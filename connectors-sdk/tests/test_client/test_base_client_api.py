@@ -71,13 +71,28 @@ class TestInit:
         assert client._session.headers["Accept"] == "application/json"
 
     def test_custom_headers(self):
-        client = BaseClientApi(
-            "https://api.example.com", headers={"X-API-KEY": "secret"}
-        )
+        class CustomClient(BaseClientApi):
+            @property
+            def session_headers(self):
+                return {"X-API-KEY": "secret"}
+
+        client = CustomClient("https://api.example.com")
         assert client._session.headers["X-API-KEY"] == "secret"
 
     def test_basic_auth(self):
-        client = BaseClientApi("https://api.example.com", auth=("user", "pass"))
+        class BasicAuthClient(BaseClientApi):
+            def __init__(self, base_url, user, password):
+                super().__init__(base_url)
+                self._user = user
+                self._password = password
+
+            @property
+            def _session(self):
+                session = super()._session
+                session.auth = (self._user, self._password)
+                return session
+
+        client = BasicAuthClient("https://api.example.com", "user", "pass")
         assert client._session.auth == ("user", "pass")
 
     def test_ssl_verify_false(self):
@@ -193,14 +208,14 @@ class TestHttpMethods:
         raw_resp = _mock_response(status_code=200, text="binary content")
         with patch.object(client._session, "request") as mock_req:
             mock_req.return_value = raw_resp
-            result = client._get_raw("/download")
+            result = client._get("/download", raw=True)
             assert result is raw_resp
 
     def test_get_raw_with_stream(self, client):
         raw_resp = _mock_response(status_code=200)
         with patch.object(client._session, "request") as mock_req:
             mock_req.return_value = raw_resp
-            client._get_raw("/download", stream=True)
+            client._get("/download", raw=True, stream=True)
             _, kwargs = mock_req.call_args
             assert kwargs["stream"] is True
 
@@ -210,13 +225,14 @@ class TestHttpMethods:
                 status_code=404, ok=False, json_data={"error": "not found"}
             )
             with pytest.raises(ApiNotFoundError):
-                client._get_raw("/missing")
+                client._get("/missing", raw=True)
 
     def test_get_raw_no_raise_when_disabled(self, client):
+        """Use _raw_request for full bypass of error handling."""
         error_resp = _mock_response(status_code=500, ok=False, text="error")
         with patch.object(client._session, "request") as mock_req:
             mock_req.return_value = error_resp
-            result = client._get_raw("/bad", raise_on_error=False)
+            result = client._raw_request("GET", "/bad")
             assert result is error_resp
 
     def test_204_returns_none(self, client):
@@ -379,7 +395,7 @@ class TestRateLimitDataclass:
     def test_adapter_accepts_rate_limit_instance(self):
         """_RateLimitAdapter accepts a RateLimit dataclass."""
         adapter = _RateLimitAdapter(
-            rate_limit=RateLimit(1, "second"), rate_limit_key="test"
+            rate_limit=RateLimit(1, "minute"), rate_limit_key="test"
         )
         mock_request = MagicMock(spec=requests.PreparedRequest)
         mock_request.url = "https://api.example.com/test"
@@ -409,7 +425,7 @@ class TestRateLimit:
 
     def test_rate_limit_blocks_when_exceeded(self):
         """Rate limit raises ApiRateLimitError when exceeded."""
-        adapter = _RateLimitAdapter(rate_limit="1/second", rate_limit_key="test")
+        adapter = _RateLimitAdapter(rate_limit="1/minute", rate_limit_key="test")
         mock_request = MagicMock(spec=requests.PreparedRequest)
         mock_request.url = "https://api.example.com/test"
 
@@ -572,7 +588,9 @@ class TestPaginateOffset:
                 content_type="application/json",
             )
             pages = list(
-                client._paginate_offset("/items", page_size=10, results_key="results")
+                client._paginate_offset(
+                    "/items", page_size=10, results_extractor="results"
+                )
             )
             assert pages == [[{"id": 1}]]
 
@@ -586,7 +604,7 @@ class TestPaginateOffset:
                 client._paginate_offset(
                     "/items",
                     page_size=10,
-                    results_key=lambda r: r["_embedded"]["items"],
+                    results_extractor=lambda r: r["_embedded"]["items"],
                 )
             )
             assert pages == [[{"id": 1}]]
@@ -658,10 +676,12 @@ class TestExceptions:
 
 
 class TestRateLimitBlock:
-    def test_rate_limit_block_calls_wait_for_token(self):
-        """When rate_limit_block=True, adapter calls _wait_for_token instead of raising."""
+    def test_rate_limit_block_calls_wait_or_raise(self):
+        """When raise_on_limit_exceeded=False, adapter calls _wait_or_raise instead of raising."""
         adapter = _RateLimitAdapter(
-            rate_limit="1/second", rate_limit_key="block-test", rate_limit_block=True
+            rate_limit="1/second",
+            rate_limit_key="block-test",
+            raise_on_limit_exceeded=False,
         )
         mock_request = MagicMock(spec=requests.PreparedRequest)
         mock_request.url = "https://api.example.com/test"
@@ -670,15 +690,17 @@ class TestRateLimitBlock:
             mock_send.return_value = _mock_response()
             # First call succeeds (consumes the 1 token)
             adapter.send(mock_request)
-            # Second call triggers _wait_for_token
-            with patch.object(adapter, "_wait_for_token") as mock_wait:
+            # Second call triggers _wait_or_raise
+            with patch.object(adapter, "_wait_or_raise") as mock_wait:
                 adapter.send(mock_request)
                 mock_wait.assert_called_once()
 
-    def test_wait_for_token_sleeps_and_retries(self):
-        """_wait_for_token loops sleeping until a token is available."""
+    def test_wait_or_raise_sleeps_and_retries(self):
+        """_wait_or_raise loops sleeping until a token is available in block mode."""
         adapter = _RateLimitAdapter(
-            rate_limit="1/second", rate_limit_key="wait-test", rate_limit_block=True
+            rate_limit="1/second",
+            rate_limit_key="wait-test",
+            raise_on_limit_exceeded=False,
         )
 
         # Mock get_window_stats to return a fixed reset_time
@@ -686,23 +708,25 @@ class TestRateLimitBlock:
         mock_stats.reset_time = 1000.5
         adapter._limiter.get_window_stats = MagicMock(return_value=mock_stats)
 
-        # hit() succeeds on first attempt inside _wait_for_token (window reset)
+        # hit() succeeds on first attempt inside _wait_or_raise (window reset)
         adapter._limiter.hit = MagicMock(return_value=True)
 
         with patch("connectors_sdk.client.rate_limit.time.sleep") as mock_sleep:
             with patch(
                 "connectors_sdk.client.rate_limit.time.time", return_value=1000.0
             ):
-                adapter._wait_for_token()
+                adapter._wait_or_raise()
 
         mock_sleep.assert_called_once()
         sleep_duration = mock_sleep.call_args[0][0]
         assert sleep_duration == pytest.approx(0.5, abs=0.01)
 
-    def test_wait_for_token_retries_on_failed_hit(self):
-        """_wait_for_token retries if hit() still fails after sleeping."""
+    def test_wait_or_raise_retries_on_failed_hit(self):
+        """_wait_or_raise retries if hit() still fails after sleeping."""
         adapter = _RateLimitAdapter(
-            rate_limit="1/second", rate_limit_key="retry-test", rate_limit_block=True
+            rate_limit="1/second",
+            rate_limit_key="retry-test",
+            raise_on_limit_exceeded=False,
         )
 
         mock_stats = MagicMock()
@@ -716,21 +740,21 @@ class TestRateLimitBlock:
             with patch(
                 "connectors_sdk.client.rate_limit.time.time", return_value=1000.0
             ):
-                adapter._wait_for_token()
+                adapter._wait_or_raise()
 
         # Should have slept twice (retry loop)
         assert mock_sleep.call_count == 2
 
-    def test_client_with_rate_limit_block(self):
-        """Client passes rate_limit_block to adapter."""
+    def test_client_with_raise_on_limit_exceeded_false(self):
+        """Client passes raise_on_limit_exceeded to adapter."""
         client = BaseClientApi(
             "https://api.example.com",
             rate_limit="10/second",
-            rate_limit_block=True,
+            raise_on_limit_exceeded=False,
             max_retries=0,
         )
         adapter = client._session.get_adapter("https://api.example.com/test")
-        assert adapter._rate_limit_block is True
+        assert adapter._raise_on_limit_exceeded is False
 
 
 # ===========================================================================

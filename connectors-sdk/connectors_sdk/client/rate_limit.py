@@ -48,8 +48,8 @@ class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
     Args:
         rate_limit: Rate limit string in ``limits`` notation.
         rate_limit_key: Key to scope the rate limit (usually the base URL).
-        rate_limit_block: If True, sleep until the window resets instead of
-            raising ``ApiRateLimitError``.
+        raise_on_limit_exceeded: If True (default), raise ``ApiRateLimitError``
+            when the limit is exceeded. If False, sleep until the window resets.
         **kwargs: Passed to ``HTTPAdapter``.
     """
 
@@ -57,7 +57,7 @@ class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
         self,
         rate_limit: RateLimit | str | None = None,
         rate_limit_key: str = "default",
-        rate_limit_block: bool = False,
+        raise_on_limit_exceeded: bool = True,
         **kwargs: Any,
     ) -> None:
         self._limiter: strategies.FixedWindowRateLimiter | None = None
@@ -66,7 +66,7 @@ class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
             self._rate_limit_item = parse(str(rate_limit))
             self._limiter = strategies.FixedWindowRateLimiter(storage.MemoryStorage())
         self._rate_limit_key = rate_limit_key
-        self._rate_limit_block = rate_limit_block
+        self._raise_on_limit_exceeded = raise_on_limit_exceeded
         super().__init__(**kwargs)
 
     def send(
@@ -75,29 +75,33 @@ class _RateLimitAdapter(HTTPAdapter):  # type: ignore[misc]
         """Check rate limit before sending the request."""
         if self._limiter and self._rate_limit_item:
             if not self._limiter.hit(self._rate_limit_item, self._rate_limit_key):
-                if self._rate_limit_block:
-                    self._wait_for_token()
-                else:
-                    window_stats = self._limiter.get_window_stats(
-                        self._rate_limit_item, self._rate_limit_key
-                    )
-                    wait_time = float(max(window_stats.reset_time - time.time(), 0))
-                    raise ApiRateLimitError(
-                        f"Rate limit exceeded ({self._rate_limit_item})",
-                        retry_after=wait_time,
-                    )
+                self._wait_or_raise()
         return super().send(request, **kwargs)
 
-    def _wait_for_token(self) -> None:
-        """Sleep until a rate-limit token becomes available, then consume it."""
+    def _wait_or_raise(self) -> None:
+        """Either raise ApiRateLimitError or sleep until a token is available."""
         assert self._limiter is not None  # noqa: S101 (guarded by caller)
         assert self._rate_limit_item is not None  # noqa: S101
+
+        window_stats = self._limiter.get_window_stats(
+            self._rate_limit_item, self._rate_limit_key
+        )
+        wait_time = float(max(window_stats.reset_time - time.time(), 0))
+
+        if self._raise_on_limit_exceeded:
+            raise ApiRateLimitError(
+                f"Rate limit exceeded ({self._rate_limit_item})",
+                retry_after=wait_time,
+            )
+
+        # Block mode: sleep until the window resets
         while True:
+            sleep_for = max(wait_time, 0.01)
+            logger.debug("Rate limit reached, sleeping %.2f seconds", sleep_for)
+            time.sleep(sleep_for)
+            if self._limiter.hit(self._rate_limit_item, self._rate_limit_key):
+                break
             window_stats = self._limiter.get_window_stats(
                 self._rate_limit_item, self._rate_limit_key
             )
             wait_time = float(max(window_stats.reset_time - time.time(), 0))
-            logger.debug("Rate limit reached, sleeping %.2f seconds", wait_time)
-            time.sleep(wait_time)
-            if self._limiter.hit(self._rate_limit_item, self._rate_limit_key):
-                break
