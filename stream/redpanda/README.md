@@ -29,7 +29,7 @@ native Kafka client.
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260615.0
+- OpenCTI Platform >= 7.260701.0
 - A reachable Redpanda HTTP Proxy (Pandaproxy), default port 8082
 - A topic to publish to (created beforehand or with auto-topic-creation enabled)
 
