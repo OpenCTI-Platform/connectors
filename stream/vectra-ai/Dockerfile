@@ -13,7 +13,6 @@ RUN cd /opt/opencti-connector-vectra-ai && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# Run the connector directly so Python is PID 1 and receives container signals
+WORKDIR /opt/opencti-connector-vectra-ai
+ENTRYPOINT ["python3", "main.py"]
