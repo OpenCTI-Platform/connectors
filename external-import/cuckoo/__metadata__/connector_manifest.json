@@ -5,8 +5,7 @@
   "short_description": "This is a connector for syncing Cuckoo Sandbox analysis as reports and IOCs OpenCTI.",
   "logo": "external-import/cuckoo/__metadata__/logo.png",
   "use_cases": [
-    "Malware Analysis",
-    "Sandbox"
+    "Malware Analysis and Sandbox"
   ],
   "verified": false,
   "last_verified_date": null,

@@ -3,7 +3,7 @@
   "slug": "matrix",
   "description": "OpenCTI external-import connector that listens on a Matrix homeserver and forwards messages, attachments, authors and thread relationships from every joined room into OpenCTI.",
   "short_description": "Stream Matrix room events into OpenCTI as STIX media-content observables.",
-  "logo": null,
+  "logo": "external-import/matrix/__metadata__/logo.png",
   "use_cases": [
     "Threat Intelligence"
   ],

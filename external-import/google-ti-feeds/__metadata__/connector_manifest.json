@@ -5,7 +5,9 @@
   "short_description": "Google Threat Intelligence provides unparalleled visibility into threats, enabling the delivery of detailed and timely intelligence to security teams worldwide.",
   "logo": "external-import/google-ti-feeds/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Vulnerability & Exploit Awareness",
+    "Adversary & Campaign Insights"
   ],
   "verified": true,
   "last_verified_date": "2025-06-20",

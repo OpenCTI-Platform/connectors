@@ -5,7 +5,9 @@
   "short_description": "Dragos is a cybersecurity company specializing in industrial control systems (ICS) and operational technology (OT) security. Their platform provides threat intelligence, incident response, and vulnerability management tailored to ICS/OT environments.",
   "logo": "external-import/dragos/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Vertical Market & Mission-Specific Insights",
+    "Adversary & Campaign Insights"
   ],
   "verified": true,
   "last_verified_date": "2025-04-22",

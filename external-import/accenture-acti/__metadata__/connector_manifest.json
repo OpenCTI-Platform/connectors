@@ -5,7 +5,8 @@
   "short_description": "The OpenCTI Accenture ACTI Connector integrates threat intelligence from Accenture's Cyber Threat Intelligence (ACTI) service directly into OpenCTI. Accenture ACTI provides comprehensive threat reporting based on extensive research and analysis of global cyber threats, including threat actors, campaigns, malware families, and emerging attack techniques.",
   "logo": "external-import/accenture-acti/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Adversary & Campaign Insights"
   ],
   "verified": true,
   "last_verified_date": null,

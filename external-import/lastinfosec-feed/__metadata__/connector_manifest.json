@@ -5,7 +5,8 @@
   "short_description": "OpenCTI LastInfoSec connectors.\nRequirement : if you want to use LastInfoSec's intelligence, you need an API key. You could contact LastInfoSec's team here https://info.gatewatcher.com/en/lp/opencti\nLastInfosec has been acquired by Gatewatcher => https://www.gatewatcher.com/en/our-solutions/lastinfosec/",
   "logo": "external-import/lastinfosec-feed/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Adversary & Campaign Insights"
   ],
   "verified": false,
   "last_verified_date": null,
