@@ -33,7 +33,7 @@ external reference.
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260615.0
+- OpenCTI Platform >= 7.260701.0
 - A reachable Swimlane instance with the REST API enabled
 - A Swimlane API token (Personal Access Token)
 - The ID of the Swimlane application to import from
@@ -69,7 +69,7 @@ environment variables.
 | API token      | `api_token`      | `SWIMLANE_API_TOKEN`        | /       | Yes       | Swimlane API token (Personal Access Token).      |
 | Application ID | `application_id` | `SWIMLANE_APPLICATION_ID`   | /       | Yes       | ID of the Swimlane application to import from.    |
 | Max records    | `max_records`    | `SWIMLANE_MAX_RECORDS`      | `100`   | No        | Maximum number of records to fetch per run.      |
-| TLP level      | `tlp_level`      | `SWIMLANE_TLP_LEVEL`        | `amber` | No        | TLP marking applied to imported incidents.       |
+| TLP level      | `tlp_level`      | `SWIMLANE_TLP_LEVEL`        | `amber` | No        | TLP marking applied to imported case-incidents.  |
 | SSL verify     | `ssl_verify`     | `SWIMLANE_SSL_VERIFY`       | `true`  | No        | Whether to verify the SSL certificate.           |
 
 ## Deployment

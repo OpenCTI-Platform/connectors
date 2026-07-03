@@ -74,7 +74,7 @@
     },
     "SWIMLANE_TLP_LEVEL": {
       "default": "amber",
-      "description": "TLP marking applied to the imported incidents.",
+      "description": "TLP marking applied to the imported case-incidents.",
       "enum": [
         "clear",
         "white",

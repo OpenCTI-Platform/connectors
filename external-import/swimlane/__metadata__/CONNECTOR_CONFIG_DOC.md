@@ -17,5 +17,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT15M"` | The period of time to await between two runs of the connector. |
 | SWIMLANE_MAX_RECORDS | `integer` |  | `1 <= x ` | `100` | Maximum number of records to fetch per run. |
-| SWIMLANE_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber"` | TLP marking applied to the imported incidents. |
+| SWIMLANE_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber"` | TLP marking applied to the imported case-incidents. |
 | SWIMLANE_SSL_VERIFY | `boolean` |  | boolean | `true` | Whether to verify the SSL certificate of the Swimlane instance. |

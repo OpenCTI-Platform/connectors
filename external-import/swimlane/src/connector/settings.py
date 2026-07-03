@@ -50,7 +50,7 @@ class SwimlaneConfig(BaseConfigModel):
     )
     tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
         Field(
-            description="TLP marking applied to the imported incidents.",
+            description="TLP marking applied to the imported case-incidents.",
             default="amber",
         )
     )
