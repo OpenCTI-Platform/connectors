@@ -71,6 +71,14 @@ class ClickHouseConnector:
             self.helper.connector_logger.debug(
                 "[%s] Event written to ClickHouse" % msg.event.upper()
             )
+        else:
+            # The client already logged the HTTP failures; record here which
+            # event was dropped so the loss is traceable to an entity.
+            self.helper.connector_logger.error(
+                "[%s] Event could not be written to ClickHouse, event dropped"
+                % msg.event.upper(),
+                meta={"id": data.get("id")},
+            )
 
     def run(self) -> None:
         """Validate config, ensure the ClickHouse schema exists, then listen to the stream."""

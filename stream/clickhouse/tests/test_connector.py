@@ -56,6 +56,23 @@ def test_event_write_is_logged_at_debug_not_info():
     helper.connector_logger.info.assert_not_called()
 
 
+def test_failed_event_write_is_logged_at_error():
+    # A failed insert must not pass silently: the dropped event is logged at
+    # ERROR with the entity id so the loss is traceable.
+    connector, helper, client = _make_connector()
+    client.insert_event.return_value = False
+
+    connector.process_message(
+        _message("create", {"id": "indicator--1", "type": "indicator"})
+    )
+
+    helper.connector_logger.error.assert_called_once()
+    assert (
+        helper.connector_logger.error.call_args.kwargs["meta"]["id"] == "indicator--1"
+    )
+    helper.connector_logger.debug.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "live_stream_id",
     [None, "ChangeMe", "CHANGEME", "changeme", "  ChangeMe  ", "", "   "],
