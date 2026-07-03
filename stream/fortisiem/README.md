@@ -79,7 +79,7 @@ environment variables.
 Build a Docker image using the provided `Dockerfile`:
 
 ```shell
-docker build . -t opencti/connector-fortisiem:rolling
+docker build . -t opencti/connector-fortisiem:latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the
@@ -91,7 +91,7 @@ docker compose up -d
 
 ### Manual Deployment
 
-Create a `config.yml` file from `config.yml.sample` and fill in the values, then:
+Create a `src/config.yml` file based on the provided `config.yml.sample` and fill in the values, then:
 
 ```shell
 cd src
