@@ -42,6 +42,13 @@ on:
         required: false
         type: boolean
         default: false
+      sdk_ref:
+        description: >
+          Optional git ref to pin connectors-sdk to in the built image.
+          If omitted, defaults to the release commit SHA (github.sha).
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   group: release-connector-${{ github.ref_name }}
@@ -354,6 +361,10 @@ jobs:
       image_tags: ${{ needs.resolve.outputs.image_tag }}
       build_mode: release
       push: ${{ needs.resolve.outputs.dry_run != 'true' }}
+      # Resolve the SDK pin ref: user-provided input, else the release commit SHA.
+      # This is always non-empty so the shared build action performs the pin only
+      # for release-connector (build-all-connectors leaves it empty → no pin).
+      sdk_ref: ${{ inputs.sdk_ref != '' && inputs.sdk_ref || github.sha }}
     secrets: inherit
 
   # ──────────────────────────────────────────────────────────
@@ -444,6 +455,15 @@ jobs:
           echo "fragment_path=$FRAGMENT_PATH" >> "$GITHUB_OUTPUT"
           echo "✅ Generated manifest fragment: $FRAGMENT_PATH"
 
+      - name: Download pinned dependency files
+        # Produced by the build job when connectors-sdk was pinned. Non-blocking:
+        # a missing artifact must not prevent the release from being created.
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: pinned-deps-${{ needs.resolve.outputs.connector_name }}
+          path: ${{ runner.temp }}/pinned-deps
+
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -482,6 +502,22 @@ jobs:
             echo "📎 Attached manifest fragment: $FRAGMENT"
           else
             echo "ℹ️ No manifest fragment to attach"
+          fi
+
+          # Attach the pinned dependency files (connectors-sdk pinned to the release ref)
+          # to help reproduce the image manually. Paths are flattened into the asset name
+          # (e.g. src/requirements.txt → mitre-src-requirements.txt) to avoid collisions.
+          PINNED_DIR="${{ runner.temp }}/pinned-deps"
+          if [ -d "$PINNED_DIR" ]; then
+            while IFS= read -r file; do
+              rel="${file#"$PINNED_DIR"/}"
+              asset="${CONNECTOR_NAME}-$(echo "$rel" | tr '/' '-')"
+              cp "$file" "${RUNNER_TEMP}/${asset}"
+              gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
+              echo "📎 Attached pinned dependency file: $asset"
+            done < <(find "$PINNED_DIR" -type f \( -name requirements.txt -o -name pyproject.toml \))
+          else
+            echo "ℹ️ No pinned dependency files to attach"
           fi
 
           echo "✅ Release created: $TITLE"
