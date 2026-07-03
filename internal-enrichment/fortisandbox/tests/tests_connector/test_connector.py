@@ -7,7 +7,7 @@ import pytest
 import stix2
 from connector import ConnectorSettings, FortisandboxConnector
 from fortisandbox_client import FortiSandboxAPIError
-from pycti import OpenCTIConnectorHelper
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -111,7 +111,8 @@ def stub_connector(mock_opencti_connector_helper):
         name="FortiSandbox",
         identity_class="organization",
     )
-    connector.tlp = stix2.TLP_WHITE
+    # Keep the connector's real default marking (OpenCTI's custom TLP:CLEAR
+    # statement marking) so tests exercise the runtime TLP handling.
     connector.client = MagicMock()
     return connector
 
@@ -220,6 +221,27 @@ def test_create_knowledge_inherits_observable_marking(stub_connector, file_messa
     assert stix2.TLP_AMBER.id in malware_analysis["object_marking_refs"]
     # The marking object is included in the bundle so the ref resolves.
     assert any(getattr(o, "id", None) == stix2.TLP_AMBER.id for o in result)
+
+
+def test_create_knowledge_falls_back_to_custom_tlp_clear(stub_connector, file_message):
+    # Without markings on the observable, the Malware Analysis must carry the
+    # connector default: OpenCTI's custom TLP:CLEAR statement marking (generated
+    # via pycti's deterministic id), not the legacy stix2.TLP_WHITE.
+    data = file_message
+    data["enrichment_entity"]["objectMarking"] = []
+    stub_connector.stix_objects = data["stix_objects"]
+
+    result = stub_connector._create_knowledge(
+        data["stix_entity"], data["enrichment_entity"], FORTI_RESULT
+    )
+
+    expected_id = MarkingDefinition.generate_id("TLP", "TLP:CLEAR")
+    malware_analysis = next(
+        o for o in result if getattr(o, "type", None) == "malware-analysis"
+    )
+    assert malware_analysis["object_marking_refs"] == [expected_id]
+    tlp_clear = next(o for o in result if getattr(o, "id", None) == expected_id)
+    assert tlp_clear["x_opencti_definition"] == "TLP:CLEAR"
 
 
 def test_extract_hash_priority():
