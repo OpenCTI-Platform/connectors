@@ -55,12 +55,13 @@ class ArcSightIncidentsConnector:
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, "ArcSight Incidents run"
-            )
-
             stix_objects = self._collect_intelligence()
+            # Only initiate a work when there is data to import, so an empty
+            # run does not clutter the OpenCTI jobs UI with empty works.
             if stix_objects:
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, "ArcSight Incidents run"
+                )
                 bundle = self.helper.stix2_create_bundle(stix_objects)
                 self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, cleanup_inconsistent_bundle=True
@@ -68,9 +69,10 @@ class ArcSightIncidentsConnector:
 
             current_state["last_run"] = now.isoformat()
             self.helper.set_state(current_state)
-            self.helper.api.work.to_processed(
-                work_id, "ArcSight Incidents connector successfully run"
-            )
+            if work_id:
+                self.helper.api.work.to_processed(
+                    work_id, "ArcSight Incidents connector successfully run"
+                )
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
             sys.exit(0)

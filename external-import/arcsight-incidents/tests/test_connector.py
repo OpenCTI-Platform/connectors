@@ -54,11 +54,42 @@ def test_process_message_sends_bundle():
     helper.api.work.to_processed.assert_called_once()
 
 
-def test_process_message_handles_errors():
+def test_process_message_skips_work_when_no_data():
+    # No data collected: no work must be initiated (no empty jobs), but the
+    # state must still be updated so the schedule advances.
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {}
+    client.get_cases.return_value = []
+
+    connector.process_message()
+
+    helper.api.work.initiate_work.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+    helper.set_state.assert_called_once()
+
+
+def test_process_message_handles_errors_before_work():
+    # A collection failure happens before any work is initiated, so there is
+    # nothing to finalize - but the error must be logged and not raised.
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {}
+    client.get_cases.side_effect = RuntimeError("boom")
+
+    connector.process_message()  # must not raise
+
+    helper.connector_logger.error.assert_called()
+    helper.api.work.initiate_work.assert_not_called()
+    helper.api.work.to_processed.assert_not_called()
+
+
+def test_process_message_finalizes_work_in_error_when_send_fails():
     connector, helper, client = _make_connector()
     helper.get_state.return_value = {}
     helper.api.work.initiate_work.return_value = "work-1"
-    client.get_cases.side_effect = RuntimeError("boom")
+    helper.stix2_create_bundle.return_value = "bundle"
+    helper.send_stix2_bundle.side_effect = RuntimeError("boom")
+    client.get_cases.return_value = [{"name": "Case A", "resourceid": "1"}]
+    client.get_case_events.return_value = []
 
     connector.process_message()  # must not raise
 
