@@ -13,7 +13,7 @@ state.
 
 Table of Contents
 
-- [OpenCTI Corelight Investigator Connector](#opencti-external-ingestion-connector-corelight-investigator)
+- [OpenCTI Corelight Investigator Connector](#opencti-corelight-investigator-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -90,7 +90,7 @@ Below are the parameters you'll need to set for the connector:
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==7.260701.0`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
@@ -168,7 +168,7 @@ API reference; the endpoint path is configurable via `alerts_path` if your tenan
 ## Debugging
 
 The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
+Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
 
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
