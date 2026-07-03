@@ -145,6 +145,25 @@ def test_remove_indicator_noop_when_absent():
     assert client.session.request.call_count == 1
 
 
+def test_membership_update_fails_when_list_request_fails():
+    # When list-ip-sets fails (e.g. FortiEDR outage), the client must not
+    # guess membership: no create/update call, and False is returned so the
+    # connector does not log a false success.
+    client = _make_client()
+    client.session.request.side_effect = requests.RequestException("boom")
+
+    with patch("fortiedr_client.api_client.time.sleep"):
+        assert (
+            client.add_indicator({"pattern": "[ipv4-addr:value = '198.51.100.1']"})
+            is False
+        )
+        client.session.request.side_effect = requests.RequestException("boom")
+        assert (
+            client.remove_indicator({"pattern": "[ipv4-addr:value = '198.51.100.1']"})
+            is False
+        )
+
+
 def test_request_retries_on_rate_limit():
     client = _make_client()
     client.session.request.side_effect = [_response(429), _response(200)]

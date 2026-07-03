@@ -96,7 +96,14 @@ class FortiEDRClient:
         return self._update_membership(ip, add=False)
 
     def _update_membership(self, ip: str, add: bool) -> bool:
-        ip_set = self._get_ip_set()
+        ip_sets = self._list_ip_sets()
+        if ip_sets is None:
+            # The list request failed: do not guess membership. Creating or
+            # rewriting the set blindly could clobber it, and reporting
+            # success for a removal would be wrong.
+            return False
+
+        ip_set = self._find_ip_set(ip_sets)
         ips = list(ip_set["ips"]) if ip_set else []
 
         if add:
@@ -129,7 +136,8 @@ class FortiEDRClient:
                 return value
         return []
 
-    def _get_ip_set(self) -> Optional[dict]:
+    def _list_ip_sets(self) -> Optional[list]:
+        """Return the raw list of IP Sets, or None if the request failed."""
         response = self._request("get", f"{IP_SETS_PATH}/list-ip-sets")
         if response is None:
             return None
@@ -137,7 +145,10 @@ class FortiEDRClient:
             payload = response.json()
         except ValueError:
             return None
-        for ip_set in self._extract_sets(payload):
+        return self._extract_sets(payload)
+
+    def _find_ip_set(self, ip_sets: list) -> Optional[dict]:
+        for ip_set in ip_sets:
             if (
                 isinstance(ip_set, dict)
                 and ip_set.get("name") == self.config.ip_set_name
