@@ -422,11 +422,6 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         # Get config/env vars as dict to send for validation
         config_dict: dict[str, Any] = settings_loader().model_dump()
 
-        cls.logger.debug(
-            "Raw configuration data loaded for validation",
-            {"config_data": config_dict},
-        )
-
         return handler(config_dict)
 
     def to_helper_config(self) -> dict[str, Any]:
