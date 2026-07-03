@@ -79,18 +79,51 @@ def test_process_message_handles_errors():
 
 def test_process_message_does_not_advance_state_on_fetch_failure():
     # A fetch failure must not advance last_run (otherwise a transient outage would
-    # silently skip incidents), and the work must be finalized in error.
+    # silently skip incidents). Since the work is only initiated once data has been
+    # fetched, no (empty) work is created or finalized on the failure path.
     connector, helper, client = _make_connector()
     helper.get_state.return_value = {"last_run": "2026-01-01T00:00:00Z"}
-    helper.api.work.initiate_work.return_value = "work-1"
     client.get_incidents.side_effect = FortiSIEMClientError("down")
 
     connector.process_message()  # must not raise
 
     helper.set_state.assert_not_called()
     helper.send_stix2_bundle.assert_not_called()
+    helper.api.work.initiate_work.assert_not_called()
+    helper.api.work.to_processed.assert_not_called()
+
+
+def test_process_message_finalizes_work_in_error_on_send_failure():
+    # If the bundle send fails after the work was initiated, the work must be
+    # finalized with in_error=True instead of dangling, and last_run must not
+    # advance.
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {"last_run": "2026-01-01T00:00:00Z"}
+    helper.api.work.initiate_work.return_value = "work-1"
+    helper.send_stix2_bundle.side_effect = RuntimeError("send failed")
+    client.get_incidents.return_value = [
+        {"incidentTitle": "Bad", "incidentId": 1, "srcIpAddr": "198.51.100.1"}
+    ]
+
+    connector.process_message()  # must not raise
+
+    helper.set_state.assert_not_called()
     helper.api.work.to_processed.assert_called_once()
     assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
+
+
+def test_process_message_no_incidents_creates_no_work():
+    # No new incidents -> no work initiated (no empty jobs), but the state still
+    # advances because the window was fetched successfully.
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {"last_run": "2026-01-01T00:00:00Z"}
+    client.get_incidents.return_value = []
+
+    connector.process_message()
+
+    helper.api.work.initiate_work.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+    helper.set_state.assert_called_once()
 
 
 def test_run_schedules_process():

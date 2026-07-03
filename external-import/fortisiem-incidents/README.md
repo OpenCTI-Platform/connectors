@@ -74,7 +74,7 @@ environment variables.
 Build a Docker image using the provided `Dockerfile`:
 
 ```shell
-docker build . -t opencti/connector-fortisiem-incidents:rolling
+docker build . -t opencti/connector-fortisiem-incidents:latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the
@@ -86,12 +86,11 @@ docker compose up -d
 
 ### Manual Deployment
 
-Create a `config.yml` file from `config.yml.sample` and fill in the values, then:
+Create a `config.yml` file from `config.yml.sample` (at the connector root) and fill in the values, then:
 
 ```shell
-cd src
-pip install -r requirements.txt
-python main.py
+pip install -r src/requirements.txt
+python src/main.py
 ```
 
 ## Behavior
