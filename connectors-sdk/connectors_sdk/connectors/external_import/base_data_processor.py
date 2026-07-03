@@ -89,7 +89,7 @@ class BaseDataProcessor(ABC):
 
     def __init__(self) -> None:
         """Initialize the processor."""
-        self.logger.debug(f"{self.__class__.__name__} instantiated succesfully")
+        self.logger.debug(f"{self.__class__.__name__} instantiated successfully")
 
     def inject_dependencies(
         self,

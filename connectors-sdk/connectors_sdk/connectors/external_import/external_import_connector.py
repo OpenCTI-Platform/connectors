@@ -8,7 +8,7 @@ Architecture::
 
     ExternalImportConnector
     ├── OpenCTIConnectorHelper       → pycti bridge (created in _init_dependencies)
-    ├── Logger                       → Logging (wraps helper's AppLogger)
+    ├── Logger                       → Logging (stdlib logging with pycti's CustomJsonFormatter)
     ├── ExternalImportConnectorState → State persistence (last_run, custom fields)
     └── BaseDataProcessor[]          → process(): with work_manager: send(transform(collect()))
         └── WorkManager              → context manager: open work → send → close work
@@ -106,7 +106,7 @@ class ExternalImportConnector:
         self.state = state if state is not None else ExternalImportConnectorState()
 
         self.logger.debug(
-            f"{self.__class__.__name__} instantiated succesfully with {len(data_processors)} processor(s)",
+            f"{self.__class__.__name__} instantiated successfully with {len(data_processors)} processor(s)",
             {"data_processors": [p.__class__.__name__ for p in data_processors]},
         )
 

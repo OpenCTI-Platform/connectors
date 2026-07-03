@@ -32,7 +32,6 @@ def _prepare_meta(meta: dict[str, Any] | None = None) -> dict[str, Any] | None:
     The format is the same as the one used in pycti's `AppLogger`, in order to maintain consistency.
 
     Args:
-        message: The log message.
         meta: Optional metadata dict.
     """
     return None if meta is None else {"attributes": meta}

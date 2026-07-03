@@ -48,7 +48,7 @@ class _StateClient:
         """
         self._helper = helper
 
-        self.logger.debug(f"{self.__class__.__name__} instantiated succesfully")
+        self.logger.debug(f"{self.__class__.__name__} instantiated successfully")
 
     def load_state(self) -> dict[str, Any]:
         """Get connector's state stored on OpenCTI."""
