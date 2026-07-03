@@ -6,7 +6,7 @@ Author: VulnCheck
 Requires-Python: <3.13,>=3.12
 Description-Content-Type: text/markdown
 Requires-Dist: vulncheck-sdk==0.0.40
-Requires-Dist: pycti==7.260626.0
+Requires-Dist: pycti==7.260701.0
 Requires-Dist: pydantic==2.11.9
 Requires-Dist: validators==0.35.0
 Requires-Dist: psutil==7.1.2
