@@ -48,7 +48,7 @@ the OpenDXL TIE client.
   with the broker list and client certificate), authorized to publish to the
   `TIE Server Set Enterprise Reputation` topic
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
-- [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
+- [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors/tree/master/connectors-sdk) library matching your OpenCTI version
 
 ## Configuration variables
 
@@ -72,7 +72,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | ------------------------------------- | --------------------------- | --------------------------------------- | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Connector ID                          | id                          | `CONNECTOR_ID`                          | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
 | Connector Type                        | type                        | `CONNECTOR_TYPE`                        | STREAM          | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
-| Connector Name                        | name                        | `CONNECTOR_NAME`                        |                 | Yes       | Name of the connector.                                                                                                                                 |
+| Connector Name                        | name                        | `CONNECTOR_NAME`                        | Trellix TIE     | No        | Name of the connector.                                                                                                                                 |
 | Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
 | Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
 | Connector Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | /               | Yes       | ID of the live stream created in the OpenCTI UI                                                                                                        |
