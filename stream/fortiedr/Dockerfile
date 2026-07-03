@@ -13,7 +13,5 @@ RUN cd /opt/opencti-connector-fortiedr && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-fortiedr
+ENTRYPOINT ["python3", "main.py"]
