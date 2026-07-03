@@ -1,19 +1,19 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=STREAM
 
-# Copy the connector
-COPY src /opt/opencti-connector-arcsight
-
-# Install Python modules
+# Install needed packages
 # hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-RUN cd /opt/opencti-connector-arcsight && \
-    pip3 install --no-cache-dir -r requirements.txt && \
+# Install needed python packages
+WORKDIR /opt/opencti-connector-arcsight
+COPY src/requirements.txt /opt/opencti-connector-arcsight/requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# Copy the connector
+COPY src /opt/opencti-connector-arcsight
+
+# Expose and set the entrypoint
+ENTRYPOINT ["python", "main.py"]

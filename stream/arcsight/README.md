@@ -79,7 +79,7 @@ environment variables.
 Build a Docker image using the provided `Dockerfile`:
 
 ```shell
-docker build . -t opencti/connector-arcsight:rolling
+docker build . -t opencti/connector-arcsight:latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the
