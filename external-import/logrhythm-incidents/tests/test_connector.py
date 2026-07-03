@@ -61,6 +61,20 @@ def test_process_message_handles_errors():
     connector.process_message()  # must not raise
 
     helper.connector_logger.error.assert_called()
+    # The work must still be closed, and flagged in error.
+    helper.api.work.to_processed.assert_called_once_with(
+        "work-1", "boom", in_error=True
+    )
+
+
+def test_collect_intelligence_skips_alarms_without_case_id():
+    connector, _, client = _make_connector()
+    client.get_cases.return_value = [{"name": "No id case"}]
+
+    objects = connector._collect_intelligence()
+
+    client.get_case_alarms.assert_not_called()
+    assert any(o["type"] == "case-incident" for o in objects)
 
 
 def test_run_schedules_process():

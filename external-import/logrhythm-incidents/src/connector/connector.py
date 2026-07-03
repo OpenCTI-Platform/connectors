@@ -27,8 +27,11 @@ class LogRhythmIncidentsConnector:
             case_id = case.get("id") or case.get("number")
 
             # LogRhythm alarms attached to the case are detections -> Incidents.
+            # Skip the alarms lookup entirely when the case carries no usable
+            # identifier (the request would be a guaranteed 404).
             incident_ids = []
-            for alarm in self.client.get_case_alarms(case_id):
+            alarms = self.client.get_case_alarms(case_id) if case_id else []
+            for alarm in alarms:
                 incident = self.converter.create_incident(alarm)
                 if incident is not None:
                     stix_objects.append(incident)
@@ -52,6 +55,7 @@ class LogRhythmIncidentsConnector:
             "[CONNECTOR] Starting LogRhythm Incidents connector..."
         )
         work_id = None
+        error_message = None
         try:
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
@@ -73,13 +77,17 @@ class LogRhythmIncidentsConnector:
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            error_message = str(err)
+            self.helper.connector_logger.error(error_message)
         finally:
             # Always close the work so a failed run does not leave an
-            # "in progress" work item hanging in OpenCTI.
+            # "in progress" work item hanging in OpenCTI, and flag it in
+            # error so failed runs stay visible in the platform.
             if work_id is not None:
                 self.helper.api.work.to_processed(
-                    work_id, "LogRhythm Incidents connector run completed"
+                    work_id,
+                    error_message or "LogRhythm Incidents connector run completed",
+                    in_error=error_message is not None,
                 )
 
     def run(self) -> None:
