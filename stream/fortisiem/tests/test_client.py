@@ -77,6 +77,17 @@ def test_add_indicator_posts_entry():
     assert body["json_body"][0]["ageOut"] == "30d"
 
 
+def test_add_indicator_releases_successful_response():
+    # The successful response body is not used, so the connection must be
+    # released back to the session pool.
+    client = _make_client()
+    ok = _response(200)
+    client.session.request.return_value = ok
+
+    assert client.add_indicator({"pattern": "[ipv4-addr:value = '1.1.1.1']"}) is True
+    ok.close.assert_called_once()
+
+
 def test_add_indicator_skips_unsupported():
     client = _make_client()
     assert client.add_indicator({"pattern": "[email-addr:value = 'a@b.com']"}) is False

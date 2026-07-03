@@ -92,7 +92,12 @@ class FortiSIEMClient:
             ],
         }
         response = self._request("post", ADD_TO_PATH, json=body)
-        return response is not None
+        if response is None:
+            return False
+        # The response body is not used: release the connection back to the
+        # session pool, consistent with the retry/error paths in _request.
+        response.close()
+        return True
 
     def _request(self, method: str, path: str, **kwargs) -> Optional[requests.Response]:
         """
