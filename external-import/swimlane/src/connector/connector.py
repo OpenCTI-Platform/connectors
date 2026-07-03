@@ -41,15 +41,21 @@ class SwimlaneConnector:
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, "Swimlane run"
-            )
-
+            # Collect first and only create a work when there is data to send,
+            # so an empty Swimlane application does not pile up empty work
+            # items in OpenCTI on every scheduled run.
             stix_objects = self._collect_intelligence()
             if stix_objects:
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, "Swimlane run"
+                )
                 bundle = self.helper.stix2_create_bundle(stix_objects)
                 self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, cleanup_inconsistent_bundle=True
+                )
+            else:
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] No Swimlane records to import this run"
                 )
 
             current_state["last_run"] = now.isoformat()

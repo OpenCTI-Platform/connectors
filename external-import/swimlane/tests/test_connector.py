@@ -44,18 +44,51 @@ def test_process_message_sends_bundle():
     helper.api.work.to_processed.assert_called_once()
 
 
-def test_process_message_handles_errors():
+def test_process_message_empty_run_creates_no_work():
+    # No records -> no work is initiated (avoids empty jobs in OpenCTI),
+    # but the run is still a success and the state advances.
     connector, helper, client = _make_connector()
     helper.get_state.return_value = {}
-    helper.api.work.initiate_work.return_value = "work-1"
+    client.get_records.return_value = []
+
+    connector.process_message()
+
+    helper.api.work.initiate_work.assert_not_called()
+    helper.api.work.to_processed.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+    helper.set_state.assert_called_once()
+
+
+def test_process_message_handles_errors():
+    # A fetch failure happens before any work is initiated, so there is no
+    # work to finalize; the error is logged and the state does not advance.
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {}
     client.get_records.side_effect = RuntimeError("boom")
 
     connector.process_message()  # must not raise
 
     helper.connector_logger.error.assert_called()
-    # the work must be finalized in error rather than reported as a success
+    helper.api.work.initiate_work.assert_not_called()
+    helper.api.work.to_processed.assert_not_called()
+    helper.set_state.assert_not_called()
+
+
+def test_process_message_failure_after_work_marks_in_error():
+    # A failure after the work is initiated must finalize the work in error
+    # rather than reporting a successful run.
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {}
+    helper.api.work.initiate_work.return_value = "work-1"
+    client.get_records.return_value = [{"trackingId": "INC-1", "id": "1"}]
+    helper.send_stix2_bundle.side_effect = RuntimeError("boom")
+
+    connector.process_message()  # must not raise
+
+    helper.connector_logger.error.assert_called()
     helper.api.work.to_processed.assert_called_once()
     assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
+    helper.set_state.assert_not_called()
 
 
 def test_process_message_interrupt_marks_work_in_error():
@@ -64,7 +97,8 @@ def test_process_message_interrupt_marks_work_in_error():
     connector, helper, client = _make_connector()
     helper.get_state.return_value = {}
     helper.api.work.initiate_work.return_value = "work-1"
-    client.get_records.side_effect = KeyboardInterrupt()
+    client.get_records.return_value = [{"trackingId": "INC-1", "id": "1"}]
+    helper.send_stix2_bundle.side_effect = KeyboardInterrupt()
 
     with pytest.raises(SystemExit):
         connector.process_message()

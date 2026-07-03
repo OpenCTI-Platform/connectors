@@ -91,7 +91,7 @@ docker compose up -d
 
 ### Manual Deployment
 
-Create a `config.yml` file from `config.yml.sample` and fill in the values, then:
+Create a `src/config.yml` file from the root `config.yml.sample` and fill in the values, then:
 
 ```shell
 cd src
