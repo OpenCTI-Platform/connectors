@@ -255,7 +255,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             raise ConfigValidationError("Error validating configuration.") from e
 
         self.logger.debug(
-            f"{self.__class__.__name__} instantiated succesfully",
+            f"{self.__class__.__name__} instantiated successfully",
             {"settings": self.model_dump(mode="json")},
         )
 

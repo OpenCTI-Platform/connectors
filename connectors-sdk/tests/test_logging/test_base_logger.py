@@ -356,10 +356,10 @@ class TestBaseLoggerLogMethods:
         capture = self._capture_records_for(logger)
 
         # When: error is called with exception
-        logger.error(ValueError("An error occured"))
+        logger.error(ValueError("An error occurred"))
 
         # Then: record contains exception message
-        assert any("An error occured" in r.getMessage() for r in capture.buffer)
+        assert any("An error occurred" in r.getMessage() for r in capture.buffer)
 
     def test_error_sets_exc_info(self, logger_factory) -> None:
         """Should set exc_info on error log records."""
