@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'LogRhythm Incidents' # optional (default: 'LogRhythm Incidents')
-  scope: 'logrhythm' # required
+  scope: 'logrhythm' # optional (default: 'logrhythm')
   log_level: 'error' # optional (default: 'error')
   duration_period: 'PT15M' # optional (default: 'PT15M')
 

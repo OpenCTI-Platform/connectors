@@ -52,19 +52,48 @@ def test_process_message_sends_bundle():
     helper.api.work.to_processed.assert_called_once()
 
 
-def test_process_message_handles_errors():
+def test_process_message_handles_errors_before_work_is_created():
     connector, helper, client = _make_connector()
     helper.get_state.return_value = {}
-    helper.api.work.initiate_work.return_value = "work-1"
     client.get_cases.side_effect = RuntimeError("boom")
 
     connector.process_message()  # must not raise
 
     helper.connector_logger.error.assert_called()
-    # The work must still be closed, and flagged in error.
+    # The collection failed before any data was available, so no work was
+    # created and there is nothing to close.
+    helper.api.work.initiate_work.assert_not_called()
+    helper.api.work.to_processed.assert_not_called()
+
+
+def test_process_message_flags_work_in_error_on_failure():
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {}
+    helper.api.work.initiate_work.return_value = "work-1"
+    helper.send_stix2_bundle.side_effect = RuntimeError("boom")
+    client.get_cases.return_value = [{"name": "Case A", "number": "1"}]
+    client.get_case_alarms.return_value = []
+
+    connector.process_message()  # must not raise
+
+    helper.connector_logger.error.assert_called()
+    # The work was created, so it must be closed and flagged in error.
     helper.api.work.to_processed.assert_called_once_with(
         "work-1", "boom", in_error=True
     )
+
+
+def test_process_message_skips_work_when_no_data():
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {}
+    client.get_cases.return_value = []
+
+    connector.process_message()
+
+    # No data -> no work item and no bundle, but the state is still updated.
+    helper.api.work.initiate_work.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+    helper.set_state.assert_called_once()
 
 
 def test_collect_intelligence_skips_alarms_without_case_id():

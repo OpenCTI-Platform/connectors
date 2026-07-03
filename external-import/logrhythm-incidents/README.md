@@ -62,7 +62,7 @@ environment variables.
 | --------------- | ----------------- | ---------------------------- | --------------------- | --------- | --------------------------------------------------- |
 | Connector ID    | `id`              | `CONNECTOR_ID`               | /                     | Yes       | A unique `UUIDv4` identifier for this connector.     |
 | Connector Name  | `name`            | `CONNECTOR_NAME`             | `LogRhythm Incidents` | No        | Name of the connector.                              |
-| Connector Scope | `scope`           | `CONNECTOR_SCOPE`            | /                     | Yes       | The scope of the connector.                         |
+| Connector Scope | `scope`           | `CONNECTOR_SCOPE`            | `logrhythm`           | No        | The scope of the connector.                         |
 | Log Level       | `log_level`       | `CONNECTOR_LOG_LEVEL`        | `error`               | No        | Logs verbosity (`debug`, `info`, `warn`, `error`).  |
 | Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD`  | `PT15M`               | No        | ISO-8601 period between two runs.                   |
 
@@ -83,7 +83,7 @@ environment variables.
 Build a Docker image using the provided `Dockerfile`:
 
 ```shell
-docker build . -t opencti/connector-logrhythm-incidents:rolling
+docker build . -t opencti/connector-logrhythm-incidents:latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the
@@ -95,7 +95,7 @@ docker compose up -d
 
 ### Manual Deployment
 
-Create a `config.yml` file from `config.yml.sample` and fill in the values, then:
+Copy `config.yml.sample` to `src/config.yml` and fill in the values, then:
 
 ```shell
 cd src

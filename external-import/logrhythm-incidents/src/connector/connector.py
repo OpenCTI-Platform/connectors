@@ -60,12 +60,13 @@ class LogRhythmIncidentsConnector:
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, "LogRhythm Incidents run"
-            )
-
             stix_objects = self._collect_intelligence()
+            # Only create a work when there is data to ingest, so empty runs
+            # do not clutter the OpenCTI jobs view with empty work items.
             if stix_objects:
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, "LogRhythm Incidents run"
+                )
                 bundle = self.helper.stix2_create_bundle(stix_objects)
                 self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, cleanup_inconsistent_bundle=True

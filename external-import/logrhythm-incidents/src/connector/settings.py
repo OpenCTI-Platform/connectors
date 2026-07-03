@@ -5,6 +5,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import AliasChoices, Field, HttpUrl, SecretStr
 
@@ -18,6 +19,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     name: str = Field(
         description="The name of the connector.",
         default="LogRhythm Incidents",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["logrhythm"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
