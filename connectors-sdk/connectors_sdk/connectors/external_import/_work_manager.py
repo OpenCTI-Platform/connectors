@@ -61,7 +61,7 @@ class _Work:
         self._closed = False
         self._has_sent_bundles = False
 
-        self.logger.debug(f"{self.__class__.__name__} instantiated succesfully")
+        self.logger.debug(f"{self.__class__.__name__} instantiated successfully")
 
     @classmethod
     def create(cls, helper: OpenCTIConnectorHelper, work_name: str) -> _Work:
@@ -200,7 +200,7 @@ class WorkManager:
         self._current_work: _Work | None = None
         self._active = False
 
-        self.logger.debug(f"{self.__class__.__name__} instantiated succesfully")
+        self.logger.debug(f"{self.__class__.__name__} instantiated successfully")
 
     def __enter__(self) -> WorkManager:
         """Enter the context manager."""
