@@ -5,7 +5,8 @@
   "short_description": "Import Corelight Investigator alerts and detections into OpenCTI as STIX Incidents.",
   "logo": null,
   "use_cases": [
-    "Threat Detection"
+    "Detection & Response Enablement",
+    "Network Security"
   ],
   "verified": false,
   "last_verified_date": null,
