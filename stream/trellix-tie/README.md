@@ -43,7 +43,7 @@ the OpenDXL TIE client.
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 6.8.12
+- OpenCTI Platform >= 7.260701.0
 - A DXL broker and an ePO-provisioned OpenDXL client configuration (`dxlclient.config`
   with the broker list and client certificate), authorized to publish to the
   `TIE Server Set Enterprise Reputation` topic
@@ -73,11 +73,11 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector ID                          | id                          | `CONNECTOR_ID`                          | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
 | Connector Type                        | type                        | `CONNECTOR_TYPE`                        | STREAM          | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
 | Connector Name                        | name                        | `CONNECTOR_NAME`                        | Trellix TIE     | No        | Name of the connector.                                                                                                                                 |
-| Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
-| Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
-| Connector Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | /               | Yes       | ID of the live stream created in the OpenCTI UI                                                                                                        |
-| Connector Live Stream Listen Delete   | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true            | Yes       | Listen to all delete events concerning the entity, depending on the filter set for the OpenCTI stream.                                                 |
-| Connector Live Stream No dependencies | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true            | Yes       | Always set to `True` unless you are synchronizing 2 OpenCTI platforms and you want to get an entity and all context (relationships and related entity) |
+| Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       | trellix-tie     | No        | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
+| Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | error           | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
+| Connector Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | live            | No        | ID of the live stream created in the OpenCTI UI                                                                                                        |
+| Connector Live Stream Listen Delete   | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true            | No        | Listen to all delete events concerning the entity, depending on the filter set for the OpenCTI stream.                                                 |
+| Connector Live Stream No dependencies | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true            | No        | Always set to `True` unless you are synchronizing 2 OpenCTI platforms and you want to get an entity and all context (relationships and related entity) |
 
 ### Connector extra parameters environment variables
 
@@ -94,7 +94,7 @@ Below are the parameters you'll need to set for the connector:
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==7.260701.0`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.

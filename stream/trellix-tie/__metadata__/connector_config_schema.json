@@ -20,7 +20,10 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "trellix-tie"
+      ],
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -87,7 +90,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "TRELLIX_TIE_DXL_CONFIG_PATH"
   ],
   "additionalProperties": true

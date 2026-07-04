@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field
 
@@ -17,6 +18,10 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     name: str = Field(
         description="The name of the connector.",
         default="Trellix TIE",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["trellix-tie"],
     )
     live_stream_id: str = Field(
         description="The ID of the OpenCTI live stream to connect to.",
