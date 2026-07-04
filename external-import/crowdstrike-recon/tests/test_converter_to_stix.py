@@ -1,4 +1,3 @@
-import base64
 from unittest.mock import MagicMock
 
 from connector.converter_to_stix import ConverterToStix
@@ -153,7 +152,7 @@ def test_create_incident_post_with_highlights_truncates_title():
     assert incident["name"] == "Dark Web Rule : " + "x" * 50 + "..."
 
 
-def test_create_incident_attachment_is_base64_string():
+def test_create_incident_content_in_description():
     converter = _converter()
     detail = {
         "notification": {
@@ -167,13 +166,10 @@ def test_create_incident_attachment_is_base64_string():
     }
 
     incident = _incident(converter.create_incident(notification_detail=detail))
-    attachment = incident["x_opencti_files"][0]
 
-    # x_opencti_files.data must be a base64 *string*, not bytes, so the STIX
-    # object serializes to valid JSON.
-    assert isinstance(attachment["data"], str)
-    decoded = base64.b64decode(attachment["data"]).decode("utf-8")
-    assert "Alert Metadata" in decoded
+    # Alert content is now stored in description (not x_opencti_files).
+    assert "Alert Metadata" in incident["description"]
+    assert incident.get("x_opencti_files") == []
 
 
 def test_create_incident_missing_highlights_does_not_crash():
