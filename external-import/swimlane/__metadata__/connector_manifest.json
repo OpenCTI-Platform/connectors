@@ -5,10 +5,10 @@
   "short_description": "Import Swimlane application records into OpenCTI as STIX Case-Incidents.",
   "logo": null,
   "use_cases": [
-    "SIEM & Analytics"
+    "SOAR"
   ],
-  "verified": true,
-  "last_verified_date": "2026-07-03",
+  "verified": false,
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=7.260701.0",
