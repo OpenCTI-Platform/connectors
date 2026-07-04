@@ -168,6 +168,7 @@ def test_create_incident_content_in_description():
     incident = _incident(converter.create_incident(notification_detail=detail))
     assert "Alert Metadata" in incident["description"]
 
+
 def test_create_incident_missing_highlights_does_not_crash():
     converter = _converter()
     detail = {
