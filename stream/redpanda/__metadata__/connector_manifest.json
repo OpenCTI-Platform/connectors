@@ -5,7 +5,7 @@
   "short_description": "Publish OpenCTI events (create/update/delete) to a Redpanda topic via the HTTP Proxy.",
   "logo": null,
   "use_cases": [
-    "SIEM & Analytics"
+    "SIEM and Analytics"
   ],
   "verified": false,
   "last_verified_date": null,
