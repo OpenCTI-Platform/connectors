@@ -20,6 +20,9 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
+      "default": [
+        "fortisiem"
+      ],
       "description": "The scope of the connector, e.g. 'flashpoint'.",
       "items": {
         "type": "string"
@@ -99,7 +102,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "FORTISIEM_INCIDENTS_API_BASE_URL",
     "FORTISIEM_INCIDENTS_USERNAME",
     "FORTISIEM_INCIDENTS_PASSWORD"

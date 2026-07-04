@@ -5,10 +5,11 @@
   "short_description": "Import FortiSIEM incidents into OpenCTI as STIX Incidents (bidirectional import side).",
   "logo": null,
   "use_cases": [
-    "SIEM & Analytics"
+    "Detection & Response Enablement",
+    "SIEM and Analytics"
   ],
-  "verified": true,
-  "last_verified_date": "2026-07-03",
+  "verified": false,
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=7.260701.0",

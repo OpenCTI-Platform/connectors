@@ -8,7 +8,7 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       # Common parameters for connectors of type EXTERNAL_IMPORT
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_SCOPE=fortisiem # mandatory
+      # - CONNECTOR_SCOPE=fortisiem # optional (default: 'fortisiem')
       # - CONNECTOR_NAME=FortiSIEM Incidents # optional (default: 'FortiSIEM Incidents')
       # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       # - CONNECTOR_DURATION_PERIOD=PT15M # optional (default: 'PT15M')

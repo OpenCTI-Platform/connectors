@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'FortiSIEM Incidents' # optional (default: 'FortiSIEM Incidents')
-  scope: 'fortisiem' # mandatory
+  scope: 'fortisiem' # optional (default: 'fortisiem')
   log_level: 'error' # optional (default: 'error')
   duration_period: 'PT15M' # optional (default: 'PT15M')
 
