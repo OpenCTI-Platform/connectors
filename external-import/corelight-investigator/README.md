@@ -40,7 +40,7 @@ detections mapped to MITRE ATT&CK. This connector imports those findings into Op
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 6.8.12
+- OpenCTI Platform >= 7.260701.0
 - A Corelight Investigator API key (read access to Detections and Alerts)
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
@@ -63,13 +63,14 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-| --------------- | ---------- | --------------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------- |
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter       | config.yml      | Docker environment variable | Default                 | Mandatory | Description                                                                              |
+| --------------- | --------------- | --------------------------- | ----------------------- | --------- | ---------------------------------------------------------------------------------------- |
+| Connector ID    | id              | `CONNECTOR_ID`              | /                       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT         | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
+| Connector Name  | name            | `CONNECTOR_NAME`            | Corelight Investigator  | No        | Name of the connector.                                                                   |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           | corelight-investigator  | No        | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | error                   | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT1H                    | No        | Interval in ISO-8601 format between two runs of the connector.                           |
 
 ### Connector extra parameters environment variables
 

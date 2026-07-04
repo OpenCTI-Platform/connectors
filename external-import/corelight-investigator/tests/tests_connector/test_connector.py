@@ -76,8 +76,22 @@ def test_process_message_sends_bundle_and_updates_state(connector):
 
     connector.process_message()
 
+    connector.helper.api.work.initiate_work.assert_called_once()
     connector.helper.send_stix2_bundle.assert_called_once()
     connector.helper.api.work.to_processed.assert_called_once()
+    saved_state = connector.helper.set_state.call_args[0][0]
+    assert "last_run" in saved_state
+
+
+def test_process_message_skips_work_when_no_data(connector):
+    connector.client.get_alerts.return_value = []
+
+    connector.process_message()
+
+    # no data -> no work is initiated and no bundle is sent, but state advances
+    connector.helper.api.work.initiate_work.assert_not_called()
+    connector.helper.send_stix2_bundle.assert_not_called()
+    connector.helper.api.work.to_processed.assert_not_called()
     saved_state = connector.helper.set_state.call_args[0][0]
     assert "last_run" in saved_state
 
@@ -89,19 +103,32 @@ def test_process_message_handles_api_error(connector):
 
     connector.helper.connector_logger.error.assert_called()
     connector.helper.send_stix2_bundle.assert_not_called()
-    # the initiated work must be finalized (in error) rather than left dangling
-    connector.helper.api.work.to_processed.assert_called_once()
-    assert connector.helper.api.work.to_processed.call_args.kwargs["in_error"] is True
+    # the error occurs while collecting data, before any work is initiated,
+    # so there is no dangling work to finalize
+    connector.helper.api.work.initiate_work.assert_not_called()
+    connector.helper.api.work.to_processed.assert_not_called()
 
 
-def test_process_message_finalizes_work_on_unexpected_error(connector):
+def test_process_message_handles_unexpected_error(connector):
     connector.client.get_alerts.side_effect = RuntimeError("kaboom")
 
     connector.process_message()  # must not raise
 
     connector.helper.connector_logger.error.assert_called()
     connector.helper.send_stix2_bundle.assert_not_called()
-    # an unexpected error must also finalize the initiated work (in error)
+    connector.helper.api.work.initiate_work.assert_not_called()
+    connector.helper.api.work.to_processed.assert_not_called()
+
+
+def test_process_message_finalizes_work_when_send_fails(connector):
+    connector.client.get_alerts.return_value = [ALERT]
+    connector.helper.send_stix2_bundle.side_effect = RuntimeError("send failed")
+
+    connector.process_message()  # must not raise
+
+    connector.helper.connector_logger.error.assert_called()
+    # a work initiated before the failure must be finalized (in error)
+    connector.helper.api.work.initiate_work.assert_called_once()
     connector.helper.api.work.to_processed.assert_called_once()
     assert connector.helper.api.work.to_processed.call_args.kwargs["in_error"] is True
 

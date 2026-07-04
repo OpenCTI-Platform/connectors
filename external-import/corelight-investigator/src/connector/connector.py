@@ -64,12 +64,14 @@ class CorelightInvestigatorConnector:
         try:
             now = datetime.now(timezone.utc)
             since = self._since()
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, "Corelight Investigator run"
-            )
 
+            # Only initiate a work when there is data to ingest, so empty runs
+            # do not clutter the OpenCTI jobs UI with zero-bundle works.
             stix_objects = self._collect_intelligence(since)
             if stix_objects:
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, "Corelight Investigator run"
+                )
                 bundle = self.helper.stix2_create_bundle(stix_objects)
                 self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, cleanup_inconsistent_bundle=True
@@ -78,9 +80,10 @@ class CorelightInvestigatorConnector:
             current_state = self.helper.get_state() or {}
             current_state["last_run"] = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
             self.helper.set_state(current_state)
-            self.helper.api.work.to_processed(
-                work_id, "Corelight Investigator connector successfully run"
-            )
+            if work_id:
+                self.helper.api.work.to_processed(
+                    work_id, "Corelight Investigator connector successfully run"
+                )
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
             sys.exit(0)
