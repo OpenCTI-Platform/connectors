@@ -5,7 +5,8 @@
   "short_description": "Push IOCs (IP addresses, domains and URLs) from OpenCTI to a Vectra AI threat feed in real time.",
   "logo": null,
   "use_cases": [
-    "Network Detection and Response"
+    "Detection & Response Enablement",
+    "Network Security"
   ],
   "verified": false,
   "last_verified_date": null,
