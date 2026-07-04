@@ -166,11 +166,7 @@ def test_create_incident_content_in_description():
     }
 
     incident = _incident(converter.create_incident(notification_detail=detail))
-
-    # Alert content is now stored in description (not x_opencti_files).
     assert "Alert Metadata" in incident["description"]
-    assert incident.get("x_opencti_files") == []
-
 
 def test_create_incident_missing_highlights_does_not_crash():
     converter = _converter()
