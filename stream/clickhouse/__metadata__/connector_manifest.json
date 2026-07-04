@@ -5,7 +5,7 @@
   "short_description": "Stream OpenCTI events (create/update/delete) to a ClickHouse table for analytics and hunting.",
   "logo": null,
   "use_cases": [
-    "SIEM & Analytics"
+    "SIEM and Analytics"
   ],
   "verified": false,
   "last_verified_date": null,
