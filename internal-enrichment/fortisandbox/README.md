@@ -49,7 +49,7 @@ and turns it into OpenCTI knowledge.
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 6.8.12
+- OpenCTI Platform >= 7.260701.0
 - A FortiSandbox instance reachable from the connector, and API credentials
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
@@ -102,7 +102,7 @@ Below are the parameters you'll need to set for the connector:
 ### Docker Deployment
 
 Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
+version of OpenCTI you're running. Example, `pycti==7.260701.0`. If you don't, it will take the latest version, but
 sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
@@ -143,14 +143,10 @@ python3 main.py
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
-
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
-
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+The connector is an internal-enrichment connector: it runs on demand. Open a `StixFile` or
+`Artifact` observable in the OpenCTI platform and trigger the enrichment from the
+`Enrichment` panel (or let it run automatically when `CONNECTOR_AUTO` is enabled). The
+connector is also playbook compatible and can be used as an enrichment step in playbooks.
 
 ## Behavior
 

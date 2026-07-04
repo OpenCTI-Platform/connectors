@@ -304,6 +304,22 @@ class FortisandboxConnector:
         self.stix_objects = stix_objects
         original_stix_objects = deepcopy(stix_objects)
 
+        if opencti_entity["entity_type"] not in ["StixFile", "Artifact"]:
+            # A missing event_type means the enrichment was triggered by a playbook:
+            # return the original bundle unchanged so the playbook can continue.
+            if not data.get("event_type"):
+                self._send_bundle(original_stix_objects)
+                message = (
+                    "Entity type is out of the connector scope, "
+                    "original bundle returned unchanged"
+                )
+                self.helper.connector_logger.info(f"[CONNECTOR] {message}")
+                return message
+            raise ValueError(
+                f"Failed to process observable, "
+                f"{opencti_entity['entity_type']} is not a supported entity type."
+            )
+
         tlp = "TLP:CLEAR"
         for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":

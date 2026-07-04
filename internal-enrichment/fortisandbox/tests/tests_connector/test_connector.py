@@ -117,6 +117,31 @@ def stub_connector(mock_opencti_connector_helper):
     return connector
 
 
+def test_process_message_out_of_scope_playbook_returns_original(
+    dummy_connector, file_message
+):
+    # No event_type in the message: the enrichment was triggered by a playbook,
+    # so an out-of-scope entity must get the original bundle back unchanged.
+    file_message["enrichment_entity"]["entity_type"] = "Url"
+
+    dummy_connector._process_message(file_message)
+
+    dummy_connector._search_hash.assert_not_called()
+    dummy_connector._create_knowledge.assert_not_called()
+    dummy_connector._send_bundle.assert_called_with(file_message["stix_objects"])
+
+
+def test_process_message_out_of_scope_manual_raises(dummy_connector, file_message):
+    # event_type present: manual enrichment of an unsupported entity type must fail.
+    file_message["enrichment_entity"]["entity_type"] = "Url"
+    file_message["event_type"] = "create"
+
+    with pytest.raises(ValueError, match="not a supported entity type"):
+        dummy_connector._process_message(file_message)
+
+    dummy_connector._send_bundle.assert_not_called()
+
+
 def test_process_message_ignores_entity_exceeding_max_tlp(
     dummy_connector, file_message
 ):

@@ -6,17 +6,16 @@
   "logo": null,
   "use_cases": [
     "Enrichment & Analysis",
-    "Malware Analysis",
-    "Sandbox"
+    "Malware Analysis and Sandbox"
   ],
-  "verified": true,
+  "verified": false,
   "last_verified_date": null,
   "playbook_supported": true,
   "max_confidence_level": 60,
-  "support_version": ">=6.8.12",
+  "support_version": ">=7.260701.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/fortisandbox",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-fortisandbox",
   "container_type": "INTERNAL_ENRICHMENT"

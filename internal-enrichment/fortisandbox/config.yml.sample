@@ -11,7 +11,7 @@ connector:
   auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
 
 fortisandbox:
-  api_base_url: 'https://fortisandbox.local' # FortiSandbox base URL (without the /jsonrpc suffix)
+  api_base_url: 'ChangeMe' # FortiSandbox base URL (without the /jsonrpc suffix), e.g. 'https://fortisandbox.local'
   username: 'ChangeMe'
   password: 'ChangeMe'
   api_version: '4.2.4' # optional, JSON-RPC API version (default: '4.2.4')
