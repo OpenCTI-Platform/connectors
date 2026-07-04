@@ -8,7 +8,7 @@ from connectors_sdk.models import (
     IPV6Address,
     Relationship,
 )
-from connectors_sdk.models.enums import HashAlgorithm
+from connectors_sdk.models.enums import HashAlgorithm, RelationshipType
 from connectors_sdk.models.reference import Reference
 from pycti import OpenCTIConnectorHelper
 
@@ -24,7 +24,7 @@ class IOCExtractorConnector:
         return stix_entity.get("description") or opencti_entity.get("description")
 
     @staticmethod
-    def _get_markings_from_entity(stix_entity: dict) -> list[Reference]:
+    def _get_markings_from_entity(stix_entity: dict) -> list[Reference] | None:
         """Extract marking references from the source entity."""
         marking_refs = stix_entity.get("object_marking_refs", [])
         return [Reference(id=ref) for ref in marking_refs] if marking_refs else None
@@ -68,8 +68,9 @@ class IOCExtractorConnector:
 
         return stix_objects, observable_ids
 
+    @staticmethod
     def _enrich_container_object_refs(
-        self, stix_entity: dict, stix_objects: list, observable_ids: list[str]
+        stix_entity: dict, stix_objects: list, observable_ids: list[str]
     ) -> list:
         """Add observable IDs to the Report's object_refs in the bundle."""
         # entity_type = stix_entity.get("type", "")
@@ -127,7 +128,7 @@ class IOCExtractorConnector:
             )
 
             # For Containers, add observables to object_refs
-            if "Container" in opencti_entity["parent_types"]:
+            if "Container" in opencti_entity.get("parent_types", []):
                 stix_entity = self._enrich_container_object_refs(
                     stix_entity, stix_objects, observable_ids
                 )
@@ -135,7 +136,7 @@ class IOCExtractorConnector:
                 for observable_id in observable_ids:
                     # Create related-to relationship
                     relationship = Relationship(
-                        type="related-to",
+                        type=RelationshipType.RELATED_TO,
                         source=Reference(id=observable_id),
                         target=stix_entity,
                     )
