@@ -1,4 +1,3 @@
-import base64
 from typing import Literal
 
 import pycti
