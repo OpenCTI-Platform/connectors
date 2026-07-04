@@ -5,7 +5,8 @@
   "short_description": "Push OpenCTI file-hash indicators to Trellix TIE reputations over OpenDXL.",
   "logo": null,
   "use_cases": [
-    "Endpoint Security"
+    "Endpoint Detection and Response",
+    "Detection & Response Enablement"
   ],
   "verified": false,
   "last_verified_date": null,
