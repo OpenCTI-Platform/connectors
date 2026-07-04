@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'CHANGEME'
+
+connector:
+  id: 'CHANGEME-UUID4'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'OSINT Industries'
+  scope: 'Email-Addr,Phone-Number,User-Account,Cryptocurrency-Wallet'
+  auto: false                 # set to true to enrich observables automatically
+  confidence_level: 60
+  log_level: 'info'
+  listen_protocol: 'AMQP'
+
+osint_industries:
+  api_key: 'CHANGEME'
+  base_url: 'https://api.osint.industries'
+  tlp_level: 'amber+strict'   # TLP applied to the produced objects
+  premium: false              # true queries more modules and consumes more credits
