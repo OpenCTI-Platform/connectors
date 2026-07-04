@@ -96,6 +96,18 @@ def test_process_message_passes_added_after_from_state(connector):
     )
 
 
+def test_process_message_skips_work_when_no_data(connector):
+    connector.client.get_objects.return_value = []
+
+    connector.process_message()
+
+    # No data: no work is initiated (avoids empty jobs), but state still advances.
+    connector.helper.api.work.initiate_work.assert_not_called()
+    connector.helper.send_stix2_bundle.assert_not_called()
+    connector.helper.api.work.to_processed.assert_not_called()
+    connector.helper.set_state.assert_called_once()
+
+
 def test_process_message_handles_api_error(connector):
     connector.client.get_objects.side_effect = Ctm360ThreatcoverAPIError("boom")
 
@@ -105,7 +117,21 @@ def test_process_message_handles_api_error(connector):
     connector.helper.send_stix2_bundle.assert_not_called()
     # State must NOT advance on error (so the next run retries instead of skipping).
     connector.helper.set_state.assert_not_called()
-    # The work item must be closed as failed, not left running.
+    # The error happened before any work was initiated, so there is nothing to close.
+    connector.helper.api.work.initiate_work.assert_not_called()
+    connector.helper.api.work.to_processed.assert_not_called()
+
+
+def test_process_message_closes_work_in_error_when_send_fails(connector):
+    connector.client.get_objects.return_value = [INDICATOR]
+    connector.helper.send_stix2_bundle.side_effect = RuntimeError("send failed")
+
+    connector.process_message()  # must not raise
+
+    connector.helper.connector_logger.error.assert_called()
+    # State must NOT advance on error (so the next run retries instead of skipping).
+    connector.helper.set_state.assert_not_called()
+    # The work item was initiated and must be closed as failed, not left running.
     connector.helper.api.work.to_processed.assert_called_once()
     assert (
         connector.helper.api.work.to_processed.call_args.kwargs.get("in_error") is True

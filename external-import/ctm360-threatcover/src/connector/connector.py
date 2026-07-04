@@ -64,12 +64,13 @@ class Ctm360ThreatcoverConnector:
             added_after = current_state.get("added_after")
             run_started = self._now_rfc3339()
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, "CTM360 ThreatCover run"
-            )
-
             stix_objects = self._collect_intelligence(added_after)
             if stix_objects:
+                # Only initiate a work when there is data to import, so empty
+                # runs do not create empty jobs on the platform.
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, "CTM360 ThreatCover run"
+                )
                 bundle = self.helper.stix2_create_bundle(stix_objects)
                 self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, cleanup_inconsistent_bundle=True
@@ -78,9 +79,10 @@ class Ctm360ThreatcoverConnector:
             current_state["added_after"] = run_started
             current_state["last_run"] = run_started
             self.helper.set_state(current_state)
-            self.helper.api.work.to_processed(
-                work_id, "CTM360 ThreatCover connector successfully run"
-            )
+            if work_id:
+                self.helper.api.work.to_processed(
+                    work_id, "CTM360 ThreatCover connector successfully run"
+                )
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
             sys.exit(0)

@@ -11,7 +11,7 @@ connector:
   duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 
 ctm360_threatcover:
-  discovery_url: 'https://<tenant>.ctm360.com/taxii2/' # CTM360 ThreatCover TAXII discovery URL
+  discovery_url: 'ChangeMe' # CTM360 ThreatCover TAXII discovery URL (e.g. https://<tenant>.ctm360.com/taxii2/)
   collection: 'ChangeMe' # the ThreatCover 'Observables' TAXII collection id or title
   v21: true # optional, use TAXII 2.1 (default: true)
   use_token: true # optional, authenticate with a token (default: true)

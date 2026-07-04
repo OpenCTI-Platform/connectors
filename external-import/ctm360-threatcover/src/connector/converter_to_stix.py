@@ -92,7 +92,7 @@ class ConverterToStix:
             # ThreatCover author; SCOs are passed through in their native form (no
             # author ref) so OpenCTI keeps them as-is.
             if "created" in enriched and "created_by_ref" not in enriched:
-                enriched["created_by_ref"] = author_id
+                enriched = dict(enriched, created_by_ref=author_id)
 
             results.append(enriched)
 
