@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime, timezone
+from urllib.parse import urljoin
 
 import stix2
 from connector.settings import ConnectorSettings
@@ -150,9 +151,8 @@ class PaloaltoWildfireConnector:
         if declared_size is not None and int(declared_size) > self.max_file_size:
             return None, None, f"File '{file_name}' exceeds the {max_mb} MB limit."
 
-        api_url = self.helper.api.api_url.replace("/graphql", "")
-        file_uri = f"{api_url}/storage/get/{file_id}"
-        content = self.helper.api.fetch_opencti_file(file_uri, True)
+        file_url = urljoin(str(self.config.opencti.url), f"storage/get/{file_id}")
+        content = self.helper.api.fetch_opencti_file(file_url, True)
         if content is None:
             return None, None, f"Failed to download file '{file_name}' from OpenCTI."
         if len(content) == 0:
@@ -319,6 +319,21 @@ class PaloaltoWildfireConnector:
                 message = "Do not send any data, TLP of the observable is greater than MAX TLP"
                 self.helper.connector_logger.info(f"[CONNECTOR] {message}")
                 return message
+
+            if opencti_entity["entity_type"] not in ["StixFile", "Artifact"]:
+                if not data.get("event_type"):
+                    # Entity bundle passed through a playbook: return the original
+                    # bundle unchanged when the entity is not in the connector scope.
+                    self._send_bundle(original_stix_objects)
+                    message = (
+                        "Observable not in connector scope, original bundle returned"
+                    )
+                    self.helper.connector_logger.info(f"[CONNECTOR] {message}")
+                    return message
+                raise ValueError(
+                    f"Failed to process observable, {opencti_entity['entity_type']} "
+                    "is not a supported entity type."
+                )
 
             enriched_objects = self._process_observable(stix_entity, opencti_entity)
             if enriched_objects:

@@ -176,6 +176,29 @@ def test_process_message_submits_when_enabled(submit_connector, file_message):
     submit_connector._create_knowledge.assert_called_once()
 
 
+def test_process_message_out_of_scope_returns_original_bundle(
+    dummy_connector, file_message
+):
+    # Playbook trigger (no event_type): the original bundle must be returned
+    # unchanged when the entity is not in the connector scope.
+    file_message["enrichment_entity"]["entity_type"] = "Url"
+
+    message = dummy_connector._process_message(file_message)
+
+    assert "not in connector scope" in message
+    dummy_connector._search_hash.assert_not_called()
+    dummy_connector._send_bundle.assert_called_with(file_message["stix_objects"])
+
+
+def test_process_message_out_of_scope_event_raises(dummy_connector, file_message):
+    # Direct enrichment event (event_type set) on an unsupported entity type.
+    file_message["enrichment_entity"]["entity_type"] = "Url"
+    file_message["event_type"] = "INTERNAL_ENRICHMENT"
+
+    with pytest.raises(ValueError, match="not a supported entity type"):
+        dummy_connector._process_message(file_message)
+
+
 def test_create_knowledge_file(stub_connector, file_message):
     data = file_message
     stub_connector.stix_objects = data["stix_objects"]
@@ -285,7 +308,6 @@ def test_download_file_rejects_declared_oversize(stub_connector):
 
 
 def test_download_file_rejects_empty(stub_connector):
-    stub_connector.helper.api.api_url = "http://localhost:8080/graphql"
     stub_connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"")
     entity = {"importFiles": [{"id": "f1", "name": "empty.bin"}]}
 
@@ -295,7 +317,6 @@ def test_download_file_rejects_empty(stub_connector):
 
 
 def test_download_file_success(stub_connector):
-    stub_connector.helper.api.api_url = "http://localhost:8080/graphql"
     stub_connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"payload")
     entity = {"importFiles": [{"id": "f1", "name": "malware.exe"}]}
 
@@ -303,10 +324,11 @@ def test_download_file_success(stub_connector):
     assert error is None
     assert name == "malware.exe"
     assert content == b"payload"
+    file_url = stub_connector.helper.api.fetch_opencti_file.call_args[0][0]
+    assert file_url == "http://localhost:8080/storage/get/f1"
 
 
 def test_submit_returns_verdict(stub_connector):
-    stub_connector.helper.api.api_url = "http://localhost:8080/graphql"
     stub_connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"data")
     stub_connector.client.submit_file = MagicMock(return_value="sha256-1")
     stub_connector.client.poll_verdict = MagicMock(return_value=1)
