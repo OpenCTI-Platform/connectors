@@ -324,12 +324,10 @@ class ConverterToStix:
         incident_labels = []
         inc_sco_sdo_refs = []
         attachment_files = []
-        title = None
 
         if item_type == "typosquatting_domain":
             typosquatting = notification.get("typosquatting") or {}
             title = typosquatting.get("unicode_format")
-            inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_typosquatting_content(notification)
             for domain_value in (
                 typosquatting.get("unicode_format"),
@@ -350,7 +348,6 @@ class ConverterToStix:
 
         elif item_type == "exposed_data":
             title = (notification.get("breach_summary") or {}).get("name")
-            inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_exposed_data_content(notification_detail)
             for item in (notification_detail.get("breach_details") or {}).get(
                 "items", []
@@ -417,17 +414,14 @@ class ConverterToStix:
 
         elif item_type == "reply":
             title = self._extract_highlight_title(notification)
-            inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_reply_content(notification_detail)
 
         elif item_type == "post":
             title = self._extract_highlight_title(notification)
-            inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_post_content(notification_detail)
 
         elif item_type == "file":
             title = self._extract_highlight_title(notification)
-            inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_file_content(notification_detail)
         else:
             # Unsupported types are expected and skipped, so log at warning level
@@ -444,23 +438,11 @@ class ConverterToStix:
         # Create the incident
         rule_name = notification.get("rule_name") or "CrowdStrike Recon"
         incident_name = f"{rule_name} : {title or '--'}"
-        alert_detail_bytes = alert_detail.encode("utf-8")
-        # x_opencti_files.data expects a base64-encoded *string*, so decode the
-        # bytes returned by b64encode before assigning it to the attachment.
-        base64_data = base64.b64encode(alert_detail_bytes).decode("utf-8")
-        attachment_files.append(
-            {
-                "name": "alert.md",
-                "data": base64_data,
-                "mime_type": "text/markdown",
-                "no_trigger_import": False,
-            }
-        )
 
         stix_incident = stix2.Incident(
             id=Incident.generate_id(incident_name, incident_date),
             name=incident_name,
-            description=inc_description,
+            description=alert_detail,
             created=incident_date,
             first_seen=incident_date,
             object_marking_refs=[self.tlp_marking.id],

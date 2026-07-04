@@ -1,8 +1,8 @@
 # OpenCTI CrowdStrike Recon Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
-| Draft  | -    | -       |
+| Status    | Date | Comment |
+|-----------|------|---------|
+| Community | -    | -       |
 
 The OpenCTI CrowdStrike Recon connector imports alerts from the CrowdStrike Falcon **Recon / Exposure Monitoring** module into OpenCTI as **Incidents**. It monitors exposure notifications such as typosquatting domains, exposed credentials, dark web posts, and file leaks.
 
