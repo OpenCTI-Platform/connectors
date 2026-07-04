@@ -5,10 +5,11 @@
   "short_description": "Sync IPv4/IPv6 IOCs from OpenCTI to a FortiEDR IP Set in real time.",
   "logo": null,
   "use_cases": [
-    "EDR"
+    "Endpoint Detection and Response",
+    "Detection & Response Enablement"
   ],
-  "verified": true,
-  "last_verified_date": "2026-07-03",
+  "verified": false,
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=7.260701.0",
