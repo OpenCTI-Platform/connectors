@@ -3,7 +3,7 @@
   "slug": "fortisiem",
   "description": "The OpenCTI FortiSIEM connector synchronises indicators of compromise from OpenCTI to a FortiSIEM Watch List in real time. Leveraging OpenCTI live streams, IPv4/IPv6 addresses, domain names, URLs and file hashes are added as Watch List entries through the FortiSIEM REST API, so rules and analytics can match events against the threat intelligence curated in OpenCTI. Entries expire automatically through the configured age-out.",
   "short_description": "Push IOCs from OpenCTI to a FortiSIEM Watch List in real time.",
-  "logo": null,
+  "logo": "stream/fortisiem/__metadata__/logo.png",
   "use_cases": [
     "Detection & Response Enablement",
     "SIEM and Analytics"

@@ -3,7 +3,7 @@
   "slug": "clickhouse",
   "description": "The OpenCTI ClickHouse connector streams OpenCTI knowledge to a ClickHouse database in real time. Leveraging OpenCTI live streams, every create, update and delete event is written to a ClickHouse table (created automatically) so that threat intelligence can be correlated, hunted and visualised alongside detection telemetry in a high-performance analytics backend.",
   "short_description": "Stream OpenCTI events (create/update/delete) to a ClickHouse table for analytics and hunting.",
-  "logo": null,
+  "logo": "stream/clickhouse/__metadata__/logo.png",
   "use_cases": [
     "SIEM and Analytics"
   ],
