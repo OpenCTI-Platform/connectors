@@ -22,7 +22,7 @@ def mock_environment(monkeypatch):
     monkeypatch.setenv("OPENCTI_TOKEN", "changeme")
     monkeypatch.setenv("CONNECTOR_ID", "connector-poc--uid")
     monkeypatch.setenv("CONNECTOR_NAME", "Test Connector")
-    monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+    monkeypatch.setenv("CONNECTOR_SCOPE", "scope1,scope2")
     monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
     monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "error")
 

@@ -36,7 +36,7 @@ class TestMigrateDeprecation:
         monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
         monkeypatch.setenv("CONNECTOR_ID", "test-id")
         monkeypatch.setenv("CONNECTOR_NAME", "Test")
-        monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+        monkeypatch.setenv("CONNECTOR_SCOPE", "scope1,scope2")
         monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
         monkeypatch.setenv("CONNECTOR_OLD_FIELD", "old_value")
 
@@ -73,7 +73,7 @@ class TestMigrateDeprecation:
         monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
         monkeypatch.setenv("CONNECTOR_ID", "test-id")
         monkeypatch.setenv("CONNECTOR_NAME", "Test")
-        monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+        monkeypatch.setenv("CONNECTOR_SCOPE", "scope1,scope2")
         monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
 
         # When: Settings initialization evaluates migration metadata
@@ -108,7 +108,7 @@ class TestMigrateDeprecation:
         monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
         monkeypatch.setenv("CONNECTOR_ID", "test-id")
         monkeypatch.setenv("CONNECTOR_NAME", "Test")
-        monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+        monkeypatch.setenv("CONNECTOR_SCOPE", "scope1,scope2")
         monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
         monkeypatch.setenv("CONNECTOR_OLD_VALUE", "5")
 
@@ -139,7 +139,7 @@ class TestMigrateDeprecation:
         monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
         monkeypatch.setenv("CONNECTOR_ID", "test-id")
         monkeypatch.setenv("CONNECTOR_NAME", "Test")
-        monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+        monkeypatch.setenv("CONNECTOR_SCOPE", "scope1,scope2")
         monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
 
         # When: TestSettings initialization evaluates namespace migration metadata
@@ -171,7 +171,7 @@ class TestMigrateDeprecation:
         monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
         monkeypatch.setenv("OLD_CONNECTOR_ID", "test-id")
         monkeypatch.setenv("OLD_CONNECTOR_NAME", "Test")
-        monkeypatch.setenv("OLD_CONNECTOR_SCOPE", "test")
+        monkeypatch.setenv("OLD_CONNECTOR_SCOPE", "scope1,scope2")
         monkeypatch.setenv("OLD_CONNECTOR_DURATION_PERIOD", "PT5M")
 
         # When: TestSettings initialization validates deprecated namespace migration
@@ -203,7 +203,7 @@ class TestMigrateDeprecation:
         monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
         monkeypatch.setenv("CONNECTOR_ID", "test-id")
         monkeypatch.setenv("CONNECTOR_NAME", "Test")
-        monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+        monkeypatch.setenv("CONNECTOR_SCOPE", "scope1,scope2")
         monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
         monkeypatch.setenv("CONNECTOR_SPECIAL_FIELD", "special_value")
 
@@ -237,7 +237,7 @@ class TestMigrateDeprecation:
         monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
         monkeypatch.setenv("CONNECTOR_ID", "test-id")
         monkeypatch.setenv("CONNECTOR_NAME", "Test")
-        monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+        monkeypatch.setenv("CONNECTOR_SCOPE", "scope1,scope2")
         monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
         monkeypatch.setenv("CONNECTOR_OLD_FIELD", "migrated_value")
 

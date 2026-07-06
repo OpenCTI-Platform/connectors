@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-from types import SimpleNamespace
 
 import freezegun
 import pytest
@@ -8,7 +7,6 @@ from connectors_sdk.settings.annotated_types import (
     ListFromString,
     parse_comma_separated_list,
     parse_iso_string,
-    serialize_list_of_strings,
 )
 from pydantic import TypeAdapter
 
@@ -45,20 +43,6 @@ def test_parse_comma_separated_list_passthrough() -> None:
     assert parse_comma_separated_list(["a", "b"]) == ["a", "b"]
 
 
-def test_serialize_list_of_strings_handles_pycti_mode() -> None:
-    info = SimpleNamespace(context={"mode": "pycti"})
-    assert serialize_list_of_strings(["a", "b"], info) == "a,b"
-
-
-@pytest.mark.parametrize("context", [None, {}, {"mode": "other"}])
-def test_serialize_list_of_strings_handles_non_pycti_modes(
-    context: dict[str, str] | None,
-) -> None:
-    info = SimpleNamespace(context=context)
-    value = ["a", "b"]
-    assert serialize_list_of_strings(value, info) == value
-
-
 def test_list_from_string_accepts_string_input() -> None:
     value = TypeAdapter(ListFromString).validate_python("a,b,c")
     assert value == ["a", "b", "c"]
@@ -72,30 +56,6 @@ def test_list_from_string_accepts_list_input() -> None:
 def test_list_from_string_dumps_valid_json() -> None:
     value = TypeAdapter(ListFromString).dump_python(["a", "b"], mode="json")
     assert value == ["a", "b"]
-
-
-@pytest.mark.parametrize(
-    "input,expected",
-    [
-        pytest.param(
-            ["a", "b", "c"],
-            "a,b,c",
-            id="list_of_strings",
-        ),
-        pytest.param(
-            [],
-            "",
-            id="empty_list",
-        ),  # empty list -> empty string
-    ],
-)
-def test_list_from_string_dumps_valid_json_in_pycti_mode(
-    input: list[str], expected: str
-) -> None:
-    value = TypeAdapter(ListFromString).dump_python(
-        input, mode="json", context={"mode": "pycti"}
-    )
-    assert value == expected
 
 
 # DatetimeFromIsoString
