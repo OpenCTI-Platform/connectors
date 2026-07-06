@@ -163,8 +163,8 @@ jobs:
             VERSION="${{ github.ref_name }}"
             VERSION="${VERSION##*/}"
 
-            if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-              echo "::error::Invalid version '${VERSION}' from tag '${{ github.ref_name }}'. Expected numeric version (e.g. 7.260630.0)"
+            if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]{6}\.[0-9]+$'; then
+              echo "::error::Invalid CalVer version '${VERSION}' from tag '${{ github.ref_name }}'. Expected format: MAJOR.YYMMDD.PATCH (e.g. 7.260630.0)"
               exit 1
             fi
 
