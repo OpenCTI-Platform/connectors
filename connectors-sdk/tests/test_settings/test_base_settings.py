@@ -123,7 +123,7 @@ def test_base_connector_settings_should_validate_settings_from_dot_env_file(
     assert settings.opencti.token == SecretStr("changeme")
     assert settings.connector.id == "connector-poc--uid"
     assert settings.connector.name == "Test Connector"
-    assert settings.connector.scope == ["test"]
+    assert settings.connector.scope == ["scope1", "scope2"]
     assert settings.connector.log_level == "debug"
 
 
@@ -144,7 +144,28 @@ def test_base_connector_settings_should_validate_settings_from_os_environ(
     assert settings.opencti.token == SecretStr("changeme")
     assert settings.connector.id == "connector-poc--uid"
     assert settings.connector.name == "Test Connector"
-    assert settings.connector.scope == ["test"]
+    assert settings.connector.scope == ["scope1", "scope2"]
+    assert settings.connector.log_level == "debug"
+
+
+def test_base_connector_settings_should_validate_settings_from_config_yaml_file(
+    mock_config_yml_file_presence,
+):
+    """
+    Test that `BaseConnectorSettings` casts and validates config vars in `config.yml`.
+    For testing purpose, the path of `config.yml` file is `tests/test_settings/data/config.test.yml`.
+    """
+
+    # Given: Valid connector settings are provided through config.yml fixture
+    # When: BaseConnectorSettings is instantiated
+    settings = BaseConnectorSettings()
+
+    # Then: Values are validated and cast to expected runtime types
+    assert settings.opencti.url == HttpUrl("http://localhost:8080/")
+    assert settings.opencti.token == SecretStr("changeme")
+    assert settings.connector.id == "connector-poc--uid"
+    assert settings.connector.name == "Test Connector"
+    assert settings.connector.scope == ["scope1", "scope2"]
     assert settings.connector.log_level == "debug"
 
 
@@ -171,19 +192,20 @@ def test_base_connector_settings_should_provide_helper_config(mock_environment):
 
     # Then: The regular JSON dump of settings does not expose the secret token value
     assert json_dump["opencti"]["token"] == "**********"
+    assert json_dump["connector"]["scope"] == ["scope1", "scope2"]
 
     # Then: The resulting helper config dict matches expected structure and values
     assert opencti_dict == {
+        "opencti": {
+            "token": "changeme",  # clear token
+            "url": "http://localhost:8080/",
+        },
         "connector": {
             "duration_period": "PT5M",
             "id": "connector-poc--uid",
             "log_level": "debug",
             "name": "Test Connector",
-            "scope": "test",
-        },
-        "opencti": {
-            "token": "changeme",
-            "url": "http://localhost:8080/",
+            "scope": "scope1,scope2",  # comma-separated string
         },
     }
 

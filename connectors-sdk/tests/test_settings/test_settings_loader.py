@@ -7,7 +7,6 @@ from connectors_sdk.settings.base_settings import (
     BaseConnectorSettings,
     _SettingsLoader,
 )
-from pydantic import HttpUrl
 
 
 def test_settings_loader_should_get_connector_main_path(mock_main_path):
@@ -118,7 +117,7 @@ def test_settings_loader_should_parse_config_yml_file(mock_config_yml_file_prese
             "name": "Test Connector",
             "duration_period": "PT5M",
             "log_level": "debug",
-            "scope": "test",
+            "scope": "scope1,scope2",
         },
     }
 
@@ -142,7 +141,7 @@ def test_settings_loader_should_parse_dot_env_file(mock_dot_env_file_presence):
         "connector_name": "Test Connector",
         "connector_duration_period": "PT5M",
         "connector_log_level": "debug",
-        "connector_scope": "test",
+        "connector_scope": "scope1,scope2",
     }
 
 
@@ -180,7 +179,7 @@ def test_settings_loader_should_parse_config_yml_from_model(
     assert settings_dict["opencti"]["token"] == "changeme"
     assert settings_dict["connector"]["id"] == "connector-poc--uid"
     assert settings_dict["connector"]["name"] == "Test Connector"
-    assert settings_dict["connector"]["scope"] == "test"
+    assert settings_dict["connector"]["scope"] == "scope1,scope2"
     assert settings_dict["connector"]["log_level"] == "debug"
 
 
@@ -201,7 +200,7 @@ def test_settings_loader_should_parse_dot_env_from_model(mock_dot_env_file_prese
     assert settings_dict["opencti"]["token"] == "changeme"
     assert settings_dict["connector"]["id"] == "connector-poc--uid"
     assert settings_dict["connector"]["name"] == "Test Connector"
-    assert settings_dict["connector"]["scope"] == "test"
+    assert settings_dict["connector"]["scope"] == "scope1,scope2"
     assert settings_dict["connector"]["log_level"] == "debug"
 
 
@@ -222,26 +221,5 @@ def test_settings_loader_should_parse_os_environ_from_model(mock_environment):
     assert settings_dict["opencti"]["token"] == "changeme"
     assert settings_dict["connector"]["id"] == "connector-poc--uid"
     assert settings_dict["connector"]["name"] == "Test Connector"
-    assert settings_dict["connector"]["scope"] == "test"
+    assert settings_dict["connector"]["scope"] == "scope1,scope2"
     assert settings_dict["connector"]["log_level"] == "debug"
-
-
-def test_base_connector_settings_should_validate_settings_from_config_yaml_file(
-    mock_config_yml_file_presence,
-):
-    """
-    Test that `BaseConnectorSettings` casts and validates config vars in `config.yml`.
-    For testing purpose, the path of `config.yml` file is `tests/test_settings/data/config.test.yml`.
-    """
-
-    # Given: Valid connector settings are provided through config.yml fixture
-    # When: BaseConnectorSettings is instantiated
-    settings = BaseConnectorSettings()
-
-    # Then: Values are validated and cast to expected runtime types
-    assert settings.opencti.url == HttpUrl("http://localhost:8080/")
-    assert settings.opencti.token == "changeme"
-    assert settings.connector.id == "connector-poc--uid"
-    assert settings.connector.name == "Test Connector"
-    assert settings.connector.scope == ["test"]
-    assert settings.connector.log_level == "debug"
