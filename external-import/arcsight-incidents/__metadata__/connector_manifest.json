@@ -3,7 +3,7 @@
   "slug": "arcsight-incidents",
   "description": "The OpenCTI ArcSight Incidents connector imports cases and their security events from ArcSight ESM into OpenCTI. It periodically fetches cases through the ESM Service Layer REST API (CaseService), resolves the referenced security events (SecurityEventService), converts each event (a detection) to a STIX 2.1 Incident, and converts the case (a case-management artifact) to a STIX 2.1 Case-Incident that references those Incidents through its object_refs. Paired with the ArcSight stream connector (which pushes IOCs to ESM Active Lists), it provides a bidirectional integration.",
   "short_description": "Import ArcSight ESM cases (Case-Incidents) and their events (Incidents) into OpenCTI (bidirectional import side).",
-  "logo": null,
+  "logo": "external-import/arcsight-incidents/__metadata__/logo.png",
   "use_cases": [
     "Detection & Response Enablement",
     "SIEM and Analytics"

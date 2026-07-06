@@ -3,7 +3,7 @@
   "slug": "swimlane",
   "description": "The OpenCTI Swimlane connector imports records from a Swimlane application into OpenCTI as STIX Case-Incidents. It periodically fetches records through the Swimlane REST API and converts them to STIX 2.1 Case-Incidents (with timestamps and an external reference), since Swimlane is a case-management (SOAR) platform, so SOC cases managed in Swimlane can be correlated and enriched with the threat intelligence curated in OpenCTI.",
   "short_description": "Import Swimlane application records into OpenCTI as STIX Case-Incidents.",
-  "logo": null,
+  "logo": "external-import/swimlane/__metadata__/logo.png",
   "use_cases": [
     "SOAR",
     "Incident Response & Ticketing"
