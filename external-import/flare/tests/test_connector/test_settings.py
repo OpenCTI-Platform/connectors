@@ -102,7 +102,7 @@ class TestConnectorSettings:  # pylint: disable=redefined-outer-name,unused-argu
         settings = ConnectorSettings()
         config = settings.to_helper_config()
         assert config["opencti"]["url"] == str(settings.opencti.url)
-        assert config["opencti"]["token"] == settings.opencti.token
+        assert config["opencti"]["token"] == settings.opencti.token.get_secret_value()
         assert config["connector"]["id"] == settings.connector.id
         assert config["connector"]["type"] == "EXTERNAL_IMPORT"
         assert config["connector"]["name"] == settings.connector.name
