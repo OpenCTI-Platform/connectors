@@ -124,6 +124,7 @@ jobs:
       # always exits 0 for them.
       - name: Run connector-linter
         run: |
+          set -o pipefail
           exit_code=0
           : > annotations.txt
           while IFS= read -r connector_path; do
@@ -176,7 +177,6 @@ jobs:
         with:
           pattern: vclint-annotations-*
           path: annotations
-          merge-multiple: true
 
       - name: Build error list
         id: build-errors
@@ -197,7 +197,7 @@ jobs:
               url="https://github.com/${repo}/blob/${sha}/${file}#L${lineno}"
               errors="${errors}- **${code}**: ${msg} ([${file}:${lineno}](${url}))\n"
               count=$((count + 1))
-            done < <(grep -h '^::error ' annotations/*.txt 2>/dev/null || true)
+            done < <(grep -h '^::error ' annotations/*/annotations.txt 2>/dev/null || true)
           fi
 
           echo "count=$count" >> "$GITHUB_OUTPUT"
@@ -263,11 +263,12 @@ jobs:
             }
 
   # Newly-added connectors are not yet "verified" or "manager_supported", so
-  # they are skipped by the `vclint` job above (which is also
-  # continue-on-error and therefore non-blocking). This job enforces VC305
-  # (connectors-sdk BaseConnectorSettings) as a hard, blocking requirement for
-  # any connector introduced for the first time in this PR, so new code never
-  # lands using the legacy get_config_variable() pattern.
+  # they are skipped by the `vclint` job above (which only targets eligible
+  # connectors and is blocking only for the "verified-with-date" subset). This
+  # job enforces VC305 (connectors-sdk BaseConnectorSettings) as a hard,
+  # blocking requirement for any connector introduced for the first time in
+  # this PR, so new code never lands using the legacy get_config_variable()
+  # pattern.
   vclint-new-connector-settings:
     name: VC305 (new connector) ${{ matrix.name }}
     needs:

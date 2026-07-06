@@ -88,7 +88,12 @@ def main() -> None:
         return
 
     entries = common.build_batched_matrix(
-        filtered, make_entry, type_of=lambda p: p.parts[0] if p.parts else "unknown"
+        filtered,
+        make_entry,
+        type_of=lambda p: (
+            f"{p.parts[0] if p.parts else 'unknown'}:"
+            f"{'verified' if common.is_verified(common.load_manifest(p)) else 'manager'}"
+        ),
     )
     print(f"Matrix jobs: {len(entries)}")
     common.write_output("has_connectors", "true")
