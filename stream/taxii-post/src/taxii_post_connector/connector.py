@@ -118,7 +118,11 @@ class TaxiiPostConnector:
                     url,
                     headers=headers,
                     auth=(
-                        self.config.login,
+                        (
+                            self.config.login.get_secret_value()
+                            if self.config.login
+                            else None
+                        ),
                         (
                             self.config.password.get_secret_value()
                             if self.config.password
