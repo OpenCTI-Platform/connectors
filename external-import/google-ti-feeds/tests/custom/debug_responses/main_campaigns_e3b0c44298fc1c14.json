@@ -56,8 +56,28 @@
           "domains_count": 1,
           "malware_roles": [],
           "field_sources": [],
-          "recent_activity_summary": [7, 7, 7, 14, 3, 2, 7, 6, 3, 6, 4, 3, 3, 5],
-          "targeted_regions": ["US", "AU", "BE", "CA"],
+          "recent_activity_summary": [
+            7,
+            7,
+            7,
+            14,
+            3,
+            2,
+            7,
+            6,
+            3,
+            6,
+            4,
+            3,
+            3,
+            5
+          ],
+          "targeted_regions": [
+            "US",
+            "AU",
+            "BE",
+            "CA"
+          ],
           "targeted_regions_hierarchy": [
             {
               "region": "Oceania",
@@ -229,10 +249,10 @@
           ],
           "campaign_type": "GLOBAL",
           "counters": {
-            "files": 0,
+            "files": 1,
             "domains": 1,
             "ip_addresses": 27,
-            "urls": 0,
+            "urls": 1,
             "iocs": 28,
             "subscribers": 1,
             "attack_techniques": 106
@@ -255,7 +275,9 @@
           "workarounds": [],
           "first_seen": 1692648309,
           "private": true,
-          "alt_names": ["GLOBAL.24.007"],
+          "alt_names": [
+            "GLOBAL.24.007"
+          ],
           "vendor_fix_references": [],
           "threat_scape": [],
           "recent_activity_relative_change": 0.14925373134328357,
