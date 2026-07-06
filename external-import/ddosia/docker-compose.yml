@@ -13,7 +13,7 @@ services:
       - CONNECTOR_SCOPE=ddosia
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=1h
-      - DDOSIA_API_BASE_URL=http://api.witha.name
+      - DDOSIA_API_BASE_URL=https://witha.name
       - DDOSIA_TLP_LEVEL=green
       - DDOSIA_IMPORT_START_TIMESTAMP=null
     volumes:

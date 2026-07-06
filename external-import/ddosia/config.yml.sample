@@ -10,6 +10,6 @@ connector:
   duration_period: 1h
 
 ddosia:
-  api_base_url: http://api.witha.name
+  api_base_url: https://witha.name
   tlp_level: green
   import_start_timestamp: null # 0 for all history, null for latest only
