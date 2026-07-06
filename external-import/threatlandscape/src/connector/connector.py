@@ -81,7 +81,7 @@ class ThreatLandscapeConnector:
         work_id = self.helper.api.work.initiate_work(self.helper.connect_id, work_label)
         self.helper.connector_logger.info(
             "Sending STIX bundle to OpenCTI",
-            {"work_id": work_id, "objects_count": len(stix_objects)},
+            meta={"work_id": work_id, "objects_count": len(stix_objects)},
         )
 
         bundle = self.helper.stix2_create_bundle(stix_objects)
@@ -153,7 +153,7 @@ class ThreatLandscapeConnector:
             except requests.HTTPError as err:
                 self.helper.connector_logger.error(
                     "API request failed; aborting run",
-                    {"error": str(err), "offset": offset},
+                    meta={"error": str(err), "offset": offset},
                 )
                 raise
 
@@ -195,7 +195,7 @@ class ThreatLandscapeConnector:
 
         self.helper.connector_logger.info(
             "Import complete",
-            {"total_objects_sent": total_objects_sent, "max_seq_id": max_seq_id},
+            meta={"total_objects_sent": total_objects_sent, "max_seq_id": max_seq_id},
         )
 
         return max_seq_id
@@ -213,7 +213,7 @@ class ThreatLandscapeConnector:
         """
         self.helper.connector_logger.info(
             "Starting connector run",
-            {"connector_name": self.helper.connect_name},
+            meta={"connector_name": self.helper.connect_name},
         )
 
         try:
@@ -227,7 +227,7 @@ class ThreatLandscapeConnector:
                 since_date = self._first_run_since_date()
                 self.helper.connector_logger.info(
                     "First run — fetching from date",
-                    {"feed": feed, "since_date": since_date},
+                    meta={"feed": feed, "since_date": since_date},
                 )
                 max_seq_id = self._collect_and_send(
                     since_seq_id=None, since_date=since_date
@@ -235,7 +235,7 @@ class ThreatLandscapeConnector:
             else:
                 self.helper.connector_logger.info(
                     "Incremental run — fetching after cursor",
-                    {"feed": feed, "last_seq_id": last_seq_id},
+                    meta={"feed": feed, "last_seq_id": last_seq_id},
                 )
                 max_seq_id = self._collect_and_send(
                     since_seq_id=last_seq_id, since_date=None
@@ -252,7 +252,7 @@ class ThreatLandscapeConnector:
                 }
                 self.helper.set_state(new_state)
                 self.helper.connector_logger.info(
-                    "State updated", {state_key: max_seq_id}
+                    "State updated", meta={state_key: max_seq_id}
                 )
             else:
                 self.helper.connector_logger.info("No new data found")
@@ -263,7 +263,7 @@ class ThreatLandscapeConnector:
 
         except Exception as err:
             self.helper.connector_logger.error(
-                "Connector run failed", {"error": str(err)}
+                "Connector run failed", meta={"error": str(err)}
             )
             raise
 

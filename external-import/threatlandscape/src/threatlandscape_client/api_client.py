@@ -50,10 +50,20 @@ class ThreatLandscapeClient:
             response = self._session.get(url, params=params, timeout=timeout)
             if response.status_code != 429:
                 return response
-            retry_after = int(response.headers.get("Retry-After", backoff))
+
+            retry_after_header = response.headers.get("Retry-After", str(backoff))
+            try:
+                retry_after = int(retry_after_header)
+            except (TypeError, ValueError):
+                retry_after = backoff
+
             self.helper.connector_logger.warning(
                 "Rate limited (429); retrying after delay",
-                {"retry_after_seconds": retry_after, "attempt": attempt + 1},
+                meta={
+                    "retry_after_seconds": retry_after,
+                    "attempt": attempt + 1,
+                    "status_code": response.status_code,
+                },
             )
             time.sleep(retry_after)
             backoff = min(backoff * 2, 120)
@@ -91,6 +101,9 @@ class ThreatLandscapeClient:
         Raises:
             requests.HTTPError: On any non-2xx response.
         """
+        if (since_seq_id is None) == (since_date is None):
+            raise ValueError("Provide exactly one of since_seq_id or since_date")
+
         params: dict = {
             "select": "seq_id,stix_bundle",
             "order": "seq_id.asc",
@@ -100,7 +113,7 @@ class ThreatLandscapeClient:
 
         if since_seq_id is not None:
             params["seq_id"] = f"gt.{since_seq_id}"
-        elif since_date is not None:
+        else:
             params["stix_published_at"] = f"gte.{since_date}"
 
         if source_type is not None:
@@ -110,7 +123,7 @@ class ThreatLandscapeClient:
 
         self.helper.connector_logger.debug(
             "Fetching STIX bundles",
-            {"url": url, "offset": offset, "page_size": page_size},
+            meta={"url": url, "offset": offset, "page_size": page_size},
         )
 
         response = self._get(url, params=params)
@@ -120,7 +133,7 @@ class ThreatLandscapeClient:
 
         self.helper.connector_logger.debug(
             "Fetched STIX bundles page",
-            {"offset": offset, "count": len(rows)},
+            meta={"offset": offset, "count": len(rows)},
         )
 
         return rows
@@ -154,6 +167,9 @@ class ThreatLandscapeClient:
         Raises:
             requests.HTTPError: On any non-2xx response.
         """
+        if (since_seq_id is None) == (since_date is None):
+            raise ValueError("Provide exactly one of since_seq_id or since_date")
+
         params: dict = {
             "select": "seq_id,stix_bundle",
             "order": "seq_id.asc",
@@ -163,14 +179,14 @@ class ThreatLandscapeClient:
 
         if since_seq_id is not None:
             params["seq_id"] = f"gt.{since_seq_id}"
-        elif since_date is not None:
+        else:
             params["created_at"] = f"gte.{since_date}"
 
         url = self._base_url + self._IOCS_PATH
 
         self.helper.connector_logger.debug(
             "Fetching actionable IOCs",
-            {"url": url, "offset": offset, "page_size": page_size},
+            meta={"url": url, "offset": offset, "page_size": page_size},
         )
 
         response = self._get(url, params=params)
@@ -180,7 +196,7 @@ class ThreatLandscapeClient:
 
         self.helper.connector_logger.debug(
             "Fetched actionable IOCs page",
-            {"offset": offset, "count": len(rows)},
+            meta={"offset": offset, "count": len(rows)},
         )
 
         return rows
