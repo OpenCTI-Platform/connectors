@@ -48,12 +48,24 @@ def test_base_config_model_should_retrieve_fields_with_deprecate_annotation():
     assert "old_field" in TestConfig._model_deprecated_fields
 
 
+def test_base_config_model_should_make_deprecated_fields_optional():
+    """Test that `BaseConfigModel` subclasses set `default` to `None` for deprecated fields."""
+
+    # Given: A deprecated field explicitly defined as required (non-optional)
+    class TestConfig(BaseConfigModel):
+        old_field: str = DeprecatedField()  # type should be overwritten to `str | None`
+
+    # When: The model field definitions are built
+    # Then: Deprecated field annotation is normalized to `str | None` to make it optional
+    assert TestConfig.model_fields["old_field"].annotation == str | None
+    assert TestConfig._model_deprecated_fields["old_field"].annotation == str | None
+
+
 def test_base_config_model_should_set_default_to_none_for_deprecated_fields():
     """Test that `BaseConfigModel` subclasses set `default` to `None` for deprecated fields."""
 
     # Given: A deprecated field explicitly defines a non-None default
     class TestConfig(BaseConfigModel):
-        test_field: str = Field(default="test")
         old_field: str = DeprecatedField(
             default="deprecated default"  # should be overwritten to None
         )
@@ -208,8 +220,8 @@ def test_settings_loader_should_parse_config_yml_file(mock_config_yml_file_prese
             "id": "connector-poc--uid",
             "name": "Test Connector",
             "duration_period": "PT5M",
-            "log_level": "error",
-            "scope": "test",
+            "log_level": "debug",
+            "scope": "scope1,scope2",
         },
     }
 
@@ -232,8 +244,8 @@ def test_settings_loader_should_parse_dot_env_file(mock_dot_env_file_presence):
         "connector_id": "connector-poc--uid",
         "connector_name": "Test Connector",
         "connector_duration_period": "PT5M",
-        "connector_log_level": "error",
-        "connector_scope": "test",
+        "connector_log_level": "debug",
+        "connector_scope": "scope1,scope2",
     }
 
 
@@ -271,8 +283,8 @@ def test_settings_loader_should_parse_config_yml_from_model(
     assert settings_dict["opencti"]["token"] == "changeme"
     assert settings_dict["connector"]["id"] == "connector-poc--uid"
     assert settings_dict["connector"]["name"] == "Test Connector"
-    assert settings_dict["connector"]["scope"] == "test"
-    assert settings_dict["connector"]["log_level"] == "error"
+    assert settings_dict["connector"]["scope"] == "scope1,scope2"
+    assert settings_dict["connector"]["log_level"] == "debug"
 
 
 def test_settings_loader_should_parse_dot_env_from_model(mock_dot_env_file_presence):
@@ -292,8 +304,8 @@ def test_settings_loader_should_parse_dot_env_from_model(mock_dot_env_file_prese
     assert settings_dict["opencti"]["token"] == "changeme"
     assert settings_dict["connector"]["id"] == "connector-poc--uid"
     assert settings_dict["connector"]["name"] == "Test Connector"
-    assert settings_dict["connector"]["scope"] == "test"
-    assert settings_dict["connector"]["log_level"] == "error"
+    assert settings_dict["connector"]["scope"] == "scope1,scope2"
+    assert settings_dict["connector"]["log_level"] == "debug"
 
 
 def test_settings_loader_should_parse_os_environ_from_model(mock_environment):
@@ -313,7 +325,7 @@ def test_settings_loader_should_parse_os_environ_from_model(mock_environment):
     assert settings_dict["opencti"]["token"] == "changeme"
     assert settings_dict["connector"]["id"] == "connector-poc--uid"
     assert settings_dict["connector"]["name"] == "Test Connector"
-    assert settings_dict["connector"]["scope"] == "test"
+    assert settings_dict["connector"]["scope"] == "scope1,scope2"
     assert settings_dict["connector"]["log_level"] == "error"
 
 
@@ -356,7 +368,7 @@ def test_base_connector_settings_should_validate_settings_from_os_environ(
     assert settings.connector.id == "connector-poc--uid"
     assert settings.connector.name == "Test Connector"
     assert settings.connector.scope == ["scope1", "scope2"]
-    assert settings.connector.log_level == "debug"
+    assert settings.connector.log_level == "error"
 
 
 def test_base_connector_settings_should_validate_settings_from_config_yaml_file(

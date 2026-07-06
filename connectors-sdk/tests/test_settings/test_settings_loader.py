@@ -4,9 +4,12 @@ from unittest.mock import patch
 
 import pytest
 from connectors_sdk.settings.base_settings import (
+    BaseConfigModel,
     BaseConnectorSettings,
     _SettingsLoader,
 )
+from connectors_sdk.settings.deprecations import DeprecatedField
+from pydantic import Field
 
 
 def test_settings_loader_should_get_connector_main_path(mock_main_path):
@@ -222,4 +225,44 @@ def test_settings_loader_should_parse_os_environ_from_model(mock_environment):
     assert settings_dict["connector"]["id"] == "connector-poc--uid"
     assert settings_dict["connector"]["name"] == "Test Connector"
     assert settings_dict["connector"]["scope"] == "scope1,scope2"
-    assert settings_dict["connector"]["log_level"] == "debug"
+    assert settings_dict["connector"]["log_level"] == "error"
+
+
+def test_settings_loader_should_parse_os_environ_from_model_with_deprecated_fields(
+    monkeypatch, mock_environment
+):
+    """
+    Test that `_SettingsLoader.build_loader_from_model` returns a `BaseSettings` subclass
+    capable of parsing `os.environ` according to the given `BaseModel` with deprecated fields.
+    For testing purpose, `os.environ` is patched.
+    """
+
+    monkeypatch.setenv("DEPRECATED_NAMESPACE_TEST_FIELD", "deprecated_value")
+
+    # Given: Connector settings model with deprecated fields
+    class DeprecatedConfig(BaseConfigModel):
+        test_field: str = Field(
+            description="This is a test field.",
+        )
+
+    class DeprecatedConnectorSettings(BaseConnectorSettings):
+        """A connector settings model with deprecated namespaces."""
+
+        deprecated_namespace: DeprecatedConfig = DeprecatedField(
+            deprecated="This namespace is deprecated.",
+        )
+
+    # When: The settings loader instance parses and dumps values
+    settings_loader = _SettingsLoader.build_loader_from_model(
+        DeprecatedConnectorSettings
+    )
+    settings_dict = settings_loader().model_dump()
+
+    # Then: Parsed nested settings expose expected OpenCTI and connector values
+    assert settings_dict["opencti"]["url"] == "http://localhost:8080"
+    assert settings_dict["opencti"]["token"] == "changeme"
+    assert settings_dict["connector"]["id"] == "connector-poc--uid"
+    assert settings_dict["connector"]["name"] == "Test Connector"
+    assert settings_dict["connector"]["scope"] == "scope1,scope2"
+    assert settings_dict["connector"]["log_level"] == "error"
+    assert settings_dict["deprecated_namespace"]["test_field"] == "deprecated_value"
