@@ -11,7 +11,7 @@ from connectors_sdk.settings.base_settings import (
 )
 from connectors_sdk.settings.deprecations import Deprecate, DeprecatedField
 from connectors_sdk.settings.exceptions import ConfigValidationError
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 def test_base_config_model_should_retrieve_deprecated_fields():
@@ -352,7 +352,7 @@ def test_base_connector_settings_should_validate_settings_from_dot_env_file(
 
     # Then: Values are validated and cast to expected runtime types
     assert settings.opencti.url == HttpUrl("http://localhost:8080/")
-    assert settings.opencti.token == "changeme"
+    assert settings.opencti.token == SecretStr("changeme")
     assert settings.connector.id == "connector-poc--uid"
     assert settings.connector.name == "Test Connector"
     assert settings.connector.scope == ["test"]
@@ -373,7 +373,7 @@ def test_base_connector_settings_should_validate_settings_from_os_environ(
 
     # Then: Values are validated and cast to expected runtime types
     assert settings.opencti.url == HttpUrl("http://localhost:8080/")
-    assert settings.opencti.token == "changeme"
+    assert settings.opencti.token == SecretStr("changeme")
     assert settings.connector.id == "connector-poc--uid"
     assert settings.connector.name == "Test Connector"
     assert settings.connector.scope == ["test"]
@@ -398,7 +398,11 @@ def test_base_connector_settings_should_provide_helper_config(mock_environment):
     # Given: A valid BaseConnectorSettings instance built from patched environment
     # When: OpenCTIConnectorHelper config dict is generated
     settings = BaseConnectorSettings()
+    json_dump = settings.model_dump(mode="json")
     opencti_dict = settings.to_helper_config()
+
+    # Then: The regular JSON dump of settings does not expose the secret token value
+    assert json_dump["opencti"]["token"] == "**********"
 
     # Then: The resulting helper config dict matches expected structure and values
     assert opencti_dict == {

@@ -27,10 +27,14 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    FieldSerializationInfo,
     HttpUrl,
     ModelWrapValidatorHandler,
+    SecretStr,
+    SerializerFunctionWrapHandler,
     ValidationError,
     create_model,
+    field_serializer,
     model_validator,
 )
 from pydantic.fields import FieldInfo
@@ -90,9 +94,24 @@ class _OpenCTIConfig(BaseConfigModel):
     url: HttpUrl = Field(
         description="The base URL of the OpenCTI instance.",
     )
-    token: str = Field(
+    token: SecretStr = Field(
         description="The API token to connect to OpenCTI.",
     )
+
+    @field_serializer("token", mode="wrap", when_used="json")
+    def _serialize_token(
+        self,
+        value: Any,
+        handler: SerializerFunctionWrapHandler,
+        info: FieldSerializationInfo,
+    ) -> str:
+        """Get token secret value when serializing for `pycti.OpenCTIConnectorHelper` only.
+        Otherwise, return the redacted value, i.e. `"********"`.
+        """
+        mode = info.context.get("mode") if info.context else None
+        if isinstance(value, SecretStr) and mode == "pycti":
+            return value.get_secret_value()
+        return handler(value)  # type: ignore[no-any-return] # actually return `str`
 
 
 class _BaseConnectorConfig(BaseConfigModel, ABC):
