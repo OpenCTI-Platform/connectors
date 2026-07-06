@@ -168,7 +168,9 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
 def validate_fragment(fragment: dict, schema_path: Path) -> None:
     """Validate the fragment against the manifest schema."""
     schema = load_json(schema_path)
-    jsonschema.validate(instance=fragment, schema=schema)
+    jsonschema.validate(
+        instance=fragment, schema=schema, format_checker=jsonschema.FormatChecker()
+    )
     print("✅ Fragment validated against schema.")
 
 

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://filigran.io/schemas/connector-manifest.json",
-  "title": "OpenCTI Connector Manifest",
-  "description": "Schema for OpenCTI connector manifest files describing connector metadata, versioning, and configuration.",
+  "title": "OpenCTI Connector Manifest Fragment",
+  "description": "Schema for OpenCTI connector manifest fragment files describing connector metadata, versioning, and configuration.",
   "type": "object",
   "required": [
     "id",
@@ -58,7 +58,7 @@
     },
     "logo": {
       "type": "string",
-      "description": "BASE64-encoded image data for the connector's logo.",
+      "description": "Base64-encoded data URL for the connector's logo (e.g. data:image/png;base64,...).",
       "minLength": 1
     },
     "use_cases": {
@@ -104,13 +104,13 @@
     "min_version": {
       "type": "string",
       "description": "Minimum OpenCTI platform version required to run this connector.",
-      "pattern": "^[0-9]+\\.[0-9]+\\.?[0-9]*$",
+      "pattern": "^[0-9]+\\.[0-9]{1,6}\\.?[0-9]*$",
       "examples": ["7.260507.0", "6.0.0"]
     },
     "version": {
       "type": "string",
       "description": "Current version of the connector.",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "pattern": "^[0-9]+\\.[0-9]{1,6}\\.[0-9]+$",
       "examples": ["6.5.1", "1.0.0"]
     },
     "image_name": {
