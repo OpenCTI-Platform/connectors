@@ -10,7 +10,17 @@ from __future__ import annotations
 
 from abc import ABC
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
+from types import UnionType
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    Self,
+    Union,
+    get_args,
+    get_origin,
+)
 
 from connectors_sdk.logging.logger import Logger
 from connectors_sdk.logging.sdk_logger import sdk_logger
@@ -49,7 +59,11 @@ class BaseConfigModel(BaseModel, ABC):
     To prevent attributes from being modified after initialization.
     """
 
-    model_config = ConfigDict(extra="allow", frozen=True, validate_default=True)
+    model_config = ConfigDict(
+        extra="allow",
+        frozen=True,
+        validate_default=True,
+    )
 
     _model_deprecated_fields: ClassVar[dict[str, FieldInfo]] = {}
 
@@ -63,12 +77,16 @@ class BaseConfigModel(BaseModel, ABC):
         for name, field in cls.model_fields.items():
             for meta in field.metadata:
                 if isinstance(meta, Deprecate):
-                    # Change validation behavior
-                    if not field.deprecated:
-                        field.deprecated = True
+                    # Make the field optional (accept `None`)
+                    if isinstance(field.annotation, type):
+                        field.annotation = field.annotation | None  # type: ignore[assignment]
                     field.default = None
                     field.default_factory = None
                     field.validate_default = False
+
+                    # Mark as deprecated (in case of missing/empty deprecation message)
+                    if not field.deprecated:
+                        field.deprecated = True
 
                     # Add deprecation info to JSON schema
                     if not field.json_schema_extra:
@@ -129,7 +147,7 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         description="The name of the connector.",
     )
     scope: ListFromString = Field(
-        description="The scope of the connector, e.g. 'indicator, vulnerability'."
+        description="The scope of the connector, e.g. 'indicator, vulnerability'.",
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display.",
@@ -319,6 +337,34 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         )
 
     @classmethod
+    def _extract_base_config_model_type(cls, annotation: Any) -> Any:
+        """Extract `BaseConfigModel` type from a field's annotation.
+
+        Args:
+            annotation: The field's annotation to extract from.
+
+        Returns:
+            The extracted `BaseConfigModel` type if present, otherwise `None`.
+        """
+        # Handle `field_name: BaseConfigModel` annotations
+        if isinstance(annotation, type) and issubclass(annotation, BaseConfigModel):
+            return annotation
+
+        # Handle `field_name: BaseConfigModel | None` / `Optional[BaseConfigModel]` annotations
+        annotation_origin = get_origin(annotation)
+        if annotation_origin in (Union, UnionType):
+            base_config_model_type = next(
+                (
+                    arg
+                    for arg in get_args(annotation)
+                    if isinstance(arg, type) and issubclass(arg, BaseConfigModel)
+                ),
+                None,
+            )
+            if base_config_model_type:
+                return base_config_model_type
+
+    @classmethod
     def _migrate_deprecated_namespaces(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Migrate deprecated namespaces in the configuration data.
 
@@ -329,9 +375,8 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             Migrated configuration data.
         """
         for field_name, field in cls._model_deprecated_fields.items():
-            annotation = field.annotation
-            is_namespace = isinstance(annotation, type) and issubclass(
-                annotation, BaseConfigModel
+            is_namespace = (
+                cls._extract_base_config_model_type(field.annotation) is not None
             )
             deprecate_metadata = next(
                 m for m in field.metadata if isinstance(m, Deprecate)
@@ -372,38 +417,39 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             Migrated configuration data.
         """
         for field_name, field in cls.model_fields.items():
-            annotation = field.annotation
-            is_namespace = isinstance(annotation, type) and issubclass(
-                annotation, BaseConfigModel
+            base_config_model_type = cls._extract_base_config_model_type(
+                field.annotation
             )
-            if is_namespace:
-                for (
-                    sub_field_name,
-                    sub_field,
-                ) in annotation._model_deprecated_fields.items():  # type: ignore[union-attr]
-                    deprecate_metadata = next(
-                        m for m in sub_field.metadata if isinstance(m, Deprecate)
-                    )
-                    new_namespace = deprecate_metadata.new_namespace
-                    new_namespaced_var = deprecate_metadata.new_namespaced_var
-                    new_value_factory = deprecate_metadata.new_value_factory
-                    removal_date = deprecate_metadata.removal_date
+            if not base_config_model_type:
+                continue  # not a namespace, skip
 
-                    if new_namespaced_var:
-                        if not isinstance(new_namespaced_var, str):
-                            raise ValueError(
-                                f"`new_namespaced_var` for field {sub_field_name} must be a string."
-                            )
+            for (
+                sub_field_name,
+                sub_field,
+            ) in base_config_model_type._model_deprecated_fields.items():
+                deprecate_metadata = next(
+                    m for m in sub_field.metadata if isinstance(m, Deprecate)
+                )
+                new_namespace = deprecate_metadata.new_namespace
+                new_namespaced_var = deprecate_metadata.new_namespaced_var
+                new_value_factory = deprecate_metadata.new_value_factory
+                removal_date = deprecate_metadata.removal_date
 
-                        migrate_deprecated_variable(
-                            data,
-                            old_name=sub_field_name,
-                            new_name=new_namespaced_var,
-                            current_namespace=field_name,
-                            new_namespace=new_namespace,
-                            new_value_factory=new_value_factory,
-                            removal_date=removal_date,
+                if new_namespaced_var:
+                    if not isinstance(new_namespaced_var, str):
+                        raise ValueError(
+                            f"`new_namespaced_var` for field {sub_field_name} must be a string."
                         )
+
+                    migrate_deprecated_variable(
+                        data,
+                        old_name=sub_field_name,
+                        new_name=new_namespaced_var,
+                        current_namespace=field_name,
+                        new_namespace=new_namespace,
+                        new_value_factory=new_value_factory,
+                        removal_date=removal_date,
+                    )
 
         return data
 
@@ -463,8 +509,8 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         return self.model_dump(
             mode="json",
             context={"mode": "pycti"},
-            # Deprecated fields can be set to `None` despite their type (due to `Deprecate` annotation).
-            # To avoid `PydanticSerializationError`, we exclude all fields set to `None` during serialization.
-            # OpenCTIConnectorHelper handles missing fields with default values or internal logic.
-            exclude_none=True,
+            # # Deprecated fields can be set to `None` despite their type (due to `Deprecate` annotation).
+            # # To avoid `PydanticSerializationError`, we exclude all fields set to `None` during serialization.
+            # # OpenCTIConnectorHelper handles missing fields with default values or internal logic.
+            # exclude_none=True,
         )

@@ -3,7 +3,8 @@ from __future__ import annotations
 import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar
+from types import UnionType
+from typing import TYPE_CHECKING, Any, ClassVar, Union, get_args, get_origin
 
 from connectors_sdk.logging.sdk_logger import sdk_logger
 from pydantic import BaseModel, create_model
@@ -149,7 +150,23 @@ class _SettingsLoader(BaseSettings):
         model_fields = deepcopy(connector_settings.model_fields)
         for field_info in model_fields.values():
             annotation = field_info.annotation
-            if annotation and issubclass(annotation, BaseModel):
+
+            # Unwrap `BaseModel | None` / `Optional[BaseModel]` annotations
+            annotation_origin = get_origin(annotation)
+            if annotation_origin in (Union, UnionType):
+                base_model_annotation = next(
+                    (
+                        arg
+                        for arg in get_args(annotation)
+                        if isinstance(arg, type) and issubclass(arg, BaseModel)
+                    ),
+                    None,
+                )
+                if base_model_annotation:
+                    annotation = base_model_annotation
+
+            # Keep only `BaseModel` model fields names (accept any value)
+            if isinstance(annotation, type) and issubclass(annotation, BaseModel):
                 fields: dict[str, Any] = dict.fromkeys(
                     annotation.model_fields.keys(), Any
                 )

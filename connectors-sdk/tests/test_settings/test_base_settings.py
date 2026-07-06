@@ -45,12 +45,24 @@ def test_base_config_model_should_retrieve_fields_with_deprecate_annotation():
     assert "old_field" in TestConfig._model_deprecated_fields
 
 
+def test_base_config_model_should_make_deprecated_fields_optional():
+    """Test that `BaseConfigModel` subclasses set `default` to `None` for deprecated fields."""
+
+    # Given: A deprecated field explicitly defined as required (non-optional)
+    class TestConfig(BaseConfigModel):
+        old_field: str = DeprecatedField()  # type should be overwritten to `str | None`
+
+    # When: The model field definitions are built
+    # Then: Deprecated field annotation is normalized to `str | None` to make it optional
+    assert TestConfig.model_fields["old_field"].annotation == str | None
+    assert TestConfig._model_deprecated_fields["old_field"].annotation == str | None
+
+
 def test_base_config_model_should_set_default_to_none_for_deprecated_fields():
     """Test that `BaseConfigModel` subclasses set `default` to `None` for deprecated fields."""
 
     # Given: A deprecated field explicitly defines a non-None default
     class TestConfig(BaseConfigModel):
-        test_field: str = Field(default="test")
         old_field: str = DeprecatedField(
             default="deprecated default"  # should be overwritten to None
         )
