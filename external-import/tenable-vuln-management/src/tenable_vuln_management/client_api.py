@@ -13,7 +13,7 @@ from dateutil import parser
 from tenable.io import TenableIO
 from tenable.io.exports.iterator import ExportsIterator
 
-from .config_variables import ConfigConnector
+from .settings import ConnectorSettings
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
@@ -95,7 +95,7 @@ def _get_opencti_version() -> str:
 class ConnectorClient:
     """Client for interacting with the Tenable Vulnerability Management API."""
 
-    def __init__(self, helper: "OpenCTIConnectorHelper", config: ConfigConnector):
+    def __init__(self, helper: "OpenCTIConnectorHelper", config: ConnectorSettings):
         """
         Initialize the client with necessary configurations
         """
