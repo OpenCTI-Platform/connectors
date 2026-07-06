@@ -28,7 +28,7 @@ This connector:
 
 ```yaml
 environment:
-  - OPENCTI_URL=http://opencti:8080
+  - OPENCTI_URL=http://localhost
   - OPENCTI_TOKEN=ChangeMe
   - CONNECTOR_ID=ChangeMe
   - CONNECTOR_NAME=Threat Landscape

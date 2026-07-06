@@ -105,6 +105,10 @@ class ThreatLandscapeConnector:
         Paginate through the API, accumulate STIX objects, and send batches to
         OpenCTI. Tracks and returns the highest ``seq_id`` seen.
 
+        Uses cursor-based pagination: the first page filters by ``since_date``
+        or ``since_seq_id`` (depending on whether this is a first or incremental
+        run), and subsequent pages filter by ``seq_id > <max_seen>``.
+
         Routes to the Intelligence API (``/stix_bundles``) or the IOC API
         (``/actionable_iocs``) based on ``config.threatlandscape.feed``.
 
@@ -127,7 +131,6 @@ class ThreatLandscapeConnector:
         elif feed == "intelligence-darknet":
             source_type = "darknet"
 
-        offset = 0
         max_seq_id: Optional[int] = None
         stix_objects: list = []
         batch_index = 1
@@ -140,7 +143,7 @@ class ThreatLandscapeConnector:
                         since_seq_id=since_seq_id,
                         since_date=since_date,
                         page_size=page_size,
-                        offset=offset,
+                        offset=0,
                     )
                 else:
                     rows = self.client.get_stix_bundles(
@@ -148,12 +151,16 @@ class ThreatLandscapeConnector:
                         since_date=since_date,
                         source_type=source_type,
                         page_size=page_size,
-                        offset=offset,
+                        offset=0,
                     )
             except requests.HTTPError as err:
                 self.helper.connector_logger.error(
                     "API request failed; aborting run",
-                    meta={"error": str(err), "offset": offset},
+                    meta={
+                        "error": str(err),
+                        "since_seq_id": since_seq_id,
+                        "since_date": since_date,
+                    },
                 )
                 raise
 
@@ -181,7 +188,11 @@ class ThreatLandscapeConnector:
                 # Last page reached.
                 break
 
-            offset += page_size
+            # Advance cursor for next page — switch to seq_id-based filtering
+            # after the first page, regardless of how this run started.
+            if max_seq_id is not None:
+                since_seq_id = max_seq_id
+                since_date = None
 
         # Send any remaining objects that did not fill a full batch.
         if stix_objects:
