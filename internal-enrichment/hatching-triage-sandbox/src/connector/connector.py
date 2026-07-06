@@ -31,7 +31,7 @@ class HatchingTriageSandboxConnector:
             description="Hatching Triage",
         )["standard_id"]
 
-        self.octi_api_url = self.config.opencti.url.rstrip("/")
+        self.octi_api_url = str(self.config.opencti.url).rstrip("/")
 
         # Instantiate the Triage Client
         self.base_url = self.config.hatching_triage_sandbox.base_url
