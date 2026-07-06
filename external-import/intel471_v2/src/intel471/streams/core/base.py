@@ -57,6 +57,7 @@ class Intel471Stream(ABC):
         self.out_queue = out_queue
         self.ioc_score = ioc_score
         self.update_existing_data = update_existing_data
+        self._unauthorized = False
         if initial_history:
             self.initial_history = initial_history
         else:
@@ -73,6 +74,8 @@ class Intel471Stream(ABC):
             self.send_to_server(bundle)
 
     def get_bundles(self) -> Iterator[Bundle]:
+        if self._unauthorized:
+            return
         cursor = self._get_cursor()
         offsets = self._get_offsets()
         with self.client_wrapper.module.ApiClient(
@@ -93,7 +96,15 @@ class Intel471Stream(ABC):
                         f"{self.__class__.__name__} calls {self.client_wrapper.backend_name} API "
                         f"with arguments: {str(kwargs)}."
                     )
-                    api_response = getattr(api_instance, self.api_method_name)(**kwargs)
+                    try:
+                        api_response = getattr(api_instance, self.api_method_name)(**kwargs)
+                    except self.client_wrapper.unauthorized_exception:
+                        self._unauthorized = True
+                        self.helper.log_warning(
+                            f"{self.__class__.__name__} is not entitled to {self.label} on "
+                            f"{self.client_wrapper.backend_name}. Skipping."
+                        )
+                        break
                     api_payload_objects = (
                         getattr(api_response, self.api_payload_objects_key) or []
                     )
