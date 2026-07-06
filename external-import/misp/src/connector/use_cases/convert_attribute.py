@@ -577,9 +577,10 @@ class AttributeConverter:
             if marking:
                 attribute_markings.append(marking)
 
-            label = self.tag_converter.create_label(tag)
-            if label:
-                attribute_labels.append(label)
+            if self.config.convert_tag_to_label:
+                label = self.tag_converter.create_label(tag)
+                if label:
+                    attribute_labels.append(label)
 
         if not attribute_markings:
             attribute_markings = markings
