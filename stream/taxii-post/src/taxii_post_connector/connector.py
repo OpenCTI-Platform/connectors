@@ -120,7 +120,7 @@ class TaxiiPostConnector:
                     auth=(
                         (
                             self.config.login.get_secret_value()
-                            if self.config.login
+                            if self.config.login is not None
                             else None
                         ),
                         (
