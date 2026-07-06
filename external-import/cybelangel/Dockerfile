@@ -1,17 +1,12 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-# Copy the connector
+RUN apk --no-cache add git build-base libmagic libffi-dev
+COPY src/requirements.txt /tmp/requirements.txt
+RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && \
+    apk del git build-base
+
 COPY src /opt/opencti-connector-cybelangel
 WORKDIR /opt/opencti-connector-cybelangel
 
-# Install Python modules
-# hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
-
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python3", "main.py"]

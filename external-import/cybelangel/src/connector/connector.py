@@ -1,11 +1,10 @@
-import os
 import sys
 import time
 from datetime import datetime, timedelta, timezone
 
 import requests
 import stix2
-import yaml
+from connector.settings import ConnectorSettings
 from pycti import (
     Campaign,
     Identity,
@@ -14,138 +13,30 @@ from pycti import (
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
 )
 
 
 class CybelAngel:
     """Main class for the CybelAngel OpenCTI connector."""
 
-    def __init__(self):
-        """
-        Initialize the CybelAngel connector by loading configuration and setting up the OpenCTI helper.
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
 
-        """
+        # Resolve audience: use explicit value or fall back to api_url + "/"
+        self._audience = (
+            self.config.cybelangel.audience
+            if self.config.cybelangel.audience is not None
+            else self.config.cybelangel.api_url.rstrip("/") + "/"
+        )
 
-        # Instantiate the connector helper from config
-        try:
-            config_file_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "config.yml"
-            )
-            if os.path.isfile(config_file_path):
-                with open(config_file_path, encoding="utf-8") as config_file:
-                    config = yaml.safe_load(config_file) or {}
-            else:
-                config = {}
-
-            self.helper = OpenCTIConnectorHelper(config)
-
-            # Extra config
-            self.opencti_url = get_config_variable(
-                "OPENCTI_URL", ["opencti", "url"], config, default="http://opencti:8080"
-            )
-            self.opencti_token = get_config_variable(
-                "OPENCTI_TOKEN", ["opencti", "token"], config
-            )
-            self.connector_id = get_config_variable(
-                "CONNECTOR_ID", ["connector", "id"], config
-            )
-            self.connector_type = get_config_variable(
-                "CONNECTOR_TYPE",
-                ["connector", "type"],
-                config,
-                default="EXTERNAL_IMPORT",
-            )
-            self.connector_name = get_config_variable(
-                "CONNECTOR_NAME", ["connector", "name"], config, default="CybelAngel"
-            )
-            self.connector_scope = get_config_variable(
-                "CONNECTOR_SCOPE", ["connector", "scope"], config, default="all"
-            )
-            self.connector_log_level = get_config_variable(
-                "CONNECTOR_LOG_LEVEL",
-                ["connector", "log_level"],
-                config,
-                default="info",
-            )
-            self.cybelangel_client_id = get_config_variable(
-                "CYBELANGEL_CLIENT_ID", ["cybelangel", "client_id"], config
-            )
-            self.cybelangel_client_secret = get_config_variable(
-                "CYBELANGEL_CLIENT_SECRET", ["cybelangel", "client_secret"], config
-            )
-            self.cybelangel_api_url = get_config_variable(
-                "CYBELANGEL_API_URL",
-                ["cybelangel", "api_url"],
-                config,
-                default="https://platform.cybelangel.com",
-            )
-            self.cybelangel_auth_url = get_config_variable(
-                "CYBELANGEL_AUTH_URL",
-                ["cybelangel", "auth_url"],
-                config,
-                default="https://auth.cybelangel.com/oauth/token",
-            )
-            # OAuth2 ``audience`` claim sent during client-credentials
-            # exchange. Defaults to the configured CybelAngel API URL so
-            # the audience stays consistent with the API host when a
-            # custom ``CYBELANGEL_API_URL`` is used (the CybelAngel
-            # authorization server validates audience against the API
-            # host). Operators can still override it explicitly when the
-            # audience deviates from the API base URL.
-            self.cybelangel_audience = get_config_variable(
-                "CYBELANGEL_AUDIENCE",
-                ["cybelangel", "audience"],
-                config,
-                default=self.cybelangel_api_url.rstrip("/") + "/",
-            )
-            self.cybelangel_marking = get_config_variable(
-                "CYBELANGEL_MARKING",
-                ["cybelangel", "marking"],
-                config,
-                default="TLP:AMBER+STRICT",
-            )
-            self.cybelangel_fetch_period = get_config_variable(
-                "CYBELANGEL_FETCH_PERIOD",
-                ["cybelangel", "fetch_period"],
-                config,
-                default="7",
-            )
-
-            # Scheduler / auto-backpressure (ISO 8601). Default = PT6H, i.e., 6 hours.
-            self.duration_period = get_config_variable(
-                "CONNECTOR_DURATION_PERIOD",
-                ["connector", "duration_period"],
-                config,
-                default="PT6H",
-            )
-
-        except Exception as e:
-            self.helper.connector_logger.error(
-                f"Error loading configuration: {e}. Please check your config.yml file."
-            )
-            sys.exit(1)
+        # Marking definition is resolved lazily in run() via load_marking_definition()
+        self.cybelangel_marking = None
 
     def load_marking_definition(self):
-        """
-        Load or create a STIX MarkingDefinition object based on the configured TLP level.
-
-        Supports standard TLP levels: TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT and TLP:RED.
-        TLP:CLEAR and TLP:AMBER+STRICT are handled as custom markings since they are not natively supported in STIX2.
-
-        Returns:
-            None
-        """
+        """Load or create a STIX MarkingDefinition object based on the configured TLP level."""
         TLP_MAPPING = {
             "TLP:WHITE": stix2.TLP_WHITE,
-            # ``TLP:CLEAR`` is OpenCTI's canonical replacement for the
-            # legacy ``TLP:WHITE`` and is not exported as a constant by
-            # the ``stix2`` library. We therefore build it as a custom
-            # ``MarkingDefinition`` (mirroring the ``TLP:AMBER+STRICT``
-            # entry below) so the marking id / label match what OpenCTI
-            # ingests and the configured value is preserved as-is —
-            # aliasing it to ``stix2.TLP_WHITE`` would silently tag
-            # ingested data with the TLP:WHITE marking id.
             "TLP:CLEAR": stix2.MarkingDefinition(
                 id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
                 definition_type="statement",
@@ -167,7 +58,7 @@ class CybelAngel:
             "TLP:RED": stix2.TLP_RED,
         }
 
-        tlp_value = self.cybelangel_marking.strip().upper()
+        tlp_value = self.config.cybelangel.marking.strip().upper()
         if tlp_value in TLP_MAPPING:
             self.cybelangel_marking = TLP_MAPPING[tlp_value]
         else:
@@ -177,33 +68,20 @@ class CybelAngel:
             self.cybelangel_marking = TLP_MAPPING["TLP:AMBER+STRICT"]
 
     def authenticate(self, max_retries=3, delay=5):
-        """
-        Authenticate with the CybelAngel API using client credentials and retrieve an access token.
-        Retries on failure up to `max_retries` times with `delay` seconds between attempts.
-
-        Args:
-            None
-
-        Returns:
-            str: A valid OAuth2 bearer token if authentication is successful, otherwise None.
-
-        Raises:
-            Exception: If the authentication request fails or the response is invalid.
-            :param delay: Delay in seconds between retry attempts.
-            :param max_retries: Maximum number of retry attempts.
-        """
-
+        """Authenticate with the CybelAngel API using client credentials."""
         auth_data = {
-            "client_id": self.cybelangel_client_id,
-            "client_secret": self.cybelangel_client_secret,
-            "audience": self.cybelangel_audience,
+            "client_id": self.config.cybelangel.client_id,
+            "client_secret": self.config.cybelangel.client_secret.get_secret_value(),
+            "audience": self._audience,
             "grant_type": "client_credentials",
         }
 
         headers = {
             "Content-Type": "application/json",
-            "User-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/138.0.0.0 Safari/537.36 ",
+            "User-agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 "
+            ),
         }
         for attempt in range(1, max_retries + 1):
             self.helper.connector_logger.info(
@@ -211,7 +89,7 @@ class CybelAngel:
             )
             try:
                 response = requests.post(
-                    self.cybelangel_auth_url,
+                    self.config.cybelangel.auth_url,
                     json=auth_data,
                     headers=headers,
                     timeout=(10, 60),
@@ -231,10 +109,6 @@ class CybelAngel:
                     f"Error during authentication attempt {attempt}/{max_retries}: {e}"
                 )
                 if attempt < max_retries:
-                    # Only announce the delay when another attempt will
-                    # actually follow - logging "Retrying in N seconds"
-                    # on the terminal attempt is misleading and makes
-                    # troubleshooting harder.
                     self.helper.connector_logger.info(
                         f"Retrying in {delay} seconds... (Attempt {attempt + 1}/{max_retries})"
                     )
@@ -245,19 +119,16 @@ class CybelAngel:
                     )
 
     def create_cybelangel_org(self):
-        """
-        Creates an identity object for the CybelAngel organization.
-
-        This function generates a STIX 2.1 Identity object representing the CybelAngel organization. The identity includes details such as the name, description, confidence level, identity class, type, and object marking references.
-
-        """
+        """Creates an identity object for the CybelAngel organization."""
         try:
             identity = stix2.Identity(
                 id=Identity.generate_id("CybelAngel", "organization"),
                 spec_version="2.1",
                 name="CybelAngel",
-                description="Cybelangel is a cybersecurity company that specializes in detecting and mitigating cyber "
-                "threats.",
+                description=(
+                    "Cybelangel is a cybersecurity company that specializes in detecting "
+                    "and mitigating cyber threats."
+                ),
                 confidence=50,
                 identity_class="organization",
                 type="identity",
@@ -268,7 +139,6 @@ class CybelAngel:
             self.helper.connector_logger.debug(
                 "CybelAngel identity object created successfully."
             )
-
             return identity
         except Exception as e:
             self.helper.connector_logger.error(
@@ -324,8 +194,7 @@ class CybelAngel:
         """Authenticate, fetch and ingest claimed attacks.
 
         Returns ``True`` when the run completes without unrecoverable errors,
-        ``False`` otherwise. The caller uses this signal to decide whether
-        ``last_run`` should be advanced.
+        ``False`` otherwise.
         """
         token = self.authenticate()
         if not token:
@@ -355,26 +224,13 @@ class CybelAngel:
         )
 
     def _build_fetch_parameters(self, last_run):
-        """
-        Compute since_date/end_date and build the CybelAngel API parameters.
-
-        Returns ``(since_date, end_date, parameters)``. When the configured
-        ``CYBELANGEL_FETCH_PERIOD`` is ``"all"`` and there is no usable
-        ``last_run`` cursor, ``since_date`` / ``end_date`` are ``None`` and
-        ``parameters`` only carries the sort (``sort_by=claimed_at&sort_order=desc``)
-        so the CybelAngel API returns the full history.
-        """
-
+        """Compute since_date/end_date and build the CybelAngel API parameters."""
         base_sort = "sort_by=claimed_at&sort_order=desc"
 
         if last_run:
             try:
                 since_date = datetime.fromisoformat(last_run).astimezone(timezone.utc)
             except ValueError:
-                # ``last_run`` is corrupted or in an unexpected format.
-                # Fall back to ``CYBELANGEL_FETCH_PERIOD`` exactly like the
-                # "no ``last_run``" branch below, including the ``all``
-                # case which means "no date filter".
                 self.helper.connector_logger.warning(
                     "Invalid last_run format, falling back to CYBELANGEL_FETCH_PERIOD",
                     {"last_run": last_run},
@@ -388,16 +244,11 @@ class CybelAngel:
             )
             return since_date, end_date, parameters
 
-        # No last_run -> we use CYBELANGEL_FETCH_PERIOD.
         return self._fetch_parameters_from_period(base_sort)
 
     def _fetch_parameters_from_period(self, base_sort):
-        """Return ``(since_date, end_date, parameters)`` derived from ``CYBELANGEL_FETCH_PERIOD``.
-
-        ``CYBELANGEL_FETCH_PERIOD`` is either a number of days (``int`` / ``str``)
-        or ``"all"`` to mean "no date filter".
-        """
-        fetch_period = getattr(self, "cybelangel_fetch_period", "all")
+        """Return ``(since_date, end_date, parameters)`` derived from ``CYBELANGEL_FETCH_PERIOD``."""
+        fetch_period = self.config.cybelangel.fetch_period
         if not fetch_period or str(fetch_period).lower() == "all":
             return None, None, base_sort
 
@@ -423,28 +274,15 @@ class CybelAngel:
     def _fetch_and_process_pages(
         self, headers, parameters, author_org, work_id, since_date
     ):
-        """Page through ``claimed-attacks`` and process every record.
-
-        Returns ``True`` when the iteration completes without
-        unrecoverable errors *and* every per-attack bundle was sent
-        successfully. Returns ``False`` when the connector gives up on
-        transient errors **or** when any ``_process_attack`` failed —
-        the caller uses the return value to keep ``last_run``
-        un-advanced so the next run retries instead of silently
-        dropping data.
-        """
+        """Page through ``claimed-attacks`` and process every record."""
         skip = 0
         limit = 50
         attempt = 0
-        # Track per-attack bundle-send failures. We keep iterating even
-        # after a failure (each attack is independent and re-runs are
-        # idempotent thanks to deterministic STIX ids), but return
-        # ``False`` at the end so the caller does not advance ``last_run``.
         all_succeeded = True
 
         while True:
             url = (
-                f"{self.cybelangel_api_url}"
+                f"{self.config.cybelangel.api_url}"
                 f"/api/v1/threat-intelligence/claimed-attacks"
                 f"?limit={limit}&skip={skip}&{parameters}"
             )
@@ -468,8 +306,6 @@ class CybelAngel:
                 time.sleep(5)
                 continue
 
-            # The CybelAngel token expires after 1 hour. This block
-            # reauthenticates when the token is no longer valid.
             if response.status_code == 401 and attempt < 3:
                 attempt += 1
                 self.helper.connector_logger.info(
@@ -485,7 +321,7 @@ class CybelAngel:
                 self.helper.connector_logger.info(
                     "Re-authentication successful, retrying data fetch."
                 )
-                attempt = 0  # Reset attempt counter on successful response
+                attempt = 0
                 continue
             if response.status_code != 200:
                 self.helper.connector_logger.error(
@@ -501,7 +337,6 @@ class CybelAngel:
                 time.sleep(5)
                 continue
 
-            # Reset retry counter once we got a successful response.
             attempt = 0
 
             attacks = response.json().get("claimed_attacks", [])
@@ -516,10 +351,6 @@ class CybelAngel:
             )
 
             for attack in attacks:
-                # Results are sorted by ``claimed_at desc``: once we see one
-                # claim older than ``since_date`` every following claim
-                # (within this page and on subsequent pages) is older too,
-                # so we can stop iterating entirely instead of just skipping.
                 if self._is_attack_too_old(attack, since_date):
                     self.helper.connector_logger.info(
                         "Reached claims older than last_run, stopping pagination."
@@ -553,15 +384,7 @@ class CybelAngel:
     # Parse & Ingest Data
     # ----------------------
     def _process_attack(self, attack, since_date, author_org, work_id) -> bool:
-        """Process a single attack and forward the resulting STIX bundle.
-
-        Returns ``True`` when the attack was handled successfully (or
-        deliberately skipped because of an unparseable timestamp / a
-        cursor cut-off) and ``False`` when bundle serialisation or
-        ``send_stix2_bundle`` failed — callers use this signal to keep
-        ``last_run`` un-advanced so the run is retried instead of
-        silently dropping data.
-        """
+        """Process a single attack and forward the resulting STIX bundle."""
         claimed_at_raw = attack.get("claimed_at")
         claimed_at = None
         if claimed_at_raw:
@@ -574,11 +397,6 @@ class CybelAngel:
                 except ValueError:
                     continue
 
-        # ``claimed_at`` is used as the deterministic timestamp for several
-        # required STIX fields (``Campaign.created``, ``first_seen``,
-        # ``last_seen``, relationship ``created``, ...). A missing or
-        # unparseable value would make the bundle invalid and crash the run,
-        # so we skip the record with a warning instead.
         if claimed_at is None:
             self.helper.connector_logger.warning(
                 "Skipping attack with missing or unparseable claimed_at",
@@ -586,7 +404,6 @@ class CybelAngel:
             )
             return True
 
-        # Stop early if attack is before last_run
         if since_date and claimed_at < since_date:
             self.helper.connector_logger.info(
                 f"Stopping processing as claimed_at {claimed_at.strftime('%Y-%m-%dT%H:%M:%SZ')} is before "
@@ -598,7 +415,6 @@ class CybelAngel:
         author_org_id = author_org["id"] if author_org else None
         marking_id = [self.cybelangel_marking.id] if self.cybelangel_marking else None
 
-        # Attack fields
         campaign_objective = attack.get("category", "Unknown")
         threat_actors = attack.get("threat_actors", []) or []
         countries = attack.get("countries", []) or []
@@ -606,14 +422,10 @@ class CybelAngel:
         victims = attack.get("victims", []) or []
         domains = attack.get("domains", []) or []
 
-        # Resource level heuristic. STIX 2.1 ``IntrusionSet.resource_level``
-        # is an open-vocabulary lowercase enum (e.g. ``individual``, ``team``,
-        # ``contest``, ``organization``), so we must use the lowercase values.
         resource_level = (
             "contest" if "ddos" in campaign_objective.lower() else "organization"
         )
 
-        # Actor label used in campaign naming
         final_actor = (
             threat_actors[0]
             if (threat_actors and threat_actors[0])
@@ -621,7 +433,7 @@ class CybelAngel:
         )
         campaign_date = f" ({claimed_at.date()})"
 
-        # --- Locations (countries) shared across campaigns for this attack
+        # --- Locations (countries)
         locations = []
         for country in countries:
             if not country:
@@ -637,7 +449,7 @@ class CybelAngel:
             locations.append(location)
             stix_objects.append(location)
 
-        # --- Sectors (industries) shared across campaigns for this attack
+        # --- Sectors (industries)
         sector_objs = []
         for ind in industries_list:
             if not ind:
@@ -647,7 +459,7 @@ class CybelAngel:
                 sector_objs.append(sector)
                 stix_objects.append(sector)
 
-        # --- Intrusion Sets shared across campaigns for this attack
+        # --- Intrusion Sets
         intrusion_sets = []
         for actor in threat_actors:
             if not actor:
@@ -676,7 +488,7 @@ class CybelAngel:
         elif victims:
             victim_domain_pairs = [(v, None) for v in victims]
 
-        # --- If no victims at all: keep a generic campaign (backward compatible)
+        # --- If no victims at all: keep a generic campaign
         if not victim_domain_pairs and not victims:
             campaign_name = f"{campaign_objective.capitalize()} campaign by {final_actor} - {campaign_date}".rstrip(
                 " - "
@@ -695,7 +507,6 @@ class CybelAngel:
             )
             stix_objects.append(campaign)
 
-            # campaign -> locations
             for location in locations:
                 stix_objects.append(
                     self._create_relationship(
@@ -707,7 +518,6 @@ class CybelAngel:
                         author_org_id,
                     )
                 )
-            # campaign -> sectors
             for sector in sector_objs:
                 stix_objects.append(
                     self._create_relationship(
@@ -719,7 +529,6 @@ class CybelAngel:
                         author_org_id,
                     )
                 )
-            # campaign -> intrusion sets
             for iset in intrusion_sets:
                 stix_objects.append(
                     self._create_relationship(
@@ -731,7 +540,6 @@ class CybelAngel:
                         author_org_id,
                     )
                 )
-            # intrusion sets -> locations / sectors
             for iset in intrusion_sets:
                 for location in locations:
                     stix_objects.append(
@@ -762,14 +570,12 @@ class CybelAngel:
                 continue
             v = victim_name if len(victim_name) >= 2 else (victim_name + " ")
 
-            # Create victim identity
             identity = self._create_identity(
                 v, "organization", marking_id, author_org_id, victim_domain
             )
             if identity:
                 stix_objects.append(identity)
 
-            # Create a dedicated campaign for this victim
             campaign_name = f"{final_actor} targets {v}"
             campaign_description = f"{campaign_objective.capitalize()} campaign by {final_actor} targeting {v}"
             campaign = stix2.Campaign(
@@ -785,7 +591,6 @@ class CybelAngel:
             )
             stix_objects.append(campaign)
 
-            # campaign -> victim
             if identity:
                 stix_objects.append(
                     self._create_relationship(
@@ -797,7 +602,6 @@ class CybelAngel:
                         author_org_id,
                     )
                 )
-            # campaign -> locations
             for location in locations:
                 stix_objects.append(
                     self._create_relationship(
@@ -809,7 +613,6 @@ class CybelAngel:
                         author_org_id,
                     )
                 )
-            # campaign -> sectors
             for sector in sector_objs:
                 stix_objects.append(
                     self._create_relationship(
@@ -821,7 +624,6 @@ class CybelAngel:
                         author_org_id,
                     )
                 )
-            # campaign -> intrusion sets
             for iset in intrusion_sets:
                 stix_objects.append(
                     self._create_relationship(
@@ -834,7 +636,6 @@ class CybelAngel:
                     )
                 )
 
-            # intrusion sets -> victim (per-victim, varies with ``identity.id``)
             for iset in intrusion_sets:
                 if identity:
                     stix_objects.append(
@@ -848,14 +649,7 @@ class CybelAngel:
                         )
                     )
 
-        # --- intrusion sets -> locations / sectors are per-attack rather than
-        # per-victim. ``StixCoreRelationship.generate_id`` is deterministic
-        # on ``(rel_type, source, target)``, so emitting them inside the
-        # per-victim loop above used to produce N copies of the same
-        # Relationship (one per victim) with identical ids/content — which
-        # inflates bundles and can fail STIX validation. They are now
-        # emitted once per attack here. (The "no victims" branch above
-        # already emitted them once per attack.)
+        # --- intrusion sets -> locations / sectors (per-attack, not per-victim)
         if victim_domain_pairs:
             for iset in intrusion_sets:
                 for location in locations:
@@ -881,16 +675,11 @@ class CybelAngel:
                         )
                     )
 
-        # Send bundle to OpenCTI. Any failure here is propagated to the
-        # caller so the pagination loop can keep ``last_run`` un-advanced
-        # — otherwise a single failed bundle would silently drop data.
         if stix_objects:
             try:
                 bundle = stix2.Bundle(
                     objects=stix_objects, allow_custom=True
                 ).serialize()
-                # ``update=`` was deprecated in pycti; the worker now always
-                # applies the relevant patch semantics.
                 self.helper.send_stix2_bundle(bundle, work_id=work_id)
                 self.helper.connector_logger.info(
                     f"Successfully processed {len(stix_objects)} STIX objects from CybelAngel."
@@ -903,13 +692,8 @@ class CybelAngel:
                 return False
         return True
 
-    def process_data(self):
-        """Main data processing method.
-
-        Initiates a work, retrieves the previous ``last_run`` from state,
-        fetches the new claimed attacks and only advances ``last_run`` when
-        :meth:`opencti_bundle` reports a successful run.
-        """
+    def process_message(self) -> None:
+        """Connector main process to collect intelligence."""
         work_id = None
         try:
             self.helper.connector_logger.info("Synchronizing with CybelAngel APIs...")
@@ -929,9 +713,6 @@ class CybelAngel:
             success = self.opencti_bundle(work_id, last_run)
 
             if success:
-                # Always store the ``last_run`` cursor in UTC ISO 8601 so the
-                # ``start_date`` / ``end_date`` parameters built on the next
-                # run are time-zone consistent.
                 self.helper.set_state({"last_run": now.isoformat()})
                 message = "End of synchronization"
                 self.helper.api.work.to_processed(work_id, message)
@@ -958,32 +739,11 @@ class CybelAngel:
                 )
                 self.helper.api.work.to_processed(work_id, error_message, in_error=True)
 
-    def run(self):
-        """
-        Run using OpenCTI Scheduler (ISO 8601 duration + auto-backpressure).
-
-        """
-        try:
-            self.helper.connector_logger.info("Fetching CybelAngel data ...")
-            self.load_marking_definition()
-
-            self.helper.schedule_iso(
-                message_callback=self.process_data,
-                duration_period=self.duration_period,
-            )
-
-        except Exception as e:
-            self.helper.connector_logger.error(f"Error in CybelAngel connector: {e}")
-            raise
-
-
-if __name__ == "__main__":
-    try:
-        connector = CybelAngel()
-        connector.run()
-    except Exception as e:
-        # Non-zero exit so container supervisors / CI / restart policies
-        # do not mistake a crash for a successful run.
-        print(f"Error running CybelAngel connector: {e}")
-        time.sleep(10)
-        sys.exit(1)
+    def run(self) -> None:
+        """Run using OpenCTI Scheduler (ISO 8601 duration + auto-backpressure)."""
+        self.helper.connector_logger.info("Fetching CybelAngel data ...")
+        self.load_marking_definition()
+        self.helper.schedule_iso(
+            message_callback=self.process_message,
+            duration_period=self.config.connector.duration_period,
+        )
