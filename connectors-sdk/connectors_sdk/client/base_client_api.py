@@ -142,7 +142,6 @@ class BaseClientApi:
         path: str,
         *,
         params: dict[str, Any] | None = None,
-        raw: bool = False,
         **kwargs: Any,
     ) -> Any:
         """Perform a GET request.
@@ -150,18 +149,16 @@ class BaseClientApi:
         Args:
             path: API endpoint path.
             params: Query parameters.
-            raw: If True, return the raw ``requests.Response`` instead of
-                parsing the body. Useful for binary downloads or streaming.
-            **kwargs: Additional arguments forwarded to the session
-                (e.g. ``stream=True`` for large downloads).
+            **kwargs: Additional arguments forwarded to the session.
 
         Returns:
-            Parsed JSON response body, or ``requests.Response`` when ``raw=True``.
+            Parsed response body (JSON dict/list, str, or bytes depending
+            on Content-Type).
 
         Raises:
             ApiClientError: On HTTP errors.
         """
-        return self._request("GET", path, params=params, raw=raw, **kwargs)
+        return self._request("GET", path, params=params, **kwargs)
 
     def _post(
         self,
@@ -170,7 +167,6 @@ class BaseClientApi:
         json: Any | None = None,
         data: Any | None = None,
         params: dict[str, Any] | None = None,
-        raw: bool = False,
         **kwargs: Any,
     ) -> Any:
         """Perform a POST request.
@@ -180,17 +176,16 @@ class BaseClientApi:
             json: JSON-serializable body.
             data: Form-encoded or raw body.
             params: Query parameters.
-            raw: If True, return the raw ``requests.Response``.
             **kwargs: Additional arguments forwarded to the session.
 
         Returns:
-            Parsed JSON response body, or ``requests.Response`` when ``raw=True``.
+            Parsed response body, or ``requests.Response`` when ``stream=True``.
 
         Raises:
             ApiClientError: On HTTP errors.
         """
         return self._request(
-            "POST", path, json=json, data=data, params=params, raw=raw, **kwargs
+            "POST", path, json=json, data=data, params=params, **kwargs
         )
 
     def _put(
@@ -199,11 +194,10 @@ class BaseClientApi:
         *,
         json: Any | None = None,
         params: dict[str, Any] | None = None,
-        raw: bool = False,
         **kwargs: Any,
     ) -> Any:
         """Perform a PUT request."""
-        return self._request("PUT", path, json=json, params=params, raw=raw, **kwargs)
+        return self._request("PUT", path, json=json, params=params, **kwargs)
 
     def _patch(
         self,
@@ -211,22 +205,20 @@ class BaseClientApi:
         *,
         json: Any | None = None,
         params: dict[str, Any] | None = None,
-        raw: bool = False,
         **kwargs: Any,
     ) -> Any:
         """Perform a PATCH request."""
-        return self._request("PATCH", path, json=json, params=params, raw=raw, **kwargs)
+        return self._request("PATCH", path, json=json, params=params, **kwargs)
 
     def _delete(
         self,
         path: str,
         *,
         params: dict[str, Any] | None = None,
-        raw: bool = False,
         **kwargs: Any,
     ) -> Any:
         """Perform a DELETE request."""
-        return self._request("DELETE", path, params=params, raw=raw, **kwargs)
+        return self._request("DELETE", path, params=params, **kwargs)
 
     # ------------------------------------------------------------------
     # Pagination helpers
@@ -312,9 +304,7 @@ class BaseClientApi:
         kwargs.setdefault("timeout", self._timeout)
         return self._session.request(method, url, **kwargs)
 
-    def _request(
-        self, method: str, path: str, *, raw: bool = False, **kwargs: Any
-    ) -> Any:
+    def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         """Execute an HTTP request with error handling and response parsing.
 
         Delegates the actual HTTP call to ``_raw_request``, then raises typed
@@ -323,13 +313,10 @@ class BaseClientApi:
         Args:
             method: HTTP method (GET, POST, etc.).
             path: URL path relative to ``base_url``.
-            raw: If True, return the raw ``requests.Response`` instead of
-                parsing the body.
             **kwargs: Passed to ``requests.Session.request()``.
 
         Returns:
-            Parsed response body, ``requests.Response`` when ``raw=True``,
-            or None for 204.
+            Parsed response body or None for 204.
 
         Raises:
             ApiUnauthorizedError: On 401.
@@ -342,13 +329,10 @@ class BaseClientApi:
         response = self._raw_request(method, path, **kwargs)
 
         if response.status_code == 204:
-            return None if not raw else response
+            return None
 
         if not response.ok:
             self._raise_for_status(response, method, path)
-
-        if raw:
-            return response
 
         return self._parse_response(response)
 
@@ -373,21 +357,36 @@ class BaseClientApi:
         return {}
 
     def _parse_response(self, response: requests.Response) -> Any:
-        """Parse a successful response. Override for non-JSON APIs.
+        """Parse a successful response based on Content-Type.
 
-        Default behavior checks Content-Type: returns parsed JSON for
-        ``application/json``, otherwise returns response text.
+        Override this in subclasses to customize response handling.
+
+        Default behavior:
+        - ``application/json`` → parsed JSON (dict/list)
+        - ``text/*`` → ``response.text`` (str)
+        - everything else (zip, pdf, image…) → ``response.content`` (bytes)
+        - no Content-Type: attempts JSON, falls back to text
         """
         content_type = response.headers.get("Content-Type", "").lower()
+
         if "application/json" in content_type:
             return response.json()
-        # If no Content-Type but body looks like JSON, try to parse
+
+        if content_type.startswith("text/"):
+            return response.text or None
+
         if not content_type and response.text:
+            # No Content-Type header — try JSON, fall back to text
             try:
                 return response.json()
             except (ValueError, requests.exceptions.JSONDecodeError):
-                pass
-        return response.text or None
+                return response.text
+
+        # Binary content (zip, pdf, image, octet-stream, …)
+        if content_type:
+            return response.content
+
+        return None
 
     # ------------------------------------------------------------------
     # Private helpers

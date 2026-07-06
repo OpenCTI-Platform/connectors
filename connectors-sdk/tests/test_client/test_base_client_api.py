@@ -204,31 +204,18 @@ class TestHttpMethods:
             args, _ = mock_req.call_args
             assert args[0] == "DELETE"
 
-    def test_get_raw(self, client):
+    def test_raw_request_returns_response_directly(self, client):
+        """_raw_request returns the Response without parsing or error raising."""
         raw_resp = _mock_response(status_code=200, text="binary content")
         with patch.object(client._session, "request") as mock_req:
             mock_req.return_value = raw_resp
-            result = client._get("/download", raw=True)
+            result = client._raw_request("GET", "/download", stream=True)
             assert result is raw_resp
-
-    def test_get_raw_with_stream(self, client):
-        raw_resp = _mock_response(status_code=200)
-        with patch.object(client._session, "request") as mock_req:
-            mock_req.return_value = raw_resp
-            client._get("/download", raw=True, stream=True)
             _, kwargs = mock_req.call_args
             assert kwargs["stream"] is True
 
-    def test_get_raw_raises_on_error_by_default(self, client):
-        with patch.object(client._session, "request") as mock_req:
-            mock_req.return_value = _mock_response(
-                status_code=404, ok=False, json_data={"error": "not found"}
-            )
-            with pytest.raises(ApiNotFoundError):
-                client._get("/missing", raw=True)
-
-    def test_get_raw_no_raise_when_disabled(self, client):
-        """Use _raw_request for full bypass of error handling."""
+    def test_raw_request_does_not_raise_on_error(self, client):
+        """_raw_request bypasses error handling entirely."""
         error_resp = _mock_response(status_code=500, ok=False, text="error")
         with patch.object(client._session, "request") as mock_req:
             mock_req.return_value = error_resp
@@ -529,8 +516,38 @@ class TestParseResponse:
         result = client._parse_response(resp)
         assert result == "hello world"
 
+    def test_parse_response_text_xml_content_type(self, client):
+        resp = _mock_response(text="<root/>", content_type="text/xml")
+        result = client._parse_response(resp)
+        assert result == "<root/>"
+
+    def test_parse_response_binary_content_type(self, client):
+        """Binary content-types (pdf, zip, octet-stream) return bytes."""
+        resp = _mock_response(text="", content_type="application/pdf")
+        resp.content = b"\x00PDF-binary"
+        result = client._parse_response(resp)
+        assert result == b"\x00PDF-binary"
+
+    def test_parse_response_octet_stream(self, client):
+        resp = _mock_response(text="", content_type="application/octet-stream")
+        resp.content = b"\x89PNG"
+        result = client._parse_response(resp)
+        assert result == b"\x89PNG"
+
+    def test_parse_response_image_content_type(self, client):
+        resp = _mock_response(text="", content_type="image/png")
+        resp.content = b"\x89PNG\r\n"
+        result = client._parse_response(resp)
+        assert result == b"\x89PNG\r\n"
+
     def test_parse_response_empty_body(self, client):
         resp = _mock_response(text="", content_type="text/plain")
+        result = client._parse_response(resp)
+        assert result is None
+
+    def test_parse_response_no_content_type_no_body(self, client):
+        """No Content-Type and empty body returns None."""
+        resp = _mock_response(text="")
         result = client._parse_response(resp)
         assert result is None
 
