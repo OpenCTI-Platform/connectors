@@ -38,7 +38,7 @@ class ConverterToStix:
         if not isinstance(objects, list):
             self.helper.connector_logger.warning(
                 "STIX bundle missing 'objects' array; skipping",
-                {"bundle_id": stix_bundle.get("id")},
+                meta={"bundle_id": stix_bundle.get("id")},
             )
             return []
         return objects

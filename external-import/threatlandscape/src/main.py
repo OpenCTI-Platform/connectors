@@ -1,3 +1,4 @@
+import sys
 import traceback
 
 from connector import ConnectorSettings, ThreatLandscapeConnector
@@ -12,4 +13,4 @@ if __name__ == "__main__":
         connector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)

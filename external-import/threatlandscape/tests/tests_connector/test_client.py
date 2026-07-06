@@ -49,6 +49,14 @@ def test_get_stix_bundles_since_seq_id_param():
     assert "seq_id=gt.500" in resp_mock.calls[0].request.url
 
 
+def test_get_stix_bundles_requires_exactly_one_cursor_or_date():
+    """Providing both cursor and date filters should be rejected."""
+    client = _make_client()
+
+    with pytest.raises(ValueError, match="exactly one"):
+        client.get_stix_bundles(since_seq_id=500, since_date="2026-04-01T00:00:00Z")
+
+
 @resp_mock.activate
 def test_get_stix_bundles_since_date_param():
     """since_date is translated to stix_published_at=gte.<value>."""
