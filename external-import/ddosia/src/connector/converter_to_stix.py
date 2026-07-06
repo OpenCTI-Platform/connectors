@@ -123,7 +123,7 @@ class ConverterToStix:
         targets: List[Dict[str, Any]],
     ) -> Note:
         """
-        Create a STIX Note containing the raw JSON targets for a specific domain.
+        Create a STIX Note with formatted attack summary and raw JSON.
 
         Args:
             domain: The target DomainName object.
@@ -133,17 +133,47 @@ class ConverterToStix:
             targets: The list of raw target dictionaries.
 
         Returns:
-            Note object.
+            Note object with readable summary + raw JSON data.
         """
-        note_content = {
-            "cfg_id": cfg_id,
-            "snapshot_ts": cfg_ts,
-            "host": host,
-            "targets": targets,
-        }
+        # Count attacks by type
+        attack_types = {}
+        for target in targets:
+            att_type = target.get("type", "unknown")
+            attack_types[att_type] = attack_types.get(att_type, 0) + 1
+
+        # Format content with summary + raw JSON
+        summary_lines = [
+            f"# DDoSIA Targets for {host}",
+            f"",
+            f"**Snapshot ID:** {cfg_id}",
+            f"**Timestamp:** {cfg_ts}",
+            f"**Total targets:** {len(targets)}",
+            f"",
+            f"## Attack Summary",
+            f"",
+        ]
+
+        for att_type, count in sorted(attack_types.items()):
+            summary_lines.append(f"- **{att_type}**: {count} targets")
+
+        summary_lines.append(f"")
+        summary_lines.append(f"## Raw Data (JSON)")
+        summary_lines.append(f"```json")
+        summary_lines.append(
+            json.dumps(
+                {
+                    "cfg_id": cfg_id,
+                    "snapshot_ts": cfg_ts,
+                    "host": host,
+                    "targets": targets,
+                },
+                indent=2,
+            )
+        )
+        summary_lines.append(f"```")
 
         return Note(
-            content=json.dumps(note_content, indent=2),
+            content="\n".join(summary_lines),
             objects=[domain],
             author=self.author,
             markings=[self.tlp_marking],
