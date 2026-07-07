@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-osint-industries:
+    image: opencti/connector-osint-industries:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=OSINT Industries
+      - CONNECTOR_SCOPE=Email-Addr,Phone-Number,User-Account,Cryptocurrency-Wallet
+      - CONNECTOR_AUTO=false # Quota-based paid source: keep manual to avoid burning credits
+      - CONNECTOR_LOG_LEVEL=error
+      - OSINT_INDUSTRIES_API_KEY=ChangeMe
+      - OSINT_INDUSTRIES_BASE_URL=https://api.osint.industries
+      - OSINT_INDUSTRIES_TLP_LEVEL=amber+strict # clear, green, amber, amber+strict, red
+      - OSINT_INDUSTRIES_PREMIUM=false # true queries more modules, consumes more credits
+    restart: always

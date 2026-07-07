@@ -1,0 +1,34 @@
+{
+  "stix_objects": [
+    {
+      "type": "artifact",
+      "id": "artifact--22222222-2222-4222-8222-222222222222",
+      "hashes": {
+        "SHA-256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  ],
+  "stix_entity": {
+    "type": "artifact",
+    "id": "artifact--22222222-2222-4222-8222-222222222222",
+    "hashes": {
+      "SHA-256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "enrichment_entity": {
+    "entity_type": "Artifact",
+    "observable_value": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "hashes": [
+      {
+        "algorithm": "SHA-256",
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "objectMarking": [
+      {
+        "definition_type": "TLP",
+        "definition": "TLP:AMBER"
+      }
+    ]
+  }
+}

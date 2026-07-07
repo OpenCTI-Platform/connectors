@@ -6,7 +6,7 @@
   "logo": "external-import/sublime/__metadata__/logo.png",
   "use_cases" : [
     "Commercial Threat Intel",
-    "Incident Response & Ticketing"
+    "Detection & Response Enablement"
   ],
   "verified": true,
   "last_verified_date": "2026-04-30",

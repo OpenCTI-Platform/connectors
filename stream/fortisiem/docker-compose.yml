@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-fortisiem:
+    image: opencti/connector-fortisiem:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type STREAM
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=FortiSIEM # optional (default: 'FortiSIEM')
+      # - CONNECTOR_SCOPE=fortisiem # optional (default: 'fortisiem')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true # optional (default: true)
+      # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
+      # FortiSIEM parameters
+      - FORTISIEM_API_BASE_URL=ChangeMe # e.g. https://fortisiem.example.com
+      # - FORTISIEM_ORGANIZATION=super # optional (default: 'super')
+      - FORTISIEM_USERNAME=ChangeMe
+      - FORTISIEM_PASSWORD=ChangeMe
+      - FORTISIEM_WATCHLIST_ID=ChangeMe # Numeric ID of the target Watch List
+      # - FORTISIEM_ENTRY_AGE_OUT=30d # optional (default: '30d')
+      # - FORTISIEM_SSL_VERIFY=true # optional (default: true)
+    restart: always
