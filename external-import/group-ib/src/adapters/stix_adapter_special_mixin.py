@@ -3,9 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import stix2
-
 import models as ds
+import stix2
 from support.incident_note_markdown import (
     markdown_attacks_ddos,
     markdown_attacks_deface,

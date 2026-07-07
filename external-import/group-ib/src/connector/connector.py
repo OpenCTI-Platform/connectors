@@ -6,8 +6,6 @@ from datetime import datetime, timezone
 from traceback import format_exc
 from typing import Any
 
-from pycti import OpenCTIConnectorHelper
-
 from client.api_client import build_ti_adapter
 from connector.logging_config import setup_file_logging
 from connector.settings import (
@@ -16,6 +14,7 @@ from connector.settings import (
     ConfigConnector,
 )
 from connector.utils import ExternalImportHelper
+from pycti import OpenCTIConnectorHelper
 from support.mitre_mapper import get_mitre_mapper
 
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from ciaops.decorators import cache_data
-
 from connector.settings import ConfigConnector
 
 if TYPE_CHECKING:

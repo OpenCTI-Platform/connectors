@@ -9,16 +9,6 @@ line-length = 88
 [tool.isort]
 profile = "black"
 line_length = 88
-src_paths = ["src"]
-known_first_party = [
-    "_data",
-    "adapters",
-    "client",
-    "connector",
-    "models",
-    "pipeline",
-    "support",
-]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

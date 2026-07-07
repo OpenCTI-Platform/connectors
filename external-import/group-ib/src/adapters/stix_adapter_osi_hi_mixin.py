@@ -3,10 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import models as ds
 import stix2
 from ciaops.collections_meta.ti import TICollections
-
-import models as ds
 from support.incident_note_markdown import (
     markdown_hi_open_threats,
     markdown_ioc_note,
