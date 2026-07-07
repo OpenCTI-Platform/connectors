@@ -15,7 +15,6 @@ RUN apk --no-cache upgrade && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del .build-deps
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# Entrypoint
+WORKDIR /opt/opencti-connector-crowdstrike-recon
+ENTRYPOINT ["python3", "main.py"]
