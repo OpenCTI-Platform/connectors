@@ -86,19 +86,6 @@ class Connector:
             return
 
         if is_stix_indicator(data):
-            print(json.dumps(data))
-            self.helper.connector_logger.info(
-                message=f"[{event.event.upper()}] Processing message",
-                meta={"data": data, "event": event.event},
-            )
-            processed = self._process_event(event_type=event.event, stix_object=data)
-            if processed:
-                self.helper.connector_logger.info(
-                    message=f"[{event.event.upper()}] Indicator processed",
-                    meta={"opencti_id": data["id"]},
-                )
-        if data.get("type") == "identity":
-            print(json.dumps(data))
             self.helper.connector_logger.info(
                 message=f"[{event.event.upper()}] Processing message",
                 meta={"data": data, "event": event.event},
@@ -111,7 +98,7 @@ class Connector:
                 )
         else:
             self.helper.connector_logger.info(
-                message=f"[{event.event.upper()}] Entity not supported: "+event.data
+                message=f"[{event.event.upper()}] Entity not supported"
             )
 
     def process_message(self, message: Event) -> None:
