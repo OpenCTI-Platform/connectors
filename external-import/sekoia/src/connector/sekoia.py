@@ -306,7 +306,7 @@ class SekoiaConnector(object):
                 )
                 if item.get("revoked") is not None and item.get("revoked") is True:
                     item["valid_until"] = item.get("modified")
-                if confidence_score:
+                if confidence_score is not None:
                     item["x_opencti_score"] = confidence_score
                 else:
                     item["x_opencti_score"] = item.get("confidence", None)

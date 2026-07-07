@@ -110,6 +110,11 @@
       "default": null,
       "description": "This will be the score assigned to the indicators. Defaults to null, maximum 100.",
       "type": "integer"
+    },
+    "SEKOIA_SEND_CONFIDENCE": {
+      "default": true,
+      "description": "Whether to include Sekoia's native STIX confidence property on objects in the bundle sent.",
+      "type": "boolean"
     }
   },
   "required": [
