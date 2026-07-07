@@ -1,6 +1,6 @@
 # OpenCTI Spur External Import Connector
 
-[Spur](https://spur.us) provides anonymous infrastructure intelligence — identifying VPN exit nodes, residential proxies, and other anonymization infrastructure at scale. This connector downloads Spur's bulk IP feeds daily and imports them into OpenCTI as STIX 2.1 observables, enriching your threat intelligence platform with anonymization context.
+[Spur](https://spur.us) provides anonymous infrastructure intelligence - identifying VPN exit nodes, residential proxies, and other anonymization infrastructure at scale. This connector downloads Spur's bulk IP feeds daily and imports them into OpenCTI as STIX 2.1 observables, enriching your existing data.
 
 ## Table of Contents
 
@@ -22,13 +22,13 @@
 
 This connector imports Spur's anonymous and residential proxy feeds into OpenCTI. Each IP in the feed is converted to a STIX 2.1 `IPv4Address` or `IPv6Address` observable with:
 
-- A computed **threat score** based on the number of Spur risk flags
-- **Labels** derived from Spur risk categories (e.g. `tunnel`, `login-bruteforce`, `ad-fraud`), infrastructure type, and tunnel operator names
-- A **description** containing ASN, organization, geolocation, detected services, tunnel details, and client statistics
-- Optional related **AutonomousSystem** and **Location** objects with `belongs-to` / `located-at` relationships
-- Optional **Indicator** objects (STIX pattern `[ipv4-addr:value = '...']`) with `based-on` relationships, created only for IPs that carry risk or tunnel flags
+- A computed threat score based on the number of Spur risk flags
+- Labels derived from Spur risk categories (e.g. `tunnel`, `login-bruteforce`, `ad-fraud`), infrastructure type, and tunnel operator names
+- A description containing ASN, organization, geolocation, detected services, tunnel details, and client statistics
+- Optional related AutonomousSystem and Location objects with `belongs-to` / `located-at` relationships
+- Optional Indicator objects (STIX pattern `[ipv4-addr:value = '...']`) with `based-on` relationships, created only for IPs that carry risk or tunnel flags
 
-All STIX object IDs are **deterministic** (UUIDv5 based on content per the STIX 2.1 spec). Running the feed twice produces the same IDs, so OpenCTI upserts rather than duplicates. This also means that IP observables already in OpenCTI from other sources (SIEM, sandboxes, manual analysis) are automatically enriched with Spur context the next time the feed runs — no separate enrichment connector is required.
+This connector will upsert anonymizer/proxy context into existing observables or indicators. 
 
 ## Installation
 
@@ -36,9 +36,9 @@ All STIX object IDs are **deterministic** (UUIDv5 based on content per the STIX 
 
 - Python >= 3.11
 - OpenCTI Platform >= 6.8.12
-- [`pycti`](https://pypi.org/project/pycti/) matching your OpenCTI server version
-- A Spur account with **feed access** — this connector downloads bulk gzipped NDJSON files, not the per-IP Context API
-- API credentials from [spur.us](https://spur.us)
+- [`pycti`](https://pypi.org/project/pycti/) compatible your OpenCTI server version
+- A Spur account with feed access - this connector downloads gzipped NDJSON files, it doesn't call the per-IP Context API
+- A Spur API key
 
 ## Configuration variables
 
@@ -125,7 +125,7 @@ python3 main.py
 
 ### Feed download and scheduling
 
-The connector runs on the configured interval (default: 24 hours). Each run downloads all configured feed URLs sequentially. Spur feeds are updated daily by approximately 05:00 UTC — set `CONNECTOR_DURATION_PERIOD=PT24H` and start the container around 06:00 UTC to consistently pick up fresh data.
+The connector runs on the configured interval (default: 24 hours). Each run downloads all configured feed URLs sequentially. Spur feeds are updated daily by approximately 05:00 UTC. Before deploying the connector, set `CONNECTOR_DURATION_PERIOD=PT24H` and start the container around 06:00 UTC to consistently pick up fresh data.
 
 Each feed is a gzip-compressed NDJSON file. The connector streams and decompresses in chunks, processing records line by line without loading the entire feed into memory. Records are sent to OpenCTI in batches (default 5000 IPs per bundle).
 
@@ -154,10 +154,10 @@ An IP with no risks at the default score of 70 stays at 70. An IP with `TUNNEL` 
 
 Labels are normalized to lowercase with underscores replaced by hyphens:
 
-- Spur `risks` values — `tunnel`, `login-bruteforce`, `ad-fraud`, `callback-proxy`, `geo-mismatch`, `web-scraping`
-- `infrastructure` type — `datacenter`, `mobile`, `satellite`, `in-flight-wifi`, `google`
-- Tunnel `type` — `vpn`, `tor`
-- Tunnel `operator` names — e.g. `protonvpn`, `mullvad`, `nordvpn`
+- Spur `risks` values: `tunnel`, `login-bruteforce`, `ad-fraud`, `callback-proxy`, `geo-mismatch`, `web-scraping`
+- `infrastructure` type: `datacenter`, `mobile`, `satellite`, `in-flight-wifi`, `google`
+- Tunnel `type`: `vpn`, `tor`
+- Tunnel `operator` names, e.g. `protonvpn`, `mullvad`, `nordvpn`
 
 ## Debugging
 
@@ -176,12 +176,12 @@ Common issues:
 
 ### pycti version alignment
 
-The `pycti` client library version must match your OpenCTI server version. Update `src/requirements.txt` and rebuild the image when upgrading OpenCTI.
+The `pycti` client library version must be compatible your OpenCTI server version. Update `src/requirements.txt` and rebuild the image when upgrading OpenCTI.
 
 ### Feed access vs. Context API
 
-This connector uses Spur's **bulk feed API** (gzipped NDJSON download), not the per-IP Context API. Ensure your Spur license covers feed access for the URLs you configure.
+This connector uses Spur's bulk feed API (gzipped NDJSON download), not the per-IP Context API. Ensure your Spur license covers feed access for the URLs you configure.
 
 ### Large feed volumes
 
-Spur feeds can contain millions of IP records. The initial import may take significant time. Subsequent daily runs re-import the full feed — Spur feeds are complete daily snapshots, not incremental diffs.
+Spur feeds contain over 90 million Context API records. The initial import may take significant time. Subsequent daily runs re-import the full feed; Spur feeds are complete daily snapshots, not incremental diffs.
