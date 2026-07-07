@@ -5,8 +5,8 @@
   "short_description": "DISINFOX is a Threat Intelligence Exchange Platform developed by the University of Murcia, Spain, and specialized in disinformation campaigns and fake news. It is a platform that allows to spread intelligence about disinformation campaigns and fake news in real-time to allow organizations with CTI capabilities to act on it",
   "logo": "external-import/disinfox/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence",
-    "FIMI"
+    "Adversary & Campaign Insights",
+    "Foreign Influence and Disinformation (FIMI)"
   ],
   "verified": false,
   "last_verified_date": null,
