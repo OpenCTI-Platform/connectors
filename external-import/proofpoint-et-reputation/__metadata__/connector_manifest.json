@@ -1,11 +1,12 @@
 {
   "title": "Proofpoint ET Reputation",
   "slug": "proofpoint-et-reputation",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "Proofpoint is a cybersecurity company that specializes in protecting organizations from digital threats. Their Emerging Threats (ET) Intelligence Rep List is a threat detection feed consisting of IP addresses and domain names associated with malicious activity, updated hourly from sensors deployed worldwide and a proprietary Malware Sandnet system. Each entry is categorized by behavior type and scored from 0 to 127 reflecting confidence in its malicious nature.\n\nThis connector imports malicious IP addresses and domain names from Proofpoint's ET Intelligence Rep List into OpenCTI as observables and indicators, with reputation scores mapped to OpenCTI confidence levels.",
+  "short_description": "Proofpoint ET Reputation connector imports malicious IPs and domains from the Emerging Threats Intelligence Rep List, with hourly-updated reputation scores based on worldwide sensor observations.",
   "logo": "external-import/proofpoint-et-reputation/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Infrastructure & Attack Surface Visibility"
   ],
   "verified": true,
   "last_verified_date": null,

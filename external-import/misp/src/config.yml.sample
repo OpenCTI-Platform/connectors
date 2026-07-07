@@ -46,6 +46,7 @@ misp:
   #import_unsupported_observables_as_text: false # Optional (default: false)
   #import_unsupported_observables_as_text_transparent: true # Optional (default: true)
   #propagate_labels: false # Optional (default: false)
+  #attribute_timestamp_filtering: false # Optional (default: false) - When enabled, only processes attributes (client-side) that have been modified since the last run.
   batch_count: 9999 # Optional (default: 9999)
   # batch_size_limit: null # Optional (default: null; examples: '10MB', '500KB', '1.5GB' - no spaces)
   # search_limit: 10 # Optional, set a result limit for queries (default: 10)

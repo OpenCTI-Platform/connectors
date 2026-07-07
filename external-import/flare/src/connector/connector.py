@@ -21,6 +21,8 @@ class FlareConnector:
         self.flare_client = flare_client
         self.mapper = mapper
 
+        self.work_id: str | None = None
+
     def run(self) -> None:
         self.helper.connector_logger.debug(
             "Scheduling Flare Connector",
@@ -32,6 +34,7 @@ class FlareConnector:
         )
 
     def process_message(self) -> None:
+        self.work_id = None
         try:
             current_state = self.helper.get_state()
             last_run_raw = (current_state or {}).get("last_run")
@@ -51,20 +54,13 @@ class FlareConnector:
                     {"from_date": from_date.isoformat()},
                 )
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, "Flare sync"
-            )
-            self.helper.connector_logger.info(
-                "Work initiated",
-                {"work_id": work_id},
-            )
-
             events = self.flare_client.get_events(
                 from_date,
                 event_types=self.config.flare.event_types,
                 event_actions=self.config.flare.event_actions,
             )
-            imported_count = self.process_events(events, work_id)
+
+            imported_count = self.process_events(events)
             self.helper.set_state({"last_run": datetime.now(timezone.utc).isoformat()})
 
             message = f"Sync completed. Imported {imported_count} events."
@@ -72,22 +68,37 @@ class FlareConnector:
                 "Sync completed",
                 {"imported_count": imported_count},
             )
-            self.helper.api.work.to_processed(work_id, message)
+
+            if self.work_id is not None:
+                self.helper.api.work.to_processed(self.work_id, message)
 
         except Exception as e:
             self.helper.connector_logger.error(
                 "Import failed",
                 {"error": str(e), "type": type(e).__name__},
             )
-            # Work will remain in "In Progress" or be marked as failed
+            if self.work_id is not None:
+                self.helper.api.work.to_processed(
+                    self.work_id, "Import failed", in_error=True
+                )
             raise
 
-    def process_events(
-        self, events: Iterator[dict[str, Any]], work_id: str | None
-    ) -> int:
+    def process_events(self, events: Iterator[dict[str, Any]]) -> int:
         processed_count = 0
 
         for event in events:
+            if self.work_id is None:
+                self.work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, "Flare sync"
+                )
+                self.helper.connector_logger.info(
+                    "Work initiated",
+                    {"work_id": self.work_id},
+                )
+
+                if self.work_id is None:
+                    raise RuntimeError("Failed to initiate work")
+
             try:
                 uid = event.get("data", {}).get("uid")
                 self.helper.connector_logger.debug(
@@ -125,7 +136,7 @@ class FlareConnector:
 
                 self.helper.send_stix2_bundle(
                     bundle,
-                    work_id=work_id,
+                    work_id=self.work_id,
                     cleanup_inconsistent_bundle=True,
                 )
 

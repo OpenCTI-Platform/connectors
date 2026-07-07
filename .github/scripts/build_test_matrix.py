@@ -22,6 +22,7 @@ import math
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
 GITHUB_ACTIONS_JOB_LIMIT = 256
 
@@ -125,6 +126,29 @@ def should_run(
 
 
 # ---------------------------------------------------------------------------
+# Verified status
+# ---------------------------------------------------------------------------
+
+
+def is_verified(req_path: str) -> bool:
+    """Check if the connector has "verified": true in its manifest.
+
+    connectors-sdk is always considered verified (it has no manifest).
+    """
+    if connector_type(req_path) == "connectors-sdk":
+        return True
+    cdir = connector_dir(req_path)
+    manifest_path = cdir / "__metadata__" / "connector_manifest.json"
+    if not manifest_path.exists():
+        return False
+    try:
+        data: dict[str, Any] = json.loads(manifest_path.read_text())
+        return data.get("verified", False) is True
+    except (json.JSONDecodeError, OSError):
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Matrix building
 # ---------------------------------------------------------------------------
 
@@ -135,7 +159,12 @@ def make_entry(req_paths: list[str]) -> dict:
         name = f"{connector_type(req_paths[0])}/{names[0]}"
     else:
         name = ", ".join(names)
-    return {"name": name, "test_requirements": "\n".join(req_paths)}
+    verified = any(is_verified(p) for p in req_paths)
+    return {
+        "name": name,
+        "test_requirements": "\n".join(req_paths),
+        "verified": verified,
+    }
 
 
 def build_matrix(paths: list[str]) -> list[dict]:

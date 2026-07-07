@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'FortiSIEM Incidents' # optional (default: 'FortiSIEM Incidents')
+  scope: 'fortisiem' # optional (default: 'fortisiem')
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT15M' # optional (default: 'PT15M')
+
+fortisiem_incidents:
+  api_base_url: 'ChangeMe' # Base URL of the FortiSIEM Supervisor, e.g. https://fortisiem.example.com
+  organization: 'super' # optional (default: 'super')
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  import_window_days: 7 # optional (default: 7)
+  tlp_level: 'amber' # optional, one of clear/white/green/amber/amber+strict/red (default: 'amber')
+  ssl_verify: true # optional (default: true)

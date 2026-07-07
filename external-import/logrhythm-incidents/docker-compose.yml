@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-logrhythm-incidents:
+    image: opencti/connector-logrhythm-incidents:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=LogRhythm Incidents
+      # - CONNECTOR_SCOPE=logrhythm
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT15M
+      # LogRhythm parameters
+      - LOGRHYTHM_INCIDENTS_API_BASE_URL=ChangeMe # e.g. https://logrhythm.example.com:8501
+      - LOGRHYTHM_INCIDENTS_API_TOKEN=ChangeMe
+      # - LOGRHYTHM_INCIDENTS_MAX_CASES=200
+      # - LOGRHYTHM_INCIDENTS_TLP_LEVEL=amber
+      # - LOGRHYTHM_INCIDENTS_SSL_VERIFY=true
+    restart: always

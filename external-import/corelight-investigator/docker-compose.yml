@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-corelight-investigator:
+    image: opencti/connector-corelight-investigator:latest # 'corelight-investigator' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_NAME=Corelight Investigator # optional (default: 'Corelight Investigator')
+      #- CONNECTOR_SCOPE=corelight-investigator # optional (default: 'corelight-investigator')
+      #- CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      #- CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      # Custom parameters for connector-corelight-investigator
+      - CORELIGHT_INVESTIGATOR_API_BASE_URL=ChangeMe # region specific, e.g. 'https://eu.api.investigator.corelight.com'
+      - CORELIGHT_INVESTIGATOR_API_KEY=ChangeMe
+      #- CORELIGHT_INVESTIGATOR_ALERTS_PATH=/api/v1/alerts # optional (default: '/api/v1/alerts')
+      #- CORELIGHT_INVESTIGATOR_IMPORT_WINDOW_DAYS=7 # optional (default: 7)
+      #- CORELIGHT_INVESTIGATOR_MAX_ALERTS=1000 # optional (default: 1000)
+      #- CORELIGHT_INVESTIGATOR_TLP_LEVEL=amber # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber')
+      #- CORELIGHT_INVESTIGATOR_SSL_VERIFY=true # optional (default: true)
+    restart: always

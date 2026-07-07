@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from flare_client.api_client import FlareClient
+from pydantic import SecretStr
 
 
 def _make_client() -> tuple[FlareClient, MagicMock, MagicMock]:
@@ -12,8 +13,8 @@ def _make_client() -> tuple[FlareClient, MagicMock, MagicMock]:
     with patch("flare_client.api_client.FlareApiClient", return_value=mock_api):
         client = FlareClient(
             helper=helper,
-            api_key="test-key",
-            base_url="api.test.io",
+            api_key=SecretStr("test-key"),
+            api_domain="api.test.io",
             tenant_id=None,
         )
     return client, helper, mock_api
