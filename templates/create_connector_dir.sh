@@ -95,7 +95,7 @@ if [[ ! "$NAME" =~ ^[a-zA-Z0-9-]+$ ]]; then
 fi
 
 # Enforce full lowercase name
-NAME="${NAME:l}"
+NAME="${NAME,,}"
 
 NEW_CONNECTOR_DIR="../$TYPE/$NAME"
 TEMPLATE_DIR="$TYPE"
