@@ -578,7 +578,12 @@ class TheHive:
             # "comments" query name); a failed comment fetch must not abort
             # the whole case import.
             self.helper.connector_logger.warning(
-                f"Could not fetch comments for case: {case.get('title')} - {str(e)}"
+                "Could not fetch comments for case; importing it without comments",
+                meta={
+                    "case_id": case.get("_id"),
+                    "case_title": case.get("title"),
+                    "error": str(e),
+                },
             )
             return []
         self.helper.connector_logger.info(
@@ -613,7 +618,12 @@ class TheHive:
             attachments = self.thehive_api.case.find_attachments(case_id=case_id)
         except Exception as e:
             self.helper.connector_logger.warning(
-                f"Could not fetch attachments for case: {case.get('title')} - {str(e)}"
+                "Could not fetch attachments for case; importing it without attachments",
+                meta={
+                    "case_id": case_id,
+                    "case_title": case.get("title"),
+                    "error": str(e),
+                },
             )
             return [], []
         self.helper.connector_logger.info(
