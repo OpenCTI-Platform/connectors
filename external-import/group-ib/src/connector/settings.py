@@ -7,6 +7,10 @@ from typing import Any
 
 import yaml
 from ciaops.utils import FileHandler
+from connectors_sdk.settings.base_settings import (
+    BaseConnectorSettings,
+    BaseExternalImportConnectorConfig,
+)
 from dotenv import load_dotenv
 from pycti import get_config_variable
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
@@ -189,6 +193,16 @@ REPORT_NOTE_COLLECTIONS = frozenset({"apt/threat", "hi/threat"})
 #      Schema (``model_json_schema()``) consumed by the docs tooling.
 # ``extra="ignore"`` keeps the models forward-compatible with keys handled
 # entirely by ciaops (e.g. server-side query knobs) or added later.
+#
+# ``ConnectorSettings`` (below, near ``ConfigConnector``) is a separate,
+# additional layer for the standard OpenCTI/connector framework fields only
+# (id/name/scope/log_level/duration_period/update_existing_data, opencti
+# url/token), built on ``connectors_sdk.settings.BaseConnectorSettings`` for
+# real Pydantic validation and ``to_helper_config()``. The Group-IB TI
+# surface (``ti_api.*``, including its per-collection settings) stays on
+# ``GroupIBConnectorSettings``/``ConfigConnector`` above: it is not part of
+# ``ConnectorSettings`` because that TI surface is unrelated to the standard
+# connector framework fields the SDK class models.
 # ============================================================================
 
 
@@ -358,6 +372,36 @@ class GroupIBConnectorSettings(_SettingsBase):
 
     opencti: OpenCTISettings = Field(default_factory=OpenCTISettings)
     ti_api: TIApiSettings = Field(default_factory=TIApiSettings)
+
+
+class _ConnectorFrameworkConfig(BaseExternalImportConnectorConfig):
+    """The standard connectors-sdk external-import fields (id/name/scope/
+    log_level/duration_period), plus the one addition the SDK has no field
+    for: whether OpenCTI should overwrite existing entities on re-ingestion.
+    Deliberately generic -- nothing here is Group-IB-specific.
+    """
+
+    update_existing_data: bool = Field(
+        default=True,
+        description=(
+            "Whether OpenCTI should overwrite existing entities when the "
+            "same STIX object is re-ingested."
+        ),
+    )
+
+
+class ConnectorSettings(BaseConnectorSettings):
+    """Framework-level settings (see the module note above for the split
+    between this and :class:`GroupIBConnectorSettings`/:class:`ConfigConnector`).
+    Loads from the standard ``OPENCTI_URL``/``OPENCTI_TOKEN``/``CONNECTOR_*``
+    environment variables; raises
+    ``connectors_sdk.settings.exceptions.ConfigValidationError`` at
+    construction if any required value is missing or malformed.
+    """
+
+    connector: _ConnectorFrameworkConfig = Field(
+        default_factory=_ConnectorFrameworkConfig
+    )
 
 
 class ConfigConnector:

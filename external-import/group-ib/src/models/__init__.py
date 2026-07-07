@@ -1,4 +1,4 @@
-from ._common import (
+from models._common import (
     BaseEntity,
     ConversionError,
     StixPayloadUtils,
@@ -6,7 +6,7 @@ from ._common import (
     _BaseIndicator,
     _BaseSDO,
 )
-from .indicators import (
+from models.indicators import (
     URL,
     BankAccount,
     Domain,
@@ -17,9 +17,9 @@ from .indicators import (
     PaymentCard,
     UserAccount,
 )
-from .location import KillChainPhase, Location
-from .report import Incident, Note, Report
-from .sdo import (
+from models.location import KillChainPhase, Location
+from models.report import Incident, Note, Report
+from models.sdo import (
     AttackPattern,
     Identity,
     IntrusionSet,

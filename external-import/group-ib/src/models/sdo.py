@@ -13,8 +13,7 @@ from connector.settings import (
     CVSS_SEVERITY_MEDIUM_MAX,
     CVSS_SEVERITY_MEDIUM_MIN,
 )
-
-from ._common import _BaseSDO
+from models._common import _BaseSDO
 
 
 class Identity(_BaseSDO):
@@ -37,6 +36,11 @@ class Identity(_BaseSDO):
         self.identity_class = identity_class
 
     def _generate_sdo(self) -> Any:
+        custom_props = {
+            "x_opencti_score": self.risk_score or None,
+            **self._labels_kv(),
+            "x_opencti_external_references": self.external_references,
+        }
         self.stix_main_object = stix2.Identity(
             id=pycti.Identity.generate_id(self.name, self.identity_class),
             name=self.name,
@@ -44,11 +48,7 @@ class Identity(_BaseSDO):
             identity_class=self.identity_class,
             created_by_ref=self.author.id,
             object_marking_refs=self.get_markings(),
-            custom_properties={
-                "x_opencti_score": self.risk_score or None,
-                **self._labels_kv(),
-                "x_opencti_external_references": self.external_references,
-            },
+            custom_properties=custom_props,
         )
         return self.stix_main_object
 
@@ -78,6 +78,11 @@ class ThreatActor(_BaseSDO):
         self.roles = roles
 
     def _generate_sdo(self) -> Any:
+        custom_props = {
+            "x_opencti_score": self.risk_score or None,
+            **self._labels_kv(),
+            "x_opencti_external_references": self.external_references,
+        }
         self.stix_main_object = stix2.ThreatActor(
             id=pycti.ThreatActorGroup.generate_id(self.name),
             name=self.name,
@@ -90,11 +95,7 @@ class ThreatActor(_BaseSDO):
             created_by_ref=self.author.id,
             threat_actor_types=([self.global_label] if self.global_label else []),
             object_marking_refs=self.get_markings(),
-            custom_properties={
-                "x_opencti_score": self.risk_score or None,
-                **self._labels_kv(),
-                "x_opencti_external_references": self.external_references,
-            },
+            custom_properties=custom_props,
         )
         return self.stix_main_object
 
@@ -122,6 +123,11 @@ class IntrusionSet(_BaseSDO):
         self.goals = goals
 
     def _generate_sdo(self) -> Any:
+        custom_props = {
+            "x_opencti_score": self.risk_score or None,
+            **self._labels_kv(),
+            "x_opencti_external_references": self.external_references,
+        }
         self.stix_main_object = stix2.IntrusionSet(
             id=pycti.IntrusionSet.generate_id(self.name),
             name=self.name,
@@ -132,11 +138,7 @@ class IntrusionSet(_BaseSDO):
             goals=self.goals,
             created_by_ref=self.author.id,
             object_marking_refs=self.get_markings(),
-            custom_properties={
-                "x_opencti_score": self.risk_score or None,
-                **self._labels_kv(),
-                "x_opencti_external_references": self.external_references,
-            },
+            custom_properties=custom_props,
         )
         return self.stix_main_object
 
@@ -164,6 +166,11 @@ class Malware(_BaseSDO):
         self.last_seen = last_seen
 
     def _generate_sdo(self) -> Any:
+        custom_props = {
+            "x_opencti_score": self.risk_score or None,
+            **self._labels_kv(),
+            "x_opencti_external_references": self.external_references,
+        }
         self.stix_main_object = stix2.Malware(
             id=pycti.Malware.generate_id(self.name),
             name=self.name,
@@ -174,11 +181,7 @@ class Malware(_BaseSDO):
             is_family=False,
             created_by_ref=self.author.id,
             object_marking_refs=self.get_markings(),
-            custom_properties={
-                "x_opencti_score": self.risk_score or None,
-                **self._labels_kv(),
-                "x_opencti_external_references": self.external_references,
-            },
+            custom_properties=custom_props,
         )
         return self.stix_main_object
 
@@ -351,6 +354,12 @@ class AttackPattern(_BaseSDO):
         self.mitre_id = mitre_id
 
     def _generate_sdo(self) -> Any:
+        custom_props = {
+            "x_opencti_score": self.risk_score or None,
+            **self._labels_kv(),
+            "x_opencti_external_references": self.external_references,
+            "x_mitre_id": self.mitre_id,
+        }
         self.stix_main_object = stix2.AttackPattern(
             id=pycti.AttackPattern.generate_id(self.name, self.mitre_id),
             name=self.name,
@@ -358,11 +367,6 @@ class AttackPattern(_BaseSDO):
             description=self.description,
             created_by_ref=self.author.id,
             object_marking_refs=self.get_markings(),
-            custom_properties={
-                "x_opencti_score": self.risk_score or None,
-                **self._labels_kv(),
-                "x_opencti_external_references": self.external_references,
-                "x_mitre_id": self.mitre_id,
-            },
+            custom_properties=custom_props,
         )
         return self.stix_main_object

@@ -7,9 +7,8 @@ import pycti
 import stix2
 
 from connector.settings import NOTE_MAX_CONTENT
+from models._common import _BaseSDO
 from support.note_markdown import MarkdownNote
-
-from ._common import _BaseSDO
 
 
 class Report(_BaseSDO):
@@ -210,6 +209,10 @@ class Note(_BaseSDO):
             extra_kwargs["modified"] = self.modified
         elif self.created is not None:
             extra_kwargs["modified"] = self.created
+        custom = {
+            **self._labels_kv(),
+            "x_opencti_external_references": self.external_references,
+        }
         # ``id=`` must stay an explicit keyword argument here so the
         # ``linter_stix_id_generator`` pylint plugin can prove every
         # ``stix2.Note`` call goes through ``pycti.Note.generate_id`` —
@@ -220,10 +223,7 @@ class Note(_BaseSDO):
             object_refs=self.object_refs,
             created_by_ref=self.author.id,
             object_marking_refs=self.get_markings(),
-            custom_properties={
-                **self._labels_kv(),
-                "x_opencti_external_references": self.external_references,
-            },
+            custom_properties=custom,
             **extra_kwargs,
         )
         return self.stix_main_object

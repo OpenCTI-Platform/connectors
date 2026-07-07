@@ -6,7 +6,7 @@ from typing import Any
 import pycti
 import stix2
 
-from ._common import BaseEntity, _BaseIndicator
+from models._common import BaseEntity, _BaseIndicator
 
 
 class Indicator(_BaseIndicator):
@@ -152,15 +152,16 @@ class URL(_BaseIndicator):
         return pattern
 
     def _generate_observable(self) -> Any:
+        custom = {
+            "x_opencti_score": self.risk_score or None,
+            **self._labels_kv(),
+            "x_opencti_external_references": self.external_references,
+            "x_opencti_created_by_ref": self.author.id,
+        }
         self.stix_main_object = stix2.URL(
             value=self.name,
             object_marking_refs=self.get_markings(),
-            custom_properties={
-                "x_opencti_score": self.risk_score or None,
-                **self._labels_kv(),
-                "x_opencti_external_references": self.external_references,
-                "x_opencti_created_by_ref": self.author.id,
-            },
+            custom_properties=custom,
         )
         return self.stix_main_object
 
@@ -231,16 +232,17 @@ class UserAccount(BaseEntity):
         self.display_name = display_name
 
     def _generate_observable(self) -> Any:
+        custom = {
+            **self._labels_kv(),
+            "x_opencti_created_by_ref": self.author.id,
+            "x_opencti_external_references": self.external_references,
+        }
         self.stix_main_object = stix2.UserAccount(
             account_login=self.account_login,
             account_type=self.account_type,
             display_name=self.display_name,
             object_marking_refs=self.get_markings(),
-            custom_properties={
-                **self._labels_kv(),
-                "x_opencti_created_by_ref": self.author.id,
-                "x_opencti_external_references": self.external_references,
-            },
+            custom_properties=custom,
         )
         return self.stix_main_object
 

@@ -6,8 +6,7 @@ from pycti import OpenCTIConnectorHelper
 
 from adapters import DataToSTIXAdapter
 from connector.settings import ConfigConnector
-
-from .collection_dispatch import (
+from pipeline.collection_dispatch import (
     SPECIAL_COLLECTIONS,
     SpecialCollection,
     get_observable_ioc_flags,

@@ -1,3 +1,3 @@
-from .adapter import DataToSTIXAdapter
+from adapters.adapter import DataToSTIXAdapter
 
 __all__ = ["DataToSTIXAdapter"]
