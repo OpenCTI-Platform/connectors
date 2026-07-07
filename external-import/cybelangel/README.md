@@ -18,38 +18,10 @@ locations and the relationships between them.
 
 ## Configuration variables
 
-The connector reads its configuration from `config.yml` (manual deployment)
-or from environment variables (Docker deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI connectivity
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `url`      | `OPENCTI_URL`               | Yes       | URL of the OpenCTI platform.                         |
-| OpenCTI Token | `token`    | `OPENCTI_TOKEN`             | Yes       | The default admin token configured in OpenCTI.       |
-
-### Generic connector parameters
-
-| Parameter          | config.yml          | Docker environment variable | Default       | Mandatory | Description                                                                |
-|--------------------|---------------------|-----------------------------|---------------|-----------|----------------------------------------------------------------------------|
-| Connector ID       | `id`                | `CONNECTOR_ID`              |               | Yes       | A unique `UUIDv4` identifier for this connector instance.                  |
-| Connector Type     | `type`              | `CONNECTOR_TYPE`            | `EXTERNAL_IMPORT` | No    | Must be `EXTERNAL_IMPORT`.                                                 |
-| Connector Name     | `name`              | `CONNECTOR_NAME`            | `CybelAngel`  | No        | Name of the connector as displayed in the OpenCTI UI.                      |
-| Connector Scope    | `scope`             | `CONNECTOR_SCOPE`           | `all`         | No        | Scope of the connector.                                                    |
-| Log Level          | `log_level`         | `CONNECTOR_LOG_LEVEL`       | `info`        | No        | One of `debug`, `info`, `warn`, `error`.                                   |
-| Duration Period    | `duration_period`   | `CONNECTOR_DURATION_PERIOD` | `PT6H`        | No        | ISO 8601 duration between two runs (e.g. `PT6H` for 6 hours, `P1D` daily). |
-
-### CybelAngel specific parameters
-
-| Parameter        | config.yml       | Docker environment variable | Default                                       | Mandatory | Description                                                                                                                              |
-|------------------|------------------|-----------------------------|-----------------------------------------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------|
-| Client ID        | `client_id`      | `CYBELANGEL_CLIENT_ID`      |                                               | Yes       | OAuth2 client ID provided by CybelAngel.                                                                                                 |
-| Client Secret    | `client_secret`  | `CYBELANGEL_CLIENT_SECRET`  |                                               | Yes       | OAuth2 client secret provided by CybelAngel.                                                                                             |
-| API URL          | `api_url`        | `CYBELANGEL_API_URL`        | `https://platform.cybelangel.com`             | No        | Base URL of the CybelAngel platform API.                                                                                                 |
-| Auth URL         | `auth_url`       | `CYBELANGEL_AUTH_URL`       | `https://auth.cybelangel.com/oauth/token`     | No        | OAuth2 token endpoint.                                                                                                                   |
-| Audience         | `audience`       | `CYBELANGEL_AUDIENCE`       | _Derived from `api_url`_                      | No        | OAuth2 `audience` claim sent during client-credentials exchange. Defaults to the configured `api_url` (with a trailing slash).           |
-| Marking          | `marking`        | `CYBELANGEL_MARKING`        | `TLP:AMBER+STRICT`                            | No        | TLP marking attached to every imported entity. Supported: `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`. |
-| Fetch Period     | `fetch_period`   | `CYBELANGEL_FETCH_PERIOD`   | `7`                                           | No        | Number of days to look back on the **first** run. Use `all` to fetch every available claimed attack.                                     |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Behavior
 
@@ -96,7 +68,7 @@ cp src/config.yml.sample src/config.yml
 # edit src/config.yml and fill in opencti.token, cybelangel.client_id,
 # cybelangel.client_secret, ...
 pip3 install -r src/requirements.txt
-python3 src/cybelangel.py
+python3 src/main.py
 ```
 
 ## Sources

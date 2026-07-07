@@ -5,7 +5,8 @@
   "short_description": "This connector imports knowledge from the Valhalla API. The connector adds data for the following Valhalla observable/indicator types: stix2 indicator pattern: yara",
   "logo": "external-import/valhalla/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Detection & Response Enablement"
   ],
   "verified": true,
   "last_verified_date": null,

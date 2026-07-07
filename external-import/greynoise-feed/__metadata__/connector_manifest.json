@@ -5,7 +5,8 @@
   "short_description": "GreyNoise Feed provides threat intelligence by distinguishing between benign internet noise and real threats, reducing false positives. Its integration with OpenCTI enables automatic ingestion of IP threat data, improving threat detection accuracy and efficiency.",
   "logo": "external-import/greynoise-feed/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Infrastructure & Attack Surface Visibility"
   ],
   "verified": true,
   "last_verified_date": null,

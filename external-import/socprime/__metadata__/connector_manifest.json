@@ -5,7 +5,8 @@
   "short_description": "SOC Prime builds collective cyber defense by fusing Detection as Code, Sigma, and MITRE ATT&CK\u00ae to help teams proactively defend against emerging threats.",
   "logo": "external-import/socprime/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Detection & Response Enablement"
   ],
   "verified": true,
   "last_verified_date": "2025-08-27",

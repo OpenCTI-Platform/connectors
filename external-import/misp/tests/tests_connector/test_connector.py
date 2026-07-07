@@ -1413,9 +1413,11 @@ class TestFilterEventAttributesByTimestamp:
         assert len(event.Event.Object) == 1
         assert event.Event.Object[0].name == "kept-obj"
 
-    def test_keeps_object_without_attributes_if_recently_modified(
+    def test_removes_object_without_attributes_even_if_recently_modified(
         self, mock_opencti_connector_helper, mock_py_misp
     ):
+        """Objects with no attributes are always dropped — the converter requires
+        at least one attribute (object.Attribute[0]) and would raise IndexError."""
         connector = fake_misp_connector(deepcopy(minimal_config_dict))
         event = _make_event_with_attributes(
             "1",
@@ -1434,7 +1436,37 @@ class TestFilterEventAttributesByTimestamp:
 
         assert before == 0
         assert after == 0
-        assert len(event.Event.Object) == 1
+        assert len(event.Event.Object) == 0
+
+    def test_removes_object_when_all_attributes_filtered_out(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """Regression test for IndexError: object.Attribute[0] in converter.
+        An object whose attributes are all older than the threshold must be
+        dropped entirely, not kept with an empty Attribute list."""
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            600,
+            objects=[
+                {
+                    "id": "10",
+                    "name": "obj-all-old",
+                    "timestamp": "600",  # object itself is recent
+                    "Attribute": [
+                        {"id": "1", "timestamp": "100", "value": "old1"},
+                        {"id": "2", "timestamp": "200", "value": "old2"},
+                    ],
+                },
+            ],
+        )
+
+        before, after = connector._filter_event_attributes_by_timestamp(event, 500)
+
+        assert before == 2
+        assert after == 0
+        # Object must be dropped — keeping it with Attribute=[] would crash the converter
+        assert len(event.Event.Object) == 0
 
     def test_removes_object_without_attributes_if_old(
         self, mock_opencti_connector_helper, mock_py_misp

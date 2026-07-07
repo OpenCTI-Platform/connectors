@@ -5,7 +5,7 @@
   "short_description": "SentinelOne delivers passive and active EDR security via AI threat detection and autonomous response.\n\nThe OpenCTI SentinelOne Incidents connector will ingest alert data from SentinelOne into the OpenCTI threat intelligence platform. This integration enables security teams to centralise and enrich incident data from SentinelOne, facilitating comprehensive threat analysis and response.",
   "logo": "external-import/sentinelone-incidents/__metadata__/logo.png",
   "use_cases": [
-    "Incident Response & Ticketing",
+    "Detection & Response Enablement",
     "SIEM & Analytics"
   ],
   "verified": false,

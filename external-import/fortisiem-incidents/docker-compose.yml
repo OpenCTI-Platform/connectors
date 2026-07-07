@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-fortisiem-incidents:
+    image: opencti/connector-fortisiem-incidents:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_SCOPE=fortisiem # optional (default: 'fortisiem')
+      # - CONNECTOR_NAME=FortiSIEM Incidents # optional (default: 'FortiSIEM Incidents')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_DURATION_PERIOD=PT15M # optional (default: 'PT15M')
+      # FortiSIEM parameters
+      - FORTISIEM_INCIDENTS_API_BASE_URL=ChangeMe # e.g. https://fortisiem.example.com
+      - FORTISIEM_INCIDENTS_USERNAME=ChangeMe
+      - FORTISIEM_INCIDENTS_PASSWORD=ChangeMe
+      # - FORTISIEM_INCIDENTS_ORGANIZATION=super # optional (default: 'super')
+      # - FORTISIEM_INCIDENTS_IMPORT_WINDOW_DAYS=7 # optional (default: 7)
+      # - FORTISIEM_INCIDENTS_TLP_LEVEL=amber # optional (default: 'amber')
+      # - FORTISIEM_INCIDENTS_SSL_VERIFY=true # optional (default: true)
+    restart: always

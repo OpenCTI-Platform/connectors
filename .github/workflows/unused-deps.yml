@@ -29,9 +29,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch PR base commit
-        run: git fetch --no-tags --depth=1 origin ${{ github.event.pull_request.base.sha }}
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -42,8 +39,10 @@ jobs:
 
       - name: Run deptry on changed connectors
         id: deptry
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          base_sha="${{ github.event.pull_request.base.sha }}"
+          pr_files=$(gh pr diff ${{ github.event.pull_request.number }} --name-only)
           warnings=""
           config=".github/deptry-package-map.txt"
 
@@ -74,7 +73,8 @@ jobs:
               connector="$(dirname "$(dirname "$req")")"
               src="$(dirname "$req")"
 
-              changed=$(git diff --name-only "$base_sha" HEAD -- "$connector" || true)
+              # Only scan connectors with files changed in this PR
+              changed=$(echo "$pr_files" | grep "^${connector}/" || true)
               [ -z "$changed" ] && continue
 
               while IFS= read -r line; do

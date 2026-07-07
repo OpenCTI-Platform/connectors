@@ -5,7 +5,7 @@
   "short_description": "Information coming soon",
   "logo": "external-import/first-epss-bulk/__metadata__/logo.png",
   "use_cases": [
-    "Vulnerability Management"
+    "Vulnerability & Exploit Awareness"
   ],
   "verified": false,
   "last_verified_date": null,

@@ -1,11 +1,12 @@
 {
   "title": "ReversingLabs Spectra Analyze",
   "slug": "reversinglabs-spectra-analyze",
-  "description": "The ReversingLabs Spectra Analyze connector supports enrichment of observables and creation of indicators based on the analysis result received from ReversingLabs Spectra Analyze. Connector enables file and url submission to the Spectra Analyze. Based on the result, connector creates indicators, malwares, calculates score, adds labels and creates relationships between created objects for submitted observable.\nIt enables file and URL submission to the ReversingLabs Spectra Analyze platform and obtaining network threat intelligence reports for URLs, domains and IP addresses.\nThe connector works for the following observable types in OpenCTI:",
-  "short_description": "The ReversingLabs Spectra Analyze connector supports enrichment of observables and creation of indicators based on the analysis result received from ReversingLabs Spectra Analyze. Connector enables file and url submission to the Spectra Analyze. Based on the result, connector creates indicators, malwares, calculates score, adds labels and creates relationships between created objects for submitted observable.\nIt enables file and URL submission to the ReversingLabs Spectra Analyze platform and obtaining network threat intelligence reports for URLs, domains and IP addresses.\nThe connector works for the following observable types in OpenCTI:",
+  "description": "ReversingLabs Spectra Analyze is a deep file and URL analysis platform that provides malware detection, classification, and network threat intelligence. This connector enables file and URL submission to Spectra Analyze appliances and retrieves network threat intelligence reports for URLs, domains, and IP addresses.\n\nKey features:\n\u2022 File submission for sandbox analysis (Windows, macOS, Linux)\n\u2022 URL submission for analysis\n\u2022 Network threat intelligence for IPs and domains\n\u2022 Automatic indicator creation with labels\n\u2022 Malware entity creation with relationships\n\u2022 Score calculation based on analysis results",
+  "short_description": "ReversingLabs Spectra Analyze connector submits files and URLs for deep analysis, enriching observables with malware classifications, threat scores, and network intelligence.",
   "logo": "internal-enrichment/reversinglabs-spectra-analyze/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Enrichment & Analysis",
+    "Malware Analysis and Sandbox"
   ],
   "verified": true,
   "last_verified_date": "2025-11-30",

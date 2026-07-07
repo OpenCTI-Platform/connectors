@@ -5,7 +5,8 @@
   "short_description": "Import TruKno breach reports with linked attack patterns and malware.",
   "logo": "external-import/trukno/__metadata__/logo.svg",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Adversary & Campaign Insights"
   ],
   "verified": false,
   "last_verified_date": null,

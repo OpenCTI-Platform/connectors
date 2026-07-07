@@ -6,7 +6,7 @@
   "logo": "internal-enrichment/greynoise-vuln/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis",
-    "Vulnerability Management"
+    "Vulnerability & Exploit Awareness"
   ],
   "verified": true,
   "last_verified_date": "2026-06-04",

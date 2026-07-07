@@ -85,9 +85,9 @@ class Misp:
 
         Modifies the event in place, removing attributes (both at event level
         and within objects) whose timestamp is older than `since_timestamp`.
-        Objects whose own timestamp is recent are kept even if all their
-        attributes are older (metadata-only changes). Objects with no recent
-        attributes and an old timestamp are removed.
+        Objects with no remaining attributes after filtering are removed entirely,
+        even if the object-level timestamp is recent: the converter requires at
+        least one attribute per object.
 
         Args:
             event: The MISP event to filter (modified in place).
@@ -111,7 +111,10 @@ class Misp:
             # Pydantic frozen model — we need to use model internals to mutate
             object.__setattr__(event.Event, "Attribute", filtered)
 
-        # Filter attributes within objects, then remove empty objects
+        # Filter attributes within objects, then remove objects with no remaining attributes.
+        # Objects without attributes are dropped even if their own timestamp is recent:
+        # the converter always expects at least one attribute (object.Attribute[0]) and
+        # there is no meaningful data to send to OpenCTI for an attribute-less object.
         if event.Event.Object:
             remaining_objects = []
             for obj in event.Event.Object:
@@ -126,13 +129,6 @@ class Misp:
                     if filtered_obj_attrs:
                         object.__setattr__(obj, "Attribute", filtered_obj_attrs)
                         remaining_objects.append(obj)
-                    elif int(obj.timestamp or "0") >= since_timestamp:
-                        # Object has no recent attrs but was itself modified
-                        object.__setattr__(obj, "Attribute", [])
-                        remaining_objects.append(obj)
-                elif int(obj.timestamp or "0") >= since_timestamp:
-                    # Object has no attributes but was modified (metadata change)
-                    remaining_objects.append(obj)
             object.__setattr__(event.Event, "Object", remaining_objects)
 
         return total_before, total_after
