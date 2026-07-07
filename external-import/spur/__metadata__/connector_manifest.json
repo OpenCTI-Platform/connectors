@@ -1,0 +1,24 @@
+{
+  "title": "Spur",
+  "name": "Spur",
+  "slug": "spur",
+  "description": "Import Spur anonymous and residential proxy feed data into OpenCTI as STIX observables. Each IP is enriched with ASN, location, infrastructure type, risk labels, tunnel operators, and a computed threat score.",
+  "short_description": "Bulk import of Spur anonymous and residential proxy feeds as IPv4/IPv6 STIX observables.",
+  "logo": null,
+  "use_cases": [
+    "Identify anonymous proxy and VPN exit nodes in your environment",
+    "Enrich existing IP observables with Spur threat intelligence via STIX upsert",
+    "Track tunnel operator and residential proxy infrastructure"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://spur.us",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/spur",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-spur",
+  "container_type": "EXTERNAL_IMPORT"
+}

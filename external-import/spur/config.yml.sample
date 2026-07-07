@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Spur'
+  scope: 'ChangeMe'
+  log_level: 'info'
+  duration_period: 'PT24H'
+
+spur:
+  api_key: 'ChangeMe'
+  feed_urls: 'https://feeds.spur.us/v2/anonymous/feed.json.gz,https://feeds.spur.us/v2/residential/feed.json.gz'
+  tlp_level: 'amber'                # available: clear, white, green, amber, amber+strict, red
+  create_indicators: true
+  create_asns: true
+  create_locations: true
+  default_score: 70                 # base OpenCTI score for Spur observables (0-100)
+  batch_size: 5000                  # IP records per bundle sent to OpenCTI

@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-spur:
+    image: opencti/connector-spur:latest
+    environment:
+      # OpenCTI connection
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector settings
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Spur
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT24H
+      # Spur feed settings
+      - SPUR_API_KEY=CHANGEME
+      - SPUR_FEED_URLS=https://feeds.spur.us/v2/anonymous/feed.json.gz,https://feeds.spur.us/v2/residential/feed.json.gz
+      - SPUR_TLP_LEVEL=amber
+      - SPUR_CREATE_INDICATORS=true
+      - SPUR_CREATE_ASNS=true
+      - SPUR_CREATE_LOCATIONS=true
+      - SPUR_DEFAULT_SCORE=70
+      - SPUR_BATCH_SIZE=5000
+    restart: always
