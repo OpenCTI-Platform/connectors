@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Literal, Optional
 
 from connectors_sdk.models import (
     DomainName,
+    ExternalReference,
     IPV4Address,
     Note,
     OrganizationAuthor,
@@ -61,20 +62,33 @@ class ConverterToStix:
         """
         return TLPMarking(level=level)
 
-    def create_domain(self, host: str) -> DomainName:
+    def create_domain(self, host: str, cfg_id: str | None = None) -> DomainName:
         """
-        Create a STIX DomainName object.
+        Create a STIX DomainName object with optional external reference.
 
         Args:
             host: The normalized domain name.
+            cfg_id: Optional configuration/snapshot ID for external reference.
 
         Returns:
             DomainName object.
         """
+        external_references = None
+        if cfg_id:
+            snapshot_url = f"https://witha.name/config/{cfg_id}"
+            external_ref = ExternalReference(
+                source_name="witha.name",
+                description=f"DDoSIA snapshot containing this target",
+                url=snapshot_url,
+                external_id=cfg_id,
+            )
+            external_references = [external_ref]
+
         return DomainName(
             value=host,
             author=self.author,
             markings=[self.tlp_marking],
+            external_references=external_references,
         )
 
     def create_ipv4(self, ip: str) -> IPV4Address:

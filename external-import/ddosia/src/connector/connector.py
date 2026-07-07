@@ -120,8 +120,8 @@ class DdosiaConnector:
 
         # 3. Convert each host aggregate to STIX
         for host, data in aggregated_data.items():
-            # Create Domain
-            domain_obj = self.converter_to_stix.create_domain(host)
+            # Create Domain with external reference to the snapshot
+            domain_obj = self.converter_to_stix.create_domain(host, cfg_id=cfg_id)
             stix_objects.append(json.loads(domain_obj.to_stix2_object().serialize()))
 
             # Create IPs and relationships
@@ -134,15 +134,16 @@ class DdosiaConnector:
                 )
                 stix_objects.append(json.loads(rel_obj.to_stix2_object().serialize()))
 
-            # Create Note with raw targets
-            note_obj = self.converter_to_stix.create_note_for_host(
-                domain=domain_obj,
-                cfg_id=cfg_id,
-                cfg_ts=cfg_ts,
-                host=host,
-                targets=data["raw_targets"],
-            )
-            stix_objects.append(json.loads(note_obj.to_stix2_object().serialize()))
+            # Create Note with raw targets (if enabled in config)
+            if self.config.ddosia.create_notes:
+                note_obj = self.converter_to_stix.create_note_for_host(
+                    domain=domain_obj,
+                    cfg_id=cfg_id,
+                    cfg_ts=cfg_ts,
+                    host=host,
+                    targets=data["raw_targets"],
+                )
+                stix_objects.append(json.loads(note_obj.to_stix2_object().serialize()))
 
         return stix_objects
 

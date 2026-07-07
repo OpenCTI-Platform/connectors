@@ -46,6 +46,10 @@ class DdosiaConfig(BaseConfigModel):
         description="Optional timestamp from which to retrieve targets on the first run (0 for all history, null for only the latest).",
         default=None,
     )
+    create_notes: bool = Field(
+        description="Whether to create STIX Note objects for each domain with raw targets data.",
+        default=True,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
