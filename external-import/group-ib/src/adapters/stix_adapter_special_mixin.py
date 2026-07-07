@@ -3,8 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import models as ds
 import stix2
+
+import models as ds
 from support.incident_note_markdown import (
     markdown_attacks_ddos,
     markdown_attacks_deface,
@@ -375,6 +376,21 @@ class StixAdapterSpecialMixin:
                         relation_type="uses",
                     )
             primary.add_relationships_to_stix_objects()
+            secondary_domain = next(
+                (o for o in secondaries if o.c_type == "domain-name"), None
+            )
+            if secondary_domain is not None:
+                ip_wrappers = [
+                    o
+                    for o in ([primary] + secondaries)
+                    if o is not None and o.c_type in ("ipv4-addr", "ipv6-addr")
+                ]
+                for ip_w in ip_wrappers:
+                    secondary_domain.generate_relationship(
+                        secondary_domain.stix_main_object,
+                        ip_w.stix_main_object,
+                        relation_type="resolves-to",
+                    )
             if all_ioc:
                 for sec in secondaries:
                     self._generate_relations(
@@ -384,6 +400,8 @@ class StixAdapterSpecialMixin:
                         is_ioc=True,
                     )
                     sec.add_relationships_to_stix_objects()
+            elif secondary_domain is not None:
+                secondary_domain.add_relationships_to_stix_objects()
         elif malware_objects and threat_actor_objects:
             anchor = malware_objects[0]
             for ta in threat_actor_objects:
@@ -1501,6 +1519,7 @@ class StixAdapterSpecialMixin:
 
         seen: set[str] = set()
         related: list[Any] = []
+        obs_by_ctype: dict[str, Any] = {}
         for cls, val, ctype in (
             (ds.Domain, payload.get("target_domain"), "domain-name"),
             (ds.URL, payload.get("site_url") or payload.get("url"), "url"),
@@ -1519,14 +1538,26 @@ class StixAdapterSpecialMixin:
             )
             if obs is not None:
                 related.append(obs)
+                obs_by_ctype[ctype] = obs
 
         observable_objs = list(related)
+
+        domain_obs = obs_by_ctype.get("domain-name")
+        ip_obs = obs_by_ctype.get("ip")
+        if (
+            domain_obs is not None
+            and ip_obs is not None
+            and domain_obs.c_type == "domain-name"
+        ):
+            domain_obs.generate_relationship(
+                domain_obs.stix_main_object,
+                ip_obs.stix_main_object,
+                relation_type="resolves-to",
+            )
+
         actor = self._attack_actor_sdo(ta, labels)
         if actor is not None:
             related.append(actor)
-            # Deface payloads carry no malware (only a threat actor); connect
-            # the defaced-site observables to the Threat-Actor so it is not an
-            # isolated node (no Incident is created for attacks/deface).
             for obs in observable_objs:
                 self._generate_relations(
                     main_obj=obs,
@@ -1534,6 +1565,8 @@ class StixAdapterSpecialMixin:
                     helper=self.helper,
                 )
                 obs.add_relationships_to_stix_objects()
+        elif domain_obs is not None:
+            domain_obs.add_relationships_to_stix_objects()
 
         cc = target.get("country_code")
         if cc:
@@ -1656,6 +1689,7 @@ class StixAdapterSpecialMixin:
         for row in payload.get("phishing_list") or []:
             if not isinstance(row, dict):
                 continue
+            row_obs_by_ctype: dict[str, Any] = {}
             for cls, val, ctype, ioc in (
                 (ds.URL, row.get("url"), "url", True),
                 (ds.Domain, row.get("domain"), "domain-name", True),
@@ -1674,6 +1708,21 @@ class StixAdapterSpecialMixin:
                 )
                 if obs is not None:
                     related.append(obs)
+                    row_obs_by_ctype[ctype] = obs
+
+            row_domain = row_obs_by_ctype.get("domain-name")
+            row_ip = row_obs_by_ctype.get("ip")
+            if (
+                row_domain is not None
+                and row_ip is not None
+                and row_domain.c_type == "domain-name"
+            ):
+                row_domain.generate_relationship(
+                    row_domain.stix_main_object,
+                    row_ip.stix_main_object,
+                    relation_type="resolves-to",
+                )
+                row_domain.add_relationships_to_stix_objects()
 
         # Hosting IPs (non-IoC — often shared infrastructure).
         for row in payload.get("ip_list") or []:
@@ -1965,15 +2014,16 @@ class StixAdapterSpecialMixin:
 
         observables: list[Any] = []
         seen: set[str] = set()
-        for cls, val, ctype, is_cnc in (
+        by_side: dict[str, dict[str, Any]] = {"target": {}, "cnc": {}}
+        for side, cls, val, ctype, is_cnc in (
             # Target (victim) infrastructure — never an IoC.
-            (ds.IPAddress, target.get("ip"), "ip", False),
-            (ds.Domain, target.get("domain"), "domain-name", False),
-            (ds.URL, target.get("url"), "url", False),
+            ("target", ds.IPAddress, target.get("ip"), "ip", False),
+            ("target", ds.Domain, target.get("domain"), "domain-name", False),
+            ("target", ds.URL, target.get("url"), "url", False),
             # CnC (attacker) infrastructure — IoC by default.
-            (ds.Domain, cnc.get("domain"), "domain-name", True),
-            (ds.URL, cnc.get("url"), "url", True),
-            (ds.IPAddress, cnc.get("ip"), "ip", True),
+            ("cnc", ds.Domain, cnc.get("domain"), "domain-name", True),
+            ("cnc", ds.URL, cnc.get("url"), "url", True),
+            ("cnc", ds.IPAddress, cnc.get("ip"), "ip", True),
         ):
             obs = self._emit_attack_observable(
                 cls,
@@ -1988,6 +2038,21 @@ class StixAdapterSpecialMixin:
             )
             if obs is not None:
                 observables.append(obs)
+                by_side[side][ctype] = obs
+
+        for side_obs in by_side.values():
+            side_domain = side_obs.get("domain-name")
+            side_ip = side_obs.get("ip")
+            if (
+                side_domain is not None
+                and side_ip is not None
+                and side_domain.c_type == "domain-name"
+            ):
+                side_domain.generate_relationship(
+                    side_domain.stix_main_object,
+                    side_ip.stix_main_object,
+                    relation_type="resolves-to",
+                )
 
         sdo_objects: list[Any] = []
         if malware.get("name"):
@@ -2046,15 +2111,15 @@ class StixAdapterSpecialMixin:
             ta_obj.add_relationships_to_stix_objects()
 
         for obs in observables:
-            if not (obs.is_ioc or sdo_objects):
-                continue
-            self._generate_relations(
-                main_obj=obs,
-                related_objects=sdo_objects,
-                helper=self.helper,
-                is_ioc=obs.is_ioc,
-            )
-            obs.add_relationships_to_stix_objects()
+            if obs.is_ioc or sdo_objects:
+                self._generate_relations(
+                    main_obj=obs,
+                    related_objects=sdo_objects,
+                    helper=self.helper,
+                    is_ioc=obs.is_ioc,
+                )
+            if obs.stix_relationships:
+                obs.add_relationships_to_stix_objects()
 
         if self.config.get_setting_bool(
             self.collection, "create_incident", default=True

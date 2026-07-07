@@ -3,12 +3,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-import models as ds
 import stix2
-from config import ACTOR_PROFILE_COLLECTIONS as _ACTOR_PROFILE_COLLECTIONS
-from config import MALWARE_DESC_PLACEHOLDER
-from config import REPORT_NOTE_COLLECTIONS as _REPORT_NOTE_COLLECTIONS
-from config import THREAT_LEVEL_TO_SCORE
+
+import models as ds
+from connector.settings import ACTOR_PROFILE_COLLECTIONS as _ACTOR_PROFILE_COLLECTIONS
+from connector.settings import MALWARE_DESC_PLACEHOLDER
+from connector.settings import REPORT_NOTE_COLLECTIONS as _REPORT_NOTE_COLLECTIONS
+from connector.settings import THREAT_LEVEL_TO_SCORE
 from support.incident_note_markdown import (
     markdown_malware,
     markdown_threat_actor,
@@ -300,6 +301,20 @@ class SdoMixin:
         if _description:
             malware.set_description(_description)
         malware.generate_external_references(_portal_links)
+        desc_in_ext = self.config.get_setting_bool(
+            self.collection,
+            "description_in_external_references",
+            default=False,
+        )
+        if desc_in_ext:
+            malware.set_description("")
+            if _description:
+                malware.external_references.append(
+                    stix2.ExternalReference(
+                        source_name="Malware description",
+                        description=str(_description),
+                    )
+                )
         if _short_description:
             malware.external_references.append(
                 stix2.ExternalReference(
@@ -1208,7 +1223,6 @@ class SdoMixin:
                     is_ioc=domain_is_ioc,
                     helper=self.helper,
                 )
-                domain_obj.add_relationships_to_stix_objects()
                 domains.append(domain_obj)
             else:
                 self.helper.connector_logger.debug(
@@ -1223,15 +1237,9 @@ class SdoMixin:
                 url_obj.is_ioc = url_is_ioc
                 url_obj.set_valid_from(valid_from)
                 url_obj.set_valid_until(valid_until)
-                url_obj.generate_external_references(
-                    [
-                        (
-                            "NoId",
-                            url_val,
-                            "Unknown: Source URL - external reference",
-                        )
-                    ]
-                )
+                url_portal_links = self._retrieve_link(entry)
+                if url_portal_links:
+                    url_obj.generate_external_references(url_portal_links)
                 url_obj.generate_stix_objects()
                 self._generate_relations(
                     main_obj=url_obj,
@@ -1266,8 +1274,9 @@ class SdoMixin:
             )
             if domain_obj:
                 self._generate_relations(
-                    main_obj=ip,
-                    related_objects=[domain_obj],
+                    main_obj=domain_obj,
+                    related_objects=[ip],
+                    is_ioc=False,
                     helper=self.helper,
                 )
             if url_obj:
@@ -1310,8 +1319,9 @@ class SdoMixin:
             )
             if domain_obj:
                 self._generate_relations(
-                    main_obj=ip6,
-                    related_objects=[domain_obj],
+                    main_obj=domain_obj,
+                    related_objects=[ip6],
+                    is_ioc=False,
                     helper=self.helper,
                 )
             if url_obj:
@@ -1322,6 +1332,9 @@ class SdoMixin:
                 )
             ip6.add_relationships_to_stix_objects()
             ips.append(ip6)
+
+        if domain_obj is not None:
+            domain_obj.add_relationships_to_stix_objects()
 
         return domains, urls, ips
 

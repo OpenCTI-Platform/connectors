@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from config import ConfigConnector
-from logging_config import _DEFAULT_LOG_MAX_BYTES, FileLoggingConfig
+from connector.logging_config import _DEFAULT_LOG_MAX_BYTES, FileLoggingConfig
+from connector.settings import ConfigConnector
 
 
 def _inst() -> ConfigConnector:

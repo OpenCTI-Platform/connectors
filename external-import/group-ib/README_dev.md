@@ -1,8 +1,8 @@
 # OpenCTI Connector
 
 
-[![Python](https://img.shields.io/badge/python-v3.10+-blue?logo=python)](https://www.python.org/downloads/release/python-3100/)
-[![OpenCTI](https://img.shields.io/badge/opencti-v6.3.1+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/6.3.1)
+[![Python](https://img.shields.io/badge/python-v3.11+-blue?logo=python)](https://www.python.org/downloads/release/python-3110/)
+[![OpenCTI](https://img.shields.io/badge/opencti-v6.8.12+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/6.8.12)
 
 
 The OpenCTI Connector
@@ -40,15 +40,27 @@ $ ls -R
 # README.md               entrypoint.sh           src
 
 ./src:
-# main.py   config.py   adapters/   pipeline/   models/   lib/   support/   …
+# main.py   requirements.txt   dev.requirements.txt   config.yml.sample
+# connector/   client/   adapters/   pipeline/   models/   support/   _data/   docs/
+
+./src/connector:
+# connector.py   settings.py   utils.py   logging_config.py
+#   connector.py    — ExternalImportConnector run loop (scheduling, work, state)
+#   settings.py     — ConfigConnector + Pydantic settings models
+#   utils.py        — validation helpers
+#   logging_config.py — stdout + rotating file logging
+
+./src/client:
+# api_client.py   — Group-IB TI API boundary (builds the ciaops TIAdapter)
 
 ./src/adapters:
-# adapter.py   stix_adapter_*.py
+# adapter.py   stix_adapter_*.py   (STIX conversion — the converter_to_stix role)
 
 
 
 ./src/support:
-# mitre_mapper.py   note_markdown.py   portal_external_refs.py
+# mitre_mapper.py   note_markdown.py   incident_note_markdown.py
+# portal_external_refs.py   text_normalize.py
 
 ./src/pipeline:
 # collect_intelligence.py   collection_dispatch.py
@@ -60,18 +72,18 @@ $ grep -Ri template .
 ```
 
 ```sh
-$ virtualenv env
-$ source ./env/bin/activate
-$ pip3 install -r requirements
-$ cp config.yml.sample config.yml
+$ python3 -m venv venv
+$ source ./venv/bin/activate
+$ pip3 install -r src/requirements.txt
+$ cp src/config.yml.sample src/config.yml
 # Define the opencti url and token, as well as the connector's id
-$ vim config.yml
-$ python3 main.py
+$ vim src/config.yml
+$ cd src && python3 main.py
 ```
 
 ## Formatting (development only)
 
-Runtime uses **`requirements.txt`** only. For local development, install pinned tools from **`dev.requirements.txt`** (Black + isort + pre-commit; line length **79** via `pyproject.toml`).
+Runtime uses **`requirements.txt`** only. For local development, install pinned tools from **`dev.requirements.txt`** (Black + isort + flake8 + pre-commit; line length **88** via `pyproject.toml`).
 
 ```sh
 pip install -r dev.requirements.txt
@@ -120,7 +132,7 @@ cd src
 python3 main.py
 ```
 
-In production wrap `python3 main.py` in systemd/supervisor. Example unit at the bottom of this file.
+In production wrap `python3 main.py` in systemd/supervisor, or run the shipped Docker image (see `Dockerfile` / `docker-compose.yml`).
 
 ### Accessing settings in code
 
@@ -137,7 +149,7 @@ Use this pattern when adding new internal helpers — avoid reaching back into r
 
 ## Dispatch architecture
 
-Each TI collection is routed to one of two flows by `pipeline/collection_dispatch.py`.
+Each TI collection is routed to one of two flows in `pipeline/collect_intelligence.py` (via `SPECIAL_COLLECTIONS.get(collection)` → `_run_special` / `_run_default_flow`), using the maps and dataclasses defined in `pipeline/collection_dispatch.py`.
 
 - **Default flow** (`pipeline/collect_intelligence.py:_run_default_flow`) — used by report-style collections. The connector runs the IOC-extractor and emits a `Report` plus extracted observables and linked SDOs. The per-collection IOC flags live in `pipeline/collection_dispatch.py:IOC_OBSERVABLE_FLAGS` (which observable types are emitted with `is_ioc=True`).
 - **Special flow** (`pipeline/collection_dispatch.py:SPECIAL_COLLECTIONS`) — collection-specific handlers in `adapters/stix_adapter_*_mixin.py`. Each handler returns its own bundle shape (incident-centric, indicator-only, identity-only, etc.) tailored to the source data.

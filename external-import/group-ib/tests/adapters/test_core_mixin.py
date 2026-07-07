@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from adapters.adapter import DataToSTIXAdapter
-from config import ConfigConnector
+from connector.settings import ConfigConnector
 
 # --- Adapter factory ---------------------------------------------------------
 

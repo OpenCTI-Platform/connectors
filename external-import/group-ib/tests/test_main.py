@@ -3,8 +3,9 @@ from __future__ import annotations
 import runpy
 from unittest.mock import MagicMock, patch
 
-import main
 import pytest
+
+import main
 
 
 class TestMainModule:
@@ -14,7 +15,7 @@ class TestMainModule:
         assert hasattr(main, "CustomConnector")
         assert hasattr(main, "dotenv")
         # CustomConnector inherits from ExternalImportConnector.
-        from external_import import ExternalImportConnector
+        from connector.connector import ExternalImportConnector
 
         assert issubclass(main.CustomConnector, ExternalImportConnector)
 
@@ -65,7 +66,7 @@ class TestMainEntrypoint:
         # Same path, this time forcing a controlled exception inside the
         # base ``ExternalImportConnector.__init__``.
         with patch(
-            "external_import.OpenCTIConnectorHelper",
+            "connector.connector.OpenCTIConnectorHelper",
             side_effect=RuntimeError("boot fail"),
         ):
             with pytest.raises(SystemExit) as excinfo:

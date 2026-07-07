@@ -674,9 +674,9 @@ class CompromisedMixin:
             ip_obs.generate_stix_objects()
             if cnc_domain_obs:
                 ip_obs.generate_relationship(
-                    ip_obs.stix_main_object,
                     cnc_domain_obs.stix_main_object,
-                    relation_type="related-to",
+                    ip_obs.stix_main_object,
+                    relation_type="resolves-to",
                 )
             related_objects.append(ip_obs)
             cnc_observables.append(ip_obs)

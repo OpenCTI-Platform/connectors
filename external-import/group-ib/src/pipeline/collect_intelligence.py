@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from adapters import DataToSTIXAdapter
-from config import ConfigConnector
 from pycti import OpenCTIConnectorHelper
+
+from adapters import DataToSTIXAdapter
+from connector.settings import ConfigConnector
 
 from .collection_dispatch import (
     SPECIAL_COLLECTIONS,

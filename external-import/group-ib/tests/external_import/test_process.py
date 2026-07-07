@@ -5,7 +5,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from external_import import ExternalImportConnector
+
+from connector.connector import ExternalImportConnector
 
 
 def _connector() -> ExternalImportConnector:
@@ -86,7 +87,7 @@ class TestRunOnce:
             ("hi/threat", iter([])),
         ]
         c._process_collection = MagicMock()
-        with patch("external_import.get_mitre_mapper", return_value={"T1": "x"}):
+        with patch("connector.connector.get_mitre_mapper", return_value={"T1": "x"}):
             c._run_once(current_state=None, timestamp=1700000000)
         # _process_collection invoked per data_item.
         assert c._process_collection.call_count == 2
@@ -96,7 +97,7 @@ class TestRunOnce:
     def test_refreshes_sequpdate_state(self):
         c = _connector()
         c.ti_adapter.create_generators.return_value = []
-        with patch("external_import.get_mitre_mapper", return_value={}):
+        with patch("connector.connector.get_mitre_mapper", return_value={}):
             c._run_once(
                 current_state={"apt/threat": {"sequpdate": "123"}},
                 timestamp=1700000000,
@@ -109,7 +110,7 @@ class TestRunOnce:
     def test_none_state_treated_as_empty(self):
         c = _connector()
         c.ti_adapter.create_generators.return_value = []
-        with patch("external_import.get_mitre_mapper", return_value={}):
+        with patch("connector.connector.get_mitre_mapper", return_value={}):
             c._run_once(current_state=None, timestamp=0)
         assert c.ti_adapter._collections_last_sequence_updates == {}
 
@@ -272,7 +273,7 @@ class TestProcessPortion:
         c.set_or_update_state = MagicMock()
         events = [{"id": "evt-1"}, {"id": "evt-2"}]
         with patch(
-            "external_import.OpenCTIConnectorHelper.stix2_create_bundle",
+            "connector.connector.OpenCTIConnectorHelper.stix2_create_bundle",
             return_value="bundle-json",
         ):
             c._process_portion(
@@ -329,7 +330,7 @@ class TestProcessPortion:
         c.set_or_update_state = MagicMock()
         events = [{"id": "evt-1"}, {"id": "evt-2"}]
         with patch(
-            "external_import.OpenCTIConnectorHelper.stix2_create_bundle",
+            "connector.connector.OpenCTIConnectorHelper.stix2_create_bundle",
             return_value="bundle",
         ):
             c._process_portion(
@@ -368,3 +369,98 @@ class TestEventHintEdgeCases:
             ExternalImportConnector._event_hint({"threat_report": {"id": 9999}})
             == "9999"
         )
+
+
+# --- whitelist / authentication failures ------------------------------------
+#
+# Regression guard for OpenCTI-connectors/issues/4168: a Group-IB API rejection
+# (IP not whitelisted, revoked token, wrong username) must surface in the
+# connector logs. Silent swallowing of the exception is the failure mode.
+
+
+class _FakeResponse:
+    """Minimal stand-in for ``requests.Response`` used inside HTTPError."""
+
+    def __init__(self, status_code: int, reason: str = "Forbidden") -> None:
+        self.status_code = status_code
+        self.reason = reason
+        self.text = f"HTTP {status_code} {reason}"
+
+
+class _FakeHTTPError(Exception):
+    """Shaped like ``requests.exceptions.HTTPError`` — carries ``response``."""
+
+    def __init__(self, status_code: int, message: str) -> None:
+        super().__init__(message)
+        self.response = _FakeResponse(status_code)
+
+
+def _collect_log_text(mock_logger: MagicMock, level: str) -> str:
+    """Concatenate every string that was passed to logger.<level>(...)."""
+    method = getattr(mock_logger, level)
+    parts: list[str] = []
+    for call in method.call_args_list:
+        for arg in call.args:
+            if isinstance(arg, str):
+                parts.append(arg)
+    return "\n".join(parts)
+
+
+class TestWhitelistAndAuthFailuresLogged:
+    def test_create_generators_auth_error_logged_as_error(self):
+        # ``create_generators`` is the first API touchpoint each cycle. If the
+        # backing IP is not whitelisted, ciaops raises here. The inner
+        # try/except inside ``_process`` must log the traceback via
+        # ``connector_logger.error`` — never swallow silently.
+        c = _connector()
+        c.ti_adapter.create_generators = MagicMock(
+            side_effect=_FakeHTTPError(401, "Unauthorized: IP not whitelisted")
+        )
+        c.set_or_update_state = MagicMock()
+        with patch("connector.connector.get_mitre_mapper", return_value={}):
+            c._process()
+
+        c.helper.connector_logger.error.assert_called()
+        joined = _collect_log_text(c.helper.connector_logger, "error")
+        assert "_FakeHTTPError" in joined
+        assert "Unauthorized" in joined
+        # State still persisted so the next tick is not lost.
+        c.set_or_update_state.assert_called_once()
+
+    def test_pre_peek_auth_error_warns_with_traceback(self):
+        # A 403 raised on the very first ``next(generator)`` must be captured
+        # by the pre-peek ``except Exception`` and logged with the traceback;
+        # no Work is created for the flapping collection.
+        c = _connector()
+        c.cfg.get_collection_settings = MagicMock(return_value=True)
+
+        def blocked():
+            raise _FakeHTTPError(403, "Forbidden: whitelisting required")
+            yield  # pragma: no cover — unreachable, marks fn as a generator
+
+        c._process_portion = MagicMock()
+        c._process_collection(
+            data_item=(("apt/threat", blocked()), {"apt/threat": {}}),
+            timestamp=1700000000,
+        )
+
+        c._process_portion.assert_not_called()
+        c.helper.api.work.initiate_work.assert_not_called()
+        c.helper.connector_logger.warning.assert_called()
+        joined = _collect_log_text(c.helper.connector_logger, "warning")
+        assert "apt/threat" in joined
+        assert "_FakeHTTPError" in joined
+        assert "Forbidden" in joined
+
+    def test_run_once_httperror_propagates_to_process_error_log(self):
+        # Independent path: even if create_generators succeeds but a later
+        # step inside _run_once (e.g. the MITRE mapper fetch) hits an auth
+        # rejection, the outer ``_process`` handler still logs a full trace.
+        c = _connector()
+        c._run_once = MagicMock(side_effect=_FakeHTTPError(401, "auth token expired"))
+        c.set_or_update_state = MagicMock()
+        c._process()
+
+        c.helper.connector_logger.error.assert_called()
+        joined = _collect_log_text(c.helper.connector_logger, "error")
+        assert "auth token expired" in joined

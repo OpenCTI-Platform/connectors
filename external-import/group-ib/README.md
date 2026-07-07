@@ -4,8 +4,8 @@
 | ----------------- |------------| ------- |
 | Filigran Verified | 2025-03-10 |    -    |
 
-[![Python](https://img.shields.io/badge/python-v3.10+-blue?logo=python)](https://www.python.org/downloads/release/python-3100/)
-[![OpenCTI](https://img.shields.io/badge/opencti-v6.3.1+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/6.3.1)
+[![Python](https://img.shields.io/badge/python-v3.11+-blue?logo=python)](https://www.python.org/downloads/release/python-3110/)
+[![OpenCTI](https://img.shields.io/badge/opencti-v6.8.12+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/6.8.12)
 
 
 The OpenCTI Group-IB Connector is a standalone Python process that collects data from Threat Intelligence via API calls
@@ -106,9 +106,9 @@ interface and that it covers the API endpoints you wish to reach. Documentation 
 
 ### Requirements
 
-- **Python >= 3.10**
+- **Python >= 3.12**
 - Active Threat Intelligence license
-- OpenCTI Platform >= 6.3.1
+- OpenCTI Platform >= 6.8.12
 
 
 ## **Quick start**
@@ -427,7 +427,7 @@ A consolidated view of the cross-cutting attributes the connector attaches to ev
 
 ### Collection display labels (`COLLECTION_DISPLAY_LABEL`)
 
-Every primary entity emitted by the connector carries exactly one `collection:<Display Name>` label. The slug → label mapping is centralized in `src/config.py` as `COLLECTION_DISPLAY_LABEL` and is the single source of truth — changing a value here is the supported way to rename a collection label across the whole bundle.
+Every primary entity emitted by the connector carries exactly one `collection:<Display Name>` label. The slug → label mapping is centralized in `src/connector/settings.py` as `COLLECTION_DISPLAY_LABEL` and is the single source of truth — changing a value here is the supported way to rename a collection label across the whole bundle.
 
 | Collection slug | Emitted label |
 |---|---|
@@ -478,7 +478,7 @@ Routed via **default flow**.
 | `Malware` × N | Per malware family | `malware_report_list[].name` |
 | `Attack-Pattern` × N (MITRE ATT&CK) | Per pattern | `mitre_matrix[]` |
 | `Vulnerability` × N (CVE) | Per CVE | `cve_list[]` |
-| `Domain-Name`, `Url`, `IPv4-Addr`, `IPv6-Addr` (all `x_opencti_create_indicator=true`) | Per network IOC | `network_list[]` — IPv6 picked from `indicators[].params.ipv6` |
+| `Domain-Name`, `Url`, `IPv4-Addr`, `IPv6-Addr` (all `x_opencti_create_indicator=true`) | Per network IOC | `network_list[]` — IPv6 picked from `indicators[].params.ipv6`. `Url` observables never carry their own value as an `external_reference` (that would render as a clickable link to the malicious URL in OpenCTI). Instead, when the entry ships a Group-IB TI `portal_link`, it is attached as the observable's external reference so analysts can pivot into the source system. |
 | `StixFile` with hash properties | Per file IOC | `file_list[]` |
 | `Indicator` (pattern_type=`stix`) | One per network / file IOC observable | derived from `network_list[]` / `file_list[]`. The `apt/threat` mapping has **no** `yara_report` / `suricata_report` block, so YARA / Suricata `Indicator`s are never emitted for this collection (only `malware/yara` and `malware/signature` produce those). |
 | `Location` (Country / City) | Per actor location | `threat_actor.country`, `countries` |
@@ -498,7 +498,7 @@ Routed via **default flow**.
 | `threat_report.short_description` | `external_references[source_name="Short description"].description` | Always in external references (independent of the flag). |
 | `threat_report.report_number` (e.g. `CP-2809-2320`) | `external_references[source_name="Group-IB Report Number"].external_id` | Group-IB internal report identifier. |
 | `threat_report.sources[]` (URL list) | `external_references[source_name="Upstream source"].url` × N | Each URL becomes a separate external reference; malformed URLs are silently skipped with a warning log. |
-| `threat_report.portal_link` / `id` | `external_references[source_name="Group-IB TI portal"].url` | Link back to the TI Portal entity. |
+| `threat_report.portal_link` / `id` | `external_references[source_name="Group-IB TI portal: <entity_name>"].url` (or bare `"Group-IB TI portal"` when the entity has no usable name) | Link back to the TI Portal entity. The entity name is appended after `": "` so operators can distinguish portal-link references by target when browsing external-reference lists. |
 | `threat_report.sectors[]` / `targeted_companies[]` / `targeted_partners[]` / `regions[]` | Searchable SDOs: `Identity` (Sector / Organization) and `Location` (Region), included in `Report.object_refs` and linked `<actor> —[targets]→ <entity>` when the report carries an actor | Gated by `TARGETED_ENTITIES_AS_SDO` (default `true`). Enables queries like "threats against my sector / region". |
 | `threat_report.expertise[]` | `Report.labels` as bare values | Gated by `INCLUDE_EXPERTISE_LABELS` (default `true`) + the `INCLUDE_CONTEXT_LABEL` gate. Enables filtering by expertise type (e.g. `Leak`, `Hacktivism`). |
 | `threat_report.related_threat_actors[]` | **Not emitted as labels** | In the Note only. |
@@ -512,6 +512,7 @@ When `STORE_REPORT_LABELS_IN_NOTE=true` the remaining labels (instead of being a
 Relationships:
 - `Indicator —[based-on]→ Observable`
 - `Indicator —[indicates]→ Threat-Actor / Intrusion-Set` (the network/file IOC indicators are linked to the report's actor anchor; there is no `Indicator —[indicates]→ Malware` here because the `apt/threat` mapping emits no YARA/Suricata indicators)
+- `Domain-Name —[resolves-to]→ IPv4-Addr / IPv6-Addr` when a `network_list[]` entry carries both a domain and an IP (STIX 2.1 canonical direction — source is the domain, target is the IP)
 - `Threat-Actor —[uses]→ Malware`, `—[uses]→ Attack-Pattern`, `—[targets]→ Vulnerability`
 - `Threat-Actor —[located-at]→ Location` (base), `—[targets]→ Location` (target)
 - `Threat-Actor —[targets]→ Identity (Sector / Organization)` and `—[targets]→ Location (Region)` for the promoted victimology entities (when the report carries an actor)
@@ -642,7 +643,7 @@ Routed via **special** handler `generate_malware_cnc`. IOC-graph + a context Not
 | `Threat-Actor` × N (or `Intrusion-Set` when toggled) | Operators (when attributed) |
 | `Note` ("Malware CnC: …") | CnC, domain/URL, platform, dates, malware, threat actors, resolved-IPs table, associated file. Carries the TI-portal link; references every emitted SDO/SCO. |
 
-Relationships: `Indicator —[based-on]→` its observable (for every Indicator emitted); each Indicator `—[indicates]→ Malware / Threat-Actor`; `Domain-Name —[resolves-to]→ IPv4/IPv6`; `Threat-Actor —[uses]→ Malware`.
+Relationships: `Indicator —[based-on]→` its observable (for every Indicator emitted); each Indicator `—[indicates]→ Malware / Threat-Actor`; `Domain-Name —[resolves-to]→ IPv4/IPv6-Addr` (STIX 2.1 canonical direction — emitted whether the domain is the CnC primary or a secondary alongside a file-hash primary, for every CnC IP in the event); `Threat-Actor —[uses]→ Malware`.
 
 Default TLP: `amber`.
 
@@ -686,7 +687,7 @@ Routed via **special** handler `generate_attacks_ddos`. Target (victim) infrastr
 | `Note` ("DDoS attack: …") | Markdown with `id`, source, type, protocol, duration, timing, target geo/ASN/provider/port, CnC, attribution, `messageLink`. Carries the TI-portal external reference (`attacks/ddos?id=`). References the Incident and all observables/SDOs. |
 | `Identity` (Group-IB author) | Always |
 
-Relationships: `Incident —[related-to]→` observables/Location, `—[uses]→ Malware`, `—[attributed-to]→ Threat-Actor/Intrusion-Set`; `Threat-Actor —[uses]→ Malware` when both present; CnC `Indicator —[based-on]→` its observable and `—[indicates]→ Malware / Threat-Actor`; target observables —[related-to]→ `Malware` and the actor, so the attribution SDOs stay connected to the attack infrastructure (OpenCTI permits `communicates-with` only from Malware to an observable, so observable-first edges use the generic type).
+Relationships: `Incident —[related-to]→` observables/Location, `—[uses]→ Malware`, `—[attributed-to]→ Threat-Actor/Intrusion-Set`; `Threat-Actor —[uses]→ Malware` when both present; CnC `Indicator —[based-on]→` its observable and `—[indicates]→ Malware / Threat-Actor`; target observables —[related-to]→ `Malware` and the actor, so the attribution SDOs stay connected to the attack infrastructure (OpenCTI permits `communicates-with` only from Malware to an observable, so observable-first edges use the generic type). When both a domain and an IP are present within the same side (target or CnC), the connector also emits `Domain-Name —[resolves-to]→ IPv4-Addr/IPv6-Addr` on that side — STIX 2.1 canonical direction, so target/victim DNS and CnC DNS are modelled independently.
 
 DDoS events are matched against active threat-hunting rules upstream, so an `Incident` per event is the intended analytic unit; disable with `CREATE_INCIDENT=false` if you only want the IOC graph.
 
@@ -707,7 +708,7 @@ Routed via **special** handler `generate_attacks_deface`. An `Incident` SDO is c
 | `Note` ("Website defacement: …") | id, source, target domain/URL, mirror, source URL, provider, target host geo/ASN/provider, attribution. References the Incident and all observables/SDOs. |
 | `Identity` (author) | Always |
 
-Relationships: `Incident —[related-to]→` observables/Location, `—[attributed-to]→ Threat-Actor/Intrusion-Set`. When attributed, each defaced-site observable is additionally linked to the `Threat-Actor`/`Intrusion-Set` (`related-to`) so the actor is connected to the infrastructure (deface payloads carry no malware, so there is no `uses` relation). The portal link is taken from the API `portalLink` field and attached to the Note and every observable. Default TLP: `amber`.
+Relationships: `Incident —[related-to]→` observables/Location, `—[attributed-to]→ Threat-Actor/Intrusion-Set`. When attributed, each defaced-site observable is additionally linked to the `Threat-Actor`/`Intrusion-Set` (`related-to`) so the actor is connected to the infrastructure (deface payloads carry no malware, so there is no `uses` relation). When the payload contains both a defaced-site domain and a hosting IP, `Domain-Name —[resolves-to]→ IPv4-Addr` is emitted (STIX 2.1 canonical direction). The edge is suppressed when `target_domain` actually carries an IP literal and is reclassified into an IP observable, since no domain remains to resolve. The portal link is taken from the API `portalLink` field and attached to the Note and every observable. Default TLP: `amber`.
 
 #### `attacks/phishing_group` — Phishing campaigns
 
@@ -723,7 +724,7 @@ Routed via **special** handler `generate_attacks_phishing_group`.
 | `Note` ("Phishing group: …") | brand, primary domain, page title, objective, source, dates, **Hosting IPs** table, **Phishing pages** table |
 | `Identity` (author) | Always |
 
-Relationships: each phishing observable `—[related-to]→ Identity (brand)`; `Threat-Actor —[targets]→ Identity (brand)` when attributed. All emitted entities also carry the brand name as a bare label (gated by `INCLUDE_BRAND_LABELS`, default `true`), so brand filtering works on labels as well.
+Relationships: each phishing observable `—[related-to]→ Identity (brand)`; `Threat-Actor —[targets]→ Identity (brand)` when attributed. For every `phishing_list[]` row that carries both a domain and an IP, `Domain-Name —[resolves-to]→ IPv4-Addr` is emitted (STIX 2.1 canonical direction) so hosting resolution is preserved per row. All emitted entities also carry the brand name as a bare label (gated by `INCLUDE_BRAND_LABELS`, default `true`), so brand filtering works on labels as well.
 
 Portal link (`attacks/phishing?scope=all&q=id:<id>`) on the Note and observables. Default TLP: `amber`.
 
@@ -757,7 +758,7 @@ Routed via **special** handler `generate_compromised_access`.
 | `Malware` | Attributed stealer family (`malware.name`), when present — at most one |
 | `Note` ("Compromised access details") | Markdown with type, target (host/domain/provider/country/device), C2, malware, source, price, and the raw access description |
 
-Relationships: `Incident —[related-to]→` every observable, `Incident —[uses]→ Malware`; CnC `Indicator —[based-on]→` its observable and `—[indicates]→ Malware` when a stealer is attributed.
+Relationships: `Incident —[related-to]→` every observable, `Incident —[uses]→ Malware`; CnC `Indicator —[based-on]→` its observable and `—[indicates]→ Malware` when a stealer is attributed; `Domain-Name —[resolves-to]→ IPv4-Addr` for each CnC IP when the darkweb-marketplace CnC domain is present (STIX 2.1 canonical direction — source is the CnC domain, target is the IP).
 
 Default TLP: `amber`.
 
@@ -863,7 +864,7 @@ Default TLP: `red`.
 
 Routed via **special** handler `generate_darkweb_forums`. Source: closed darkweb forums where threat actors plan and coordinate attacks. Modeled like the chat-message collections (discord / messenger): the post author becomes a `User-Account` SCO and the post body/metadata go into a `Note`. The forum itself is **not** emitted as an `Organization`/`Identity` (one low-signal entity per forum is avoided).
 
-The real API fields are `topic` (→ title), `message` (→ body), `categories`, `forum`, `nickname`, `lang`, `datetime` / `uploadTime` / `updateDatetimeAlert` (dates), and `domain` + `url` (the real forum post URL). This collection does **not** carry an `indicators.params` block — no network/file IOCs are extracted.
+After mapping.json normalization the handler reads `title` (topic), `message` (body), `categories`, `forum`, `nickname`, `langs`, the date fields, and `sources` (the original forum post URL). This collection does **not** carry an `indicators.params` block — no network/file IOCs are extracted.
 
 | OpenCTI entity | When | Source field |
 |---|---|---|
@@ -872,7 +873,7 @@ The real API fields are `topic` (→ title), `message` (→ body), `categories`,
 | `Identity` (Group-IB author) | Always | constant |
 | `MarkingDefinition` (TLP) | Always | `evaluation.tlp` (fallback `amber`) |
 
-External references on the Note: the TI-portal link (`ta/darkweb?id=`) plus the original forum post URL (`domain` + `url`). The forum name is added as a bare context label when `include_context_label` is enabled (defaults to `true`; this collection has no dedicated `INCLUDE_CONTEXT_LABEL` key in `.env.sample`). Post categories go into the Note body only.
+External references on the Note: the TI-portal link (`ta/darkweb?id=`) plus the original forum post URL (from the `sources` field, labeled "Original forum post"). The forum name is added as a bare context label when `include_context_label` is enabled (defaults to `true`; this collection has no dedicated `INCLUDE_CONTEXT_LABEL` key in `.env.sample`). Post categories go into the Note body only.
 
 TLP: `evaluation.tlp` per-event (fallback `amber`).
 
@@ -936,7 +937,7 @@ These feeds are non-IOC by policy — they are background context, not detection
 - **Author Identity** — every bundle includes a single shared `Identity` SDO (`name=Group-IB`, `identity_class=organization`) with a deterministic STIX ID for cross-bundle deduplication.
 - **TLP markings** — derived from `event.evaluation.tlp`, with two kinds of per-collection override declared in `pipeline/collection_dispatch.py`:
   - **`tlp_strict`** (always overrides `event.evaluation.tlp`): `compromised/account_group` → `red`; `ioc/primary` → `amber`. Actors (`apt/threat_actor`, `hi/threat_actor`) emit `amber+strict` as a hard-coded handler default.
-  - **`tlp_fallback`** (used only when the event omits a TLP): `compromised/masked_card`, `compromised/bank_card_group`, `compromised/discord`, `compromised/messenger` → `red`; `osi/public_leak`, `osi/git_repository`, `compromised/access`, `compromised/spd`, `malware/cnc`, `hi/open_threats`, `darkweb/forums`, `attacks/deface`, `attacks/phishing_group`, `attacks/phishing_kit` → `amber`; `osi/vulnerability`, `attacks/ddos` → `green`.
+  - **`tlp_fallback`** (used only when the event omits a TLP): `compromised/masked_card`, `compromised/bank_card_group`, `compromised/discord`, `compromised/messenger` → `red`; `osi/public_leak`, `osi/git_repository`, `compromised/access`, `compromised/spd`, `malware/cnc`, `hi/open_threats`, `darkweb/forums`, `attacks/deface`, `attacks/phishing_group`, `attacks/phishing_kit`, `osi/vulnerability`, `attacks/ddos` → `amber`.
   - All other collections derive TLP straight from `event.evaluation.tlp`. The custom `amber+strict` marking object is generated at config load (the `stix2` library does not ship it by default).
 - **Statement marking** — when `ENABLE_STATEMENT_MARKING=true` an extra custom `MarkingDefinition` (`definition_type=statement`, `definition={"statement": "Group-IB"}`) is attached to every bundle.
 - **Indicators** — default-flow IOC collections (e.g. `apt/threat`, `hi/threat`, `malware/malware`) emit the observable with `is_ioc=True` and an explicit `Indicator` SDO plus `based-on` / `indicates` relations. Special handlers are collection-specific: `malware/cnc`, `attacks/phishing_group`, and `attacks/phishing_kit` emit IOC observables with the corresponding Indicator semantics, while `ioc/primary` emits Indicator SDOs only and does not include standalone backing observables in the bundle. The per-collection default-flow IOC flags live in `pipeline/collection_dispatch.py:IOC_OBSERVABLE_FLAGS`.
@@ -975,7 +976,7 @@ Example state layout:
 
 - **First run:** If there is no entry for a collection, the feed client uses that collection's `DEFAULT_DATE` as the lookback anchor; after data is ingested, the latest `sequpdate` returned by the API is written to state.
 - **Later runs:** The stored `sequpdate` is passed back so only new or updated records are fetched.
-- **Failure safety:** After each processed API portion the connector calls `set_state` with the updated `sequpdate` (see `external_import.ExternalImportConnector._process_portion`), so a crash mid-run does not skip as much data as losing the whole run.
+- **Failure safety:** After each processed API portion the connector calls `set_state` with the updated `sequpdate` (see `connector.connector.ExternalImportConnector._process_portion`), so a crash mid-run does not skip as much data as losing the whole run.
 
 
 ### Threat reports (`apt/threat`, `hi/threat`) and observables
@@ -1020,7 +1021,7 @@ For each key the table below documents three things: what it controls, the defau
 | `TI_API__COLLECTIONS__<NAME>__DEFAULT_DATE` | **strongly recommended when ENABLE=true** | Lookback start date for the **first** run only, format `YYYY-MM-DD`. After the first run the upstream `sequpdate` cursor stored in OpenCTI connector state takes over and this value is ignored. **Unset / empty on an enabled collection → the Group-IB API adapter uses today minus 3 days as the initial lookback.** Set an explicit date to make initial ingestion deterministic. |
 | `TI_API__COLLECTIONS__<NAME>__TTL` | per-collection default (see `.env.sample`; typical: 30/90/1460 days) | Validity period for emitted `Indicator` SDOs in days. The connector computes `valid_until = valid_from + TTL` when a handler creates Indicators and has a base timestamp. **Unset → default-flow helpers fall back to `DEFAULT_TTL_DAYS = 365`; several special handlers have their own code defaults (`malware/cnc` 90, `compromised/masked_card` 90, `attacks/phishing_group` 30, `attacks/phishing_kit` 30).** Keep the sample TTLs explicit if you need deterministic indicator expiry. |
 | `TI_API__COLLECTIONS__<NAME>__LOCAL_CUSTOM_TAG` | `null` | Optional extra label appended to every emitted entity from this collection. Useful for tenant-tagging (e.g. `tenant:acme`) or pipeline-stage tagging. **Unset / set to `null` → no extra label is appended.** |
-| `TI_API__COLLECTIONS__<NAME>__DESCRIPTION_IN_EXTERNAL_REFERENCES` | `false` | When `true`, supported handlers clear the entity's `description` field and move the description body into an `external_references` entry. This is honored by `apt/threat`, `hi/threat`, `apt/threat_actor`, `hi/threat_actor`, and incident-style handlers that call `_apply_incident_description` (`compromised/access`, `compromised/account_group`, `compromised/bank_card_group`, `compromised/masked_card`, `compromised/spd`, `malware/config`, `osi/git_repository`, `osi/public_leak`). **Unset → defaults to `false`**; descriptions stay on the SDO. |
+| `TI_API__COLLECTIONS__<NAME>__DESCRIPTION_IN_EXTERNAL_REFERENCES` | `false` | When `true`, supported handlers clear the entity's `description` field and move the description body into an `external_references` entry. Honored by: `apt/threat`, `hi/threat` (Report SDO); `apt/threat_actor`, `hi/threat_actor` (Threat-Actor / Intrusion-Set SDO); `malware/malware` (Malware SDO); `hi/open_threats` (Report SDO); and incident-style handlers that call `_apply_incident_description` (`compromised/access`, `compromised/account_group`, `compromised/bank_card_group`, `compromised/masked_card`, `compromised/spd`, `malware/config`, `osi/git_repository`, `osi/public_leak`). **Unset → defaults to `false`**; descriptions stay on the SDO. |
 | `TI_API__COLLECTIONS__<NAME>__USE_HUNTING_RULES` | `false` | When `true` and the upstream endpoint supports `apply_hunting_rules`, the connector asks the API to apply the tenant's portal-configured hunting rules **server-side**. Drastically reduces ingested volume for noisy collections (`osi/public_leak`, `compromised/messenger`, `darkweb/forums`, …). **Unset → defaults to `false`**; full feed is ingested. |
 
 ### Collection-specific parameter matrix

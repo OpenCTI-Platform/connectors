@@ -6,16 +6,17 @@ from datetime import datetime, timezone
 from traceback import format_exc
 from typing import Any
 
-from ciaops.adapters.opencti_adapter import TIAdapter
-from config import (
+from pycti import OpenCTIConnectorHelper
+
+from client.api_client import build_ti_adapter
+from connector.logging_config import setup_file_logging
+from connector.settings import (
     INITIATE_WORK_DELAY_SEC,
     MAX_ERROR_TRUNCATE_LEN,
     ConfigConnector,
 )
-from logging_config import setup_file_logging
-from pycti import OpenCTIConnectorHelper
+from connector.utils import ExternalImportHelper
 from support.mitre_mapper import get_mitre_mapper
-from utils import ExternalImportHelper
 
 
 class ExternalImportConnector:
@@ -59,7 +60,7 @@ class ExternalImportConnector:
             f"Enabled collections: {self.enabled_collections}"
         )
 
-        self.ti_adapter = TIAdapter(
+        self.ti_adapter = build_ti_adapter(
             ti_creds_dict={
                 "api_key": self.cfg.ti_api_token,
                 "username": self.cfg.ti_api_username,
@@ -451,6 +452,7 @@ class ExternalImportConnector:
                         bundle,
                         update=self.update_existing_data,
                         work_id=work_id,
+                        cleanup_inconsistent_bundle=True,
                     )
                     sent += 1
                 else:

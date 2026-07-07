@@ -7,7 +7,8 @@ from urllib.parse import urlparse
 
 import pycti
 import stix2
-from config import (
+
+from connector.settings import (
     CTRL_CHAR_RE,
     HTML_TAG_RE,
     PORTAL_LINK_DEFAULT_LABEL,
@@ -33,7 +34,7 @@ class StixPayloadUtils:
 
     @staticmethod
     def _extract_domain(url: str, suffix: str = "") -> str:
-        if not url:
+        if not isinstance(url, str) or not url:
             return ""
         try:
             parsed_url = urlparse(url)
@@ -224,25 +225,14 @@ class BaseEntity(StixPayloadUtils):
     def _generate_external_reference(
         self, ref_id: str, ref_url: str, ref_desc: str
     ) -> Any:
-        # Two conventions feed this method:
-        #   1) Group-IB portal links — ``ref_desc`` is empty or carries just
-        #      the upstream short_description/description blob. The OpenCTI
-        #      "Source" column should identify which Group-IB record the
-        #      link points to, so we use ``Group-IB TI portal: <entity_name>``.
-        #   2) Source-URL observables (``sdo_mixin._emit_indicator_observables``)
-        #      use the legacy ``"<source> - <body>"`` convention; preserve
-        #      the prefix as ``source_name`` so that path keeps working.
-        if ref_desc and " - " in ref_desc:
-            source_name = ref_desc.split(" - ", 1)[0]
-        else:
-            name_str = self.name if isinstance(self.name, str) else None
-            if not name_str and isinstance(self.name, list) and self.name:
-                name_str = next((n for n in self.name if isinstance(n, str)), None)
-            source_name = (
-                f"{PORTAL_LINK_DEFAULT_LABEL}: {name_str}"
-                if name_str
-                else PORTAL_LINK_DEFAULT_LABEL
-            )
+        name_str = self.name if isinstance(self.name, str) else None
+        if not name_str and isinstance(self.name, list) and self.name:
+            name_str = next((n for n in self.name if isinstance(n, str)), None)
+        source_name = (
+            f"{PORTAL_LINK_DEFAULT_LABEL}: {name_str}"
+            if name_str
+            else PORTAL_LINK_DEFAULT_LABEL
+        )
         return stix2.ExternalReference(
             external_id=pycti.ExternalReference.generate_id(
                 ref_url, self._extract_domain(ref_url), ref_id

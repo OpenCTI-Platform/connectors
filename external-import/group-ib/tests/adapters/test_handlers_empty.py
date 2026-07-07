@@ -4,8 +4,9 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+
 from adapters.adapter import DataToSTIXAdapter
-from config import ConfigConnector
+from connector.settings import ConfigConnector
 
 
 def _adapter(collection: str, *, is_ioc: bool = False) -> DataToSTIXAdapter:

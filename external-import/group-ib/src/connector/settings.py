@@ -6,18 +6,20 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from _data.iso3166 import COUNTRIES as _ISO3166_COUNTRIES
 from ciaops.utils import FileHandler
 from dotenv import load_dotenv
-from logging_config import (
+from pycti import get_config_variable
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
+from stix2.v21.vocab import MALWARE_TYPE
+
+from _data.iso3166 import COUNTRIES as _ISO3166_COUNTRIES
+from connector.logging_config import (
     _DEFAULT_LOG_BACKUP_COUNT,
     _DEFAULT_LOG_DIR,
     _DEFAULT_LOG_MAX_BYTES,
     FileLoggingConfig,
 )
-from pycti import get_config_variable
-from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
-from stix2.v21.vocab import MALWARE_TYPE
 
 # ============================================================================
 # Connector-wide constants
@@ -174,7 +176,192 @@ MALWARE_DESC_PLACEHOLDER = "Sorry, no description yet."
 REPORT_NOTE_COLLECTIONS = frozenset({"apt/threat", "hi/threat"})
 
 
+# ============================================================================
+# Pydantic settings models
+# ----------------------------------------------------------------------------
+# These declare the connector's configuration surface with types, defaults and
+# human-readable descriptions. They serve two purposes:
+#   1. Validation — ``ConfigConnector`` validates the effective (env or YAML)
+#      configuration against ``GroupIBConnectorSettings`` at startup. Validation
+#      is non-fatal: the legacy loader remains the runtime source of truth, so a
+#      schema quirk never blocks ingestion; failures are logged as a warning.
+#   2. Documentation — ``ConfigConnector.config_json_schema()`` emits a JSON
+#      Schema (``model_json_schema()``) consumed by the docs tooling.
+# ``extra="ignore"`` keeps the models forward-compatible with keys handled
+# entirely by ciaops (e.g. server-side query knobs) or added later.
+# ============================================================================
+
+
+class _SettingsBase(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+
+class ProxySettings(_SettingsBase):
+    ip: str | None = Field(default=None, description="Proxy host or IP.")
+    port: int | None = Field(default=None, description="Proxy port.")
+    protocol: str | None = Field(
+        default=None, description="Proxy protocol (http/https)."
+    )
+    username: str | None = Field(default=None, description="Proxy username.")
+    password: str | None = Field(default=None, description="Proxy password.")
+
+
+class CollectionSettings(_SettingsBase):
+    """Per-collection settings. The union of every per-collection key; each
+    collection uses the subset its handler reads (unknown keys are ignored)."""
+
+    enable: bool = Field(
+        default=False, description="Ingest this collection. Must be true to run."
+    )
+    default_date: str | None = Field(
+        default=None,
+        description="First-run lookback anchor (YYYY-MM-DD). Ignored after the "
+        "stored sequpdate cursor takes over.",
+        examples=["2024-01-01"],
+    )
+    ttl: int | None = Field(
+        default=None,
+        description="Validity period (days) for emitted Indicator SDOs.",
+        examples=[30, 90, 1460],
+    )
+    local_custom_tag: str | None = Field(
+        default=None,
+        description="Extra bare label appended to every entity from this "
+        "collection.",
+    )
+    use_hunting_rules: bool = Field(
+        default=False,
+        description="Ask the Group-IB API to apply portal hunting rules "
+        "server-side (only honored by collections that support it).",
+    )
+    description_in_external_references: bool = Field(
+        default=False,
+        description="Move the entity description into an external reference "
+        "instead of the SDO description field.",
+    )
+    full_data: bool | None = Field(
+        default=None,
+        description="Emit full text instead of a truncated preview in Notes.",
+    )
+    data_preview_max_len: int | None = Field(
+        default=None,
+        description="Max characters of preview text in Notes when full_data " "is off.",
+    )
+    cnc_as_indicator: bool | None = Field(
+        default=None, description="Emit CnC observables as Indicators."
+    )
+    all_observables_as_indicators: bool | None = Field(
+        default=None,
+        description="Emit every observable of the event as an Indicator.",
+    )
+    observables_as_indicators: bool | None = Field(
+        default=None, description="Emit report IOC observables as Indicators."
+    )
+    target_observables: bool | None = Field(
+        default=None, description="Emit non-IOC target/victim observables."
+    )
+    targeted_entities_as_sdo: bool | None = Field(
+        default=None,
+        description="Promote victimology (sectors/regions/companies) into SDOs.",
+    )
+    create_incident: bool | None = Field(
+        default=None, description="Create an Incident SDO per event."
+    )
+    brand_as_identity: bool | None = Field(
+        default=None, description="Emit the impersonated brand as an Identity."
+    )
+    author_email_observables: bool | None = Field(
+        default=None, description="Emit commit-author emails as observables."
+    )
+    redact_message_text: bool | None = Field(
+        default=None, description="Redact chat message bodies in Notes."
+    )
+    store_report_labels_in_note: bool | None = Field(
+        default=None, description="Write report labels to a Note instead of the SDO."
+    )
+    add_threat_actor_label_to_observables: bool | None = Field(
+        default=None, description="Attach the actor name as a label on observables."
+    )
+    include_malware_labels: bool | None = Field(default=None)
+    include_threat_actor_labels: bool | None = Field(default=None)
+    include_malware_threat_actor_labels: bool | None = Field(default=None)
+    include_source_type_labels: bool | None = Field(default=None)
+    include_brand_labels: bool | None = Field(default=None)
+    include_expertise_labels: bool | None = Field(default=None)
+    include_nation_state_label: bool | None = Field(default=None)
+    include_cybercriminal_label: bool | None = Field(default=None)
+    include_context_label: bool | None = Field(default=None)
+    include_passwords: bool | None = Field(default=None)
+    include_text_in_note: bool | None = Field(default=None)
+    include_original_in_note: bool | None = Field(default=None)
+    include_translation_in_note: bool | None = Field(default=None)
+
+
+class ExtraSettings(_SettingsBase):
+    intrusion_set_instead_of_threat_actor: bool = Field(
+        default=False,
+        description="Emit Intrusion-Set SDOs instead of Threat-Actor.",
+    )
+    ignore_non_malware_ddos: bool = Field(
+        default=False, description="Drop DDoS events without a malware payload."
+    )
+    ignore_non_indicator_threats: bool = Field(
+        default=False, description="Drop threat events carrying no indicators."
+    )
+    ignore_non_indicator_threat_reports: bool = Field(
+        default=False, description="Drop threat reports carrying no indicators."
+    )
+    enable_statement_marking: bool = Field(
+        default=False, description="Attach a Group-IB statement marking to bundles."
+    )
+    preserve_manual_labels: bool = Field(
+        default=False,
+        description="Omit x_opencti_labels so analyst-added labels survive updates.",
+    )
+    time_output_format: str | None = Field(
+        default=None,
+        description="strftime format for human-readable timestamps in logs.",
+        examples=["%Y-%m-%d %H:%M:%S"],
+    )
+    enable_file_logging: bool = Field(
+        default=False, description="Write rotating file logs in addition to stdout."
+    )
+    log_file_dir: str | None = Field(
+        default=None, description="Directory for rotating file logs."
+    )
+    log_file_max_bytes: int | None = Field(
+        default=None, description="Max size (bytes) per log file before rotation."
+    )
+    log_file_backup_count: int | None = Field(
+        default=None, description="Number of rotated log files to keep."
+    )
+
+
+class OpenCTISettings(_SettingsBase):
+    url: str | None = Field(default=None, description="OpenCTI platform URL.")
+    token: str | None = Field(default=None, description="OpenCTI API token.")
+
+
+class TIApiSettings(_SettingsBase):
+    url: str | None = Field(default=None, description="Group-IB TI API URL.")
+    username: str | None = Field(
+        default=None, description="Group-IB TI portal profile email."
+    )
+    token: str | None = Field(default=None, description="Group-IB TI API token.")
+    proxy: ProxySettings = Field(default_factory=ProxySettings)
+    collections: dict[str, CollectionSettings] = Field(default_factory=dict)
+    extra_settings: ExtraSettings = Field(default_factory=ExtraSettings)
+
+
+class GroupIBConnectorSettings(_SettingsBase):
+    """Top-level connector configuration schema (Group-IB TI → OpenCTI)."""
+
+    opencti: OpenCTISettings = Field(default_factory=OpenCTISettings)
+    ti_api: TIApiSettings = Field(default_factory=TIApiSettings)
+
+
 class ConfigConnector:
+    _config_validation_warned = False
 
     def __init__(self):
         self.load = self._load_config()
@@ -183,9 +370,74 @@ class ConfigConnector:
         self.collection_mapping_config = FileHandler().read_json_config(
             self.CONFIG_JSON
         )
+        # Validate the effective configuration against the Pydantic schema.
+        # Non-fatal by design: the loader above stays the runtime source of
+        # truth, so a schema quirk must never block ingestion.
+        self.settings = self._build_validated_settings()
+
+    @classmethod
+    def config_json_schema(cls) -> dict[str, Any]:
+        """JSON Schema for the connector configuration (docs tooling)."""
+        return GroupIBConnectorSettings.model_json_schema()
+
+    def _assemble_settings_dict(self) -> dict[str, Any]:
+        """Fold the flat ``ti_api_collections_<slug>_<key>`` / ``opencti_*`` /
+        ``ti_api_extra_settings_*`` attributes into the nested structure the
+        Pydantic models expect. Works for both the YAML and env-only paths
+        because both resolve to the same flat attribute namespace."""
+        env_slugs = sorted(self.COLLECTION_MAP.keys(), key=len, reverse=True)
+        opencti: dict[str, Any] = {}
+        ti_api: dict[str, Any] = {}
+        proxy: dict[str, Any] = {}
+        extra: dict[str, Any] = {}
+        collections: dict[str, dict[str, Any]] = {}
+        for attr, val in vars(self).items():
+            if attr.startswith("ti_api_collections_"):
+                rest = attr[len("ti_api_collections_") :]
+                for slug in env_slugs:
+                    if rest.startswith(slug + "_"):
+                        collections.setdefault(slug, {})[rest[len(slug) + 1 :]] = val
+                        break
+            elif attr.startswith("ti_api_extra_settings_"):
+                extra[attr[len("ti_api_extra_settings_") :]] = val
+            elif attr.startswith("ti_api_proxy_"):
+                proxy[attr[len("ti_api_proxy_") :]] = val
+            elif attr in ("ti_api_url", "ti_api_username", "ti_api_token"):
+                ti_api[attr[len("ti_api_") :]] = val
+            elif attr in ("opencti_url", "opencti_token"):
+                opencti[attr[len("opencti_") :]] = val
+        ti_api["proxy"] = proxy
+        ti_api["extra_settings"] = extra
+        ti_api["collections"] = collections
+        return {"opencti": opencti, "ti_api": ti_api}
+
+    def _build_validated_settings(self) -> "GroupIBConnectorSettings | None":
+        try:
+            return GroupIBConnectorSettings.model_validate(
+                self._assemble_settings_dict()
+            )
+        except ValidationError as exc:
+            if not ConfigConnector._config_validation_warned:
+                ConfigConnector._config_validation_warned = True
+                logging.getLogger(__name__).warning(
+                    "Connector configuration did not validate against the schema; "
+                    "continuing with the loaded values. Details: %s",
+                    exc,
+                )
+            return None
+        except Exception as exc:  # noqa: BLE001 - validation must never crash startup
+            if not ConfigConnector._config_validation_warned:
+                ConfigConnector._config_validation_warned = True
+                logging.getLogger(__name__).warning(
+                    "Unexpected error while validating configuration (ignored): %s",
+                    exc,
+                )
+            return None
 
     def _load_config(self) -> dict:
-        config_file_path = Path(__file__).resolve().parent / "config.yml"
+        # settings.py lives in src/connector/; config.yml sits at the src/ root
+        # (one level up) alongside main.py and requirements.txt.
+        config_file_path = Path(__file__).resolve().parent.parent / "config.yml"
 
         if config_file_path.is_file():
             with open(config_file_path, "r", encoding="utf-8") as file:
@@ -325,7 +577,9 @@ class ConfigConnector:
 
     AUTHOR = "Group-IB"
 
-    ROOT_DIR = str(Path(__file__).resolve().parent)
+    # settings.py lives in src/connector/; docs/ and _data/ stay at the src/
+    # root, so resolve one level up for the connector root directory.
+    ROOT_DIR = str(Path(__file__).resolve().parent.parent)
     DOCS_DIR = os.path.join(ROOT_DIR, "docs")
 
     _config_name_json = "mapping.json"

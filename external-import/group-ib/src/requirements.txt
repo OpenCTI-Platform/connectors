@@ -1,6 +1,7 @@
-pycti==7.260430.0
+pycti==7.260701.0
 ciaops==1.1.0
 python-dotenv==1.2.2
 stix2==3.0.2
 isodate==0.7.2
 PyYAML==6.0.3
+pydantic>=2.13.4,<3

@@ -20,3 +20,9 @@ repos:
     hooks:
       - id: isort
         args: [--profile=black, --line-length=88]
+
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.3.0
+    hooks:
+      - id: flake8
+        args: [--ignore=E,W]

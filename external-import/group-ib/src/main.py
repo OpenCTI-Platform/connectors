@@ -4,8 +4,9 @@ import traceback
 from typing import Any
 
 import dotenv
-from config import ConfigConnector
-from external_import import ExternalImportConnector
+
+from connector.connector import ExternalImportConnector
+from connector.settings import ConfigConnector
 from pipeline import collect_intelligence
 
 dotenv.load_dotenv()

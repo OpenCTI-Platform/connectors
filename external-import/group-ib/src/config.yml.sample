@@ -235,6 +235,7 @@ ti_api:
         local_custom_tag: null
         ttl: 30
         use_hunting_rules: false
+        description_in_external_references: false
         # Text/original in Note: max chars for preview; if full_data true, no truncation
         data_preview_max_len: 2000
         full_data: false
@@ -301,6 +302,7 @@ ti_api:
         enable: false
         local_custom_tag: null
         ttl: 1460
+        description_in_external_references: false
 
       malware/signature:
         default_date: ''

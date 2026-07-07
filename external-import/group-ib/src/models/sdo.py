@@ -4,7 +4,8 @@ from typing import Any
 
 import pycti
 import stix2
-from config import (
+
+from connector.settings import (
     CVSS_SEVERITY_CRITICAL_MIN,
     CVSS_SEVERITY_HIGH_MAX,
     CVSS_SEVERITY_HIGH_MIN,

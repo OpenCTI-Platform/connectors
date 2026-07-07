@@ -4,7 +4,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from utils import ExternalImportHelper
+
+from connector.utils import ExternalImportHelper
 
 
 def _helper_stub() -> SimpleNamespace:

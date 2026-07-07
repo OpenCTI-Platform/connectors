@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 import pytest
+
 from models._common import BaseEntity, StixPayloadUtils
 
 # --- _sanitize ----------------------------------------------------------------
@@ -91,6 +92,13 @@ class TestExtractDomain:
         # catches the ValueError and uses a manual split.
         out = StixPayloadUtils._extract_domain("http://example.web[.]app/path")
         assert "example.web[.]app" in out
+
+    def test_list_input_returns_empty(self):
+        # Regression guard for OpenCTI-connectors/issues/6341: upstream
+        # payloads occasionally deliver ``portal_link`` as a list; the
+        # function must not reach ``urlparse`` in that case.
+        assert StixPayloadUtils._extract_domain(["https://example.com"]) == ""
+        assert StixPayloadUtils._extract_domain([]) == ""
 
 
 # --- IP validation ------------------------------------------------------------

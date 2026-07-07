@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from logging_config import (
+from connector.logging_config import (
     FileLoggingConfig,
     get_stdlib_logger,
     setup_file_logging,

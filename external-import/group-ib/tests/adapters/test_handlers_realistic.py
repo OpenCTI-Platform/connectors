@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from adapters.adapter import DataToSTIXAdapter
-from config import ConfigConnector
+from connector.settings import ConfigConnector
 
 
 def _adapter(
@@ -95,6 +95,46 @@ class TestAttacksDefaceHandler:
         assert "domain-name" in types
         assert "url" in types
 
+        # Domain-Name --resolves-to--> IP-Addr must be emitted exactly once
+        # with the STIX 2.1 canonical direction (domain is the source).
+        by_id = {o.id: o for o in out if hasattr(o, "id")}
+        resolves = [
+            o
+            for o in out
+            if getattr(o, "type", "") == "relationship"
+            and getattr(o, "relationship_type", "") == "resolves-to"
+        ]
+        assert len(resolves) == 1
+        rel = resolves[0]
+        assert by_id[rel.source_ref].type == "domain-name"
+        assert by_id[rel.target_ref].type == "ipv4-addr"
+
+    def test_target_domain_carrying_ip_creates_no_resolves_to(self):
+        # When target_domain is actually an IP it is reclassified to an IP
+        # observable in _emit_attack_observable; there is no domain-name
+        # left to resolve, so no resolves-to SRO must be emitted.
+        a = _adapter("attacks/deface")
+        out = a.generate_attacks_deface(
+            event={
+                "deface": {
+                    "id": "def-2",
+                    "target_domain": "192.0.2.9",
+                    "target_ip": {"ip": "192.0.2.1"},
+                }
+            },
+            json_date_obj={},
+            json_eval_obj={},
+        )
+        _assert_bundle(out)
+        types = {getattr(o, "type", "") for o in out}
+        assert "domain-name" not in types
+        assert not [
+            o
+            for o in out
+            if getattr(o, "type", "") == "relationship"
+            and getattr(o, "relationship_type", "") == "resolves-to"
+        ]
+
     def test_skip_when_no_observables(self):
         # Empty target + actor → nothing to emit.
         a = _adapter("attacks/deface")
@@ -144,6 +184,48 @@ class TestAttacksDdosHandler:
         # CnC domain/ip are IOCs (cnc_as_indicator defaults True) → Indicator.
         assert "indicator" in types
 
+        # Domain-Name --resolves-to--> IP-Addr must appear for BOTH sides
+        # (target victim domain + cnc attacker domain), each with the STIX
+        # 2.1 canonical direction (source=domain, target=ipv4-addr).
+        by_id = {o.id: o for o in out if hasattr(o, "id")}
+        resolves = [
+            o
+            for o in out
+            if getattr(o, "type", "") == "relationship"
+            and getattr(o, "relationship_type", "") == "resolves-to"
+        ]
+        assert len(resolves) == 2
+        pairs = {
+            (by_id[r.source_ref].value, by_id[r.target_ref].value) for r in resolves
+        }
+        assert ("victim.example.com", "192.0.2.1") in pairs
+        assert ("c2.example.com", "192.0.2.2") in pairs
+        for rel in resolves:
+            assert by_id[rel.source_ref].type == "domain-name"
+            assert by_id[rel.target_ref].type in {"ipv4-addr", "ipv6-addr"}
+
+    def test_no_resolves_to_when_side_lacks_domain(self):
+        # target side has only IP; cnc side has only IP → no resolves-to.
+        a = _adapter("attacks/ddos")
+        out = a.generate_attacks_ddos(
+            event={
+                "ddos": {
+                    "id": "ddos-2",
+                    "target": {"ip": "192.0.2.1"},
+                    "cnc": {"ip": "192.0.2.2"},
+                }
+            },
+            json_date_obj={"submission-time": "2024-01-01T00:00:00Z"},
+            json_eval_obj={},
+        )
+        _assert_bundle(out)
+        assert not [
+            o
+            for o in out
+            if getattr(o, "type", "") == "relationship"
+            and getattr(o, "relationship_type", "") == "resolves-to"
+        ]
+
 
 # --- attacks/phishing_group --------------------------------------------------
 
@@ -178,6 +260,42 @@ class TestAttacksPhishingGroupHandler:
         assert "note" in types
         # The phishing_list row URL (an IOC) is emitted.
         assert "url" in types
+
+    def test_phishing_row_emits_resolves_to_for_domain_ip(self):
+        # A phishing_list row that carries both a domain and an IP is a
+        # hosting pair; connector must emit Domain --resolves-to--> IP.
+        a = _adapter("attacks/phishing_group")
+        out = a.generate_attacks_phishing_group(
+            event={
+                "phishing_group": {
+                    "id": "pg-2",
+                    "brand": "AcmeCorp",
+                    "phishing_list": [
+                        {
+                            "url": "https://phish1.example.com/",
+                            "domain": "phish1.example.com",
+                            "ip": "192.0.2.10",
+                        }
+                    ],
+                }
+            },
+            json_date_obj={"submission-time": "2024-01-01T00:00:00Z"},
+            json_eval_obj={},
+        )
+        _assert_bundle(out)
+        by_id = {o.id: o for o in out if hasattr(o, "id")}
+        resolves = [
+            o
+            for o in out
+            if getattr(o, "type", "") == "relationship"
+            and getattr(o, "relationship_type", "") == "resolves-to"
+        ]
+        assert len(resolves) == 1
+        rel = resolves[0]
+        assert by_id[rel.source_ref].type == "domain-name"
+        assert by_id[rel.source_ref].value == "phish1.example.com"
+        assert by_id[rel.target_ref].type == "ipv4-addr"
+        assert by_id[rel.target_ref].value == "192.0.2.10"
 
 
 # --- attacks/phishing_kit ----------------------------------------------------
@@ -241,6 +359,68 @@ class TestMalwareCncHandler:
         assert "indicator" in types
         assert "malware" in types
         assert "threat-actor" in types
+
+        # Primary is the Domain (priority order in _build_cnc_observable_set:
+        # file > domain > url > ipv4 > ipv6); the ip is a secondary. The main
+        # _generate_relations call links primary→secondaries via the map,
+        # which yields Domain --resolves-to--> IP for the domain-name row.
+        by_id = {o.id: o for o in out if hasattr(o, "id")}
+        resolves = [
+            o
+            for o in out
+            if getattr(o, "type", "") == "relationship"
+            and getattr(o, "relationship_type", "") == "resolves-to"
+        ]
+        assert len(resolves) >= 1
+        for rel in resolves:
+            assert by_id[rel.source_ref].type == "domain-name"
+            assert by_id[rel.target_ref].type in {"ipv4-addr", "ipv6-addr"}
+
+    def test_file_primary_still_emits_domain_resolves_to_ip(self):
+        # When a file hash is present, ``_build_cnc_observable_set`` picks
+        # File as primary and the domain drops to secondaries. Regression
+        # guard: the connector must still model DNS resolution as
+        # Domain --resolves-to--> IP for every CnC IP, canonical direction.
+        a = _adapter("malware/cnc", is_ioc=True)
+        out = a.generate_malware_cnc(
+            event={
+                "malware_cnc": {
+                    "id": "cnc-2",
+                    "domain": "c2.example.com",
+                    "file": {"md5": "d41d8cd98f00b204e9800998ecf8427e"},
+                    "ipv4_list": [{"ip": "192.0.2.10"}, {"ip": "192.0.2.11"}],
+                    "malware_list": [{"name": "MalwareBeta"}],
+                }
+            },
+            json_date_obj={
+                "date-first-seen": "2024-01-01T00:00:00Z",
+                "date-last-seen": "2024-02-01T00:00:00Z",
+            },
+            json_eval_obj={},
+        )
+        _assert_bundle(out)
+        types = {getattr(o, "type", "") for o in out}
+        assert "file" in types
+        assert "domain-name" in types
+        assert "ipv4-addr" in types
+
+        by_id = {o.id: o for o in out if hasattr(o, "id")}
+        resolves = [
+            o
+            for o in out
+            if getattr(o, "type", "") == "relationship"
+            and getattr(o, "relationship_type", "") == "resolves-to"
+        ]
+        # Two IPs → two resolves-to edges, both sourced at the domain.
+        assert len(resolves) == 2
+        for rel in resolves:
+            assert by_id[rel.source_ref].type == "domain-name"
+            assert by_id[rel.source_ref].value == "c2.example.com"
+            assert by_id[rel.target_ref].type == "ipv4-addr"
+        assert {by_id[r.target_ref].value for r in resolves} == {
+            "192.0.2.10",
+            "192.0.2.11",
+        }
 
 
 # --- malware/config ----------------------------------------------------------
@@ -344,6 +524,25 @@ class TestCompromisedAccessHandler:
         types = {getattr(o, "type", "") for o in out}
         assert "incident" in types
         assert "indicator" in types  # CNC as indicator
+
+        # CnC domain --resolves-to--> CnC IP (regression guard for the
+        # OpenCTI-connectors/issues/5176 sibling site inside the darkweb
+        # marketplace CnC block).
+        by_id = {o.id: o for o in out if hasattr(o, "id")}
+        resolves = [
+            o
+            for o in out
+            if getattr(o, "type", "") == "relationship"
+            and getattr(o, "relationship_type", "") == "resolves-to"
+        ]
+        assert len(resolves) >= 1
+        # Every resolves-to must be canonical: source=domain, target=IP.
+        for rel in resolves:
+            assert by_id[rel.source_ref].type == "domain-name"
+            assert by_id[rel.target_ref].type in {"ipv4-addr", "ipv6-addr"}
+        # The bug shape (IP source, Domain target) must not appear.
+        for rel in resolves:
+            assert by_id[rel.source_ref].type != "ipv4-addr"
 
 
 # --- compromised/bank_card_group --------------------------------------------
@@ -581,6 +780,39 @@ class TestHiOpenThreatsHandler:
         assert "url" in types
         assert "file" in types
         assert "indicator" in types
+
+    def test_description_in_external_references_flag_moves_body(self):
+        # When description_in_external_references=true the Report's
+        # description column is emptied and the body is mirrored into an
+        # ExternalReference with source_name="Open threat description".
+        from unittest.mock import patch
+
+        a = _adapter("hi/open_threats")
+
+        def _flag(collection: str, key: str, default: bool = False) -> bool:
+            if key == "description_in_external_references":
+                return True
+            return default
+
+        with patch.object(a.config, "get_setting_bool", side_effect=_flag):
+            out = a.generate_hi_open_threats(
+                event={
+                    "open_threat": {
+                        "id": "ot-2",
+                        "title": "Public Threat Report",
+                    }
+                },
+                json_date_obj={"date-created": "2024-01-01T00:00:00Z"},
+                json_eval_obj={},
+            )
+        report = next(o for o in out if getattr(o, "type", "") == "report")
+        assert getattr(report, "description", "") == ""
+        matches = [
+            r
+            for r in getattr(report, "external_references", [])
+            if r.source_name == "Open threat description"
+        ]
+        assert len(matches) == 1
 
 
 # --- ioc/primary ------------------------------------------------------------

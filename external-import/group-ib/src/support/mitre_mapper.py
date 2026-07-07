@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from ciaops.decorators import cache_data
-from config import ConfigConnector
+
+from connector.settings import ConfigConnector
 
 if TYPE_CHECKING:
     from ciaops.adapters.opencti_adapter import TIAdapter

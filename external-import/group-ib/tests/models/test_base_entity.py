@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 import stix2
+
 from models.indicators import URL, Domain
 from models.sdo import Identity
 
@@ -171,19 +172,6 @@ class TestGenerateExternalReferences:
             ]
         )
         assert refs[0].source_name == "Group-IB TI portal: MalwareExample"
-
-    def test_legacy_dash_convention_preserved(self):
-        d = Domain(name="example.com", c_type="domain-name")
-        refs = d.generate_external_references(
-            [
-                (
-                    "NoId",
-                    "https://example.com",
-                    "Unknown: Source URL - external reference",
-                )
-            ]
-        )
-        assert refs[0].source_name == "Unknown: Source URL"
 
     def test_list_name_with_strings(self):
         # FileHash uses a list name; the helper should pick the first string.

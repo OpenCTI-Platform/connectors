@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from config import (
+from connector.settings import (
     COLLECTION_DISPLAY_LABEL,
     DESC_BR_RE,
     DESC_CLOSE_LI_RE,

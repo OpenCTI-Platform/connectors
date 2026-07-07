@@ -3,9 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import models as ds
 import stix2
 from ciaops.collections_meta.ti import TICollections
+
+import models as ds
 from support.incident_note_markdown import (
     markdown_hi_open_threats,
     markdown_ioc_note,
@@ -825,6 +826,20 @@ class OsiHiMixin:
         )
         report.set_description(report_description)
         report.generate_external_references(portal_links)
+        desc_in_ext = self.config.get_setting_bool(
+            _coll,
+            "description_in_external_references",
+            default=False,
+        )
+        if desc_in_ext:
+            report.set_description("")
+            if report_description:
+                report.external_references.append(
+                    stix2.ExternalReference(
+                        source_name="Open threat description",
+                        description=str(report_description),
+                    )
+                )
         report.generate_stix_objects()
 
         if eval_obj.get("reliability") is not None:

@@ -13,7 +13,7 @@ from __future__ import annotations
 import html
 from typing import Any
 
-from config import (
+from connector.settings import (
     DESC_BR_RE,
     DESC_CLOSE_LI_RE,
     DESC_CLOSE_P_RE,

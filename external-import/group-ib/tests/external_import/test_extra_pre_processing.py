@@ -3,7 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from external_import import ExternalImportConnector
+from connector.connector import ExternalImportConnector
 
 
 def _bare_connector() -> ExternalImportConnector:

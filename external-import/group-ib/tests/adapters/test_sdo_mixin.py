@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from adapters.adapter import DataToSTIXAdapter
-from config import ConfigConnector
+from connector.settings import ConfigConnector
 
 
 def _adapter(
@@ -167,6 +167,63 @@ class TestGenerateStixMalware:
         # Primary + 1 linked sibling.
         assert len(malware_wrappers) == 2
 
+    def test_description_stays_on_sdo_by_default(self):
+        # Baseline for the DESCRIPTION_IN_EXTERNAL_REFERENCES flag: default
+        # false → description body is set on Malware.description and is NOT
+        # mirrored into a "Malware description" ExternalReference on the
+        # wrapper (which then feeds the SDO's ``x_opencti_external_references``
+        # custom property, per src/models/sdo.py::Malware._generate_sdo).
+        a = _adapter("malware/malware")
+        out = a.generate_stix_malware(
+            obj={"name": "MalwareGamma", "description": "Full description body"},
+            json_date_obj={},
+        )
+        malware = next(
+            o
+            for o in out
+            if hasattr(o, "stix_main_object") and o.stix_main_object.type == "malware"
+        )
+        assert malware.stix_main_object.description == "Full description body"
+        source_names = {
+            r.source_name for r in getattr(malware, "external_references", [])
+        }
+        assert "Malware description" not in source_names
+
+    def test_flag_moves_description_to_external_reference(self):
+        # When description_in_external_references=true, the Malware SDO's
+        # description column is emptied and the body is mirrored into an
+        # ExternalReference (source_name="Malware description") on the wrapper,
+        # which the SDO builder embeds into ``x_opencti_external_references``.
+        # Mirrors the same-named flag used by apt/threat, hi/threat and the
+        # actor handlers.
+        from unittest.mock import patch
+
+        a = _adapter("malware/malware")
+
+        def _flag(collection: str, key: str, default: bool = False) -> bool:
+            if key == "description_in_external_references":
+                return True
+            return default
+
+        with patch.object(a.config, "get_setting_bool", side_effect=_flag):
+            out = a.generate_stix_malware(
+                obj={"name": "MalwareDelta", "description": "Full description body"},
+                json_date_obj={},
+            )
+        malware = next(
+            o
+            for o in out
+            if hasattr(o, "stix_main_object") and o.stix_main_object.type == "malware"
+        )
+        assert getattr(malware.stix_main_object, "description", "") == ""
+        matches = [
+            r
+            for r in getattr(malware, "external_references", [])
+            if r.source_name == "Malware description"
+        ]
+        assert len(matches) == 1
+        assert matches[0].description == "Full description body"
+
 
 # --- generate_stix_threat_actor + intrusion_set -----------------------------
 
@@ -302,6 +359,107 @@ class TestGenerateStixNetwork:
         assert len(domain_list) == 1
         assert len(url_list) == 1
         assert len(ip_list) == 1
+
+    def test_domain_ip_uses_resolves_to_direction(self):
+        # STIX 2.1: ``resolves-to`` source MUST be domain-name, target MUST be
+        # ipv4/ipv6-addr. Regression guard for OpenCTI-connectors/issues/5176.
+        a = _adapter("apt/threat")
+        domain_list, _url, ip_list, _ddos = a.generate_stix_network(
+            obj={
+                "network_list": [
+                    {
+                        "domain": "example.com",
+                        "ip-address": "192.0.2.1",
+                        "ipv6-address": "2001:db8::1",
+                    }
+                ],
+            },
+            json_date_obj={
+                "first-seen": "2024-01-01T00:00:00+00:00",
+                "last-seen": "2024-02-01T00:00:00+00:00",
+                "ttl": 30,
+            },
+            related_objects=[],
+            domain_is_ioc=False,
+            url_is_ioc=False,
+            ip_is_ioc=False,
+        )
+        domain_wrapper = domain_list[0]
+        domain_id = domain_wrapper.stix_main_object.id
+        ip_ids = {w.stix_main_object.id for w in ip_list}
+
+        resolves_edges = [
+            r
+            for r in domain_wrapper.stix_relationships
+            if r.relationship_type == "resolves-to"
+        ]
+        assert len(resolves_edges) == 2
+        for edge in resolves_edges:
+            assert edge.source_ref == domain_id
+            assert edge.target_ref in ip_ids
+
+        # No IP wrapper should carry an outbound edge back to the domain —
+        # the removed behavior was ``ip related-to domain``.
+        for ip_wrapper in ip_list:
+            for r in ip_wrapper.stix_relationships:
+                assert r.target_ref != domain_id
+
+    def test_url_observable_has_no_self_external_reference(self):
+        # Regression guard for OpenCTI-connectors/issues/4526: importing a
+        # URL observable must NOT attach that same URL back as an
+        # ExternalReference on the observable (clickable-malicious-link risk).
+        malicious = "https://evil.example/payload"
+        a = _adapter("apt/threat")
+        _domain, url_list, _ip, _ddos = a.generate_stix_network(
+            obj={"network_list": [{"url": malicious}]},
+            json_date_obj={
+                "first-seen": "2024-01-01T00:00:00+00:00",
+                "last-seen": "2024-02-01T00:00:00+00:00",
+                "ttl": 30,
+            },
+            related_objects=[],
+            domain_is_ioc=False,
+            url_is_ioc=False,
+            ip_is_ioc=False,
+        )
+        assert len(url_list) == 1
+        url_wrapper = url_list[0]
+
+        assert url_wrapper.external_references == []
+
+        for obj in url_wrapper.stix_objects or []:
+            if getattr(obj, "type", None) == "url":
+                assert not getattr(obj, "external_references", None)
+            assert getattr(obj, "url", None) != malicious
+
+    def test_url_observable_uses_entry_portal_link_when_present(self):
+        # When the network_list entry ships a Group-IB TI portal_link, it
+        # must surface as the URL observable's ExternalReference — the
+        # malicious URL value must still never appear there.
+        malicious = "https://evil.example/payload"
+        portal = "https://tap.group-ib.com/apt/threat/12345"
+        a = _adapter("apt/threat")
+        _domain, url_list, _ip, _ddos = a.generate_stix_network(
+            obj={
+                "network_list": [{"url": malicious, "portal_link": portal}],
+            },
+            json_date_obj={
+                "first-seen": "2024-01-01T00:00:00+00:00",
+                "last-seen": "2024-02-01T00:00:00+00:00",
+                "ttl": 30,
+            },
+            related_objects=[],
+            domain_is_ioc=False,
+            url_is_ioc=False,
+            ip_is_ioc=False,
+        )
+        assert len(url_list) == 1
+        url_wrapper = url_list[0]
+
+        assert len(url_wrapper.external_references) == 1
+        ext_urls = {ref.url for ref in url_wrapper.external_references}
+        assert portal in ext_urls
+        assert malicious not in ext_urls
 
 
 # --- generate_stix_file -----------------------------------------------------
