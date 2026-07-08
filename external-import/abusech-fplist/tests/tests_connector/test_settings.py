@@ -134,7 +134,7 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     class FakeConnectorSettings(ConnectorSettings):
         """
         Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
-        It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict.
+        It overrides `BaseConnectorSettings._load_config_dict` to return a fake but invalid config dict.
         """
 
         @classmethod
@@ -143,4 +143,15 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+    assert "Error validating configuration" in str(err.value)
+
+    # `ConfigValidationError` is raised from the underlying `pydantic.ValidationError`,
+    # so the failing field locations can be asserted from its `errors()`
+    cause = err.value.__cause__
+    assert cause is not None
+    error_fields = {".".join(map(str, e.get("loc", ()))) for e in cause.errors()}
+    if field_name == "settings":
+        # Empty config: several required fields are reported, just ensure some are
+        assert error_fields
+    else:
+        assert field_name in error_fields

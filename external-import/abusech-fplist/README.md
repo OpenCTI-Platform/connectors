@@ -94,7 +94,7 @@ docker run --rm \
   connector-abusech-fplist:latest
 ```
 
-Alternatively, copy `src/config.yml.sample` to `src/config.yml`, fill in your values and mount it (the connector picks it up automatically; env vars take precedence):
+Alternatively, copy `config.yml.sample` to `src/config.yml`, fill in your values and mount it (the connector picks it up automatically; env vars take precedence):
 
 ```bash
 docker run --rm \

@@ -2,10 +2,9 @@ import logging
 import sys
 from datetime import datetime, timezone
 
+from abusech_fplist_connector.client_api import ConnectorClient
 from abusech_fplist_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
-
-from .client_api import ConnectorClient
 
 # Maps entry_type → candidate STIX pattern templates for Indicator lookup.
 # Some types need several candidates because the abuse.ch feed connectors use
@@ -124,11 +123,6 @@ class ConnectorAbusechFplist:
                 {"last_removal_id": last_removal_id},
             )
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id,
-                f"Connector {self.helper.connect_name}",
-            )
-
             all_entries = self.client.get_fplist()
 
             new_entries = [
@@ -137,31 +131,39 @@ class ConnectorAbusechFplist:
             # Process oldest first so the marker always moves forward
             new_entries.sort(key=lambda e: int(e["removal_id"]))
 
-            self.helper.connector_logger.info(
-                f"[CONNECTOR] {len(new_entries)} new FP entries to process"
-            )
+            if new_entries:
+                self.helper.connector_logger.info(
+                    f"[CONNECTOR] {len(new_entries)} new FP entries to process"
+                )
 
-            max_removal_id = last_removal_id
-            for entry in new_entries:
-                self._remove_entry(entry)
-                max_removal_id = int(entry["removal_id"])
+                # Only create a work when there are entries to process,
+                # to avoid empty jobs in the OpenCTI UI
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id,
+                    f"Connector {self.helper.connect_name}",
+                )
 
-            if max_removal_id > last_removal_id:
+                max_removal_id = last_removal_id
+                for entry in new_entries:
+                    self._remove_entry(entry)
+                    max_removal_id = int(entry["removal_id"])
+
                 current_state["last_removal_id"] = max_removal_id
                 current_state["last_run"] = datetime.now(timezone.utc).strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
                 self.helper.set_state(current_state)
-                self.helper.connector_logger.info(
-                    f"[CONNECTOR] State updated to removal_id={max_removal_id}"
-                )
 
-            message = (
-                f"{self.helper.connect_name} run completed, "
-                f"processed up to removal_id={max_removal_id}"
-            )
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(message)
+                message = (
+                    f"{self.helper.connect_name} run completed, "
+                    f"processed up to removal_id={max_removal_id}"
+                )
+                self.helper.api.work.to_processed(work_id, message)
+                self.helper.connector_logger.info(message)
+            else:
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] No new FP entries to process"
+                )
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped.")
