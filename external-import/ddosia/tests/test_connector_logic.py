@@ -2,7 +2,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector.connector import DdosiaConnector
-from connector.settings import ConnectorSettings
 
 
 class TestSelectConfigsToProcess:

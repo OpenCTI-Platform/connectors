@@ -1,4 +1,3 @@
-import pytest
 from connector.utils import group_targets_by_host, is_valid_ipv4, normalize_host
 
 

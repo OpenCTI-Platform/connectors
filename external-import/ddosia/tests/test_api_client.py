@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from ddosia_client.api_client import DdosiaClient
-from pycti import OpenCTIConnectorHelper
 
 
 class TestDdosiaClient:

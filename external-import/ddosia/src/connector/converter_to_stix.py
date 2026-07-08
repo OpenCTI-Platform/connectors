@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal
 
 from connectors_sdk.models import (
     DomainName,
