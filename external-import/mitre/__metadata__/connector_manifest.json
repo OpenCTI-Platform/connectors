@@ -5,7 +5,8 @@
   "short_description": "MITRE ATT&CK is a globally-accessible knowledge base of adversary tactics and techniques based on real-world observations. The ATT&CK knowledge base is used as a foundation for the development of specific threat models and methodologies in the private sector, in government, and in the cybersecurity product and service community.",
   "logo": "external-import/mitre/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Open Source Threat Intel",
+    "Adversary & Campaign Insights"
   ],
   "verified": true,
   "last_verified_date": "2025-01-01",

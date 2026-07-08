@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'STREAM'
+  id: 'ChangeMe'
+  name: 'Trellix TIE' # optional (default: 'Trellix TIE')
+  scope: 'trellix-tie' # optional (default: 'trellix-tie')
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'live' # optional, ID of the live stream created in the OpenCTI UI (default: 'live')
+  live_stream_listen_delete: true # optional (default: true)
+  live_stream_no_dependencies: true # optional (default: true)
+
+trellix_tie:
+  dxl_config_path: 'ChangeMe' # path to the ePO-provisioned OpenDXL config file, e.g. /opt/dxl/dxlclient.config
+  trust_level: 'KNOWN_MALICIOUS' # optional, one of: KNOWN_MALICIOUS, MOST_LIKELY_MALICIOUS, MIGHT_BE_MALICIOUS, UNKNOWN, MIGHT_BE_TRUSTED, MOST_LIKELY_TRUSTED, KNOWN_TRUSTED, KNOWN_TRUSTED_INSTALLER, NOT_SET (default: KNOWN_MALICIOUS)
+  comment: 'Set by OpenCTI' # optional, comment attached to the TIE reputation (default: 'Set by OpenCTI')

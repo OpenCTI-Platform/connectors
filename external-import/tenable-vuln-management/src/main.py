@@ -1,6 +1,7 @@
 import traceback
 
-from tenable_vuln_management import Connector
+from pycti import OpenCTIConnectorHelper
+from tenable_vuln_management import Connector, ConnectorSettings
 
 if __name__ == "__main__":
     """
@@ -13,7 +14,10 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = Connector()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = Connector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()

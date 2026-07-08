@@ -10,9 +10,7 @@
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [Hatching Triage Configuration](#hatching-triage-configuration)
+  - [Configuration variables](#configuration-variables)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -52,37 +50,12 @@ This internal enrichment connector submits files (Artifacts) and URLs to Hatchin
 
 ---
 
-## Configuration
+## Configuration variables
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
-
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `Artifact`, `Url` |
-| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
-
-### Hatching Triage Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `hatching_triage_sandbox_base_url` | `HATCHING_TRIAGE_SANDBOX_BASE_URL` | Yes | Triage API URL (e.g., `https://tria.ge/api`) |
-| `hatching_triage_sandbox_token` | `HATCHING_TRIAGE_SANDBOX_TOKEN` | Yes | Triage API token |
-| `hatching_triage_sandbox_use_existing_analysis` | `HATCHING_TRIAGE_SANDBOX_USE_EXISTING_ANALYSIS` | No | Reuse existing analysis if available (default: true) |
-| `hatching_triage_sandbox_family_color` | `HATCHING_TRIAGE_SANDBOX_FAMILY_COLOR` | No | Label color for malware family |
-| `hatching_triage_sandbox_botnet_color` | `HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR` | No | Label color for botnet tags |
-| `hatching_triage_sandbox_campaign_color` | `HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR` | No | Label color for campaign tags |
-| `hatching_triage_sandbox_tag_color` | `HATCHING_TRIAGE_SANDBOX_TAG_COLOR` | No | Label color for other tags |
-| `hatching_triage_sandbox_max_tlp` | `HATCHING_TRIAGE_SANDBOX_MAX_TLP` | No | Maximum TLP for submission |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ---
 
@@ -95,35 +68,34 @@ Build a Docker Image using the provided `Dockerfile`.
 Example `docker-compose.yml`:
 
 ```yaml
-version: '3'
 services:
   connector-hatching-triage-sandbox:
     image: opencti/connector-hatching-triage-sandbox:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=Hatching_Triage_Sandbox
-      - "CONNECTOR_NAME=Hatching Triage Sandbox"
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Hatching Triage Sandbox
       - CONNECTOR_SCOPE=Artifact,Url
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=error
-      - HATCHING_TRIAGE_SANDBOX_BASE_URL=https://tria.ge/api
       - HATCHING_TRIAGE_SANDBOX_TOKEN=ChangeMe
-      - HATCHING_TRIAGE_SANDBOX_USE_EXISTING_ANALYSIS=true
-      - HATCHING_TRIAGE_SANDBOX_FAMILY_COLOR=#0059f7
-      - HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR=#f79e00
-      - HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR=#7a01e5
-      - HATCHING_TRIAGE_SANDBOX_TAG_COLOR=#54483b
-      - HATCHING_TRIAGE_SANDBOX_MAX_TLP=TLP:AMBER
+      #- HATCHING_TRIAGE_SANDBOX_BASE_URL=https://tria.ge/api
+      #- HATCHING_TRIAGE_SANDBOX_USE_EXISTING_ANALYSIS=true
+      #- HATCHING_TRIAGE_SANDBOX_FAMILY_COLOR=#0059f7
+      #- HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR=#f79e00
+      #- HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR=#7a01e5
+      #- HATCHING_TRIAGE_SANDBOX_TAG_COLOR=#54483b
+      #- HATCHING_TRIAGE_SANDBOX_MAX_TLP=TLP:AMBER
     restart: always
 ```
 
 ### Manual Deployment
 
 1. Clone the repository
-2. Copy `config.yml.sample` to `config.yml` and configure
-3. Install dependencies: `pip install -r requirements.txt`
-4. Run: `python hatching-triage-sandbox.py`
+2. Copy `src/config.yml.sample` to `src/config.yml` and configure
+3. Install dependencies: `pip install -r src/requirements.txt`
+4. Run: `cd src && python3 main.py`
 
 ---
 

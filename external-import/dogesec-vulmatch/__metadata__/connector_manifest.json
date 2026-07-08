@@ -5,7 +5,7 @@
   "short_description": "The OpenCTI Vulmatch Connector is designed to bring enriched, actionable vulnerability intelligence into OpenCTI by transforming Vulmatch data into STIX objects that integrate seamlessly with the OpenCTI data model. In addition to standard CVE information, the connector imports CVSS scores (v2, v3, and v4), EPSS exploit probability predictions, CWE references, Known Exploited Vulnerabilities (KEV), vulnerable software relationships, and contextual links to CWE, ATT&CK and CAPEC techniques.\n\nBy applying filtering, normalization, and local processing before ingestion, the connector enables organizations to reduce noise and focus on vulnerabilities that are relevant to their environment and risk posture. Whether used for broad vulnerability monitoring or SBoM-aware exposure tracking, the Vulmatch Connector supports continuous, automated enrichment of vulnerability data to improve prioritization, investigation, and decision-making across SOC, CTI, and vulnerability management workflows.",
   "logo": "external-import/dogesec-vulmatch/__metadata__/logo.png",
   "use_cases": [
-    "Vulnerability Management",
+    "Vulnerability & Exploit Awareness",
     "Commercial Threat Intel",
     "Open Source Threat Intel"
   ],

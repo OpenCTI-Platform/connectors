@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Literal
 import stix2
 import validators
 
-from .config_variables import ConfigConnector
 from .models.opencti import (
     Author,
     BaseEntity,
@@ -24,6 +23,7 @@ from .models.opencti import (
     Vulnerability,
 )
 from .models.tenable import Asset, Plugin, VulnerabilityFinding
+from .settings import ConnectorSettings
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
@@ -140,7 +140,7 @@ class ConverterToStix:
     def __init__(
         self,
         helper: "OpenCTIConnectorHelper",
-        config: "ConfigConnector",
+        config: "ConnectorSettings",
         default_marking: Literal[
             "TLP:CLEAR", "TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"
         ],
@@ -456,7 +456,7 @@ class ConverterToStix:
                 external_references=[
                     {
                         "source_name": "Tenable Vulnerability Management",
-                        "url": f"{self.config.tio_api_base_url}/tio/app.html#/findings/host-vulnerabilities/details/"
+                        "url": f"{self.config.tenable_vuln_management.api_base_url}/tio/app.html#/findings/host-vulnerabilities/details/"
                         f"{vuln_finding.finding_id}/asset/{vuln_finding.asset.uuid}/asset-affected",
                         "description": "A detailed analysis of the vulnerability.",
                     }

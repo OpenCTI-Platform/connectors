@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/ipsum_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "IPsum",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "ipsum"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT6H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_IPSUM_API_BASE_URL": {
+      "default": "https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt",
+      "description": "The URL of the IPsum feed to fetch (levels 1-8 are available).",
+      "type": "string"
+    },
+    "CONNECTOR_IPSUM_API_KEY": {
+      "default": null,
+      "description": "Optional GitHub API key used to avoid rate limiting.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_IPSUM_DEFAULT_X_OPENCTI_SCORE": {
+      "default": 60,
+      "description": "Default x_opencti_score to set on imported observables.",
+      "type": "integer"
+    },
+    "CONNECTOR_IPSUM_TLP_LEVEL": {
+      "default": "white",
+      "description": "TLP marking to apply to imported data (white, clear, green, amber, amber+strict, red).",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

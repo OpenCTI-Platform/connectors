@@ -5,9 +5,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -15,13 +16,13 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The name of the connector.",
         default="Flare",
     )
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="4ca16691-f5e3-46a2-828e-a29549a8b61f",
+    )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=["Incident", "Observable", "Indicator"],
-    )
-    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
-        description="The minimum level of logs to display.",
-        default="info",
+        default=["Flare"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs.",
@@ -30,11 +31,18 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
 
 class FlareConfig(BaseConfigModel):
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         description="Flare API key.",
     )
-    api_base_url: str = Field(
-        description="API base URL.",
+
+    api_base_url: str = DeprecatedField(
+        deprecated="Use api_domain instead",
+        new_namespaced_var="api_domain",
+        removal_date="2027-06-30",  # Optional informative removal deadline
+    )
+
+    api_domain: str = Field(
+        description="API domain name.",
         default="api.flare.io",
     )
     tenant_id: int | None = Field(

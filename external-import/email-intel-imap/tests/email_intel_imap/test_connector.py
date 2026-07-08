@@ -168,3 +168,25 @@ def test_connector_unknown_error(connector: Connector) -> None:
     connector.helper.get_state.side_effect = ValueError("Unknown error")
 
     assert connector.process() == "Unexpected error. See connector logs for details."
+
+
+@freezegun.freeze_time("2025-04-22T14:00:00Z")
+def test_connector_process_data_naive_email_date(
+    connector: Connector, mocked_mail_box: Mock
+) -> None:
+    """Regression test: offset-naive email.date must not crash when compared to the
+    always offset-aware since_date (TypeError: can't compare offset-naive and
+    offset-aware datetimes)."""
+    naive_old = datetime.datetime(2025, 2, 1, 12, 0, 0)  # before the 30-day window
+    naive_recent = datetime.datetime(2025, 4, 21, 12, 0, 0)  # within the 30-day window
+
+    email1 = Mock(subject="old", html="body old", attachments=[], date=naive_old)
+    email2 = Mock(
+        subject="recent", html="body recent", attachments=[], date=naive_recent
+    )
+
+    mocked_mail_box.fetch.return_value = [email1, email2]
+    stix_objects = connector.process_data()
+
+    assert len(stix_objects) == 1
+    assert stix_objects[0].name == "recent"

@@ -36,7 +36,13 @@ class Connector(BaseConnector):
                 since_date.date()
             )
             # As the IMAP library filters by date, we need to add this to filter also by time
-            if email.date > since_date
+            # Normalize naive datetimes to UTC before comparing with the always-aware since_date
+            if (
+                email.date
+                if email.date.tzinfo is not None
+                else email.date.replace(tzinfo=datetime.UTC)
+            )
+            > since_date
             for stix_object in self.converter.to_stix_objects(email)
         ]
 

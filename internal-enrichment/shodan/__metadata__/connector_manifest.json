@@ -5,7 +5,8 @@
   "short_description": "Shodan is a metadata search engine that scans the internet for connected devices (like servers, routers, webcams). It gathers information such as open ports, SSL certificates, and banners.",
   "logo": "internal-enrichment/shodan/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Enrichment & Analysis",
+    "Infrastructure & Attack Surface Visibility"
   ],
   "verified": true,
   "last_verified_date": null,

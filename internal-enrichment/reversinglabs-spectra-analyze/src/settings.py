@@ -4,9 +4,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, model_validator
+from pydantic import Field
 
 
 class ConnectorSettings(BaseInternalEnrichmentConnectorConfig):
@@ -15,15 +16,13 @@ class ConnectorSettings(BaseInternalEnrichmentConnectorConfig):
     )
     scope: ListFromString = Field(
         description="Comma-separated list of entity types the connector will enrich.",
-        default="Artifact,IPv4-Addr,Domain-Name",
+        default=["Artifact", "IPv4-Addr", "Domain-Name"],
     )
 
 
 class ReversinglabsSpectraAnalyzeConfig(BaseConfigModel):
-    url: str = Field(description="API base URL", validation_alias="spectra_analyze_url")
-    token: str = Field(
-        description="API token", validation_alias="spectra_analyze_token"
-    )
+    url: str = Field(description="API base URL")
+    token: str = Field(description="API token")
     max_tlp: Literal[
         "TLP:WHITE",
         "TLP:CLEAR",
@@ -44,18 +43,11 @@ class ReversinglabsSpectraAnalyzeConfig(BaseConfigModel):
 class ConfigLoader(BaseConnectorSettings):
     """Handles connector configuration loading and validation."""
 
-    connector: BaseInternalEnrichmentConnectorConfig = Field(
-        default_factory=BaseInternalEnrichmentConnectorConfig
-    )
+    connector: ConnectorSettings = Field(default_factory=ConnectorSettings)
     reversinglabs_spectra_analyze: ReversinglabsSpectraAnalyzeConfig = Field(
         default_factory=ReversinglabsSpectraAnalyzeConfig,
-        validation_alias="reversinglabs",
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_deprecated_settings(cls, data) -> dict:
-        reversinglabs = data.get("reversinglabs", {})
-        reversinglabs.update(data.pop("reversinglabs_spectra_analyze", {}))
-        data["reversinglabs"] = reversinglabs
-        return data
+    reversinglabs: ReversinglabsSpectraAnalyzeConfig = DeprecatedField(
+        new_namespace="reversinglabs_spectra_analyze",
+    )

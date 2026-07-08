@@ -1,13 +1,12 @@
 {
   "title": "Joe Sandbox",
   "slug": "joe-sandbox",
-  "description": "This connector supports enrichment of observables via Joe Sandbox. The connector works for the following observable types:\n\n* Artifact\n* Url\n.",
-  "short_description": "This connector supports enrichment of observables via Joe Sandbox.",
+  "description": "Joe Sandbox is a deep malware analysis platform that performs dynamic and static analysis of malicious files and URLs. This connector submits artifacts and URLs to Joe Sandbox for analysis and enriches OpenCTI with the results.\n\nKey features:\n\n- Multi-platform analysis (Windows, Linux, macOS, Android)\n- MITRE ATT&CK mapping\n- Network indicator extraction\n- Malware configuration extraction\n- Yara rule matching\n- Comprehensive report generation",
+  "short_description": "Joe Sandbox connector submits artifacts and URLs for deep malware analysis, returning multi-platform behavioral reports with MITRE ATT&CK mappings and network indicators.",
   "logo": "internal-enrichment/joe-sandbox/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis",
-    "Malware Analysis",
-    "Sandbox"
+    "Malware Analysis and Sandbox"
   ],
   "verified": false,
   "last_verified_date": null,

@@ -5,8 +5,7 @@
   "short_description": "This connector imports alerts and cases from Elastic Security into OpenCTI as incidents and case incidents.",
   "logo": "external-import/elastic-security-incidents/__metadata__/logo.png",
   "use_cases": [
-    "Incident Response & Ticketing",
-    "SIEM & Analytics"
+    "Detection & Response Enablement"
   ],
   "verified": true,
   "last_verified_date": "2025-09-16",
@@ -15,7 +14,7 @@
   "support_version": ">=6.7.19",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/elastic-security-incidents",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-elastic-security-incidents",
   "container_type": "EXTERNAL_IMPORT"

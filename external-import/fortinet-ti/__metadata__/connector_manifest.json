@@ -5,7 +5,8 @@
   "short_description": "This connector imports data from the Fortinet database\n. The connector creates the following OpenCTI entities:\n\n- Indicator (URL, Domain Name, and IPv4),\n- Observable URL,\n- Observable Domain Name,\n- Observable IPv4,\n- The Fortinet Organization.\n.",
   "logo": "external-import/fortinet-ti/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Adversary & Campaign Insights"
   ],
   "verified": true,
   "last_verified_date": null,
