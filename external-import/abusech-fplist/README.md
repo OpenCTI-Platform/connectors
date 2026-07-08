@@ -114,15 +114,19 @@ On each run the connector:
 
 ### Supported IOC types
 
-| `entry_type` | STIX pattern used for lookup |
+Some types are looked up with several candidate patterns, to match the different
+pattern styles used by the abuse.ch feed connectors (URLhaus, ThreatFox, MalwareBazaar).
+Every Indicator matching any of the candidates is deleted.
+
+| `entry_type` | STIX patterns used for lookup |
 |---|---|
 | `sha256_hash` | `[file:hashes.'SHA-256' = '...']` |
 | `md5_hash` | `[file:hashes.MD5 = '...']` |
-| `sha1_hash` | `[file:hashes.'SHA-1' = '...']` |
+| `sha1_hash` | `[file:hashes.'SHA-1' = '...']`, `[file:hashes.SHA1 = '...']` |
 | `sha3_384` | `[file:hashes.'SHA3-384' = '...']` |
 | `domain` | `[domain-name:value = '...']` |
 | `url` | `[url:value = '...']` |
-| `ip:port` | `[network-traffic:dst_ref.type = 'ipv4-addr' AND ...]` |
+| `ip:port` | `[network-traffic:dst_ref.type = 'ipv4-addr' AND ...]`, `[ipv4-addr:value = '...']` |
 
 ## Debugging
 
