@@ -41,8 +41,8 @@ class DatadogIntelClient:
         self.integration_api_url = config.datadog_intel.integration_api_url
 
         headers = {
-            "dd-api-key": config.datadog_intel.dd_api_key,
-            "dd-application-key": config.datadog_intel.dd_application_key,
+            "dd-api-key": config.datadog_intel.dd_api_key.get_secret_value(),
+            "dd-application-key": config.datadog_intel.dd_application_key.get_secret_value(),
             "Content-Type": "application/json",
             "ti_vendor": "opencti",
             "ti_indicator": indicator_type,
