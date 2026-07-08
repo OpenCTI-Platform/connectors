@@ -4,7 +4,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -39,7 +39,7 @@ class DatadogIntelConfig(BaseConfigModel):
             "'https://api.datadoghq.com/api/v2/security/threat-intel-feed'."
         )
     )
-    indicator_type: list[str] = Field(
+    indicator_type: ListFromString = Field(
         description=(
             "List of indicator types to forward. Accepted values: "
             "'ip_address', 'domain', 'sha256'."
@@ -58,6 +58,20 @@ class DatadogIntelConfig(BaseConfigModel):
             "as the 'dd-application-key' header to authenticate against 'integration_api_url'."
         )
     )
+
+    @field_validator("indicator_type", mode="after")
+    def _validate_indicator_type(cls, value: list[str]) -> list[str]:
+        """
+        Validate that the indicator types are valid.
+        """
+        valid_types = {"ip_address", "domain", "sha256"}
+        invalid_types = set(value) - valid_types
+        if invalid_types:
+            raise ValueError(
+                f"Invalid indicator types: {', '.join(invalid_types)}. "
+                f"Valid types are: {', '.join(valid_types)}."
+            )
+        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):

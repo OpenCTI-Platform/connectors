@@ -22,7 +22,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 },
                 "datadog_intel": {
                     "integration_api_url": "https://api.datadoghq.com/api/v2/security/threat-intel-feed",
-                    "indicator_type": ["ip_address"],
+                    "indicator_type": "ip_address",
                     "dd_api_key": "test-api-key",
                     "dd_application_key": "test-app-key",
                 },
@@ -84,7 +84,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "datadog_intel": {
                     "integration_api_url": "https://api.datadoghq.com/api/v2/security/threat-intel-feed",
-                    "indicator_type": ["ip_address"],
+                    "indicator_type": "ip_address",
                     "dd_api_key": "test-api-key",
                     "dd_application_key": "test-app-key",
                 },

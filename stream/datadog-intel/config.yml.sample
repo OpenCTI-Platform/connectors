@@ -14,9 +14,6 @@ connector:
 
 datadog_intel:
   integration_api_url: 'ChangeMe'
-  indicator_type:
-    - 'ip_address'
-    # - 'domain'
-    # - 'sha256'
+  indicator_type: 'ip_address, domain, sha256'
   dd_api_key: 'ChangeMe'
   dd_application_key: 'ChangeMe'
