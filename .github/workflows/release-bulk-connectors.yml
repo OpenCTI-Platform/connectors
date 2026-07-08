@@ -1,0 +1,223 @@
+name: "Release Connectors (bulk)"
+
+# Bulk release orchestrator.
+#
+# Resolves a set of connectors (a named list or "all") and a single shared CalVer
+# version, then dispatches one independent `release-connector.yml` run per
+# connector via workflow_dispatch. Each dispatched run performs the full per-
+# connector pipeline (build → push → create the GitHub Release, which creates the
+# tag). This workflow itself does no building or tagging.
+#
+# Why dispatch instead of pushing tags or a matrix?
+#   - workflow_dispatch events always create a workflow run, even when triggered
+#     with the default GITHUB_TOKEN (unlike tag pushes, which do not) — so no PAT
+#     is required.
+#   - One run per connector is not bound by the 256-job matrix limit, so "all"
+#     (250+ connectors) works in a single orchestration.
+#
+# Use cases: shared-dependency security fix, pycti bump, connectors-sdk breaking
+# change, LTS alignment.
+#
+# Transition trigger — platform CalVer tag push (e.g. `7.260706.0`):
+# automatically runs a manifest-only bulk release for every connector. Each
+# dispatched per-connector run still produces its full tag, GitHub Release,
+# manifest fragment, and container_version commit-back — only the Docker
+# build/push step is skipped, since image builds for the platform release are
+# still handled by CircleCI at this stage. This lets the platform release keep
+# flowing through the current CircleCI pipeline while per-connector tags,
+# releases, and manifest fragments are produced in parallel via GitHub Actions.
+
+on:
+  push:
+    tags:
+      # Platform (OCTI) CalVer release tags, e.g. 7.260706.0. These never
+      # contain '/', unlike per-connector tags `{name}/{version}` matched by
+      # release-connector.yml's own '*/*' filter (glob '*' does not match
+      # '/', so the two patterns can never collide).
+      # NOTE: bulk_release.py currently only validates the plain
+      # MAJOR.YYMMDD.PATCH format; an `-lts.N`-suffixed platform tag would
+      # match this trigger but fail version validation in the resolve step.
+      - '*.*.*'
+  workflow_dispatch:
+    inputs:
+      connectors:
+        description: >
+          Connectors to release: "all" or a comma-separated list
+          (e.g. "mitre,crowdstrike").
+        required: true
+        type: string
+        default: "all"
+      version:
+        description: >
+          Optional CalVer to tag, same for all connectors (e.g. 7.260706.0).
+          Leave empty to auto-compute today's 7.YYMMDD.0.
+        required: false
+        type: string
+        default: ""
+      manifest_only:
+        description: >
+          Manifest-only — skip Docker build/push only for every dispatched
+          connector (still handled by CircleCI during the transition). Tag,
+          GitHub Release, manifest fragment, and container_version
+          commit-back are still fully produced for each connector. Always
+          forced to true when this workflow is triggered by a platform
+          CalVer tag push.
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: "Dry run — resolve and preview connectors without dispatching releases."
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-bulk-connectors
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  bulk-release:
+    name: Dispatch connector releases
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required to dispatch release-connector.yml via `gh workflow run`.
+      actions: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Determine effective inputs
+        id: trigger
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          TAG_NAME: ${{ github.ref_name }}
+          INPUT_CONNECTORS: ${{ inputs.connectors }}
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_MANIFEST_ONLY: ${{ inputs.manifest_only }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            # Platform CalVer tag push: dispatch a full release (tag, GitHub
+            # Release, manifest fragment, commit-back) for every connector at
+            # this exact version, but skip the Docker build — still on CircleCI.
+            echo "connectors=all" >> "$GITHUB_OUTPUT"
+            echo "version=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+            echo "dry_run=false" >> "$GITHUB_OUTPUT"
+            echo "manifest_only=true" >> "$GITHUB_OUTPUT"
+            echo "🏷️ Platform release tag: ${TAG_NAME} → bulk manifest-only run for all connectors"
+          else
+            echo "connectors=${INPUT_CONNECTORS}" >> "$GITHUB_OUTPUT"
+            echo "version=${INPUT_VERSION}" >> "$GITHUB_OUTPUT"
+            echo "dry_run=${INPUT_DRY_RUN}" >> "$GITHUB_OUTPUT"
+            echo "manifest_only=${INPUT_MANIFEST_ONLY}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve connectors and version
+        id: resolve
+        env:
+          CONNECTORS: ${{ steps.trigger.outputs.connectors }}
+          VERSION: ${{ steps.trigger.outputs.version }}
+          DRY_RUN: ${{ steps.trigger.outputs.dry_run }}
+          MANIFEST_ONLY: ${{ steps.trigger.outputs.manifest_only }}
+        run: |
+          set -euo pipefail
+
+          ARGS=()
+          if [ "${CONNECTORS,,}" = "all" ]; then
+            ARGS+=("--all")
+          else
+            ARGS+=("--connectors" "${CONNECTORS}")
+          fi
+
+          if [ -n "${VERSION}" ]; then
+            ARGS+=("--version" "${VERSION}")
+          fi
+
+          # A dry run previews the full intended set, including connectors already
+          # released at this version. A real run (manifest-only or not) skips them,
+          # since it creates a real tag/GitHub Release per connector and re-running
+          # for an already-released version would collide with the existing tag.
+          if [ "${DRY_RUN}" = "true" ]; then
+            ARGS+=("--include-released")
+          fi
+
+          python .github/scripts/bulk_release.py "${ARGS[@]}"
+
+      - name: Dispatch per-connector releases
+        if: ${{ steps.trigger.outputs.dry_run != 'true' && steps.resolve.outputs.has_connectors == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONNECTORS_JSON: ${{ steps.resolve.outputs.connectors }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+          MANIFEST_ONLY: ${{ steps.trigger.outputs.manifest_only }}
+          REF: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Bulk release — version \`$VERSION\`"
+            echo ""
+            if [ "$MANIFEST_ONLY" = "true" ]; then
+              echo "🧩 **Manifest-only mode** — Docker build/push is skipped for every connector (still handled by CircleCI during the transition). Tag, GitHub Release, manifest fragment, and container_version commit-back are still fully produced for each connector."
+              echo ""
+            fi
+            echo "Dispatching connector release(s) on ref \`$REF\`."
+            echo ""
+            echo "| Connector | Target | Status |"
+            echo "|-----------|--------|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          ok=0
+          failed=0
+          while IFS= read -r name; do
+            [ -z "$name" ] && continue
+            target_label="${name}/${VERSION}"
+            if gh workflow run release-connector.yml \
+                 --ref "$REF" \
+                 -f connector_name="$name" \
+                 -f version="$VERSION" \
+                 -f dry_run=false \
+                 -f manifest_only="$MANIFEST_ONLY"; then
+              echo "| $name | $target_label | ✅ dispatched |" >> "$GITHUB_STEP_SUMMARY"
+              ok=$((ok + 1))
+            else
+              echo "| $name | $target_label | ❌ dispatch failed |" >> "$GITHUB_STEP_SUMMARY"
+              failed=$((failed + 1))
+            fi
+            # Space out mutating API calls to stay clear of secondary rate limits.
+            sleep 1
+          done < <(printf '%s' "$CONNECTORS_JSON" | jq -r '.[]')
+
+          {
+            echo ""
+            echo "**${ok} dispatched, ${failed} failed.**"
+            echo ""
+            echo "🔎 Track the runs: https://github.com/${REPO}/actions/workflows/release-connector.yml"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "✅ ${ok} dispatched, ${failed} failed."
+          if [ "$failed" -gt 0 ]; then
+            exit 1
+          fi
+
+      - name: Dry run notice
+        if: ${{ steps.trigger.outputs.dry_run == 'true' }}
+        run: |
+          echo "🔎 Dry run — connectors resolved and previewed above; no releases dispatched."
+          echo "Re-run with dry_run=false to dispatch the per-connector release workflows."
+
