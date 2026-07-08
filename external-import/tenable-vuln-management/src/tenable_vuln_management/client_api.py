@@ -13,7 +13,7 @@ from dateutil import parser
 from tenable.io import TenableIO
 from tenable.io.exports.iterator import ExportsIterator
 
-from .config_variables import ConfigConnector
+from .settings import ConnectorSettings
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
@@ -95,18 +95,18 @@ def _get_opencti_version() -> str:
 class ConnectorClient:
     """Client for interacting with the Tenable Vulnerability Management API."""
 
-    def __init__(self, helper: "OpenCTIConnectorHelper", config: ConfigConnector):
+    def __init__(self, helper: "OpenCTIConnectorHelper", config: ConnectorSettings):
         """
         Initialize the client with necessary configurations
         """
         self.helper = helper
         self.config = config
         self._tio_client = TenableIO(
-            access_key=self.config.tio_api_access_key,
-            secret_key=self.config.tio_api_secret_key,
-            url=self.config.tio_api_base_url,
-            backoff=self.config.tio_api_backoff,
-            retries=self.config.tio_api_retries,
+            access_key=self.config.tenable_vuln_management.api_access_key.get_secret_value(),
+            secret_key=self.config.tenable_vuln_management.api_secret_key.get_secret_value(),
+            url=self.config.tenable_vuln_management.api_base_url,
+            backoff=self.config.tenable_vuln_management.api_backoff,
+            retries=self.config.tenable_vuln_management.api_retries,
             # Tenable integration best practice.
             # See https://developer.tenable.com/docs/tenableio-integrations [consulted on September 27th, 2024]
             vendor="Filigran",
@@ -163,8 +163,11 @@ class ConnectorClient:
         ]
 
     @safe_call
-    def export_vulnerabilities(self) -> ExportsIterator:
+    def export_vulnerabilities(self, export_since: str) -> ExportsIterator:
         """Trigger a Vulnerability export process.
+
+        Args:
+            export_since: Date string from which to start pulling vulnerability data.
 
         Returns:
             (tenable.io.exports.ExportsIterator): Iterator pointing to triggered export.
@@ -183,12 +186,17 @@ class ConnectorClient:
             [Consulted on September 27th, 2024].
         """
         return self._tio_client.exports.vulns(
-            since=int(parser.parse(self.config.tio_export_since).timestamp()),
-            severity=SeverityLevel.levels_above(self.config.tio_severity_min_level),
+            since=int(parser.parse(export_since).timestamp()),
+            severity=SeverityLevel.levels_above(
+                self.config.tenable_vuln_management.min_severity
+            ),
         )
 
-    def _since_filter_api_v3(self):
+    def _since_filter_api_v3(self, export_since: str):
         """Create a `since` filter equivalent of API V2 to be used in api V3.
+
+        Args:
+            export_since: Date string from which to start pulling vulnerability data.
 
         Returns:
             (dict[str, Any]): The equivalent since filter
@@ -197,7 +205,7 @@ class ConnectorClient:
             https://community.tenable.com/s/article/since-filter-changes-for-Tenable-io-vulns-exports-API
 
         """
-        parsed_with_tz = parser.parse(self.config.tio_export_since)
+        parsed_with_tz = parser.parse(export_since)
         utc_datetime = (
             datetime.datetime.fromtimestamp(parsed_with_tz.timestamp()).isoformat()
             + "Z"
@@ -287,8 +295,11 @@ class ConnectorClient:
         )
 
     @safe_call
-    def get_finding_ids(self) -> list[dict[str, str]]:
+    def get_finding_ids(self, export_since: str) -> list[dict[str, str]]:
         """Get findings ids from the Tenable V3 API
+
+        Args:
+            export_since: Date string from which to start pulling vulnerability data.
 
         Returns:
             (list[dict[str, str]]): Containing `id` (the finding id), `asset.id` and `definition.id` (to join data later)
@@ -296,11 +307,11 @@ class ConnectorClient:
         """
         # Note this must be sync as pagination is handle via the next_page id, returned by the current call.
         # We then cannot just get a total count, then used async calls to get particular chunks.
-        filter_since = self._since_filter_api_v3()
+        filter_since = self._since_filter_api_v3(export_since)
         filter_severity = {
             "operator": "eq",
             "value": SeverityLevel.levels_index_above(
-                self.config.tio_severity_min_level
+                self.config.tenable_vuln_management.min_severity
             ),
             "property": "severity",
         }
