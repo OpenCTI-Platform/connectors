@@ -210,9 +210,7 @@ def test_create_asn_default_name(converter):
 
 
 def test_create_location_city(converter):
-    loc, rel = converter._create_location(
-        {"city": "Paris", "country": "FR"}, OBS_ID
-    )
+    loc, rel = converter._create_location({"city": "Paris", "country": "FR"}, OBS_ID)
     assert loc.city == "Paris"
     assert rel.relationship_type == "located-at"
 
@@ -228,9 +226,7 @@ def test_create_location_empty_returns_none(converter):
 
 
 def test_create_indicator_ipv4_with_risks(converter):
-    ind, rel = converter._create_indicator(
-        "1.2.3.4", OBS_ID, {"risks": ["PROXY"]}
-    )
+    ind, rel = converter._create_indicator("1.2.3.4", OBS_ID, {"risks": ["PROXY"]})
     assert ind.pattern == "[ipv4-addr:value = '1.2.3.4']"
     assert ind.labels == ["malicious-activity"]
     assert rel.relationship_type == "based-on"

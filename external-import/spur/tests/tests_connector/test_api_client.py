@@ -46,9 +46,7 @@ def test_stream_feed_skips_malformed_json():
 
 def test_stream_feed_request_exception_returns_empty():
     client = make_client()
-    client.session.get = MagicMock(
-        side_effect=requests.RequestException("boom")
-    )
+    client.session.get = MagicMock(side_effect=requests.RequestException("boom"))
 
     records = list(client.stream_feed("https://feed"))
 
@@ -59,9 +57,7 @@ def test_stream_feed_request_exception_returns_empty():
 def test_stream_feed_http_error_returns_empty():
     client = make_client()
     response = MagicMock()
-    response.raise_for_status = MagicMock(
-        side_effect=requests.HTTPError("404")
-    )
+    response.raise_for_status = MagicMock(side_effect=requests.HTTPError("404"))
     client.session.get = MagicMock(return_value=response)
 
     records = list(client.stream_feed("https://feed"))
