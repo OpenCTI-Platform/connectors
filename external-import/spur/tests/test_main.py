@@ -63,7 +63,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_id == "connector-id"
     assert helper.connect_name == "Spur"
     assert helper.log_level == "ERROR"
-    assert helper.connect_duration_period == "PT24H"
+    assert helper.connect_duration_period == "P1D"
 
 
 def test_connector_is_instantiated(mock_opencti_connector_helper):
