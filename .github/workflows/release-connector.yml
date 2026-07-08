@@ -1,5 +1,22 @@
 name: "Release Connector"
 
+# Dynamic run name shown in the Actions run list, so it's obvious at a glance
+# which connector/version each run is for instead of a generic "Release
+# Connector #NNN". Context availability for `run-name` is limited to
+# `github`, `inputs`, `vars` (no job outputs), so on tag push we just reuse
+# the tag itself (already "{connector}/{version}"); on workflow_dispatch we
+# build the label from the raw inputs.
+run-name: >-
+  ${{
+    github.event_name == 'push'
+      && format('🚀 {0}', github.ref_name)
+      || format('🚀 {0}{1}{2}{3}',
+           inputs.connector_name,
+           inputs.version != '' && format('@{0}', inputs.version) || '',
+           inputs.dry_run && ' · dry-run' || '',
+           inputs.manifest_only && ' · manifest-only' || '')
+  }}
+
 # Production release pipeline for individual connectors.
 #
 # Triggers:

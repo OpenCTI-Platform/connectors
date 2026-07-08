@@ -1,5 +1,20 @@
 name: "Release Connectors (bulk)"
 
+# Dynamic run name shown in the Actions run list, so it's obvious at a glance
+# which connectors/version a bulk run targets instead of a generic "Release
+# Connectors (bulk) #NNN". Same context limitation as release-connector.yml:
+# only `github`, `inputs`, `vars` are available here.
+run-name: >-
+  ${{
+    github.event_name == 'push'
+      && format('🚀 bulk (platform tag {0})', github.ref_name)
+      || format('🚀 bulk: {0}{1}{2}{3}',
+           inputs.connectors,
+           inputs.version != '' && format('@{0}', inputs.version) || '',
+           inputs.dry_run && ' · dry-run' || '',
+           inputs.manifest_only && ' · manifest-only' || '')
+  }}
+
 # Bulk release orchestrator.
 #
 # Resolves a set of connectors (a named list or "all") and a single shared CalVer
