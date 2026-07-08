@@ -44,11 +44,14 @@ class DatadogIntelConnector:
         self.config = config
         self.helper = helper
 
+        indicator_types = getattr(
+            self.config.datadog_intel, "indicator_type", None
+        ) or ["ip_address"]
         self.clients: dict[str, DatadogIntelClient] = {
             ind_type: DatadogIntelClient(
-                helper=helper, config=config, indicator_type=ind_type
+                helper=self.helper, config=self.config, indicator_type=ind_type
             )
-            for ind_type in config.datadog_intel.indicator_type
+            for ind_type in indicator_types
         }
 
     def check_stream_id(self) -> None:
@@ -71,20 +74,16 @@ class DatadogIntelConnector:
         :return: None
         """
         self.helper.connector_logger.debug(
-            "Message received",
-            meta={"event": msg.event, "id": msg.id},
+            "Message received", meta={"event": msg.event, "id": msg.id}
         )
-
         try:
             self.check_stream_id()
-
             data = json.loads(msg.data)["data"]
             data["event_type"] = msg.event
             data["x_opencti_event_type"] = msg.event
         except Exception as e:
             self.helper.connector_logger.error(
-                "Cannot parse message",
-                meta={"error": str(e), "raw": msg.data},
+                "Cannot parse message", meta={"error": str(e), "raw": msg.data}
             )
             return
 
@@ -94,7 +93,22 @@ class DatadogIntelConnector:
             return
 
         ind_type = indicator_type_for_event(data)
-        self.clients[ind_type].process_indicator(data)
+        if ind_type is None:
+            self.helper.connector_logger.debug(
+                "Skipping indicator with unknown type",
+                meta={"id": data.get("id"), "raw": data},
+            )
+            return
+
+        client = self.clients.get(ind_type)
+        if client is None:
+            self.helper.connector_logger.debug(
+                "Skipping indicator type not configured",
+                meta={"indicator_type": ind_type, "id": data.get("id")},
+            )
+            return
+
+        client.process_indicator(data)
 
     def run(self) -> None:
         """
