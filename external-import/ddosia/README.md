@@ -65,6 +65,7 @@ The DDoSIA connector automatically retrieves snapshots of DDoS targets. For each
 | API Base URL | api_base_url | `DDOSIA_API_BASE_URL` | / | Yes | The base URL of the witha.name API. |
 | TLP Level | tlp_level | `DDOSIA_TLP_LEVEL` | green | No | Default TLP level of the imported entities. |
 | Import Start Timestamp | import_start_timestamp | `DDOSIA_IMPORT_START_TIMESTAMP` | null | No | Timestamp to start the first import. <br> - `null`: Only the most recent snapshot. <br> - `0`: All available history. <br> - `value`: All snapshots since this timestamp. |
+| Create Notes | create_notes | `DDOSIA_CREATE_NOTES` | true | No | Whether to create STIX Note objects for each domain containing raw targets data. Set to `false` to disable note creation. |
 
 ## Behavior
 

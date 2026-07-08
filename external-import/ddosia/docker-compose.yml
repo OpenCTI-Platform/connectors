@@ -16,6 +16,7 @@ services:
       - DDOSIA_API_BASE_URL=https://witha.name
       - DDOSIA_TLP_LEVEL=green
       - DDOSIA_IMPORT_START_TIMESTAMP=null
+      - DDOSIA_CREATE_NOTES=true # whether to create STIX Note objects with raw targets data
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
