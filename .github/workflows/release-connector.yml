@@ -81,7 +81,7 @@ jobs:
   # 1. Resolve connector directory and build configuration
   # ──────────────────────────────────────────────────────────
   resolve:
-    name: Resolve connector
+    name: Resolve connector ${{ inputs.connector_name}}
     runs-on: ubuntu-latest
     outputs:
       connector_name: ${{ steps.parse.outputs.connector_name }}
@@ -393,15 +393,24 @@ jobs:
   # ──────────────────────────────────────────────────────────
   # 4. Create GitHub Release + update manifest version
   # ──────────────────────────────────────────────────────────
-  # `build` is skipped (not failed) when manifest_only is true. This job's
-  # explicit `if:` (below) replaces the default `success()` gate that GitHub
-  # Actions would otherwise apply to `needs`, so it still runs in that case —
-  # only the `dry_run` (old-style build-without-push) case is excluded here.
+  # `build` is skipped (not failed) when manifest_only is true. Per GitHub's
+  # docs on `jobs.<job_id>.needs`: "If a job fails or is skipped, all jobs
+  # that need it are skipped unless the jobs use a conditional expression
+  # that causes the job to continue" — a plain custom `if:` does NOT bypass
+  # this cascade, only `always()` does. So we must use `always()` here and
+  # explicitly re-check resolve/release-notes succeeded and build didn't
+  # fail/get cancelled (skipped is fine).
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [resolve, release-notes, build]
-    if: needs.resolve.outputs.dry_run != 'true'
+    if: |
+      always() &&
+      needs.resolve.result == 'success' &&
+      needs.release-notes.result == 'success' &&
+      needs.build.result != 'failure' &&
+      needs.build.result != 'cancelled' &&
+      needs.resolve.outputs.dry_run != 'true'
     permissions:
       contents: write
     steps:
