@@ -1,11 +1,7 @@
-# coding: utf-8
-
 import io
 import ipaddress
 import json
-import os
 import re
-import sys
 import time
 from hashlib import sha256
 from typing import Dict
@@ -13,28 +9,21 @@ from typing import Dict
 import magic
 import pycti
 import stix2
-import yaml
+from connector.settings import ConnectorSettings
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
 )
 from stix2 import URL, DomainName, EmailAddress, IPv4Address
 from triage import Client
 
 
 class HatchingTriageSandboxConnector:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config, playbook_compatible=True)
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
 
         self.identity = self.helper.api.identity.create(
             type="Organization",
@@ -42,61 +31,26 @@ class HatchingTriageSandboxConnector:
             description="Hatching Triage",
         )["standard_id"]
 
-        self.octi_api_url = get_config_variable(
-            "OPENCTI_URL", ["opencti", "url"], config
-        )
-        if isinstance(self.octi_api_url, str):
-            self.octi_api_url = self.octi_api_url.rstrip("/")
+        self.octi_api_url = str(self.config.opencti.url).rstrip("/")
 
-        # Get URL and token from config, use to instantiate the Triage Client
-        base_url = get_config_variable(
-            "HATCHING_TRIAGE_SANDBOX_BASE_URL",
-            ["hatching_triage_sandbox", "base_url"],
-            config,
-        )
-        token = get_config_variable(
-            "HATCHING_TRIAGE_SANDBOX_TOKEN",
-            ["hatching_triage_sandbox", "token"],
-            config,
-        )
-        self.triage_client = Client(token, root_url=base_url)
+        # Instantiate the Triage Client
+        self.base_url = self.config.hatching_triage_sandbox.base_url
+        token = self.config.hatching_triage_sandbox.token.get_secret_value()
+        self.triage_client = Client(token, root_url=self.base_url)
 
         # Get other config values
-        self.use_existing_analysis = get_config_variable(
-            "HATCHING_TRIAGE_SANDBOX_USE_EXISTING_ANALYSIS",
-            ["hatching_triage_sandbox", "use_existing_analysis"],
-            config,
+        self.use_existing_analysis = (
+            self.config.hatching_triage_sandbox.use_existing_analysis
         )
-        self.family_color = get_config_variable(
-            "HATCHING_TRIAGE_SANDBOX_FAMILY_COLOR",
-            ["hatching_triage_sandbox", "family_color"],
-            config,
-        )
-        self.botnet_color = get_config_variable(
-            "HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR",
-            ["hatching_triage_sandbox", "botnet_color"],
-            config,
-        )
-        self.campaign_color = get_config_variable(
-            "HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR",
-            ["hatching_triage_sandbox", "campaign_color"],
-            config,
-        )
-        self.default_tag_color = get_config_variable(
-            "HATCHING_TRIAGE_SANDBOX_TAG_COLOR",
-            ["hatching_triage_sandbox", "tag_color"],
-            config,
-        )
-        self.max_tlp = get_config_variable(
-            "HATCHING_TRIAGE_SANDBOX_MAX_TLP",
-            ["hatching_triage_sandbox", "max_tlp"],
-            config,
-        )
+        self.family_color = self.config.hatching_triage_sandbox.family_color
+        self.botnet_color = self.config.hatching_triage_sandbox.botnet_color
+        self.campaign_color = self.config.hatching_triage_sandbox.campaign_color
+        self.default_tag_color = self.config.hatching_triage_sandbox.tag_color
+        self.max_tlp = self.config.hatching_triage_sandbox.max_tlp
 
     def _process_overview_report(
         self, observable, overview_dict, sample_id, entity_type
     ):
-
         bundle_objects = []
 
         if "us-sandbox.recordedfuture.com" in self.base_url:
@@ -107,7 +61,6 @@ class HatchingTriageSandboxConnector:
             report_url = f"https://triage.ge/{sample_id}/"
 
         # Create external reference
-        # Analysis URL
         external_reference = self.helper.api.external_reference.create(
             source_name="Hatching Triage Sandbox Analysis",
             url=report_url,
@@ -121,9 +74,6 @@ class HatchingTriageSandboxConnector:
         # Create labels from the tags
         if "tags" in overview_dict["analysis"]:
             for tag in overview_dict["analysis"]["tags"]:
-                # Set the label color depending on tag type
-                # Note: Only certain tags are separated by a colon
-                # Those are the tags we are colorizing
                 tag_split = tag.split(":")
                 tag_value = tag
                 label_color = self.default_tag_color
@@ -136,7 +86,6 @@ class HatchingTriageSandboxConnector:
                         label_color = self.campaign_color
                     tag_value = tag_split[1]
 
-                # Create and add the label
                 label = self.helper.api.label.create(value=tag_value, color=label_color)
                 self.helper.api.stix_cyber_observable.add_label(
                     id=observable["id"], label_id=label["id"]
@@ -157,7 +106,7 @@ class HatchingTriageSandboxConnector:
             # Handle config
             if "config" in extracted_dict:
                 if "rule" not in extracted_dict["config"]:
-                    self.helper.api.log_info("rule key not found, skipping...")
+                    self.helper.connector_logger.info("rule key not found, skipping...")
                     continue
                 # Create a Note
                 config_json = json.dumps(extracted_dict, indent=2)
@@ -174,7 +123,6 @@ class HatchingTriageSandboxConnector:
                 # Create Observables and Relationships for C2s
                 c2_list = extracted_dict.get("config").get("c2", [])
                 for c2 in c2_list:
-                    # Differentiate between C2 IP and URL
                     parsed = c2.split(":")[0]
                     key = "Url"
                     relationship_type = (
@@ -226,7 +174,6 @@ class HatchingTriageSandboxConnector:
                     username = cred_dict.get("username")
                     protocol = cred_dict.get("protocol")
                     if host:
-                        # Add Host Observable
                         host_stix = CustomObservableHostname(
                             value=host,
                             custom_properties={
@@ -236,7 +183,9 @@ class HatchingTriageSandboxConnector:
                         )
                         relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "related-to", observable["standard_id"], host_stix.id
+                                "related-to",
+                                observable["standard_id"],
+                                host_stix.id,
                             ),
                             relationship_type="related-to",
                             created_by_ref=self.identity,
@@ -244,11 +193,9 @@ class HatchingTriageSandboxConnector:
                             target_ref=host_stix.id,
                             allow_custom=True,
                         )
-
                         bundle_objects.append(host_stix)
                         bundle_objects.append(relationship)
                     if protocol == "smtp" and username:
-                        # Add Email Address Observable
                         email_stix = EmailAddress(
                             value=username,
                             custom_properties={
@@ -258,7 +205,9 @@ class HatchingTriageSandboxConnector:
                         )
                         relationship = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "related-to", observable["standard_id"], email_stix.id
+                                "related-to",
+                                observable["standard_id"],
+                                email_stix.id,
                             ),
                             relationship_type="related-to",
                             created_by_ref=self.identity,
@@ -269,24 +218,21 @@ class HatchingTriageSandboxConnector:
                         bundle_objects.append(email_stix)
                         bundle_objects.append(relationship)
                 # Download task file, wait for it to become available
-                # Give up after 5 tries
                 task_id = extracted_dict["tasks"][0]
                 filename = extracted_dict["dumped_file"]
                 file_contents = self.triage_client.sample_task_file(
                     sample_id, task_id, filename
                 )
                 for x in range(5):
-                    # Sample not yet available, sleep
                     if b"NOT_AVAILABLE" in file_contents[:30]:
                         time.sleep(10)
                         continue
-
                     file_contents = self.triage_client.sample_task_file(
                         sample_id, task_id, filename
                     )
 
                 if b"NOT_AVAILABLE" in file_contents[:30]:
-                    self.helper.api.log_info(
+                    self.helper.connector_logger.info(
                         "Maximum attempts tried to obtain extracted file, skipping..."
                     )
                     continue
@@ -304,7 +250,9 @@ class HatchingTriageSandboxConnector:
                 # Create Relationship between original Observable and the extracted
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", response["standard_id"], observable["standard_id"]
+                        "related-to",
+                        response["standard_id"],
+                        observable["standard_id"],
                     ),
                     relationship_type="related-to",
                     created_by_ref=self.identity,
@@ -327,7 +275,6 @@ class HatchingTriageSandboxConnector:
             # Handle dropper
             if "dropper" in extracted_dict:
                 dropper_dict = extracted_dict["dropper"]
-                # Create Url Observables and Relationships
                 dropper_urls = dropper_dict["urls"]
                 for url_dict in dropper_urls:
                     dropper_type = url_dict["type"]
@@ -352,7 +299,6 @@ class HatchingTriageSandboxConnector:
                     )
                     bundle_objects.append(url_stix)
                     bundle_objects.append(relationship)
-                    # Create dropper type label
                     self.helper.api.label.create(
                         value=dropper_type, color=self.default_tag_color
                     )
@@ -394,7 +340,6 @@ class HatchingTriageSandboxConnector:
                 for task_dict in overview_dict["targets"]
             ]
             for ip in ips[0]:
-                # Filter out non-global and known DNS IPs
                 if not ipaddress.ip_address(ip).is_global:
                     continue
                 if ip in ["8.8.8.8", "8.8.4.4"]:
@@ -418,10 +363,10 @@ class HatchingTriageSandboxConnector:
                 )
                 bundle_objects.append(host_stix)
                 bundle_objects.append(relationship)
+
         # Attach the TTPs
         if "signatures" in overview_dict:
             for signature_dict in overview_dict["signatures"]:
-                # Skip any dicts without a ttps key
                 if "ttp" not in signature_dict:
                     continue
                 name = signature_dict["name"]
@@ -457,6 +402,7 @@ class HatchingTriageSandboxConnector:
                     )
                     bundle_objects.append(attack_pattern)
                     bundle_objects.append(relationship)
+
         # Serialize and send all bundles
         if bundle_objects:
             return self._send_bundle(bundle_objects)
@@ -469,7 +415,7 @@ class HatchingTriageSandboxConnector:
         return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
 
     def _process_file(self, observable, entity_type):
-        self.helper.log_info("Triggering the sandbox...")
+        self.helper.connector_logger.info("Triggering the sandbox...")
 
         sample_id = None
         observable_value = observable["observable_value"]
@@ -478,14 +424,13 @@ class HatchingTriageSandboxConnector:
             if not observable["importFiles"]:
                 raise ValueError(f"No files found for {observable_value}")
 
-            # Build the URI to download the file
             file_name = observable["importFiles"][0]["name"]
             file_id = observable["importFiles"][0]["id"]
             file_uri = f"{self.octi_api_url}/storage/get/{file_id}"
             file_content = self.helper.api.fetch_opencti_file(file_uri, True)
-            sha256 = self._get_sha256(file_content)
+            sha256_hash = self._get_sha256(file_content)
 
-            search_query = f"sha256:{sha256}"
+            search_query = f"sha256:{sha256_hash}"
             sample_id = self._search_for_analysis(search_query)
 
             if sample_id is None:
@@ -511,28 +456,25 @@ class HatchingTriageSandboxConnector:
         sample_id = None
 
         if self.use_existing_analysis:
-            # Perform a search of the sha256 to see if there's any existing analyses
             search_paginator = self.triage_client.search(query=search_query, max=1)
             for search in search_paginator:
                 existing_status = search["status"]
                 if existing_status == "reported":
                     sample_id = search["id"]
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"Found existing analysis with id {sample_id} and status {existing_status}."
                     )
                 elif existing_status == "pending":
                     sample_id = search["id"]
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"Found existing analysis with id {sample_id} and status {existing_status}."
                     )
                     self._wait_for_analysis(sample_id)
-                # Don't paginate, just get the first result
                 break
 
         return sample_id
 
     def _submit_sample(self, url=None, file_name=None, file_content=None):
-
         sample_json = None
 
         if file_content is not None:
@@ -545,7 +487,7 @@ class HatchingTriageSandboxConnector:
 
         sample_id = sample_json["id"]
         sample_status = sample_json["status"]
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f'Started new analysis {sample_id}, has status "{sample_status}".'
         )
         self._wait_for_analysis(sample_id)
@@ -553,11 +495,9 @@ class HatchingTriageSandboxConnector:
         return sample_id
 
     def _process_observable(self, observable, entity_type):
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Processing the observable " + observable["observable_value"]
         )
-
-        # If File, Artifact
         return self._process_file(observable, entity_type)
 
     def _process_message(self, data: Dict):
@@ -586,31 +526,20 @@ class HatchingTriageSandboxConnector:
                 )
 
     def _wait_for_analysis(self, sample_id):
-        """
-        Wait for an analysis to finish.
-
-        sample_id: a str representing the sample id
-        returns: none
-        """
-
+        """Wait for an analysis to finish."""
         for events in self.triage_client.sample_events(sample_id):
             if events["status"] == "pending":
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"Analysis {sample_id} has status \"{events['status']}\"."
                 )
             elif events["status"] == "reported":
-                self.helper.log_info(f"Analysis {sample_id} has finished.")
+                self.helper.connector_logger.info(f"Analysis {sample_id} has finished.")
                 break
             elif events["status"] == "failed":
                 raise ValueError(f"Analysis {sample_id} failed.")
 
     def _get_sha256(self, contents):
-        """
-        Return sha256 of bytes.
-
-        contents: a bytes object to get the sha256 for
-        returns: a str of the sha256
-        """
+        """Return sha256 of bytes."""
         sha256obj = sha256()
         sha256obj.update(contents)
         return sha256obj.hexdigest()
@@ -619,16 +548,5 @@ class HatchingTriageSandboxConnector:
         m = re.match(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", ip)
         return bool(m) and all(map(lambda n: 0 <= int(n) <= 255, m.groups()))
 
-    # Start the main loop
-    def start(self):
+    def run(self) -> None:
         self.helper.listen(message_callback=self._process_message)
-
-
-if __name__ == "__main__":
-    try:
-        hatching_triage_sandbox = HatchingTriageSandboxConnector()
-        hatching_triage_sandbox.start()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
