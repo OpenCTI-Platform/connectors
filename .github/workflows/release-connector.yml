@@ -572,9 +572,11 @@ jobs:
             while IFS= read -r file; do
               rel="${file#"$PINNED_DIR"/}"
               asset="${CONNECTOR_NAME}-$(echo "$rel" | tr '/' '-')"
-              cp "$file" "${RUNNER_TEMP}/${asset}"
-              gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
-              echo "📎 Attached pinned dependency file: $asset"
+              if [ -f "$file" ]; then
+                cp "$file" "${RUNNER_TEMP}/${asset}"
+                gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
+                echo "📎 Attached pinned dependency file: $asset"
+              fi
             done < <(find "$PINNED_DIR" -type f \( -name requirements.txt -o -name pyproject.toml \))
           else
             echo "ℹ️ No pinned dependency files to attach"
