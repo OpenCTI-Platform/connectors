@@ -1,15 +1,14 @@
-import sys
 import traceback
 
-from elastic_security_incidents_connector import ElasticSecurityIncidentsConnector
+from connector import ConnectorSettings, ElasticSecurityIncidentsConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
-    """
-    Entry point of the script
-    """
     try:
-        connector = ElasticSecurityIncidentsConnector()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+        connector = ElasticSecurityIncidentsConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
-        sys.exit(1)
+        exit(1)
