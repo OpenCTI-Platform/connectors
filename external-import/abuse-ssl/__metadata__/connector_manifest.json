@@ -1,16 +1,17 @@
 {
   "title": "Abuse SSL (Deprecated)",
   "slug": "abuse-ssl",
-  "description": "The Abuse.ch SSLBL (SSL Blacklist) identifies and lists IP addresses associated with botnet Command & Control (C&C) servers based on SSL certificate fingerprints. SSLBL collects IP addresses running with blacklisted SSL certificates and publishes a CSV blacklist that can be used to detect botnet C2 traffic leaving your network.\n\n⚠️ This connector is deprecated — the source CSV feed has not been updated since 2025-01-03 and will no longer be maintained.",
-  "short_description": "Imports botnet C&C server IP addresses detected via SSL certificate fingerprints from the Abuse.ch SSLBL blacklist into OpenCTI as STIX 2.1 indicators. ⚠️ Deprecated — source feed no longer updated since January 2025.",
+  "description": "The Abuse.ch SSLBL (SSL Blacklist) identifies and lists IP addresses associated with botnet Command & Control (C&C) servers based on SSL certificate fingerprints. SSLBL collects IP addresses running with blacklisted SSL certificates and publishes a CSV blacklist that can be used to detect botnet C2 traffic leaving your network.\n\n\u26a0\ufe0f This connector is deprecated \u2014 the source CSV feed has not been updated since 2025-01-03 and will no longer be maintained.",
+  "short_description": "Imports botnet C&C server IP addresses detected via SSL certificate fingerprints from the Abuse.ch SSLBL blacklist into OpenCTI as STIX 2.1 indicators. \u26a0\ufe0f Deprecated \u2014 source feed no longer updated since January 2025.",
   "logo": "external-import/abuse-ssl/__metadata__/logo.png",
   "use_cases": [
     "Infrastructure & Attack Surface Visibility"
   ],
-  "solution_categories":[
+  "solution_categories": [
     "Threat Intelligence Feed"
   ],
   "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
