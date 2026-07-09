@@ -1,9 +1,13 @@
 import json
+import re
 from typing import Any
 
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from vulners_client import VulnersClient
+
+# Canonical CVE identifier format (CVE-YYYY-NNNN[NNN]).
+CVE_ID_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,7}$")
 
 
 class VulnersConnector:
@@ -31,7 +35,7 @@ class VulnersConnector:
         self.settings = settings
 
         self.client = VulnersClient(
-            api_key=self.settings.vulners.api_key,
+            api_key=self.settings.vulners.api_key.get_secret_value(),
             base_url=self.settings.vulners.api_base_url,
         )
         self.max_tlp = self.settings.vulners.max_tlp_level
@@ -68,6 +72,28 @@ class VulnersConnector:
 
         return None
 
+    def _passthrough_bundle(self, data: dict[str, Any]) -> None:
+        """
+        Forward the inbound bundle unchanged when running from a playbook.
+
+        Playbook messages carry no ``event_type``; sending the original
+        ``stix_objects`` back keeps the playbook chain going even when this
+        connector adds nothing.
+        """
+        stix_objects = data.get("stix_objects")
+        if not data.get("event_type") and stix_objects:
+            self.helper.send_stix2_bundle(
+                self.helper.stix2_create_bundle(stix_objects),
+                cleanup_inconsistent_bundle=True,
+            )
+
+    def _skip(self, data: dict[str, Any], reason: str) -> None:
+        """Pass the inbound bundle through and close the work, if any."""
+        self._passthrough_bundle(data)
+        work_id = self._resolve_work_id(data)
+        if work_id:
+            self.helper.api.work.to_processed(work_id, reason)
+
     def _process_submission(
         self, bundle: dict[str, Any], work_id: str | None
     ) -> list[Any]:
@@ -84,7 +110,7 @@ class VulnersConnector:
             self.helper.api.work.to_processed(work_id, "Enrichment completed")
         return bundles_sent
 
-    def process_message(self, data: dict[str, Any]) -> str | None:
+    def process_message(self, data: dict[str, Any]) -> str:
         """
         Process an enrichment message for a Vulnerability.
 
@@ -114,20 +140,24 @@ class VulnersConnector:
                     "max_tlp": self.max_tlp,
                 },
             )
-            work_id = self._resolve_work_id(data)
-            if work_id:
-                self.helper.api.work.to_processed(
-                    work_id, "Skipped: TLP of the entity exceeds the max TLP"
-                )
+            self._skip(data, "Skipped: TLP of the entity exceeds the max TLP")
             return "Skipped (TLP too high)"
 
         cve_id = stix_entity.get("name")
+        if not isinstance(cve_id, str) or not CVE_ID_PATTERN.match(cve_id):
+            self.helper.connector_logger.info(
+                "Entity name is not a CVE identifier, skipping enrichment",
+                {"name": cve_id, "stix_entity_id": stix_entity_id},
+            )
+            self._skip(data, "Skipped: entity name is not a CVE identifier")
+            return "Skipped (not a CVE identifier)"
 
         bundle = self.client.get_bundle(cve_id, stix_entity["id"])
         if not bundle:
             self.helper.connector_logger.warning(
                 "Empty STIX bundle, skipping", {"cve_id": cve_id}
             )
+            self._skip(data, "No data from Vulners for this CVE")
             return "No data"
 
         work_id = self._resolve_work_id(data)

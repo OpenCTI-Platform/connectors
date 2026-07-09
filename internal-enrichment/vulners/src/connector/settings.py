@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 # TLP levels accepted by `OpenCTIConnectorHelper.check_max_tlp`.
 # The Vulners SDK does not ship a dedicated TLPLevel enum, so we mirror the
@@ -47,7 +47,7 @@ class VulnersConfig(BaseConfigModel):
         VULNERS_MAX_TLP_LEVEL  -> max_tlp_level
     """
 
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         description="Vulners API key. Get one at https://vulners.com",
     )
     api_base_url: str = Field(

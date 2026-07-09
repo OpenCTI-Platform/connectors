@@ -53,7 +53,9 @@
     },
     "VULNERS_API_KEY": {
       "description": "Vulners API key. Get one at https://vulners.com",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "VULNERS_API_BASE_URL": {
       "default": "https://vulners.com",

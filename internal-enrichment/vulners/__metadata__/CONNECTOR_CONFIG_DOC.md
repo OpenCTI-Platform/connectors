@@ -8,7 +8,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
-| VULNERS_API_KEY | `string` | ✅ | string |  | Vulners API key. Get one at https://vulners.com |
+| VULNERS_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Vulners API key. Get one at https://vulners.com |
 | CONNECTOR_NAME | `string` |  | string | `"Vulners"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["Vulnerability"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
