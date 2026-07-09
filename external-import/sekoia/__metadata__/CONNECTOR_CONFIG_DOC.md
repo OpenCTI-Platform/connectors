@@ -22,3 +22,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SEKOIA_IMPORT_SOURCE_LIST | `boolean` |  | boolean | `false` | Create the list of sources observed by Sekoia as label. |
 | SEKOIA_IMPORT_IOC_RELATIONSHIPS | `boolean` |  | boolean | `true` | Import IOCs relationships and related objects. |
 | SEKOIA_CONFIDENCE_SCORE | `integer` |  | integer | `null` | This will be the score assigned to the indicators. Defaults to null, maximum 100. |
+| SEKOIA_SEND_CONFIDENCE | `boolean` |  | boolean | `true` | Whether to include Sekoia's native STIX confidence property on objects in the bundle sent. |
