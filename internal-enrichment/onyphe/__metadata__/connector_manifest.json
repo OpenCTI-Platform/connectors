@@ -7,6 +7,11 @@
   "use_cases": [
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Attack Surface Management"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

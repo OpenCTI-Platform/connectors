@@ -2,12 +2,15 @@
   "title": "URLScan Enrichment",
   "slug": "urlscan-enrichment",
   "description": "URLScan is an online service that allows you to scan URLs to analyze and detect potential security threats. It provides a platform where users can submit links to be scanned to obtain information about the page's content, loaded external resources, potential threats, and other relevant security details.\n\nThe integration of URLScan with OpenCTI enables the automatic enrichment and analysis of IP addresses and URLs.",
-  "short_description": "URLScan is an online service that allows you to scan URLs to analyze and detect potential security threats. It provides a platform where users can submit links to be scanned to obtain information about the page's content, loaded external resources, potential threats, and other relevant security details.\n\nThe integration of URLScan with OpenCTI enables the automatic enrichment and analysis of IP addresses and URLs.",
+  "short_description": "Enriches IP and URL observables in OpenCTI with URLScan.io analysis results, including page content details, loaded resources, screenshots, and detected threats.",
   "logo": "internal-enrichment/urlscan-enrichment/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,

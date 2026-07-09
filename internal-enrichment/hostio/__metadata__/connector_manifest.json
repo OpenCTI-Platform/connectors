@@ -2,11 +2,15 @@
   "title": "Host.io",
   "slug": "hostio",
   "description": "The HostIO Connector is an internal enrichment connector for OpenCTI, designed to enhance cyber threat intelligence by enriching IP addresses and domain names using HostIO's domain data and IPinfo's IP data services. This connector fetches and integrates detailed information about IP addresses and domain names into OpenCTI, allowing analysts to gain deeper insights into cyber threats.",
-  "short_description": "The HostIO Connector is an internal enrichment connector for OpenCTI, designed to enhance cyber threat intelligence by enriching IP addresses and domain names using HostIO's domain data and IPinfo's IP data services. This connector fetches and integrates detailed information about IP addresses and domain names into OpenCTI, allowing analysts to gain deeper insights into cyber threats.",
+  "short_description": "Enriches IP addresses and domain names in OpenCTI using Host.io and IPinfo, providing domain ownership, co-hosted domains, geolocation, and ASN data.",
   "logo": "internal-enrichment/hostio/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

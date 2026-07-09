@@ -5,9 +5,13 @@
   "short_description": "IVRE connector enriches network observables with self-hosted reconnaissance data including network scan results, passive DNS, and geolocation.",
   "logo": "internal-enrichment/ivre/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Network Security"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

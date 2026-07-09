@@ -2,12 +2,17 @@
   "title": "Greynoise Vulnerabilities",
   "slug": "greynoise-vuln",
   "description": "GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity.\nThe purpose of this connector is to answer to this question : \"Is this vulnerability being exploited in the wild?\"",
-  "short_description": "GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity.\nThe purpose of this connector is to answer to this question : \"Is this vulnerability being exploited in the wild?\"",
+  "short_description": "Enriches CVE vulnerabilities in OpenCTI with GreyNoise exploit activity data, indicating whether a vulnerability is being actively scanned or exploited in the wild.",
   "logo": "internal-enrichment/greynoise-vuln/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Vulnerability & Exploit Awareness"
+    "Vulnerability & Exploit Awareness",
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Vulnerability & Exposure Management"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": "2026-06-04",
   "playbook_supported": true,

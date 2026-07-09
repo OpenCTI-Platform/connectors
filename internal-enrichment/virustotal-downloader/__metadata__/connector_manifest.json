@@ -2,12 +2,16 @@
   "title": "VirusTotal Downloader",
   "slug": "virustotal-downloader",
   "description": "VirusTotal Downloader Connector is an internal enrichment Connector that enables automated and manual submissions of file hashes (MD5, SHA1, and SHA256) to VirusTotal to attempt to retrieve associated file contents. If the file is found in VirusTotal, a new Observable of type Artifact will be uploaded.",
-  "short_description": "VirusTotal Downloader Connector is an internal enrichment Connector that enables automated and manual submissions of file hashes (MD5, SHA1, and SHA256) to VirusTotal to attempt to retrieve associated file contents. If the file is found in VirusTotal, a new Observable of type Artifact will be uploaded.",
+  "short_description": "Submits file hash observables (MD5, SHA1, SHA256) to VirusTotal and retrieves the associated file content, creating a new Artifact observable in OpenCTI when a match is found.",
   "logo": "internal-enrichment/virustotal-downloader/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

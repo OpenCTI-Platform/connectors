@@ -5,8 +5,12 @@
   "short_description": "This OpenCTI connector enriches Artifact Observables by scanning their contents using every YARA Indicator in the system. When a rule matches, the connector creates a relationship between the Artifact and Indicator.",
   "logo": "internal-enrichment/yara/__metadata__/logo.png",
   "use_cases": [
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": "2026-04-09",
   "playbook_supported": false,

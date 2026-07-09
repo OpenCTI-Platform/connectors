@@ -2,11 +2,15 @@
   "title": "Attribution Tools",
   "slug": "attribution-tools",
   "description": "The attribution tools connector developed by WithSecure provides incident attribution capability for OpenCTI. The tool is trained from OpenCTI intrusion-set data and can be launched as an enrichment for OpenCTI incidents.\nThe tool will assess the best matching intrusion-sets for the incident based on the collection of related objects within it.",
-  "short_description": "The attribution tools connector developed by WithSecure provides incident attribution capability for OpenCTI. The tool is trained from OpenCTI intrusion-set data and can be launched as an enrichment for OpenCTI incidents.\nThe tool will assess the best matching intrusion-sets for the incident based on the collection of related objects within it.",
+  "short_description": "WithSecure attribution connector that assesses the best-matching intrusion sets for an OpenCTI incident, trained on intrusion-set data to provide automated campaign attribution.",
   "logo": null,
   "use_cases": [
-    "Enrichment & Analysis"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
