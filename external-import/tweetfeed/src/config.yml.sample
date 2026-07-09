@@ -4,16 +4,17 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  name: 'TWEETFEED'
+  name: 'Tweetfeed'
   scope: 'tweetfeed'
-  log_level: 'info'
+  # log_level: 'error'
+  # duration_period: 'P1D' # ISO 8601 duration (1 day)
 
-tweetfeed:
-  confidence_level: 60 # From 0 (Unknown) to 100 (Fully trusted)
-  create_indicators: true
-  create_observables: true
-  interval: 1 # In days, must be strictly greater than 1
-  update_existing_data: false
-  org_description: 'Tweetfeed, a connector to import IOC from Twitter.'
-  org_name: 'Tweetfeed'
-  days_back_in_time: 30
+# tweetfeed:
+#   confidence_level: 25 # From 0 (Unknown) to 100 (Fully trusted)
+#   create_indicators: true
+#   create_observables: true
+#   interval: 1 # In days
+#   update_existing_data: true
+#   org_name: 'Tweetfeed'
+#   org_description: 'Tweetfeed, a connector to import IOC from Twitter.'
+#   days_back_in_time: 30
