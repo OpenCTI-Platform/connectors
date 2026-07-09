@@ -6,9 +6,9 @@ services:
     container_name: connector-ddosia
     restart: always
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=YOUR_OPENCTI_TOKEN
-      - CONNECTOR_ID=YOUR_CONNECTOR_ID
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=
+      - CONNECTOR_ID=
       - CONNECTOR_NAME=DDoSIA Connector
       - CONNECTOR_SCOPE=ddosia
       - CONNECTOR_LOG_LEVEL=info

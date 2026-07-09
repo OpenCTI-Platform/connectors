@@ -78,7 +78,7 @@ class ConverterToStix:
             snapshot_url = f"https://witha.name/config/{cfg_id}"
             external_ref = ExternalReference(
                 source_name="witha.name",
-                description=f"DDoSIA snapshot containing this target",
+                description="DDoSIA snapshot containing this target",
                 url=snapshot_url,
                 external_id=cfg_id,
             )
@@ -158,21 +158,21 @@ class ConverterToStix:
         # Format content with summary + raw JSON
         summary_lines = [
             f"# DDoSIA Targets for {host}",
-            f"",
+            "",
             f"**Snapshot ID:** {cfg_id}",
             f"**Timestamp:** {cfg_ts}",
             f"**Total targets:** {len(targets)}",
-            f"",
-            f"## Attack Summary",
-            f"",
+            "",
+            "## Attack Summary",
+            "",
         ]
 
         for att_type, count in sorted(attack_types.items()):
             summary_lines.append(f"- **{att_type}**: {count} targets")
 
-        summary_lines.append(f"")
-        summary_lines.append(f"## Raw Data (JSON)")
-        summary_lines.append(f"```json")
+        summary_lines.append("")
+        summary_lines.append("## Raw Data (JSON)")
+        summary_lines.append("```json")
         summary_lines.append(
             json.dumps(
                 {
@@ -184,7 +184,7 @@ class ConverterToStix:
                 indent=2,
             )
         )
-        summary_lines.append(f"```")
+        summary_lines.append("```")
 
         return Note(
             content="\n".join(summary_lines),
