@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from connector import DatadogIntelConnector
+from pydantic import SecretStr
 
 
 def test_process_message_propagates_stream_event_type_to_validation_and_client():
@@ -11,8 +12,8 @@ def test_process_message_propagates_stream_event_type_to_validation_and_client()
         datadog_intel=SimpleNamespace(
             indicator_type=["ip_address"],
             integration_api_url="http://test.com",
-            dd_api_key="test-api-key",
-            dd_application_key="test-app-key",
+            dd_api_key=SecretStr("test-api-key"),
+            dd_application_key=SecretStr("test-app-key"),
         )
     )
     helper = MagicMock()

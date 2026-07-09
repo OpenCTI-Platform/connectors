@@ -1,22 +1,21 @@
 version: '3'
 services:
   connector-datadog-intel:
-    build: .
     image: opencti/connector-datadog-intel:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_ID}
-      - CONNECTOR_NAME=Datadog Threat Intel
-      - CONNECTOR_SCOPE=indicator
-      - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_ID=5f8830a4-97ab-42f1-878c-1aa59b992dee
+      # - CONNECTOR_NAME=DatadogIntelConnector
+      # - CONNECTOR_SCOPE=indicator
+      # - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_LIVE_STREAM_ID=live
-      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - DATADOG_INTEL_INTEGRATION_API_URL=${DATADOG_INTEL_INTEGRATION_API_URL}
       - DATADOG_INTEL_DD_API_KEY=${DATADOG_INTEL_DD_API_KEY}
       - DATADOG_INTEL_DD_APPLICATION_KEY=${DATADOG_INTEL_DD_APPLICATION_KEY}
-      - DATADOG_INTEL_INDICATOR_TYPE=["ip_address"]
+      # - DATADOG_INTEL_INDICATOR_TYPE=ip_address
     restart: unless-stopped
     networks:
       - default
