@@ -97,7 +97,11 @@ class DdosiaConnector:
             Exception: If the snapshot cannot be processed, to allow the caller to handle the failure.
         """
         cfg_id = config_item["id"]
-        cfg_ts = float(config_item.get("ts", 0))
+        ts_val = config_item.get("ts")
+        try:
+            cfg_ts = float(ts_val) if ts_val is not None else 0.0
+        except (TypeError, ValueError):
+            cfg_ts = 0.0
 
         self.helper.connector_logger.info(
             f"[CONNECTOR] Processing snapshot {cfg_id}",
