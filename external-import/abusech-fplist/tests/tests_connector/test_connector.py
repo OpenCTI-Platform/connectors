@@ -73,13 +73,15 @@ def test_find_indicators_builds_expected_pattern(mock_opencti_connector_helper):
     assert _patterns_searched(connector) == [f"[file:hashes.'SHA-256' = '{'a' * 64}']"]
 
 
-def test_find_indicators_escapes_single_quotes(mock_opencti_connector_helper):
+def test_find_indicators_escapes_backslashes_and_single_quotes(
+    mock_opencti_connector_helper,
+):
     connector = _make_connector()
 
-    connector._find_indicators("url", "http://evil.example/a'b")
+    connector._find_indicators("url", "http://evil.example/a'b\\c")
 
     assert _patterns_searched(connector) == [
-        "[url:value = 'http://evil.example/a\\'b']"
+        "[url:value = 'http://evil.example/a\\'b\\\\c']"
     ]
 
 

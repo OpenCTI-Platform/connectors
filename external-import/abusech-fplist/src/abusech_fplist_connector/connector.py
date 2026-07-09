@@ -72,7 +72,7 @@ class ConnectorAbusechFplist:
                 return []
             format_args = {"ip": ip, "port": port}
         else:
-            format_args = {"v": entry_value.replace("'", "\\'")}
+            format_args = {"v": entry_value.replace("\\", "\\\\").replace("'", "\\'")}
 
         indicator_ids: list[str] = []
         seen_ids: set[str] = set()
