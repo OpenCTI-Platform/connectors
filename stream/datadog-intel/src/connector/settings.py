@@ -4,7 +4,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, HttpUrl, SecretStr, field_validator
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -19,11 +19,14 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     )
     name: str = Field(
         description="The name of the connector.",
-        default="DatadogIntel",
+        default="DatadogIntelConnector",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=[],
+        default=["indicator"],
+    )
+    live_stream_id: str = Field(
+        description="The ID of the live stream to connect to.",
     )
 
 
@@ -32,30 +35,29 @@ class DatadogIntelConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `DatadogIntelConnector`.
     """
 
-    integration_api_url: str = Field(
+    integration_api_url: HttpUrl = Field(
         description=(
-            "Datadog Threat Intel Feed API endpoint. If your Datadog site is "
-            "'https://app.datadoghq.com', use "
-            "'https://api.datadoghq.com/api/v2/security/threat-intel-feed'."
+            "Datadog's API URL as provided by the integration. "
+            "If your Datadog site is `https://app.datadoghq.com`, use `https://api.datadoghq.com/api/v2/security/threat-intel-feed`"
         )
     )
     indicator_type: ListFromString = Field(
         description=(
-            "List of indicator types to forward. Accepted values: "
+            "Types of indicators to send to the API. Accepted values: "
             "'ip_address', 'domain', 'sha256'."
         ),
         default=["ip_address"],
     )
     dd_api_key: SecretStr = Field(
         description=(
-            "Datadog API Key. Sent on every request as the 'dd-api-key' header "
-            "to authenticate against 'integration_api_url'."
+            "Datadog's API key. "
+            "Sent on every request as the `dd-api-key` header to authenticate against `integration_api_url`"
         )
     )
     dd_application_key: SecretStr = Field(
         description=(
-            "Datadog Application Key (or Personal Access Token). Sent on every request "
-            "as the 'dd-application-key' header to authenticate against 'integration_api_url'."
+            "Datadog's application key. "
+            "Sent on every request as the `dd-application-key` header to authenticate against `integration_api_url`"
         )
     )
 

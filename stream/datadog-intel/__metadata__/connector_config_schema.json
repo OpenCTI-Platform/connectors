@@ -15,12 +15,14 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "DatadogIntel",
+      "default": "DatadogIntelConnector",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "indicator"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
@@ -59,27 +61,30 @@
       "type": "boolean"
     },
     "DATADOG_INTEL_INTEGRATION_API_URL": {
-      "description": "Datadog Threat Intel Feed API endpoint. If your Datadog site is 'https://app.datadoghq.com', use 'https://api.datadoghq.com/api/v2/security/threat-intel-feed'.",
+      "description": "Datadog's API URL as provided by the integration. If your Datadog site is `https://app.datadoghq.com`, use `https://api.datadoghq.com/api/v2/security/threat-intel-feed`",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "DATADOG_INTEL_INDICATOR_TYPE": {
       "default": [
         "ip_address"
       ],
-      "description": "List of indicator types to forward. Accepted values: 'ip_address', 'domain', 'sha256'.",
+      "description": "Types of indicators to send to the API. Accepted values: 'ip_address', 'domain', 'sha256'.",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
     "DATADOG_INTEL_DD_API_KEY": {
-      "description": "Datadog API Key. Sent on every request as the 'dd-api-key' header to authenticate against 'integration_api_url'.",
+      "description": "Datadog's API key. Sent on every request as the `dd-api-key` header to authenticate against `integration_api_url`",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "DATADOG_INTEL_DD_APPLICATION_KEY": {
-      "description": "Datadog Application Key (or Personal Access Token). Sent on every request as the 'dd-application-key' header to authenticate against 'integration_api_url'.",
+      "description": "Datadog's application key. Sent on every request as the `dd-application-key` header to authenticate against `integration_api_url`",
       "format": "password",
       "type": "string",
       "writeOnly": true

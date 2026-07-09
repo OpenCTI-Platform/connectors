@@ -44,14 +44,11 @@ class DatadogIntelConnector:
         self.config = config
         self.helper = helper
 
-        indicator_types = getattr(
-            self.config.datadog_intel, "indicator_type", None
-        ) or ["ip_address"]
         self.clients: dict[str, DatadogIntelClient] = {
             ind_type: DatadogIntelClient(
-                helper=self.helper, config=self.config, indicator_type=ind_type
+                helper=helper, config=config, indicator_type=ind_type
             )
-            for ind_type in indicator_types
+            for ind_type in config.datadog_intel.indicator_type
         }
 
     def check_stream_id(self) -> None:

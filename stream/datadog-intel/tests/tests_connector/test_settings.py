@@ -4,37 +4,93 @@ import pytest
 from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 
+BASE_VALID_SETTINGS = {
+    "opencti": {
+        "url": "http://localhost:8080",
+        "token": "test-token",
+    },
+    "connector": {
+        "id": "connector-id",
+        "name": "Test Connector",
+        "log_level": "error",
+        "live_stream_id": "test-live-stream-id",
+        "live_stream_listen_delete": True,
+        "live_stream_no_dependencies": True,
+    },
+    "datadog_intel": {
+        "integration_api_url": "http://test.com",
+        "dd_api_key": "test-api-key",
+        "dd_application_key": "test-app-key",
+    },
+}
+
 
 @pytest.mark.parametrize(
     "settings_dict",
     [
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {
-                    "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "test, connector",
-                    "log_level": "error",
-                    "live_stream_id": "test-live-stream-id",
-                    "live_stream_listen_delete": True,
-                    "live_stream_no_dependencies": True,
-                },
+                **BASE_VALID_SETTINGS,
                 "datadog_intel": {
-                    "integration_api_url": "https://api.datadoghq.com/api/v2/security/threat-intel-feed",
-                    "indicator_type": "ip_address",
+                    "integration_api_url": "http://test.com",
                     "dd_api_key": "test-api-key",
                     "dd_application_key": "test-app-key",
+                    "indicator_type": "ip_address",
                 },
             },
-            id="full_valid_settings_dict",
+            id="indicator_type_ip_address",
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {"live_stream_id": "test-live-stream-id"},
+                **BASE_VALID_SETTINGS,
                 "datadog_intel": {
-                    "integration_api_url": "https://api.datadoghq.com/api/v2/security/threat-intel-feed",
+                    "integration_api_url": "http://test.com",
+                    "dd_api_key": "test-api-key",
+                    "dd_application_key": "test-app-key",
+                    "indicator_type": "domain",
+                },
+            },
+            id="indicator_type_domain",
+        ),
+        pytest.param(
+            {
+                **BASE_VALID_SETTINGS,
+                "datadog_intel": {
+                    "integration_api_url": "http://test.com",
+                    "dd_api_key": "test-api-key",
+                    "dd_application_key": "test-app-key",
+                    "indicator_type": "sha256",
+                },
+            },
+            id="indicator_type_file_hash",
+        ),
+        pytest.param(
+            {
+                **BASE_VALID_SETTINGS,
+                "datadog_intel": {
+                    "integration_api_url": "http://test.com",
+                    "dd_api_key": "test-api-key",
+                    "dd_application_key": "test-app-key",
+                    "indicator_type": "ip_address, domain, sha256",
+                },
+            },
+            id="indicator_type_all_types",
+        ),
+        pytest.param(
+            BASE_VALID_SETTINGS,
+            id="indicator_type_defaults_to_ip_address_list",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "live_stream_id": "test-live-stream-id",
+                },
+                "datadog_intel": {
+                    "integration_api_url": "http://test.com",
                     "dd_api_key": "test-api-key",
                     "dd_application_key": "test-app-key",
                 },
@@ -52,6 +108,7 @@ def test_settings_should_accept_valid_input(settings_dict):
     :param settings_dict: The dict to use as `ConnectorSettings` input
     """
 
+    # Given: Valid input
     class FakeConnectorSettings(ConnectorSettings):
         """
         Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
@@ -62,7 +119,10 @@ def test_settings_should_accept_valid_input(settings_dict):
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(settings_dict)
 
+    # When: We create an ConnectorSettings instance with valid input data
     settings = FakeConnectorSettings()
+
+    # Then: The ConnectorSettings instance should be created successfully
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.datadog_intel, BaseConfigModel) is True
@@ -71,46 +131,70 @@ def test_settings_should_accept_valid_input(settings_dict):
 @pytest.mark.parametrize(
     "settings_dict, field_name",
     [
-        pytest.param({}, "settings", id="empty_settings_dict"),
         pytest.param(
-            {
-                "opencti": {"url": "http://localhost:8080"},
-                "connector": {
-                    "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "test, connector",
-                    "log_level": "error",
-                    "live_stream_id": "test-live-stream-id",
-                },
-                "datadog_intel": {
-                    "integration_api_url": "https://api.datadoghq.com/api/v2/security/threat-intel-feed",
-                    "indicator_type": "ip_address",
-                    "dd_api_key": "test-api-key",
-                    "dd_application_key": "test-app-key",
-                },
-            },
-            "opencti.token",
-            id="missing_opencti_token",
+            {},
+            "settings",
+            id="empty_settings_dict",
         ),
         pytest.param(
             {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {
-                    "id": 123456,
-                    "name": "Test Connector",
-                    "scope": "test, connector",
-                    "log_level": "error",
-                    "live_stream_id": "test-live-stream-id",
+                **BASE_VALID_SETTINGS,
+                "opencti": {
+                    "url": "http://localhost:PORT",
+                    "token": "test-token",
                 },
+            },
+            "opencti.url",
+            id="invalid_opencti_url",
+        ),
+        pytest.param(
+            {
+                **BASE_VALID_SETTINGS,
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "log_level": "error",
+                    "live_stream_listen_delete": True,
+                    "live_stream_no_dependencies": True,
+                },
+            },
+            "connector.live_stream_id",
+            id="missing_connector_live_stream_id",
+        ),
+        pytest.param(
+            {
+                **BASE_VALID_SETTINGS,
                 "datadog_intel": {
-                    "integration_api_url": "https://api.datadoghq.com/api/v2/security/threat-intel-feed",
-                    "indicator_type": ["ip_address"],
+                    "integration_api_url": "http://test.com",
                     "dd_api_key": "test-api-key",
+                    "dd_application_key": "test-app-key",
+                    "indicator_type": "invalid_type",
+                },
+            },
+            "datadog_intel.indicator_type",
+            id="invalid_indicator_type",
+        ),
+        pytest.param(
+            {
+                **BASE_VALID_SETTINGS,
+                "datadog_intel": {
+                    "integration_api_url": "http://test.com",
                     "dd_application_key": "test-app-key",
                 },
             },
-            "connector.id",
-            id="invalid_connector_id",
+            "datadog_intel.dd_api_key",
+            id="missing_dd_api_key",
+        ),
+        pytest.param(
+            {
+                **BASE_VALID_SETTINGS,
+                "datadog_intel": {
+                    "integration_api_url": "http://test.com",
+                    "dd_api_key": "test-api-key",
+                },
+            },
+            "datadog_intel.dd_application_key",
+            id="missing_dd_application_key",
         ),
     ],
 )
