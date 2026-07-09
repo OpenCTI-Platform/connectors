@@ -111,31 +111,22 @@ def test_find_indicators_ip_port_tries_both_pattern_styles(
         pytest.param("1.2.3.4", id="missing_port"),
         pytest.param("1.2.3.4:http", id="non_numeric_port"),
         pytest.param(":8080", id="missing_ip"),
+        pytest.param("1.2.3.4:99999", id="port_out_of_range"),
+        pytest.param("2001:db8::1:8080", id="ipv6_address"),
+        pytest.param("evil.example:443", id="hostname_instead_of_ip"),
     ],
 )
-def test_find_indicators_invalid_ip_port_is_skipped(
+def test_find_indicators_invalid_or_unsupported_ip_port_is_skipped(
     mock_opencti_connector_helper, entry_value
 ):
+    """The candidate patterns are ipv4-addr based (abuse.ch feeds only produce
+    IPv4:port entries), so anything else must be skipped without lookups."""
     connector = _make_connector()
 
     ids = connector._find_indicators("ip:port", entry_value)
 
     assert ids == []
     connector.helper.api.indicator.list.assert_not_called()
-
-
-def test_find_indicators_ip_port_splits_on_last_colon(mock_opencti_connector_helper):
-    """Values with several colons (e.g. IPv6-style) keep the address intact."""
-    connector = _make_connector()
-
-    connector._find_indicators("ip:port", "2001:db8::1:8080")
-
-    assert _patterns_searched(connector) == [
-        "[network-traffic:dst_ref.type = 'ipv4-addr' "
-        "AND network-traffic:dst_ref.value = '2001:db8::1' "
-        "AND network-traffic:dst_port = 8080]",
-        "[ipv4-addr:value = '2001:db8::1']",
-    ]
 
 
 def test_find_indicators_sha1_tries_both_pattern_styles(

@@ -129,7 +129,7 @@ Every Indicator matching any of the candidates is deleted.
 | `sha3_384` | `[file:hashes.'SHA3-384' = '...']` |
 | `domain` | `[domain-name:value = '...']` |
 | `url` | `[url:value = '...']` |
-| `ip:port` | `[network-traffic:dst_ref.type = 'ipv4-addr' AND ...]`, `[ipv4-addr:value = '...']` |
+| `ip:port` (IPv4 only) | `[network-traffic:dst_ref.type = 'ipv4-addr' AND ...]`, `[ipv4-addr:value = '...']` |
 
 ## Debugging
 

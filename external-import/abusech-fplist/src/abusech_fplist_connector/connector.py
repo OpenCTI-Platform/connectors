@@ -1,3 +1,4 @@
+import ipaddress
 import logging
 import sys
 from datetime import datetime, timezone
@@ -6,10 +7,9 @@ from abusech_fplist_connector.client_api import ConnectorClient
 from abusech_fplist_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
-# entry_type → candidate STIX pattern templates. Some types need several
-# candidates because the abuse.ch feed connectors use different pattern styles:
-# ThreatFox stores ip:port IOCs as an ipv4-addr pattern and SHA-1 hashes as
-# file:hashes.SHA1.
+# entry_type → candidate STIX pattern templates. ThreatFox stores ip:port IOCs
+# as an ipv4-addr pattern and SHA-1 hashes as file:hashes.SHA1, hence the
+# multiple candidates.
 INDICATOR_PATTERNS = {
     "sha256_hash": ["[file:hashes.'SHA-256' = '{v}']"],
     "md5_hash": ["[file:hashes.MD5 = '{v}']"],
@@ -29,6 +29,14 @@ INDICATOR_PATTERNS = {
         "[ipv4-addr:value = '{ip}']",
     ],
 }
+
+
+def _is_ipv4(value: str) -> bool:
+    try:
+        ipaddress.IPv4Address(value)
+        return True
+    except ValueError:
+        return False
 
 
 class ConnectorAbusechFplist:
@@ -56,17 +64,18 @@ class ConnectorAbusechFplist:
 
         if entry_type == "ip:port":
             ip, _, port = entry_value.rpartition(":")
-            if not ip or not port.isdigit():
+            if not _is_ipv4(ip) or not port.isdigit() or not 0 < int(port) <= 65535:
                 self.helper.connector_logger.warning(
-                    "[CONNECTOR] Invalid ip:port value, skipping",
+                    "[CONNECTOR] Invalid or unsupported ip:port value (IPv4:port only), skipping",
                     {"value": entry_value},
                 )
                 return []
-            format_args = {"ip": ip.replace("'", "\\'"), "port": port}
+            format_args = {"ip": ip, "port": port}
         else:
             format_args = {"v": entry_value.replace("'", "\\'")}
 
         indicator_ids: list[str] = []
+        seen_ids: set[str] = set()
         for pattern_template in pattern_templates:
             pattern = pattern_template.format(**format_args)
             # API errors are not caught on purpose: they abort the run so the
@@ -86,8 +95,9 @@ class ConnectorAbusechFplist:
                 )
                 for indicator in data.get("entities") or []:
                     ind_id = indicator.get("id")
-                    if ind_id and ind_id not in indicator_ids:
+                    if ind_id and ind_id not in seen_ids:
                         indicator_ids.append(ind_id)
+                        seen_ids.add(ind_id)
         return indicator_ids
 
     def _remove_entry(self, entry: dict) -> None:
@@ -173,8 +183,6 @@ class ConnectorAbusechFplist:
                     max_removal_id = int(entry["removal_id"])
 
                 if self.config.abusech_fplist.dry_run:
-                    # the marker is not advanced so the entries are reprocessed
-                    # for real once dry run is disabled
                     message = (
                         f"{self.helper.connect_name} dry run completed, "
                         f"would have processed up to removal_id={max_removal_id} "
