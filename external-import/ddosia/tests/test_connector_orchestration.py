@@ -1,7 +1,8 @@
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, call, patch
+
 import pytest
-from datetime import datetime, timezone
 from connector.connector import DdosiaConnector
+
 
 class TestDdosiaConnectorOrchestration:
     @pytest.fixture
@@ -25,8 +26,9 @@ class TestDdosiaConnectorOrchestration:
 
     @pytest.fixture
     def connector(self, mock_config, mock_helper):
-        with patch("connector.connector.DdosiaClient"), \
-             patch("connector.connector.ConverterToStix"):
+        with patch("connector.connector.DdosiaClient"), patch(
+            "connector.connector.ConverterToStix"
+        ):
             conn = DdosiaConnector(mock_config, mock_helper)
             conn.client = MagicMock()
             conn.converter_to_stix = MagicMock()
@@ -44,18 +46,22 @@ class TestDdosiaConnectorOrchestration:
             {"items": []},
         ]
         # Mock _select_configs_to_process to return all
-        connector._select_configs_to_process = MagicMock(return_value=[{"id": "c1"}, {"id": "c2"}])
+        connector._select_configs_to_process = MagicMock(
+            return_value=[{"id": "c1"}, {"id": "c2"}]
+        )
         # Mock _process_snapshot to return empty list to avoid further calls
         connector._process_snapshot = MagicMock(return_value=[])
 
         connector.process_message()
 
         assert connector.client.get_configs.call_count == 3
-        connector.client.get_configs.assert_has_calls([
-            call(page=1),
-            call(page=2),
-            call(page=3),
-        ])
+        connector.client.get_configs.assert_has_calls(
+            [
+                call(page=1),
+                call(page=2),
+                call(page=3),
+            ]
+        )
 
     def test_process_message_pagination_optimization_start_ts(self, connector):
         """Test that pagination stops when last item is older than start_ts."""
@@ -94,13 +100,17 @@ class TestDdosiaConnectorOrchestration:
                 {"host": "host1", "ip": "1.1.1.2"},
             ]
         }
-        
+
         # Mock converter outputs
         mock_obj = MagicMock()
-        mock_obj.to_stix2_object.return_value.serialize.return_value = '{"id": "stix_obj"}'
+        mock_obj.to_stix2_object.return_value.serialize.return_value = (
+            '{"id": "stix_obj"}'
+        )
         connector.converter_to_stix.create_domain.return_value = mock_obj
         connector.converter_to_stix.create_ipv4.return_value = mock_obj
-        connector.converter_to_stix.create_resolves_to_relationship.return_value = mock_obj
+        connector.converter_to_stix.create_resolves_to_relationship.return_value = (
+            mock_obj
+        )
         connector.converter_to_stix.create_note_for_host.return_value = mock_obj
 
         results = connector._process_snapshot(config_item)
@@ -126,13 +136,17 @@ class TestDdosiaConnectorOrchestration:
         """Test that notes are not created when disabled in config."""
         connector.config.ddosia.create_notes = False
         config_item = {"id": "cfg_1", "ts": "100"}
-        connector.client.get_config.return_value = {"targets": [{"host": "h1", "ip": "1.1.1.1"}]}
-        
+        connector.client.get_config.return_value = {
+            "targets": [{"host": "h1", "ip": "1.1.1.1"}]
+        }
+
         mock_obj = MagicMock()
-        mock_obj.to_stix2_object.return_value.serialize.return_value = '{}'
+        mock_obj.to_stix2_object.return_value.serialize.return_value = "{}"
         connector.converter_to_stix.create_domain.return_value = mock_obj
         connector.converter_to_stix.create_ipv4.return_value = mock_obj
-        connector.converter_to_stix.create_resolves_to_relationship.return_value = mock_obj
+        connector.converter_to_stix.create_resolves_to_relationship.return_value = (
+            mock_obj
+        )
 
         connector._process_snapshot(config_item)
 
@@ -142,32 +156,44 @@ class TestDdosiaConnectorOrchestration:
 
     def test_process_message_full_cycle_success(self, connector, mock_helper):
         """Test the full successful flow from pagination to state update."""
-        connector.client.get_configs.return_value = {"items": [{"id": "cfg_1", "ts": "100"}]}
-        connector._select_configs_to_process = MagicMock(return_value=[{"id": "cfg_1", "ts": "100"}])
+        connector.client.get_configs.return_value = {
+            "items": [{"id": "cfg_1", "ts": "100"}]
+        }
+        connector._select_configs_to_process = MagicMock(
+            return_value=[{"id": "cfg_1", "ts": "100"}]
+        )
         connector._process_snapshot = MagicMock(return_value=[{"id": "stix_1"}])
-        
+
         mock_work_id = "work_123"
         mock_helper.api.work.initiate_work.return_value = mock_work_id
 
         connector.process_message()
 
         mock_helper.api.work.initiate_work.assert_called_once()
-        mock_helper.stix2_create_bundle = MagicMock() # helper method
+        mock_helper.stix2_create_bundle = MagicMock()  # helper method
         # Note: helper.stix2_create_bundle is called via helper, not connector
         # In the real code: bundle = self.helper.stix2_create_bundle(stix_objects)
         # Since we mock helper, we check if the call happened
         mock_helper.send_stix2_bundle.assert_called_once()
-        mock_helper.api.work.to_processed.assert_called_with(mock_work_id, "Processed snapshot cfg_1 with 1 objects")
+        mock_helper.api.work.to_processed.assert_called_with(
+            mock_work_id, "Processed snapshot cfg_1 with 1 objects"
+        )
         mock_helper.set_state.assert_called_once()
 
     def test_process_message_isolated_error(self, connector, mock_helper):
         """Test that an error in one snapshot doesn't stop others and doesn't update state."""
-        connector.client.get_configs.return_value = {"items": [{"id": "c1", "ts": "100"}, {"id": "c2", "ts": "200"}]}
-        connector._select_configs_to_process = MagicMock(return_value=[{"id": "c1", "ts": "100"}, {"id": "c2", "ts": "200"}])
-        
+        connector.client.get_configs.return_value = {
+            "items": [{"id": "c1", "ts": "100"}, {"id": "c2", "ts": "200"}]
+        }
+        connector._select_configs_to_process = MagicMock(
+            return_value=[{"id": "c1", "ts": "100"}, {"id": "c2", "ts": "200"}]
+        )
+
         # First snapshot fails, second succeeds
-        connector._process_snapshot = MagicMock(side_effect=[Exception("API Error"), [{"id": "stix_2"}]])
-        
+        connector._process_snapshot = MagicMock(
+            side_effect=[Exception("API Error"), [{"id": "stix_2"}]]
+        )
+
         mock_helper.api.work.initiate_work.side_effect = ["work_1", "work_2"]
 
         connector.process_message()
@@ -175,9 +201,13 @@ class TestDdosiaConnectorOrchestration:
         # Check that both were attempted
         assert connector._process_snapshot.call_count == 2
         # Check that work_1 was marked as failed
-        mock_helper.api.work.to_processed.assert_any_call("work_1", "Failed to process snapshot c1: API Error")
+        mock_helper.api.work.to_processed.assert_any_call(
+            "work_1", "Failed to process snapshot c1: API Error"
+        )
         # Check that work_2 was marked as processed
-        mock_helper.api.work.to_processed.assert_any_call("work_2", "Processed snapshot c2 with 1 objects")
+        mock_helper.api.work.to_processed.assert_any_call(
+            "work_2", "Processed snapshot c2 with 1 objects"
+        )
         # State should only be updated for the last successful one
         # The code updates state inside the loop after each successful snapshot
         assert mock_helper.set_state.call_count == 1
