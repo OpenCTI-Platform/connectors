@@ -47,7 +47,7 @@ class ConnectorAbusechFplist:
         if not pattern_templates:
             return []
 
-        indicator_ids = []
+        indicator_ids: list[str] = []
         for pattern_template in pattern_templates:
             try:
                 if entry_type == "ip:port":
@@ -57,15 +57,20 @@ class ConnectorAbusechFplist:
                 else:
                     pattern = pattern_template.format(v=entry_value.replace("'", "\\'"))
 
-                result = self.helper.api.indicator.read(
+                # indicator.list instead of indicator.read: several Indicators
+                # can share the same pattern, all of them must be deleted
+                results = self.helper.api.indicator.list(
+                    first=1000,
                     filters={
                         "mode": "and",
                         "filters": [{"key": "pattern", "values": [pattern]}],
                         "filterGroups": [],
-                    }
+                    },
                 )
-                if result:
-                    indicator_ids.append(result["id"])
+                for indicator in results or []:
+                    ind_id = indicator.get("id")
+                    if ind_id and ind_id not in indicator_ids:
+                        indicator_ids.append(ind_id)
             except Exception as err:
                 self.helper.connector_logger.error(
                     f"[CONNECTOR] Error searching indicator for {entry_value}",
