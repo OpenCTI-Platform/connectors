@@ -5,7 +5,6 @@ from aiohttp import ClientConnectionError, ClientResponseError
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
 from src.connector.models import (
-    ConfigLoader,
     ObservableResponse,
     SecurityIncidentResponse,
     TaskResponse,
@@ -16,6 +15,7 @@ from src.connector.services import (
     ServiceNowClient,
     Utils,
 )
+from src.connector.settings import ConnectorSettings
 from tenacity import RetryError
 
 
@@ -55,7 +55,7 @@ class ConnectorServicenow:
 
     """
 
-    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """Initialize the Connector with necessary configurations"""
 
         # Load configuration file and connection helper
@@ -322,7 +322,6 @@ class ConnectorServicenow:
             List | None
         """
         try:
-
             self.helper.connector_logger.info(
                 "[CONNECTOR] Start the collection of information from ServiceNow.",
             )
@@ -598,14 +597,14 @@ class ConnectorServicenow:
             "IPv6-Addr": lambda *arg: self.converter_to_stix.make_ipv6(*arg),
             "Url": lambda *arg: self.converter_to_stix.make_url(*arg),
             "Email-Addr": lambda *arg: self.converter_to_stix.make_email_address(*arg),
-            "Email-Message--Body": lambda *arg: self.converter_to_stix.make_email_message(
-                *arg
+            "Email-Message--Body": lambda *arg: (
+                self.converter_to_stix.make_email_message(*arg)
             ),
-            "Email-Message--Message_id": lambda *arg: self.converter_to_stix.make_email_message(
-                *arg
+            "Email-Message--Message_id": lambda *arg: (
+                self.converter_to_stix.make_email_message(*arg)
             ),
-            "Email-Message--Subject": lambda *arg: self.converter_to_stix.make_email_message(
-                *arg
+            "Email-Message--Subject": lambda *arg: (
+                self.converter_to_stix.make_email_message(*arg)
             ),
             "MD5": lambda *arg: self.converter_to_stix.make_file(*arg),
             "SHA-1": lambda *arg: self.converter_to_stix.make_file(*arg),
@@ -617,13 +616,13 @@ class ConnectorServicenow:
             "Mutex": lambda *arg: self.converter_to_stix.make_mutex(*arg),
             "Autonomous-System": lambda *arg: self.converter_to_stix.make_asn(*arg),
             "Phone-Number": lambda *arg: self.converter_to_stix.make_phone_number(*arg),
-            "Windows-Registry-Key": lambda *arg: self.converter_to_stix.make_windows_registry_key(
-                *arg
+            "Windows-Registry-Key": lambda *arg: (
+                self.converter_to_stix.make_windows_registry_key(*arg)
             ),
             "User-Account": lambda *arg: self.converter_to_stix.make_user_account(*arg),
             "CVE-Number": lambda *arg: self.converter_to_stix.make_vulnerability(*arg),
-            "Organization-Name": lambda *arg: self.converter_to_stix.make_organization_name(
-                *arg
+            "Organization-Name": lambda *arg: (
+                self.converter_to_stix.make_organization_name(*arg)
             ),
         }
 
@@ -634,7 +633,6 @@ class ConnectorServicenow:
             observable_value = getattr(observable, "value", None)
 
             if observable and observable_type in observables_make_mapping:
-
                 # Prepare all the labels for the observable.
                 prepared_labels_observable = self._handling_labels(
                     entity=observable,
@@ -752,16 +750,16 @@ class ConnectorServicenow:
                 mitre_mapping = {
                     # MITRE Technique / MITRE Tactic
                     # Example: ["T1110 (Brute Force)"] -> [mitre_id (mitre_name)]
-                    "mitre_technique": lambda args: self.converter_to_stix.make_attack_pattern(
-                        *args
+                    "mitre_technique": lambda args: (
+                        self.converter_to_stix.make_attack_pattern(*args)
                     ),
-                    "mitre_tactic": lambda args: self.converter_to_stix.make_attack_pattern(
-                        *args
+                    "mitre_tactic": lambda args: (
+                        self.converter_to_stix.make_attack_pattern(*args)
                     ),
                     # MITRE Group / MITRE Malware / MITRE Tool
                     # Example: ["G0102 (Wizard Spider)"] -> [mitre_name (mitre_alias)]
-                    "mitre_group": lambda args: self.converter_to_stix.make_intrusion_set(
-                        *args
+                    "mitre_group": lambda args: (
+                        self.converter_to_stix.make_intrusion_set(*args)
                     ),
                     "mitre_malware": lambda args: self.converter_to_stix.make_malware(
                         *args
@@ -874,7 +872,6 @@ class ConnectorServicenow:
                 # Make Tasks object -> CustomObjectTask
                 all_tasks = getattr(security_incident_object, "get_tasks", None)
                 if all_tasks:
-
                     task_all_objects = [custom_case_incident]
                     for task in all_tasks:
                         sit_number = getattr(task, "number", None)
