@@ -5,23 +5,19 @@ services:
     image: opencti/connector-ddosia:latest
     container_name: connector-ddosia
     restart: always
-    # You can provide sensitive values (OPENCTI_TOKEN, CONNECTOR_ID, CONNECTOR_NAME) using an env_file
-    # or set them at deploy/run time. Do NOT commit secrets or default production values to the repo.
-    # env_file:
-    #   - ./secrets.env
     environment:
       - OPENCTI_URL=http://localhost
-      # - OPENCTI_TOKEN=<set at deploy time>
-      # - CONNECTOR_ID=<set at deploy time>
-      # - CONNECTOR_NAME=<set at deploy time>
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
       - CONNECTOR_SCOPE=ddosia
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=1h
       # Optional connector-specific config (commented out; set if needed)
-      # - DDOSIA_API_BASE_URL=<api base url>
-      # - DDOSIA_TLP_LEVEL=<tlp level>
-      # - DDOSIA_IMPORT_START_TIMESTAMP=<timestamp|null>
-      # - DDOSIA_CREATE_NOTES=<true|false> # whether to create STIX Note objects with raw targets data
+      - DDOSIA_API_BASE_URL=https://witha.name
+      - DDOSIA_TLP_LEVEL=green
+      - DDOSIA_IMPORT_START_TIMESTAMP=null
+      - DDOSIA_CREATE_NOTES=true # whether to create STIX Note objects with raw targets data
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
