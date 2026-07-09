@@ -8,81 +8,26 @@ either **verified** (verified=true AND last_verified_date is set) or
 
 On non-master branches the list is further narrowed to connectors whose
 files actually changed, using the same git-diff logic as build_test_matrix.py.
+
+Shared git/manifest/output/batching helpers live in _matrix_common.py.
 """
 
 import json
-import math
-import os
-import subprocess
-from pathlib import Path
 
-GITHUB_ACTIONS_JOB_LIMIT = 256
-
-CONNECTOR_DIRS = [
-    "external-import",
-    "internal-enrichment",
-    "internal-export-file",
-    "internal-import-file",
-    "stream",
-]
-
-
-# ---------------------------------------------------------------------------
-# Git helpers (same as build_test_matrix.py)
-# ---------------------------------------------------------------------------
-
-
-def git(*args: str) -> str:
-    return subprocess.run(
-        ["git"] + list(args), capture_output=True, text=True
-    ).stdout.strip()
-
-
-def get_base_commit() -> str | None:
-    release_ref = os.environ.get("RELEASE_REF", "master")
-    commit = git("merge-base", f"origin/{release_ref}", "HEAD")
-    return commit or None
-
-
-def has_changes(base_commit: str, *pathspecs: str) -> bool:
-    result = subprocess.run(
-        ["git", "diff", "--name-only", base_commit, "HEAD", "--"] + list(pathspecs),
-        capture_output=True,
-        text=True,
-    )
-    return bool(result.stdout.strip())
-
+import _matrix_common as common
 
 # ---------------------------------------------------------------------------
 # Manifest scanning
 # ---------------------------------------------------------------------------
 
 
-def is_eligible(manifest: dict) -> bool:
-    """Return True if connector is verified-with-date or manager-supported."""
-    verified = manifest.get("verified", False) is True
-    has_date = manifest.get("last_verified_date") not in (None, "", False)
-    manager = manifest.get("manager_supported", False) is True
-    return (verified and has_date) or manager
-
-
-def discover_eligible_connectors() -> list[Path]:
+def discover_eligible_connectors() -> list:
     """Return connector root dirs whose manifest passes eligibility."""
-    eligible: list[Path] = []
-    for ctype in CONNECTOR_DIRS:
-        ctype_dir = Path(ctype)
-        if not ctype_dir.is_dir():
-            continue
-        for manifest_path in sorted(
-            ctype_dir.rglob("__metadata__/connector_manifest.json")
-        ):
-            try:
-                manifest = json.loads(manifest_path.read_text())
-            except (json.JSONDecodeError, OSError):
-                continue
-            if is_eligible(manifest):
-                # connector root is two levels up from __metadata__/connector_manifest.json
-                eligible.append(manifest_path.parent.parent)
+    eligible = []
+    for connector_root in common.discover_connector_roots():
+        manifest = common.load_manifest(connector_root)
+        if common.is_eligible(manifest):
+            eligible.append(connector_root)
     return eligible
 
 
@@ -91,16 +36,10 @@ def discover_eligible_connectors() -> list[Path]:
 # ---------------------------------------------------------------------------
 
 
-def should_run(
-    connector_root: Path,
-    base_commit: str | None,
-) -> bool:
+def should_run(connector_root, base_commit: str | None) -> bool:
     if base_commit is None:
         return True
-
-    if has_changes(base_commit, str(connector_root)):
-        return True
-    return False
+    return common.has_changes(base_commit, str(connector_root))
 
 
 # ---------------------------------------------------------------------------
@@ -108,12 +47,18 @@ def should_run(
 # ---------------------------------------------------------------------------
 
 
-def make_entry(connector_roots: list[Path]) -> dict:
+def make_entry(connector_roots: list) -> dict:
     names = [
         f"{p.parent.name}/{p.name}" if len(p.parts) >= 2 else str(p)
         for p in connector_roots
     ]
     paths = [str(p) for p in connector_roots]
+    # If any connector in the batch is verified-with-date, treat the whole
+    # batch as verified: its linter errors must block the PR. Batches only
+    # ever contain more than one connector when the eligible count exceeds
+    # GITHUB_ACTIONS_JOB_LIMIT, which in practice does not mix verified and
+    # manager-supported-only connectors together.
+    verified = any(common.is_verified(common.load_manifest(r)) for r in connector_roots)
     return {
         "name": (
             ", ".join(names)
@@ -121,44 +66,12 @@ def make_entry(connector_roots: list[Path]) -> dict:
             else f"{names[0]} (+{len(names) - 1} more)"
         ),
         "connector_paths": "\n".join(paths),
+        "verified": verified,
     }
 
 
-def build_matrix(roots: list[Path]) -> list[dict]:
-    if len(roots) <= GITHUB_ACTIONS_JOB_LIMIT:
-        return [make_entry([r]) for r in roots]
-
-    # Batch by connector type to stay under the limit
-    groups: dict[str, list[Path]] = {}
-    for r in roots:
-        ctype = r.parts[0] if r.parts else "unknown"
-        groups.setdefault(ctype, []).append(r)
-
-    batch_size = math.ceil(len(roots) / GITHUB_ACTIONS_JOB_LIMIT)
-    entries = []
-    for _, cpaths in sorted(groups.items()):
-        for i in range(0, len(cpaths), batch_size):
-            entries.append(make_entry(cpaths[i : i + batch_size]))
-    return entries
-
-
-# ---------------------------------------------------------------------------
-# Output
-# ---------------------------------------------------------------------------
-
-
-def write_output(key: str, value: str) -> None:
-    output_file = os.environ.get("GITHUB_OUTPUT")
-    line = f"{key}={value}\n"
-    if output_file:
-        with Path(output_file).open("a") as f:
-            f.write(line)
-    else:
-        print(line, end="")
-
-
 def main() -> None:
-    base_commit = get_base_commit()
+    base_commit = common.get_base_commit()
 
     eligible = discover_eligible_connectors()
     print(f"Total eligible connectors (verified/manager-supported): {len(eligible)}")
@@ -168,14 +81,25 @@ def main() -> None:
 
     if not filtered:
         print("No connectors to lint, skipping.")
-        write_output("has_connectors", "false")
-        write_output("matrix", json.dumps({"include": []}, separators=(",", ":")))
+        common.write_output("has_connectors", "false")
+        common.write_output(
+            "matrix", json.dumps({"include": []}, separators=(",", ":"))
+        )
         return
 
-    entries = build_matrix(filtered)
+    entries = common.build_batched_matrix(
+        filtered,
+        make_entry,
+        type_of=lambda p: (
+            f"{p.parts[0] if p.parts else 'unknown'}:"
+            f"{'verified' if common.is_verified(common.load_manifest(p)) else 'manager'}"
+        ),
+    )
     print(f"Matrix jobs: {len(entries)}")
-    write_output("has_connectors", "true")
-    write_output("matrix", json.dumps({"include": entries}, separators=(",", ":")))
+    common.write_output("has_connectors", "true")
+    common.write_output(
+        "matrix", json.dumps({"include": entries}, separators=(",", ":"))
+    )
 
 
 if __name__ == "__main__":

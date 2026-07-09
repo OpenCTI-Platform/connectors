@@ -27,13 +27,9 @@ import os
 import subprocess
 from pathlib import Path
 
-CONNECTOR_TYPE_DIRS = [
-    "external-import",
-    "internal-enrichment",
-    "internal-export-file",
-    "internal-import-file",
-    "stream",
-]
+import _matrix_common as common
+
+CONNECTOR_TYPE_DIRS = common.CONNECTOR_TYPE_DIRS
 
 # Paths that, if changed, trigger a full rebuild of all connectors
 SHARED_PATHS = [
@@ -151,15 +147,7 @@ def filter_changed(
     return filtered
 
 
-def write_output(key: str, value: str) -> None:
-    """Write a key=value pair to $GITHUB_OUTPUT (or stdout if not set)."""
-    output_file = os.environ.get("GITHUB_OUTPUT")
-    line = f"{key}={value}\n"
-    if output_file:
-        with Path(output_file).open("a") as f:
-            f.write(line)
-    else:
-        print(line, end="")
+write_output = common.write_output
 
 
 def type_to_output_key(type_dir: str) -> str:
