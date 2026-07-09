@@ -220,6 +220,7 @@ class TheHiveTest(unittest.TestCase):
         _connector.helper.send_stix2_bundle.assert_called_once_with(
             _connector.helper.stix2_create_bundle.return_value,
             work_id=sentinel.work_id,
+            cleanup_inconsistent_bundle=True,
         )
         # The main case bundle is still returned for process_items to send.
         self.assertEqual(result, _connector.helper.stix2_create_bundle.return_value)

@@ -280,6 +280,7 @@ class TheHive:
                 self.helper.send_stix2_bundle(
                     self.helper.stix2_create_bundle(attachments),
                     work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
                 )
 
             except Exception as e:
