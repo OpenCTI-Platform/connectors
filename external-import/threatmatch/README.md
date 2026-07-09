@@ -74,7 +74,7 @@ Configuration can be provided via a `config.yml` file, or **environment variable
 | Import Alerts                   | `threatmatch.import_alerts`                 | `THREATMATCH_IMPORT_ALERTS`                  | ❌        | `true`                       | Import ThreatMatch *alerts* dataset.                                                                  |
 | Import IOCs                     | `threatmatch.import_iocs`                   | `THREATMATCH_IMPORT_IOCS`                    | ❌        | `true`                       | Import ThreatMatch *IOCs* dataset.                                                                    |
 | Default TLP                     | `threatmatch.tlp_level`                     | `THREATMATCH_TLP_LEVEL`                      | ❌        | `amber`                      | TLP if missing on source objects. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.   |
-| Threat actors as intrusion sets | `threatmatch.threat_actor_as_intrusion_set` | `THREATMATCH_THREAT_ACTOR_AS_INSTRUSION_SET` | ❌        | `true`                       | Map ThreatMatch `threat-actor` to STIX `intrusion-set`.                                               |
+| Threat actors as intrusion sets | `threatmatch.threat_actor_as_intrusion_set` | `THREATMATCH_THREAT_ACTOR_AS_INTRUSION_SET` | ❌        | `true`                       | Map ThreatMatch `threat-actor` to STIX `intrusion-set`.                                               |
 
 > **Note**: Set `CONNECTOR_LOG_LEVEL=debug` to see detailed fetch/mapping logs during troubleshooting.
 
