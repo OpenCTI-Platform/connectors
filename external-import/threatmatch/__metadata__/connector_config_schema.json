@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/threatmatch_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ThreatMatch",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "threatmatch"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "Polling frequency as an ISO-8601 duration (e.g., 'P1D').",
+      "format": "duration",
+      "type": "string"
+    },
+    "THREATMATCH_CLIENT_ID": {
+      "description": "ThreatMatch OAuth2 client id (Client Credentials).",
+      "type": "string"
+    },
+    "THREATMATCH_CLIENT_SECRET": {
+      "description": "ThreatMatch OAuth2 client secret.",
+      "type": "string"
+    },
+    "THREATMATCH_URL": {
+      "default": "https://eu.threatmatch.com/",
+      "description": "Base URL of the ThreatMatch API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "THREATMATCH_IMPORT_FROM_DATE": {
+      "description": "Relative ISO-8601 duration (e.g., 'P30D') used to set the first import window. Applied on the first run only. Defaults to 30 days ago from the current date. ",
+      "format": "date-time",
+      "type": "string"
+    },
+    "THREATMATCH_IMPORT_PROFILES": {
+      "default": true,
+      "description": "Import the ThreatMatch profiles dataset.",
+      "type": "boolean"
+    },
+    "THREATMATCH_IMPORT_ALERTS": {
+      "default": true,
+      "description": "Import the ThreatMatch alerts dataset.",
+      "type": "boolean"
+    },
+    "THREATMATCH_IMPORT_IOCS": {
+      "default": true,
+      "description": "Import the ThreatMatch IOCs dataset.",
+      "type": "boolean"
+    },
+    "THREATMATCH_TLP_LEVEL": {
+      "default": "amber",
+      "description": "Default TLP marking applied when missing on source objects.",
+      "enum": [
+        "white",
+        "clear",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "THREATMATCH_THREAT_ACTOR_AS_INTRUSION_SET": {
+      "default": true,
+      "description": "Map ThreatMatch threat-actor objects to STIX intrusion-set.",
+      "type": "boolean"
+    },
+    "THREATMATCH_INTERVAL": {
+      "default": null,
+      "deprecated": true,
+      "format": "duration",
+      "type": "string",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead. (removal scheduled for 2027-01-01)"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "THREATMATCH_CLIENT_ID",
+    "THREATMATCH_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}
