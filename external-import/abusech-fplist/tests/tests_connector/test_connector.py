@@ -1,6 +1,7 @@
 from typing import Any
 from unittest.mock import MagicMock, call
 
+import pytest
 from abusech_fplist_connector import ConnectorAbusechFplist, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
@@ -31,6 +32,14 @@ def _make_settings(dry_run: bool = False) -> ConnectorSettings:
     return StubConnectorSettings()
 
 
+def _page(entities: list[dict], has_next: bool = False, cursor: str | None = None):
+    """Build a paginated `indicator.list(withPagination=True)` result."""
+    return {
+        "entities": entities,
+        "pagination": {"hasNextPage": has_next, "endCursor": cursor},
+    }
+
+
 def _make_connector(dry_run: bool = False) -> ConnectorAbusechFplist:
     settings = _make_settings(dry_run=dry_run)
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
@@ -38,7 +47,7 @@ def _make_connector(dry_run: bool = False) -> ConnectorAbusechFplist:
     helper.set_state = MagicMock()
     helper.api.work.initiate_work = MagicMock(return_value="work-1")
     helper.api.work.to_processed = MagicMock()
-    helper.api.indicator.list = MagicMock(return_value=[])
+    helper.api.indicator.list = MagicMock(return_value=_page([]))
     helper.api.stix_domain_object.delete = MagicMock()
 
     connector = ConnectorAbusechFplist(config=settings, helper=helper)
@@ -56,7 +65,7 @@ def _patterns_searched(connector: ConnectorAbusechFplist) -> list[str]:
 
 def test_find_indicators_builds_expected_pattern(mock_opencti_connector_helper):
     connector = _make_connector()
-    connector.helper.api.indicator.list.return_value = [{"id": "ind-1"}]
+    connector.helper.api.indicator.list.return_value = _page([{"id": "ind-1"}])
 
     ids = connector._find_indicators("sha256_hash", "a" * 64)
 
@@ -81,8 +90,8 @@ def test_find_indicators_ip_port_tries_both_pattern_styles(
     ipv4-addr style used by the ThreatFox connector."""
     connector = _make_connector()
     connector.helper.api.indicator.list.side_effect = [
-        [{"id": "ind-network-traffic"}],
-        [{"id": "ind-ipv4"}],
+        _page([{"id": "ind-network-traffic"}]),
+        _page([{"id": "ind-ipv4"}]),
     ]
 
     ids = connector._find_indicators("ip:port", "1.2.3.4:8080")
@@ -93,6 +102,39 @@ def test_find_indicators_ip_port_tries_both_pattern_styles(
         "AND network-traffic:dst_ref.value = '1.2.3.4' "
         "AND network-traffic:dst_port = 8080]",
         "[ipv4-addr:value = '1.2.3.4']",
+    ]
+
+
+@pytest.mark.parametrize(
+    "entry_value",
+    [
+        pytest.param("1.2.3.4", id="missing_port"),
+        pytest.param("1.2.3.4:http", id="non_numeric_port"),
+        pytest.param(":8080", id="missing_ip"),
+    ],
+)
+def test_find_indicators_invalid_ip_port_is_skipped(
+    mock_opencti_connector_helper, entry_value
+):
+    connector = _make_connector()
+
+    ids = connector._find_indicators("ip:port", entry_value)
+
+    assert ids == []
+    connector.helper.api.indicator.list.assert_not_called()
+
+
+def test_find_indicators_ip_port_splits_on_last_colon(mock_opencti_connector_helper):
+    """Values with several colons (e.g. IPv6-style) keep the address intact."""
+    connector = _make_connector()
+
+    connector._find_indicators("ip:port", "2001:db8::1:8080")
+
+    assert _patterns_searched(connector) == [
+        "[network-traffic:dst_ref.type = 'ipv4-addr' "
+        "AND network-traffic:dst_ref.value = '2001:db8::1' "
+        "AND network-traffic:dst_port = 8080]",
+        "[ipv4-addr:value = '2001:db8::1']",
     ]
 
 
@@ -111,13 +153,29 @@ def test_find_indicators_sha1_tries_both_pattern_styles(
     ]
 
 
+def test_find_indicators_paginates_through_all_pages(mock_opencti_connector_helper):
+    connector = _make_connector()
+    connector.helper.api.indicator.list.side_effect = [
+        _page([{"id": "ind-1"}], has_next=True, cursor="cursor-1"),
+        _page([{"id": "ind-2"}]),
+    ]
+
+    ids = connector._find_indicators("url", "http://evil.example")
+
+    assert ids == ["ind-1", "ind-2"]
+    calls = connector.helper.api.indicator.list.call_args_list
+    assert calls[0].kwargs["after"] is None
+    assert calls[1].kwargs["after"] == "cursor-1"
+    assert all(c.kwargs["withPagination"] is True for c in calls)
+
+
 def test_find_indicators_collects_all_matches_and_deduplicates(
     mock_opencti_connector_helper,
 ):
     connector = _make_connector()
     connector.helper.api.indicator.list.side_effect = [
-        [{"id": "ind-1"}, {"id": "ind-2"}],
-        [{"id": "ind-2"}, {"id": "ind-3"}],
+        _page([{"id": "ind-1"}, {"id": "ind-2"}]),
+        _page([{"id": "ind-2"}, {"id": "ind-3"}]),
     ]
 
     ids = connector._find_indicators("ip:port", "1.2.3.4:8080")
@@ -139,8 +197,8 @@ def test_remove_entry_deletes_every_matching_indicator(
 ):
     connector = _make_connector()
     connector.helper.api.indicator.list.side_effect = [
-        [{"id": "ind-1"}],
-        [{"id": "ind-2"}],
+        _page([{"id": "ind-1"}]),
+        _page([{"id": "ind-2"}]),
     ]
 
     connector._remove_entry(
@@ -155,7 +213,7 @@ def test_remove_entry_deletes_every_matching_indicator(
 
 def test_remove_entry_dry_run_does_not_delete(mock_opencti_connector_helper):
     connector = _make_connector(dry_run=True)
-    connector.helper.api.indicator.list.return_value = [{"id": "ind-1"}]
+    connector.helper.api.indicator.list.return_value = _page([{"id": "ind-1"}])
 
     connector._remove_entry(
         {"removal_id": "1", "entry_type": "url", "entry_value": "http://evil.example"}
@@ -183,7 +241,7 @@ def test_process_message_advances_state_to_max_removal_id(
         {"removal_id": "100", "entry_type": "url", "entry_value": "http://old.example"},
         {"removal_id": "101", "entry_type": "url", "entry_value": "http://a.example"},
     ]
-    connector.helper.api.indicator.list.return_value = [{"id": "ind-1"}]
+    connector.helper.api.indicator.list.return_value = _page([{"id": "ind-1"}])
 
     connector.process_message()
 
@@ -211,3 +269,41 @@ def test_process_message_without_new_entries_does_not_create_work(
 
     connector.helper.api.work.initiate_work.assert_not_called()
     connector.helper.set_state.assert_not_called()
+
+
+def test_process_message_dry_run_does_not_advance_state(
+    mock_opencti_connector_helper,
+):
+    """A dry run must be side-effect free: no deletion and no state update,
+    so the same entries are reprocessed once dry run is disabled."""
+    connector = _make_connector(dry_run=True)
+    connector.helper.get_state.return_value = {"last_removal_id": 100}
+    connector.client.get_fplist.return_value = [
+        {"removal_id": "101", "entry_type": "url", "entry_value": "http://a.example"},
+    ]
+    connector.helper.api.indicator.list.return_value = _page([{"id": "ind-1"}])
+
+    connector.process_message()
+
+    connector.helper.api.stix_domain_object.delete.assert_not_called()
+    connector.helper.set_state.assert_not_called()
+    connector.helper.api.work.to_processed.assert_called_once()
+
+
+def test_process_message_search_error_aborts_run_and_keeps_state(
+    mock_opencti_connector_helper,
+):
+    """API errors during the Indicator lookup must abort the run without
+    advancing the state marker, so the entries are retried on the next run."""
+    connector = _make_connector()
+    connector.helper.get_state.return_value = {"last_removal_id": 100}
+    connector.client.get_fplist.return_value = [
+        {"removal_id": "101", "entry_type": "url", "entry_value": "http://a.example"},
+    ]
+    connector.helper.api.indicator.list.side_effect = Exception("OpenCTI unavailable")
+
+    connector.process_message()
+
+    connector.helper.set_state.assert_not_called()
+    connector.helper.api.work.to_processed.assert_called_once()
+    assert connector.helper.api.work.to_processed.call_args.kwargs["in_error"] is True

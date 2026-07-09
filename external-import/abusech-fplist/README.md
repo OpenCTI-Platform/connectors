@@ -109,8 +109,11 @@ On each run the connector:
 1. Reads `last_removal_id` from the connector state stored in OpenCTI (0 on first run).
 2. Fetches the full False Positive List from the Hunting API (CSV format).
 3. Filters entries with `removal_id > last_removal_id` and processes them oldest-first.
-4. For each entry, searches OpenCTI for a matching Indicator by STIX pattern and deletes it if found.
-5. Saves the highest processed `removal_id` back to the connector state, so the next run skips entries that were already processed.
+4. For each entry, searches OpenCTI for the matching Indicators by STIX pattern and deletes them if found.
+5. Saves the highest processed `removal_id` back to the connector state, so the next run skips entries that were already processed. The state is only advanced after a fully successful run (and never in dry run mode): if a run fails, its entries are retried on the next run — deletions are idempotent.
+
+> [!WARNING]
+> Deletion is pattern-based. OpenCTI Indicators have deterministic ids derived from their pattern, so an Indicator whose pattern matches a false positive entry is deleted even if other (non abuse.ch) sources contributed to it. Run the connector with `ABUSECH_FPLIST_DRY_RUN=true` first to review what would be deleted.
 
 ### Supported IOC types
 

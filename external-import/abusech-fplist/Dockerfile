@@ -15,6 +15,5 @@ RUN pip3 install --no-cache-dir -r requirements.txt && \
 # Source code
 COPY src /opt/opencti-connector-abusech-fplist
 
-# Run the connector directly as PID 1 so it receives SIGTERM/SIGINT and Docker
-# can perform a graceful shutdown
+# Run as PID 1 so SIGTERM/SIGINT reach the connector directly
 ENTRYPOINT ["python3", "main.py"]

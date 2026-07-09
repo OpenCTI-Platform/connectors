@@ -6,10 +6,10 @@ from abusech_fplist_connector.client_api import ConnectorClient
 from abusech_fplist_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
-# Maps entry_type → candidate STIX pattern templates for Indicator lookup.
-# Some types need several candidates because the abuse.ch feed connectors use
-# different pattern styles (e.g. ThreatFox stores ip:port IOCs as an ipv4-addr
-# pattern with the port in the description, and SHA-1 hashes as file:hashes.SHA1).
+# entry_type → candidate STIX pattern templates. Some types need several
+# candidates because the abuse.ch feed connectors use different pattern styles:
+# ThreatFox stores ip:port IOCs as an ipv4-addr pattern and SHA-1 hashes as
+# file:hashes.SHA1.
 INDICATOR_PATTERNS = {
     "sha256_hash": ["[file:hashes.'SHA-256' = '{v}']"],
     "md5_hash": ["[file:hashes.MD5 = '{v}']"],
@@ -32,12 +32,19 @@ INDICATOR_PATTERNS = {
 
 
 class ConnectorAbusechFplist:
+    """External-import connector that deletes from OpenCTI the Indicators
+    reported as false positives by abuse.ch.
+
+    Unlike a regular external-import connector it does not create entities:
+    it fetches the abuse.ch False Positive List and deletes the matching
+    Indicators, so no STIX bundle is ever sent. Observables are left untouched.
+    """
+
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
         self.client = ConnectorClient(helper, config)
-        # pycti's API client logs every query at INFO ("Listing Indicators with
-        # filters"), flooding the output on large FP lists
+        # pycti logs every API query at INFO, flooding the output on large FP lists
         if self.helper.log_level.lower() != "debug":
             logging.getLogger("api").setLevel(logging.WARNING)
 
@@ -47,38 +54,44 @@ class ConnectorAbusechFplist:
         if not pattern_templates:
             return []
 
+        if entry_type == "ip:port":
+            ip, _, port = entry_value.rpartition(":")
+            if not ip or not port.isdigit():
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] Invalid ip:port value, skipping",
+                    {"value": entry_value},
+                )
+                return []
+            format_args = {"ip": ip.replace("'", "\\'"), "port": port}
+        else:
+            format_args = {"v": entry_value.replace("'", "\\'")}
+
         indicator_ids: list[str] = []
         for pattern_template in pattern_templates:
-            try:
-                if entry_type == "ip:port":
-                    parts = entry_value.split(":")
-                    ip, port = parts[0], parts[1] if len(parts) > 1 else "0"
-                    pattern = pattern_template.format(ip=ip, port=port)
-                else:
-                    pattern = pattern_template.format(v=entry_value.replace("'", "\\'"))
-
-                # indicator.list instead of indicator.read: several Indicators
-                # can share the same pattern, all of them must be deleted
-                results = self.helper.api.indicator.list(
+            pattern = pattern_template.format(**format_args)
+            # API errors are not caught on purpose: they abort the run so the
+            # state marker is not advanced past unchecked entries
+            data = {"pagination": {"hasNextPage": True, "endCursor": None}}
+            while data["pagination"].get("hasNextPage"):
+                data = self.helper.api.indicator.list(
                     first=1000,
+                    after=data["pagination"].get("endCursor"),
                     filters={
                         "mode": "and",
                         "filters": [{"key": "pattern", "values": [pattern]}],
                         "filterGroups": [],
                     },
+                    withPagination=True,
+                    customAttributes="id",
                 )
-                for indicator in results or []:
+                for indicator in data.get("entities") or []:
                     ind_id = indicator.get("id")
                     if ind_id and ind_id not in indicator_ids:
                         indicator_ids.append(ind_id)
-            except Exception as err:
-                self.helper.connector_logger.error(
-                    f"[CONNECTOR] Error searching indicator for {entry_value}",
-                    {"error": str(err)},
-                )
         return indicator_ids
 
     def _remove_entry(self, entry: dict) -> None:
+        """Delete (or log, in dry run) every Indicator matching the FP entry."""
         entry_type = entry["entry_type"]
         entry_value = entry["entry_value"]
         removal_id = entry["removal_id"]
@@ -115,6 +128,13 @@ class ConnectorAbusechFplist:
             )
 
     def process_message(self) -> None:
+        """Fetch the FP list and process the entries newer than the state marker.
+
+        The `last_removal_id` marker is only advanced after a fully successful
+        run (and never in dry run), so failed or interrupted runs are retried:
+        deletions are idempotent, already-deleted Indicators are simply not
+        found again.
+        """
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
@@ -141,11 +161,10 @@ class ConnectorAbusechFplist:
                     f"[CONNECTOR] {len(new_entries)} new FP entries to process"
                 )
 
-                # Only create a work when there are entries to process,
-                # to avoid empty jobs in the OpenCTI UI
+                now = datetime.now(timezone.utc)
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id,
-                    f"Connector {self.helper.connect_name}",
+                    f"{self.helper.connect_name} run @ {now.isoformat(timespec='seconds')}",
                 )
 
                 max_removal_id = last_removal_id
@@ -153,16 +172,23 @@ class ConnectorAbusechFplist:
                     self._remove_entry(entry)
                     max_removal_id = int(entry["removal_id"])
 
-                current_state["last_removal_id"] = max_removal_id
-                current_state["last_run"] = datetime.now(timezone.utc).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-                self.helper.set_state(current_state)
+                if self.config.abusech_fplist.dry_run:
+                    # the marker is not advanced so the entries are reprocessed
+                    # for real once dry run is disabled
+                    message = (
+                        f"{self.helper.connect_name} dry run completed, "
+                        f"would have processed up to removal_id={max_removal_id} "
+                        "(state not updated)"
+                    )
+                else:
+                    current_state["last_removal_id"] = max_removal_id
+                    current_state["last_run"] = now.strftime("%Y-%m-%d %H:%M:%S")
+                    self.helper.set_state(current_state)
+                    message = (
+                        f"{self.helper.connect_name} run completed, "
+                        f"processed up to removal_id={max_removal_id}"
+                    )
 
-                message = (
-                    f"{self.helper.connect_name} run completed, "
-                    f"processed up to removal_id={max_removal_id}"
-                )
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.connector_logger.info(message)
             else:
@@ -179,6 +205,7 @@ class ConnectorAbusechFplist:
                 self.helper.api.work.to_processed(work_id, str(err), in_error=True)
 
     def run(self) -> None:
+        """Start the connector and schedule its runs every `duration_period`."""
         self.helper.schedule_iso(
             message_callback=self.process_message,
             duration_period=self.config.connector.duration_period,
