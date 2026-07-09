@@ -10,7 +10,7 @@ from microsoft_sentinel_intel.errors import (
     ConnectorWarning,
 )
 from microsoft_sentinel_intel.settings import ConnectorSettings
-from microsoft_sentinel_intel.utils import is_stix_indicator
+from microsoft_sentinel_intel.utils import is_stix_identity, is_stix_indicator
 from pycti import OpenCTIConnectorHelper
 
 
@@ -35,6 +35,25 @@ class Connector:
                 set(stix_object.get("labels", []) + extra_labels)
             )
         return stix_object
+
+    def _is_supported_stix_object(self, data: dict) -> bool:
+        """Check whether a STIX object should be processed by this connector.
+
+        Indicators are always supported. STIX Identity objects (e.g. an
+        indicator's author) are supported only when the
+        `publish_identities` config option is enabled.
+
+        :param data: STIX object data dict.
+        :return: True if the object should be processed, False otherwise.
+        """
+        if is_stix_indicator(data):
+            return True
+        if (
+            self.config.microsoft_sentinel_intel.publish_identities
+            and is_stix_identity(data)
+        ):
+            return True
+        return False
 
     def _process_event(self, event_type: str, stix_object: dict) -> bool:
         """Process a single STIX event by dispatching to the appropriate API call.
@@ -85,7 +104,7 @@ class Connector:
         if not data:
             return
 
-        if is_stix_indicator(data):
+        if self._is_supported_stix_object(data):
             self.helper.connector_logger.info(
                 message=f"[{event.event.upper()}] Processing message",
                 meta={"data": data, "event": event.event},
@@ -93,7 +112,7 @@ class Connector:
             processed = self._process_event(event_type=event.event, stix_object=data)
             if processed:
                 self.helper.connector_logger.info(
-                    message=f"[{event.event.upper()}] Indicator processed",
+                    message=f"[{event.event.upper()}] {data.get('type', 'Object').capitalize()} processed",
                     meta={"opencti_id": data["id"]},
                 )
         else:
@@ -150,7 +169,7 @@ class Connector:
                 if not data:
                     continue
 
-                if not is_stix_indicator(data):
+                if not self._is_supported_stix_object(data):
                     continue
 
                 if event.event not in self.config.microsoft_sentinel_intel.event_types:

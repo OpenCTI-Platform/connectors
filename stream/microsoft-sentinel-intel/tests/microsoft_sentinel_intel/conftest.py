@@ -150,6 +150,46 @@ def fixture_mock_microsoft_sentinel_intel_delete_only_config(
     _mock_config_environ(mocker, microsoft_sentinel_intel_delete_only_config_dict)
 
 
+@pytest.fixture(name="microsoft_sentinel_intel_publish_identities_config_dict")
+def fixture_microsoft_sentinel_intel_publish_identities_config_dict(
+    microsoft_sentinel_intel_config_dict: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    config = deepcopy(microsoft_sentinel_intel_config_dict)
+    config["microsoft_sentinel_intel"]["publish_identities"] = True
+    return config
+
+
+@pytest.fixture(name="mock_microsoft_sentinel_intel_publish_identities_config")
+def fixture_mock_microsoft_sentinel_intel_publish_identities_config(
+    mocker: MockerFixture,
+    microsoft_sentinel_intel_publish_identities_config_dict: dict[str, dict[str, Any]],
+) -> None:
+    _mock_config_environ(
+        mocker, microsoft_sentinel_intel_publish_identities_config_dict
+    )
+
+
+@pytest.fixture(name="microsoft_sentinel_intel_batch_publish_identities_config_dict")
+def fixture_microsoft_sentinel_intel_batch_publish_identities_config_dict(
+    microsoft_sentinel_intel_batch_config_dict: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    config = deepcopy(microsoft_sentinel_intel_batch_config_dict)
+    config["microsoft_sentinel_intel"]["publish_identities"] = True
+    return config
+
+
+@pytest.fixture(name="mock_microsoft_sentinel_intel_batch_publish_identities_config")
+def fixture_mock_microsoft_sentinel_intel_batch_publish_identities_config(
+    mocker: MockerFixture,
+    microsoft_sentinel_intel_batch_publish_identities_config_dict: dict[
+        str, dict[str, Any]
+    ],
+) -> None:
+    _mock_config_environ(
+        mocker, microsoft_sentinel_intel_batch_publish_identities_config_dict
+    )
+
+
 @pytest.fixture(name="microsoft_sentinel_intel_batch_create_only_config_dict")
 def fixture_microsoft_sentinel_intel_batch_create_only_config_dict(
     microsoft_sentinel_intel_batch_config_dict: dict[str, dict[str, Any]],
