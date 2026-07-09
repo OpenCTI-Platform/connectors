@@ -16,7 +16,7 @@ def test_config() -> None:
     assert config["connector"]["live_stream_id"] == "live-stream-id"
 
     microsoft_sentinel_intel = config["microsoft_sentinel_intel"]
-    assert len(microsoft_sentinel_intel) == 17
+    assert len(microsoft_sentinel_intel) == 18
     assert not microsoft_sentinel_intel["batch_mode"]
     assert microsoft_sentinel_intel["batch_size"] == 100
     assert microsoft_sentinel_intel["batch_timeout"] == 30
@@ -34,3 +34,4 @@ def test_config() -> None:
     assert microsoft_sentinel_intel["workspace_id"] == "ChangeMe"
     assert microsoft_sentinel_intel["workspace_name"] == "ChangeMe"
     assert microsoft_sentinel_intel["event_types"] == ["create", "update", "delete"]
+    assert microsoft_sentinel_intel["publish_identities"] is False

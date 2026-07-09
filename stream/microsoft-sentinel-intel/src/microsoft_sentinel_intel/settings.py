@@ -97,6 +97,10 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         description="Comma-separated list of event types to process (create, update, delete). Defaults to all three; a single instance handles every event type. Restrict this only if you want to split the workload across dedicated instances.",
         default=["create", "update", "delete"],
     )
+    publish_identities: bool = Field(
+        description="Also push STIX Identity objects (e.g. an indicator's author) received from the stream to Microsoft Sentinel, in addition to Indicators, so their display name resolves correctly instead of only showing the identifier.",
+        default=False,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
