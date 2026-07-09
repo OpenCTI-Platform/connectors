@@ -5,8 +5,12 @@
   "short_description": "OpenCTI Export File ODS connector renders OpenCTI search results to an OpenDocument Spreadsheet (.ods) using a headless LibreOffice instance.",
   "logo": null,
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

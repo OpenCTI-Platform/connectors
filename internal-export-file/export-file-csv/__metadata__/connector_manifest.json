@@ -5,8 +5,12 @@
   "short_description": "The Export File CSV connector generates CSV files from OpenCTI data, supporting single entities, selected entities, and query-based exports for reporting, spreadsheet analysis, and integration with external tools.",
   "logo": "internal-export-file/export-file-csv/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
