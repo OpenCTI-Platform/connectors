@@ -38,6 +38,7 @@ class SekoiaConnector(object):
         self.api_key = self.config.sekoia.api_key.get_secret_value()
         self.base_url = self.config.sekoia.base_url
         self.confidence_score = self.config.sekoia.confidence_score
+        self.send_confidence = self.config.sekoia.send_confidence
         self.start_date = self.config.sekoia.start_date
         self.limit = self.config.sekoia.limit
         self.collection = self.config.sekoia.collection
@@ -193,6 +194,9 @@ class SekoiaConnector(object):
 
             items += all_related_objects + all_relationships
 
+        if not self.send_confidence:
+            self._remove_confidence_from_items(items)
+
         bundle = self.helper.stix2_create_bundle(items)
         try:
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
@@ -302,10 +306,15 @@ class SekoiaConnector(object):
                 )
                 if item.get("revoked") is not None and item.get("revoked") is True:
                     item["valid_until"] = item.get("modified")
-                if confidence_score:
+                if confidence_score is not None:
                     item["x_opencti_score"] = confidence_score
                 else:
                     item["x_opencti_score"] = item.get("confidence", None)
+
+    @staticmethod
+    def _remove_confidence_from_items(items: List[Dict]):
+        for item in items:
+            item.pop("confidence", None)
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
