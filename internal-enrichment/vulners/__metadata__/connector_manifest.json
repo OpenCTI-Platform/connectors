@@ -1,0 +1,21 @@
+{
+  "title": "Vulners",
+  "slug": "vulners",
+  "description": "Vulners is a vulnerability intelligence platform that aggregates data from a wide range of public and proprietary sources. This connector enriches OpenCTI Vulnerability entities with Vulners intelligence, including CVSS scoring, EPSS exploitation-probability, CISA KEV (Known Exploited Vulnerabilities) status, links to public exploits and proof-of-concept code, and references to affected software and products.\n\nThe enrichment follows a thin-client design: the complete STIX 2.1 bundle is built server-side by the Vulners backend, and the connector simply relays it to OpenCTI. This keeps enrichment results consistent with the Vulners platform and minimizes client-side processing. Security teams can use the enriched data to prioritize remediation based on real-world exploitation signals rather than severity alone.",
+  "short_description": "Enriches OpenCTI Vulnerability entities with Vulners intelligence: CVSS, EPSS, CISA KEV status, known exploits and related software, delivered as a ready-made STIX bundle.",
+  "logo": "internal-enrichment/vulners/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 80,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://vulners.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/vulners",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-vulners",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
