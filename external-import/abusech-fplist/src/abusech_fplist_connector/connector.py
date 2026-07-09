@@ -64,13 +64,14 @@ class ConnectorAbusechFplist:
 
         if entry_type == "ip:port":
             ip, _, port = entry_value.rpartition(":")
-            if not _is_ipv4(ip) or not port.isdigit() or not 0 < int(port) <= 65535:
+            port_int = int(port) if port.isdigit() else 0
+            if not _is_ipv4(ip) or not 0 < port_int <= 65535:
                 self.helper.connector_logger.warning(
                     "[CONNECTOR] Invalid or unsupported ip:port value (IPv4:port only), skipping",
                     {"value": entry_value},
                 )
                 return []
-            format_args = {"ip": ip, "port": port}
+            format_args = {"ip": ip, "port": port_int}
         else:
             format_args = {"v": entry_value.replace("\\", "\\\\").replace("'", "\\'")}
 
@@ -152,7 +153,14 @@ class ConnectorAbusechFplist:
         work_id = None
         try:
             current_state = self.helper.get_state() or {}
-            last_removal_id = int(current_state.get("last_removal_id", 0))
+            try:
+                last_removal_id = int(current_state.get("last_removal_id", 0))
+            except (TypeError, ValueError):
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] Invalid last_removal_id in state, resetting to 0",
+                    {"last_removal_id": current_state.get("last_removal_id")},
+                )
+                last_removal_id = 0
             self.helper.connector_logger.info(
                 "[CONNECTOR] Resuming from last removal_id",
                 {"last_removal_id": last_removal_id},

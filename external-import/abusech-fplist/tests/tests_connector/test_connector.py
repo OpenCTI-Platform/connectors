@@ -8,11 +8,6 @@ from pycti import OpenCTIConnectorHelper
 
 def _make_settings(dry_run: bool = False) -> ConnectorSettings:
     class StubConnectorSettings(ConnectorSettings):
-        """
-        Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
-        It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict.
-        """
-
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(
@@ -33,7 +28,6 @@ def _make_settings(dry_run: bool = False) -> ConnectorSettings:
 
 
 def _page(entities: list[dict], has_next: bool = False, cursor: str | None = None):
-    """Build a paginated `indicator.list(withPagination=True)` result."""
     return {
         "entities": entities,
         "pagination": {"hasNextPage": has_next, "endCursor": cursor},
@@ -88,8 +82,6 @@ def test_find_indicators_escapes_backslashes_and_single_quotes(
 def test_find_indicators_ip_port_tries_both_pattern_styles(
     mock_opencti_connector_helper,
 ):
-    """ip:port lookups must match both the network-traffic pattern style and the
-    ipv4-addr style used by the ThreatFox connector."""
     connector = _make_connector()
     connector.helper.api.indicator.list.side_effect = [
         _page([{"id": "ind-network-traffic"}]),
@@ -121,8 +113,6 @@ def test_find_indicators_ip_port_tries_both_pattern_styles(
 def test_find_indicators_invalid_or_unsupported_ip_port_is_skipped(
     mock_opencti_connector_helper, entry_value
 ):
-    """The candidate patterns are ipv4-addr based (abuse.ch feeds only produce
-    IPv4:port entries), so anything else must be skipped without lookups."""
     connector = _make_connector()
 
     ids = connector._find_indicators("ip:port", entry_value)
@@ -131,11 +121,24 @@ def test_find_indicators_invalid_or_unsupported_ip_port_is_skipped(
     connector.helper.api.indicator.list.assert_not_called()
 
 
+def test_find_indicators_ip_port_normalizes_leading_zero_port(
+    mock_opencti_connector_helper,
+):
+    connector = _make_connector()
+
+    connector._find_indicators("ip:port", "1.2.3.4:00443")
+
+    assert _patterns_searched(connector) == [
+        "[network-traffic:dst_ref.type = 'ipv4-addr' "
+        "AND network-traffic:dst_ref.value = '1.2.3.4' "
+        "AND network-traffic:dst_port = 443]",
+        "[ipv4-addr:value = '1.2.3.4']",
+    ]
+
+
 def test_find_indicators_sha1_tries_both_pattern_styles(
     mock_opencti_connector_helper,
 ):
-    """SHA-1 lookups must match both the STIX standard quoted hash key and the
-    unquoted SHA1 key used by the ThreatFox connector."""
     connector = _make_connector()
 
     connector._find_indicators("sha1_hash", "b" * 40)
@@ -264,11 +267,24 @@ def test_process_message_without_new_entries_does_not_create_work(
     connector.helper.set_state.assert_not_called()
 
 
+def test_process_message_resets_invalid_state_marker(
+    mock_opencti_connector_helper,
+):
+    connector = _make_connector()
+    connector.helper.get_state.return_value = {"last_removal_id": "corrupted"}
+    connector.client.get_fplist.return_value = [
+        {"removal_id": "101", "entry_type": "url", "entry_value": "http://a.example"},
+    ]
+
+    connector.process_message()
+
+    state = connector.helper.set_state.call_args.args[0]
+    assert state["last_removal_id"] == 101
+
+
 def test_process_message_dry_run_does_not_advance_state(
     mock_opencti_connector_helper,
 ):
-    """A dry run must be side-effect free: no deletion and no state update,
-    so the same entries are reprocessed once dry run is disabled."""
     connector = _make_connector(dry_run=True)
     connector.helper.get_state.return_value = {"last_removal_id": 100}
     connector.client.get_fplist.return_value = [
@@ -286,8 +302,6 @@ def test_process_message_dry_run_does_not_advance_state(
 def test_process_message_search_error_aborts_run_and_keeps_state(
     mock_opencti_connector_helper,
 ):
-    """API errors during the Indicator lookup must abort the run without
-    advancing the state marker, so the entries are retried on the next run."""
     connector = _make_connector()
     connector.helper.get_state.return_value = {"last_removal_id": 100}
     connector.client.get_fplist.return_value = [
