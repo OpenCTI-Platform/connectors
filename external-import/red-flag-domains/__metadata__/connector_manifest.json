@@ -5,12 +5,12 @@
   "short_description": "Red Flag Domains are lists of very recently registered probably malicious domain names in french TLDs.",
   "logo": "external-import/red-flag-domains/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
-  "verified": true,
-  "last_verified_date": null,
-  "playbook_supported": false,
-  "max_confidence_level": 70,
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "support_version": ">= 6.5.1",
   "subscription_link": "https://red.flag.domains",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/red-flag-domains",

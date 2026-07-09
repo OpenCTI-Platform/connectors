@@ -5,9 +5,12 @@
     "short_description": "Import IOCs (IP, URL, Hash, IP-Range) from Echo CTI threat intelligence platform into OpenCTI.",
     "logo": "external-import/echocti/__metadata__/logo.png",
     "use_cases": [
-        "Commercial Threat Intel",
         "Adversary & Campaign Insights"
     ],
+    "solution_categories": [
+        "Threat Intelligence Feed"
+    ],
+    "license_type": "Commercial",
     "verified": false,
     "last_verified_date": null,
     "playbook_supported": false,

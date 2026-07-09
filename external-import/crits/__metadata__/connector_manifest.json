@@ -5,8 +5,12 @@
   "short_description": "CRITs Connector migrates threat data from CRITs to OpenCTI, facilitating platform transition.",
   "logo": "external-import/crits/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

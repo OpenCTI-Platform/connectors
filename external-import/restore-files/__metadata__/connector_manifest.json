@@ -4,7 +4,13 @@
   "description": "This connector allows organizations to restore their OpenCTI data from a specific folder.",
   "short_description": "This connector allows organizations to restore their OpenCTI data from a specific folder.",
   "logo": null,
-  "use_cases": [],
+  "use_cases": [
+    "Other"
+  ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

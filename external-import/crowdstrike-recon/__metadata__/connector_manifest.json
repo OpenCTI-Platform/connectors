@@ -5,9 +5,13 @@
   "short_description": "CrowdStrike Falcon Recon imports exposure monitoring alerts (typosquatting, leaked credentials, dark web posts) as OpenCTI Incidents with associated observables.",
   "logo": "external-import/crowdstrike-recon/__metadata__/logo.png",
   "use_cases": [
-    "Brand, Digital Risk & Underground Exposure",
-    "Third-Party & Supply Chain Oversight"
+    "Brand, Digital Risk & Underground Exposure"
   ],
+  "solution_categories": [
+    "Digital Risk Protection",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

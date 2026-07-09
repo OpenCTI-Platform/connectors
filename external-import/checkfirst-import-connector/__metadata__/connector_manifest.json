@@ -5,8 +5,12 @@
   "short_description": "CheckFirst connector imports FIMI and disinformation campaign articles into OpenCTI, mapping influence operation infrastructure, channels, and media content as STIX 2.1 objects.",
   "logo": "external-import/checkfirst-import-connector/__metadata__/logo.png",
   "use_cases": [
-    "Foreign Influence and Disinformation (FIMI)"
+    "FIMI & Disinformation"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": "2026-03-20",
   "playbook_supported": false,

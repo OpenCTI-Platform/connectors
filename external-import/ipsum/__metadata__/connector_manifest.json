@@ -5,9 +5,12 @@
   "short_description": "IPsum connector imports malicious IP addresses from 30+ aggregated blacklists into OpenCTI as indicators, with confidence scoring based on cross-list occurrence count.",
   "logo": "external-import/ipsum/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -5,8 +5,13 @@
   "short_description": "Imports adversarial AI prompt intelligence (IoPC) from PromptIntel as AI-Prompt observables and indicators.",
   "logo": "external-import/promptintel/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed",
+    "AI Security"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

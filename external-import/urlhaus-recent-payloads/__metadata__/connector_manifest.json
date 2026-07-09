@@ -1,12 +1,16 @@
 {
   "title": "URLhaus Recent Payloads",
   "slug": "urlhaus-recent-payloads",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "URLhaus Recent Payloads imports the most recently submitted malware payloads from URLhaus (abuse.ch) into OpenCTI. It fetches the latest malware samples distributed via malicious URLs, creating file observables (MD5, SHA-256) and malware entities, providing near-real-time visibility into active malware distribution activity.",
+  "short_description": "Imports the most recent malware payloads from URLhaus (abuse.ch) into OpenCTI as file observables and malware entities.",
   "logo": "external-import/urlhaus-recent-payloads/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

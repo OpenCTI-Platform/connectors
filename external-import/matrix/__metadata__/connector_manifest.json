@@ -5,13 +5,12 @@
   "short_description": "Stream Matrix room events into OpenCTI as STIX media-content observables.",
   "logo": "external-import/matrix/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
-  "verified": false,
-  "last_verified_date": null,
-  "playbook_supported": false,
-  "max_confidence_level": 100,
-  "support_version": ">=6.7.0",
+  "solution_categories": [
+    "Other"
+  ],
+  "license_type": "Free",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/matrix",
   "manager_supported": false,

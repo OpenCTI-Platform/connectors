@@ -1,12 +1,16 @@
 {
   "title": "AbuseIPDB IP BlackList",
   "slug": "abuseipdb-ipblacklist",
-  "description": "The AbuseIPDB Blacklist connector let you ingest IP addresses present into Blacklist database of AbuseIPDB. The blacklist is a list of the most reported IP addresses by AbuseIPDB users.\n\nThe connector acts as an interface between AbuseIPDB and OpenCTI, transforming malicious IP address data into the STIX 2.1 format. This transformation allows the data to be ingested and utilized within the OpenCTI platform.\n\nIt creates a STIX Identity object for AbuseIPDB to ensure proper attribution of the data. It also establishes an external reference pointing to the AbuseIPDB website, allowing users to trace back to the original source of the information.\n\nThe connector assigns Traffic Light Protocol (TLP) markings to indicate the sensitivity and sharing restrictions of the data. These markings help manage the distribution and application of the threat intelligence data.\n\nThe connector transforms reported malicious IP addresses into STIX Observables, and then into STIX Indicator objects (if configured to do so). These indicators include patterns and descriptions that explain why the IPs are considered threats, aiding security analysts in their investigations.\n\nIt also supports the creation of relationships between STIX objects, which helps in building connections between different pieces of threat intelligence, such as linking malicious IPs to threat actors.\n\nOverall, the connector facilitates the incorporation of IP blacklist data from AbuseIPDB into OpenCTI, enhancing the platform's capabilities in analyzing and responding to cyber threats.",
-  "short_description": "The AbuseIPDB Blacklist connector let you ingest IP addresses present into Blacklist database of AbuseIPDB. The blacklist is a list of the most reported IP addresses by AbuseIPDB users.",
+  "description": "AbuseIPDB is a community-driven project dedicated to fighting hackers, spammers, and abusive activity on the internet. Its API provides access to a comprehensive database of IP addresses reported for malicious activity.\n\nThis connector fetches the AbuseIPDB blacklist and imports the most reported malicious IP addresses into OpenCTI as IPv4/IPv6 observables, with optional STIX Indicator creation. Each object is attributed to an AbuseIPDB identity, linked to an external reference, and annotated with configurable TLP markings. Relationship creation between indicators and other STIX objects is also supported.",
+  "short_description": "Imports the most reported malicious IP addresses from the AbuseIPDB blacklist API into OpenCTI as IPv4/IPv6 observables and optional STIX indicators, with TLP markings and source attribution.",
   "logo": "external-import/abuseipdb-ipblacklist/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories":[
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

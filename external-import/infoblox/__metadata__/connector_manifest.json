@@ -5,12 +5,12 @@
   "short_description": "Infoblox Connector imports threat indicators and observables from Infoblox into OpenCTI, enhancing threat analysis.",
   "logo": "external-import/infoblox/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
-  "verified": true,
-  "last_verified_date": null,
-  "playbook_supported": false,
-  "max_confidence_level": 70,
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "support_version": ">= 6.5.1",
   "subscription_link": "https://www.infoblox.com/threat-intel/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/infoblox",

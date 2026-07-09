@@ -1,12 +1,16 @@
 {
   "title": "Google Drive",
   "slug": "google-drive",
-  "description": "Create reports based on a Google drive folder.\nTo configure the Service Account:\nThose steps with screenshots can be found at the beginning of this blog post.",
-  "short_description": "Create reports based on a Google drive folder.\nTo configure the Service Account:\nThose steps with screenshots can be found at the beginning of this blog post.",
+  "description": "The Google Drive connector imports threat intelligence reports stored in a Google Drive folder into OpenCTI. It uses a Google Service Account to authenticate and periodically scans the configured folder, creating OpenCTI Report objects from the files found.",
+  "short_description": "Imports threat intelligence reports from a Google Drive folder into OpenCTI using a Google Service Account, creating Report objects from the stored files.",
   "logo": "external-import/google-drive/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

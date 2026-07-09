@@ -5,9 +5,12 @@
   "short_description": "The OpenCTI Obstracts Connector synchronizes intelligence from the blogs you are subscribed to in Obstracts into OpenCTI.",
   "logo": "external-import/dogesec-obstracts/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
-    "Open Source Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

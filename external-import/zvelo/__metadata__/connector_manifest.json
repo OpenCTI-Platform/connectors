@@ -5,12 +5,12 @@
   "short_description": "The Zvelo connector ingests indicators of compromise (IOCs) from Zvelo Cyber Threat Intelligence Feeds.",
   "logo": "external-import/zvelo/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
-  "verified": true,
-  "last_verified_date": "2025-06-12",
-  "playbook_supported": false,
-  "max_confidence_level": 60,
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "support_version": ">= 6.4.0",
   "subscription_link": "https://zvelo.com/zvelocti-cyber-threat-intelligence/malicious-detailed-detection-feed/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/zvelo",

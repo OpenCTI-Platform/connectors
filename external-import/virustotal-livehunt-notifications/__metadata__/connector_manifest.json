@@ -5,8 +5,12 @@
   "short_description": "VirusTotal Livehunt connector imports malware samples matching custom YARA rules in real time, creating incidents, file observables, and YARA indicators in OpenCTI.",
   "logo": "external-import/virustotal-livehunt-notifications/__metadata__/logo.png",
   "use_cases": [
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

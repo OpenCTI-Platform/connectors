@@ -5,9 +5,12 @@
   "short_description": "Proofpoint ET Reputation connector imports malicious IPs and domains from the Emerging Threats Intelligence Rep List, with hourly-updated reputation scores based on worldwide sensor observations.",
   "logo": "external-import/proofpoint-et-reputation/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
