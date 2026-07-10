@@ -20,7 +20,8 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [],
+      "description": "The scope of the connector",
       "items": {
         "type": "string"
       },
@@ -133,7 +134,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "CTM360_THREATCOVER_DISCOVERY_URL",
     "CTM360_THREATCOVER_COLLECTION"
   ],
