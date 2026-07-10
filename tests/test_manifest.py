@@ -41,7 +41,7 @@ def test_manifest_contracts_are_valid(contract: dict):
     """Assert each contract in the global manifest satisfies validity rules.
 
     Important: All fields are required in each contract object, except `config_schema`
-    (not implemented in every connector yet).Some fields are nullable, which means
+    (not implemented in every connector yet). Some fields are nullable, which means
     the key is still required but the value may be `None`.
 
     Field validation rules:
@@ -103,6 +103,11 @@ def test_manifest_contracts_are_valid(contract: dict):
     assert is_valid_container_type(contract["container_type"])
 
     # Validate contract fields coming from connector_config_schema.json files
-    assert "config_schema" not in contract or isinstance(
-        contract["config_schema"], dict
-    )
+    if contract["manager_supported"]:
+        # MUST be present for deployment in XTM Composer
+        assert isinstance(contract["config_schema"], dict)
+    else:
+        # MAY be present (if using BaseConnectorSettings from connectors-sdk)
+        assert "config_schema" not in contract or isinstance(
+            contract["config_schema"], dict
+        )
