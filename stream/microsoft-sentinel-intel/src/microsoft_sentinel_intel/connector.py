@@ -81,6 +81,15 @@ class Connector:
                     source_system=self.config.microsoft_sentinel_intel.source_system,
                 )
             case "delete":
+                if not is_stix_indicator(stix_object):
+                    self.helper.connector_logger.info(
+                        message=f"[{event_type.upper()}] Skipping delete: only STIX indicators are supported for this operation",
+                        meta={
+                            "opencti_id": stix_object.get("id"),
+                            "type": stix_object.get("type"),
+                        },
+                    )
+                    return False
                 self.client.delete_indicator_by_id(
                     stix_object["id"],
                     source_system=self.config.microsoft_sentinel_intel.source_system,
@@ -185,7 +194,7 @@ class Connector:
             for event_type, data in unique_objects.values():
                 if event_type in ("create", "update"):
                     objects_to_upload.append(data)
-                elif event_type == "delete":
+                elif event_type == "delete" and is_stix_indicator(data):
                     objects_to_delete.append(data)
 
             if objects_to_upload:
