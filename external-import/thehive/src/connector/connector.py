@@ -156,7 +156,7 @@ class TheHive:
         self.helper.connector_logger.info(
             f"Starting import for alert '{alert.get('title')}'"
         )
-        bundle_objects = []
+        bundle_objects = [self.identity]
         markings = []
         try:
             markings = self.process_markings(alert)
@@ -206,7 +206,7 @@ class TheHive:
         self.helper.connector_logger.info(
             f"Starting generation of STIX bundle for case: {case.get('title')}"
         )
-        bundle_objects = []
+        bundle_objects = [self.identity]
         markings = []
 
         try:
@@ -278,7 +278,7 @@ class TheHive:
                     "Sending STIX artifacts bundle (attachments)..."
                 )
                 self.helper.send_stix2_bundle(
-                    self.helper.stix2_create_bundle(attachments),
+                    self.helper.stix2_create_bundle([self.identity] + attachments),
                     work_id=work_id,
                     cleanup_inconsistent_bundle=True,
                 )
