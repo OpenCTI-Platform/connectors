@@ -6,6 +6,7 @@ from connectors_sdk.models import (
     File,
     IPV4Address,
     IPV6Address,
+    OrganizationAuthor,
     Relationship,
 )
 from connectors_sdk.models.enums import HashAlgorithm, RelationshipType
@@ -17,6 +18,7 @@ class IOCExtractorConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
+        self.author = OrganizationAuthor(name="IOC Extractor")
 
     @staticmethod
     def _get_description(stix_entity: dict, opencti_entity: dict) -> str:
@@ -29,24 +31,49 @@ class IOCExtractorConnector:
         marking_refs = stix_entity.get("object_marking_refs", [])
         return [Reference(id=ref) for ref in marking_refs] if marking_refs else None
 
+    def _extract_and_check_markings(self, opencti_entity: dict) -> None:
+        """Extract TLP from entity and check against max_tlp config."""
+        tlp = "TLP:CLEAR"
+        for marking_definition in opencti_entity.get("objectMarking", []):
+            if marking_definition["definition_type"] == "TLP":
+                tlp = marking_definition["definition"]
+        if not OpenCTIConnectorHelper.check_max_tlp(
+            tlp, self.config.ioc_extractor.max_tlp
+        ):
+            raise ValueError(
+                "Do not send any data, TLP of the observable is greater than MAX TLP"
+            )
+
     @staticmethod
-    def _ioc_to_stix_object(ioc: ExtractedIOC, markings=None):
+    def _ioc_to_stix_object(ioc: ExtractedIOC, markings=None, author=None):
         """Convert an ExtractedIOC to a connectors-sdk model instance."""
         match ioc.type:
             case "ipv4":
-                return IPV4Address(value=ioc.value, markings=markings)
+                return IPV4Address(value=ioc.value, markings=markings, author=author)
             case "ipv6":
-                return IPV6Address(value=ioc.value, markings=markings)
+                return IPV6Address(value=ioc.value, markings=markings, author=author)
             case "domain":
-                return DomainName(value=ioc.value, markings=markings)
+                return DomainName(value=ioc.value, markings=markings, author=author)
             case "url":
-                return URL(value=ioc.value, markings=markings)
+                return URL(value=ioc.value, markings=markings, author=author)
             case "md5":
-                return File(hashes={HashAlgorithm.MD5: ioc.value}, markings=markings)
+                return File(
+                    hashes={HashAlgorithm.MD5: ioc.value},
+                    markings=markings,
+                    author=author,
+                )
             case "sha1":
-                return File(hashes={HashAlgorithm.SHA1: ioc.value}, markings=markings)
+                return File(
+                    hashes={HashAlgorithm.SHA1: ioc.value},
+                    markings=markings,
+                    author=author,
+                )
             case "sha256":
-                return File(hashes={HashAlgorithm.SHA256: ioc.value}, markings=markings)
+                return File(
+                    hashes={HashAlgorithm.SHA256: ioc.value},
+                    markings=markings,
+                    author=author,
+                )
             case _:
                 return None
 
@@ -58,7 +85,9 @@ class IOCExtractorConnector:
         observable_ids = []
 
         for ioc in iocs:
-            sdk_object = self._ioc_to_stix_object(ioc, markings=markings)
+            sdk_object = self._ioc_to_stix_object(
+                ioc, markings=markings, author=self.author
+            )
             if sdk_object is None:
                 continue
 
@@ -98,6 +127,9 @@ class IOCExtractorConnector:
             opencti_entity = data["enrichment_entity"]
             stix_objects = data["stix_objects"]
             stix_entity = data["stix_entity"]
+
+            # Check TLP marking against max_tlp configuration
+            self._extract_and_check_markings(opencti_entity)
 
             config = self.config.ioc_extractor
             description = self._get_description(stix_entity, opencti_entity)
@@ -142,8 +174,10 @@ class IOCExtractorConnector:
                     )
                     stix_objects.append(relationship.to_stix2_object())
 
-            # Merge enrichment objects with original bundle
-            all_objects = stix_objects + enrichment_objects
+            # Merge enrichment objects with original bundle (include author identity)
+            all_objects = (
+                [self.author.to_stix2_object()] + stix_objects + enrichment_objects
+            )
             bundles_sent = self._send_bundle(all_objects)
 
             self.helper.connector_logger.info(

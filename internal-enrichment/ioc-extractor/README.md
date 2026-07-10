@@ -60,14 +60,15 @@ The **IOC Extractor** enrichment connector extracts Observables from unstructure
 
 ### Connector-specific parameters
 
-| Parameter                 | Docker environment variable               | Default | Description                                                   |
-|---------------------------|-------------------------------------------|---------|---------------------------------------------------------------|
-| Extract hashes            | `IOC_EXTRACTOR_EXTRACT_HASHES`            | `true`  | Extract MD5, SHA-1, SHA-256 file hashes                       |
-| Extract IPv4              | `IOC_EXTRACTOR_EXTRACT_IPV4`              | `true`  | Extract IPv4 addresses                                        |
-| Extract IPv6              | `IOC_EXTRACTOR_EXTRACT_IPV6`              | `true`  | Extract IPv6 addresses                                        |
-| Extract domains           | `IOC_EXTRACTOR_EXTRACT_DOMAINS`           | `true`  | Extract domain names                                          |
-| Extract URLs              | `IOC_EXTRACTOR_EXTRACT_URLS`              | `true`  | Extract URLs                                                  |
-| Skip private IPs          | `IOC_EXTRACTOR_SKIP_PRIVATE_IPS`          | `true`  | Skip private/reserved IP addresses (RFC 1918, loopback, etc.) |
+| Parameter                 | Docker environment variable               | Default      | Description                                                   |
+|---------------------------|-------------------------------------------|--------------|---------------------------------------------------------------|
+| Extract hashes            | `IOC_EXTRACTOR_EXTRACT_HASHES`            | `true`       | Extract MD5, SHA-1, SHA-256 file hashes                       |
+| Extract IPv4              | `IOC_EXTRACTOR_EXTRACT_IPV4`              | `true`       | Extract IPv4 addresses                                        |
+| Extract IPv6              | `IOC_EXTRACTOR_EXTRACT_IPV6`              | `true`       | Extract IPv6 addresses                                        |
+| Extract domains           | `IOC_EXTRACTOR_EXTRACT_DOMAINS`           | `true`       | Extract domain names                                          |
+| Extract URLs              | `IOC_EXTRACTOR_EXTRACT_URLS`              | `true`       | Extract URLs                                                  |
+| Skip private IPs          | `IOC_EXTRACTOR_SKIP_PRIVATE_IPS`          | `true`       | Skip private/reserved IP addresses (RFC 1918, loopback, etc.) |
+| Max TLP                   | `IOC_EXTRACTOR_MAX_TLP`                   | `TLP:AMBER`  | The maximal TLP of the observable being enriched              |
 
 ## Deployment
 
