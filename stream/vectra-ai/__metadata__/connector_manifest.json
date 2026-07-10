@@ -5,9 +5,12 @@
   "short_description": "Push IOCs (IP addresses, domains and URLs) from OpenCTI to a Vectra AI threat feed in real time.",
   "logo": "stream/vectra-ai/__metadata__/logo.png",
   "use_cases": [
-    "Detection & Response Enablement",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
     "Network Security"
   ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

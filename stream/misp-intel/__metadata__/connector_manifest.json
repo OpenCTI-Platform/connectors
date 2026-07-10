@@ -5,8 +5,12 @@
   "short_description": "Real-time streaming connector that exports OpenCTI containers and their content to MISP events, enabling bidirectional threat intelligence synchronization.",
   "logo": "stream/misp-intel/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": "2025-01-01",
   "playbook_supported": false,

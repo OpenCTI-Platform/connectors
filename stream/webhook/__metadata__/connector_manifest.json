@@ -2,9 +2,16 @@
   "title": "Webhook",
   "slug": "webhook",
   "description": "This connector allows organizations to relay events to other systems (SOAR etc ..) thought post messages",
-  "short_description": "This connector allows organizations to relay events to other systems (SOAR etc ..) thought post messages",
+  "short_description": "Relays OpenCTI stream events to external systems via HTTP POST webhooks, enabling integration with SOAR platforms and custom automation pipelines.",
   "logo": "stream/webhook/__metadata__/logo.png",
-  "use_cases": [],
+  "use_cases": [
+    "Other"
+  ],
+  "solution_categories": [
+    "SOAR & Security Automation",
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
