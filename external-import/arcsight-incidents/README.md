@@ -37,7 +37,7 @@ author identity and marked with a configurable TLP.
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260706.0
+- OpenCTI Platform >= 7.260710.0
 - A reachable ArcSight ESM Manager (Service Layer REST API enabled)
 - An ESM account allowed to read cases
 
