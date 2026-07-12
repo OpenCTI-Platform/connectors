@@ -23,14 +23,17 @@ import reportimporter.core
 from reportimporter.configparser import ConfigParser
 from reportimporter.llmhelper import LLMHelper
 
-# Silence connector ping loops during tests
-mp = pytest.MonkeyPatch()
-mp.setattr(
-    reportimporter.core.OpenCTIConnectorHelper,
-    "start_pinging",
-    lambda *a, **k: None,
-    raising=False,
-)
+
+@pytest.fixture(autouse=True)
+def disable_connector_ping_loop(monkeypatch):
+    """Silence connector ping loops without leaking the patch past each test."""
+    monkeypatch.setattr(
+        reportimporter.core.OpenCTIConnectorHelper,
+        "start_pinging",
+        lambda *a, **k: None,
+        raising=False,
+    )
+
 
 SYSTEM_PROMPT = "Extract STIX entities."
 

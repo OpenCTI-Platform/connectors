@@ -14,6 +14,7 @@ import pytest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
+import reportimporter.configparser as configparser_module
 from reportimporter.configparser import ConfigParser
 from reportimporter.preprocessor import PdfOcrConfig
 
@@ -192,3 +193,19 @@ def test_configparser_none_config_uses_defaults(monkeypatch):
     cfg = ConfigParser()
     assert cfg.ai_provider == "ollama"
     assert cfg.max_model_tokens == 4096
+
+
+def test_configparser_non_mapping_yaml_falls_back_to_empty_config(
+    monkeypatch, tmp_path
+):
+    _clear_key_env(monkeypatch)
+    monkeypatch.setenv("IMPORT_DOCUMENT_AI_PROVIDER", "ollama")
+    module_path = tmp_path / "src" / "reportimporter" / "configparser.py"
+    module_path.parent.mkdir(parents=True)
+    (module_path.parent.parent / "config.yml").write_text("- item\n- another\n")
+    monkeypatch.setattr(configparser_module, "__file__", str(module_path))
+
+    cfg = ConfigParser()
+
+    assert cfg._config == {}
+    assert cfg.ai_provider == "ollama"

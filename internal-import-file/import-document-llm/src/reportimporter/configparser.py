@@ -2,6 +2,7 @@
 Configuration parser for the document import connector.
 """
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import yaml
@@ -33,7 +34,11 @@ class ConfigParser:
                     cfg = {}
             else:
                 cfg = {}
-            config = dict(cfg)
+            config = dict(cfg) if isinstance(cfg, Mapping) else {}
+        elif isinstance(config, Mapping):
+            config = dict(config)
+        else:
+            config = {}
 
         self._config: dict = config
 

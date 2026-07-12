@@ -334,3 +334,11 @@ def test_stix_object_mapping_factories(category, value, cp):
         obj = obj[0]
     obj_type = obj["type"] if isinstance(obj, dict) else obj.type
     assert obj_type
+
+
+def test_channel_factory_uses_object_marking_refs():
+    marking_id = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+    channel = util.stix_object_mapping["Channel"]("telegram-channel", [marking_id], {})
+
+    assert channel.object_marking_refs == [marking_id]
+    assert "object_markings" not in channel

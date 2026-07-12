@@ -100,3 +100,12 @@ class TestBuildHintsFromSpans:
         ip_hints = [h for h in result["hints"] if h["value"] == "8.8.8.8"]
         assert len(ip_hints) == 1
         assert len(ip_hints[0]["positions"]) == 2
+
+    def test_x509_serial_hint_is_observable(self):
+        spans = scan_structured_iocs("Serial Number: 01:23:45")
+        result = build_hints_from_spans(spans)
+        serial_hints = [
+            h for h in result["hints"] if h["category"] == "X509-Certificate.serial"
+        ]
+        assert serial_hints
+        assert serial_hints[0]["type"] == "observable"

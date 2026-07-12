@@ -673,6 +673,7 @@ OBSERVABLE_LABELS: Set[str] = {
     "Directory",
     "X509-Certificate.issuer",
     "X509-Certificate.subject",
+    "X509-Certificate.serial",
     "X509-Certificate.sha1_fingerprint",
     "X509-Certificate.sha256_fingerprint",
     "Mutex",

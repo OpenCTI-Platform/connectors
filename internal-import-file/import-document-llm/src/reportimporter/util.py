@@ -769,7 +769,7 @@ stix_object_mapping: dict[str, Callable[[str, list[str], dict[str, Any]], Any]] 
     "Channel": lambda v, om, cp: CustomObjectChannel(
         id=Channel.generate_id(name=v),
         name=v,
-        object_markings=om,
+        object_marking_refs=om,
         allow_custom=True,
         **_channel_kwargs(cp),
     ),
