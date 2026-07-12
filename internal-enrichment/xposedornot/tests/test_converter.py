@@ -69,6 +69,19 @@ def test_note_is_deterministic_across_runs():
 
 
 @sdk_required
+def test_note_id_is_unique_per_source_observable():
+    # Two different observables with an identical breach set must NOT share a
+    # Note id (the SDK derives the id from content/abstract, not object_refs).
+    converter = ConverterToStix(
+        ConverterToStix.make_author(), TLPMarking(level="amber")
+    )
+    other_id = "email-addr--22222222-2222-4222-8222-222222222222"
+    id_a = converter.build_note(SOURCE_ID, _result()).to_stix2_object()["id"]
+    id_b = converter.build_note(other_id, _result()).to_stix2_object()["id"]
+    assert id_a != id_b
+
+
+@sdk_required
 def test_helpers():
     result = _result()
     assert ConverterToStix.years(result["breaches"]) == (2013, 2026)

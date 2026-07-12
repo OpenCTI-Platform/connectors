@@ -17,7 +17,6 @@ import re
 import traceback
 from copy import deepcopy
 
-import stix2
 import yaml
 from connectors_sdk.models import TLPMarking
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -128,12 +127,15 @@ class XposedOrNotConnector:
         if not any(
             ref.get("source_name") == "XposedOrNot" for ref in external_references
         ):
+            # Append a plain dict to match the existing (dict) references on the
+            # observable; mixing stix2 objects into a plain-dict STIX entity can
+            # break bundle serialization.
             external_references.append(
-                stix2.ExternalReference(
-                    source_name="XposedOrNot",
-                    url="https://xposedornot.com",
-                    description="XposedOrNot breach exposure check",
-                )
+                {
+                    "source_name": "XposedOrNot",
+                    "url": "https://xposedornot.com",
+                    "description": "XposedOrNot breach exposure check",
+                }
             )
         enriched_entity["external_references"] = external_references
         enriched_objects = [

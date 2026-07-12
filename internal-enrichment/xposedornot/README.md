@@ -63,9 +63,9 @@ docker compose up -d
 ### Manual Deployment
 
 ```shell
-cd src
-pip3 install -r requirements.txt
-cp ../config.yml.sample ../config.yml   # then edit config.yml
+# From the connector root directory (internal-enrichment/xposedornot):
+pip3 install -r src/requirements.txt
+cp config.yml.sample config.yml   # then edit config.yml
 python3 -m src
 ```
 
