@@ -184,8 +184,6 @@ class RansomLookAPIClient:
                         raise RansomLookCapabilityUnavailable(
                             optional_capability, response.status_code
                         )
-                    if response.status_code in self._TRANSIENT_STATUS:
-                        response.raise_for_status()
                     response.raise_for_status()
                     return self._decode_json(response)
                 except RansomLookCapabilityUnavailable:
