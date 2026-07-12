@@ -1,0 +1,55 @@
+opencti:
+  url: http://localhost:8080
+  # Use the token of a dedicated OpenCTI user named RansomLook. OpenCTI derives
+  # the platform Creators field and native-file uploader from this user.
+  token: ChangeMe
+
+connector:
+  id: ChangeMe
+  name: RansomLook
+  scope: artifact,attack-pattern,cryptocurrency-wallet,ipv4-addr,ipv6-addr,identity,indicator,infrastructure,intrusion-set,threat-actor,incident,malware,report,note,domain-name,url,relationship
+  log_level: info
+  duration_period: PT1H
+
+ransomlook:
+  api_base_url: https://www.ransomlook.io/api
+  # api_key: ChangeMe
+  labels: ransomware,ransomlook
+  marking_definition: TLP:CLEAR
+  initial_history_days: 7
+  max_response_size_mb: 32
+  max_records_per_endpoint: 1000
+  max_pages_per_endpoint: 10
+  max_requests_per_run: 2000
+  max_run_duration_seconds: 2700
+  work_reconciliation_timeout_seconds: 900
+  max_objects_per_bundle: 500
+  max_objects_per_run: 20000
+  # Must remain large enough for max_artifact_size_mb when post evidence is on.
+  max_bundle_size_mb: 64
+  replay_window_days: 1
+  max_artifact_size_mb: 5
+  max_artifacts_per_claim: 2
+  max_artifacts_per_location: 2
+  max_artifacts_per_run: 300
+  max_artifact_bytes_per_run_mb: 200
+  max_evidence_serialized_bytes_per_run_mb: 800
+  max_pending_claims: 5000
+  max_claim_retries: 5
+  max_pending_groups: 1000
+  max_enrichment_retries: 5
+  retry_max_age_days: 30
+  enrich_actor_profiles: true
+  import_infrastructure: true
+  # Private/chat/admin/file-server endpoint values are sensitive and opt-in.
+  import_sensitive_infrastructure: false
+  import_post_evidence: true
+  import_location_evidence: false
+  import_notes: true
+  import_wallets: true
+  import_torrents: true
+  import_torrent_peers: false
+  import_leaks: true
+  import_analyses: true
+  import_victim_websites: true
+  create_indicators: false

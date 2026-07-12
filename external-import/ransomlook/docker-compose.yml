@@ -1,0 +1,67 @@
+services:
+  connector-ransomlook:
+    image: opencti/connector-ransomlook:latest
+    build: .
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
+      # Use a dedicated OpenCTI user named RansomLook; its token determines the
+      # platform Creators field and native-file uploader metadata.
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      # - CONNECTOR_NAME=RansomLook
+      # - CONNECTOR_SCOPE=artifact,attack-pattern,cryptocurrency-wallet,ipv4-addr,ipv6-addr,identity,indicator,infrastructure,intrusion-set,threat-actor,incident,malware,report,note,domain-name,url,relationship
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT1H
+      - CONNECTOR_RUN_AND_TERMINATE=${CONNECTOR_RUN_AND_TERMINATE:-false}
+      # - RANSOMLOOK_API_BASE_URL=https://www.ransomlook.io/api
+      # Optional; public read endpoints do not require a key.
+      # - RANSOMLOOK_API_KEY=ChangeMe
+      # - RANSOMLOOK_LABELS=ransomware,ransomlook
+      # - RANSOMLOOK_MARKING_DEFINITION=TLP:CLEAR
+      # - RANSOMLOOK_INITIAL_HISTORY_DAYS=7
+      # - RANSOMLOOK_MAX_RESPONSE_SIZE_MB=32
+      # - RANSOMLOOK_MAX_RECORDS_PER_ENDPOINT=1000
+      # - RANSOMLOOK_MAX_PAGES_PER_ENDPOINT=10
+      # - RANSOMLOOK_MAX_REQUESTS_PER_RUN=2000
+      # - RANSOMLOOK_MAX_RUN_DURATION_SECONDS=2700
+      # - RANSOMLOOK_WORK_RECONCILIATION_TIMEOUT_SECONDS=900
+      # - RANSOMLOOK_MAX_OBJECTS_PER_BUNDLE=500
+      # - RANSOMLOOK_MAX_OBJECTS_PER_RUN=20000
+      # Must remain large enough for the configured maximum post evidence.
+      # - RANSOMLOOK_MAX_BUNDLE_SIZE_MB=64
+      # - RANSOMLOOK_REPLAY_WINDOW_DAYS=1
+      # - RANSOMLOOK_MAX_ARTIFACT_SIZE_MB=5
+      # - RANSOMLOOK_MAX_ARTIFACTS_PER_CLAIM=2
+      # - RANSOMLOOK_MAX_ARTIFACTS_PER_LOCATION=2
+      # - RANSOMLOOK_MAX_ARTIFACTS_PER_RUN=300
+      # - RANSOMLOOK_MAX_ARTIFACT_BYTES_PER_RUN_MB=200
+      # - RANSOMLOOK_MAX_EVIDENCE_SERIALIZED_BYTES_PER_RUN_MB=800
+      # - RANSOMLOOK_MAX_PENDING_CLAIMS=5000
+      # - RANSOMLOOK_MAX_CLAIM_RETRIES=5
+      # - RANSOMLOOK_MAX_PENDING_GROUPS=1000
+      # - RANSOMLOOK_MAX_ENRICHMENT_RETRIES=5
+      # - RANSOMLOOK_RETRY_MAX_AGE_DAYS=30
+      # - RANSOMLOOK_ENRICH_ACTOR_PROFILES=true
+      # - RANSOMLOOK_IMPORT_INFRASTRUCTURE=true
+      # Sensitive private/chat/admin/file-server endpoint values are opt-in.
+      # - RANSOMLOOK_IMPORT_SENSITIVE_INFRASTRUCTURE=false
+      # - RANSOMLOOK_IMPORT_POST_EVIDENCE=true
+      # - RANSOMLOOK_IMPORT_LOCATION_EVIDENCE=false
+      # - RANSOMLOOK_IMPORT_NOTES=true
+      # - RANSOMLOOK_IMPORT_WALLETS=true
+      # - RANSOMLOOK_IMPORT_TORRENTS=true
+      # - RANSOMLOOK_IMPORT_TORRENT_PEERS=false
+      # - RANSOMLOOK_IMPORT_LEAKS=true
+      # - RANSOMLOOK_IMPORT_ANALYSES=true
+      # - RANSOMLOOK_IMPORT_VICTIM_WEBSITES=true
+      # - RANSOMLOOK_CREATE_INDICATORS=false
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 4g
+    restart: "${CONNECTOR_RESTART_POLICY:-unless-stopped}"
