@@ -85,15 +85,28 @@ def test_clean_email_404_and_empty_200_both_return_empty_dict():
         assert client.lookup("clean@example.org") == {}
 
 
-def test_rate_limit_retries_then_gives_up():
+def test_rate_limit_retries_then_gives_up_without_final_sleep():
     client, helper = _client()
     resp_429 = FakeResp(429, headers={"Retry-After": "0"})
     with patch.object(client.session, "get", return_value=resp_429) as mocked_get:
         with patch("xposedornot.client_api.time.sleep") as mocked_sleep:
             assert client.lookup("test@example.com") is None
     assert mocked_get.call_count == 3
-    assert mocked_sleep.call_count == 3
+    # no sleep on the final attempt -- it would only delay the error
+    assert mocked_sleep.call_count == 2
     assert helper.connector_logger.error.called
+    warned = str(helper.connector_logger.warning.call_args)
+    assert "keyless" in warned
+
+
+def test_rate_limit_message_tailored_for_plus_api():
+    client, helper = _client(api_key="SECRET")
+    resp_429 = FakeResp(429, headers={"Retry-After": "0"})
+    with patch.object(client.session, "get", return_value=resp_429):
+        with patch("xposedornot.client_api.time.sleep"):
+            assert client.lookup("test@example.com") is None
+    warned = str(helper.connector_logger.warning.call_args)
+    assert "Plus API" in warned and "keyless" not in warned
 
 
 def test_rate_limit_recovers_after_backoff():

@@ -132,15 +132,22 @@ class XposedOrNotClient:
                 return {}
 
             if resp.status_code == 429:
-                retry_after = resp.headers.get("Retry-After")
-                wait = int(retry_after) if retry_after and retry_after.isdigit() else 15
-                wait = min(wait, 60)
-                self.helper.connector_logger.warning(
-                    "XposedOrNot rate limited (keyless: 2/s, 25/hour); backing off."
-                    " An optional API key raises limits.",
-                    meta={"wait_seconds": wait, "attempt": attempt},
-                )
-                time.sleep(wait)
+                if self.api_key:
+                    message = "XposedOrNot Plus API rate limited; backing off."
+                else:
+                    message = (
+                        "XposedOrNot rate limited (keyless: 2/s, 25/hour); backing"
+                        " off. An optional API key raises limits."
+                    )
+                self.helper.connector_logger.warning(message, meta={"attempt": attempt})
+                if attempt < max_retries:
+                    retry_after = resp.headers.get("Retry-After")
+                    wait = (
+                        int(retry_after)
+                        if retry_after and retry_after.isdigit()
+                        else 15
+                    )
+                    time.sleep(min(wait, 60))
                 continue
 
             if resp.status_code in (401, 403, 422):

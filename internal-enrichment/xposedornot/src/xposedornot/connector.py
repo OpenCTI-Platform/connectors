@@ -87,10 +87,10 @@ class XposedOrNotConnector:
             return "Unsupported type: %s" % entity_type
 
         tlp = observable_tlp(observable)
-        if tlp and not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
             return (
                 "TLP of the observable (%s) is higher than what the connector is"
-                " allowed to enrich (%s); skipping." % (tlp, self.max_tlp)
+                " allowed to enrich (%s); skipping." % (tlp or "none", self.max_tlp)
             )
 
         email = (
