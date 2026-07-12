@@ -743,7 +743,7 @@ class RansomLookConverter:
         external_id = external_id.strip().upper()
         clean_name = " ".join(name.split())[:512]
         return stix2.AttackPattern(
-            id=AttackPattern.generate_id(external_id),
+            id=AttackPattern.generate_id(name=clean_name, x_mitre_id=external_id),
             name=clean_name,
             description=self.clean_description(value.get("description")),
             created=self.SOURCE_EPOCH,
@@ -756,6 +756,7 @@ class RansomLookConverter:
                 )
             ],
             custom_properties={
+                "x_mitre_id": external_id,
                 "x_opencti_labels": self.labels,
                 "x_ransomlook_analysis_explicit": True,
             },

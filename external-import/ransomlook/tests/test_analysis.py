@@ -9,7 +9,7 @@ import stix2
 from connector.api_client import RansomLookAPIError, RansomLookCapabilityUnavailable
 from connector.converter import RansomLookConverter
 from connector.evidence import EvidenceBudget, EvidenceDecoder
-from pycti import OpenCTIConnectorHelper
+from pycti import AttackPattern, OpenCTIConnectorHelper
 
 from tests.test_connector import make_connector
 
@@ -32,6 +32,10 @@ def test_only_explicit_malware_and_valid_attack_mappings_are_converted():
     assert malware.name == "ExampleCrypt"
     assert malware.is_family is True
     assert technique.external_references[0].external_id == "T1486"
+    assert technique.x_mitre_id == "T1486"
+    assert technique.id == AttackPattern.generate_id(
+        name="Data Encrypted for Impact", x_mitre_id="T1486"
+    )
     assert conv.create_analysis_malware("ExampleCrypt") is None
     assert conv.create_analysis_attack_pattern({"name": "guessed from note"}) is None
     assert (

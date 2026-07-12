@@ -7,13 +7,13 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT \
 
 WORKDIR /opt/opencti-connector-ransomlook
 COPY src/requirements.txt ./requirements.txt
-RUN apk --no-cache add libmagic=5.47-r2 && \
+RUN apk --no-cache add libmagic && \
     apk --no-cache add --virtual .build-deps \
-        git=2.54.0-r0 \
-        build-base=0.5-r4 \
-        libffi-dev=3.5.2-r1 \
-        libxml2-dev=2.13.9-r2 \
-        libxslt-dev=1.1.43-r3 && \
+        git \
+        build-base \
+        libffi-dev \
+        libxml2-dev \
+        libxslt-dev && \
     pip3 install --no-cache-dir \
         pip==26.1.2 \
         setuptools==82.0.1 \
