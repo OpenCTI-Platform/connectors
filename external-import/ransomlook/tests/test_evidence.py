@@ -320,6 +320,7 @@ def test_post_evidence_is_marked_provenanced_and_scoped_to_its_claim_report():
             [*graph, group, connector.converter.author, connector.converter.marking]
         ),
         allow_custom=True,
+        version="2.1",
     )
     assert len([obj for obj in parsed.objects if obj.type == "artifact"]) == 2
     parsed_report = next(obj for obj in parsed.objects if obj.type == "report")

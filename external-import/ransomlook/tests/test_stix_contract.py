@@ -43,7 +43,7 @@ def test_claim_graph_serializes_through_pycti_and_stix_parser():
     graph.extend([report, note, converter.author, converter.marking])
 
     bundle_json = OpenCTIConnectorHelper.stix2_create_bundle(graph.copy())
-    bundle = stix2.parse(bundle_json, allow_custom=True)
+    bundle = stix2.parse(bundle_json, allow_custom=True, version="2.1")
     object_ids = {obj.id for obj in bundle.objects}
 
     assert bundle.spec_version == "2.1"
@@ -81,7 +81,9 @@ def test_actor_infrastructure_serializes_and_remains_outside_claim_report():
     )
     graph = [group, *profile, uses, report, converter.author, converter.marking]
     bundle = stix2.parse(
-        OpenCTIConnectorHelper.stix2_create_bundle(graph.copy()), allow_custom=True
+        OpenCTIConnectorHelper.stix2_create_bundle(graph.copy()),
+        allow_custom=True,
+        version="2.1",
     )
     assert any(obj.type == "infrastructure" for obj in bundle.objects)
     assert profile[0].id not in report.object_refs
@@ -114,7 +116,9 @@ def test_named_actor_profile_serializes_and_remains_outside_claim_report():
     assert relation.id not in report.object_refs
     graph = [actor, group, relation, report, converter.author, converter.marking]
     bundle = stix2.parse(
-        OpenCTIConnectorHelper.stix2_create_bundle(graph.copy()), allow_custom=True
+        OpenCTIConnectorHelper.stix2_create_bundle(graph.copy()),
+        allow_custom=True,
+        version="2.1",
     )
     assert any(obj.type == "threat-actor" for obj in bundle.objects)
 
@@ -132,7 +136,7 @@ def test_note_evidence_and_wallet_serialize_as_profile_context():
     bundle = OpenCTIConnectorHelper.stix2_create_bundle(
         [group, note, wallet, relation, converter.author, converter.marking]
     )
-    parsed = stix2.parse(bundle, allow_custom=True)
+    parsed = stix2.parse(bundle, allow_custom=True, version="2.1")
     assert {obj.type for obj in parsed.objects} >= {
         "note",
         "cryptocurrency-wallet",
@@ -175,7 +179,9 @@ def test_torrent_magnet_webseed_and_direct_leak_serialize_without_indicators():
         converter.marking,
     ]
     parsed = stix2.parse(
-        OpenCTIConnectorHelper.stix2_create_bundle(graph.copy()), allow_custom=True
+        OpenCTIConnectorHelper.stix2_create_bundle(graph.copy()),
+        allow_custom=True,
+        version="2.1",
     )
     assert {obj.type for obj in parsed.objects} >= {
         "url",

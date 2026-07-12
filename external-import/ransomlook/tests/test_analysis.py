@@ -222,7 +222,9 @@ def test_analysis_graph_serializes_through_pycti_and_stix():
     graph = connector._create_analysis_graph(explicit_analysis(), group.id)
     complete = [group, *graph, connector.converter.author, connector.converter.marking]
     parsed = stix2.parse(
-        OpenCTIConnectorHelper.stix2_create_bundle(complete.copy()), allow_custom=True
+        OpenCTIConnectorHelper.stix2_create_bundle(complete.copy()),
+        allow_custom=True,
+        version="2.1",
     )
     types = {obj.type for obj in parsed.objects}
     assert {"report", "artifact", "malware", "attack-pattern", "indicator"} <= types
