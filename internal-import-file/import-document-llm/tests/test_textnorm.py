@@ -105,3 +105,17 @@ def test_combined_pipeline_preserves_mapping():
     assert "http://evil.com continues here." in compacted
     assert "Next para with extra spaces." in compacted
     assert isinstance(tm3, TransformMap)
+
+
+def test_combined_pipeline_composes_offsets_across_stages():
+    raw = "a[.]b  c"
+    unwrapped, tm1 = unwrap_soft_wraps(raw)
+    refanged, tm2 = refang_targeted(unwrapped, tm1)
+    compacted, tm3 = compact_whitespace(refanged, tm2)
+
+    assert refanged == "a.b  c"
+    assert compacted == "a.b c"
+    assert tm2.raw_to_cleaned(4) == 2
+    assert tm2.cleaned_to_raw(2) == 4
+    assert tm3.raw_to_cleaned(7) == 4
+    assert tm3.cleaned_to_raw(4) == 7

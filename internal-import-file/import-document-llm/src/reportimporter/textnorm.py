@@ -38,11 +38,12 @@ class TransformMap:
         - Designed for traceable NLP preprocessing, not large-scale analytics.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, base_map: TransformMap | None = None) -> None:
+        self._base_map = base_map
         self._segments: list[Segment] = []
 
     def get_segments(self) -> list[Segment]:
-        """Get the list of mapping segments."""
+        """Get the mapping segments for this normalization stage."""
         return self._segments
 
     def add_segment(
@@ -51,8 +52,8 @@ class TransformMap:
         """Add a new mapping segment."""
         self._segments.append(Segment(raw_start, raw_end, cleaned_start, cleaned_end))
 
-    def raw_to_cleaned(self, raw_index: int) -> int:
-        """Translate a raw text offset to the cleaned text offset.
+    def _raw_to_cleaned_local(self, raw_index: int) -> int:
+        """Translate this stage's input offset to its output offset.
 
         Complexity:
             O(n_segments), where n_segments is typically small.
@@ -71,8 +72,14 @@ class TransformMap:
             return self._segments[0].cleaned_start
         return self._segments[-1].cleaned_end
 
-    def cleaned_to_raw(self, cleaned_index: int) -> int:
-        """Translate a cleaned text offset back to the raw text offset.
+    def raw_to_cleaned(self, raw_index: int) -> int:
+        """Translate an original raw text offset to the final cleaned offset."""
+        if self._base_map is not None:
+            raw_index = self._base_map.raw_to_cleaned(raw_index)
+        return self._raw_to_cleaned_local(raw_index)
+
+    def _cleaned_to_raw_local(self, cleaned_index: int) -> int:
+        """Translate this stage's output offset back to its input offset.
 
         Complexity:
             O(n_segments), linear in the number of mapping segments.
@@ -90,6 +97,13 @@ class TransformMap:
         if cleaned_index < self._segments[0].cleaned_start:
             return self._segments[0].raw_start
         return self._segments[-1].raw_end
+
+    def cleaned_to_raw(self, cleaned_index: int) -> int:
+        """Translate a final cleaned text offset back to the original raw offset."""
+        raw_index = self._cleaned_to_raw_local(cleaned_index)
+        if self._base_map is not None:
+            return self._base_map.cleaned_to_raw(raw_index)
+        return raw_index
 
 
 def unwrap_soft_wraps(text: str) -> tuple[str, TransformMap]:
@@ -159,9 +173,9 @@ def refang_targeted(
     - [.] , (.) , {dot}, [dot] → .
     - [@], (at), {at} → @
     """
-    tm = base_map or TransformMap()
+    tm = TransformMap(base_map=base_map)
     raw_i = 0
-    cleaned_i = max((s.cleaned_end for s in tm.get_segments()), default=0)
+    cleaned_i = 0
     n = len(text)
     out = StringIO()
     run_start = 0
@@ -235,9 +249,9 @@ def compact_whitespace(
     text: str, base_map: TransformMap | None = None
 ) -> tuple[str, TransformMap]:
     """Collapse runs of spaces/tabs into a single space. Preserve newlines."""
-    tm = base_map or TransformMap()
+    tm = TransformMap(base_map=base_map)
     raw_i = 0
-    cleaned_i = max((s.cleaned_end for s in tm.get_segments()), default=0)
+    cleaned_i = 0
     n = len(text)
     out = StringIO()
 
