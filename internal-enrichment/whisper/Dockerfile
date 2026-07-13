@@ -13,7 +13,8 @@ RUN apk --no-cache add git build-base libmagic libffi-dev && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# Exec-form ENTRYPOINT, no shell wrapper — the upstream Verified linter
+# (VC402) forbids an entrypoint.sh shim. python is PID 1 either way, so
+# SIGTERM from `docker stop` still reaches the connector directly.
+WORKDIR /opt/opencti-connector-whisper
+ENTRYPOINT ["python", "main.py"]

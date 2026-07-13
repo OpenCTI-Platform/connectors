@@ -34,6 +34,10 @@ OpenCTI dispatches the request to this connector over RabbitMQ. The connector
 runs bounded one-hop queries against the Whisper graph API, translates the
 result into a STIX 2.1 bundle, and ships it back to OpenCTI. All STIX IDs are
 deterministic, so re-enrichment is idempotent and never duplicates objects.
+Every non-empty bundle is led by a `Whisper` author `Identity` (organization)
+that all other objects reference — SDOs, relationships, and Notes via
+`created_by_ref`, SCOs via the OpenCTI `x_opencti_created_by_ref` custom
+property — so analysts can filter Whisper-sourced intel by author in the UI.
 
 ## Installation
 
@@ -45,7 +49,7 @@ deterministic, so re-enrichment is idempotent and never duplicates objects.
 ## Configuration variables
 
 Configuration is provided via environment variables (Docker) or a `config.yml`
-file (manual deployment). See [`src/config.yml.sample`](src/config.yml.sample).
+file (manual deployment). See [`config.yml.sample`](config.yml.sample).
 
 ### OpenCTI environment variables
 
@@ -89,10 +93,9 @@ variables and run `docker compose up -d`.
 ### Manual Deployment
 
 ```shell
-cd src
-pip3 install -r requirements.txt
+pip3 install -r src/requirements.txt
 cp config.yml.sample config.yml   # then edit config.yml
-python3 main.py
+cd src && python3 main.py
 ```
 
 ## Usage

@@ -15,6 +15,7 @@ OpenCTI-Platform/connectors#6708). These tests pin down the guarantees the
 """
 
 import pytest
+from conftest import StubConnectorSettings
 from connector.settings import ConnectorSettings, WhisperConfig
 from pydantic import SecretStr, ValidationError
 
@@ -68,6 +69,17 @@ def test_whisper_config_accepts_every_canonical_tlp(tlp):
 
 
 # --- ConnectorSettings (top-level, via the make_config stub) ----------------
+
+
+def test_connector_settings_instantiates_from_valid_config():
+    # The upstream Verified linter (VC325) requires this file to contain a
+    # valid-input ``*Settings()`` instantiation outside any pytest.raises
+    # block (it does not scan conftest.py, hence the direct import).
+    settings = StubConnectorSettings()
+    assert isinstance(settings, ConnectorSettings)
+    assert settings.whisper.api_url == "https://api.whisper.test"
+    assert settings.whisper.api_key.get_secret_value() == "test-key"
+    assert settings.whisper.max_tlp == "TLP:RED"
 
 
 def test_connector_settings_exposes_whisper_block(make_config):

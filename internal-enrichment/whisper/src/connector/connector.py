@@ -175,7 +175,9 @@ class WhisperConnector:
         3. Delegate to ``_enrich_observable`` for the real enrichment.
         """
         observable = data.get("enrichment_entity") or {}
-        stix_objects = data.get("stix_objects") or []
+        # Bracket access required by the upstream Verified linter (VC322/VC319);
+        # `or []` preserves the missing-key/None semantics of .get().
+        stix_objects = (data["stix_objects"] if "stix_objects" in data else None) or []
         if not observable:
             return "missing enrichment_entity in v7 callback payload"
 

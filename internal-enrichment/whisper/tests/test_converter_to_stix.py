@@ -1,9 +1,13 @@
+import logging
+
 import pytest
 import stix2
 from connector.converter_to_stix import (
     ALLOWED_RELATIONSHIPS,
     NODE_MAPPERS,
+    WHISPER_AUTHOR,
     build_bundle,
+    build_note,
     map_edge,
     map_node,
 )
@@ -315,11 +319,15 @@ def test_build_bundle_round_trips_through_stix2_parse():
     ]
     bundle = build_bundle(nodes, edges)
     assert isinstance(bundle, stix2.Bundle)
-    assert len(bundle.objects) == 5
+    # 3 nodes + 2 relationships + the prepended WHISPER_AUTHOR Identity.
+    assert len(bundle.objects) == 6
+    assert bundle.objects[0] == WHISPER_AUTHOR
 
-    parsed = stix2.parse(bundle.serialize(), allow_custom=False)
+    # allow_custom=True: the SCOs carry the x_opencti_created_by_ref custom
+    # property (see the VC302 author convention in converter_to_stix).
+    parsed = stix2.parse(bundle.serialize(), allow_custom=True)
     assert isinstance(parsed, stix2.Bundle)
-    assert len(parsed.objects) == 5
+    assert len(parsed.objects) == 6
 
 
 def test_build_bundle_edge_unknown_node_raises():
@@ -329,12 +337,160 @@ def test_build_bundle_edge_unknown_node_raises():
         build_bundle(nodes, edges)
 
 
+@pytest.mark.parametrize("rel_type", ["related-to", "resolves-to"])
+def test_build_bundle_skips_self_loop_relationship(rel_type, caplog):
+    # Distinct Whisper nodes can collapse onto one deterministic STIX ID —
+    # e.g. a domain that is its own nameserver arrives as two HOSTNAME
+    # nodes with the same value. OpenCTI rejects every same-source-target
+    # relationship (worker UNSUPPORTED_ERROR), so build_bundle must drop
+    # the edge instead of shipping it.
+    nodes = [
+        {"id": "w-dom", "type": "domain-name", "properties": {"value": "ns.test"}},
+        {"id": "w-ns", "type": "domain-name", "properties": {"value": "ns.test"}},
+    ]
+    edges = [
+        {
+            "source_id": "w-dom",
+            "target_id": "w-ns",
+            "type": rel_type,
+            "properties": {"description": "name-server"},
+        }
+    ]
+    with caplog.at_level(logging.INFO, logger="connector.converter_to_stix"):
+        bundle = build_bundle(nodes, edges)
+    types = [o["type"] for o in bundle.objects]
+    assert "relationship" not in types
+    # build_bundle does not dedup node objects, so both same-value nodes
+    # land in the bundle (same STIX ID twice); OpenCTI dedups on ingest.
+    assert types.count("domain-name") == 2
+    assert bundle.objects[0] == WHISPER_AUTHOR
+    # The skip is logged at info with the shared STIX ID and rel type for
+    # QA traceability.
+    shared_id = stix2.DomainName(value="ns.test").id
+    assert any(
+        "skipping self-loop relationship" in msg
+        and shared_id in msg
+        and rel_type in msg
+        for msg in caplog.messages
+    )
+
+
+def test_build_bundle_normal_edge_control_still_emits_relationship():
+    # Control for the self-loop guard: distinct-value endpoints must keep
+    # producing their relationship, refs intact.
+    nodes = [
+        {"id": "w-dom", "type": "domain-name", "properties": {"value": "a.test"}},
+        {"id": "w-ns", "type": "domain-name", "properties": {"value": "ns.test"}},
+    ]
+    edges = [
+        {
+            "source_id": "w-dom",
+            "target_id": "w-ns",
+            "type": "related-to",
+            "properties": {"description": "name-server"},
+        }
+    ]
+    bundle = build_bundle(nodes, edges)
+    rels = [o for o in bundle.objects if o["type"] == "relationship"]
+    assert len(rels) == 1
+    assert rels[0].source_ref == stix2.DomainName(value="a.test").id
+    assert rels[0].target_ref == stix2.DomainName(value="ns.test").id
+
+
 def test_build_bundle_empty_inputs():
     # stix2 strips empty collection fields, so `.objects` is absent on an
     # empty bundle. The caller in #7 must guard against this rather than
     # sending an empty bundle to OpenCTI.
     bundle = build_bundle([], [])
     assert isinstance(bundle, stix2.Bundle)
+    assert "objects" not in bundle
+
+
+# --- Author attribution (VC302) ---------------------------------------------
+# Every object the connector emits must reference the Whisper author
+# Identity: SDOs/SROs/Notes via created_by_ref, SCOs via the OpenCTI
+# x_opencti_created_by_ref custom property (STIX 2.1 forbids
+# created_by_ref on SCOs).
+
+
+def test_author_identity_is_deterministic_and_self_authored():
+    # pycti hashes exactly (name, identity_class), so the ID is stable
+    # across runs, connectors, and the upstream port.
+    import pycti
+
+    assert WHISPER_AUTHOR.id == pycti.Identity.generate_id(
+        name="Whisper", identity_class="organization"
+    )
+    assert WHISPER_AUTHOR.identity_class == "organization"
+    # The author Identity itself carries no created_by_ref.
+    assert "created_by_ref" not in WHISPER_AUTHOR
+
+
+def test_sco_carries_x_opencti_created_by_ref():
+    obj = map_node(
+        {"id": "w-1", "type": "ipv4-addr", "properties": {"value": "1.2.3.4"}}
+    )
+    assert obj.x_opencti_created_by_ref == WHISPER_AUTHOR.id
+    # The custom property must not perturb the spec-deterministic SCO ID.
+    assert obj.id == stix2.IPv4Address(value="1.2.3.4").id
+
+
+@pytest.mark.parametrize(
+    "node",
+    [
+        {"id": "w-a", "type": "threat-actor", "properties": {"name": "APT-Test"}},
+        {"id": "w-b", "type": "malware", "properties": {"name": "TestMal"}},
+        {"id": "w-c", "type": "location", "properties": {"country": "US"}},
+        {"id": "w-d", "type": "identity", "properties": {"name": "Google LLC"}},
+    ],
+)
+def test_sdo_carries_created_by_ref(node):
+    obj = map_node(node)
+    assert obj.created_by_ref == WHISPER_AUTHOR.id
+
+
+def test_relationship_carries_created_by_ref():
+    src = map_node(
+        {"id": "n1", "type": "ipv4-addr", "properties": {"value": "1.1.1.1"}}
+    )
+    dst = map_node(
+        {"id": "n2", "type": "domain-name", "properties": {"value": "x.test"}}
+    )
+    rel = map_edge(
+        {"source_id": "n1", "target_id": "n2", "type": "resolves-to"}, src, dst
+    )
+    assert rel.created_by_ref == WHISPER_AUTHOR.id
+
+
+def test_note_carries_created_by_ref_without_rekeying_id():
+    # created_by_ref must not change the Note ID — pycti.Note.generate_id
+    # only hashes (created, content, abstract).
+    import pycti
+
+    note = build_note(
+        "ipv4-addr--00000000-0000-4000-8000-000000000000", "content", abstract="abs"
+    )
+    assert note.created_by_ref == WHISPER_AUTHOR.id
+    assert note.id == pycti.Note.generate_id(None, "content", "abs")
+
+
+def test_build_bundle_with_sco_allows_custom_and_prepends_author():
+    # Regression guard for the allow_custom=True requirement: an SCO in the
+    # bundle carries a custom property, and stix2.Bundle raises without
+    # allow_custom. The author Identity leads the object list.
+    nodes = [{"id": "n1", "type": "ipv4-addr", "properties": {"value": "8.8.8.8"}}]
+    note = build_note(
+        "ipv4-addr--00000000-0000-4000-8000-000000000000", "threat context"
+    )
+    bundle = build_bundle(nodes, [], extra_objects=[note])
+    assert bundle.objects[0] == WHISPER_AUTHOR
+    assert [o["type"] for o in bundle.objects] == ["identity", "ipv4-addr", "note"]
+
+
+def test_build_bundle_empty_inputs_has_no_author():
+    # No data → no bundle content at all; the author is only prepended
+    # when there is something to attribute.
+    bundle = build_bundle([], [])
     assert "objects" not in bundle
 
 

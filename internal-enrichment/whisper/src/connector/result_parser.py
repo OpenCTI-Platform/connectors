@@ -230,7 +230,12 @@ def _translate_node(cell: dict) -> dict | None:
             # at ingestion. Drop them here so the bundle stays consistent
             # with what OpenCTI will accept (issue #47).
             if not _is_valid_domain_name(name):
-                logger.debug("dropping HOSTNAME with non-RFC-1035 value: %r", name)
+                # warning (not debug/info) so operators get a visible record
+                # of silently dropped data — the upstream Verified linter
+                # (VC307) flags except blocks whose only log call is
+                # debug/info; warning is the lowest level that conforms.
+                # Volume is bounded by the query LIMITs.
+                logger.warning("dropping HOSTNAME with non-RFC-1035 value: %r", name)
                 return None
 
     stix_type = _LABEL_TO_STIX_TYPE.get(label)
