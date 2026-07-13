@@ -52,6 +52,9 @@ except Exception:  # pragma: no cover - optional dependency at runtime
 
 # Default to a null helper until set_helper() is called
 _helper = _NullHelper()
+_OBSERVABLE_LABELS_BY_CASEFOLD = {
+    label.casefold(): label for label in OBSERVABLE_LABELS
+}
 
 
 def set_helper(helper):
@@ -964,11 +967,18 @@ class LLMHelper:
         relations_out: List[dict] = []
         base_start = int(chunk.get("start", 0) or 0)
 
+        def _canonicalize_observable_label(label: str) -> str:
+            return _OBSERVABLE_LABELS_BY_CASEFOLD.get(label.casefold(), label)
+
         def _infer_role(label: str) -> str:
             # Classify against the shared observable set so dotted *entity*
             # categories (e.g. Attack-Pattern.x_mitre_id, Vulnerability.name) are
             # not mistaken for observables the way a bare "." check would be.
-            return "observable" if (label or "") in OBSERVABLE_LABELS else "entity"
+            return (
+                "observable"
+                if (label or "").casefold() in _OBSERVABLE_LABELS_BY_CASEFOLD
+                else "entity"
+            )
 
         for obj in items:
             if not isinstance(obj, dict):
@@ -1000,6 +1010,7 @@ class LLMHelper:
             ).strip()
             if not label or not value:
                 continue
+            label = _canonicalize_observable_label(label)
 
             role = str(obj.get("type") or _infer_role(label)).strip()
             try:

@@ -105,6 +105,26 @@ def test_relations_ndjson_merge(simple_helper):
         ), f"Expected Email-Addr span, got: {spans}"
 
 
+def test_lowercase_observable_label_is_canonicalized(simple_helper):
+    ndjson = '{"label":"domain-name.value","value":"Example.COM"}'
+
+    with patch.object(simple_helper, "call_openai", return_value=ndjson):
+        out = simple_helper._call_model_relations(
+            {"text": "Example.COM", "start": 0, "end": 11, "hints": []},
+            0,
+        )
+
+    spans = (out.get("metadata") or {}).get("span_based_entities") or []
+    assert spans == [
+        {
+            "id": "llm::observable::domain-name.value::example.com",
+            "text": "Example.COM",
+            "label": "Domain-Name.value",
+            "type": "observable",
+        }
+    ]
+
+
 def test_parse_ndjson_any_basic(simple_helper):
     """Ensure _parse_ndjson_any() correctly parses valid NDJSON lines."""
     ndjson = "\n".join(
