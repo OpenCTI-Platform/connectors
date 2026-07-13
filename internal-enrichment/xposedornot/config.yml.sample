@@ -1,19 +1,17 @@
 opencti:
   url: 'http://localhost:8080'
-  token: 'CHANGEME'
+  token: 'ChangeMe'
 
 connector:
-  id: 'CHANGEME-UUID4'
   type: 'INTERNAL_ENRICHMENT'
-  name: 'XposedOrNot'
-  scope: 'Email-Addr'
-  auto: false                 # keyless API is rate limited (25/hour); enable with care or configure an API key
-  confidence_level: 60
-  log_level: 'info'
-  listen_protocol: 'AMQP'
+  id: 'ChangeMe'
+  name: 'XposedOrNot'                 # optional (default: 'XposedOrNot')
+  scope: 'Email-Addr'                 # optional (default: 'Email-Addr')
+  log_level: 'info'                   # optional (default: 'error')
+  auto: false                         # optional, auto-enrich observables. Keyless API is rate limited; keep false or set an api_key (default: false)
 
 xposedornot:
-  api_key: ''                 # optional; empty uses the free keyless community API
-  base_url: 'https://api.xposedornot.com'
-  max_tlp: 'TLP:AMBER'        # maximum TLP of observables the connector may enrich
-  tlp_level: 'amber'          # TLP applied to the produced objects
+  api_key: 'ChangeMe'                 # optional; remove/leave empty to use the free keyless community API
+  api_base_url: 'https://api.xposedornot.com'  # optional (default: community API)
+  max_tlp: 'TLP:AMBER'                # optional, max TLP of observables the connector may enrich (default: 'TLP:AMBER')
+  tlp_level: 'amber'                  # optional, TLP applied to produced objects: clear, green, amber, amber+strict, red (default: 'amber')

@@ -12,17 +12,16 @@ investigations.
 
 from __future__ import annotations
 
-import os
 import re
 import traceback
 from copy import deepcopy
 
-import yaml
 from connectors_sdk.models import TLPMarking
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
 
 from .client_api import XposedOrNotClient
 from .converter_to_stix import ConverterToStix
+from .settings import ConnectorSettings
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -42,42 +41,23 @@ def observable_tlp(observable: dict) -> str | None:
 class XposedOrNotConnector:
     SCOPES = ["Email-Addr"]
 
-    def __init__(self):
-        config = self._load_config()
-        self.helper = OpenCTIConnectorHelper(config)
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
 
-        api_key = get_config_variable(
-            "XPOSEDORNOT_API_KEY", ["xposedornot", "api_key"], config
+        api_key = (
+            config.xposedornot.api_key.get_secret_value()
+            if config.xposedornot.api_key
+            else None
         )
-        base_url = get_config_variable(
-            "XPOSEDORNOT_BASE_URL", ["xposedornot", "base_url"], config
+        self.max_tlp = config.xposedornot.max_tlp
+        self.tlp = TLPMarking(level=config.xposedornot.tlp_level)
+        self.client = XposedOrNotClient(
+            helper, api_key, str(config.xposedornot.api_base_url)
         )
-        self.max_tlp = (
-            get_config_variable(
-                "XPOSEDORNOT_MAX_TLP", ["xposedornot", "max_tlp"], config
-            )
-            or "TLP:AMBER"
-        )
-        tlp_level = (
-            get_config_variable(
-                "XPOSEDORNOT_TLP_LEVEL", ["xposedornot", "tlp_level"], config
-            )
-            or "amber"
-        )
-
-        self.tlp = TLPMarking(level=tlp_level)
-        self.client = XposedOrNotClient(self.helper, api_key, base_url)
         self.converter = ConverterToStix(
             author=ConverterToStix.make_author(), tlp=self.tlp
         )
-
-    @staticmethod
-    def _load_config() -> dict:
-        config_file = os.path.join(os.path.dirname(__file__), "..", "..", "config.yml")
-        if os.path.isfile(config_file):
-            with open(config_file, "r", encoding="utf-8") as fh:
-                return yaml.safe_load(fh) or {}
-        return {}
 
     def _process_message(self, data: dict) -> str:
         observable = data["enrichment_entity"]

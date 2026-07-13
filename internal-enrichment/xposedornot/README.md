@@ -46,7 +46,7 @@ Key parameters:
 | OpenCTI Token | `OPENCTI_TOKEN` | Yes | | Token of the connector user. |
 | Connector Auto | `CONNECTOR_AUTO` | No | `false` | Automatic enrichment. The keyless API allows 2 req/s and 25/hour per IP — keep manual, or configure an API key before enabling on busy platforms. |
 | API key | `XPOSEDORNOT_API_KEY` | No | *(empty)* | Optional key; switches to the Plus API with higher limits. Fully functional without it. |
-| Base URL | `XPOSEDORNOT_BASE_URL` | No | `https://api.xposedornot.com` | Free community API base URL. |
+| Base URL | `XPOSEDORNOT_API_BASE_URL` | No | `https://api.xposedornot.com` | Free community API base URL. |
 | Max TLP | `XPOSEDORNOT_MAX_TLP` | No | `TLP:AMBER` | Maximum TLP of an observable the connector may enrich (the email address is sent to the API). |
 | TLP level | `XPOSEDORNOT_TLP_LEVEL` | No | `amber` | TLP marking applied to the produced objects. |
 

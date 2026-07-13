@@ -56,7 +56,7 @@
       "format": "password",
       "type": "string"
     },
-    "XPOSEDORNOT_BASE_URL": {
+    "XPOSEDORNOT_API_BASE_URL": {
       "default": "https://api.xposedornot.com",
       "description": "Base URL of the free XposedOrNot community API.",
       "format": "uri",
