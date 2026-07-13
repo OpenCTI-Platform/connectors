@@ -58,6 +58,9 @@ class TestNormalizeDomain:
     def test_hyphenated_multilabel_domain(self):
         assert util._normalize_domain("my-host.co.uk") == "my-host.co.uk"
 
+    def test_srv_label_rejects_non_hostname_punctuation(self):
+        assert util._normalize_domain("svc:name.example.com") is None
+
     def test_raw_unicode_label_rejected(self):
         # Labels are validated against an ASCII-only pattern before IDNA.
         assert util._normalize_domain("münchen.de") is None

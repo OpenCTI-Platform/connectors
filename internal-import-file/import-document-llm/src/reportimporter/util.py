@@ -47,7 +47,7 @@ from .regex_scanner import _NON_DOMAIN_FILE_EXTENSIONS, normalize_stix_value
 
 # Precompiled regexes for performance
 _MESSAGE_ID = re.compile(r"^<?[^>\s@]+@[^>\s@]+>?$")
-_SRV_HOSTNAME = re.compile(r"^(?!-)[A-Za-z0-9-_]{1,63}(?<!-)$")
+_SRV_HOSTNAME = re.compile(r"^(?!-)[A-Za-z0-9_-]{1,63}(?<!-)$")
 _HOSTNAME = re.compile(r"^(?!-)[A-Za-z0-9-]{1,63}(?<!-)$")
 _NETTRAFFIC = re.compile(
     r"^(?P<proto>[a-z]+)://(?P<src>[^:>]+):(?P<src_port>\d+)->(?P<dst>[^:>]+):(?P<dst_port>\d+)$",
