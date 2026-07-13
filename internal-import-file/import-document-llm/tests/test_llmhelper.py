@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import reportimporter.core
 from reportimporter.configparser import ConfigParser
-from reportimporter.llmhelper import LLMHelper
+from reportimporter.llmhelper import LLMHelper, TokenEncoder
 
 
 @pytest.fixture(autouse=True)
@@ -231,3 +231,54 @@ def test_relation_guidance_balances_labels_not_uses_only():
     assert "USES" in guidance
     assert "TARGETS" in guidance
     assert "ATTRIBUTED-TO" in guidance
+
+
+def test_token_encoder_fallback_paths(monkeypatch):
+    def _raise(*args, **kwargs):
+        raise LookupError("no tokenizer")
+
+    monkeypatch.setattr("reportimporter.llmhelper.tiktoken.encoding_for_model", _raise)
+    monkeypatch.setattr("reportimporter.llmhelper.tiktoken.get_encoding", _raise)
+
+    encoder = TokenEncoder("unknown-model", chars_per_token=2)
+
+    assert encoder.encode("") == []
+    assert encoder.encode("abcd") == ["ab", "cd"]
+    assert encoder.decode(["ab", "cd"]) == "abcd"
+    assert encoder.count("abc") == 2
+    assert encoder.is_tiktoken() is False
+    assert encoder.get_encoder() is None
+
+
+def test_prompt_loading_cache_and_fallback(monkeypatch, tmp_path):
+    prompt_path = tmp_path / "prompt.md"
+    prompt_path.write_text("hello prompt", encoding="utf-8")
+    json_list_path = tmp_path / "prompt-list.json"
+    json_list_path.write_text('{"content": ["one", "two"]}', encoding="utf-8")
+    json_string_path = tmp_path / "prompt-string.json"
+    json_string_path.write_text('"single"', encoding="utf-8")
+    invalid_path = tmp_path / "prompt-invalid.json"
+    invalid_path.write_text('{"unexpected": true}', encoding="utf-8")
+
+    assert LLMHelper._load_prompt_from_disk(json_list_path) == "one\ntwo"
+    assert LLMHelper._load_prompt_from_disk(json_string_path) == "single"
+    with pytest.raises(ValueError):
+        LLMHelper._load_prompt_from_disk(invalid_path)
+    with pytest.raises(FileNotFoundError):
+        LLMHelper._load_prompt_from_disk(tmp_path / "missing.md")
+
+    assert LLMHelper._resolve_prompt_path(str(prompt_path)) == prompt_path
+    relative_path = LLMHelper._resolve_prompt_path("relative.md")
+    assert relative_path == Path.cwd() / "relative.md"
+
+    LLMHelper._SYSTEM_PROMPT = None
+    LLMHelper._PROMPT_CACHE.clear()
+    assert LLMHelper._ensure_system_prompt_loaded(str(prompt_path)) == "hello prompt"
+
+    LLMHelper._SYSTEM_PROMPT = None
+    assert LLMHelper._ensure_system_prompt_loaded(str(prompt_path)) == "hello prompt"
+
+    LLMHelper._SYSTEM_PROMPT = None
+    LLMHelper._PROMPT_CACHE.clear()
+    fallback = LLMHelper._ensure_system_prompt_loaded(str(tmp_path / "missing.md"))
+    assert "cyber-threat intelligence extractor" in fallback

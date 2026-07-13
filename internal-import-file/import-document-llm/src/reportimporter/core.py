@@ -86,9 +86,12 @@ class ReportImporter:
             )
             sys.exit(1)
 
-        self.helper: OpenCTIConnectorHelper = OpenCTIConnectorHelper(
-            self.config._config
+        helper_config = (
+            self.config.to_helper_config()
+            if hasattr(self.config, "to_helper_config")
+            else self.config._config
         )
+        self.helper: OpenCTIConnectorHelper = OpenCTIConnectorHelper(helper_config)
         set_util_helper(self.helper)
         set_preproc_helper(self.helper)
 

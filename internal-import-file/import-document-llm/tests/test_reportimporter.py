@@ -1344,6 +1344,58 @@ def test_process_message_delegates(monkeypatch, importer):
     assert called["x"] == 1
 
 
+def test_runtime_caches_evict_and_process_message_reports_errors(monkeypatch, importer):
+    importer.config.run_binary_cache_size = 1
+    importer.config.run_text_cache_size = 1
+
+    assert importer._mark_binary_seen("hash-a") is False
+    assert importer._mark_binary_seen("hash-a") is True
+    assert importer._mark_binary_seen("hash-b") is False
+    assert importer._mark_binary_seen("hash-a") is False
+
+    importer._put_text_cache("doc-a", "done", "ok")
+    assert importer._get_text_cache("doc-a") == {"status": "done", "reason": "ok"}
+    importer._put_text_cache("doc-b", "skip", "duplicate")
+    assert importer._get_text_cache("doc-a") is None
+
+    def _boom(_):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(importer, "_process_import", _boom)
+
+    assert (
+        importer._process_message({"k": "v"}) == "Fatal error during processing: boom"
+    )
+
+
+def test_validate_import_request_and_name_sanitization(importer):
+    assert importer._sanitize_name(None) is None
+    assert importer._sanitize_name(" x,") is None
+    assert importer._sanitize_name(" APT,") == "APT"
+
+    assert importer._validate_import_request("not-a-dict") is False
+    assert (
+        importer._validate_import_request(
+            {
+                "file_id": "",
+                "file_fetch": "/fetch",
+                "file_mime": "application/pdf",
+            }
+        )
+        is False
+    )
+    assert (
+        importer._validate_import_request(
+            {
+                "file_id": "import/global/file.pdf",
+                "file_fetch": "/fetch",
+                "file_mime": "application/pdf",
+            }
+        )
+        is True
+    )
+
+
 def test_link_to_container_avoids_self_reference(importer):
     rep_id = _stix_id("report")
     importer.helper.api.stix2 = DummyStix2Api(

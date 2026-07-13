@@ -12,6 +12,7 @@ phonenumbers==9.0.15
 openai==2.2.0
 ollama==0.6.0
 pycti==7.260609.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
 python-docx==1.2.0
 markdownify==1.2.0
 antlr4-python3-runtime==4.9.3

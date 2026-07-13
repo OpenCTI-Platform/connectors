@@ -11,11 +11,12 @@ import os
 import sys
 
 import pytest
+from connectors_sdk import ConfigValidationError
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 import reportimporter.configparser as configparser_module
-from reportimporter.configparser import ConfigParser
+from reportimporter.configparser import ConfigParser, ConnectorSettings
 from reportimporter.preprocessor import PdfOcrConfig
 
 
@@ -209,3 +210,100 @@ def test_configparser_non_mapping_yaml_falls_back_to_empty_config(
 
     assert cfg._config == {}
     assert cfg.ai_provider == "ollama"
+
+
+def test_configparser_invalid_yaml_falls_back_to_empty_config(monkeypatch, tmp_path):
+    _clear_key_env(monkeypatch)
+    monkeypatch.setenv("IMPORT_DOCUMENT_AI_PROVIDER", "ollama")
+    module_path = tmp_path / "src" / "reportimporter" / "configparser.py"
+    module_path.parent.mkdir(parents=True)
+    (module_path.parent.parent / "config.yml").write_text("{not-valid-yaml")
+    monkeypatch.setattr(configparser_module, "__file__", str(module_path))
+
+    cfg = ConfigParser()
+
+    assert cfg._config == {}
+    assert cfg.ai_provider == "ollama"
+
+
+def test_to_helper_config_uses_sdk_settings_model(monkeypatch):
+    _clear_key_env(monkeypatch)
+    cfg = ConfigParser(
+        {
+            "opencti": {
+                "url": "http://localhost:8080",
+                "token": "token",
+            },
+            "connector": {
+                "id": "connector-id",
+                "scope": "application/pdf,text/plain",
+            },
+            "import_document": {
+                "ai_provider": "ollama",
+                "pdf_ocr_langs": "en,fr",
+            },
+        }
+    )
+
+    helper_config = cfg.to_helper_config()
+
+    assert isinstance(cfg._settings, ConnectorSettings)
+    assert helper_config["opencti"]["url"] == "http://localhost:8080/"
+    assert helper_config["connector"]["scope"] == "application/pdf,text/plain"
+    assert helper_config["import_document"]["pdf_ocr_langs"] == "en,fr"
+
+
+def test_trace_env_alias_and_legacy_rpm_alias(monkeypatch):
+    _clear_key_env(monkeypatch)
+    monkeypatch.setenv("REPORTIMPORTER_TRACE_PAYLOADS", "yes")
+
+    cfg = ConfigParser(
+        {
+            "import_document": {
+                "ai_provider": "ollama",
+                "openai_rpm": "12",
+                "trace_payloads": False,
+            }
+        }
+    )
+
+    assert cfg.trace_enabled is True
+    assert cfg.llm_rpm == 12
+    assert cfg.openai_rpm == 12
+
+
+def test_connector_settings_accepts_valid_input():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _data, handler):
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "application/pdf",
+                    },
+                    "import_document": {
+                        "ai_provider": "ollama",
+                        "ai_model": "gemma4",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.import_document.ai_provider == "ollama"
+    assert settings.connector.scope == ["application/pdf"]
+
+
+def test_connector_settings_rejects_invalid_input():
+    class InvalidConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _data, handler):
+            return handler({"import_document": {"model_input_ratio": 2}})
+
+    with pytest.raises(ConfigValidationError):
+        InvalidConnectorSettings()
