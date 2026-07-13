@@ -695,14 +695,13 @@ stix_object_mapping: dict[str, Callable[[str, list[str], dict[str, Any]], Any]] 
         else None
     ),
     "Phone-Number": lambda v, om, cp: (
-        {
-            "type": "phone-number",
-            "spec_version": "2.1",
-            "id": _make_stix_id("phone-number", norm),
-            "value": norm,
-            "object_marking_refs": om,
+        pycti.CustomObservablePhoneNumber(
+            id=_make_stix_id("phone-number", norm),
+            value=norm,
+            allow_custom=True,
+            **_mk(om),
             **_sco_cp(cp),
-        }
+        )
         if (norm := _normalize_phone_number(v.strip()))
         else None
     ),

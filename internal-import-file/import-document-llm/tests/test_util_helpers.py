@@ -191,6 +191,23 @@ class TestCreateStixObject:
         # rejects it (single label) and returns None -> [].
         assert util.create_stix_object("Domain-Name.value", "localhost", [], {}) == []
 
+    def test_phone_number_factory_flattens_custom_properties(self):
+        marking_id = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
+        created_by_ref = "identity--12345678-1234-1234-1234-123456789012"
+        out = util.create_stix_object(
+            "Phone-Number",
+            "+442083661177",
+            [marking_id],
+            {"created_by_ref": created_by_ref, "x_original": "raw"},
+        )
+
+        assert len(out) == 1
+        assert out[0]["id"] == util._make_stix_id("phone-number", "+442083661177")
+        assert out[0]["object_marking_refs"] == [marking_id]
+        assert out[0]["x_opencti_created_by_ref"] == created_by_ref
+        assert out[0]["x_original"] == "raw"
+        assert "custom_properties" not in out[0]
+
 
 class TestComposeIndicators:
     def test_domain_indicator(self):
