@@ -5,6 +5,7 @@ All tests use a pre-built connector fixture with TheHiveApi patched out (no real
 """
 
 import time
+from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import connector.connector as module
@@ -80,12 +81,15 @@ def _make_case(title="Test Case", tlp=1, pap=0, severity=2, tags=None):
 
 
 def test_constructor_with_import_from_date():
+    # ConnectorSettings delivers a datetime (DatetimeFromIsoString), not a
+    # string: the constructor must accept it without re-parsing.
+    import_from_date = datetime(2023, 1, 1)
     with patch.object(module, "TheHiveApi"):
         c = module.TheHive(
-            _make_mock_config(import_from_date="2023-01-01T00:00:00"),
+            _make_mock_config(import_from_date=import_from_date),
             MagicMock(),
         )
-        assert c.thehive_import_from_date > 0
+        assert c.thehive_import_from_date == import_from_date.timestamp()
 
 
 # ---------------------------------------------------------------------------
@@ -435,6 +439,26 @@ def test_process_comments_comment_without_created_at(connector):
     assert result[0]["content"] == "a comment"
 
 
+def test_process_comments_api_error_returns_empty(connector):
+    # TheHive 4 rejects the "comments" query name; a failed fetch must not
+    # abort the whole case import.
+    case = _make_case()
+    stix_case = MagicMock()
+    connector.thehive_api.case.find_comments.side_effect = Exception(
+        "AttributeCheckingError - [Invalid format for _name]"
+    )
+    assert connector.process_comments(case, stix_case) == []
+
+
+def test_process_attachments_api_error_returns_empty(connector):
+    case = _make_case()
+    stix_case = MagicMock()
+    connector.thehive_api.case.find_attachments.side_effect = Exception(
+        "AttributeCheckingError - [Invalid format for _name]"
+    )
+    assert connector.process_attachments(case, stix_case) == ([], [])
+
+
 # ---------------------------------------------------------------------------
 # process_observables
 # ---------------------------------------------------------------------------
@@ -639,6 +663,20 @@ def test_generate_case_bundle(connector):
     assert result == {"type": "bundle"}
 
 
+def test_generate_case_bundle_survives_comment_fetch_failure(connector):
+    # End-to-end TheHive 4 scenario: the comments endpoint does not exist,
+    # but the case bundle must still be generated.
+    case = _make_case()
+    connector.thehive_api.case.find_observables.return_value = []
+    connector.thehive_api.case.find_tasks.return_value = []
+    connector.thehive_api.case.find_comments.side_effect = Exception(
+        "AttributeCheckingError - [Invalid format for _name]"
+    )
+    connector.helper.stix2_create_bundle.return_value = {"type": "bundle"}
+    result = connector.generate_case_bundle(case)
+    assert result == {"type": "bundle"}
+
+
 def test_generate_case_bundle_with_attachments():
     with patch.object(module, "TheHiveApi"):
         c = module.TheHive(
@@ -655,6 +693,44 @@ def test_generate_case_bundle_with_attachments():
     c.helper.stix2_create_bundle.return_value = {"type": "bundle"}
     result = c.generate_case_bundle(case)
     assert result == {"type": "bundle"}
+
+
+# ---------------------------------------------------------------------------
+# process_logic — empty vs error API responses
+# ---------------------------------------------------------------------------
+
+
+def test_process_logic_empty_case_results_do_not_raise(connector):
+    # An empty list is a normal result (no new items since the last run),
+    # not an API error: the run must complete and persist state.
+    connector.current_state = {}
+    connector.thehive_api.case.find.return_value = []
+    connector.helper.api.work.initiate_work.return_value = "work-003"
+
+    connector.process_logic("case", "last_case_date", MagicMock())
+
+    connector.helper.set_state.assert_called_once()
+
+
+def test_process_logic_empty_alert_results_do_not_raise(connector):
+    connector.current_state = {}
+    connector.thehive_api.alert.find.return_value = []
+    connector.helper.api.work.initiate_work.return_value = "work-004"
+
+    connector.process_logic("alert", "last_alert_date", MagicMock())
+
+    connector.helper.set_state.assert_called_once()
+
+
+def test_process_logic_non_list_case_response_raises(connector):
+    connector.current_state = {}
+    connector.thehive_api.case.find.return_value = {
+        "message": "bad request",
+        "type": "error",
+    }
+
+    with pytest.raises(Exception):
+        connector.process_logic("case", "last_case_date", MagicMock())
 
 
 # ---------------------------------------------------------------------------

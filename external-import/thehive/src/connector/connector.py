@@ -16,7 +16,6 @@ from connector.hive_observable_transform import (
 )
 from connector.settings import ConnectorSettings
 from connector.utils import format_datetime
-from dateutil.parser import parse
 from pycti import (
     CaseIncident,
     CustomObjectCaseIncident,
@@ -48,9 +47,9 @@ class TheHive:
         self.thehive_organization_name = config.thehive.organization_name
 
         if config.thehive.import_from_date:
-            self.thehive_import_from_date = parse(
-                config.thehive.import_from_date
-            ).timestamp()
+            # Settings already deliver a datetime (DatetimeFromIsoString);
+            # feeding it to dateutil.parser.parse() raises TypeError.
+            self.thehive_import_from_date = config.thehive.import_from_date.timestamp()
         else:
             self.thehive_import_from_date = time.time()
 
@@ -405,7 +404,9 @@ class TheHive:
                 sortby=Asc("_updatedAt"),
                 paginate=Paginate(start=0, end=100),
             )
-            if not items:
+            # An empty list is a normal result (no new items since last run);
+            # not_found_items only handles non-list error payloads.
+            if not isinstance(items, list):
                 self.not_found_items(items, type)
         elif type == "alert":
             items: list["OutputAlert"] = self.thehive_api.alert.find(
@@ -413,7 +414,7 @@ class TheHive:
                 sortby=Asc("_updatedAt"),
                 paginate=Paginate(start=0, end=100),
             )
-            if not items:
+            if not isinstance(items, list):
                 self.not_found_items(items, type)
         else:
             raise ValueError(f"Unsupported type in process_logic: {type}")
@@ -588,11 +589,25 @@ class TheHive:
 
     def process_comments(self, case, stix_case):
         """Function to process all comments within a case."""
-        case_comments = self.thehive_api.case.find_comments(
-            case_id=case.get("_id"),
-            sortby=Asc("_createdAt"),
-            paginate=Paginate(start=0, end=10),
-        )
+        try:
+            case_comments = self.thehive_api.case.find_comments(
+                case_id=case.get("_id"),
+                sortby=Asc("_createdAt"),
+                paginate=Paginate(start=0, end=10),
+            )
+        except Exception as e:
+            # TheHive 4 has no case comments (its query API rejects the
+            # "comments" query name); a failed comment fetch must not abort
+            # the whole case import.
+            self.helper.connector_logger.warning(
+                "Could not fetch comments for case; importing it without comments",
+                meta={
+                    "case_id": case.get("_id"),
+                    "case_title": case.get("title"),
+                    "error": str(e),
+                },
+            )
+            return []
         self.helper.connector_logger.info(
             f"Processing {len(case_comments)} comments for case: {case.get('title')}"
         )
@@ -621,7 +636,18 @@ class TheHive:
     def process_attachments(self, case, stix_case):
         """Downloading attachments and creating STIX Artifacts objects + OpenCTI files."""
         case_id = case.get("_id")
-        attachments = self.thehive_api.case.find_attachments(case_id=case_id)
+        try:
+            attachments = self.thehive_api.case.find_attachments(case_id=case_id)
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "Could not fetch attachments for case; importing it without attachments",
+                meta={
+                    "case_id": case_id,
+                    "case_title": case.get("title"),
+                    "error": str(e),
+                },
+            )
+            return [], []
         self.helper.connector_logger.info(
             f"Processing {len(attachments)} attachments for case: {case.get('title')}"
         )
