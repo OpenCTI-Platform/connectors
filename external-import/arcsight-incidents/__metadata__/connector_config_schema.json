@@ -20,7 +20,8 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [],
+      "description": "The scope of the connector",
       "items": {
         "type": "string"
       },
@@ -94,7 +95,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "ARCSIGHT_INCIDENTS_API_BASE_URL",
     "ARCSIGHT_INCIDENTS_USERNAME",
     "ARCSIGHT_INCIDENTS_PASSWORD"

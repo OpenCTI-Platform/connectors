@@ -24,6 +24,16 @@ on:
         required: false
         type: boolean
         default: true
+      dockerfile:
+        description: "Override Dockerfile path (e.g. 'Dockerfile_ubi9'). Defaults to per-connector Dockerfile when empty."
+        required: false
+        type: string
+        default: ""
+      variant:
+        description: "Build variant (e.g. 'ubi9'). Affects cache keys, OCI labels, and auto-generates build-args for shared Dockerfiles."
+        required: false
+        type: string
+        default: ""
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -56,7 +66,8 @@ jobs:
             .github
             shared
             connectors-sdk
-          sparse-checkout-cone-mode: true
+            ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
+          sparse-checkout-cone-mode: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
@@ -81,13 +92,15 @@ jobs:
         with:
           connector_path: ${{ matrix.path }}
           connector_name: ${{ matrix.name }}
-          fips: ${{ matrix.fips }}
+          fips: ${{ matrix.fips || 'false' }}
           image_tags: ${{ inputs.image_tags }}
           build_mode: ${{ inputs.build_mode }}
           platforms: linux/amd64
           tag_suffix: "-amd64"
           push: ${{ inputs.push }}
           digests_dir: /tmp/digests
+          dockerfile: ${{ inputs.dockerfile }}
+          variant: ${{ inputs.variant }}
 
       - name: Upload digest
         if: inputs.push
@@ -116,7 +129,8 @@ jobs:
             .github
             shared
             connectors-sdk
-          sparse-checkout-cone-mode: true
+            ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
+          sparse-checkout-cone-mode: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
@@ -141,13 +155,15 @@ jobs:
         with:
           connector_path: ${{ matrix.path }}
           connector_name: ${{ matrix.name }}
-          fips: ${{ matrix.fips }}
+          fips: ${{ matrix.fips || 'false' }}
           image_tags: ${{ inputs.image_tags }}
           build_mode: ${{ inputs.build_mode }}
           platforms: linux/arm64
           tag_suffix: "-arm64"
           push: ${{ inputs.push }}
           digests_dir: /tmp/digests
+          dockerfile: ${{ inputs.dockerfile }}
+          variant: ${{ inputs.variant }}
 
       - name: Upload digest
         if: inputs.push
