@@ -52,6 +52,9 @@
     },
     "CITALID_CUSTOMER_SUB_DOMAIN_URL": {
       "description": "URL of your Citalid instance (customer subdomain).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "CITALID_USER": {

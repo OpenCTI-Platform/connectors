@@ -14,7 +14,7 @@ class Citalid:
         self.helper = helper
 
         # Config vars (no get_config_variable calls; rely on validated settings models)
-        self.citalid_customer_sub_domain_url = (
+        self.citalid_customer_sub_domain_url = str(
             self.config.citalid.customer_sub_domain_url
         )
         self.citalid_user = self.config.citalid.user

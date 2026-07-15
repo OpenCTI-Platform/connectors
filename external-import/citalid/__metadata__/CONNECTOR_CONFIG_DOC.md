@@ -8,7 +8,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
-| CITALID_CUSTOMER_SUB_DOMAIN_URL | `string` | ✅ | string |  | URL of your Citalid instance (customer subdomain). |
+| CITALID_CUSTOMER_SUB_DOMAIN_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | URL of your Citalid instance (customer subdomain). |
 | CITALID_USER | `string` | ✅ | string |  | Username with access to the Citalid instance. |
 | CITALID_PASSWORD | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Password for the Citalid user. |
 | CITALID_INTERVAL | `integer` | ✅ | integer |  | Polling interval in hours between connector runs. |

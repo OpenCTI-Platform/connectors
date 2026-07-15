@@ -38,7 +38,7 @@ class CitalidConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `CitalidConnector`.
     """
 
-    customer_sub_domain_url: str = Field(
+    customer_sub_domain_url: HttpUrl = Field(
         description="URL of your Citalid instance (customer subdomain).",
     )
     user: str = Field(
