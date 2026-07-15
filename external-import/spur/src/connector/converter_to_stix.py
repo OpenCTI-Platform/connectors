@@ -210,13 +210,13 @@ class ConverterToStix:  # pylint: disable=too-few-public-methods
                     custom_properties=custom,
                 )
             self.helper.connector_logger.warning(
-                "[SPUR] Unrecognised IP value — skipping", {"ip": ip}
+                "[SPUR] Unrecognised IP value — skipping", meta={"ip": ip}
             )
             return None
         except Exception as err:
             self.helper.connector_logger.error(
                 "[SPUR] Failed to create IP observable",
-                {"ip": ip, "error": str(err)},
+                meta={"ip": ip, "error": str(err)},
             )
             return None
 

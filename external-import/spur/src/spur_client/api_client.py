@@ -16,14 +16,16 @@ class SpurClient:  # pylint: disable=too-few-public-methods
 
     def stream_feed(self, feed_url: str) -> Iterator[dict]:
         """Stream a gzipped NDJSON Spur feed, yielding one IP Context dict per line."""
-        self.helper.connector_logger.info("[SPUR] Downloading feed", {"url": feed_url})
+        self.helper.connector_logger.info(
+            "[SPUR] Downloading feed", meta={"url": feed_url}
+        )
         try:
             response = self.session.get(feed_url, stream=True, timeout=300)
             response.raise_for_status()
         except requests.RequestException as err:
             self.helper.connector_logger.error(
                 "[SPUR] Failed to download feed",
-                {"url": feed_url, "error": str(err)},
+                meta={"url": feed_url, "error": str(err)},
             )
             return
 
@@ -38,10 +40,10 @@ class SpurClient:  # pylint: disable=too-few-public-methods
                     except json.JSONDecodeError as err:
                         self.helper.connector_logger.warning(
                             "[SPUR] Skipping malformed JSON line",
-                            {"error": str(err)},
+                            meta={"error": str(err)},
                         )
         except Exception as err:
             self.helper.connector_logger.error(
                 "[SPUR] Error reading feed stream",
-                {"url": feed_url, "error": str(err)},
+                meta={"url": feed_url, "error": str(err)},
             )

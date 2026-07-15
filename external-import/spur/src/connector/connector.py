@@ -38,7 +38,7 @@ class SpurConnector:
 
         for feed_url in self.config.spur.feed_urls:
             self.helper.connector_logger.info(
-                "[SPUR] Processing feed", {"url": feed_url}
+                "[SPUR] Processing feed", meta={"url": feed_url}
             )
             for record in self.client.stream_feed(feed_url):
                 objects = self.converter.convert_ip_context(record)
@@ -50,18 +50,18 @@ class SpurConnector:
                     batch = []
                     self.helper.connector_logger.info(
                         "[SPUR] Flushed batch",
-                        {"records_processed": record_count},
+                        meta={"records_processed": record_count},
                     )
 
         self._flush_batch(batch, work_id)
         self.helper.connector_logger.info(
-            "[SPUR] Feed import complete", {"total_records": record_count}
+            "[SPUR] Feed import complete", meta={"total_records": record_count}
         )
 
     def process_message(self) -> None:
         self.helper.connector_logger.info(
             "[SPUR] Starting connector run",
-            {"connector_name": self.helper.connect_name},
+            meta={"connector_name": self.helper.connect_name},
         )
 
         try:
@@ -70,7 +70,7 @@ class SpurConnector:
 
             if "last_run" in current_state:
                 self.helper.connector_logger.info(
-                    "[SPUR] Last run", {"last_run": current_state["last_run"]}
+                    "[SPUR] Last run", meta={"last_run": current_state["last_run"]}
                 )
             else:
                 self.helper.connector_logger.info("[SPUR] First run")
@@ -94,7 +94,7 @@ class SpurConnector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(
-                "[SPUR] Connector error", {"error": str(err)}
+                "[SPUR] Connector error", meta={"error": str(err)}
             )
             raise
 
