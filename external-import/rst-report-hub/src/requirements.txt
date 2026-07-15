@@ -1,5 +1,4 @@
-pycti==6.7.19
+pycti==7.260710.0
 python-dateutil==2.9.0.post0
-pytz==2025.2
 pydantic >=2.8.2, <3
-./connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
