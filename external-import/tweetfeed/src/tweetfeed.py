@@ -114,7 +114,6 @@ class TweetFeed:
             externalReferences=[external_reference_org["id"]],
             contact_information="'TWITTER: https://twitter.com/0xDanielLopez'",
         )
-        self.update_existing_data = self.config.tweetfeed.update_existing_data
         self.score = self.config.tweetfeed.confidence_level
         self.data = {}
 
