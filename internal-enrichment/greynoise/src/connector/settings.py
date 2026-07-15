@@ -23,7 +23,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=[],
+        default=["IPv4-Addr"],
     )
 
 

@@ -13,7 +13,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | GREYNOISE_SIGHTING_NOT_SEEN | `boolean` | ✅ | boolean |  | Create sighting with count=0 when IP not seen. |
 | GREYNOISE_NO_SIGHTINGS | `boolean` | ✅ | boolean |  | Skip any sighting creations. |
 | CONNECTOR_NAME | `string` |  | string | `"Greynoise"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `[]` | The scope of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string | `["IPv4-Addr"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
