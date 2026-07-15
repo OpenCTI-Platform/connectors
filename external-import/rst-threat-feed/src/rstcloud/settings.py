@@ -1,9 +1,12 @@
 from datetime import timedelta
+from typing import Optional
+
 from pydantic import Field, SecretStr
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 
@@ -128,9 +131,11 @@ class RstThreatFeedConfig(BaseConfigModel):
         description="If true, create named vulnerabilities as separate objects, otherwise prefer CVE numbers.",
         default=True,
     )
-    create_mitre_ttp: bool = Field(
+    create_mitre_ttp: Optional[bool] = DeprecatedField(
+        default=None,
         description="(Deprecated) Use create_mitre_ttps instead. Kept for backward compatibility.",
-        deprecated=True,
+        deprecated="Use 'create_mitre_ttps' instead.",
+        new_namespaced_var="create_mitre_ttps",
     )
     create_custom_ttps: bool = Field(
         description="If true, create custom attack-pattern objects for named techniques/attacks not present in MITRE ATT&CK.",
