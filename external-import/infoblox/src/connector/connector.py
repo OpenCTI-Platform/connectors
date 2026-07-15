@@ -1,83 +1,37 @@
 import json
-import os
 import sys
-import time
-import traceback
 from datetime import datetime, timezone
 
 import requests
 import stix2
-import yaml
+from connector.settings import ConnectorSettings
 from pycti import (
     Indicator,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
 )
 
 
 class Infoblox:
     """Infoblox connector"""
 
-    def __init__(self):
-        """Initializer"""
-
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config_file_path = config_file_path.replace("\\", "/")
-        config = {}
-        if os.path.isfile(config_file_path):
-            with open(config_file_path, encoding="utf-8") as f:
-                config = yaml.load(f, Loader=yaml.FullLoader)
-        self.helper = OpenCTIConnectorHelper(config)
-
-        # Extra config
-        self.infoblox_api_key = get_config_variable(
-            "INFOBLOX_API_KEY",
-            ["infoblox", "api_key"],
-            config,
-        )
-        self.infoblox_interval = get_config_variable(
-            "INFOBLOX_INTERVAL",
-            ["infoblox", "interval"],
-            config,
-            isNumber=True,
-            default=12,
-        )
-        self.infoblox_ioc_limit = get_config_variable(
-            "INFOBLOX_IOC_LIMIT",
-            ["infoblox", "ioc_limit"],
-            config,
-            default="10000",
-        )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-            default=False,
-        )
-        self.infoblox_url = get_config_variable(
-            "INFOBLOX_URL",
-            ["infoblox", "url"],
-            config,
-            default="https://csp.infoblox.com/tide/api/data/threats",
-        )
-        self.infoblox_marking = get_config_variable(
-            "INFOBLOX_MARKING",
-            ["infoblox", "marking_definition"],
-            config,
-            default="TLP:AMBER+STRICT",
-        )
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        """Initialize the connector with its configuration and helper."""
+        self.config = config
+        self.helper = helper
+        self.marking = None
+        self.set_marking()
 
     def set_marking(self):
-        if self.infoblox_marking == "TLP:WHITE" or self.infoblox_marking == "TLP:CLEAR":
+        marking_definition = self.config.infoblox.marking_definition
+        if marking_definition == "TLP:WHITE" or marking_definition == "TLP:CLEAR":
             marking = stix2.TLP_WHITE
-        elif self.infoblox_marking == "TLP:GREEN":
+        elif marking_definition == "TLP:GREEN":
             marking = stix2.TLP_GREEN
-        elif self.infoblox_marking == "TLP:AMBER":
+        elif marking_definition == "TLP:AMBER":
             marking = stix2.TLP_AMBER
-        elif self.infoblox_marking == "TLP:AMBER+STRICT":
+        elif marking_definition == "TLP:AMBER+STRICT":
             marking = stix2.MarkingDefinition(
                 id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
                 definition_type="statement",
@@ -86,7 +40,7 @@ class Infoblox:
                 x_opencti_definition_type="TLP",
                 x_opencti_definition="TLP:AMBER+STRICT",
             )
-        elif self.infoblox_marking == "TLP:RED":
+        elif marking_definition == "TLP:RED":
             marking = stix2.TLP_RED
         else:
             marking = stix2.MarkingDefinition(
@@ -98,16 +52,28 @@ class Infoblox:
                 x_opencti_definition="TLP:AMBER+STRICT",
             )
 
-        self.infoblox_marking = marking
+        self.marking = marking
 
     def infoblox_api_get(self):
         try:
-            headers = {"Authorization": "Token {}".format(self.infoblox_api_key)}
+            headers = {
+                "Authorization": "Token {}".format(
+                    self.config.infoblox.api_key.get_secret_value()
+                )
+            }
+            # The lookup period (in hours) is derived from the connector's duration period.
+            period_hours = (
+                int(self.config.connector.duration_period.total_seconds() // 3600) or 1
+            )
             ioc_types = ["ip", "url", "host"]
             infoblox_result = []
             for ioc_type in ioc_types:
 
-                url = f"{self.infoblox_url}?type={ioc_type}&period={self.infoblox_interval}h&profile=IID&dga=false&up=true&rlimit={self.infoblox_ioc_limit}"
+                url = (
+                    f"{self.config.infoblox.url.rstrip('/')}?type={ioc_type}"
+                    f"&period={period_hours}h&profile=IID&dga=false&up=true&"
+                    f"rlimit={self.config.infoblox.ioc_limit}"
+                )
                 response = requests.get(
                     url, headers=headers, verify=True, timeout=(80000, 80000)
                 )
@@ -137,7 +103,7 @@ class Infoblox:
             name = threat["url"]
             observable = stix2.URL(
                 value=name,
-                object_marking_refs=[self.infoblox_marking],
+                object_marking_refs=[self.marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_description": description,
@@ -152,7 +118,7 @@ class Infoblox:
             name = threat["domain"]
             observable = stix2.DomainName(
                 value=name,
-                object_marking_refs=[self.infoblox_marking],
+                object_marking_refs=[self.marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_description": description,
@@ -167,7 +133,7 @@ class Infoblox:
             name = threat["ip"]
             observable = stix2.IPv4Address(
                 value=name,
-                object_marking_refs=[self.infoblox_marking],
+                object_marking_refs=[self.marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_description": description,
@@ -198,7 +164,7 @@ class Infoblox:
                 ).replace(tzinfo=timezone.utc),
                 labels=[threat["class"], threat["property"]],
                 confidence=threat["confidence"],
-                object_marking_refs=[self.infoblox_marking],
+                object_marking_refs=[self.marking],
                 custom_properties={
                     "x_opencti_score": threat["threat_level"],
                     "x_opencti_main_observable_type": observable_type,
@@ -215,7 +181,7 @@ class Infoblox:
                 source_ref=indicator["id"],
                 target_ref=observable["id"],
                 created_by_ref=identity_id,
-                object_marking_refs=[self.infoblox_marking],
+                object_marking_refs=[self.marking],
             )
 
             stix_objects.append(relationship)
@@ -246,7 +212,7 @@ class Infoblox:
             object_marking_refs=stix2.TLP_WHITE,
         )
 
-        stix_objects = [identity, self.infoblox_marking]
+        stix_objects = [identity, self.marking]
         all_threats = urls + ips + domains
         for threat in all_threats:
             stix_object = self.create_stix_object(threat, identity_id)
@@ -274,7 +240,7 @@ class Infoblox:
 
             stix_bundle_dict = json.dumps(stix_bundle_dict, indent=4)
             self.helper.send_stix2_bundle(
-                stix_bundle_dict, update=self.update_existing_data, work_id=work_id
+                stix_bundle_dict, update=False, work_id=work_id
             )
         except Exception as e:
             self.helper.connector_logger.error(str(e))
@@ -284,17 +250,21 @@ class Infoblox:
             self.helper.send_stix2_bundle(
                 serialized_bundle,
                 entities_types=self.helper.connect_scope,
-                update=self.update_existing_data,
+                update=False,
                 work_id=work_id,
             )
         except Exception as e:
             self.helper.connector_logger.error(f"Error while sending bundle: {e}")
 
-    def process_data(self):
+    def process_message(self) -> None:
+        """Connector main process to collect intelligence."""
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Starting connector...",
+            {"connector_name": self.helper.connect_name},
+        )
         try:
             self.helper.connector_logger.info("Synchronizing with Infoblox APIs...")
-            timestamp = int(time.time())
-            now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            now = datetime.now(tz=timezone.utc)
             friendly_name = "Infoblox run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
@@ -313,30 +283,18 @@ class Infoblox:
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
-            time.sleep(self.infoblox_interval)
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info("Connector stop")
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector stopped...",
+                {"connector_name": self.helper.connect_name},
+            )
             sys.exit(0)
-        except Exception as e:
-            self.helper.connector_logger.error(str(e))
+        except Exception as err:
+            self.helper.connector_logger.error(str(err))
 
-    def run(self):
-        self.helper.connector_logger.info("Fetching Infoblox datasets...")
-        self.set_marking()
-        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
-        if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
-            self.process_data()
-            self.helper.force_ping()
-        else:
-            while True:
-                self.process_data()
-                time.sleep(self.infoblox_interval * 60 * 60)
-
-
-if __name__ == "__main__":
-    try:
-        connector = Infoblox()
-        connector.run()
-    except Exception:
-        traceback.print_exc()
-        sys.exit(1)
+    def run(self) -> None:
+        """Run the main process encapsulated in the pycti scheduler."""
+        self.helper.schedule_iso(
+            message_callback=self.process_message,
+            duration_period=self.config.connector.duration_period,
+        )
