@@ -52,7 +52,7 @@ class DefenderApiHandler:
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
-        self.base_url = str(base_url)
+        self.base_url = str(base_url).rstrip("/")
         self.resource_path = resource_path
         self.action = action
         self.expired_after = expired_after
@@ -188,7 +188,9 @@ class DefenderApiHandler:
         Get Threat Intelligence Indicators from Defender.
         :return: List of Threat Intelligence Indicators if request is successful, None otherwise
         """
-        data = self._send_request("get", f"{self.base_url}{self.resource_path}")
+        data = self._send_request(
+            "get", f"{self.base_url}/{self.resource_path.lstrip('/')}"
+        )
         result = data["value"]
         while "@odata.nextLink" in data and data["@odata.nextLink"] is not None:
             data = self._send_request("get", data["@odata.nextLink"])
@@ -203,7 +205,7 @@ class DefenderApiHandler:
         """
         params = f"$filter=indicatorValue eq '{value}'"
         data = self._send_request(
-            "get", f"{self.base_url}{self.resource_path}", params=params
+            "get", f"{self.base_url}/{self.resource_path.lstrip('/')}", params=params
         )
         result = data["value"]
         while "@odata.nextLink" in data and data["@odata.nextLink"] is not None:
@@ -221,7 +223,7 @@ class DefenderApiHandler:
         request_body_observable = self._build_request_body(observable, defender_id)
         data = self._send_request(
             "post",
-            f"{self.base_url}{self.resource_path}",
+            f"{self.base_url}/{self.resource_path.lstrip('/')}",
             json=request_body_observable,
         )
         return data
@@ -240,7 +242,7 @@ class DefenderApiHandler:
 
         data = self._send_request(
             "post",
-            f"{self.base_url}{self.resource_path}/import",
+            f"{self.base_url}/{self.resource_path.strip('/')}/import",
             json=request_body,
         )
         return data
@@ -254,7 +256,7 @@ class DefenderApiHandler:
         request_body = {"IndicatorIds": indicators_ids}
         self._send_request(
             "post",
-            f"{self.base_url}{self.resource_path}/BatchDelete",
+            f"{self.base_url}/{self.resource_path.strip('/')}/BatchDelete",
             json=request_body,
         )
         return True
@@ -267,6 +269,6 @@ class DefenderApiHandler:
         """
         self._send_request(
             "delete",
-            f"{self.base_url}{self.resource_path}/{indicator_id}",
+            f"{self.base_url}/{self.resource_path.strip('/')}/{indicator_id}",
         )
         return True
