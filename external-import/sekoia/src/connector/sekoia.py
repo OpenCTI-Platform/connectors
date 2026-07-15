@@ -254,8 +254,6 @@ class SekoiaConnector(object):
                 continue
             try:
                 all_data = self._send_request(self.get_relationship(indicator_id))
-                if not all_data:
-                    continue
             except Exception as e:
                 self.helper.connector_logger.error(
                     "[ERROR] An error occurred while retrieving related entities for indicator",
@@ -414,14 +412,7 @@ class SekoiaConnector(object):
         items = []
         for chunk in self.chunks(ids, 40):
             url = url_callback(chunk)
-            try:
-                res = self._send_request(url)
-            except RequestException as e:
-                self.helper.connector_logger.error(
-                    "Request failed while retrieving items by ID, skipping chunk",
-                    {"url": url, "error": str(e)},
-                )
-                continue
+            res = self._send_request(url)
             if not res:
                 continue
             if "items" in res:
@@ -472,7 +463,7 @@ class SekoiaConnector(object):
                 self.helper.connector_logger.error(error)
             else:
                 self.helper.connector_logger.error(str(ex))
-            raise
+            return None
 
     def _load_data_sets(self):
         # Mapping between SEKOIA sectors/locations and OpenCTI ones
@@ -515,14 +506,7 @@ class SekoiaConnector(object):
                         if not os.path.splitext(file["file_name"])[1]:
                             file["file_name"] += ".pdf"
 
-                try:
-                    data = self._send_request(url, binary=True)
-                except RequestException as e:
-                    self.helper.connector_logger.error(
-                        "Request failed while downloading file, skipping",
-                        {"url": url, "error": str(e)},
-                    )
-                    continue
+                data = self._send_request(url, binary=True)
                 if data:
                     item["x_opencti_files"].append(
                         {
