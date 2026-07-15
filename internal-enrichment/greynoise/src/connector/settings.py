@@ -4,7 +4,7 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -32,7 +32,7 @@ class GreynoiseConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `GreynoiseConnector`.
     """
 
-    key: str = Field(
+    key: SecretStr = Field(
         description="The GreyNoise API key.",
     )
     max_tlp: str = Field(
@@ -43,6 +43,30 @@ class GreynoiseConfig(BaseConfigModel):
     )
     no_sightings: bool = Field(
         description="Skip any sighting creations.",
+    )
+    name: str = Field(
+        description="The name of the GreyNoise identity created in OpenCTI.",
+        default="GreyNoise Intelligence",
+    )
+    description: str = Field(
+        description="The description of the GreyNoise identity created in OpenCTI.",
+        default=(
+            "GreyNoise collects and analyzes untargeted, widespread, and "
+            "opportunistic scan and attack activity that reaches every server "
+            "directly connected to the Internet."
+        ),
+    )
+    indicator_score_malicious: int = Field(
+        description="The `x_opencti_score` value to set on indicators classified as malicious.",
+        default=75,
+    )
+    indicator_score_suspicious: int = Field(
+        description="The `x_opencti_score` value to set on indicators classified as suspicious.",
+        default=50,
+    )
+    indicator_score_benign: int = Field(
+        description="The `x_opencti_score` value to set on indicators classified as benign.",
+        default=20,
     )
 
 

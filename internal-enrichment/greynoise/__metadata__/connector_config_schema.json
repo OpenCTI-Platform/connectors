@@ -51,7 +51,9 @@
     },
     "GREYNOISE_KEY": {
       "description": "The GreyNoise API key.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "GREYNOISE_MAX_TLP": {
       "description": "Maximum TLP level for data to be sent to GreyNoise.",
@@ -64,6 +66,31 @@
     "GREYNOISE_NO_SIGHTINGS": {
       "description": "Skip any sighting creations.",
       "type": "boolean"
+    },
+    "GREYNOISE_NAME": {
+      "default": "GreyNoise Intelligence",
+      "description": "The name of the GreyNoise identity created in OpenCTI.",
+      "type": "string"
+    },
+    "GREYNOISE_DESCRIPTION": {
+      "default": "GreyNoise collects and analyzes untargeted, widespread, and opportunistic scan and attack activity that reaches every server directly connected to the Internet.",
+      "description": "The description of the GreyNoise identity created in OpenCTI.",
+      "type": "string"
+    },
+    "GREYNOISE_INDICATOR_SCORE_MALICIOUS": {
+      "default": 75,
+      "description": "The `x_opencti_score` value to set on indicators classified as malicious.",
+      "type": "integer"
+    },
+    "GREYNOISE_INDICATOR_SCORE_SUSPICIOUS": {
+      "default": 50,
+      "description": "The `x_opencti_score` value to set on indicators classified as suspicious.",
+      "type": "integer"
+    },
+    "GREYNOISE_INDICATOR_SCORE_BENIGN": {
+      "default": 20,
+      "description": "The `x_opencti_score` value to set on indicators classified as benign.",
+      "type": "integer"
     }
   },
   "required": [
