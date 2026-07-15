@@ -42,7 +42,7 @@ This connector consumes the TAXII "Observables" collection and imports it into O
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 7.260710.0
+- OpenCTI Platform >= 7.260715.0
 - A CTM360 ThreatCover TAXII 2.1 endpoint, API token and collection id
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
