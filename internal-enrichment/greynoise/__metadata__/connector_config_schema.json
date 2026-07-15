@@ -58,14 +58,25 @@
       "writeOnly": true
     },
     "GREYNOISE_MAX_TLP": {
+      "default": "TLP:AMBER",
       "description": "Maximum TLP level for data to be sent to GreyNoise.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     },
     "GREYNOISE_SIGHTING_NOT_SEEN": {
+      "default": false,
       "description": "Create sighting with count=0 when IP not seen.",
       "type": "boolean"
     },
     "GREYNOISE_NO_SIGHTINGS": {
+      "default": false,
       "description": "Skip any sighting creations.",
       "type": "boolean"
     },
@@ -98,10 +109,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "GREYNOISE_KEY",
-    "GREYNOISE_MAX_TLP",
-    "GREYNOISE_SIGHTING_NOT_SEEN",
-    "GREYNOISE_NO_SIGHTINGS"
+    "GREYNOISE_KEY"
   ],
   "additionalProperties": true
 }

@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -35,14 +37,24 @@ class GreynoiseConfig(BaseConfigModel):
     key: SecretStr = Field(
         description="The GreyNoise API key.",
     )
-    max_tlp: str = Field(
+    max_tlp: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
         description="Maximum TLP level for data to be sent to GreyNoise.",
+        default="TLP:AMBER",
     )
     sighting_not_seen: bool = Field(
         description="Create sighting with count=0 when IP not seen.",
+        default=False,
     )
     no_sightings: bool = Field(
         description="Skip any sighting creations.",
+        default=False,
     )
     name: str = Field(
         description="The name of the GreyNoise identity created in OpenCTI.",
