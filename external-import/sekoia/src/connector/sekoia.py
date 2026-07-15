@@ -204,9 +204,6 @@ class SekoiaConnector(object):
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
         self.helper.set_state({"last_cursor": cursor})
-        if len(items) < self.limit:
-            # We got the last results
-            return cursor
         return cursor
 
     def _clean_external_references_fields(self, items: List[Dict]):
