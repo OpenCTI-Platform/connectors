@@ -63,22 +63,9 @@
       "writeOnly": true
     },
     "COFENSE_THREATHQ_IMPORT_START_DATE": {
-      "anyOf": [
-        {
-          "format": "date",
-          "type": "string"
-        },
-        {
-          "format": "date-time",
-          "type": "string"
-        },
-        {
-          "format": "duration",
-          "type": "string"
-        }
-      ],
-      "default": "P30D",
-      "description": "Date from which data import should start (YYYY-MM-DD, full datetime, or ISO 8601 duration like P30D)."
+      "description": "Date from which data import should start (ISO 8601 datetime or duration, e.g. '2023-10-01' or 'P30D'). Default: 30 days ago.",
+      "format": "date-time",
+      "type": "string"
     },
     "COFENSE_THREATHQ_API_BASE_URL": {
       "default": "https://www.threathq.com/apiv1/",

@@ -26,7 +26,7 @@ cofense_threathq:
   token_password: 'ChangeMe'
 
   # Cofense-ThreatHQ definition parameters - OPTIONAL
-  import_start_date: 'ChangeMe' # Format 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS+HH:MM' or ISO 8601 duration - Default: "P30D"
+  import_start_date: 'ChangeMe' # ISO 8601 datetime or duration (e.g. '2023-10-01' or 'P30D') - Leave empty for default (30 days ago)
   api_base_url: 'ChangeMe' # Default: "https://www.threathq.com/apiv1/"
   api_leaky_bucket_rate: ChangeMe # Default: 10
   api_leaky_bucket_capacity: ChangeMe # Default: 10

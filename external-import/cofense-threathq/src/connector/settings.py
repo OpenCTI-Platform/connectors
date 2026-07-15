@@ -1,13 +1,14 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
     ListFromString,
 )
-from pydantic import AwareDatetime, Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -45,9 +46,10 @@ class CofenseThreathqConfig(BaseConfigModel):
     token_password: SecretStr = Field(
         description="Token password for Cofense ThreatHQ API authentication.",
     )
-    import_start_date: date | AwareDatetime | timedelta = Field(
-        default=timedelta(days=30),
-        description="Date from which data import should start (YYYY-MM-DD, full datetime, or ISO 8601 duration like P30D).",
+    import_start_date: DatetimeFromIsoString = Field(
+        # `default_factory` is used to set a dynamic default value (datetime) at runtime
+        default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=30),
+        description="Date from which data import should start (ISO 8601 datetime or duration, e.g. '2023-10-01' or 'P30D'). Default: 30 days ago.",
     )
     api_base_url: str = Field(
         default="https://www.threathq.com/apiv1/",
@@ -95,16 +97,6 @@ class CofenseThreathqConfig(BaseConfigModel):
     @classmethod
     def _lowercase_tlp_level(cls, value: str) -> str:
         return value.lower() if isinstance(value, str) else value
-
-    @field_validator("import_start_date", mode="after")
-    @classmethod
-    def _convert_import_start_date_relative_to_utc_datetime(
-        cls, value: date | AwareDatetime | timedelta
-    ) -> date | AwareDatetime | datetime:
-        """Allow relative import_start_date values (timedelta)."""
-        if isinstance(value, timedelta):
-            return datetime.now(tz=timezone.utc) - value
-        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):
