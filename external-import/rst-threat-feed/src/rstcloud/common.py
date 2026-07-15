@@ -1,8 +1,4 @@
 import datetime
-from rstcloud.common import ThreatTypes
-from rstcloud.common import FeedType
-from rstcloud.connector import RSTThreatFeed
-from rstcloud.settings import ConnectorSettings
 import json
 import os
 import re
@@ -26,10 +22,30 @@ __all__ = [
     "ThreatTypes",
     "feed_converter",
     "MitreTtpDownloader",
-    "ConnectorSettings",
-    "RSTThreatFeed",
 ]
+
 from rstcloud.MitreTtpDownloader import MitreTtpDownloader
+
+
+class FeedType:
+    IP = "ip"
+    DOMAIN = "domain"
+    URL = "url"
+    HASH = "hash"
+
+
+class ThreatTypes:
+    MALWARE = "malware"
+    GROUP = "intrusion-set"
+    CAMPAIGN = "campaign"
+    TOOL = "tool"
+    TTP = "attack-pattern"
+    RANSOMWARE = "malware_ransomware"
+    RAT = "malware_rat"
+    BACKDOOR = "malware_backdoor"
+    EXPLOIT = "malware_exploit"
+    CRYPTOMINER = "malware_miner"
+    VULNERABILITY = "vulnerability"
 
 
 def custom_mapping_industry_sector(input_name):
