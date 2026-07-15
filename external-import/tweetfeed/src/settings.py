@@ -58,11 +58,11 @@ class TweetFeedConfig(BaseConfigModel):
     )
     org_name: Optional[str] = Field(
         description="Name of the author organization created in OpenCTI.",
-        default=None,
+        default="Tweetfeed",
     )
     org_description: Optional[str] = Field(
         description="Description of the author organization created in OpenCTI.",
-        default=None,
+        default="Tweetfeed, a connector to import IOC from Twitter.",
     )
     days_back_in_time: int = Field(
         description="Number of days to retrieve data back in time.",
