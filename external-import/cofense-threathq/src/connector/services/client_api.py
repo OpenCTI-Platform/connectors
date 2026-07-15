@@ -18,8 +18,8 @@ class CofenseThreatHQClient:
         self.import_report_pdf = self.config.cofense_threathq.import_report_pdf
         self.import_start_date = self.config.cofense_threathq.import_start_date
         self.auth = BasicAuth(
-            login=self.config.cofense_threathq.token_user,
-            password=self.config.cofense_threathq.token_password,
+            login=self.config.cofense_threathq.token_user.get_secret_value(),
+            password=self.config.cofense_threathq.token_password.get_secret_value(),
         )
         self.rate_limiter = Limiter(
             rate=self.config.cofense_threathq.api_leaky_bucket_rate,

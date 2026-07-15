@@ -11,7 +11,7 @@ from connector.services import (
     DateTimeFormat,
     Utils,
 )
-from connector.models import ConfigLoader
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from tenacity import RetryError
 
@@ -52,7 +52,7 @@ class CofenseThreatHQ:
 
     """
 
-    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """Initialize the Connector with necessary configurations."""
         self.config = config
         self.helper = helper
