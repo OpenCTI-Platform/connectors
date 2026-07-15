@@ -70,6 +70,9 @@
     "COFENSE_THREATHQ_API_BASE_URL": {
       "default": "https://www.threathq.com/apiv1/",
       "description": "Cofense ThreatHQ API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "COFENSE_THREATHQ_API_LEAKY_BUCKET_RATE": {

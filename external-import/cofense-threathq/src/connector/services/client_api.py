@@ -11,7 +11,7 @@ class CofenseThreatHQClient:
         self.helper = helper
         self.config = config
 
-        self.api_base_url = self.config.cofense_threathq.api_base_url
+        self.api_base_url = str(self.config.cofense_threathq.api_base_url)
         self.api_retry = self.config.cofense_threathq.api_retry
         self.api_backoff = self.config.cofense_threathq.api_backoff.total_seconds()
         self.impact_to_exclude = self.config.cofense_threathq.impact_to_exclude

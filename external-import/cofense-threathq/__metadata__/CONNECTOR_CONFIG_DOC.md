@@ -16,7 +16,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector. |
 | COFENSE_THREATHQ_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Date from which data import should start (ISO 8601 datetime or duration, e.g. '2023-10-01' or 'P30D'). Default: 30 days ago. |
-| COFENSE_THREATHQ_API_BASE_URL | `string` |  | string | `"https://www.threathq.com/apiv1/"` | Cofense ThreatHQ API base URL. |
+| COFENSE_THREATHQ_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://www.threathq.com/apiv1/"` | Cofense ThreatHQ API base URL. |
 | COFENSE_THREATHQ_API_LEAKY_BUCKET_RATE | `integer` |  | integer | `10` | Leaky bucket rate per second for API rate limiting. |
 | COFENSE_THREATHQ_API_LEAKY_BUCKET_CAPACITY | `integer` |  | integer | `10` | Leaky bucket capacity for API rate limiting. |
 | COFENSE_THREATHQ_API_RETRY | `integer` |  | integer | `5` | Maximum number of retry attempts in case of API failure. |

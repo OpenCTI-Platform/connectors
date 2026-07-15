@@ -8,7 +8,7 @@ from connectors_sdk import (
     DatetimeFromIsoString,
     ListFromString,
 )
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, HttpUrl, SecretStr, field_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -51,8 +51,8 @@ class CofenseThreathqConfig(BaseConfigModel):
         default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=30),
         description="Date from which data import should start (ISO 8601 datetime or duration, e.g. '2023-10-01' or 'P30D'). Default: 30 days ago.",
     )
-    api_base_url: str = Field(
-        default="https://www.threathq.com/apiv1/",
+    api_base_url: HttpUrl = Field(
+        default=HttpUrl("https://www.threathq.com/apiv1/"),
         description="Cofense ThreatHQ API base URL.",
     )
     api_leaky_bucket_rate: int = Field(
