@@ -230,7 +230,7 @@ class ConverterToStix:
             "x_opencti_description": description,
             "x_opencti_score": score,
             "x_opencti_labels": labels,
-            "x_opencti_create_indicator": self.config.flowtriq.create_indicator,
+            "x_opencti_create_indicator": False,
         }
 
         # Create observable
@@ -350,7 +350,7 @@ class ConverterToStix:
             "x_opencti_description": source_desc,
             "x_opencti_score": score,
             "x_opencti_labels": labels + ["ddos:source"],
-            "x_opencti_create_indicator": self.config.flowtriq.create_indicator,
+            "x_opencti_create_indicator": False,
         }
 
         if self._is_ipv6(source_ip):
