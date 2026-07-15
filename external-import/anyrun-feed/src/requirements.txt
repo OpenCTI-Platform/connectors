@@ -1,4 +1,4 @@
-pycti==7.260706.0
+pycti==7.260710.0
 requests==2.33.0
 anyrun-sdk==1.14.12
 pydantic>=2.8.2,<3

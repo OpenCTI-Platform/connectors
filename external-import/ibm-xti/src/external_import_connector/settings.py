@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl
 
@@ -21,6 +22,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(minutes=5),
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector",
+        default=[],
     )
 
 

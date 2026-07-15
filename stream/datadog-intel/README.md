@@ -33,33 +33,15 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### OpenCTI environment variables
 
-| Parameter | config.yml | Docker env var | Mandatory | Description |
-|---|---|---|---|---|
-| OpenCTI URL | `opencti.url` | `OPENCTI_URL` | Yes | URL of the OpenCTI platform |
-| OpenCTI Token | `opencti.token` | `OPENCTI_TOKEN` | Yes | Admin token for the OpenCTI platform |
 
-### Base connector environment variables
+## Configuration variables
 
-| Parameter | config.yml | Docker env var | Default | Mandatory | Description |
-|---|---|---|---|---|---|
-| Connector ID | `connector.id` | `CONNECTOR_ID` | — | Yes | Unique UUIDv4 for this connector instance |
-| Connector Name | `connector.name` | `CONNECTOR_NAME` | `DatadogIntelConnector` | No | Display name in OpenCTI |
-| Connector Scope | `connector.scope` | `CONNECTOR_SCOPE` | — | Yes | Set to `indicator` |
-| Log Level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `error` | No | `debug`, `info`, `warn`, or `error` |
-| Live Stream ID | `connector.live_stream_id` | `CONNECTOR_LIVE_STREAM_ID` | `live` | Yes | ID of the dedicated stream created in the OpenCTI UI |
-| Listen Deletes | `connector.live_stream_listen_delete` | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` | `true` | No | Forward delete events to Datadog |
-| No Dependencies | `connector.live_stream_no_dependencies` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `true` | No | Only forward the indicator itself, not related entities |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-Listening to the platform-wide `live` stream is not recommended, as this is considered bad practice. Create a dedicated OpenCTI stream for Datadog Threat Intel and set `connector.live_stream_id` / `CONNECTOR_LIVE_STREAM_ID` to that stream ID. The sample value `ChangeMe` is only a placeholder and must be replaced.
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-### Connector extra parameters environment variables
-
-| Parameter | config.yml | Docker env var | Default | Mandatory | Description |
-|---|---|---|---|---|---|
-| API Base URL | `datadog_intel.integration_api_url` | `DATADOG_INTEL_INTEGRATION_API_URL` | — | Yes | If your Datadog site is `https://app.datadoghq.com`, use `https://api.datadoghq.com/api/v2/security/threat-intel-feed`. |
-| Indicator Types | `datadog_intel.indicator_type` | `DATADOG_INTEL_INDICATOR_TYPE` | `["ip_address"]` | No | List of indicator types to forward. Accepted values: `ip_address`, `domain`, `sha256`. In config.yml use a YAML list; via env var use a JSON array (e.g. `["ip_address","domain"]`) |
-| Datadog API Key | `datadog_intel.dd_api_key` | `DATADOG_INTEL_DD_API_KEY` | — | Yes | Datadog API Key. Sent on every request as the `dd-api-key` header to authenticate against `integration_api_url` |
-| Datadog Application Key | `datadog_intel.dd_application_key` | `DATADOG_INTEL_DD_APPLICATION_KEY` | — | Yes | Datadog Application Key. Sent on every request as the `dd-application-key` header to authenticate against `integration_api_url` |
+### Datadog authentication
 
 Datadog authentication for this endpoint uses [API Keys](https://app.datadoghq.com/organization-settings/api-keys) and a value sent in the `dd-application-key` header. You can use [Application Keys](https://app.datadoghq.com/organization-settings/application-keys) for that header; when you do, the key must include the `reference_table_write` scope or requests fail with `403 Forbidden`. Instead of using Application Keys, you can use [Personal Access Tokens](https://app.datadoghq.com/organization-settings/access-tokens). Personal Access Tokens are scoped and short-lived, so access is limited to the permissions you need and expires automatically.
 
@@ -72,7 +54,8 @@ Before starting the connector, replace `CONNECTOR_LIVE_STREAM_ID=live` in `docke
 Set the required environment variables in a `.env` file alongside `docker-compose.yml`:
 
 ```shell
-OPENCTI_TOKEN=<your-opencti-token>
+OPENCTI_TOKEN=<your-opencti-token>      # - DATADOG_INTEL_INDICATOR_TYPE=ip_address
+
 CONNECTOR_ID=<uuidv4>
 DATADOG_INTEL_INTEGRATION_API_URL=<datadog-endpoint>
 DATADOG_INTEL_DD_API_KEY=<your-datadog-api-key>

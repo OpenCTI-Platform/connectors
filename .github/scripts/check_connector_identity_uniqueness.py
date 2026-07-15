@@ -10,13 +10,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-CONNECTOR_TYPE_DIRS = [
-    "external-import",
-    "internal-enrichment",
-    "internal-export-file",
-    "internal-import-file",
-    "stream",
-]
+import _matrix_common as common
+
+CONNECTOR_TYPE_DIRS = common.CONNECTOR_TYPE_DIRS
 
 FIELDS_TO_CHECK = ["slug", "container_image"]
 

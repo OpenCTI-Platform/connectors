@@ -89,6 +89,11 @@ class Misp:
         even if the object-level timestamp is recent: the converter requires at
         least one attribute per object.
 
+        When ALL attributes are filtered out, the first original attribute is
+        kept to ensure the converter can produce a valid report with at least
+        one object_ref (the resulting observable already exists in OpenCTI from
+        a previous run, so the upsert is a no-op).
+
         Args:
             event: The MISP event to filter (modified in place).
             since_timestamp: Unix timestamp; only attributes with timestamp >= this value are kept.
@@ -98,6 +103,16 @@ class Misp:
         """
         total_before = 0
         total_after = 0
+
+        # Save the first available attribute before filtering, as a fallback
+        first_attribute: "ExtendedAttributeItem | None" = None
+        if event.Event.Attribute:
+            first_attribute = event.Event.Attribute[0]
+        elif event.Event.Object:
+            for obj in event.Event.Object:
+                if obj.Attribute:
+                    first_attribute = obj.Attribute[0]
+                    break
 
         # Filter top-level event attributes
         if event.Event.Attribute:
@@ -130,6 +145,19 @@ class Misp:
                         object.__setattr__(obj, "Attribute", filtered_obj_attrs)
                         remaining_objects.append(obj)
             object.__setattr__(event.Event, "Object", remaining_objects)
+
+        # If everything was filtered out, keep the first original attribute so the
+        # converter can produce a valid report with a real object_ref.
+        if total_after == 0 and first_attribute is not None:
+            self.logger.info(
+                "No attributes passed the filter, keeping first attribute "
+                "as fallback",
+                {
+                    "prefix": LOG_PREFIX,
+                    "event_id": event.Event.id,
+                },
+            )
+            object.__setattr__(event.Event, "Attribute", [first_attribute])
 
         return total_before, total_after
 
@@ -358,6 +386,48 @@ class Misp:
             )
 
         return event_datetime
+
+    def _event_already_exists_in_opencti(
+        self, event: "EventRestSearchListItem"
+    ) -> bool:
+        """Check whether this MISP event was already ingested into OpenCTI.
+
+        Looks up the ExternalReference created by the converter (source_name=MISP,
+        external_id=event.uuid). This is timezone-independent and relies solely
+        on the MISP event UUID.
+
+        Args:
+            event: The MISP event to check.
+
+        Returns:
+            True if the event was already ingested, False otherwise.
+        """
+        result = self.helper.api.query(
+            """
+            query CheckMISPEvent($filters: FilterGroup) {
+              externalReferences(first: 1, filters: $filters) {
+                edges { node { id } }
+              }
+            }
+            """,
+            {
+                "filters": {
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "external_id",
+                            "values": [event.Event.uuid],
+                        },
+                        {
+                            "key": "source_name",
+                            "values": ["MISP"],
+                        },
+                    ],
+                    "filterGroups": [],
+                }
+            },
+        )
+        return len(result["data"]["externalReferences"]["edges"]) > 0
 
     @staticmethod
     def _compute_completion_percentage(
@@ -610,28 +680,33 @@ class Misp:
                         )
 
                         # Apply attribute-level timestamp filtering if enabled
+                        # Track whether real attributes passed the filter for
+                        # high-water mark calculation (fallback attributes must
+                        # not regress the watermark).
+                        filter_passed_count: int | None = None
                         if attribute_ts_filtering and since_attr_timestamp is not None:
-                            before, after = self._filter_event_attributes_by_timestamp(
-                                event, int(since_attr_timestamp)
-                            )
-                            if after == 0 and not event.Event.Object:
+                            if self._event_already_exists_in_opencti(event):
+                                before, after = (
+                                    self._filter_event_attributes_by_timestamp(
+                                        event, int(since_attr_timestamp)
+                                    )
+                                )
+                                filter_passed_count = after
                                 self.logger.info(
-                                    "No new/modified attributes or objects in event "
-                                    "after attribute-level filtering, skipping",
+                                    "Attribute-level filtering applied",
                                     {
                                         **event_log_data,
                                         "attributes_before_filter": before,
+                                        "attributes_after_filter": after,
                                     },
                                 )
-                                continue
-                            self.logger.info(
-                                "Attribute-level filtering applied",
-                                {
-                                    **event_log_data,
-                                    "attributes_before_filter": before,
-                                    "attributes_after_filter": after,
-                                },
-                            )
+                            else:
+                                self.logger.info(
+                                    "Event not yet in OpenCTI, skipping "
+                                    "attribute-level filtering to ingest "
+                                    "all attributes",
+                                    event_log_data,
+                                )
 
                         try:
                             self._current_bundle = author, markings, bundle_objects = (
@@ -676,8 +751,13 @@ class Misp:
                     if outcome is ProcessingOutcome.BUFFERING:
                         break
 
-                    # Update the high-water mark for attribute timestamps
-                    if attribute_ts_filtering:
+                    # Update the high-water mark for attribute timestamps.
+                    # Only advance the watermark when real attributes passed the
+                    # filter (filter_passed_count > 0) or no filtering was applied
+                    # (filter_passed_count is None).  When filter_passed_count == 0
+                    # the event only contains a fallback attribute whose old
+                    # timestamp must NOT regress the watermark.
+                    if attribute_ts_filtering and filter_passed_count != 0:
                         cur_max = self._get_max_attribute_timestamp(event)
                         if cur_max > 0 and (
                             max_attr_timestamp_seen is None

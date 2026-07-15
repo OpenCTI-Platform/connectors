@@ -40,7 +40,7 @@ detections mapped to MITRE ATT&CK. This connector imports those findings into Op
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 7.260706.0
+- OpenCTI Platform >= 7.260710.0
 - A Corelight Investigator API key (read access to Detections and Alerts)
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
