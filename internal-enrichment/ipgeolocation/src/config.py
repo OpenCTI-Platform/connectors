@@ -78,7 +78,7 @@ class ConnectorConfig:
     type: str = "INTERNAL_ENRICHMENT"
     auto: bool = field(
         default_factory=lambda: _var(
-            "CONNECTOR_AUTO", ["connector", "auto"], default=True
+            "CONNECTOR_AUTO", ["connector", "auto"], default=False
         )
     )
     confidence_level: int = field(
