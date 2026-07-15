@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -135,3 +136,43 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_interval():
+    """
+    Test that the deprecated `CITALID_INTERVAL` (hours) is automatically migrated
+    to `CONNECTOR_DURATION_PERIOD` via `DeprecatedField` metadata in `BaseConnectorSettings`.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "name": "Test Connector",
+                        "scope": "citalid",
+                    },
+                    "citalid": {
+                        "customer_sub_domain_url": "https://ChangeMe.citalid.com",
+                        "user": "ChangeMe",
+                        "password": "ChangeMe",
+                        "interval": 24,
+                    },
+                }
+            )
+
+    import warnings
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(hours=24)
+    warning_messages = [str(warning.message) for warning in w]
+    assert any("interval" in msg.lower() for msg in warning_messages)

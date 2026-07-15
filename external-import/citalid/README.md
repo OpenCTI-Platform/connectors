@@ -68,10 +68,10 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=citalid
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=P1D
       - CITALID_CUSTOMER_SUB_DOMAIN_URL=https://your-instance.citalid.com
       - CITALID_USER=ChangeMe
       - CITALID_PASSWORD=ChangeMe
-      - CITALID_INTERVAL=24
     restart: always
 ```
 
@@ -94,12 +94,14 @@ pip3 install -r requirements.txt
 3. Start the connector from the `src` directory:
 
 ```bash
-python3 citalid.py
+python3 main.py
 ```
 
 ## Usage
 
-The connector runs automatically at the interval defined by `CITALID_INTERVAL`. To force an immediate run:
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD` (ISO 8601 duration format, e.g. `P1D` for one day).
+The legacy `CITALID_INTERVAL` (in hours) is deprecated in favor of `CONNECTOR_DURATION_PERIOD` but is still accepted for backward compatibility and is automatically migrated at startup.
+To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 

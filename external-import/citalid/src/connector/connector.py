@@ -1,6 +1,5 @@
 import json
 import sys
-import time
 from datetime import datetime
 
 import citalid_api
@@ -19,7 +18,6 @@ class Citalid:
         )
         self.citalid_user = self.config.citalid.user
         self.citalid_password = self.config.citalid.password.get_secret_value()
-        self.citalid_interval = self.config.citalid.interval
 
         # Instruction: replace CONNECTOR_UPDATE_EXISTING_DATA by False
         self.update_existing_data = False
@@ -30,9 +28,6 @@ class Citalid:
             name="Citalid",
             description="Citalid offers a cyber risk quantification SaaS platform to manage security & cyber insurance investments. Citalid is built upon a strong expertise in strategic Cyber Threat Intelligence (CTI) which enriches risk assessment with dynamic state of the threats.",
         )
-
-    def get_interval(self):
-        return int(self.citalid_interval) * 60 * 60
 
     @staticmethod
     def get_not_loaded_version(last_version, versions_list):
@@ -115,12 +110,9 @@ class Citalid:
             self.helper.log_error(f"Error while sending bundle: {e}")
 
     def run(self):
+        """Run the connector using the pycti scheduler with ISO 8601 duration period."""
         self.helper.log_info("Fetching Citalid datasets...")
-        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
-        if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
-            self.process_data()
-            self.helper.force_ping()
-        else:
-            while True:
-                self.process_data()
-                time.sleep(self.get_interval())
+        self.helper.schedule_iso(
+            message_callback=self.process_data,
+            duration_period=self.config.connector.duration_period,
+        )

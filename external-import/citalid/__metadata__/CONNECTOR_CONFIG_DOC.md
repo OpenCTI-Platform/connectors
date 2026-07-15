@@ -4,16 +4,16 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 
 ### Type: `object`
 
-| Property | Type | Required | Possible values | Default | Description |
-| -------- | ---- | -------- | --------------- | ------- | ----------- |
-| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
-| CITALID_CUSTOMER_SUB_DOMAIN_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | URL of your Citalid instance (customer subdomain). |
-| CITALID_USER | `string` | ✅ | string |  | Username with access to the Citalid instance. |
-| CITALID_PASSWORD | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Password for the Citalid user. |
-| CITALID_INTERVAL | `integer` | ✅ | integer |  | Polling interval in hours between connector runs. |
-| CONNECTOR_NAME | `string` |  | string | `"Citalid"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `[]` | The scope of the connector. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
-| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
-| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector. |
+| Property | Type | Required | Possible values | Deprecated | Default | Description |
+| -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
+| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
+| OPENCTI_TOKEN | `string` | ✅ | string |  |  | The API token to connect to OpenCTI. |
+| CITALID_CUSTOMER_SUB_DOMAIN_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | URL of your Citalid instance (customer subdomain). |
+| CITALID_USER | `string` | ✅ | string |  |  | Username with access to the Citalid instance. |
+| CITALID_PASSWORD | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | Password for the Citalid user. |
+| CONNECTOR_NAME | `string` |  | string |  | `"Citalid"` | The name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string |  | `[]` | The scope of the connector. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
+| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT1H"` | The period of time to await between two runs of the connector. |
+| CITALID_INTERVAL | `integer` |  | integer | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |

@@ -1,9 +1,11 @@
 from datetime import timedelta
+from typing import Optional
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
@@ -47,7 +49,12 @@ class CitalidConfig(BaseConfigModel):
     password: SecretStr = Field(
         description="Password for the Citalid user.",
     )
-    interval: int = Field(
+    interval: Optional[int] = DeprecatedField(
+        default=None,
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(hours=int(x)),
         description="Polling interval in hours between connector runs.",
     )
 

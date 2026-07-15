@@ -68,7 +68,9 @@
       "writeOnly": true
     },
     "CITALID_INTERVAL": {
-      "description": "Polling interval in hours between connector runs.",
+      "default": null,
+      "deprecated": true,
+      "description": "Use CONNECTOR_DURATION_PERIOD instead.",
       "type": "integer"
     }
   },
@@ -77,8 +79,7 @@
     "OPENCTI_TOKEN",
     "CITALID_CUSTOMER_SUB_DOMAIN_URL",
     "CITALID_USER",
-    "CITALID_PASSWORD",
-    "CITALID_INTERVAL"
+    "CITALID_PASSWORD"
   ],
   "additionalProperties": true
 }
