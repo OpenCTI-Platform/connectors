@@ -16,7 +16,7 @@
   "subscription_link": "https://www.fortinet.com/products/siem/fortisiem",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/fortisiem-incidents",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "7.260715.0",
   "container_image": "opencti/connector-fortisiem-incidents",
   "container_type": "EXTERNAL_IMPORT"
 }

@@ -16,7 +16,7 @@
   "subscription_link": "https://www.akamai.com/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/akamai",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "7.260715.0",
   "container_image": "opencti/connector-akamai-stream",
   "container_type": "STREAM"
 }

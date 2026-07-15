@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-c2tracker:
-    image: opencti/connector-montysecurity-c2-tracker:rolling
+    image: opencti/connector-montysecurity-c2-tracker:7.260715.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe

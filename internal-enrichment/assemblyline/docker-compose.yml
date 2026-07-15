@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-assemblyline:
-    image: opencti/connector-assemblyline:rolling
+    image: opencti/connector-assemblyline:7.260715.0
     environment:
       - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe
