@@ -10,6 +10,19 @@ from .settings import ConnectorSettings
 SEVERITY_ORDER = ["low", "medium", "high", "critical"]
 
 
+def _parse_timestamp(ts: str | None) -> datetime | None:
+    """Parse an ISO 8601 timestamp string into a timezone-aware datetime."""
+    if not ts:
+        return None
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except (ValueError, TypeError):
+        return None
+
+
 class ConnectorFlowtriq:
     """
     Specifications of the external import connector
@@ -96,19 +109,22 @@ class ConnectorFlowtriq:
         last_incident_time = None
         if current_state and "last_incident_time" in current_state:
             last_incident_time = current_state["last_incident_time"]
+        last_incident_dt = _parse_timestamp(last_incident_time)
 
         processed = 0
         skipped_severity = 0
         skipped_seen = 0
-        newest_incident_time = last_incident_time
+        newest_incident_dt = last_incident_dt
+        newest_incident_raw = last_incident_time
 
         for incident in incidents:
             severity = incident.get("severity", "medium")
             started_at = incident.get("started_at")
+            started_dt = _parse_timestamp(started_at)
 
-            # Skip incidents already processed (by timestamp comparison)
-            if last_incident_time and started_at:
-                if started_at <= last_incident_time:
+            # Skip incidents already processed (by parsed datetime comparison)
+            if last_incident_dt and started_dt:
+                if started_dt <= last_incident_dt:
                     skipped_seen += 1
                     continue
 
@@ -137,14 +153,15 @@ class ConnectorFlowtriq:
                 processed += 1
 
                 # Track the newest incident timestamp for dedup state
-                if started_at:
-                    if not newest_incident_time or started_at > newest_incident_time:
-                        newest_incident_time = started_at
+                if started_dt:
+                    if not newest_incident_dt or started_dt > newest_incident_dt:
+                        newest_incident_dt = started_dt
+                        newest_incident_raw = started_at
 
         # Persist the newest incident timestamp for next run deduplication
-        if newest_incident_time and newest_incident_time != last_incident_time:
+        if newest_incident_raw and newest_incident_raw != last_incident_time:
             state = self.helper.get_state() or {}
-            state["last_incident_time"] = newest_incident_time
+            state["last_incident_time"] = newest_incident_raw
             self.helper.set_state(state)
 
         self.helper.connector_logger.info(
