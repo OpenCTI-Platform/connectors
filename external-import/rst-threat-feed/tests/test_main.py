@@ -1,4 +1,3 @@
-/home/paulineeustachy/code/filigran/connectors-worktrees/6848-rst-threat-feed/external-import/rst-threat-feed/tests/test_main.py
 from typing import Any
 from unittest.mock import MagicMock
 

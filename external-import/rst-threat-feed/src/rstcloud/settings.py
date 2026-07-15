@@ -1,4 +1,3 @@
-/home/paulineeustachy/code/filigran/connectors-worktrees/6848-rst-threat-feed/external-import/rst-threat-feed/src/rstcloud/settings.py.tmp
 from datetime import timedelta
 from pydantic import Field, SecretStr
 from connectors_sdk import (

@@ -1,4 +1,3 @@
-/home/paulineeustachy/code/filigran/connectors-worktrees/6848-rst-threat-feed/external-import/rst-threat-feed/src/main.py.tmp
 import traceback
 
 from pycti import OpenCTIConnectorHelper

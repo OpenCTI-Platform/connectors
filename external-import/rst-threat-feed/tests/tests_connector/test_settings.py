@@ -1,4 +1,3 @@
-/home/paulineeustachy/code/filigran/connectors-worktrees/6848-rst-threat-feed/external-import/rst-threat-feed/tests/tests_connector/test_settings.py
 from typing import Any
 
 import pytest

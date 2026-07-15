@@ -1,4 +1,3 @@
-/home/paulineeustachy/code/filigran/connectors-worktrees/6848-rst-threat-feed/external-import/rst-threat-feed/src/rstcloud/connector.py.tmp
 import os
 import sys
 import time
