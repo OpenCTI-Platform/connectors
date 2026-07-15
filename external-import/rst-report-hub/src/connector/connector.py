@@ -1,60 +1,20 @@
-import base64
 import json
-import os
 import re
 import time
 from datetime import datetime, timedelta
 
 import requests
 import stix2
-import yaml
 from connector.settings import ConnectorSettings
 from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 
 
 class ReportHub:
-    def __init__(self):
-        # NOTE:
-        # This connector is instantiated by `main.py.tmp` and by unit tests with:
-        #   ReportHub(config=settings, helper=helper)
-        # In order to keep backward compatibility with existing code, we accept
-        # both calling conventions:
-        #   - ReportHub() (legacy)
-        #   - ReportHub(config=..., helper=...)
-        #
-        # But we MUST keep `__init__(self)` signature unchanged as required by instructions.
-        config = None
-        helper = None
-
-        # Best-effort extraction of kwargs from outer scope (tests/main will pass kwargs).
-        # Python will raise TypeError if kwargs are passed to a signature without **kwargs.
-        # Therefore, in practice, this __init__ MUST be called without kwargs.
-        # We keep legacy behavior but also allow injection through environment-based
-        # loading in ConnectorSettings/OpenCTIConnectorHelper in main.py.tmp.
-        #
-        # For unit tests, ReportHub is instantiated with arguments; to support that,
-        # we detect if attributes were pre-set (monkeypatching) and use them.
-        if hasattr(self, "config"):
-            config = getattr(self, "config")
-        if hasattr(self, "helper"):
-            helper = getattr(self, "helper")
-
-        # If not injected, build from local config file (legacy).
-        if config is None or helper is None:
-            config_file_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "config.yml"
-            )
-            raw_config = (
-                yaml.safe_load(open(config_file_path, encoding="UTF-8"))
-                if os.path.isfile(config_file_path)
-                else {}
-            )
-            # When running legacy mode, we don't have connectors-sdk settings.
-            # Create helper directly from raw dict.
-            helper = helper or OpenCTIConnectorHelper(raw_config)
-            config = config or ConnectorSettings()
-
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        """
+        Initialize the Connector with necessary configurations
+        """
         self.config: ConnectorSettings = config
         self.helper: OpenCTIConnectorHelper = helper
 
@@ -85,9 +45,6 @@ class ReportHub:
             ),
             "set_detection_flag": bool(rst_cfg.set_detection_flag),
         }
-
-        # As per instructions: replace CONNECTOR_UPDATE_EXISTING_DATA by False
-        self.update_existing_data = False
 
     def labels_format_check(self, labels_str: str):
         labels = labels_str.split(",") if labels_str else []
@@ -400,7 +357,6 @@ class ReportHub:
             bundle = stix2.v21.Bundle(objects=report_bundle, allow_custom=True)
             self.helper.send_stix2_bundle(
                 bundle=bundle.serialize(),
-                update=self.update_existing_data,
                 work_id=work_id,
             )
         except Exception as e:
