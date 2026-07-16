@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
