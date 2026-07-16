@@ -31,6 +31,10 @@ Field mapping (existing manifest -> fragment):
     container_type    -> image_type
     playbook_supported, max_confidence_level -> additional_properties
     connector_config_schema.json -> config_schema (embedded)
+    <any other manifest key> -> copied through as-is (see
+        MANIFEST_KEYS_HANDLED_EXPLICITLY), so new manifest fields (e.g.
+        solution_categories, license_type, contact) automatically appear in
+        the fragment without requiring a code change here.
 Constant fields:
     platform = "OpenCTI", integration_type = "connector"
 """
@@ -52,6 +56,36 @@ CONNECTOR_CONFIG_SCHEMA_FILENAME = "connector_config_schema.json"
 
 PLATFORM = "OpenCTI"
 INTEGRATION_TYPE = "connector"
+
+# Manifest keys that are explicitly transformed (renamed, reshaped, truncated,
+# or moved into a nested object) when building the fragment. Every other
+# manifest key is copied through as-is in `build_fragment`, so new manifest
+# fields automatically flow into the fragment without requiring a code change
+# here — only a schema update if strict validation of the new field is desired.
+MANIFEST_KEYS_HANDLED_EXPLICITLY = frozenset(
+    {
+        "title",
+        "slug",
+        "description",
+        "short_description",
+        "logo",
+        "verified",
+        "use_cases",
+        "solution_categories",
+        "license_type",
+        "contact",
+        "last_verified_date",
+        "subscription_link",
+        "source_code",
+        "manager_supported",
+        "support_version",
+        "container_image",
+        "container_type",
+        "container_version",
+        "playbook_supported",
+        "max_confidence_level",
+    }
+)
 
 # Maximum length allowed by the schema for `short_description`.
 SHORT_DESCRIPTION_MAX_LENGTH = 200
@@ -145,8 +179,11 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
         "short_description": truncate_short_description(manifest["short_description"]),
         "logo": logo,
         "use_cases": manifest["use_cases"],
-        "verified": manifest.get("verified"),
-        "last_verified_date": manifest.get("last_verified_date"),
+        "solution_categories": manifest["solution_categories"],
+        "license_type": manifest.get("license_type") or "",
+        "contact": manifest.get("contact") or "",
+        "verified": manifest.get("verified", False),
+        "last_verified_date": manifest.get("last_verified_date") or "",
         "subscription_link": manifest.get("subscription_link") or "",
         "source_code": manifest["source_code"],
         "manager_supported": manifest["manager_supported"],
@@ -162,6 +199,14 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
         },
         "config_schema": config_schema,
     }
+
+    # Copy through any manifest key not explicitly handled above (e.g. 
+    # any future addition) so the fragment stays in sync with the manifest 
+    # without code changes.
+    for key, value in manifest.items():
+        if key not in MANIFEST_KEYS_HANDLED_EXPLICITLY and key not in fragment:
+            fragment[key] = value
+
     return fragment
 
 
@@ -172,6 +217,26 @@ def validate_fragment(fragment: dict, schema_path: Path) -> None:
         instance=fragment, schema=schema, format_checker=jsonschema.FormatChecker()
     )
     print("✅ Fragment validated against schema.")
+    warn_unchecked_keys(fragment, schema)
+
+
+def warn_unchecked_keys(fragment: dict, schema: dict) -> None:
+    """Warn loudly about fragment keys the schema does not declare.
+
+    Because `additionalProperties` is `true`, these keys are accepted as-is by
+    `jsonschema.validate` above without any type/enum/format check — they are
+    passed through from the manifest (see `MANIFEST_KEYS_HANDLED_EXPLICITLY`)
+    but are otherwise unvalidated.
+    """
+    known_properties = set(schema.get("properties", {}))
+    unchecked_keys = sorted(set(fragment) - known_properties)
+    if unchecked_keys:
+        print(
+            "⚠️⚠️⚠️  WARNING: the following fragment key(s) are NOT declared in "
+            f"the JSON schema and will NOT be validated (type, enum, format, ...): "
+            f"{', '.join(unchecked_keys)}. Add them to connector_manifest_schema.json "
+            "to enforce their format.  ⚠️⚠️⚠️"
+        )
 
 
 def main() -> None:
