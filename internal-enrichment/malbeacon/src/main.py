@@ -4,6 +4,7 @@ from malbeacon_converter import MalbeaconConverter
 from malbeacon_endpoints import C2_PATH
 from models.c2_model import C2Beacon
 from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings  # noqa
 
 
 class MalBeaconConnector:
