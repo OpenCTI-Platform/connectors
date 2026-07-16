@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/zscaler_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Zscaler",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "domain-name"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "ZSCALER_USERNAME": {
+      "description": "Zscaler account username used for authentication.",
+      "type": "string"
+    },
+    "ZSCALER_PASSWORD": {
+      "description": "Zscaler account password used for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ZSCALER_API_KEY": {
+      "description": "Zscaler API key used to obfuscate the authenticated session.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ZSCALER_BLACKLIST_NAME": {
+      "default": "BLACK_LIST_DYNDNS",
+      "description": "Name of the Zscaler URL category used as blacklist.",
+      "type": "string"
+    },
+    "ZSCALER_SSL_VERIFY": {
+      "default": false,
+      "description": "Whether to verify SSL certificates when connecting to OpenCTI.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "ZSCALER_USERNAME",
+    "ZSCALER_PASSWORD",
+    "ZSCALER_API_KEY"
+  ],
+  "additionalProperties": true
+}
