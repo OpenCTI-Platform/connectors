@@ -9,7 +9,7 @@ import yaml
 from dateutil.parser import parse as parse_date_str
 from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from socprime.config import ConnectorSettings
+from socprime.settings import ConnectorSettings
 from socprime.mitre_attack import MitreAttack
 from socprime.tdm_api_client import ApiClient
 from stix2 import (
@@ -45,8 +45,10 @@ class SocprimeConnector:
 
     def __init__(self):
         self.config = ConnectorSettings()
-        self.helper = OpenCTIConnectorHelper(self.config.model_dump_pycti())
-        self.tdm_api_client = ApiClient(api_key=self.config.socprime.api_key)
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.tdm_api_client = ApiClient(
+            api_key=self.config.socprime.api_key.get_secret_value()
+        )
         self.mitre_attack = MitreAttack()
         self.start_datetime = datetime.now(tz=UTC)  # redefined in _process()
         self.work_id = None
