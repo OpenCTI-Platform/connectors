@@ -56,7 +56,9 @@
     },
     "MALTIVERSE_PASSWD": {
       "description": "Maltiverse account password.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "MALTIVERSE_FEEDS": {
       "description": "Comma-separated list of feed/collection IDs to fetch.",

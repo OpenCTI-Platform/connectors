@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -39,7 +39,7 @@ class MaltiverseConfig(BaseConfigModel):
     """
 
     user: str = Field(description="Maltiverse account username/email.")
-    passwd: str = Field(description="Maltiverse account password.")
+    passwd: SecretStr = Field(description="Maltiverse account password.")
     feeds: str = Field(
         description="Comma-separated list of feed/collection IDs to fetch."
     )

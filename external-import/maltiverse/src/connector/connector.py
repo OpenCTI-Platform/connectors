@@ -53,7 +53,7 @@ class MaltiverseConnector:
                     cli = taxiicli.Server(
                         "https://api.maltiverse.com/taxii2/",
                         user=self.user,
-                        password=self.passwd,
+                        password=self.passwd.get_secret_value(),
                     )
                     collections = [
                         col for col in cli.default.collections if col.id in self.feeds
