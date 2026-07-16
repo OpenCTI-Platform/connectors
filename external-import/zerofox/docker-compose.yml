@@ -3,14 +3,17 @@ services:
   connector-zerofox:
     image: opencti/connector-zerofox:latest
     environment:
-      - CONNECTOR_NAME=Zerofox
-      - CONNECTOR_SCOPE=zerofox # MIME type or Stix Object
-      - OPENCTI_URL=http://localhost
+      - OPENCTI_URL=ChangeMe
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_LOG_LEVEL=debug
-      - CONNECTOR_RUN_EVERY=1d # optional, default 1d
-      - CONNECTOR_FIRST_RUN=1d # optional, default 1d
-      - ZEROFOX_USERNAME=changeme # required
-      - ZEROFOX_PASSWORD=changeme # required
+      # - CONNECTOR_NAME=ZeroFox
+      # - CONNECTOR_SCOPE=zerofox
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=P1D # optional, ISO 8601 duration, default 1 day
+      # - CONNECTOR_RUN_EVERY=1d # optional, default 1d
+      # - CONNECTOR_FIRST_RUN=1d # optional, default 1d
+      # - CONNECTOR_UPDATE_EXISTING_DATA=false # optional, default false
+      - ZEROFOX_USERNAME=ChangeMe # required
+      - ZEROFOX_PASSWORD=ChangeMe # required
+      # - ZEROFOX_COLLECTORS= # optional, comma-separated feeds, default all feeds
     restart: always
