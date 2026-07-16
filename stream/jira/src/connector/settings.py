@@ -13,17 +13,13 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     to the configuration for connectors of type `STREAM`.
     """
 
-    id: str = Field(
-        description="A UUID v4 to identify the connector in OpenCTI.",
-        default="4e4988ea-74d4-485c-9517-796edbcb3a8c",
-    )
     name: str = Field(
         description="The name of the connector.",
-        default="Jira",
+        default="Atlassian JIRA",
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=[],
+        default=["jira"],
     )
 
 

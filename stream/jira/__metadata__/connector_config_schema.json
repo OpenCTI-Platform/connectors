@@ -15,12 +15,14 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "Jira",
+      "default": "Atlassian JIRA",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "jira"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"

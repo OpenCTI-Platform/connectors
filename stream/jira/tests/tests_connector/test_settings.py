@@ -36,7 +36,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {"live_stream_id": "test-live-stream-id"},
+                "connector": {
+                    "id": "connector-id",
+                    "live_stream_id": "test-live-stream-id",
+                },
                 "jira": {
                     "url": "https://jira.changeme.com",
                     "login_email": "user@example.com",

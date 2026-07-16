@@ -56,11 +56,22 @@ class JiraConnector:
         else:
             self.is_custom_fields_ignored = False
 
-        self.jira_client = JIRA(
-            server=self.jira_url,
-            basic_auth=(self.jira_login_email, self.jira_api_token),
-            options={"verify": self.jira_ssl_verify},
-        )
+        self._jira_client = None
+
+    @property
+    def jira_client(self):
+        """
+        Lazily instantiate the JIRA client on first access.
+        This avoids authenticating against the Jira API as a side effect of
+        building the connector (e.g. during unit tests or object instantiation).
+        """
+        if self._jira_client is None:
+            self._jira_client = JIRA(
+                server=self.jira_url,
+                basic_auth=(self.jira_login_email, self.jira_api_token),
+                options={"verify": self.jira_ssl_verify},
+            )
+        return self._jira_client
 
     def check_stream_id(self):
         """
@@ -112,7 +123,3 @@ class JiraConnector:
     def run(self):
         self.check_stream_id()
         self.helper.listen_stream(self._process_message)
-
-    # Backward-compatible entrypoint name (kept to avoid breaking existing usage)
-    def start(self):
-        self.run()
