@@ -9,8 +9,8 @@ import yaml
 from dateutil.parser import parse as parse_date_str
 from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
-from socprime.settings import ConnectorSettings
 from socprime.mitre_attack import MitreAttack
+from socprime.settings import ConnectorSettings
 from socprime.tdm_api_client import ApiClient
 from stix2 import (
     AttackPattern,

@@ -55,11 +55,11 @@ class SocPrimeConfig(BaseConfigModel):
         description="SIEM type used to render rules imported from content lists.",
         default="sigma",
     )
-    tlp_level: Literal[
-        "clear", "white", "green", "amber", "amber+strict", "red"
-    ] = Field(
-        description="TLP marking applied to imported entities.",
-        default="amber+strict",
+    tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
+        Field(
+            description="TLP marking applied to imported entities.",
+            default="amber+strict",
+        )
     )
     interval_sec: int | None = DeprecatedField(
         default=None,
