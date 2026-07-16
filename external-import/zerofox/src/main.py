@@ -1,4 +1,3 @@
-import os
 import sys
 import time
 from datetime import UTC, datetime
@@ -8,6 +7,7 @@ import stix2
 from collectors.builder import build_collectors
 from collectors.collector import Collector
 from pycti import Identity, OpenCTIConnectorHelper
+from settings import ConnectorSettings
 from time_.interval import delta_from_interval, seconds_from_interval
 from zerofox.app.zerofox import ZeroFox
 
@@ -22,26 +22,31 @@ ZEROFOX = "ZeroFox"
 class ZeroFoxConnector:
     def __init__(self, helper: OpenCTIConnectorHelper = None):
         """ZeroFox connector for OpenCTI."""
-        self.helper = helper if helper else OpenCTIConnectorHelper({})
+        self.config = ConnectorSettings()
+        self.helper = (
+            helper
+            if helper
+            else OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        )
 
         # Specific connector attributes for external import connectors
-        self.interval = os.environ.get("CONNECTOR_RUN_EVERY", "1d").lower()
+        self.interval = self.config.connector.run_every.lower()
         self._validate_interval("CONNECTOR_RUN_EVERY", self.interval)
 
-        self.first_run_interval = os.environ.get("CONNECTOR_FIRST_RUN", "1d").lower()
+        self.first_run_interval = self.config.connector.first_run.lower()
         self._validate_interval("CONNECTOR_FIRST_RUN", self.first_run_interval)
 
         self.update_existing_data = self._parse_update_existing_data(
-            os.environ.get("CONNECTOR_UPDATE_EXISTING_DATA", "false")
+            self.config.connector.update_existing_data
         )
 
-        self.zerofox_username = os.environ.get("ZEROFOX_USERNAME", "")
-        self.zerofox_password = os.environ.get("ZEROFOX_PASSWORD", "")
+        self.zerofox_username = self.config.zerofox.username
+        self.zerofox_password = self.config.zerofox.password.get_secret_value()
         self.client = ZeroFox(user=self.zerofox_username, token=self.zerofox_password)
 
         self.collectors: Dict[str, Collector] = build_collectors(
             client=self.client,
-            feeds=os.environ.get("ZEROFOX_COLLECTORS", None),
+            feeds=self.config.zerofox.collectors,
             logger=self.helper.connector_logger,
         )
         self.author = stix2.Identity(
