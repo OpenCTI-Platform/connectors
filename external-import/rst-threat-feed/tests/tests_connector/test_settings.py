@@ -2,7 +2,6 @@ from typing import Any
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
-
 from rstcloud import ConnectorSettings
 
 

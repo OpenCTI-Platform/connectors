@@ -6,10 +6,9 @@ from typing import List
 
 import stix2
 from pycti import Identity, OpenCTIConnectorHelper, StixCoreRelationship
-
+from rstcloud.common import FeedType, ThreatTypes, feed_converter
 from rstcloud.FeedFetch import Downloader
 from rstcloud.MitreTtpDownloader import MitreTtpDownloader
-from rstcloud.common import FeedType, ThreatTypes, feed_converter
 from rstcloud.settings import ConnectorSettings
 
 
@@ -70,7 +69,10 @@ class RSTThreatFeed:
             self.config.rst_threat_feed.retry_backoff_multiplier
         )
 
-        if self._downloader_config["latest"] not in self._downloader_config["time_range"]:
+        if (
+            self._downloader_config["latest"]
+            not in self._downloader_config["time_range"]
+        ):
             raise ValueError(
                 "Incorrect time range. Use one of "
                 f"{self._downloader_config['time_range']}"
@@ -111,9 +113,13 @@ class RSTThreatFeed:
                 if last_run is None or timestamp - last_run > self.get_interval():
                     try:
                         self.mitre_downloader.download_mitre_ttps()
-                        self.mitre_ttp_mapping = self.mitre_downloader.load_ttp_mapping()
+                        self.mitre_ttp_mapping = (
+                            self.mitre_downloader.load_ttp_mapping()
+                        )
                     except Exception as ex:
-                        self.helper.log_error(f"Failed to update MITRE TTP mappings: {ex}")
+                        self.helper.log_error(
+                            f"Failed to update MITRE TTP mappings: {ex}"
+                        )
 
                     for ioc_feed_type in [
                         FeedType.IP,
@@ -126,7 +132,9 @@ class RSTThreatFeed:
 
                     self.helper.set_state({"last_run": timestamp})
                 else:
-                    new_interval = round(self.get_interval() - (timestamp - last_run), 2)
+                    new_interval = round(
+                        self.get_interval() - (timestamp - last_run), 2
+                    )
                     self.helper.log_info(
                         f"Connector will not run. Next run in: {new_interval} seconds."
                     )
@@ -196,7 +204,9 @@ class RSTThreatFeed:
 
             x_opencti_detection = False
             try:
-                if int(ioc["score"]) > int(self._min_score_detection[ioc["observable_type"]]):
+                if int(ioc["score"]) > int(
+                    self._min_score_detection[ioc["observable_type"]]
+                ):
                     x_opencti_detection = True
             except Exception as ex:
                 self.helper.log_info(
@@ -377,14 +387,14 @@ class RSTThreatFeed:
                 self.helper.log_info(
                     f"Connector ran successfully, saving last_run as {str(timestamp)}"
                 )
-                message = f"Last_run stored, next run in: {str(self.get_interval())} seconds"
+                message = (
+                    f"Last_run stored, next run in: {str(self.get_interval())} seconds"
+                )
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_debug("End of the batch upload")
                 return
             except (ConnectionError, OSError, TimeoutError) as ex:
-                error_message = (
-                    f"Communication issue with opencti (attempt {attempt + 1}/{max_retries}): {ex}"
-                )
+                error_message = f"Communication issue with opencti (attempt {attempt + 1}/{max_retries}): {ex}"
                 self.helper.log_error(error_message)
                 if attempt < max_retries - 1:
                     self.helper.log_info(f"Retrying in {retry_delay} seconds...")

@@ -1,7 +1,6 @@
 from datetime import timedelta
 from typing import Optional
 
-from pydantic import Field, SecretStr
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -9,6 +8,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
+from pydantic import Field, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
