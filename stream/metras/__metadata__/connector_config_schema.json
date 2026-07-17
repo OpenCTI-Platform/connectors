@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/w_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Metras-Stream",
+      "examples": [
+        "Metras-Stream"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": "Metras",
+      "examples": [
+        "Metras"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "UUID of the OpenCTI live stream collection to consume (must be created and activated in Data > Data sharing > Live streams).",
+      "examples": [
+        "00000000-0000-0000-0000-000000000000"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "METRAS_API_BASE_URL": {
+      "default": "https://api.metras.sa/api",
+      "description": "Base URL of the Metras API.",
+      "examples": [
+        "https://api.metras.sa/api"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "METRAS_API_KEY": {
+      "description": "Metras API key (X-API-KEY header).",
+      "examples": [
+        "ChangeMe"
+      ],
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "METRAS_VERIFY_SSL": {
+      "default": true,
+      "description": "Verify TLS certificates.",
+      "examples": [
+        true
+      ],
+      "type": "boolean"
+    },
+    "METRAS_BLOCKLIST_ACTION": {
+      "default": "ALERT",
+      "description": "Action for pushed blocklists.",
+      "enum": [
+        "ALERT",
+        "BLOCK"
+      ],
+      "examples": [
+        "ALERT"
+      ],
+      "type": "string"
+    },
+    "METRAS_BLOCKLIST_PLATFORM": {
+      "default": "windows",
+      "description": "Default OS platform for blocklists.",
+      "enum": [
+        "windows",
+        "linux",
+        "darwin"
+      ],
+      "examples": [
+        "windows"
+      ],
+      "type": "string"
+    },
+    "METRAS_BLOCKLIST_SEVERITY": {
+      "default": "Medium",
+      "description": "Default severity for blocklists.",
+      "enum": [
+        "Informational",
+        "Low",
+        "Medium",
+        "High",
+        "Critical"
+      ],
+      "examples": [
+        "Medium"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "METRAS_API_KEY"
+  ],
+  "additionalProperties": true
+}

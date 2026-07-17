@@ -48,7 +48,14 @@ class ConverterToExternal:
         paths: list[str] = []
         if names and dirs:
             for d in dirs:
-                sep = "" if d.endswith(("\\", "/")) else "\\"
+                # Match the directory's own separator style so POSIX paths stay
+                # POSIX (e.g. /usr/bin + evil -> /usr/bin/evil, not /usr/bin\evil).
+                if d.endswith(("\\", "/")):
+                    sep = ""
+                elif "\\" in d:
+                    sep = "\\"
+                else:
+                    sep = "/"
                 for n in names:
                     paths.append(f"{d}{sep}{n}")
         else:

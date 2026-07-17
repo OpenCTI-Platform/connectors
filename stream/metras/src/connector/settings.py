@@ -24,7 +24,7 @@ class MetrasConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(
         default="https://api.metras.sa/api",
         description="Base URL of the Metras API.",
-        examples=["https://api.metras.sa"],
+        examples=["https://api.metras.sa/api"],
     )
     api_key: SecretStr = Field(
         description="Metras API key (X-API-KEY header).", examples=["ChangeMe"]

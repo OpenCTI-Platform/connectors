@@ -46,6 +46,13 @@ class MetrasStreamConnector:
             )
             # Continue: the stream still registers; pushes will log errors.
 
+        if not getattr(self.helper, "connect_live_stream_id", None):
+            raise ValueError(
+                "CONNECTOR_LIVE_STREAM_ID is not set. Create and activate a live "
+                "stream in OpenCTI (Data > Data sharing > Live streams) and set its "
+                "UUID as CONNECTOR_LIVE_STREAM_ID."
+            )
+
         self.helper.connector_logger.info("[CONNECTOR] Starting Metras stream listener")
         # listen_stream() spawns a daemon thread and returns — keep the main
         # thread alive so the process does not exit.

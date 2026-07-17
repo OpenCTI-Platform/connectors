@@ -24,6 +24,13 @@ def test_extract_dir_plus_name():
     assert paths == ["C:\\Windows\\evil.exe"]
 
 
+def test_extract_dir_plus_name_posix():
+    # POSIX directory must stay POSIX (no back-slash separator).
+    conv = ConverterToExternal()
+    pattern = "[directory:path = '/usr/bin' AND file:name = 'evil']"
+    assert conv.extract_file_paths({"pattern": pattern}) == ["/usr/bin/evil"]
+
+
 def test_non_file_indicator_is_unconvertible():
     conv = ConverterToExternal()
     data = {
