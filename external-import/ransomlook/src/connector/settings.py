@@ -1,7 +1,6 @@
 import os
 from datetime import timedelta
 from typing import Literal
-from urllib.parse import urlsplit
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -54,10 +53,15 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 class RansomLookConfig(BaseConfigModel):
     """Define source-specific RansomLook collection behavior."""
 
-    model_config = ConfigDict(hide_input_in_errors=True, extra="forbid")
+    model_config = ConfigDict(
+        hide_input_in_errors=True,
+        extra="ignore",
+        frozen=True,
+        validate_default=True,
+    )
 
     api_base_url: HttpUrl = Field(
-        default="https://www.ransomlook.io/api",
+        default=HttpUrl("https://www.ransomlook.io/api"),
         description="RansomLook API base URL.",
     )
     api_key: SecretStr | None = Field(
@@ -288,14 +292,13 @@ class RansomLookConfig(BaseConfigModel):
     @model_validator(mode="after")
     def validate_configuration(self) -> "RansomLookConfig":
         """Validate endpoint safety and compatible transport/evidence bounds."""
-        endpoint = urlsplit(str(self.api_base_url))
-        if endpoint.username or endpoint.password:
+        if self.api_base_url.username or self.api_base_url.password:
             raise ValueError("RansomLook API base URL must not contain credentials")
-        if endpoint.query or endpoint.fragment:
+        if self.api_base_url.query or self.api_base_url.fragment:
             raise ValueError(
                 "RansomLook API base URL must not contain a query or fragment"
             )
-        if self.api_key is not None and endpoint.scheme != "https":
+        if self.api_key is not None and self.api_base_url.scheme != "https":
             raise ValueError("RansomLook API keys require an HTTPS base URL")
         artifact_producers_enabled = any(
             (

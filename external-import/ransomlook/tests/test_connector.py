@@ -649,9 +649,12 @@ def test_every_artifact_producer_requires_a_deliverable_bundle(producer):
         RansomLookConfig(**values)
 
 
-def test_unknown_source_settings_are_rejected_without_values(monkeypatch):
-    with pytest.raises(ValidationError, match="extra_forbidden"):
-        RansomLookConfig(max_artificat_size_mb=7)
+def test_unknown_source_settings_are_ignored_but_env_typos_are_rejected_without_values(
+    monkeypatch,
+):
+    settings = RansomLookConfig(max_artificat_size_mb=7)
+    assert settings.max_artifact_size_mb == 5
+    assert not hasattr(settings, "max_artificat_size_mb")
 
     monkeypatch.setenv("RANSOMLOOK_MAX_ARTIFACT_SZE_MB", "TOPSECRET")
     with pytest.raises(ValueError) as error:

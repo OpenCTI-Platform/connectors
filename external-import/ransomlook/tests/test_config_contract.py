@@ -26,6 +26,9 @@ def test_sample_compose_schema_and_scope_are_synchronized():
             encoding="utf-8"
         )
     )
+    manifest = json.loads(
+        (ROOT / "__metadata__" / "connector_manifest.json").read_text(encoding="utf-8")
+    )
     compose = (ROOT / "docker-compose.yml").read_text(encoding="utf-8")
 
     source_variables = {f"RANSOMLOOK_{key.upper()}" for key in sample["ransomlook"]}
@@ -38,3 +41,4 @@ def test_sample_compose_schema_and_scope_are_synchronized():
     assert "CONNECTOR_RUN_AND_TERMINATE" in compose
     assert "CONNECTOR_RESTART_POLICY:-unless-stopped" in compose
     assert "mem_limit: 4g" in compose
+    assert manifest["manager_supported"] is True
