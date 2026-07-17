@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-doppel-alert-takedown:
+    image: opencti/connector-doppel-alert-takedown:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Doppel Alert and Takedown # optional (default: 'Doppel Alert and Takedown')
+      - CONNECTOR_SCOPE=Url,Domain-Name # optional (default: 'Url,Domain-Name')
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_AUTO=false # optional (default: false)
+      # Custom parameters for connector-doppel-alert-takedown
+      - DOPPEL_API_KEY=CHANGEME
+      - DOPPEL_USER_API_KEY=CHANGEME
+      - DOPPEL_API_BASE_URL=https://api.doppel.com # optional (default: 'https://api.doppel.com')
+      - DOPPEL_TAGS= # optional, comma-separated list of tags added to created alerts (default: empty)
+      - DOPPEL_TAKEDOWN_COMMENT=Confirmed by OpenCTI — requesting takedown. # optional
+      - DOPPEL_MAX_TLP=TLP:AMBER+STRICT # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED', or empty for no limit (default: empty)
+    restart: always

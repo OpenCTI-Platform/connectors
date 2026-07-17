@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/doppel-brand-protection_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Doppel Alert and Takedown",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": "Url,Domain-Name",
+      "description": "The scope of the connector (types of observables to enrich).",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "DOPPEL_API_BASE_URL": {
+      "default": "https://api.doppel.com/",
+      "description": "Doppel API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "DOPPEL_API_KEY": {
+      "description": "Doppel API key, sent as the `x-api-key` header.",
+      "type": "string"
+    },
+    "DOPPEL_USER_API_KEY": {
+      "description": "Doppel user API key, sent as the `x-user-api-key` header.",
+      "type": "string"
+    },
+    "DOPPEL_TAGS": {
+      "description": "List of tags to attach to the alerts created in Doppel.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "DOPPEL_TAKEDOWN_COMMENT": {
+      "default": "Confirmed by OpenCTI \u2014 requesting takedown.",
+      "description": "Comment sent to Doppel when requesting a takedown.",
+      "type": "string"
+    },
+    "DOPPEL_MAX_TLP": {
+      "default": "",
+      "description": "Max TLP level of entities to enrich (empty = no limit).",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+        ""
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "DOPPEL_API_KEY",
+    "DOPPEL_USER_API_KEY"
+  ],
+  "additionalProperties": true
+}
