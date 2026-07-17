@@ -1,0 +1,216 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RST Threat Library Connector configuration",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["connector", "rst_threat_library"],
+  "properties": {
+    "connector": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Connector ID (UUID v4) registered in OpenCTI.",
+          "examples": ["b7f9a6b4-6b2a-4c3f-9f7b-8b5e5b6f2d1a"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Connector display name.",
+          "default": "RST Threat Library",
+          "examples": ["RST Threat Library"]
+        },
+        "scope": {
+          "type": "string",
+          "description": "Comma-separated STIX scopes (domain types the connector emits).",
+          "examples": ["intrusion-set,malware,tool,campaign"]
+        },
+        "log_level": {
+          "type": "string",
+          "description": "Connector log level (e.g., info, debug).",
+          "examples": ["info", "error", "debug"]
+        },
+        "duration_period": {
+          "type": "string",
+          "description": "ISO-8601 duration between two runs (e.g., PT1H).",
+          "default": "PT1H",
+          "examples": ["PT1H", "PT30M"]
+        },
+        "queue_threshold": {
+          "type": "number",
+          "description": "Server capacity: max RabbitMQ queue size (MB) before the connector pauses ingestion.",
+          "default": 500,
+          "exclusiveMinimum": 0,
+          "examples": [500.0]
+        },
+        "update_existing_data": {
+          "type": "boolean",
+          "description": "Whether to update existing STIX objects in OpenCTI.",
+          "default": true,
+          "examples": [true, false]
+        },
+        "auto_create_service_account": {
+          "type": "boolean",
+          "description": "Create a dedicated Connectors-group service account on first start.",
+          "default": false,
+          "examples": [true, false]
+        },
+        "auto_create_service_account_confidence_level": {
+          "type": "integer",
+          "description": "Max confidence level for the auto-created service account.",
+          "default": 50,
+          "minimum": 0,
+          "maximum": 100,
+          "examples": [50, 80]
+        }
+      }
+    },
+    "rst_threat_library": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["apikey", "baseurl"],
+      "properties": {
+        "baseurl": {
+          "type": "string",
+          "description": "RST Cloud API base URL.",
+          "default": "https://api.rstcloud.net/v1",
+          "examples": ["https://api.rstcloud.net/v1"]
+        },
+        "apikey": {
+          "type": "string",
+          "description": "RST Cloud Threat Library API key.",
+          "examples": ["ChangeMe"]
+        },
+        "auth_header": {
+          "type": "string",
+          "description": "HTTP header name used to send the API key.",
+          "default": "x-api-key",
+          "examples": ["x-api-key"]
+        },
+        "contimeout": {
+          "type": "integer",
+          "description": "HTTP connect timeout in seconds.",
+          "default": 30,
+          "examples": [30]
+        },
+        "readtimeout": {
+          "type": "integer",
+          "description": "HTTP read timeout in seconds.",
+          "default": 120,
+          "examples": [120, 600]
+        },
+        "retry": {
+          "type": "integer",
+          "description": "Per-request HTTP retry count.",
+          "default": 2,
+          "examples": [2, 10]
+        },
+        "ssl_verify": {
+          "type": "boolean",
+          "description": "Verify TLS certificates for API requests.",
+          "default": true,
+          "examples": [true, false]
+        },
+        "page_size": {
+          "type": "integer",
+          "description": "Page size (limit) for Threat Library list requests.",
+          "default": 100,
+          "examples": [20, 100]
+        },
+        "order_by": {
+          "type": "string",
+          "description": "Sort field for incremental polling.",
+          "default": "modified",
+          "examples": ["modified"]
+        },
+        "order_mode": {
+          "type": "string",
+          "description": "Sort direction for incremental polling.",
+          "enum": ["asc", "desc"],
+          "default": "desc",
+          "examples": ["desc", "asc"]
+        },
+        "proxy": {
+          "type": "string",
+          "description": "Optional forward HTTP proxy URL.",
+          "default": "",
+          "examples": ["", "http://proxy.example.com:8080"]
+        },
+        "max_retries": {
+          "type": "integer",
+          "description": "Maximum retries when pushing bundles to OpenCTI.",
+          "default": 3,
+          "examples": [3]
+        },
+        "retry_delay": {
+          "type": "integer",
+          "description": "Initial retry delay in seconds for OpenCTI push failures.",
+          "default": 10,
+          "examples": [10]
+        },
+        "retry_backoff_multiplier": {
+          "type": "number",
+          "description": "Backoff multiplier for OpenCTI push retries.",
+          "default": 2.0,
+          "examples": [2.0]
+        },
+        "object_types": {
+          "type": "string",
+          "description": "Comma-separated threat-object paths to poll.",
+          "default": "intrusion-sets,malware,tools,campaigns",
+          "examples": ["intrusion-sets,malware,tools,campaigns"]
+        },
+        "import_from_date": {
+          "type": "string",
+          "description": "Optional initial backfill cutoff (YYYY-MM-DD). Empty = full history.",
+          "default": "",
+          "examples": ["", "2024-01-01"]
+        },
+        "opencti_push_mode": {
+          "type": "string",
+          "description": "OpenCTI write path: bundle (worker) or api (GraphQL import).",
+          "enum": ["bundle", "api"],
+          "default": "bundle",
+          "examples": ["bundle", "api"]
+        },
+        "sync_labels": {
+          "type": "string",
+          "description": "Labels merged on import; scopes merge/split.",
+          "default": "RST Threat Library",
+          "examples": ["RST Threat Library"]
+        },
+        "reconcile_exclude_labels": {
+          "type": "string",
+          "description": "Entities with these labels are excluded from merge/split fusion.",
+          "default": "",
+          "examples": ["", "MITRE,manual"]
+        },
+        "reconcile_allow_created_by": {
+          "type": "string",
+          "description": "If set, merge/split fuses only entities with these createdBy IDs.",
+          "default": "",
+          "examples": ["", "identity--11111111-1111-1111-1111-111111111111"]
+        },
+        "merge_split": {
+          "type": "boolean",
+          "description": "Enable intrusion-set merge/split against the full catalogue.",
+          "default": false,
+          "examples": [false, true]
+        },
+        "respect_user_edits": {
+          "type": "boolean",
+          "description": "Preserve OpenCTI content when its confidence exceeds upstream.",
+          "default": false,
+          "examples": [false, true]
+        },
+        "intrusion_set_default_confidence": {
+          "type": "integer",
+          "description": "When set, replaces upstream confidence on imported intrusion sets.",
+          "minimum": 0,
+          "maximum": 100,
+          "examples": [80]
+        }
+      }
+    }
+  }
+}
