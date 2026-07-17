@@ -88,7 +88,6 @@ class DoppelClient:
         try:
             response = self.session.put(url, params={"entity": entity}, json=payload)
             response.raise_for_status()
-            print(response.json())
             return response.json() if response.content else {}
         except requests.RequestException as err:
             raise DoppelClientError(
