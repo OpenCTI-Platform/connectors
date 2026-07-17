@@ -115,8 +115,12 @@ class MetrasClient:
             return {}
         try:
             return resp.json()
-        except ValueError:
-            return {"_raw": resp.text}
+        except ValueError as exc:
+            raise MetrasAPIError(
+                f"Non-JSON response from {path} (HTTP {resp.status_code}): "
+                f"{resp.text[:200]}",
+                resp.status_code,
+            ) from exc
 
     def _get(self, path: str, params: dict | None = None) -> dict:
         return self._request("GET", path, params=params)

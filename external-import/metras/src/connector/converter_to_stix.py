@@ -195,8 +195,21 @@ class ConverterToStix:
                     source_name="Metras", external_id=str(external_id)
                 )
             )
+        # Seed the deterministic Incident id on the stable Metras alert id so a
+        # recurring alert (whose last_occurrence_time advances) updates the same
+        # Incident instead of creating a duplicate. The fixed seed-time keeps the id
+        # independent of the moving occurrence time; first_seen/last_seen still carry
+        # the real timestamps. Fall back to name+created when no stable id exists.
+        if external_id:
+            incident_id = Incident.generate_id(
+                name=f"metras-alert-{external_id}", created="1970-01-01T00:00:00Z"
+            )
+        else:
+            incident_id = Incident.generate_id(
+                name=name, created=first_seen or stix_timestamp()
+            )
         return stix2.Incident(
-            id=Incident.generate_id(name=name, created=first_seen or stix_timestamp()),
+            id=incident_id,
             name=name,
             description=description,
             created_by_ref=self.author["id"],

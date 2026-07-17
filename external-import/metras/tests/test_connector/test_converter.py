@@ -83,3 +83,25 @@ def test_process_endpoint_creates_system_identity():
     assert types == ["identity"]
     assert "172.16.68.7" in objs[0]["description"]
     assert "10.0.0.5" in objs[0]["description"]
+
+
+def test_incident_id_stable_across_occurrence_time():
+    # A recurring alert (same id, newer last_occurrence_time) must map to the SAME
+    # Incident id so OpenCTI updates it instead of creating a duplicate.
+    conv = _converter()
+    base = {
+        "id": "alert-42",
+        "alert_name": "recurring-rule",
+        "severity": "high",
+        "last_occurrence_time": "2025-11-11T11:36:20.162Z",
+    }
+
+    def _incident_id(alert):
+        return next(
+            o["id"] for o in conv.process_alert(alert) if o["type"] == "incident"
+        )
+
+    newer = {**base, "last_occurrence_time": "2025-12-01T09:00:00.000Z"}
+    assert _incident_id(base) == _incident_id(newer)
+    # A different alert id yields a different Incident.
+    assert _incident_id({**base, "id": "alert-99"}) != _incident_id(base)
