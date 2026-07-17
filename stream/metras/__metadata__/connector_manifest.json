@@ -1,0 +1,19 @@
+{
+  "title": "Metras Stream Connector",
+  "slug": "metras-stream",
+  "description": "Forwards OpenCTI file-name/path indicators to Metras custom blocklists (create/update/delete). Note: Metras blocklists accept file paths only; IP/domain/hash indicators are skipped.",
+  "short_description": "Stream connector forwarding file indicators to Metras blocklists",
+  "logo": null,
+  "use_cases": ["Data Sharing"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260529.0",
+  "subscription_link": null,
+  "source_code": null,
+  "manager_supported": false,
+  "container_version": "1.0.0",
+  "container_image": "opencti/connector-metras-stream",
+  "container_type": "STREAM"
+}
