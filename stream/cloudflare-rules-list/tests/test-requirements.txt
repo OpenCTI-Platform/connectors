@@ -1,0 +1,3 @@
+-r ../src/requirements.txt
+pytest
+pytest-mock

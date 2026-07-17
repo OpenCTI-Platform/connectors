@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'                       # Unique connector UUID
+  type: 'STREAM'
+  name: 'Cloudflare Rules List'
+  scope: 'cloudflare'
+  log_level: 'info'                    # debug | info | warn | error
+  live_stream_id: 'live'               # OpenCTI live stream ID
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
+  # Minimum interval between snapshot uploads to Cloudflare.
+  # Accepts '30m', '1h', '1h30m', or a bare number of seconds.
+  sync_interval: '1h'
+
+cloudflare:
+  # Cloudflare account ID that owns the Rules List.
+  account_id: 'ChangeMe'
+  # API token with 'Account > Account Filter Lists > Edit' permission.
+  api_token: 'ChangeMe'
+  # ID of the existing Cloudflare Rules List (IP kind) to sync into.
+  list_id: 'ChangeMe'
+  # Base URL of the Cloudflare API. Override only for testing or a compatible gateway.
+  # api_base_url: 'https://api.cloudflare.com/client/v4'
