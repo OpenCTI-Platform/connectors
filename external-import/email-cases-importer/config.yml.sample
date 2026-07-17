@@ -1,0 +1,212 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'  # Valid UUIDv4
+  name: 'Email Cases Importer'
+  scope: 'Email Cases Importer'
+  log_level: 'info'
+  duration_period: 'PT5M'
+
+email_cases:
+  # ── Protocol ───────────────────────────────────────────────────────────
+  # Supported: imap, microsoft_graph, gmail, ews
+  protocol: 'imap'
+
+  # ── IMAP settings ──────────────────────────────────────────────────────
+  imap_host: 'mail.example.com'
+  imap_port: 993
+  imap_username: 'user@example.com'
+  imap_password: 'ChangeMe'
+  imap_folder: 'INBOX'
+  imap_use_ssl: true
+
+  # ── Microsoft Graph settings (Office 365) ──────────────────────────────
+  # Uncomment and fill in if protocol is 'microsoft_graph'
+  # graph_tenant_id: 'ChangeMe'
+  # graph_client_id: 'ChangeMe'
+  # graph_client_secret: 'ChangeMe'
+  # graph_user_id: 'user@company.com'
+
+  # ── Gmail settings ─────────────────────────────────────────────────────
+  # Uncomment and fill in if protocol is 'gmail'
+  # gmail_credentials_file: '/path/to/service-account-credentials.json'
+  # gmail_user_id: 'me'
+
+  # ── EWS settings (on-premise Exchange) ─────────────────────────────────
+  # Uncomment and fill in if protocol is 'ews'
+  # ews_server: 'https://exchange.company.com/ews/exchange.asmx'
+  # ews_username: 'DOMAIN\user'
+  # ews_password: 'ChangeMe'
+  # ews_auth_type: 'NTLM'  # NTLM or OAuth2
+
+  # ── Email filtering ────────────────────────────────────────────────────
+  # Only emails from this sender are processed.
+  sender_address: 'alerts@security-vendor.com'
+
+  # JSON array of subject filters. An email is processed if its subject
+  # matches ANY filter. Supported types: exact, contains, regex.
+  #
+  # Examples:
+  #   exact    — subject must equal the value exactly (case-sensitive)
+  #   contains — subject must contain the value (case-sensitive)
+  #   regex    — subject must match the regular expression
+  #
+  # Use '[]' (empty array) to accept ANY subject (no subject filtering).
+  subject_filters: >-
+    [
+      {"type": "contains", "value": "Security Alert"},
+      {"type": "regex",    "value": "INC-\\d+"},
+      {"type": "exact",    "value": "Weekly Threat Report"}
+    ]
+
+  # ── Thread tracking ────────────────────────────────────────────────────
+  # How replies are grouped into the same IR case.
+  #   provider_thread_id — uses the email provider's native thread/conversation ID (most reliable)
+  #   message_headers    — uses In-Reply-To and References headers (works across providers)
+  #   subject_matching   — strips RE:/FW: prefixes and matches on base subject
+  thread_tracking_strategy: 'provider_thread_id'
+
+  # ── First-run starting date (optional) ────────────────────────────────
+  # Used ONLY on the very first fetch cycle, when the connector has no prior
+  # state. Later cycles resume from the last run timestamp stored in state.
+  # Formats: 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:MM:SSZ'.
+  # Leave empty to let the email server return the most recent emails (bounded
+  # by max_emails_per_cycle).
+  # start_date: '2026-04-01'
+
+  # ── Password extraction ────────────────────────────────────────────────
+  # Passwords embedded in the email body between these markers are
+  # extracted and used to decrypt encrypted attachments.
+  #
+  # Example email body:
+  #   Please find the report attached.
+  #   The password is: ---BEGIN PASSWORD---MyP@ssw0rd---END PASSWORD---
+  password_prefix: '---BEGIN PASSWORD---'
+  password_suffix: '---END PASSWORD---'
+
+  # Strip all spaces, tabs, and newlines from extracted passwords.
+  # Enable this if your email provider wraps long lines or if the HTML
+  # rendering inserts whitespace within the password.
+  # Example: "---BEGIN PASSWORD---My Pass\n  word---END PASSWORD---"
+  #   with strip_whitespace=false → "My Pass\n  word"
+  #   with strip_whitespace=true  → "MyPassword"
+  password_strip_whitespace: false
+
+  # ── Display ───────────────────────────────────────────────────────────
+  # Show sender and recipient display names in case content.
+  # true  → "NCSC UK Contact <contact@ncsc.gov.uk>"
+  # false → "contact@ncsc.gov.uk"
+  display_sender_names: true
+
+  # ── Timeout ──────────────────────────────────────────────────────────
+  # Maximum seconds for a single email fetch cycle.
+  # Prevents the connector from hanging on unresponsive mail servers.
+  email_fetch_timeout: 120
+
+  # ── Case defaults ──────────────────────────────────────────────────────
+  # These are used unless overridden by a subject rule.
+  # Values that don't exist in OpenCTI are auto-created as vocabulary entries.
+  default_severity: 'medium'   # e.g. low, medium, high, critical
+  default_priority: 'P3'       # e.g. P1, P2, P3, P4
+  case_prefix: ''              # Optional prefix prepended to case names
+
+  # ── Labels ─────────────────────────────────────────────────────────────
+  # Comma-separated labels always applied to every created case.
+  # Labels are auto-created in OpenCTI if they don't exist.
+  # Leave empty to skip.
+  labels: 'NCSC UK,Email Alert'
+
+  # ── Subject rules ──────────────────────────────────────────────────────
+  # JSON array of rules that conditionally set case properties based on
+  # the email subject. Multiple rules can match — labels and response_types
+  # are merged; first matching severity/priority/case_template wins.
+  #
+  # Each rule requires:
+  #   match_type — how to match: exact, contains, starts_with, regex
+  #   value      — the string or pattern to match against
+  #
+  # Each rule can optionally set:
+  #   labels         — list of additional label names
+  #   response_types — list of incident response types (auto-created if missing)
+  #   severity       — override default severity (auto-created if missing)
+  #   priority       — override default priority (auto-created if missing)
+  #   case_template  — name of an OpenCTI case template to apply
+  #
+  # Match types:
+  #   exact       — subject must equal the value exactly (case-sensitive)
+  #   contains    — subject must contain the value (case-insensitive)
+  #   starts_with — subject must start with the value (case-insensitive)
+  #   regex       — subject must match the regular expression
+  subject_rules: >-
+    [
+      {
+        "match_type": "contains",
+        "value": "Threat Alert",
+        "labels": ["Threat Alert"],
+        "response_types": ["ransomware"],
+        "severity": "critical",
+        "priority": "P1",
+        "case_template": "Ransomware Playbook"
+      },
+      {
+        "match_type": "starts_with",
+        "value": "INC-",
+        "labels": ["Incident"],
+        "response_types": ["data-leak"]
+      },
+      {
+        "match_type": "regex",
+        "value": "CVE-\\d{4}-\\d+",
+        "labels": ["Vulnerability"],
+        "severity": "high"
+      },
+      {
+        "match_type": "exact",
+        "value": "Weekly Threat Report",
+        "labels": ["Weekly Report"],
+        "severity": "low",
+        "priority": "P4"
+      }
+    ]
+
+  # ── Sender rules ───────────────────────────────────────────────────────
+  # JSON array of rules that set case properties based on the sender email.
+  # Each rule matches on the sender address and can set:
+  #   author       — organization name to set as case author (auto-created)
+  #   marking      — marking definition to apply (e.g. "TLP:GREEN", "TLP:AMBER")
+  #   assignees    — list of OpenCTI user emails to assign to the case
+  #   participants — list of OpenCTI user emails to add as participants
+  #
+  # The author identity is auto-created as an Organization if it doesn't exist.
+  # Marking definitions must already exist in OpenCTI (TLP markings are built-in).
+  # Assignees and participants must be existing OpenCTI users (matched by email).
+  sender_rules: >-
+    [
+      {
+        "sender": "alerts@ncsc.gov.uk",
+        "author": "NCSC UK",
+        "marking": "TLP:AMBER",
+        "assignees": ["analyst@company.com"],
+        "participants": ["soc-team@company.com"]
+      },
+      {
+        "sender": "noreply@security-vendor.com",
+        "author": "Security Vendor",
+        "marking": "TLP:GREEN"
+      }
+    ]
+
+  # ── Import settings ────────────────────────────────────────────────────
+  # Polling cadence is controlled by `connector.duration_period` (ISO-8601,
+  # e.g. 'PT5M') above. `import_interval` is DEPRECATED: ignored when a valid
+  # duration_period is set; kept only for backward compatibility.
+  # import_interval: 300         # (deprecated) seconds between polling cycles
+  max_emails_per_cycle: 50       # Max emails processed per cycle
+  tls_verify: true               # Verify TLS certificates
+
+  # ── Attachment settings ────────────────────────────────────────────────
+  max_attachment_size_mb: 25     # Max attachment size in MB
+  attachment_store_in_opencti: true

@@ -1,0 +1,82 @@
+services:
+  connector-email-cases-importer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_EMAIL_CASES_ID}
+      - CONNECTOR_NAME=Email Cases Importer
+      - CONNECTOR_SCOPE=Email Cases Importer
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT5M
+      # Protocol: imap, microsoft_graph, gmail, ews
+      - EMAIL_CASES_PROTOCOL=imap
+      # IMAP settings
+      - EMAIL_CASES_IMAP_HOST=${EMAIL_CASES_IMAP_HOST}
+      - EMAIL_CASES_IMAP_PORT=993
+      - EMAIL_CASES_IMAP_USERNAME=${EMAIL_CASES_IMAP_USERNAME}
+      - EMAIL_CASES_IMAP_PASSWORD=${EMAIL_CASES_IMAP_PASSWORD}
+      - EMAIL_CASES_IMAP_FOLDER=INBOX
+      - EMAIL_CASES_IMAP_USE_SSL=true
+      # Microsoft Graph settings (uncomment if using microsoft_graph)
+      # - EMAIL_CASES_GRAPH_TENANT_ID=${EMAIL_CASES_GRAPH_TENANT_ID}
+      # - EMAIL_CASES_GRAPH_CLIENT_ID=${EMAIL_CASES_GRAPH_CLIENT_ID}
+      # - EMAIL_CASES_GRAPH_CLIENT_SECRET=${EMAIL_CASES_GRAPH_CLIENT_SECRET}
+      # - EMAIL_CASES_GRAPH_USER_ID=${EMAIL_CASES_GRAPH_USER_ID}
+      # Gmail settings (uncomment if using gmail)
+      # - EMAIL_CASES_GMAIL_CREDENTIALS_FILE=/run/secrets/gmail_creds.json
+      # - EMAIL_CASES_GMAIL_USER_ID=me
+      # EWS settings (uncomment if using ews)
+      # - EMAIL_CASES_EWS_SERVER=${EMAIL_CASES_EWS_SERVER}
+      # - EMAIL_CASES_EWS_USERNAME=${EMAIL_CASES_EWS_USERNAME}
+      # - EMAIL_CASES_EWS_PASSWORD=${EMAIL_CASES_EWS_PASSWORD}
+      # - EMAIL_CASES_EWS_AUTH_TYPE=NTLM
+      # Email filtering
+      - EMAIL_CASES_SENDER_ADDRESS=${EMAIL_CASES_SENDER_ADDRESS}
+      # JSON array. Use '[]' to accept any subject (no subject filtering).
+      - EMAIL_CASES_SUBJECT_FILTERS=${EMAIL_CASES_SUBJECT_FILTERS}
+      # Thread tracking: provider_thread_id, message_headers, subject_matching
+      - EMAIL_CASES_THREAD_TRACKING_STRATEGY=provider_thread_id
+      # Optional first-run floor: ISO-8601 or YYYY-MM-DD. Only used on the first
+      # cycle (no prior state). Leave empty for "most recent" behavior.
+      # - EMAIL_CASES_START_DATE=2026-04-01
+      # Password extraction markers
+      - EMAIL_CASES_PASSWORD_PREFIX=---BEGIN PASSWORD---
+      - EMAIL_CASES_PASSWORD_SUFFIX=---END PASSWORD---
+      - EMAIL_CASES_PASSWORD_STRIP_WHITESPACE=false
+      # Display names in case content (e.g. "NCSC UK <contact@ncsc.gov.uk>")
+      - EMAIL_CASES_DISPLAY_SENDER_NAMES=true
+      # Timeout for email fetch operations (seconds)
+      - EMAIL_CASES_EMAIL_FETCH_TIMEOUT=120
+      # Case defaults
+      - EMAIL_CASES_DEFAULT_SEVERITY=medium
+      - EMAIL_CASES_DEFAULT_PRIORITY=P3
+      - EMAIL_CASES_CASE_PREFIX=
+      # Labels (comma-separated, auto-created if missing)
+      - EMAIL_CASES_LABELS=
+      # Subject rules (JSON array, see README for format)
+      - EMAIL_CASES_SUBJECT_RULES=[]
+      # Sender rules (JSON array, see README for format)
+      - EMAIL_CASES_SENDER_RULES=[]
+      # Import settings
+      # Polling cadence is controlled by CONNECTOR_DURATION_PERIOD (above).
+      # EMAIL_CASES_IMPORT_INTERVAL is DEPRECATED — ignored when
+      # CONNECTOR_DURATION_PERIOD is set; kept only for backward compatibility.
+      # - EMAIL_CASES_IMPORT_INTERVAL=300
+      - EMAIL_CASES_MAX_EMAILS_PER_CYCLE=50
+      - EMAIL_CASES_TLS_VERIFY=true
+      # Attachment settings
+      - EMAIL_CASES_MAX_ATTACHMENT_SIZE_MB=25
+      - EMAIL_CASES_ATTACHMENT_STORE_IN_OPENCTI=true
+    restart: always
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 512m
+    pids_limit: 100
+    depends_on:
+      opencti:
+        condition: service_healthy
