@@ -60,7 +60,7 @@ class DoppelClient:
             {"url_path": url, "entity": entity, "entity_type": entity_type},
         )
         try:
-            response = self.session.post(url, json=payload)
+            response = self.session.post(url, json=payload, timeout=30)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as err:
@@ -86,7 +86,9 @@ class DoppelClient:
             {"url_path": url, "entity": entity},
         )
         try:
-            response = self.session.put(url, params={"entity": entity}, json=payload)
+            response = self.session.put(
+                url, params={"entity": entity}, json=payload, timeout=30
+            )
             response.raise_for_status()
             return response.json() if response.content else {}
         except requests.RequestException as err:
