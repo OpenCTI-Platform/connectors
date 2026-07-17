@@ -16,7 +16,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
 
     name: str = Field(
         description="The name of the connector.",
-        default="Doppel Alert And Takedown",
+        default="Doppel Alert and Takedown",
     )
     scope: str = Field(
         description="The scope of the connector (types of observables to enrich).",
