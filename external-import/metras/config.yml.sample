@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'  # UUIDv4
+  name: 'Metras-Feed'
+  scope: 'Metras'
+  log_level: 'info'
+  duration_period: 'PT1H'  # ISO-8601: poll interval
+
+metras:
+  api_base_url: 'https://api.metras.sa/api'
+  api_key: 'ChangeMe'
+  verify_ssl: true
+  import_alerts: true
+  import_binaries: true
+  import_endpoints: true
+  binary_malicious_only: true   # only banned/unsigned binaries
+  page_size: 50
+  tlp_level: 'amber'

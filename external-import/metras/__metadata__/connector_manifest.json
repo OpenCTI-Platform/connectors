@@ -1,0 +1,19 @@
+{
+  "title": "Metras Feed Connector",
+  "slug": "metras-feed",
+  "description": "Imports Metras EDR alerts (with MITRE ATT&CK mapping), file binaries, and endpoint inventory into OpenCTI as STIX incidents, observables and system identities.",
+  "short_description": "External import connector for Metras EDR telemetry",
+  "logo": null,
+  "use_cases": ["Threat Intelligence"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260529.0",
+  "subscription_link": null,
+  "source_code": null,
+  "manager_supported": false,
+  "container_version": "1.0.0",
+  "container_image": "opencti/connector-metras-feed",
+  "container_type": "EXTERNAL_IMPORT"
+}
