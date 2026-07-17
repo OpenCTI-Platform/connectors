@@ -178,7 +178,7 @@ class MetrasEnrichmentConnector:
         if alert_data:
             hits += len(alert_data)
             names = ", ".join(
-                sorted({a.get("alert_name", "?") for a in alert_data})[:10]
+                sorted({a.get("alert_name") or "?" for a in alert_data})[:10]
             )
             notes.append(f"EDR alerts where agent_ip={ip}: {len(alert_data)} ({names})")
 
@@ -199,7 +199,7 @@ class MetrasEnrichmentConnector:
         if endpoints:
             notes.append(
                 f"Matches {len(endpoints)} fleet endpoint(s): "
-                + ", ".join(e.get("name", "?") for e in endpoints[:10])
+                + ", ".join(e.get("name") or "?" for e in endpoints[:10])
             )
 
         if notes:

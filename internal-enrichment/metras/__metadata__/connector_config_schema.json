@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/w_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Metras-Enrichment",
+      "examples": [
+        "Metras-Enrichment"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "IPv4-Addr",
+        "StixFile"
+      ],
+      "description": "Entity types this connector enriches.",
+      "examples": [
+        [
+          "IPv4-Addr",
+          "StixFile"
+        ]
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "examples": [
+        false
+      ],
+      "type": "boolean"
+    },
+    "METRAS_API_BASE_URL": {
+      "default": "https://api.metras.sa/api",
+      "description": "Base URL of the Metras API.",
+      "examples": [
+        "https://api.metras.sa/api"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "METRAS_API_KEY": {
+      "description": "Metras API key (X-API-KEY header).",
+      "examples": [
+        "ChangeMe"
+      ],
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "METRAS_VERIFY_SSL": {
+      "default": true,
+      "description": "Verify TLS certificates.",
+      "examples": [
+        true
+      ],
+      "type": "boolean"
+    },
+    "METRAS_MAX_TLP": {
+      "description": "Maximum TLP level the connector will enrich.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber+strict",
+      "examples": [
+        "amber+strict"
+      ]
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "METRAS_API_KEY"
+  ],
+  "additionalProperties": true
+}

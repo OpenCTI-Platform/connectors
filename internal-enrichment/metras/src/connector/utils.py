@@ -6,10 +6,10 @@ No side effects, no HTTP, no STIX, no config access.
 import ipaddress
 
 
-def refang(value: str) -> str:
+def refang(value: str | None) -> str:
     """Remove common defanging so values match the external API."""
     if not value:
-        return value
+        return ""
     v = value
     v = v.replace("[.]", ".").replace("(.)", ".").replace("{.}", ".")
     v = v.replace("[:]", ":").replace("[://]", "://")

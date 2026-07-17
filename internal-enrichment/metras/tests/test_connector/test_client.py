@@ -43,6 +43,13 @@ def test_server_error_raises():
         _client([FakeResp(500, text="boom")])._get("/v1/endpoints")
 
 
+def test_non_json_response_raises():
+    # A 200 with a non-JSON body (WAF/HTML/proxy error page) must fail loudly,
+    # not silently return an unparsable payload that looks like an empty result.
+    with pytest.raises(MetrasAPIError):
+        _client([FakeResp(200, text="<html>blocked</html>")])._get("/v1/endpoints")
+
+
 def test_iter_edr_alerts_paginates_until_more_false():
     client = _client(
         [
