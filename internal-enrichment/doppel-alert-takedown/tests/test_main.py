@@ -62,7 +62,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.opencti_url == "http://localhost:8080/"
     assert helper.opencti_token == "test-token"
     assert helper.connect_id == "connector-id"
-    assert helper.connect_name == "Doppel Brand Protection"
+    assert helper.connect_name == "Doppel Alert and Takedown"
     assert helper.connect_scope == "Url,Domain-Name"
     assert helper.log_level == "ERROR"
     assert helper.connect_auto is True
