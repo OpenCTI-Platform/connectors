@@ -11,7 +11,7 @@
   "max_confidence_level": 50,
   "support_version": ">=7.260529.0",
   "subscription_link": null,
-  "source_code": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/metras",
   "manager_supported": false,
   "container_version": "1.0.0",
   "container_image": "opencti/connector-metras-feed",
