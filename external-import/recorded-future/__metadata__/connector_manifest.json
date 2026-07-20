@@ -12,6 +12,10 @@
     "Threat Intelligence Feed"
   ],
   "license_type": "Commercial",
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 55,
   "support_version": ">= 6.5.1",
   "subscription_link": "https://www.recordedfuture.com/get-started",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/recorded-future",
