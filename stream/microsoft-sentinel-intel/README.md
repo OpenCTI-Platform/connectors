@@ -61,21 +61,22 @@ The connector supports two authentication modes:
   or the locally logged-in `az login` session.
 
 Whichever identity is used, it must be granted the **Microsoft Sentinel Contributor**
-role on the Log Analytics Workspace (see step 4 below), and API permission
-**ThreatIndicators.ReadWrite.OwnedBy**.
+role on the Log Analytics Workspace (see step 3 below). No Microsoft Graph API
+permission is required, the connector authenticates against Azure Resource Manager
+(`https://management.azure.com/.default`), and access is controlled entirely by that
+RBAC role assignment, per the
+[official upload API prerequisites](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-upload-api#prerequisites).
 
 ### Azure AD Application Setup
 
 1. Register an application in Azure AD (Entra portal)
 2. Note the `tenant_id`, `client_id`, and `client_secret`
-3. Configure API permissions: **ThreatIndicators.ReadWrite.OwnedBy**
-4. In the Log Analytics Workspace, add **Microsoft Sentinel Contributor** role to the application
+3. In the Log Analytics Workspace, add **Microsoft Sentinel Contributor** role to the application
 
 > Skip this section if you're using a managed identity, workload identity, or `az login`
 > instead — see [Authentication](#authentication) above.
 
 ![Sentinel Variables](./doc/sentinel_info_variables.png)
-![Sentinel Permissions](./doc/permission_mandatory.png)
 
 View indicators in: **Microsoft Sentinel > Threat Intelligence > Indicators**
 
