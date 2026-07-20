@@ -6,11 +6,10 @@ import stix2
 from pycti import Identity as pyctiIdentity
 from pycti import MarkingDefinition, OpenCTIConnectorHelper
 from stix2 import Identity
+from teamt5_connector.indicator_bundle_handler import IndicatorBundleHandler
+from teamt5_connector.report_handler import ReportHandler
 from teamt5_connector.settings import ConnectorSettings
 from teamt5_services import Teamt5Client
-
-from .indicator_bundle_handler import IndicatorBundleHandler
-from .report_handler import ReportHandler
 
 
 class TeamT5Connector:
