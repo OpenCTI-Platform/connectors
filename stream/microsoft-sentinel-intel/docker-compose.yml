@@ -14,6 +14,8 @@ services:
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
 
+      # Optional: omit these 3 together to authenticate via DefaultAzureCredential
+      # (managed identity, workload identity, or `az login`) instead of an app registration.
       - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe # Azure Tenant ID
       - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
       - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
