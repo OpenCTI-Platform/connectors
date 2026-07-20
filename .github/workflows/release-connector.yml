@@ -1,5 +1,22 @@
 name: "Release Connector"
 
+# Dynamic run name shown in the Actions run list, so it's obvious at a glance
+# which connector/version each run is for instead of a generic "Release
+# Connector #NNN". Context availability for `run-name` is limited to
+# `github`, `inputs`, `vars` (no job outputs), so on tag push we just reuse
+# the tag itself (already "{connector}/{version}"); on workflow_dispatch we
+# build the label from the raw inputs.
+run-name: >-
+  ${{
+    github.event_name == 'push'
+      && format('🚀 {0}', github.ref_name)
+      || format('🚀 {0}{1}{2}{3}',
+           inputs.connector_name,
+           inputs.version != '' && format('@{0}', inputs.version) || '',
+           inputs.dry_run && ' · dry-run' || '',
+           inputs.manifest_only && ' · manifest-only' || '')
+  }}
+
 # Production release pipeline for individual connectors.
 #
 # Triggers:
@@ -14,6 +31,13 @@ name: "Release Connector"
 #   4. Build & push Docker image (DockerHub + GHCR)
 #   5. Create GitHub Release with changelog + manifest/schema/fragment assets
 #   6. Update container_version in manifest and commit back to default branch
+#
+# Transition mode — `manifest_only` (workflow_dispatch only, never on tag push):
+# skips step 4 (Docker build/push) only — everything else (release notes, tag,
+# GitHub Release, manifest fragment, container_version commit-back) still runs
+# normally. Used while image builds are still handled by CircleCI (see
+# release-bulk-connectors.yml, which forces this mode when triggered by a
+# platform CalVer tag push).
 
 on:
   push:
@@ -42,6 +66,15 @@ on:
         required: false
         type: boolean
         default: false
+      manifest_only:
+        description: >
+          Manifest-only — skip Docker build/push only (still handled by
+          CircleCI during the transition). Release notes, tag, GitHub
+          Release, manifest fragment, and container_version commit-back are
+          still fully produced.
+        required: false
+        type: boolean
+        default: false
       sdk_ref:
         description: >
           Optional git ref to pin connectors-sdk to in the built image.
@@ -51,7 +84,10 @@ on:
         default: ""
 
 concurrency:
-  group: release-connector-${{ github.ref_name }}
+  # Per-connector group so bulk releases (which dispatch one run per connector,
+  # all on the same branch ref) run in parallel rather than serialize. On tag
+  # push there are no inputs, so github.ref_name (the tag) is already unique.
+  group: release-connector-${{ inputs.connector_name || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -62,7 +98,7 @@ jobs:
   # 1. Resolve connector directory and build configuration
   # ──────────────────────────────────────────────────────────
   resolve:
-    name: Resolve connector
+    name: Resolve connector ${{ inputs.connector_name}}
     runs-on: ubuntu-latest
     outputs:
       connector_name: ${{ steps.parse.outputs.connector_name }}
@@ -75,6 +111,7 @@ jobs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
       is_tag_push: ${{ steps.parse.outputs.is_tag_push }}
       dry_run: ${{ steps.parse.outputs.dry_run }}
+      manifest_only: ${{ steps.parse.outputs.manifest_only }}
       tag: ${{ steps.version.outputs.tag }}
       matrix_json: ${{ steps.matrix.outputs.matrix_json }}
     steps:
@@ -95,12 +132,14 @@ jobs:
             echo "connector_name=$CONNECTOR_NAME" >> "$GITHUB_OUTPUT"
             echo "is_tag_push=true" >> "$GITHUB_OUTPUT"
             echo "dry_run=false" >> "$GITHUB_OUTPUT"
+            echo "manifest_only=false" >> "$GITHUB_OUTPUT"
             echo "🏷️ Tag push: $TAG → connector=$CONNECTOR_NAME version=$VERSION"
           else
             # workflow_dispatch: use inputs directly
             echo "connector_name=${{ inputs.connector_name }}" >> "$GITHUB_OUTPUT"
             echo "is_tag_push=false" >> "$GITHUB_OUTPUT"
             echo "dry_run=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"
+            echo "manifest_only=${{ inputs.manifest_only }}" >> "$GITHUB_OUTPUT"
             echo "📋 Manual dispatch: connector=${{ inputs.connector_name }}"
           fi
 
@@ -351,6 +390,7 @@ jobs:
   # ──────────────────────────────────────────────────────────
   build:
     needs: resolve
+    if: needs.resolve.outputs.manifest_only != 'true'
     uses: ./.github/workflows/build-connector-type.yml
     permissions:
       contents: read
@@ -370,11 +410,24 @@ jobs:
   # ──────────────────────────────────────────────────────────
   # 4. Create GitHub Release + update manifest version
   # ──────────────────────────────────────────────────────────
+  # `build` is skipped (not failed) when manifest_only is true. Per GitHub's
+  # docs on `jobs.<job_id>.needs`: "If a job fails or is skipped, all jobs
+  # that need it are skipped unless the jobs use a conditional expression
+  # that causes the job to continue" — a plain custom `if:` does NOT bypass
+  # this cascade, only `always()` does. So we must use `always()` here and
+  # explicitly re-check resolve/release-notes succeeded and build didn't
+  # fail/get cancelled (skipped is fine).
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [resolve, release-notes, build]
-    if: needs.resolve.outputs.dry_run != 'true'
+    if: |
+      always() &&
+      needs.resolve.result == 'success' &&
+      needs.release-notes.result == 'success' &&
+      needs.build.result != 'failure' &&
+      needs.build.result != 'cancelled' &&
+      needs.resolve.outputs.dry_run != 'true'
     permissions:
       contents: write
     steps:
@@ -468,6 +521,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHANGELOG: ${{ needs.release-notes.outputs.changelog }}
+          MANIFEST_ONLY: ${{ needs.resolve.outputs.manifest_only }}
         run: |
           CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
           CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
@@ -477,9 +531,15 @@ jobs:
 
           echo "📋 Creating release: $TITLE"
 
+          NOTES="$CHANGELOG"
+          if [ "$MANIFEST_ONLY" = "true" ]; then
+            NOTICE="> 🧩 **Manifest-only release** — Docker build/push is still handled by CircleCI during the CircleCI→GitHub Actions transition; no image was built by this workflow run for this tag."
+            NOTES="${NOTICE}"$'\n\n'"${NOTES}"
+          fi
+
           gh release create "$TAG" \
             --title "$TITLE" \
-            --notes "$CHANGELOG" \
+            --notes "$NOTES" \
             --target "${{ github.sha }}"
 
           # Attach connector manifest, config schema, and manifest fragment as release assets
@@ -512,9 +572,11 @@ jobs:
             while IFS= read -r file; do
               rel="${file#"$PINNED_DIR"/}"
               asset="${CONNECTOR_NAME}-$(echo "$rel" | tr '/' '-')"
-              cp "$file" "${RUNNER_TEMP}/${asset}"
-              gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
-              echo "📎 Attached pinned dependency file: $asset"
+              if [ -f "$file" ]; then
+                cp "$file" "${RUNNER_TEMP}/${asset}"
+                gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
+                echo "📎 Attached pinned dependency file: $asset"
+              fi
             done < <(find "$PINNED_DIR" -type f \( -name requirements.txt -o -name pyproject.toml \))
           else
             echo "ℹ️ No pinned dependency files to attach"
@@ -599,6 +661,7 @@ jobs:
       - name: Print summary
         run: |
           DRY_RUN="${{ needs.resolve.outputs.dry_run }}"
+          MANIFEST_ONLY="${{ needs.resolve.outputs.manifest_only }}"
           CONNECTOR="${{ needs.resolve.outputs.connector_name }}"
           VERSION="${{ needs.resolve.outputs.version }}"
           DIR="${{ needs.resolve.outputs.connector_dir }}"
@@ -610,7 +673,10 @@ jobs:
           {
             echo "## 🚀 Release Connector — Summary"
             echo ""
-            if [ "$DRY_RUN" = "true" ]; then
+            if [ "$MANIFEST_ONLY" = "true" ]; then
+              echo "> 🧩 **MANIFEST-ONLY** — Docker build/push was skipped (still handled by CircleCI during the transition); tag, GitHub Release, manifest fragment, and container_version commit-back were still produced normally."
+              echo ""
+            elif [ "$DRY_RUN" = "true" ]; then
               echo "> ⚠️ **DRY RUN** — no images were pushed and no release was created."
               echo ""
             fi
@@ -624,6 +690,7 @@ jobs:
             echo "| FIPS | ${FIPS} |"
             echo "| Trigger | $([ \"$IS_TAG_PUSH\" = \"true\" ] && echo \"tag push\" || echo \"manual dispatch\") |"
             echo "| Dry Run | ${DRY_RUN} |"
+            echo "| Manifest Only | ${MANIFEST_ONLY} |"
             echo ""
 
             echo "### Job Results"
