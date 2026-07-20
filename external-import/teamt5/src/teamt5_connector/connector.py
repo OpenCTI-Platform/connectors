@@ -174,7 +174,6 @@ class TeamT5Connector:
             self.helper.connector_logger.error(
                 "[CONNECTOR] Unhandled exception during run",
                 meta={"error": str(err)},
-                exc_info=True,
             )
             if work_id is not None:
                 try:
