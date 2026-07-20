@@ -18,5 +18,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-urlscan",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "urlscan.io"
+  ],
+  "egress_config_keys": [
+    "URLSCAN_URL"
+  ]
 }

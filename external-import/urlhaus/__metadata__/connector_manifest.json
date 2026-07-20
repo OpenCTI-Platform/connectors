@@ -17,5 +17,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-urlhaus",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "urlhaus.abuse.ch"
+  ],
+  "egress_config_keys": [
+    "URLHAUS_CSV_URL"
+  ]
 }

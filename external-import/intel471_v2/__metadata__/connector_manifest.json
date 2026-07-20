@@ -18,5 +18,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-intel471_v2",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "api.intel471.com"
+  ],
+  "egress_config_keys": []
 }

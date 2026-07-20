@@ -18,5 +18,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-fortisiem-incidents",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [],
+  "egress_config_keys": [
+    "FORTISIEM_INCIDENTS_API_BASE_URL"
+  ]
 }

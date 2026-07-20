@@ -18,5 +18,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-flashpoint",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "api.flashpoint.io"
+  ],
+  "egress_config_keys": []
 }

@@ -17,5 +17,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-threatfox",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "threatfox.abuse.ch"
+  ],
+  "egress_config_keys": [
+    "THREATFOX_CSV_URL"
+  ]
 }

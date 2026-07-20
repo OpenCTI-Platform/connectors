@@ -18,5 +18,10 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-microsoft-sentinel-incidents",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "login.microsoftonline.com",
+    "api.loganalytics.azure.com"
+  ],
+  "egress_config_keys": []
 }

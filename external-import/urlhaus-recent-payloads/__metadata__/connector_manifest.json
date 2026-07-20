@@ -17,5 +17,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-urlhaus-recent-payloads",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "urlhaus-api.abuse.ch"
+  ],
+  "egress_config_keys": [
+    "URLHAUS_RECENT_PAYLOADS_API_URL"
+  ]
 }

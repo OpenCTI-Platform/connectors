@@ -18,5 +18,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-alienvault",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "otx.alienvault.com"
+  ],
+  "egress_config_keys": [
+    "ALIENVAULT_BASE_URL"
+  ]
 }

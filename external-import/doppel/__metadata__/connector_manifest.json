@@ -17,5 +17,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-doppel",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "api.doppel.com"
+  ],
+  "egress_config_keys": [
+    "DOPPEL_API_BASE_URL"
+  ]
 }

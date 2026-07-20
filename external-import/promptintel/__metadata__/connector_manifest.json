@@ -17,5 +17,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-promptintel",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "api.promptintel.novahunting.ai"
+  ],
+  "egress_config_keys": [
+    "PROMPTINTEL_API_URL"
+  ]
 }

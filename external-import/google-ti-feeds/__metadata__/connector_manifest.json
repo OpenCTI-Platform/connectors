@@ -19,5 +19,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-google-ti-feeds",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "www.virustotal.com"
+  ],
+  "egress_config_keys": [
+    "GTI_API_URL"
+  ]
 }

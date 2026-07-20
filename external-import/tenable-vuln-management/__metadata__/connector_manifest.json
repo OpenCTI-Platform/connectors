@@ -17,5 +17,12 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-tenable-vuln-management",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "cloud.tenable.com"
+  ],
+  "egress_config_keys": [
+    "TENABLE_VULN_MANAGEMENT_API_BASE_URL",
+    "TIO_API_BASE_URL"
+  ]
 }

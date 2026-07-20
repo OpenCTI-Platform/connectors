@@ -19,5 +19,12 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-proofpoint-tap",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "tap-api-v2.proofpoint.com"
+  ],
+  "egress_config_keys": [
+    "PROOFPOINT_TAP_API_BASE_URL",
+    "TAP_API_BASE_URL"
+  ]
 }

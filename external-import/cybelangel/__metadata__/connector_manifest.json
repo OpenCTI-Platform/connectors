@@ -18,5 +18,13 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-cybelangel",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "platform.cybelangel.com",
+    "auth.cybelangel.com"
+  ],
+  "egress_config_keys": [
+    "CYBELANGEL_API_URL",
+    "CYBELANGEL_AUTH_URL"
+  ]
 }

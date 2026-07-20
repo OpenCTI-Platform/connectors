@@ -19,5 +19,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-sparta",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "sparta.aerospace.org"
+  ],
+  "egress_config_keys": [
+    "SPARTA_BASE_URL"
+  ]
 }

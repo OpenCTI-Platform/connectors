@@ -18,5 +18,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-ipsum",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "raw.githubusercontent.com"
+  ],
+  "egress_config_keys": [
+    "CONNECTOR_IPSUM_API_BASE_URL"
+  ]
 }

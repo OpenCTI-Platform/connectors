@@ -18,5 +18,17 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-crowdstrike",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "api.crowdstrike.com",
+    "raw.githubusercontent.com"
+  ],
+  "egress_config_keys": [
+    "CROWDSTRIKE_BASE_URL",
+    "CROWDSTRIKE_ATTACK_ENTERPRISE_URL"
+  ],
+  "limits": {
+    "fetch_max_mb": 64,
+    "memory_mb": 3072
+  }
 }

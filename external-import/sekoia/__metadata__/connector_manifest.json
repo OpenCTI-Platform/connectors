@@ -18,5 +18,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-sekoia",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": ["api.sekoia.io", "app.sekoia.io"],
+  "egress_config_keys": ["SEKOIA_BASE_URL"],
+  "limits": {
+    "fetch_max_mb": 64,
+    "memory_mb": 1024
+  }
 }

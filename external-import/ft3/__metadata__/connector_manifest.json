@@ -18,5 +18,12 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-ft3",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "raw.githubusercontent.com"
+  ],
+  "egress_config_keys": [
+    "FT3_TACTICS_URL",
+    "FT3_TECHNIQUES_URL"
+  ]
 }

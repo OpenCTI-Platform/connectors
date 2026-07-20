@@ -18,5 +18,8 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-malpedia",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "malpedia.caad.fkie.fraunhofer.de"
+  ]
 }

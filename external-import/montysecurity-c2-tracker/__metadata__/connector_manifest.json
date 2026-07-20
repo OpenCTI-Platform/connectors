@@ -4,7 +4,7 @@
   "description": "The MontySecurity C2-Tracker is a free, community-driven IOC feed that leverages Shodan searches to identify active Command & Control, botnet, and malware infrastructure across the internet.\n\nThis connector imports C2-Tracker data into OpenCTI, creating Malware entities and associated IP address observables with indicators relationships. It provides visibility into active adversary infrastructure for proactive threat detection and blocking.",
   "short_description": "MontySecurity C2-Tracker connector imports active C2, botnet, and malware infrastructure IPs identified via Shodan, linked to their associated malware families.",
   "logo": "external-import/montysecurity-c2-tracker/__metadata__/logo.png",
-  "use_cases" : [
+  "use_cases": [
     "Open Source Threat Intel",
     "Infrastructure & Attack Surface Visibility"
   ],
@@ -18,5 +18,13 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-montysecurity-c2-tracker",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "raw.githubusercontent.com",
+    "github.com"
+  ],
+  "egress_config_keys": [
+    "MONTYSECURITY_C2_TRACKER_MALWARE_LIST_URL",
+    "MONTYSECURITY_C2_TRACKER_MALWARE_IPS_BASE_URL"
+  ]
 }

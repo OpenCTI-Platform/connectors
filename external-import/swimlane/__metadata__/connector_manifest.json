@@ -18,5 +18,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-swimlane",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [],
+  "egress_config_keys": [
+    "SWIMLANE_API_BASE_URL"
+  ]
 }

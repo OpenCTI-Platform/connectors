@@ -17,5 +17,10 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-elastic-security-incidents",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [],
+  "egress_config_keys": [
+    "ELASTIC_SECURITY_URL",
+    "ELASTIC_SECURITY_KIBANA_URL"
+  ]
 }

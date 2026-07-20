@@ -17,5 +17,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-vxvault",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "vxvault.net"
+  ],
+  "egress_config_keys": [
+    "VXVAULT_URL"
+  ]
 }

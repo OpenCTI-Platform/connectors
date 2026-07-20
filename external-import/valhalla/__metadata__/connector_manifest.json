@@ -18,5 +18,8 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-valhalla",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "valhalla.nextron-systems.com"
+  ]
 }

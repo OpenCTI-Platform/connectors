@@ -17,5 +17,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-cpe",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "services.nvd.nist.gov"
+  ],
+  "egress_config_keys": [
+    "CPE_BASE_URL"
+  ]
 }

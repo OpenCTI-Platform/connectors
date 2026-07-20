@@ -18,5 +18,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-corelight-investigator",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [],
+  "egress_config_keys": [
+    "CORELIGHT_INVESTIGATOR_API_BASE_URL"
+  ]
 }

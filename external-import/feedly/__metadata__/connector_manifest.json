@@ -17,5 +17,10 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-feedly",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "cloud.feedly.com",
+    "feedly.com"
+  ],
+  "egress_config_keys": []
 }

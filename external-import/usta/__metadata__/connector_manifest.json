@@ -20,5 +20,11 @@
   "container_image": "opencti/connector-usta",
   "container_type": "EXTERNAL_IMPORT",
   "config_schema": "external-import/usta/__metadata__/connector_config_schema.json",
-  "config_documentation": "external-import/usta/__metadata__/CONNECTOR_CONFIG_DOC.md"
+  "config_documentation": "external-import/usta/__metadata__/CONNECTOR_CONFIG_DOC.md",
+  "egress": [
+    "usta.prodaft.com"
+  ],
+  "egress_config_keys": [
+    "USTA_API_BASE_URL"
+  ]
 }

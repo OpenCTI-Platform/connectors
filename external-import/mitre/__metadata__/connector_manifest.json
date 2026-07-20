@@ -18,5 +18,17 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-mitre",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "raw.githubusercontent.com"
+  ],
+  "egress_config_keys": [
+    "MITRE_ENTERPRISE_FILE_URL",
+    "MITRE_MOBILE_ATTACK_FILE_URL",
+    "MITRE_ICS_ATTACK_FILE_URL",
+    "MITRE_CAPEC_FILE_URL"
+  ],
+  "limits": {
+    "fetch_max_mb": 64
+  }
 }

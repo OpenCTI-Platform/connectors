@@ -18,5 +18,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-silobreaker",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "api.silobreaker.com"
+  ],
+  "egress_config_keys": [
+    "SILOBREAKER_API_URL"
+  ]
 }

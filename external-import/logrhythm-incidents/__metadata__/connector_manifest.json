@@ -18,5 +18,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-logrhythm-incidents",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [],
+  "egress_config_keys": [
+    "LOGRHYTHM_INCIDENTS_API_BASE_URL"
+  ]
 }

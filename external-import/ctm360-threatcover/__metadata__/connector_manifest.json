@@ -17,5 +17,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-ctm360-threatcover",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [],
+  "egress_config_keys": [
+    "CTM360_THREATCOVER_DISCOVERY_URL"
+  ]
 }

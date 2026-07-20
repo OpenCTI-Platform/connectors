@@ -17,5 +17,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-mokn",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [],
+  "egress_config_keys": [
+    "MOKN_CONSOLE_URL"
+  ]
 }

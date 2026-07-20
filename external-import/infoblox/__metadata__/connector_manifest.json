@@ -17,5 +17,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-infoblox",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "csp.infoblox.com"
+  ],
+  "egress_config_keys": [
+    "INFOBLOX_URL"
+  ]
 }

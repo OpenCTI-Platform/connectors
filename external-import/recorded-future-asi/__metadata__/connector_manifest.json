@@ -18,5 +18,12 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-recorded-future-asi",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "api.securitytrails.com"
+  ],
+  "egress_config_keys": [
+    "RECORDED_FUTURE_ASI_API_BASE_URL",
+    "RECORDED_FUTURE_ASI_API_V1_BASE_URL"
+  ]
 }

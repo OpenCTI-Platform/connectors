@@ -17,5 +17,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-shadowserver",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "dl.shadowserver.org",
+    "transform.shadowserver.org"
+  ]
 }

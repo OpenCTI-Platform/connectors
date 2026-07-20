@@ -17,5 +17,9 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-virustotal-livehunt-notifications",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "www.virustotal.com"
+  ],
+  "egress_config_keys": []
 }

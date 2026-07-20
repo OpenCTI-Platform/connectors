@@ -19,5 +19,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-disarm-framework",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "raw.githubusercontent.com"
+  ],
+  "egress_config_keys": [
+    "DISARM_FRAMEWORK_URL"
+  ]
 }

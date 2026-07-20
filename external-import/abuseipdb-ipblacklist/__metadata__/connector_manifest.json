@@ -17,5 +17,11 @@
   "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-abuseipdb-ipblacklist",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "api.abuseipdb.com"
+  ],
+  "egress_config_keys": [
+    "ABUSEIPDB_API_URL"
+  ]
 }

@@ -18,5 +18,11 @@
   "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-ctm360-cyberblindspot",
-  "container_type": "EXTERNAL_IMPORT"
+  "container_type": "EXTERNAL_IMPORT",
+  "egress": [
+    "cbs.ctm360.com"
+  ],
+  "egress_config_keys": [
+    "CTM360_CBS_API_BASE_URL"
+  ]
 }
