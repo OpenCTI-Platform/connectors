@@ -107,8 +107,27 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
 
     @model_validator(mode="after")
     def check_auth_fields_consistency(self) -> "MicrosoftSentinelIntelConfig":
-        fields = (self.tenant_id, self.client_id, self.client_secret)
-        if any(f is not None for f in fields) and not all(f is not None for f in fields):
+        values = {
+            "tenant_id": self.tenant_id,
+            "client_id": self.client_id,
+            "client_secret": (
+                self.client_secret.get_secret_value()
+                if self.client_secret is not None
+                else None
+            ),
+        }
+        blank_fields = [
+            name
+            for name, value in values.items()
+            if value is not None and not value.strip()
+        ]
+        if blank_fields:
+            raise ValueError(
+                f"{', '.join(blank_fields)} must not be empty or whitespace-only."
+            )
+
+        provided = [value is not None for value in values.values()]
+        if any(provided) and not all(provided):
             raise ValueError(
                 "If you provide any of tenant_id, client_id, or client_secret, you must provide all three."
             )

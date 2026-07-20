@@ -119,11 +119,11 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      # Optional: omit these 3 together to authenticate via DefaultAzureCredential
-      # (managed identity, workload identity, or `az login`) instead of an app registration.
-      - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe
-      - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe
-      - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe
+      # Optional: uncomment and fill in to use app-registration auth instead of DefaultAzureCredential
+      # (managed identity, workload identity, or `az login`).
+      # - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe
+      # - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe
+      # - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID=ChangeMe

@@ -23,9 +23,9 @@ class ConnectorClient:
             f"/providers/Microsoft.SecurityInsights/threatIntelligence/main"
         )
         if (
-            config.microsoft_sentinel_intel.tenant_id
-            and config.microsoft_sentinel_intel.client_id
-            and config.microsoft_sentinel_intel.client_secret
+            config.microsoft_sentinel_intel.tenant_id is not None
+            and config.microsoft_sentinel_intel.client_id is not None
+            and config.microsoft_sentinel_intel.client_secret is not None
         ):
             credential = ClientSecretCredential(
                 tenant_id=config.microsoft_sentinel_intel.tenant_id,
@@ -36,7 +36,9 @@ class ConnectorClient:
             credential = DefaultAzureCredential()
 
         policies = [
-            BearerTokenCredentialPolicy(credential, "https://management.azure.com/.default"),
+            BearerTokenCredentialPolicy(
+                credential, "https://management.azure.com/.default"
+            ),
             RetryPolicy(),
         ]
 
