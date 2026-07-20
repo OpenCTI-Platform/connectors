@@ -1,0 +1,21 @@
+{
+  "title": "XposedOrNot",
+  "slug": "xposedornot",
+  "description": "XposedOrNot is an open, free data-breach search service tracking 760+ breaches. Given an email address, it returns the breaches the address appears in, with per-breach detail: breach date, records exposed, exposed data classes, affected domain, industry and password-storage risk, plus an overall risk score.\n\nIntegrating XposedOrNot with OpenCTI lets analysts enrich an Email-Addr observable in place: the observable receives a risk-derived score, `data-breach` labels (plus a `plaintext-password-exposure` label when applicable) and an external reference, and a markdown summary note with the full breach table is attached. The connector works without any API key via the free community API (rate limits apply); an optional commercial key raises limits. Breach exposure tied to an email address is personal information and must only be used for lawful, authorised investigations (GDPR / legal basis / proper investigative framework).",
+  "short_description": "Enrich an email address with its data-breach exposure — breach names, dates, records, exposed data classes and password-storage risk — score and label the observable, and attach a summary note. No API key required.",
+  "logo": "internal-enrichment/xposedornot/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 75,
+  "support_version": ">= 6.8.12",
+  "subscription_link": "https://console.xposedornot.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/xposedornot",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-xposedornot",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
