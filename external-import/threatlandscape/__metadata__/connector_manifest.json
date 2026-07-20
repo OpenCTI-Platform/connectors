@@ -1,0 +1,19 @@
+{
+  "title": "Threat Landscape",
+  "slug": "threatlandscape",
+  "description": "Connector for Threat Landscape (threatlandscape.io), a commercial threat intelligence platform delivering continuously updated STIX 2.1 data. Choose from four feed modes: full intelligence (OSINT and darknet combined), OSINT-only, darknet-only, or a vetted actionable IOC feed. The intelligence feeds deliver rich context including threat actors, malware families, campaigns, intrusion sets, vulnerabilities, attack patterns, and their relationships. The IOC feed delivers lean, high-confidence indicators for immediate operationalisation.",
+  "short_description": "Commercial threat intelligence connector for threatlandscape.io. Ingest full STIX 2.1 intelligence bundles (OSINT, darknet, or combined) or a vetted actionable IOC feed.",
+  "logo": "external-import/threatlandscape/__metadata__/logo.png",
+  "use_cases": ["Commercial Threat Intel"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://threatlandscape.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/threatlandscape",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-threatlandscape",
+  "container_type": "EXTERNAL_IMPORT"
+}
