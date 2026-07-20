@@ -1697,11 +1697,14 @@ def test_process_events_resume_with_attribute_filtering_does_not_crash(
         ],
     )
 
-    # Pre-set _current_bundle to simulate a resume after buffering
+    # Pre-set _current_bundle to simulate a resume after buffering.
+    # The 4th element is filter_passed_count from the original filtering pass;
+    # use None to simulate "no filtering was applied" (e.g. event not yet in
+    # OpenCTI on first ingestion).
     fake_author = MagicMock()
     fake_markings = []
     fake_bundle_objects = [MagicMock()]
-    connector._current_bundle = (fake_author, fake_markings, fake_bundle_objects)
+    connector._current_bundle = (fake_author, fake_markings, fake_bundle_objects, None)
 
     initial_state = {
         "last_event_date": datetime(2026, 1, 14, tzinfo=timezone.utc).isoformat(),
