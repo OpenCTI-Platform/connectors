@@ -11,6 +11,10 @@
     "Threat Intelligence Feed"
   ],
   "license_type": "Commercial",
+  "verified": true,
+  "last_verified_date": "2025-06-12",
+  "playbook_supported": false,
+  "max_confidence_level": 60,
   "support_version": ">= 6.4.0",
   "subscription_link": "https://zvelo.com/zvelocti-cyber-threat-intelligence/malicious-detailed-detection-feed/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/zvelo",
