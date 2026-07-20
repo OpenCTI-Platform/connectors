@@ -56,8 +56,7 @@ import traceback
 from dataclasses import dataclass
 from pathlib import Path
 
-import _matrix_common  as common
-
+import _matrix_common as common
 
 # Default CalVer major, matching release-connector.yml (MAJOR=7).
 DEFAULT_MAJOR = 7
