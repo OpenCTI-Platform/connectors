@@ -2,11 +2,15 @@
   "title": "Lia File Feed",
   "slug": "lia-file-feed",
   "description": "The connector ingests indicators of compromise (IOCs) from the Loader Insight Agency (LIA) File Feed, establishing relationships between IOCs to provide context such as the loader family responsible for downloading a payload and theURL from which it was downloaded. If known, the payload is tagged with a detection, offering insights into which malware loader delivers specific malware.\nNOTE: Requires a LIA File Feed subscription and can be acquired at https://loaderinsight.agency.",
-  "short_description": "The connector ingests indicators of compromise (IOCs) from the Loader Insight Agency (LIA) File Feed, establishing relationships between IOCs to provide context such as the loader family responsible for downloading a payload and theURL from which it was downloaded. If known, the payload is tagged with a detection, offering insights into which malware loader delivers specific malware.\nNOTE: Requires a LIA File Feed subscription and can be acquired at https://loaderinsight.agency.",
+  "short_description": "Imports IOCs from the Loader Insight Agency (LIA) File Feed, linking loaders to payloads and download URLs with malware family tags. Requires a LIA subscription.",
   "logo": "external-import/lia-file-feed/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

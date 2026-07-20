@@ -2,11 +2,15 @@
   "title": "Criminalip C2 Daily Feed",
   "slug": "criminalip-c2-daily-feed",
   "description": "The connector uses the criminalip C2-Daily-Feed to collect the malicious IP addresses derived from Criminal IP (https://www.criminalip.io/).",
-  "short_description": "The connector uses the criminalip C2-Daily-Feed to collect the malicious IP addresses derived from Criminal IP (https://www.criminalip.io/).",
+  "short_description": "Imports daily C2 malicious IP addresses from the Criminal IP C2-Daily-Feed into OpenCTI as STIX indicators.",
   "logo": "external-import/criminalip-c2-daily-feed/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

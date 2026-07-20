@@ -5,8 +5,12 @@
   "short_description": "Enriches Indicator observables using Team Cymru Scout Search API for playbook-based threat intelligence queries.",
   "logo": "internal-enrichment/team-cymru-scout-search/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": "2026-02-05",
   "playbook_supported": true,

@@ -1,13 +1,16 @@
 {
   "title": "Valhalla",
   "slug": "valhalla",
-  "description": "This connector imports knowledge from the Valhalla API.",
-  "short_description": "This connector imports knowledge from the Valhalla API. The connector adds data for the following Valhalla observable/indicator types: stix2 indicator pattern: yara",
+  "description": "The Valhalla connector imports YARA rules from the Nextron Systems Valhalla API into OpenCTI as STIX 2.1 indicators. Valhalla provides a curated feed of high-quality YARA rules for detecting malware, APT tooling, and other threats. The connector creates indicator objects with YARA pattern type, enabling correlation with malware and threat actor entities in OpenCTI.",
+  "short_description": "Imports curated YARA detection rules from the Nextron Systems Valhalla API into OpenCTI as STIX 2.1 indicators.",
   "logo": "external-import/valhalla/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

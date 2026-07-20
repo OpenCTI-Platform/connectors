@@ -5,9 +5,12 @@
   "short_description": "Tanium Intel connector streams OpenCTI threat intelligence to Tanium Threat Response in real time for endpoint detection and hunting.",
   "logo": "stream/tanium-intel/__metadata__/logo.png",
   "use_cases": [
-    "Endpoint Detection and Response",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -5,9 +5,12 @@
   "short_description": "ANY.RUN Interactive Sandbox connector permits to detonate files and URLs in a cloud sandbox, returning detailed behavioral reports with network activity, dropped files, and MITRE ATT&CK mappings.",
   "logo": "internal-enrichment/anyrun-task/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

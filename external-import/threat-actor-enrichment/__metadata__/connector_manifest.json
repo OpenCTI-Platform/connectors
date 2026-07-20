@@ -5,9 +5,12 @@
   "short_description": "Enriches threat actor groups with computed last_seen dates from related indicators and reports.",
   "logo": null,
   "use_cases": [
-    "Enrichment & Analysis",
-    "Threat Intelligence Management"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

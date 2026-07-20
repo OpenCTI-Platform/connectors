@@ -5,15 +5,12 @@
   "short_description": "IBM X-Force Connector integrates X-Force threat reports and IOCs into OpenCTI, enhancing threat intelligence.",
   "logo": "external-import/ibm-xti/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
     "Adversary & Campaign Insights"
   ],
-  "verified": true,
-  "last_verified_date": null,
-  "playbook_supported": false,
-  "max_confidence_level": 50,
-  "support_version": ">= 6.5.1",
-  "subscription_link": "https://www.ibm.com/services/threat-intelligence",
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ibm-xti",
   "manager_supported": true,
   "container_version": "rolling",

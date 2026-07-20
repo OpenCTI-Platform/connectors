@@ -5,9 +5,12 @@
   "short_description": "MontySecurity C2-Tracker connector imports active C2, botnet, and malware infrastructure IPs identified via Shodan, linked to their associated malware families.",
   "logo": "external-import/montysecurity-c2-tracker/__metadata__/logo.png",
   "use_cases" : [
-    "Open Source Threat Intel",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": "2026-03-17",
   "playbook_supported": false,

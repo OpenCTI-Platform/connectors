@@ -2,11 +2,15 @@
   "title": "Cisco SMA",
   "slug": "cisco-sma",
   "description": "This connector imports data from the CISCO SMA database.\nThe connector does not retrieve historical data. It retrieves the day's IOCs on a daily basis. For this reason, there is no reason to set the \u201cinterval\u201d variable to a value other than \u201c24\u201d. Setting more would cause IOCs to be missed, setting less would simply reimport IOCs already retrieved.\nThe connector creates the following OpenCTI entities:",
-  "short_description": "This connector imports data from the CISCO SMA database.\nThe connector does not retrieve historical data. It retrieves the day's IOCs on a daily basis. For this reason, there is no reason to set the \u201cinterval\u201d variable to a value other than \u201c24\u201d. Setting more would cause IOCs to be missed, setting less would simply reimport IOCs already retrieved.\nThe connector creates the following OpenCTI entities:",
+  "short_description": "Imports daily IOCs from the Cisco SMA (Security Management Appliance) database into OpenCTI. Retrieves only the current day's indicators — interval should be set to 24 hours.",
   "logo": "external-import/cisco-sma/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

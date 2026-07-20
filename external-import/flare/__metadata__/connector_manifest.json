@@ -5,9 +5,12 @@
   "short_description": "Import Flare threat intelligence events (leaked credentials, stealer logs, lookalike domains, ransomware leaks) as STIX2 incidents into OpenCTI.",
   "logo": "external-import/flare/__metadata__/logo.png",
   "use_cases" : [
-    "Brand, Digital Risk & Underground Exposure",
-    "Third-Party & Supply Chain Oversight"
+    "Brand, Digital Risk & Underground Exposure"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": "2026-06-18",
   "playbook_supported": false,

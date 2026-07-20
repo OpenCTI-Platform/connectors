@@ -5,9 +5,12 @@
   "short_description": "Import Intel 471 darknet alerts and reports into OpenCTI.",
   "logo": "external-import/intel471-darknet/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Adversary & Campaign Insights"
   ],
-  "verified": false,
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 100,

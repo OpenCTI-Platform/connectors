@@ -5,8 +5,13 @@
   "short_description": "Comlaude connector imports domain portfolio information from the Comlaude API into OpenCTI, supporting CTI allowlist management and domain intelligence.",
   "logo": "external-import/comlaude/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Brand, Digital Risk & Underground Exposure",
+    "Third-Party & Supply Chain Oversight"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": "2025-04-17",
   "playbook_supported": false,

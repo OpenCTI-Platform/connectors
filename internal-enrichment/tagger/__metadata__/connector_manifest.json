@@ -5,8 +5,12 @@
   "short_description": "This is an internal enrichment connector that apply labels to objects based on specific regular expressions rules and scopes (reports, observables, etc.).",
   "logo": "internal-enrichment/tagger/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Other"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

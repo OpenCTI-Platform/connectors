@@ -5,10 +5,12 @@
   "short_description": "Hunt.io connector imports Observables linked to C2 infrastructures detected by HuntIO sensors.",
   "logo": "external-import/hunt-io/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
-  "verified": true,
-  "last_verified_date": "2025-11-12",
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "playbook_supported": false,
   "max_confidence_level": 60,
   "support_version": ">= 6.5.1",

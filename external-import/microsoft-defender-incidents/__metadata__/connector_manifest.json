@@ -1,12 +1,16 @@
 {
   "title": "Microsoft Defender Incidents",
   "slug": "microsoft-defender-incidents",
-  "description": "This OpenCTI connector allows to import indicators and observables from Microsoft Defender's incidents to your OpenCTI platform.",
-  "short_description": "This OpenCTI connector allows to import indicators and observables from Microsoft Defender's incidents to your OpenCTI platform.",
+  "description": "The Microsoft Defender Incidents connector imports incidents, alerts, indicators, and observables from Microsoft Defender XDR (formerly Microsoft 365 Defender) into OpenCTI. It creates structured STIX Incidents linked to associated IOCs and entities, enabling SOC teams to correlate endpoint detections with threat intelligence.",
+  "short_description": "Imports incidents, alerts, and observables from Microsoft Defender XDR into OpenCTI as STIX Incidents linked to associated IOCs.",
   "logo": "external-import/microsoft-defender-incidents/__metadata__/logo.png",
   "use_cases": [
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": "2026-06-09",
   "playbook_supported": false,

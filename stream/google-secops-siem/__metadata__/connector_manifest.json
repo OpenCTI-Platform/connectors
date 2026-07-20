@@ -2,12 +2,15 @@
   "title": "Google SecOps SIEM",
   "slug": "google-secops-siem",
   "description": "Google SecOps SIEM offers a cloud-based security information and event management solution that helps organizations collect, analyze, and respond to security incidents across their networks.\n\nThe integration of Google SecOps SIEM with OpenCTI enables the automatic dissemination of STIX indicators into Google SecOps SIEM. The connector consumes indicators from an OpenCTI stream, convert them as UDM entities and push them into Google SecOps SIEM using the\"entities.import\" API.",
-  "short_description": "Google SecOps SIEM offers a cloud-based security information and event management solution that helps organizations collect, analyze, and respond to security incidents across their networks.",
+  "short_description": "Streams OpenCTI threat intelligence indicators to Google SecOps SIEM in real time, enabling detection rule management and indicator-based threat hunting.",
   "logo": "stream/google-secops-siem/__metadata__/logo.png",
   "use_cases": [
-    "SIEM and Analytics",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": "2026-05-05",
   "playbook_supported": false,

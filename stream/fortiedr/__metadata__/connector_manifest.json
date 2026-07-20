@@ -5,9 +5,12 @@
   "short_description": "Sync IPv4/IPv6 IOCs from OpenCTI to a FortiEDR IP Set in real time.",
   "logo": "stream/fortiedr/__metadata__/logo.png",
   "use_cases": [
-    "Endpoint Detection and Response",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

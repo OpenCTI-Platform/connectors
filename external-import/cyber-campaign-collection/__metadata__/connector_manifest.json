@@ -5,9 +5,12 @@
   "short_description": "Cyber Campaign Collection connector imports publicly available APT and cybercriminal campaign reports from the CyberMonitor GitHub repository into OpenCTI.",
   "logo": "external-import/cyber-campaign-collection/__metadata__/logo.png",
   "use_cases": [
-    "Adversary & Campaign Insights",
-    "Open Source Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

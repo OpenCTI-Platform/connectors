@@ -2,11 +2,16 @@
   "title": "Maltiverse",
   "slug": "maltiverse",
   "description": "This connector enables you to bring the information from Maltiverse into OpenCTI",
-  "short_description": "This connector enables you to bring the information from Maltiverse into OpenCTI",
+  "short_description": "Imports threat intelligence from Maltiverse into OpenCTI, including malicious IPs, domains, URLs, and file hashes with classification and reputation scores.",
   "logo": "external-import/maltiverse/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

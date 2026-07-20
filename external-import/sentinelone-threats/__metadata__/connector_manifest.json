@@ -1,12 +1,16 @@
 {
   "title": "SentinelOne Threats",
   "slug": "sentinelone-threats",
-  "description": "The OpenCTI SentinelOne Threats connector can be used to import Artifacts from BinaryVault. For more information about BinaryVault and the steps to set it up, see: https://success.alienvault.com/s/article/UUID-9bf40076-0ba9-2f93-93bd-b4878bd6c220\nNote: API tokens expire every 6 months for SentinelOne. In order for this connector to continue functioning, you must re-generate a token before this expiration date,and replace it in the configuration.",
-  "short_description": "The OpenCTI SentinelOne Threats connector can be used to import Artifacts from BinaryVault. For more information about BinaryVault and the steps to set it up, see: https://success.alienvault.com/s/article/UUID-9bf40076-0ba9-2f93-93bd-b4878bd6c220\nNote: API tokens expire every 6 months for SentinelOne. In order for this connector to continue functioning, you must re-generate a token before this expiration date,and replace it in the configuration.",
+  "description": "The SentinelOne Threats connector imports malware artifacts and threat data from SentinelOne BinaryVault into OpenCTI. It retrieves malicious file samples detected by SentinelOne's EDR platform and creates corresponding STIX observables and indicators. Note: SentinelOne API tokens expire every 6 months and must be renewed before expiration.",
+  "short_description": "Imports malware artifacts detected by SentinelOne EDR from BinaryVault into OpenCTI as STIX observables and indicators.",
   "logo": "external-import/sentinelone-threats/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -1,12 +1,17 @@
 {
   "title": "ZeroFox",
   "slug": "zerofox",
-  "description": "The OpenCTI ZeroFox connector can be used to import knowledge from the ZeroFox platform. The connector leverages the Threat Intelligence data feeds to get data about ...\nNote: Requires subscription to the ZeroFox CTI feeds. The subscription details dictate what feeds are available to the connector.",
-  "short_description": "The OpenCTI ZeroFox connector can be used to import knowledge from the ZeroFox platform. The connector leverages the Threat Intelligence data feeds to get data about ...\nNote: Requires subscription to the ZeroFox CTI feeds. The subscription details dictate what feeds are available to the connector.",
+  "description": "The ZeroFox connector imports threat intelligence from the ZeroFox platform into OpenCTI via its CTI data feeds. ZeroFox specializes in digital risk protection, monitoring social media, the dark web, and external attack surfaces for brand threats, phishing, account takeovers, and credential exposure. The feeds available depend on the ZeroFox subscription tier.",
+  "short_description": "Imports ZeroFox digital risk intelligence feeds into OpenCTI, covering brand threats, phishing, dark web exposure, and external attack surface data. Requires a ZeroFox CTI subscription.",
   "logo": "external-import/zerofox/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Brand, Digital Risk & Underground Exposure"
   ],
+  "solution_categories": [
+    "Digital Risk Protection",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

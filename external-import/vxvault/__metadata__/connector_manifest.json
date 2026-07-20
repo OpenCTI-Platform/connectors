@@ -5,10 +5,12 @@
   "short_description": "VX Vault is a public repository tracking URLs associated with malicious payloads. This connector imports these URLs into OpenCTI as STIX 2.1 observables, enabling security teams to detect and monitor active malware distribution infrastructure.",
   "logo": "external-import/vxvault/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
-  "verified": true,
-  "last_verified_date": "2026-04-09",
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=5.5.0",

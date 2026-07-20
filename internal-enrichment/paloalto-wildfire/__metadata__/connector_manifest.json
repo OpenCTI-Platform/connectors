@@ -5,9 +5,12 @@
   "short_description": "Enrich StixFile and Artifact observables with Palo Alto Networks WildFire verdicts.",
   "logo": "internal-enrichment/paloalto-wildfire/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": true,

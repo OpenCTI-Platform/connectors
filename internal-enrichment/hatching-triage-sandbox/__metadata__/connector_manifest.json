@@ -5,9 +5,12 @@
   "short_description": "Hatching Triage connector detonates files and URLs in a malware sandbox, extracting malware families, C2 infrastructure, network indicators, and MITRE ATT&CK TTPs.",
   "logo": "internal-enrichment/hatching-triage-sandbox/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

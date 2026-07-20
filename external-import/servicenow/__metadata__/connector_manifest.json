@@ -1,14 +1,16 @@
 {
   "title": "ServiceNow",
   "slug": "servicenow",
-  "description": "ServiceNow provides Security Incident Response and Security Incident Tasks module handled by this connector which collects SIR and SIT and related entities.",
-  "short_description": "Ingestion of SIR and SIT as Case Incident and Tasks.",
+  "description": "The ServiceNow connector imports Security Incident Response (SIR) records and Security Incident Tasks (SIT) from ServiceNow into OpenCTI as Case Incidents and Tasks. For each SIR, the connector creates an Incident with all pivotal information, linked observables, and associated tasks. The connector incrementally synchronizes records based on their last update date, ensuring OpenCTI stays aligned with the current state of security incidents in ServiceNow. Compatible with ServiceNow releases Xanadu and Yokohama.",
+  "short_description": "Imports ServiceNow Security Incident Response (SIR) records and Security Incident Tasks (SIT) into OpenCTI as Case Incidents and Tasks, with incremental synchronization.",
   "logo": "external-import/servicenow/__metadata__/logo.png",
   "use_cases": [
     "Detection & Response Enablement"
   ],
-  "verified": true,
-  "last_verified_date": "2025-06-15",
+  "solution_categories": [
+    "Incident Response & Case Management"
+  ],
+  "license_type": "Commercial",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.5.1",

@@ -5,10 +5,13 @@
   "short_description": "IPQualityScore connector enriches IPs, emails, phones, URLs, domains, user accounts, and file artifacts with fraud scores, risk analysis, darkweb leak data, and malware detection.",
   "logo": "internal-enrichment/ipqs/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
     "Fraud, Financial Crime & Cryptocurrency Monitoring",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

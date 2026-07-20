@@ -5,8 +5,12 @@
   "short_description": "This connector allows to consume an OpenCTI Stream and open JIRA issues.",
   "logo": "stream/jira/__metadata__/logo.png",
   "use_cases": [
-    "Incident Response & Ticketing"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Incident Response & Case Management"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

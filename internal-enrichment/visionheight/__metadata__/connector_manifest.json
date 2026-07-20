@@ -5,9 +5,12 @@
   "short_description": "Enriches IPv4 and Domain observables with VisionHeight threat intelligence: risk score, labels, ASN/geolocation, vulnerabilities, DNS, certificates, and WHOIS. Promotes high-risk observables to Indicators.",
   "logo": "__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": true,

@@ -1,10 +1,16 @@
 {
   "title": "OpenCTI Datasets",
   "slug": "opencti",
-  "description": "This connector collects data from the OpenCTI datasets repository in order to pre-populate your OpenCTI instance with information like the following:",
-  "short_description": "This connector collects data from the OpenCTI datasets repository in order to pre-populate your OpenCTI instance with information like the following:",
+  "description": "The OpenCTI Datasets connector imports reference data from the OpenCTI datasets repository to pre-populate an OpenCTI instance with foundational knowledge. It includes geographic data (countries, regions, cities), sector taxonomies, identity types, attack pattern frameworks, and commonly used STIX objects that form the baseline knowledge graph for a new OpenCTI deployment.",
+  "short_description": "Pre-populates an OpenCTI instance with reference datasets including countries, sectors, identity types, and foundational STIX knowledge objects.",
   "logo": "external-import/opencti/__metadata__/logo.png",
-  "use_cases": [],
+  "use_cases": [
+    "Other"
+  ],
+  "solution_categories": [
+    "Other"
+  ],
+  "license_type": "Free",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

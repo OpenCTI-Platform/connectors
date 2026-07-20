@@ -2,13 +2,15 @@
   "title": "Pan Cortex XSOAR Intel",
   "slug": "pan-cortex-xsoar-intel",
   "description": "This connector allows organizations to push indicators to PAN Cortex XSOAR.",
-  "short_description": "This connector allows organizations to push indicators to PAN Cortex XSOAR.",
+  "short_description": "Streams OpenCTI threat intelligence indicators to Palo Alto Networks Cortex XSOAR, enabling automated playbook execution and indicator management.",
   "logo": "stream/pan-cortex-xsoar-intel/__metadata__/logo.png",
   "use_cases": [
-    "SOAR",
-    "Incident Response & Ticketing",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SOAR & Security Automation"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

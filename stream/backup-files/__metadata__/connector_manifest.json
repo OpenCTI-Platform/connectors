@@ -4,7 +4,13 @@
   "description": "This connector allows organizations to consume their OpenCTI data and write them to a specific folder.",
   "short_description": "This connector allows organizations to consume their OpenCTI data and write them to a specific folder.",
   "logo": "stream/backup-files/__metadata__/logo.png",
-  "use_cases": [],
+  "use_cases": [
+    "Other"
+  ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

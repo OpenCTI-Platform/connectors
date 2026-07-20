@@ -5,9 +5,12 @@
   "short_description": "Imports CybelAngel claimed-attack threat intelligence as STIX 2.1 Campaigns / Intrusion Sets / victim Identities.",
   "logo": "external-import/cybelangel/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence",
-    "Commercial Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

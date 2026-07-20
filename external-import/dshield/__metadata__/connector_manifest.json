@@ -5,9 +5,12 @@
   "short_description": "DShield connector imports the SANS Internet Storm Center's Recommended Block List of top attacking IP subnets into OpenCTI as STIX indicators.",
   "logo": "external-import/dshield/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

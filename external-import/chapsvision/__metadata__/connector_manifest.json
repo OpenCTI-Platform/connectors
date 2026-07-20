@@ -2,11 +2,15 @@
   "title": "ChapsVision",
   "slug": "chapsvision",
   "description": "ChapsVision enables sectors with a large data footprint such as Retail, Finance, and Public Services to succeed in their digital transformation. Their CTI platform monitors social media, websites, and messaging platforms for threat-relevant content.\n\nThis connector fetches data from the ChapsVision API and imports it into OpenCTI as Channels, Media Content, and Reports, enabling organizations to track threat-related discussions across various platforms.",
-  "short_description": "ChapsVision connector fetches data from the ChapsVision API and imports it into OpenCTI as Channels, Media Content, and Reports, enabling organizations to track threat-related discussions across various platforms.",
+  "short_description": "Imports Channels, Media Content, and Reports from the ChapsVision CTI platform into OpenCTI, tracking threat-related discussions across social media, websites, and messaging platforms.",
   "logo": "external-import/chapsvision/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Brand, Digital Risk & Underground Exposure"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

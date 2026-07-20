@@ -5,9 +5,13 @@
   "short_description": "ReversingLabs Spectra Analyze connector submits files and URLs for deep analysis, enriching observables with malware classifications, threat scores, and network intelligence.",
   "logo": "internal-enrichment/reversinglabs-spectra-analyze/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
   "verified": true,
   "last_verified_date": "2025-11-30",
   "playbook_supported": true,

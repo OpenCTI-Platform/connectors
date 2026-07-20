@@ -1,10 +1,17 @@
 {
   "title": "Cofense (Deprecated)",
   "slug": "cofense",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "Cofense is a leading provider of phishing threat intelligence and incident response solutions. This connector imports phishing-related threat intelligence from the Cofense platform into OpenCTI.\n\n⚠️ This connector is deprecated and will no longer be maintained.",
+  "short_description": "Imports phishing threat intelligence from the Cofense platform into OpenCTI. ⚠️ Deprecated.",
   "logo": "external-import/cofense/__metadata__/logo.png",
-  "use_cases": [],
+  "use_cases": [
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Email Security",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
