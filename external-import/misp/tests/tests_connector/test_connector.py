@@ -1670,6 +1670,86 @@ class TestGetMaxAttributeTimestamp:
         assert connector._get_max_attribute_timestamp(event) == 0
 
 
+@freeze_time("2026-01-01 00:00:00")
+def test_process_events_resume_with_attribute_filtering_does_not_crash(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Regression test: when resuming a buffered bundle (``_current_bundle`` is
+    already set) with ``attribute_timestamp_filtering`` enabled, the connector
+    must not raise ``UnboundLocalError`` on ``filter_passed_count``.
+
+    Before the fix, ``filter_passed_count`` was only initialised inside the
+    ``if self._current_bundle is None`` branch; on resume (else branch) it
+    was never set, causing a crash at the high-water mark update.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    config_dict["misp"]["attribute_timestamp_filtering"] = True
+    connector = fake_misp_connector(config_dict)
+
+    ts = int(datetime(2026, 1, 15, tzinfo=timezone.utc).timestamp())
+    event = _make_event_with_attributes(
+        "1",
+        ts,
+        attributes=[
+            {"id": "1", "timestamp": str(ts), "value": "1.2.3.4"},
+        ],
+    )
+
+    # Pre-set _current_bundle to simulate a resume after buffering
+    fake_author = MagicMock()
+    fake_markings = []
+    fake_bundle_objects = [MagicMock()]
+    connector._current_bundle = (fake_author, fake_markings, fake_bundle_objects)
+
+    initial_state = {
+        "last_event_date": datetime(2026, 1, 14, tzinfo=timezone.utc).isoformat(),
+        "last_attribute_timestamp": ts - 100,
+    }
+
+    state = dict(initial_state)
+
+    def track_update_state(state_update=None, **kwargs):
+        if state_update:
+            state.update(state_update)
+
+    with (
+        patch.object(connector, "helper") as mock_helper,
+        patch.object(connector, "work_manager") as mock_wm,
+        patch.object(connector, "client_api") as mock_api,
+        patch.object(connector, "batch_processor"),
+        patch.object(
+            connector,
+            "_process_bundle_in_batch",
+            return_value=ProcessingOutcome.COMPLETED,
+        ),
+    ):
+        mock_helper.get_state.return_value = initial_state
+        mock_helper.metric = MagicMock()
+        mock_helper.api.query.return_value = {
+            "data": {"externalReferences": {"edges": [{"node": {"id": "x"}}]}}
+        }
+
+        mock_wm.get_state.side_effect = lambda: dict(state)
+        mock_wm.update_state.side_effect = track_update_state
+
+        mock_api.search_events.return_value = iter([event])
+
+        # This must not raise UnboundLocalError (caught by the inner
+        # except block which would swallow it and reset _current_bundle).
+        result = connector.process_events()
+
+    assert result is None
+    # _current_bundle should be cleared after successful processing
+    assert connector._current_bundle is None
+    # The watermark must advance — this only happens when the code does NOT
+    # crash on ``filter_passed_count``.  Before the fix, the UnboundLocalError
+    # was caught internally, the watermark was never updated, and the connector
+    # would re-ingest the same events indefinitely.
+    assert state.get("last_attribute_timestamp") == ts + 1
+
+
 class TestProcessEventsAttributeTimestampFiltering:
     """Integration tests for attribute-level timestamp filtering in ``process_events``."""
 
