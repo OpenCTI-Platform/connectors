@@ -13,14 +13,13 @@ class MaltiverseConnector:
         self.helper = helper
 
         # Keep existing runtime attributes for minimal changes in the rest of the class
-        self.interval = self.config.maltiverse.poll_interval
         self.user = self.config.maltiverse.user
         self.passwd = self.config.maltiverse.passwd
         feeds = self.config.maltiverse.feeds or ""
         self.feeds = [f.strip() for f in feeds.split(",") if f.strip()]
 
     def get_interval(self) -> int:
-        return int(self.interval) * 3600
+        return int(self.config.connector.duration_period.total_seconds())
 
     def run(self):
         self.helper.log_info("Fetching knowledge...")

@@ -65,8 +65,10 @@
       "type": "string"
     },
     "MALTIVERSE_POLL_INTERVAL": {
-      "description": "Polling interval in hours between connector runs.",
-      "type": "integer"
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     }
   },
   "required": [
@@ -74,8 +76,7 @@
     "OPENCTI_TOKEN",
     "MALTIVERSE_USER",
     "MALTIVERSE_PASSWD",
-    "MALTIVERSE_FEEDS",
-    "MALTIVERSE_POLL_INTERVAL"
+    "MALTIVERSE_FEEDS"
   ],
   "additionalProperties": true
 }

@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -43,8 +44,12 @@ class MaltiverseConfig(BaseConfigModel):
     feeds: str = Field(
         description="Comma-separated list of feed/collection IDs to fetch."
     )
-    poll_interval: int = Field(
-        description="Polling interval in hours between connector runs."
+    poll_interval: int | None = DeprecatedField(
+        default=None,
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(hours=int(x)),
     )
 
 
