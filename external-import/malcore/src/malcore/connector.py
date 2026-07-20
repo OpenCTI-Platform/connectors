@@ -31,7 +31,6 @@ class Malcore:
         self.api_key = self.config.malcore.api_key.get_secret_value()
         self.score = self.config.malcore.score
         self.limit = self.config.malcore.limit
-        self.interval = self.config.malcore.interval
 
         # In previous implementation it was pulled from CONNECTOR_UPDATE_EXISTING_DATA; per instructions keep it fixed.
         self.update_existing_data = False
@@ -44,7 +43,7 @@ class Malcore:
         )
 
     def get_interval(self):
-        return int(self.interval) * 60 * 60
+        return int(self.config.connector.duration_period.total_seconds())
 
     def run_feed_ioc(self, timestamp):
         try:
@@ -277,10 +276,7 @@ class Malcore:
                 else:
                     last_run = None
                     self.helper.log_info("Connector has never run")
-                if (
-                    last_run is None
-                    or timestamp - last_run > int(self.interval) * 60 * 60
-                ):
+                if last_run is None or timestamp - last_run > self.get_interval():
                     self.helper.log_info("Connector will run!")
                     self.run_feed_ioc(timestamp)
                     self.run_feed_threat(timestamp)

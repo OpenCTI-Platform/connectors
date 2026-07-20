@@ -45,7 +45,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
+      "default": "PT12H",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -74,9 +74,10 @@
       "type": "integer"
     },
     "MALCORE_INTERVAL": {
-      "default": 12,
-      "description": "Interval between two executions, in hours (must be > 1)",
-      "type": "integer"
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     }
   },
   "required": [

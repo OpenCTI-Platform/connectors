@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -29,7 +30,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=1),
+        default=timedelta(hours=12),
     )
 
 
@@ -55,9 +56,12 @@ class MalcoreConfig(BaseConfigModel):
         default=10000,
         deprecated=True,
     )
-    interval: int = Field(
-        description="Interval between two executions, in hours (must be > 1)",
-        default=12,
+    interval: int | None = DeprecatedField(
+        default=None,
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(hours=int(x)),
     )
 
 
