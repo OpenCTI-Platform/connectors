@@ -1,27 +1,16 @@
-from typing import Literal
-
 from connectors_sdk.models import (
     URL,
     DomainName,
     ExternalReference,
     Note,
     OrganizationAuthor,
+    Reference,
     TLPMarking,
 )
-from connectors_sdk.models.reference import Reference
 from pycti import OpenCTIConnectorHelper
 
-AUTHOR_NAME = "Doppel"
-AUTHOR_DESCRIPTION = (
-    "Doppel is a brand protection and digital risk protection platform used to "
-    "detect and take down phishing sites, fraudulent domains and other online threats."
-)
-AUTHOR_URL = "https://www.doppel.com"
-
-TLPLevel = Literal["clear", "white", "green", "amber", "amber+strict", "red"]
-
 # Mapping from OpenCTI TLP marking definition to connectors_sdk TLPMarking level
-TLP_DEFINITION_TO_LEVEL: dict[str, TLPLevel] = {
+TLP_DEFINITION_TO_LEVEL = {
     "TLP:CLEAR": "clear",
     "TLP:WHITE": "white",
     "TLP:GREEN": "green",
@@ -51,10 +40,13 @@ class ConverterToStix:
         """
         self.helper = helper
         self.author = OrganizationAuthor(
-            name=AUTHOR_NAME,
-            description=AUTHOR_DESCRIPTION,
+            name="Doppel",
+            description=(
+                "Doppel is a brand protection and digital risk protection platform used to "
+                "detect and take down phishing sites, fraudulent domains and other online threats."
+            ),
             external_references=[
-                ExternalReference(source_name=AUTHOR_NAME, url=AUTHOR_URL)
+                ExternalReference(source_name="Doppel", url="https://www.doppel.com")
             ],
         )
 
@@ -71,7 +63,7 @@ class ConverterToStix:
         level = TLP_DEFINITION_TO_LEVEL.get(tlp_definition.upper())
         if level is None:
             return None
-        return TLPMarking(level=level)
+        return TLPMarking(level=level)  # type: ignore[arg-type]
 
     @staticmethod
     def build_external_reference(alert: dict) -> ExternalReference:
