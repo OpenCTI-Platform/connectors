@@ -175,7 +175,7 @@ class DoppelConnector:
 
     def _send_bundle(self, stix_objects: list) -> str:
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-        bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
+        bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle, cleanup_inconsistent_bundle=True)  # type: ignore[arg-type]
         return f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
 
     def run(self) -> None:
