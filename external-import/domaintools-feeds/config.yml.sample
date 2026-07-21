@@ -1,0 +1,23 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'DomaniTools Feeds' # optional
+  scope: 'stix2'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT5M' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+domaintools:
+  api_base_url: 'https://api.domaintools.com'
+  api_key: 'ChangeMe'
+  feed_type: 'ChangeMe'  # domainhotlist, domainrisk, nod, nad, noh, domaindiscovery
+  session_id: 'ChangeMe'     # 
+  # after: -60                  # optional
+  # before: -120                # optional
+  # domain: *bank*              # optional
+  # fromBeginning: True         # optional
+  # top: 10                     # optional
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
