@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/cloudflare-rules-list_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Cloudflare Rules List",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "cloudflare"
+      ],
+      "description": "The scope of the stream connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_SYNC_INTERVAL": {
+      "default": "1h",
+      "description": "Minimum interval between snapshot uploads to Cloudflare. Accepts a duration like '30m', '1h', '1h30m', or a bare number of seconds.",
+      "type": "string"
+    },
+    "CLOUDFLARE_ACCOUNT_ID": {
+      "description": "Cloudflare account ID that owns the Rules List.",
+      "type": "string"
+    },
+    "CLOUDFLARE_API_TOKEN": {
+      "description": "Cloudflare API token with the 'Account > Account Filter Lists > Edit' permission.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CLOUDFLARE_LIST_ID": {
+      "description": "ID of the existing Cloudflare Rules List (IP kind) to sync into.",
+      "type": "string"
+    },
+    "CLOUDFLARE_API_BASE_URL": {
+      "default": "https://api.cloudflare.com/client/v4",
+      "description": "Base URL of the Cloudflare API. Override only for testing against a mock server or a Cloudflare-compatible gateway.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_LIST_ID"
+  ],
+  "additionalProperties": true
+}

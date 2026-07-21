@@ -1,0 +1,12 @@
+# OpenCTI Python client (CalVer; must be compatible with your OpenCTI 7.x platform)
+pycti==7.260715.0
+
+# Modern connector SDK (Pydantic-settings base classes, shared types)
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+
+# Configuration
+pydantic~=2.11.5
+pydantic-settings~=2.9.1
+
+# HTTP client
+requests>=2.31.0,<3.0.0

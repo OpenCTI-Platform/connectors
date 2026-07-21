@@ -1,0 +1,25 @@
+services:
+  connector-cloudflare-rules-list:
+    image: opencti/connector-cloudflare-rules-list:rolling
+    container_name: opencti-connector-cloudflare-rules-list
+    restart: unless-stopped
+    environment:
+      # OpenCTI
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+
+      # Connector
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_NAME=Cloudflare Rules List
+      - CONNECTOR_SCOPE=cloudflare
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-info}
+      - CONNECTOR_LIVE_STREAM_ID=${CONNECTOR_LIVE_STREAM_ID:-live}
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - CONNECTOR_SYNC_INTERVAL=${CONNECTOR_SYNC_INTERVAL:-1h}
+
+      # Cloudflare
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - CLOUDFLARE_LIST_ID=${CLOUDFLARE_LIST_ID}

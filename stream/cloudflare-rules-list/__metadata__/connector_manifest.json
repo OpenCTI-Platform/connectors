@@ -1,0 +1,21 @@
+{
+  "title": "Cloudflare Rules List",
+  "slug": "cloudflare-rules-list",
+  "description": "Cloudflare Rules Lists are reusable collections of IP addresses that can be referenced from WAF custom rules, firewall rules, and other security configurations across a Cloudflare account.\n\nThe integration of Cloudflare with OpenCTI enables the automatic dissemination of IPv4 threat-intelligence indicators and observables into a Cloudflare Rules List. The connector consumes IPv4 indicators from an OpenCTI live stream, maintains an in-memory snapshot, and periodically replaces the contents of a target Cloudflare Rules List (IP kind) using Cloudflare's bulk list-items API documented at https://developers.cloudflare.com/api/resources/rules/subresources/lists/.",
+  "short_description": "Push IPv4 threat-intelligence indicators from OpenCTI into a Cloudflare Rules List for use in WAF and firewall rules.",
+  "logo": "stream/cloudflare-rules-list/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.7.5",
+  "subscription_link": "https://developers.cloudflare.com/waf/tools/lists/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/cloudflare-rules-list",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cloudflare-rules-list",
+  "container_type": "STREAM"
+}
