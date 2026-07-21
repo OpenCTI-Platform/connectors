@@ -107,8 +107,8 @@ class PolySwarmConfig(BaseConfigModel):
         description="Request and attach PDF report from PolySwarm.",
     )
     llm_report_enabled: bool = Field(
-        default=True,
-        description="Request AI-generated analysis summary.",
+        default=False,
+        description="Request AI-generated analysis summary (opt-in).",
     )
     llm_report_timeout: int = Field(
         default=120,
@@ -152,6 +152,10 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     Inherits ``type = INTERNAL_ENRICHMENT`` from the SDK base class.
     Only ``name`` and ``scope`` are overridden here; everything else
     (ID, confidence, log level) comes from env vars or SDK defaults.
+
+    Scope is ``Artifact`` only: the sandbox detonates an uploaded file,
+    so it needs the file attached to an Artifact. A StixFile observable
+    carrying just a hash has nothing to detonate.
     """
 
     name: str = Field(
@@ -159,7 +163,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["StixFile", "Artifact"],
+        default=["Artifact"],
         description="The scope of the connector.",
     )
 

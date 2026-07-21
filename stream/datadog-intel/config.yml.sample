@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+#  id: '5f8830a4-97ab-42f1-878c-1aa59b992dee'
+#  name: 'DatadogIntelConnector'
+#  scope: 'indicator'
+#  log_level: 'error'
+  live_stream_id: 'ChangeMe'
+#  live_stream_listen_delete: true
+#  live_stream_no_dependencies: true
+
+datadog_intel:
+  integration_api_url: 'ChangeMe'
+#  indicator_type: 'ip_address, domain, sha256'
+  dd_api_key: 'ChangeMe'
+  dd_application_key: 'ChangeMe'

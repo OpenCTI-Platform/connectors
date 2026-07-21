@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime
-from typing import Optional, cast
+from typing import Optional
 
 from feedly.api_client.enterprise.indicators_of_compromise import StixIoCDownloader
 from feedly.api_client.session import FeedlySession
@@ -13,6 +13,32 @@ FEEDLY_AI_UUID = "identity--477866fd-8784-46f9-ab40-5592ed4eddd7"
 
 # Pattern for IPv4 address followed by colon and port number
 _IPV4_WITH_PORT = re.compile(r"^(?P<addr>\b(?:\d{1,3}\.){3}\d{1,3}\b):(?P<port>\d+)$")
+
+# Guardrail for converting report descriptions to Markdown. Descriptions come from
+# arbitrary external Feedly articles; a long run of the same Markdown-active symbol
+# (e.g. backticks or brackets) triggers catastrophic regex backtracking in the parser,
+# pinning the CPU for minutes with no progress and no logs. We defuse that by shortening
+# only such degenerate symbol runs -- no report text is ever truncated, so nothing is
+# lost. Runs of letters/digits (e.g. base64, hashes) are not Markdown-active and are
+# left untouched.
+_MARKDOWN_MAX_CHAR_RUN = 50
+_MARKDOWN_LONG_RUN = re.compile(r"([^\w\s])\1{%d,}" % _MARKDOWN_MAX_CHAR_RUN)
+
+
+def _sanitize_markdown_input(text: str) -> str:
+    """Make untrusted text safe to feed to python-markdown without losing content.
+
+    Collapses runs of the same Markdown-active symbol longer than
+    ``_MARKDOWN_MAX_CHAR_RUN`` so that pathological article content cannot trigger
+    catastrophic regex backtracking in the Markdown parser (which would otherwise hang
+    the connector at 100% CPU with no logs). Only degenerate symbol runs are shortened;
+    letters, digits and normal text are left untouched and nothing is truncated.
+    """
+    if not isinstance(text, str) or not text:
+        return text
+    return _MARKDOWN_LONG_RUN.sub(
+        lambda match: match.group(1) * _MARKDOWN_MAX_CHAR_RUN, text
+    )
 
 
 class FeedlyConnector:
@@ -29,31 +55,95 @@ class FeedlyConnector:
         self.enable_relationships = enable_relationships
 
     def fetch_and_publish(self, stream_id: str, newer_than: datetime) -> Optional[str]:
-        bundle = self.fetch_bundle(stream_id, newer_than)
-        if not bundle["objects"]:
-            return
-        self.cti_helper.send_stix2_bundle(json.dumps(bundle))
-        return self._get_last_article_published_date(bundle)
+        last_article_published_date = None
+        total_reports = 0
 
-    def fetch_bundle(self, stream_id: str, newer_than: datetime) -> dict:
-        bundle = StixIoCDownloader(
+        self.cti_helper.log_debug(
+            "Initializing Feedly downloader",
+            meta={"stream_id": stream_id, "newer_than": newer_than.isoformat()},
+        )
+        downloader = StixIoCDownloader(
             session=self.feedly_session,
             newer_than=newer_than,
             older_than=None,
             stream_id=stream_id,
-        ).download_all()
+        )
 
-        bundle = cast("dict", bundle)
+        batch_index = 0
+        for batch in downloader.stream_bundles():
+            batch_index += 1
+            # Logged only *after* the (blocking) HTTP fetch returns: if Feedly stalls,
+            # the previous log line is the last one seen -> points at the network wait.
+            self.cti_helper.log_debug(
+                "Received Feedly batch",
+                meta={
+                    "stream_id": stream_id,
+                    "batch": batch_index,
+                    "objects": len(batch.get("objects", [])),
+                },
+            )
+            bundle = self._process_bundle(batch)
+            if not bundle["objects"]:
+                self.cti_helper.log_debug(
+                    "Skipping empty batch after processing",
+                    meta={"stream_id": stream_id, "batch": batch_index},
+                )
+                continue
+            total_reports += self._count_reports(bundle)
+            # Logged before the (blocking) send: if serialization/splitting or the
+            # broker stalls, this is the last line seen -> points at the publish step.
+            self.cti_helper.log_debug(
+                "Sending STIX bundle to OpenCTI",
+                meta={
+                    "stream_id": stream_id,
+                    "batch": batch_index,
+                    "objects": len(bundle["objects"]),
+                },
+            )
+            self.cti_helper.send_stix2_bundle(json.dumps(bundle))
+            self.cti_helper.log_debug(
+                "STIX bundle accepted by OpenCTI",
+                meta={"stream_id": stream_id, "batch": batch_index},
+            )
+            batch_last_date = self._get_last_article_published_date(bundle)
+            if batch_last_date:
+                if (
+                    last_article_published_date is None
+                    or batch_last_date > last_article_published_date
+                ):
+                    last_article_published_date = batch_last_date
+
+        self.cti_helper.log_debug(
+            "Feedly stream fully consumed",
+            meta={
+                "stream_id": stream_id,
+                "batches": batch_index,
+                "reports": total_reports,
+            },
+        )
+        self.cti_helper.log_info(f"Found {total_reports} new reports")
+        return last_article_published_date
+
+    def _process_bundle(self, bundle: dict) -> dict:
+        object_count = len(bundle["objects"])
+        self.cti_helper.log_debug(
+            "Converting report descriptions to markdown",
+            meta={"objects": object_count},
+        )
         self._make_reports_content_instead_of_descriptions(bundle)
+        self.cti_helper.log_debug("Adding main observable types to indicators")
         self._add_main_observable_type_to_indicators(bundle)
+        self.cti_helper.log_debug("Transforming threat actors to intrusion sets")
         self._transform_threat_actors_to_intrusion_sets(bundle)
+        self.cti_helper.log_debug("Adding source names as authors")
         self._add_source_name_as_author_to_all_reports(bundle)
+        self.cti_helper.log_debug("Fixing IP addresses with ports")
         self._fix_ip_addresses_with_ports(bundle)
 
         if not self.enable_relationships:
+            self.cti_helper.log_debug("Filtering out relationships")
             self._filter_relationships(bundle)
 
-        self.cti_helper.log_info(f"Found {self._count_reports(bundle)} new reports")
         return bundle
 
     @staticmethod
@@ -99,13 +189,35 @@ class FeedlyConnector:
         if new_objects:
             bundle["objects"].extend(new_objects)
 
-    @staticmethod
-    def _make_reports_content_instead_of_descriptions(bundle: dict) -> None:
+    def _make_reports_content_instead_of_descriptions(self, bundle: dict) -> None:
         notes = []
         for o in bundle["objects"]:
             if o["type"] == "report":
+                description = o["description"]
+                sanitized = _sanitize_markdown_input(description)
+                if isinstance(description, str) and sanitized != description:
+                    # The guard only alters pathological content (huge input or long
+                    # runs of Markdown-active characters) that would otherwise hang the
+                    # Markdown parser. Surface it so such reports can be spotted.
+                    self.cti_helper.log_warning(
+                        "Report description sanitized before markdown conversion",
+                        meta={
+                            "report_id": o.get("id"),
+                            "original_length": len(description),
+                            "sanitized_length": len(sanitized),
+                        },
+                    )
+                self.cti_helper.log_debug(
+                    "Converting report description to markdown",
+                    meta={
+                        "report_id": o.get("id"),
+                        "description_length": (
+                            len(description) if isinstance(description, str) else 0
+                        ),
+                    },
+                )
                 o["content"], o["description"] = (
-                    markdown(o["description"]),
+                    markdown(sanitized),
                     o["name"],
                 )
         bundle["objects"].extend([json.loads(note.serialize()) for note in notes])

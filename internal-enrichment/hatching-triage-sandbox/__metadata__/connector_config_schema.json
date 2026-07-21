@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/hatching-triage-sandbox_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Hatching Triage Sandbox",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Artifact",
+        "Url"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "HATCHING_TRIAGE_SANDBOX_TOKEN": {
+      "description": "Hatching Triage API token. See https://tria.ge/account",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "HATCHING_TRIAGE_SANDBOX_BASE_URL": {
+      "default": "https://tria.ge/api",
+      "description": "Hatching Triage API base URL. See https://tria.ge/docs/",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_USE_EXISTING_ANALYSIS": {
+      "default": true,
+      "description": "If true, get existing analysis if any.",
+      "type": "boolean"
+    },
+    "HATCHING_TRIAGE_SANDBOX_FAMILY_COLOR": {
+      "default": "#0059f7",
+      "description": "Label color for malware family.",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR": {
+      "default": "#f79e00",
+      "description": "Label color for botnet.",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR": {
+      "default": "#7a01e5",
+      "description": "Label color for campaign.",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_TAG_COLOR": {
+      "default": "#54483b",
+      "description": "Label color for all other labels.",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Maximum TLP marking for observable submission.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "HATCHING_TRIAGE_SANDBOX_TOKEN"
+  ],
+  "additionalProperties": true
+}

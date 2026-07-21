@@ -1,6 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
+    ":semanticCommits",
     "config:recommended"
   ],
   "pre-commit": {
@@ -11,7 +12,6 @@
     "filigran team"
   ],
   "prConcurrentLimit": 2,
-  "commitMessagePrefix": "[tool] chore(deps):",
   "packageRules": [
     {
       "matchUpdateTypes": [

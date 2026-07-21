@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-redpanda:
+    image: opencti/connector-redpanda:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type STREAM
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Redpanda # optional (default: 'Redpanda')
+      # - CONNECTOR_SCOPE=redpanda # optional (default: 'redpanda')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true # optional (default: true)
+      # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
+      # Redpanda parameters
+      - REDPANDA_HTTP_PROXY_URL=ChangeMe # e.g. http://redpanda:8082
+      # - REDPANDA_TOPIC=opencti # optional (default: 'opencti')
+      # - REDPANDA_USERNAME=ChangeMe # optional, for HTTP basic authentication
+      # - REDPANDA_PASSWORD=ChangeMe # optional, for HTTP basic authentication
+      # - REDPANDA_SSL_VERIFY=true # optional (default: true)
+    restart: always

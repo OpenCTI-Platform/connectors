@@ -1,0 +1,23 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'Vectra AI Intel' # optional (default: 'Vectra AI Intel')
+  scope: 'vectra-ai' # optional (default: 'vectra-ai')
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true # optional (default: true)
+  live_stream_no_dependencies: true # optional (default: true)
+
+vectra_ai:
+  api_base_url: 'ChangeMe' # Base URL of the Vectra AI Platform, e.g. https://vectra.example.com
+  api_token: 'ChangeMe' # Vectra AI API token
+  api_version: 'v2.5' # optional (default: 'v2.5')
+  feed_name: 'OpenCTI' # optional (default: 'OpenCTI')
+  feed_category: 'cnc' # optional, one of cnc, malware, recon, exfil, lateral (default: 'cnc')
+  feed_certainty: 'High' # optional, one of Low, Medium, High (default: 'High')
+  feed_duration: 14 # optional, indicator lifetime in days (default: 14)
+  ssl_verify: true # optional (default: true)

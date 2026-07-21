@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'FortiSIEM' # optional (default: 'FortiSIEM')
+  scope: 'fortisiem' # optional (default: 'fortisiem')
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true # optional (default: true)
+  live_stream_no_dependencies: true # optional (default: true)
+
+fortisiem:
+  api_base_url: 'ChangeMe' # Base URL of the FortiSIEM Supervisor, e.g. https://fortisiem.example.com
+  organization: 'super' # optional (default: 'super')
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  watchlist_id: 1 # Numeric ID of the target Watch List
+  entry_age_out: '30d' # optional (default: '30d')
+  ssl_verify: true # optional (default: true)

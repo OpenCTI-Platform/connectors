@@ -108,13 +108,13 @@ class PolySwarmConnector:
         # Unknown provider — warn and fall back to first available
         if available_slugs:
             fallback = available_slugs[0]
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[CONNECTOR] Unknown sandbox provider '{provider_config}', "
                 f"available: {available_slugs}. Defaulting to '{fallback}'"
             )
             return [fallback]
 
-        self.helper.log_warning(
+        self.helper.connector_logger.warning(
             f"[CONNECTOR] Unknown sandbox provider '{provider_config}' and "
             "no providers available from API. Defaulting to 'cape'"
         )
@@ -129,26 +129,19 @@ class PolySwarmConnector:
     def _entity_in_scope(self, data: dict[str, Any]) -> bool:
         """Check if entity type is in connector scope.
 
-        Extracts type from STIX ID (e.g. 'artifact--<uuid>') with fallback
-        to enrichment_entity.entity_type for non-STIX-formatted IDs.
+        Uses the authoritative ``enrichment_entity.entity_type`` rather than
+        parsing the STIX ID prefix. A StixFile observable has id
+        ``file--<uuid>`` but entity_type ``StixFile``, so deriving the type
+        from the ID prefix never matches a ``StixFile`` scope entry.
         """
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
-        entity_id = data.get("entity_id", "")
-
-        entity_type = ""
-        if entity_id and "--" in entity_id:
-            entity_type = entity_id.split("--")[0].lower()
-
-        if not entity_type:
-            opencti_entity = data.get("enrichment_entity", {})
-            entity_type = (
-                opencti_entity.get("entity_type", "") if opencti_entity else ""
-            ).lower()
+        opencti_entity = data.get("enrichment_entity") or {}
+        entity_type = opencti_entity.get("entity_type", "").lower()
 
         if entity_type in scopes:
             return True
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[CONNECTOR] Entity type '{entity_type}' not in scope {scopes}"
         )
         return False
@@ -166,7 +159,7 @@ class PolySwarmConnector:
                 bundle, update=True, cleanup_inconsistent_bundle=True
             )
         except (ValueError, TypeError, RuntimeError) as e:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[CONNECTOR] Failed to return original bundle: {e}"
             )
 
@@ -181,14 +174,14 @@ class PolySwarmConnector:
         """
         opencti_entity = data.get("enrichment_entity")
         stix_entity = data.get("stix_entity")
-        stix_objects = data.get("stix_objects", [])
+        stix_objects = data["stix_objects"] if "stix_objects" in data else []
         entity_id = data.get("entity_id")
 
         if not opencti_entity:
             self._send_original_bundle(stix_objects)
             return json.dumps({"status": "error", "error": "Entity not found"})
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[CONNECTOR] Processing entity type: {opencti_entity.get('entity_type')}"
         )
 
@@ -212,12 +205,14 @@ class PolySwarmConnector:
             result = self._enrich_file(entity_id, entity, opencti_entity, stix_objects)
             if result and result.get("status") == "error":
                 error_msg = result.get("error", "Unknown error")
-                self.helper.log_warning(f"[CONNECTOR] {error_msg}")
+                self.helper.connector_logger.warning(f"[CONNECTOR] {error_msg}")
                 self._send_original_bundle(stix_objects)
                 return json.dumps(result)
             return json.dumps({"status": "success", "message": "Enrichment completed"})
         except PolySwarmAPIError as api_err:
-            self.helper.log_error(f"[CONNECTOR] PolySwarm API error: {api_err}")
+            self.helper.connector_logger.error(
+                f"[CONNECTOR] PolySwarm API error: {api_err}"
+            )
             self._send_error_note(
                 entity, api_err.category, api_err.detail, api_err.recommendations
             )
@@ -225,7 +220,7 @@ class PolySwarmConnector:
             return json.dumps({"status": "error", "error": str(api_err)})
         except (ValueError, TypeError, RuntimeError, KeyError, AttributeError) as e:
             error_msg = f"Enrichment failed: {str(e)}"
-            self.helper.log_error(f"[CONNECTOR] {error_msg}")
+            self.helper.connector_logger.error(f"[CONNECTOR] {error_msg}")
             self._send_error_note(
                 entity,
                 "Unexpected Enrichment Error",
@@ -358,8 +353,12 @@ class PolySwarmConnector:
             # Build a minimal bundle with just the author identity + error note
             author = self.stix_builder._create_author()
             bundle = self.helper.stix2_create_bundle([author, error_note])
-            self.helper.send_stix2_bundle(bundle, update=True)
-            self.helper.log_info(f"[CONNECTOR] Error note created: {error_category}")
+            self.helper.send_stix2_bundle(
+                bundle, update=True, cleanup_inconsistent_bundle=True
+            )
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] Error note created: {error_category}"
+            )
         except (
             ValueError,
             TypeError,
@@ -367,7 +366,7 @@ class PolySwarmConnector:
             KeyError,
             AttributeError,
         ) as note_err:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[CONNECTOR] Failed to create error note: {type(note_err).__name__}: {note_err}"
             )
 
@@ -383,13 +382,13 @@ class PolySwarmConnector:
         sandbox_tasks = {}
         providers = self._get_sandbox_providers()
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[CONNECTOR] Submitting to sandbox provider(s): {providers}"
         )
 
         for provider in providers:
             vm_slug = self._get_vm_for_provider(provider)
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONNECTOR] Submitting to {provider} with VM: {vm_slug}"
             )
 
@@ -404,11 +403,11 @@ class PolySwarmConnector:
 
             if task_id:
                 sandbox_tasks[provider] = task_id
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONNECTOR] {provider.upper()} sandbox submitted, task_id: {task_id}"
                 )
             else:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[CONNECTOR] Failed to submit to {provider} sandbox"
                 )
 
@@ -440,7 +439,7 @@ class PolySwarmConnector:
         while any(result is None for result in sandbox_results.values()):
             elapsed = time.monotonic() - poll_start
             if elapsed >= poll_timeout:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[CONNECTOR] Sandbox polling timeout reached ({poll_timeout}s)"
                 )
                 break
@@ -456,11 +455,11 @@ class PolySwarmConnector:
 
                         # Check if this is a failure state
                         if PolySwarmClient.is_sandbox_failure(status):
-                            self.helper.log_warning(
+                            self.helper.connector_logger.warning(
                                 f"[CONNECTOR] {provider.upper()} sandbox FAILED with status: {status}"
                             )
                         elif PolySwarmClient.is_sandbox_success(status):
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[CONNECTOR] {provider.upper()} sandbox completed successfully"
                             )
                             # Fire LLM report creation immediately on success
@@ -470,15 +469,15 @@ class PolySwarmConnector:
                                 and provider not in llm_task_ids
                             ):
                                 llm_id = self.polyswarm_client.create_llm_report(
-                                    sandbox_task_id=task_id
+                                    sandbox_task_id=task_id, provider=provider
                                 )
                                 if llm_id:
                                     llm_task_ids[provider] = llm_id
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         f"[CONNECTOR] {provider.upper()} LLM report fired (task: {llm_id})"
                                     )
                         else:
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[CONNECTOR] {provider.upper()} sandbox completed with status: {status}"
                             )
 
@@ -496,7 +495,7 @@ class PolySwarmConnector:
                     status_parts.append(f"{p.upper()}: Pending")
 
             status_str = ", ".join(status_parts)
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONNECTOR] Sandbox polling... {int(elapsed)}s. {status_str}"
             )
 
@@ -523,7 +522,7 @@ class PolySwarmConnector:
                 if PolySwarmClient.is_sandbox_success(status):
                     valid_results[k] = v
                 else:
-                    self.helper.log_debug(
+                    self.helper.connector_logger.debug(
                         f"[CONNECTOR] Skipping {k} from merge (status: {status})"
                     )
 
@@ -535,7 +534,7 @@ class PolySwarmConnector:
             return result, (provider, result)
 
         # Multiple results - merge them
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[CONNECTOR] Merging sandbox results from {list(valid_results.keys())}"
         )
 
@@ -687,7 +686,7 @@ class PolySwarmConnector:
         )
 
         if download_error:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONNECTOR] {self._enrich_ctx} Download failed: {download_error}"
             )
             if "exceeds the maximum" in download_error:
@@ -721,7 +720,7 @@ class PolySwarmConnector:
 
         if not file_data:
             err_msg = "Could not download artifact from OpenCTI. Ensure a file is attached to this artifact."
-            self.helper.log_warning(f"[CONNECTOR] {err_msg}")
+            self.helper.connector_logger.warning(f"[CONNECTOR] {err_msg}")
             self._send_error_note(
                 entity,
                 "No File Downloaded",
@@ -734,7 +733,9 @@ class PolySwarmConnector:
             )
             raise ValueError(err_msg)
 
-        self.helper.log_info(f"[CONNECTOR] Downloaded artifact: {len(file_data)} bytes")
+        self.helper.connector_logger.info(
+            f"[CONNECTOR] Downloaded artifact: {len(file_data)} bytes"
+        )
         password = entity.get("decryption_key") or entity.get(
             "x_opencti_encryption_password"
         )
@@ -751,7 +752,7 @@ class PolySwarmConnector:
             if import_files
             else None
         ) or opencti_entity.get("mime_type")
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[CONNECTOR] Filename: {filename}, MIME: {mime_type or 'auto-detect'}"
         )
         return file_data, filename, password, mime_type
@@ -774,7 +775,7 @@ class PolySwarmConnector:
             file_data, filename, mime_type, "default", password
         )
         if not scan_id:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONNECTOR] {self._enrich_ctx} Scan submission failed"
             )
             self._send_error_note(
@@ -833,14 +834,14 @@ class PolySwarmConnector:
         while scan_id and not scan_res:
             elapsed = time.monotonic() - poll_start
             if elapsed >= poll_timeout:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[CONNECTOR] Scan polling timeout reached ({poll_timeout}s)"
                 )
                 break
             time.sleep(poll_interval)
             scan_res = self.polyswarm_client.get_scan_results(scan_id)
             elapsed = int(time.monotonic() - poll_start)
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONNECTOR] Scan polling... {elapsed}s. "
                 f"Scan: {'Ready' if scan_res else 'Pending'}"
             )
@@ -879,7 +880,7 @@ class PolySwarmConnector:
             llm_id = self.polyswarm_client.create_llm_report(instance_id=scan_id)
             if llm_id:
                 llm_task_ids["scan"] = llm_id
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONNECTOR] Scan LLM report fired (task: {llm_id})"
                 )
 
@@ -898,7 +899,7 @@ class PolySwarmConnector:
         Returns:
             sandbox_results mapping provider→result dict.
         """
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[CONNECTOR] Polling sandbox results (timeout: {sandbox_timeout}s)"
         )
         sandbox_results = self._poll_sandbox_results(
@@ -942,7 +943,9 @@ class PolySwarmConnector:
                 json_filename = (
                     f"Scan_result_{lookup_hash[:16] if lookup_hash else 'unknown'}.json"
                 )
-                self.helper.log_info(f"[CONNECTOR] Attaching JSON: {json_filename}")
+                self.helper.connector_logger.info(
+                    f"[CONNECTOR] Attaching JSON: {json_filename}"
+                )
                 try:
                     self.helper.api.stix_cyber_observable.add_file(
                         id=entity["id"],
@@ -953,14 +956,16 @@ class PolySwarmConnector:
                         no_trigger_import=True,
                     )
                 except (OSError, KeyError, RuntimeError, TypeError) as e:
-                    self.helper.log_warning(
+                    self.helper.connector_logger.warning(
                         f"[CONNECTOR] Failed to attach scan JSON: {type(e).__name__}: {e}"
                     )
 
             for provider, result in sandbox_results.items():
                 if result:
                     json_filename = f"Sandbox_{provider}_{lookup_hash[:16] if lookup_hash else 'unknown'}.json"
-                    self.helper.log_info(f"[CONNECTOR] Attaching JSON: {json_filename}")
+                    self.helper.connector_logger.info(
+                        f"[CONNECTOR] Attaching JSON: {json_filename}"
+                    )
                     try:
                         self.helper.api.stix_cyber_observable.add_file(
                             id=entity["id"],
@@ -971,7 +976,7 @@ class PolySwarmConnector:
                             no_trigger_import=True,
                         )
                     except (OSError, KeyError, RuntimeError, TypeError) as e:
-                        self.helper.log_warning(
+                        self.helper.connector_logger.warning(
                             f"[CONNECTOR] Failed to attach {provider} sandbox JSON: {type(e).__name__}: {e}"
                         )
                     # PROD-24: Only run debug helper when debug logging is active
@@ -988,7 +993,9 @@ class PolySwarmConnector:
                 pdf = self.polyswarm_client.generate_pdf(scan_id, "scan")
                 if pdf:
                     pdf_filename = f"PolySwarm_Scan_{safe_filename}.pdf"
-                    self.helper.log_info(f"[CONNECTOR] Attaching PDF: {pdf_filename}")
+                    self.helper.connector_logger.info(
+                        f"[CONNECTOR] Attaching PDF: {pdf_filename}"
+                    )
                     try:
                         self.helper.api.stix_cyber_observable.add_file(
                             id=entity["id"],
@@ -997,7 +1004,7 @@ class PolySwarmConnector:
                             no_trigger_import=True,
                         )
                     except (OSError, KeyError, RuntimeError, TypeError) as e:
-                        self.helper.log_warning(
+                        self.helper.connector_logger.warning(
                             f"[CONNECTOR] Failed to attach scan PDF: {type(e).__name__}: {e}"
                         )
 
@@ -1011,7 +1018,7 @@ class PolySwarmConnector:
                             pdf_filename = (
                                 f"PolySwarm_Sandbox_{provider}_{safe_filename}.pdf"
                             )
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[CONNECTOR] Attaching PDF: {pdf_filename}"
                             )
                             try:
@@ -1022,7 +1029,7 @@ class PolySwarmConnector:
                                     no_trigger_import=True,
                                 )
                             except (OSError, KeyError, RuntimeError, TypeError) as e:
-                                self.helper.log_warning(
+                                self.helper.connector_logger.warning(
                                     f"[CONNECTOR] Failed to attach {provider} sandbox PDF: {type(e).__name__}: {e}"
                                 )
 
@@ -1030,7 +1037,7 @@ class PolySwarmConnector:
         llm_reports: dict[str, str] = {}
         if self.config.polyswarm.llm_report_enabled and llm_task_ids:
             llm_timeout = self.config.polyswarm.llm_report_timeout
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONNECTOR] Collecting {len(llm_task_ids)} LLM report(s): {list(llm_task_ids.keys())}"
             )
             for source, llm_id in llm_task_ids.items():
@@ -1039,11 +1046,11 @@ class PolySwarmConnector:
                 )
                 if report_text:
                     llm_reports[source] = report_text
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] {source.upper()} LLM report collected ({len(report_text)} chars)"
                     )
                 else:
-                    self.helper.log_warning(
+                    self.helper.connector_logger.warning(
                         f"[CONNECTOR] {source.upper()} LLM report collection failed"
                     )
                     self._send_error_note(
@@ -1072,7 +1079,9 @@ class PolySwarmConnector:
     ) -> None:
         """Build and send the STIX bundle."""
         if not (scan_mapped or sandbox_mapped or sandbox_processed or sandbox_failures):
-            self.helper.log_warning("[CONNECTOR] No scan or sandbox data to process")
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] No scan or sandbox data to process"
+            )
             self._send_error_note(
                 entity,
                 "No Analysis Data Available",
@@ -1087,7 +1096,7 @@ class PolySwarmConnector:
             )
             return
 
-        self.helper.log_info("[CONNECTOR] Building STIX bundle...")
+        self.helper.connector_logger.info("[CONNECTOR] Building STIX bundle...")
         new_stix_objects = self.stix_builder.build_bundle(
             entity=entity,
             scan_data=scan_mapped,
@@ -1099,7 +1108,7 @@ class PolySwarmConnector:
         )
 
         if not new_stix_objects:
-            self.helper.log_warning("[CONNECTOR] No STIX objects created")
+            self.helper.connector_logger.warning("[CONNECTOR] No STIX objects created")
             self._send_error_note(
                 entity,
                 "No Results Generated",
@@ -1118,7 +1127,9 @@ class PolySwarmConnector:
         for obj in new_stix_objects:
             t = obj.get("type", "unknown")
             type_counts[t] = type_counts.get(t, 0) + 1
-        self.helper.log_info(f"[CONNECTOR] STIX objects created: {type_counts}")
+        self.helper.connector_logger.info(
+            f"[CONNECTOR] STIX objects created: {type_counts}"
+        )
 
         # Merge with existing objects — strip binary payloads so the bundle doesn't
         # re-upload the file to OpenCTI (it's already stored).
@@ -1187,8 +1198,10 @@ class PolySwarmConnector:
         }
         final_objects.sort(key=lambda o: _type_order.get(o.get("type", ""), 5))
         bundle = self.helper.stix2_create_bundle(final_objects)
-        bundles_sent = self.helper.send_stix2_bundle(bundle, update=True)
-        self.helper.log_info(
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle, update=True, cleanup_inconsistent_bundle=True
+        )
+        self.helper.connector_logger.info(
             f"[CONNECTOR] {self._enrich_ctx} Sent {len(bundles_sent)} bundle(s)"
         )
 
@@ -1216,7 +1229,7 @@ class PolySwarmConnector:
             lookup_hash = self._get_lookup_hash(entity)
             if lookup_hash:
                 self._enrich_ctx = f"[entity={short_id} hash={lookup_hash[:16]}]"
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONNECTOR] {self._enrich_ctx} Starting enrichment"
                 )
 
@@ -1232,7 +1245,7 @@ class PolySwarmConnector:
                         if isinstance(m, dict)
                     ]
                 if markings and not self.helper.check_max_tlp(markings, max_tlp):
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] {self._enrich_ctx} Skipping: TLP exceeds max_tlp={max_tlp}"
                     )
                     return {
@@ -1281,7 +1294,7 @@ class PolySwarmConnector:
             if scan_res and not scan_res.get("failed"):
                 scan_mapped = ScanProcessor.process(scan_res, scan_id=scan_id)
                 if scan_mapped:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] Scan processed: score={scan_mapped.get('score')}, "
                         f"family={scan_mapped.get('family')}"
                     )
@@ -1295,7 +1308,7 @@ class PolySwarmConnector:
                         processed = SandboxProcessor.process(raw_result)
                         if processed:
                             sandbox_processed[provider] = processed
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[CONNECTOR] {provider.upper()} sandbox processed: "
                                 f"score={processed.get('score')}, "
                                 f"family={processed.get('family')}, "
@@ -1311,11 +1324,11 @@ class PolySwarmConnector:
                             or raw_result.get("message")
                             or f"Sandbox execution {status.lower()}",
                         }
-                        self.helper.log_warning(
+                        self.helper.connector_logger.warning(
                             f"[CONNECTOR] {provider.upper()} sandbox failed: {status}"
                         )
                     else:
-                        self.helper.log_warning(
+                        self.helper.connector_logger.warning(
                             f"[CONNECTOR] {provider.upper()} sandbox has unknown status: {status}"
                         )
                         sandbox_failures[provider] = {
@@ -1353,10 +1366,10 @@ class PolySwarmConnector:
         except PolySwarmAPIError:
             raise
         except Exception as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONNECTOR] {self._enrich_ctx} Enrichment failure: {str(e)}"
             )
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONNECTOR] {self._enrich_ctx} Traceback: {traceback.format_exc()}"
             )
             raise
@@ -1371,31 +1384,37 @@ class PolySwarmConnector:
 
         Only called when connector log level is ``debug`` (see PROD-24).
         """
-        self.helper.log_debug("[CONNECTOR] === Sandbox Structure Debug ===")
-        self.helper.log_debug(f"[CONNECTOR] Top-level keys: {list(sandbox_res.keys())}")
+        self.helper.connector_logger.debug(
+            "[CONNECTOR] === Sandbox Structure Debug ==="
+        )
+        self.helper.connector_logger.debug(
+            f"[CONNECTOR] Top-level keys: {list(sandbox_res.keys())}"
+        )
 
         if sandbox_res.get("domains"):
-            self.helper.log_debug(
+            self.helper.connector_logger.debug(
                 f"[CONNECTOR] result['domains']: {len(sandbox_res['domains'])} items"
             )
 
         report = sandbox_res.get("report", {})
         if report:
-            self.helper.log_debug(f"[CONNECTOR] report keys: {list(report.keys())}")
+            self.helper.connector_logger.debug(
+                f"[CONNECTOR] report keys: {list(report.keys())}"
+            )
 
             if report.get("domains"):
-                self.helper.log_debug(
+                self.helper.connector_logger.debug(
                     f"[CONNECTOR] report['domains']: {len(report['domains'])} items"
                 )
 
             network = report.get("network", {})
             if network:
-                self.helper.log_debug(
+                self.helper.connector_logger.debug(
                     f"[CONNECTOR] report['network'] keys: {list(network.keys())}"
                 )
                 for key in ["dns", "http", "hosts", "tcp", "udp"]:
                     if network.get(key):
-                        self.helper.log_debug(
+                        self.helper.connector_logger.debug(
                             f"[CONNECTOR] network['{key}']: {len(network[key])} items"
                         )
 

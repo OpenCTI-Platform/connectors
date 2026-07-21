@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'CrowdStrike Recon' # optional (default: 'CrowdStrike Recon')
+  scope: 'ChangeMe'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+crowdstrike_recon:
+  api_base_url: 'ChangeMe'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  tlp_level: 'amber+strict' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+  import_start_date: 'P10D'
+  #filter_topic: 'SA_BRAND,SA_THIRD_PARTY_V2' # optional, comma-separated topic name(s) to filter notifications (default: '' = no filtering)
+  #filter_type: 'typosquatting_domain,exposed_data' # optional, comma-separated notification type(s) to filter (default: '' = no filtering)
+  #filter_priority: 'high,medium' # optional, comma-separated priority(ies) to filter notifications (default: '' = no filtering)

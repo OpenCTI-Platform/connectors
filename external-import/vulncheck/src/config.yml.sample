@@ -5,9 +5,18 @@ opencti:
 connector:
   type: 'EXTERNAL_IMPORT'
   id: "ChangeMe"
- # scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source"
+  # Defaults to all object types except 'software'. Uncomment to override;
+  # add 'software' only if prepared for the volume (see README "Data Volume").
+  # scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,attack-pattern,course-of-action,x-mitre-data-source,report"
 
-connector_vulncheck:
+vulncheck:
   api_key: "ChangeMe"
  # data_sources: "botnets,epss,exploits,initial-access,ipintel,nist-nvd2,snort,suricata,ransomware,threat-actors,vulncheck-kev,vulncheck-nvd2"
+ # NVD2 (nist-nvd2 / vulncheck-nvd2) incremental ingestion. Normal runs are
+ # incremental via connector state; the settings below only shape the first run
+ # and allow manual backfills.
+ # nvd2_pull_history: false          # true => first run pulls full history (no date filter)
+ # nvd2_max_date_range: P120D        # first-run lookback (ISO-8601 duration) when not pulling history
+ # nvd2_last_mod_start_date:         # ISO-8601 date (YYYY-MM-DD), manual backfill override (normally unset)
+ # nvd2_last_mod_end_date:           # ISO-8601 date (YYYY-MM-DD), manual backfill override (normally unset)
 

@@ -1,0 +1,19 @@
+version: '3'
+services:
+  connector-visionheight:
+    image: opencti/connector-visionheight:latest # 'visionheight' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=VisionHeight # optional (default: 'VisionHeight')
+      - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name
+      - CONNECTOR_LOG_LEVEL=info # optional (default: 'info')
+      - CONNECTOR_AUTO=false # optional (default: false)
+      # Custom parameters for connector-visionheight
+      - VISIONHEIGHT_API_BASE_URL=https://api.visionheight.com
+      - VISIONHEIGHT_API_KEY=CHANGEME
+      - VISIONHEIGHT_MAX_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+    restart: always

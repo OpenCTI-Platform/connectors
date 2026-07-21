@@ -5,6 +5,22 @@ import validators
 from pydantic import TypeAdapter
 
 
+def get_group_entry(group_name: str, group_data: list[dict]) -> dict | None:
+    """
+    Return the full group dict for group_name from group_data, or None if not found.
+
+    Params:
+        group_name: group name in string
+        group_data: list of group dicts from /v2/groups API response
+    Return:
+        matching group dict or None
+    """
+    for item in group_data:
+        if item.get("name") == group_name:
+            return item
+    return None
+
+
 def threat_description_generator(group_name: str, group_data) -> str:
     """
     Retrieve description of a group name

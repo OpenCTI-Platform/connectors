@@ -1,12 +1,17 @@
 {
   "title": "Import Document",
   "slug": "import-document",
-  "description": "This connector allows organizations to feed information from document to OpenCTI.\nThis connector extracts the information in the document files and then matches it against regular expressions for Entities from the OpenCTI knowledge base or new Observables.",
-  "short_description": "This connector allows organizations to feed information from document to OpenCTI.\nThis connector extracts the information in the document files and then matches it against regular expressions for Entities from the OpenCTI knowledge base or new Observables.",
+  "description": "This connector allows organizations to extract threat intelligence from documents and feed it into OpenCTI. It parses document files (PDF, DOCX, TXT, HTML, Markdown, CSV) and extracts:\n\n- Entities: matches text against existing entities in the OpenCTI knowledge base (threat actors, malware, campaigns, etc.)\n- Observables: extracts IOCs using regex patterns and the ioc_finder library (IP addresses, domains, URLs, hashes, etc.)\n\nThe connector can operate in two modes: file import (parse uploaded files and create/update entities) and internal analysis (analyze files or entity fields and return structured analysis results).",
+  "short_description": "This connector extracts threat intelligence from documents (PDF, DOCX, TXT, HTML, Markdown, CSV), matching text against OpenCTI entities and extracting observables such as IPs, domains, URLs, and hashes.",
   "logo": "internal-import-file/import-document/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

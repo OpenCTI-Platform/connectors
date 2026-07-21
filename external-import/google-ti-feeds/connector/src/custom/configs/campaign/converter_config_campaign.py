@@ -18,6 +18,7 @@ from connector.src.custom.exceptions import (
     GTIFileConversionError,
     GTIIPConversionError,
     GTIMalwareConversionError,
+    GTISoftwareToolkitConversionError,
     GTITechniqueConversionError,
     GTIUrlConversionError,
     GTIVulnerabilityConversionError,
@@ -52,6 +53,9 @@ from connector.src.custom.mappers.gti_malwares.gti_malware_family_to_stix_compos
 from connector.src.custom.mappers.gti_malwares.gti_malware_family_to_stix_malware import (
     GTIMalwareFamilyToSTIXMalware,
 )
+from connector.src.custom.mappers.gti_software_toolkits.gti_software_toolkit_to_stix_tool import (
+    GTISoftwareToolkitToSTIXTool,
+)
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_composite import (
     GTIThreatActorToSTIXComposite,
 )
@@ -79,6 +83,9 @@ from connector.src.custom.models.gti.gti_ip_addresses_model import (
 )
 from connector.src.custom.models.gti.gti_malware_family_model import (
     GTIMalwareFamilyData,
+)
+from connector.src.custom.models.gti.gti_software_toolkit_model import (
+    GTISoftwareToolkitData,
 )
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
@@ -231,6 +238,18 @@ GTI_CAMPAIGN_IP_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=related_to_relationship(GTIIPToSTIXIP, "campaign"),
 )
 
+GTI_CAMPAIGN_SOFTWARE_TOOLKIT_CONVERTER_CONFIG = GenericConverterConfig(
+    entity_type="software_toolkits",
+    mapper_class=GTISoftwareToolkitToSTIXTool,
+    output_stix_type="tool",
+    exception_class=GTISoftwareToolkitConversionError,
+    display_name="software toolkits",
+    input_model=GTISoftwareToolkitData,
+    display_name_singular="software toolkit",
+    validate_input=True,
+    postprocessing_function=uses_relationship(GTISoftwareToolkitToSTIXTool, "campaign"),
+)
+
 CAMPAIGN_CONVERTER_CONFIGS = {
     "campaign": GTI_CAMPAIGN_CONVERTER_CONFIG,
     "campaign_locations": GTI_CAMPAIGN_LOCATION_CONVERTER_CONFIG,
@@ -243,4 +262,5 @@ CAMPAIGN_CONVERTER_CONFIGS = {
     "campaign_files": GTI_CAMPAIGN_FILE_CONVERTER_CONFIG,
     "campaign_urls": GTI_CAMPAIGN_URL_CONVERTER_CONFIG,
     "campaign_ip_addresses": GTI_CAMPAIGN_IP_CONVERTER_CONFIG,
+    "campaign_software_toolkits": GTI_CAMPAIGN_SOFTWARE_TOOLKIT_CONVERTER_CONFIG,
 }

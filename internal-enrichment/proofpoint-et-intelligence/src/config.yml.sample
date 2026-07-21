@@ -3,7 +3,6 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'ProofPoint ET Intelligence'
   scope: 'IPv4-Addr,Domain-Name,StixFile'
@@ -13,5 +12,5 @@ connector:
 proofpoint_et_intelligence:
   api_base_url: 'https://api.emergingthreats.net/v1/'
   api_key: 'ChangeMe'
-  max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+  max_tlp: "TLP:AMBER+STRICT" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
   import_last_seen_time_window: "P30D"

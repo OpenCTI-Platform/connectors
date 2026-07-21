@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/trukno_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token used by the connector to authenticate to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_ID": {
+      "description": "A stable UUID for this connector instance.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "TruKno",
+      "description": "Name of the connector shown in OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "report",
+        "attack-pattern",
+        "malware"
+      ],
+      "description": "STIX object scope currently imported by the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Connector type for OpenCTI.",
+      "enum": [
+        "EXTERNAL_IMPORT"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "Determines the verbosity of runtime logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "TRUKNO_API_BASE_URL": {
+      "default": "https://api.trukno.com/v2",
+      "description": "Base URL of the TruKno API.",
+      "format": "uri",
+      "type": "string"
+    },
+    "TRUKNO_API_KEY": {
+      "description": "API key used to authenticate to TruKno.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TRUKNO_INTERVAL_MINUTES": {
+      "default": 60,
+      "description": "Polling interval in minutes between connector cycles.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "TRUKNO_INITIAL_LOOKBACK_DAYS": {
+      "default": 30,
+      "description": "Number of days to backfill on the first run before a checkpoint exists.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "TRUKNO_CONNECTOR_CONFIG": {
+      "description": "Optional explicit path to a config.yml file used for manual or packaged runs.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "TRUKNO_API_KEY"
+  ],
+  "additionalProperties": true
+}

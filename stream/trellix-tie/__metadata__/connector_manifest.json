@@ -1,0 +1,26 @@
+{
+  "title": "Trellix TIE",
+  "slug": "trellix-tie",
+  "description": "The OpenCTI Trellix TIE stream connector pushes OpenCTI file-hash indicators to Trellix Threat Intelligence Exchange (TIE) as enterprise file reputations over the OpenDXL fabric. On each indicator create/update carrying a STIX file-hash pattern, it sets the TIE reputation (configurable trust level) for the MD5/SHA-1/SHA-256 hashes via the OpenDXL TIE client, so Trellix endpoint security can act on the intelligence. This is the standard McAfee/Trellix integration mechanism (Trellix EDR has no outbound IOC REST API). It requires an ePO-provisioned OpenDXL configuration (broker list + client certificate) and covers file/cert hashes only.",
+  "short_description": "Push OpenCTI file-hash indicators to Trellix TIE reputations over OpenDXL.",
+  "logo": "stream/trellix-tie/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260701.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/trellix-tie",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-trellix-tie",
+  "container_type": "STREAM"
+}

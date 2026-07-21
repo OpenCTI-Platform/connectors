@@ -1,0 +1,100 @@
+name: Build UBI9 Images
+
+on:
+  workflow_call:
+    inputs:
+      build_mode:
+        description: >
+          Build mode: "rolling" (master), "prerelease" (release/* branches),
+          or "release" (version tags like 7.260529.0).
+        required: true
+        type: string
+      push:
+        description: "Whether to push images to registries"
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_PASSWORD:
+        required: false
+      GHCR_USERNAME:
+        required: false
+      GHCR_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-matrix:
+    name: Generate build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      image_tags: ${{ steps.meta.outputs.image_tags }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          sparse-checkout: .github/ubi9-connectors.json
+
+      - name: Generate build matrix
+        id: set-matrix
+        run: |
+          python3 -c "
+          import json, os
+          with open('.github/ubi9-connectors.json') as f:
+              connectors = json.load(f)
+          matrix = {'include': [{'path': c, 'name': os.path.basename(c)} for c in connectors]}
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('matrix=' + json.dumps(matrix) + '\n')
+          "
+
+      - name: Compute image tags
+        id: meta
+        run: |
+          BUILD_MODE="${{ inputs.build_mode }}"
+
+          case "$BUILD_MODE" in
+            rolling)
+              IMAGE_TAGS="rolling-ubi9"
+              ;;
+            prerelease)
+              IMAGE_TAGS="prerelease-ubi9"
+              ;;
+            release)
+              TAG_NAME="${{ github.ref_name }}"
+              LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+
+              IMAGE_TAGS="${TAG_NAME}-ubi9"
+              if [ "$TAG_NAME" = "$LATEST_TAG" ]; then
+                IMAGE_TAGS="${IMAGE_TAGS},latest-ubi9"
+              fi
+              ;;
+            *)
+              echo "::error::Unknown build mode: $BUILD_MODE"
+              exit 1
+              ;;
+          esac
+
+          echo "image_tags=${IMAGE_TAGS}" >> "$GITHUB_OUTPUT"
+          echo "🏷️ UBI9 image tags: $IMAGE_TAGS"
+
+  build:
+    needs: build-matrix
+    uses: ./.github/workflows/build-connector-type.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      type_name: ubi9
+      matrix_json: ${{ needs.build-matrix.outputs.matrix }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+      dockerfile: Dockerfile_ubi9
+      variant: ubi9
+    secrets: inherit

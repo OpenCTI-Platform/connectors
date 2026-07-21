@@ -1,3 +1,8 @@
+# v2.2.1
+
+  + Upgrade `verity471` to version [1.1.7](https://github.com/intel471/verity471-python/releases/tag/v1.1.7)
+  + Add support for bulletproof hosting indicators
+
 # v2.2.0
 
   + Added [Verity471](https://www.intel471.com/verity471) support with full feature and data parity alongside the existing Titan infrastructure.

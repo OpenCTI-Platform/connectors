@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'  # UUIDv4
+  name: 'CTM360-CYNA'
+  scope: 'ctm360-cyna'
+  log_level: 'info'
+  duration_period: 'PT24H'
+
+ctm360_cyna:
+  api_base_url: 'https://cyna.ctm360.com'
+  api_key: 'ChangeMe'
+  import_interval: 86400
+  page_size: 25
+  max_pages: 100

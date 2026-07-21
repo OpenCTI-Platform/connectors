@@ -416,7 +416,7 @@ class _FindingAPI(FindingPort):
         return self._pydantic_model.acr_score
 
     @property
-    def asset_exposure_score(self) -> float:
+    def asset_exposure_score(self) -> Optional[float]:
         return self._pydantic_model.asset_exposure_score
 
     @property
@@ -444,7 +444,6 @@ class _FindingAPI(FindingPort):
             "ip",
             "protocol",
             "seol_date",
-            "asset_exposure_score",
             "severity_name",
         ]
         optional_direct_fields = [
@@ -478,6 +477,7 @@ class _FindingAPI(FindingPort):
             "temporal_score",
             "cvss_v3_base_score",
             "cvss_v3_temporal_score",
+            "asset_exposure_score",
         ]
         datetime_fields = ["first_seen", "last_seen"]
         optional_datetime_fields = [

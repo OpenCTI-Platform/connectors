@@ -1,12 +1,17 @@
 {
   "title": "FIRST EPSS Bulk",
   "slug": "first-epss-bulk",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "FIRST EPSS (Exploit Prediction Scoring System) is a data-driven effort for estimating the likelihood that a software vulnerability will be exploited in the wild. The EPSS model produces a probability score between 0 and 1, helping organizations prioritize vulnerability remediation based on actual exploitation likelihood.\n\nThis connector performs a bulk import of EPSS scores for all CVEs from the FIRST EPSS dataset and updates the corresponding Vulnerability objects in OpenCTI with their current EPSS score and percentile.",
+  "short_description": "Bulk imports EPSS (Exploit Prediction Scoring System) scores from FIRST for all CVEs and updates the corresponding Vulnerability objects in OpenCTI with exploitation likelihood scores.",
   "logo": "external-import/first-epss-bulk/__metadata__/logo.png",
   "use_cases": [
-    "Vulnerability Management"
+    "Vulnerability & Exploit Awareness"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

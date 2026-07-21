@@ -30,78 +30,151 @@ class ExportFileCsv:
             []
         )  # error holder to be reset before each new process
 
-    def export_dict_list_to_csv(self, data):
+    # The frontend (opencti #15593) sends the visible DataTable column ids as
+    # the ``visible_columns`` list. A few presentation column ids do not map 1:1
+    # onto a field key in the exported entity dicts. Each such id maps to a
+    # ``(source field key, sub-field)`` pair: the source key is the field to read
+    # from the entity dict, and the sub-field is the attribute to pull from that
+    # field's resolved value (``None`` renders the field's representative value).
+    # This lets a single underlying field - e.g. a relationship's ``from``/``to``
+    # endpoint - be projected into several distinct columns (its name and its
+    # entity type) instead of being collapsed into one. Any id not listed here is
+    # matched against the export keys as-is (most ids already match, e.g.
+    # ``relationship_type``, ``entity_type``, ``created_at``, ``objectMarking``).
+    VISIBLE_COLUMN_FIELDS = {
+        "fromName": ("from", None),
+        "fromType": ("from", "entity_type"),
+        "toName": ("to", None),
+        "toType": ("to", "entity_type"),
+        "creator": ("creators", None),
+    }
+
+    # Observable hash algorithms expanded into their own ``hashes_<algo>``
+    # columns whenever a ``hashes`` column is exported.
+    HASHES_ALGORITHMS = ["MD5", "SHA-1", "SHA-256", "SHA-512", "SSDEEP"]
+
+    @classmethod
+    def _select_export_columns(cls, data_headers, columns):
+        """Resolve the ordered ``(header, source_key, sub_field)`` columns.
+
+        ``columns`` is the optional list of visible DataTable column ids sent by
+        the frontend. ``None`` or an empty list means "no filter" - one column
+        per data header. Presentation ids in ``VISIBLE_COLUMN_FIELDS`` are
+        projected onto their underlying field (and optional sub-field), so
+        ``fromName`` and ``fromType`` become two distinct columns both reading
+        the relationship's ``from`` endpoint (its representative value and its
+        entity type). Ids whose underlying field is absent from the data are
+        dropped; the requested order is preserved and exact duplicates removed.
+        If nothing resolves, fall back to all columns so the export is never
+        empty.
+        """
+        if not columns:
+            return [(header, header, None) for header in data_headers]
+        selected = []
+        seen = set()
+        for column in columns:
+            source_key, sub_field = cls.VISIBLE_COLUMN_FIELDS.get(
+                column, (column, None)
+            )
+            if source_key in data_headers and column not in seen:
+                seen.add(column)
+                selected.append((column, source_key, sub_field))
+        return selected or [(header, header, None) for header in data_headers]
+
+    @staticmethod
+    def _render_value(value):
+        """Render a raw field value to its CSV string representation."""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, int):  # bool is an int subclass, kept as before
+            return str(value)
+        if isinstance(value, float):
+            return str(value)
+        if isinstance(value, list):
+            if len(value) > 0 and isinstance(value[0], str):
+                return ",".join(value)
+            if len(value) > 0 and isinstance(value[0], dict):
+                rendered = []
+                for item in value:
+                    if "name" in item:
+                        rendered.append(
+                            item["name"] if item["name"] is not None else ""
+                        )
+                    elif "definition" in item:
+                        rendered.append(
+                            item["definition"] if item["definition"] is not None else ""
+                        )
+                    elif "value" in item:
+                        rendered.append(
+                            item["value"] if item["value"] is not None else ""
+                        )
+                    elif "observable_value" in item:
+                        rendered.append(
+                            item["observable_value"]
+                            if item["observable_value"] is not None
+                            else ""
+                        )
+                return ",".join(rendered)
+            return ""
+        if isinstance(value, dict):
+            if "name" in value:
+                return value["name"] or ""
+            if "value" in value:
+                return value["value"] or ""
+            if "observable_value" in value:
+                return value["observable_value"] or ""
+            return ""
+        return ""
+
+    @classmethod
+    def _extract_hash(cls, value, algorithm):
+        """Return the hash for ``algorithm`` from a STIX ``hashes`` list."""
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict) and item.get("algorithm") == algorithm:
+                    return item.get("hash") or ""
+        return ""
+
+    @classmethod
+    def _render_cell(cls, entity, source_key, sub_field):
+        """Render a single CSV cell for ``entity`` given a column spec."""
+        if source_key not in entity:
+            return ""
+        value = entity[source_key]
+        if sub_field is None:
+            return cls._render_value(value)
+        if source_key == "hashes":
+            return cls._extract_hash(value, sub_field)
+        if isinstance(value, dict):
+            return cls._render_value(value.get(sub_field))
+        if isinstance(value, list):
+            return ",".join(
+                cls._render_value(item.get(sub_field))
+                for item in value
+                if isinstance(item, dict) and item.get(sub_field) is not None
+            )
+        return ""
+
+    def export_dict_list_to_csv(self, data, columns=None):
         output = io.StringIO()
-        headers = sorted(set().union(*(d.keys() for d in data)))
-        if "hashes" in headers:
-            headers = headers + [
-                "hashes.MD5",
-                "hashes_SHA-1",
-                "hashes_SHA-256",
-                "hashes_SHA-512",
-                "hashes_SSDEEP",
-            ]
+        data_headers = sorted(set().union(*(d.keys() for d in data)))
+        column_specs = self._select_export_columns(data_headers, columns)
+        # Expand a "hashes" field into one column per algorithm. The expanded
+        # columns are appended after the regular columns (matching the previous
+        # output ordering) while the raw "hashes" column is kept as-is.
+        expanded_specs = list(column_specs)
+        for _, source_key, sub_field in column_specs:
+            if source_key == "hashes" and sub_field is None:
+                for algorithm in self.HASHES_ALGORITHMS:
+                    expanded_specs.append(("hashes_" + algorithm, "hashes", algorithm))
+        headers = [spec[0] for spec in expanded_specs]
         csv_data = [headers]
-        for d in data:
+        for entity in data:
             try:
-                row = []
-                for h in headers:
-                    if h.startswith("hashes_") and "hashes" in d:
-                        hashes = {}
-                        for hash in d["hashes"]:
-                            hashes[hash["algorithm"]] = hash["hash"]
-                        if h.split("_")[1] in hashes:
-                            row.append(hashes[h.split("_")[1]])
-                        else:
-                            row.append("")
-                    elif h not in d:
-                        row.append("")
-                    elif isinstance(d[h], str):
-                        row.append(d[h])
-                    elif isinstance(d[h], int):
-                        row.append(str(d[h]))
-                    elif isinstance(d[h], float):
-                        row.append(str(d[h]))
-                    elif isinstance(d[h], list):
-                        if len(d[h]) > 0 and isinstance(d[h][0], str):
-                            row.append(",".join(d[h]))
-                        elif len(d[h]) > 0 and isinstance(d[h][0], dict):
-                            rrow = []
-                            for r in d[h]:
-                                if "name" in r:
-                                    if r["name"] is not None:
-                                        rrow.append(r["name"])
-                                    else:
-                                        rrow.append("")
-                                elif "definition" in r:
-                                    if r["definition"] is not None:
-                                        rrow.append(r["definition"])
-                                    else:
-                                        rrow.append("")
-                                elif "value" in r:
-                                    if r["value"] is not None:
-                                        rrow.append(r["value"])
-                                    else:
-                                        rrow.append("")
-                                elif "observable_value" in r:
-                                    if r["observable_value"] is not None:
-                                        rrow.append(r["observable_value"])
-                                    else:
-                                        rrow.append("")
-                            row.append(",".join(rrow))
-                        else:
-                            row.append("")
-                    elif isinstance(d[h], dict):
-                        if "name" in d[h]:
-                            row.append(d[h]["name"])
-                        elif "value" in d[h]:
-                            row.append(d[h]["value"])
-                        elif "observable_value" in d[h]:
-                            row.append(d[h]["observable_value"])
-                        else:
-                            row.append("")
-                    else:
-                        row.append("")
+                row = [
+                    self._render_cell(entity, source_key, sub_field)
+                    for _, source_key, sub_field in expanded_specs
+                ]
                 csv_data.append(row)
             except Exception as err:
                 self.helper.connector_logger.warning(
@@ -123,7 +196,15 @@ class ExportFileCsv:
         file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
-        csv_data = self.export_dict_list_to_csv(entities_list)
+        list_params = data.get("list_params", {})
+        # Use None (not []) as the "no filter" sentinel so an absent
+        # visible_columns exports all columns, while a provided list filters.
+        visible_columns = list_params.get("visible_columns")
+        self.helper.connector_logger.debug(
+            "Exporting with visible columns",
+            {"visible_columns": visible_columns},
+        )
+        csv_data = self.export_dict_list_to_csv(entities_list, visible_columns)
         self.helper.log_info(
             "Uploading: " + entity_type + "/" + export_type + " to " + file_name
         )

@@ -1,0 +1,22 @@
+services:
+  connector-flare:
+    image: opencti/connector-flare:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_NAME='Flare' # optional (default: 'Flare')
+      #- CONNECTOR_SCOPE='Flare' # optional (default: 'Flare')
+      #- CONNECTOR_LOG_LEVEL='error' # optional (default: 'error')
+      #- CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs (default: 'PT1H')
+      # Custom parameters for connector-flare
+      - FLARE_API_KEY=ChangeMe
+      #- FLARE_API_DOMAIN=api.flare.io # optional (default: 'api.flare.io')
+      #- FLARE_TENANT_ID= # optional, Flare tenant ID (default: none)
+      #- FLARE_EVENT_TYPES=stealer_log,domain,ransomleak,leak # optional (default: 'stealer_log,domain,ransomleak,leak')
+      #- FLARE_EVENT_ACTIONS= # optional, filter by event actions: 'ignored', 'remediated' (default: none)
+      #- FLARE_LOOKBACK_DAYS=30 # optional, number of days to look back on first run (default: 30)
+      #- FLARE_TLP_LEVEL=white # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'white')
+    restart: always

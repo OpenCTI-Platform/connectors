@@ -67,17 +67,20 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         ),
     )
 
-    # Entity-creation flags. Every flag defaults to ``False`` so the
-    # connector's default bundle stays minimal (Victim + Indicator-like
-    # objects); the operator opts into the broader Threat Actor /
-    # Intrusion Set / Campaign / Report SDOs explicitly. Defaults
-    # mirror the README configuration table so docs and runtime agree.
+    # Entity-creation flags.
+    # ``create_intrusion_set`` and ``create_report`` default to ``True``
+    # to preserve the behaviour that existed before PR #5590: the connector
+    # always emitted an IntrusionSet and a Report per disclosed victim.
+    # ``create_threat_actor`` and ``create_campaign`` default to ``False``
+    # because they were not produced before that PR and enabling them by
+    # default would cause a surge of new entities on existing deployments.
+    # Defaults mirror the README configuration table so docs and runtime agree.
     create_threat_actor: bool = Field(
         default=False,
         description="Whether to create a Threat Actor object.",
     )
     create_intrusion_set: bool = Field(
-        default=False,
+        default=True,
         description="Whether to create an Intrusion Set object.",
     )
     create_campaign: bool = Field(
@@ -85,7 +88,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         description="Whether to create a Campaign object.",
     )
     create_report: bool = Field(
-        default=False,
+        default=True,
         description="Whether to create a Report object.",
     )
 
@@ -109,6 +112,14 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
             "``TLP:CLEAR`` (default) is the OpenCTI-specific modern "
             "label; ``TLP:WHITE`` is the legacy STIX 2.1 equivalent."
         ),
+    )
+    create_leak_site_domains: bool = Field(
+        default=False,
+        description="Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet",
+    )
+    create_leak_post_refs: bool = Field(
+        default=False,
+        description="Whether to include the leak post URL as an external reference on victim reports",
     )
 
     @field_validator("type")

@@ -1,18 +1,23 @@
 {
   "title": "UNPACME",
   "slug": "unpac-me",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "UnpacMe is an automated malware unpacking service that extracts and analyzes packed malware samples. This connector submits file artifacts to UnpacMe for unpacking and analysis, then imports the results including unpacked samples and malware family identifications.\n\nKey features:\n\n- Automated malware unpacking\n- Malware family identification\n- Unpacked sample extraction\n- YARA rule matching\n- Relationship creation between samples",
+  "short_description": "UnpacMe connector submits packed malware samples for automated unpacking, returning extracted payloads, malware family identifications, and YARA matches.",
   "logo": "internal-enrichment/unpac-me/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=5.6.1",
-  "subscription_link": null,
+  "subscription_link": "https://www.unpac.me",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/unpac-me",
   "manager_supported": false,
   "container_version": "rolling",

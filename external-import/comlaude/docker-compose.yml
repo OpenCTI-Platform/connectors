@@ -1,22 +1,25 @@
-version: '3'
+version: "3"
 services:
   connector-comlaude:
     image: opencti/connector-comlaude:latest
     environment:
+      # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+      # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME="Comlaude"
-      - CONNECTOR_SCOPE=comlaude,stix # MIME type or Stix Object
+      - CONNECTOR_NAME=Comlaude
+      - CONNECTOR_SCOPE=comlaude,stix
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=PT2H     # Example: PT2H for a 2-hour period
-      - CONNECTOR_QUEUE_THRESHOLD=500MB    # Optional queue threshold (default: 500MB)
+      - CONNECTOR_DURATION_PERIOD=PT2H
+      #- CONNECTOR_QUEUE_THRESHOLD=500MB
+      #- CONNECTOR_RUN_AND_TERMINATE=true
+      # Connector's custom execution parameters
       - COMLAUDE_USERNAME=ChangeMe
       - COMLAUDE_PASSWORD=ChangeMe
       - COMLAUDE_API_KEY=ChangeMe
       - COMLAUDE_GROUP_ID=ChangeMe
-      - COMLAUDE_SCORE=15                  # From 0 to 100
-      - COMLAUDE_START_TIME=1970-01-01T00:00:00Z
-      - CONNECTOR_RUN_AND_TERMINATE=true
-      - COMLAUDE_LABELS="comlaude,safelist"
+      #- COMLAUDE_SCORE=15
+      #- COMLAUDE_START_TIME=1970-01-01T00:00:00Z
+      #- COMLAUDE_LABELS=comlaude,safelist
     restart: always

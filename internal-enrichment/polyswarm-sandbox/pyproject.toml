@@ -1,8 +1,0 @@
-[tool.ruff]
-line-length = 120
-
-[tool.ruff.lint]
-select = ["E", "W", "F", "I", "N", "UP", "S", "B", "A", "C4", "PIE", "RSE", "RET", "SIM"]
-
-[tool.black]
-line-length = 120

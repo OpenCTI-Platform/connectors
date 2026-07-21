@@ -1,0 +1,26 @@
+{
+  "title": "Vectra AI Intel",
+  "slug": "vectra-ai",
+  "description": "The OpenCTI Vectra AI Intelligence connector synchronises indicators of compromise (IOCs) from OpenCTI to the Vectra AI Platform in real time. Leveraging OpenCTI live streams, it maintains a Vectra threat feed of IP addresses, domains and URLs so that network detections (Threat Intel Match) fire on the threat intelligence curated in OpenCTI.",
+  "short_description": "Push IOCs (IP addresses, domains and URLs) from OpenCTI to a Vectra AI threat feed in real time.",
+  "logo": "stream/vectra-ai/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Network Security"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260701.0",
+  "subscription_link": "https://www.vectra.ai",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/vectra-ai",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-vectra-ai",
+  "container_type": "STREAM"
+}

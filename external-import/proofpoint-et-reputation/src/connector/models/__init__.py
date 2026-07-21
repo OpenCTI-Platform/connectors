@@ -1,4 +1,3 @@
-from connector.models.config_variables_models import ProofpointEtReputationConfigVar
 from connector.models.opencti_converter_models import (
     Author,
     DomainName,
@@ -14,7 +13,6 @@ from connector.models.reputation_models import (
 )
 
 __all__ = [
-    "ProofpointEtReputationConfigVar",
     "IPReputationModel",
     "DomainReputationModel",
     "BaseReputation",

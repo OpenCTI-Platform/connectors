@@ -187,6 +187,26 @@ The connector supports extensive filtering:
 - **By Threat Level**: Filter by threat level (1-4)
 - **By Publication Status**: Only published events
 
+### Attribute-Level Timestamp Filtering
+
+When `MISP_ATTRIBUTE_TIMESTAMP_FILTERING` is enabled (`true`), the connector only processes attributes that have been modified since the last successful run. This is a **client-side** filter applied after events are fetched from MISP.
+
+**Why is this useful?** When a single attribute is added or modified in a large MISP event, the API returns the entire event with all its attributes. Without this filter, the connector would re-process and re-push all (potentially thousands of) unchanged attributes to OpenCTI on every run.
+
+**How it works:**
+
+1. The connector tracks the highest attribute `timestamp` seen across all processed events (`last_attribute_timestamp` in the connector state).
+2. On subsequent runs, only attributes with a `timestamp >= last_attribute_timestamp` are kept; older attributes are filtered out before conversion.
+3. Objects (MISP composite objects) whose attributes are all filtered out are removed entirely to avoid converter errors.
+4. If **all** attributes in an event are filtered out, the first original attribute is kept as a fallback so the converter can produce a valid report with a real `object_ref`. Since this attribute was already sent to OpenCTI in a previous run, the resulting upsert is a no-op.
+5. Event-level metadata (galaxies, tags, threat level, markings) is **always** re-extracted and sent, even when no attributes passed the filter. This ensures changes to galaxies or tags are propagated to OpenCTI without resending all observables.
+
+**Migration behavior:** If the connector was already running and this option is enabled for the first time (i.e. `last_attribute_timestamp` does not exist in state but `last_event_date` does), the connector uses `last_event_date` as the initial filter threshold to avoid reprocessing all attributes from returned events.
+
+```yaml
+- MISP_ATTRIBUTE_TIMESTAMP_FILTERING=true
+```
+
 ### Threat Level Score Mapping
 
 MISP exposes four threat levels (`1=High`, `2=Medium`, `3=Low`, `4=Undefined`) which the connector converts into an OpenCTI score on the generated report, indicators and observables. The mapping is configurable through `MISP_THREAT_LEVEL_SCORE_MAPPING` and defaults to `1:90;2:60;3:30;4:50`, which preserves the historical behavior.

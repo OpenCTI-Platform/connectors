@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/ctm360-cyberblindspot-feed_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "CTM360-CyberBlindSpot",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CTM360_CBS_API_BASE_URL": {
+      "default": "https://cbs.ctm360.com",
+      "description": "CyberBlindSpot API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CTM360_CBS_API_KEY": {
+      "description": "API key for CyberBlindSpot authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CTM360_CBS_IMPORT_INTERVAL": {
+      "default": 86400,
+      "description": "Interval in seconds between imports (default: 24h).",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CTM360_CBS_IMPORT_INCIDENTS": {
+      "default": true,
+      "description": "Enable importing incidents.",
+      "type": "boolean"
+    },
+    "CTM360_CBS_IMPORT_MALWARE_LOGS": {
+      "default": true,
+      "description": "Enable importing malware logs.",
+      "type": "boolean"
+    },
+    "CTM360_CBS_IMPORT_BREACHED_CREDENTIALS": {
+      "default": true,
+      "description": "Enable importing breached credentials.",
+      "type": "boolean"
+    },
+    "CTM360_CBS_IMPORT_CARD_LEAKS": {
+      "default": true,
+      "description": "Enable importing card leaks.",
+      "type": "boolean"
+    },
+    "CTM360_CBS_IMPORT_DOMAIN_PROTECTION": {
+      "default": true,
+      "description": "Enable importing domain protection findings.",
+      "type": "boolean"
+    },
+    "CTM360_CBS_STATUS_POLL_INTERVAL": {
+      "default": 3600,
+      "description": "Interval in seconds between status polling cycles (default: 1h).",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CTM360_CBS_ENABLE_STATUS_TRACKING": {
+      "default": true,
+      "description": "Enable background polling for incident status changes.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_SCOPE",
+    "CONNECTOR_DURATION_PERIOD",
+    "CTM360_CBS_API_KEY"
+  ],
+  "additionalProperties": true
+}

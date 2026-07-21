@@ -1,5 +1,3 @@
-from typing import Literal
-
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -22,16 +20,6 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     scope: ListFromString = Field(
         default=["indicator"],
         description="Connector scope",
-    )
-
-    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
-        default="info",
-        description="Logging level",
-    )
-
-    live_stream_id: str = Field(
-        default="live",
-        description="Live stream ID",
     )
 
 

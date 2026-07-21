@@ -12,6 +12,9 @@ from connector.src.custom.configs.indicator.gti_config_indicator import (
 )
 from connector.src.custom.configs.malware.gti_config_malware import GTIMalwareConfig
 from connector.src.custom.configs.report.gti_config_report import GTIReportConfig
+from connector.src.custom.configs.software_toolkit.gti_config_software_toolkit import (
+    GTISoftwareToolkitConfig,
+)
 from connector.src.custom.configs.threat_actor.gti_config_threat_actor import (
     GTIThreatActorConfig,
 )
@@ -27,6 +30,7 @@ class GTIConfig(
     GTIVulnerabilityConfig,
     GTICampaignConfig,
     GTIIndicatorConfig,
+    GTISoftwareToolkitConfig,
 ):
     """Unified configuration for the Google Threat Intelligence (GTI) connector.
 

@@ -1,0 +1,29 @@
+version: '3'
+services:
+  connector-ctm360-threatcover:
+    image: opencti/connector-ctm360-threatcover:latest # 'ctm360-threatcover' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_SCOPE=ctm360-threatcover # mandatory
+      # - CONNECTOR_NAME=CTM360 ThreatCover # optional (default: 'CTM360 ThreatCover')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      # Custom parameters for connector-ctm360-threatcover
+      - CTM360_THREATCOVER_DISCOVERY_URL=ChangeMe # CTM360 ThreatCover TAXII discovery URL (e.g. https://<tenant>.ctm360.com/taxii2/)
+      - CTM360_THREATCOVER_COLLECTION=ChangeMe # the ThreatCover 'Observables' TAXII collection id or title
+      - CTM360_THREATCOVER_TOKEN=ChangeMe # CTM360 ThreatCover API token (used when use_token is true)
+      # - CTM360_THREATCOVER_V21=true # optional, use TAXII 2.1 (default: true)
+      # - CTM360_THREATCOVER_USE_TOKEN=true # optional, authenticate with a token (default: true)
+      # - CTM360_THREATCOVER_USE_APIKEY=false # optional, authenticate with a custom API-key header instead (default: false)
+      # - CTM360_THREATCOVER_APIKEY_KEY= # optional, header name when use_apikey is true
+      # - CTM360_THREATCOVER_APIKEY_VALUE= # optional, header value when use_apikey is true
+      # - CTM360_THREATCOVER_USERNAME= # optional, basic-auth username (when neither token nor apikey is used)
+      # - CTM360_THREATCOVER_PASSWORD= # optional, basic-auth password
+      # - CTM360_THREATCOVER_CERT_PATH= # optional, path to a client certificate for mutual TLS
+      # - CTM360_THREATCOVER_VERIFY_SSL=true # optional (default: true)
+      # - CTM360_THREATCOVER_TLP_LEVEL=amber # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber')
+    restart: always

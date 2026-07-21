@@ -1,14 +1,17 @@
 {
   "title": "CAPE Sandbox",
   "slug": "cape-sandbox",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "CAPEv2 (Config And Payload Extraction) is an open-source malware sandbox derived from Cuckoo Sandbox, specifically designed for extracting malware configurations and payloads. It provides comprehensive behavioral analysis including process monitoring, network traffic capture, API tracing, and automated config extraction.\n\nThis connector integrates CAPEv2 with OpenCTI to submit File and Artifact observables for dynamic analysis, import extracted malware configurations, create relationships to MITRE ATT&CK techniques, extract network IOCs (domains, IP addresses), and upload extracted payloads and process dumps as related artifacts.",
+  "short_description": "The CAPEv2 connector allows submitting File and Artifact observables for dynamic malware analysis, then imports the resulting extracted configurations, network IOCs, MITRE ATT&CK mappings, and payloads back into OpenCTI",
   "logo": "internal-enrichment/cape-sandbox/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis",
-    "Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

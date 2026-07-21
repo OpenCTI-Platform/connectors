@@ -1,0 +1,26 @@
+{
+  "title": "Gatewatcher LastInfosec Feed",
+  "slug": "lastinfosec-feed",
+  "description": "The Gatewatcher LastInfoSec Feed connector imports threat intelligence IOC feeds from LastInfoSec (acquired by Gatewatcher) into OpenCTI. The feed provides structured IOC data including IPs, domains, and URLs associated with malware campaigns and threat actors. Requires a LastInfoSec API key.",
+  "short_description": "Imports IOC threat intelligence feeds from Gatewatcher LastInfoSec into OpenCTI. Requires an API key from LastInfoSec/Gatewatcher.",
+  "logo": "external-import/lastinfosec-feed/__metadata__/logo.png",
+  "use_cases": [
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 45,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/lastinfosec-feed",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-lastinfosec-feed",
+  "container_type": "EXTERNAL_IMPORT"
+}

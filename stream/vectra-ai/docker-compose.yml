@@ -1,0 +1,26 @@
+version: '3'
+services:
+  connector-vectra-ai:
+    image: opencti/connector-vectra-ai:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type STREAM
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Vectra AI Intel # optional (default: 'Vectra AI Intel')
+      # - CONNECTOR_SCOPE=vectra-ai # optional (default: 'vectra-ai')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true # optional (default: true)
+      # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
+      # Vectra AI parameters
+      - VECTRA_AI_API_BASE_URL=ChangeMe # e.g. https://vectra.example.com
+      - VECTRA_AI_API_TOKEN=ChangeMe
+      # - VECTRA_AI_API_VERSION=v2.5 # optional (default: 'v2.5')
+      # - VECTRA_AI_FEED_NAME=OpenCTI # optional (default: 'OpenCTI')
+      # - VECTRA_AI_FEED_CATEGORY=cnc # optional (default: 'cnc')
+      # - VECTRA_AI_FEED_CERTAINTY=High # optional (default: 'High')
+      # - VECTRA_AI_FEED_DURATION=14 # optional (default: 14)
+      # - VECTRA_AI_SSL_VERIFY=true # optional (default: true)
+    restart: always

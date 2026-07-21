@@ -1,0 +1,35 @@
+[tools]
+poetry = "latest"
+pre-commit = "latest"
+ty = "latest"
+ruff = "latest"
+uv = "latest"
+gh = "latest"
+"aqua:github/copilot-cli" = "latest"
+git-cliff = "latest"
+
+[env]
+_.path = ["{{config_root}}/tasks"]
+# Set DOCKER_REPO_PATH in .mise/config.local.toml for deploy task
+# DOCKER_REPO_PATH = "/path/to/your/docker/repo"
+
+[tasks.global_manifest]
+description = "Update the global manifest file for all connectors"
+depends = ["generate_config_schema"]
+run = [
+    'sh ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh'
+]
+
+[tasks.deploy_to_catalog]
+description = "Deploy the connector to the catalog for testing (requires DOCKER_REPO_PATH)"
+# depends = ["push_docker", "global_manifest"]
+alias = "deploy"
+run = [
+    """
+    if [ -z "${DOCKER_REPO_PATH:-}" ]; then
+        echo "Error: DOCKER_REPO_PATH is not set. Define it in .mise/config.local.toml" >&2
+        exit 1
+    fi
+    cd "$DOCKER_REPO_PATH" && if command -v podman >/dev/null 2>&1; then RUNTIME=podman; else RUNTIME=docker; fi && $RUNTIME compose restart opencti
+    """
+]

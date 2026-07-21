@@ -20,6 +20,7 @@ from connector.src.custom.exceptions import (
     GTIIPConversionError,
     GTIMalwareConversionError,
     GTIReportConversionError,
+    GTISoftwareToolkitConversionError,
     GTITechniqueConversionError,
     GTIUrlConversionError,
     GTIVulnerabilityConversionError,
@@ -53,6 +54,9 @@ from connector.src.custom.mappers.gti_malwares.gti_malware_family_to_stix_malwar
 )
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_composite import (
     GTIReportToSTIXComposite,
+)
+from connector.src.custom.mappers.gti_software_toolkits.gti_software_toolkit_to_stix_tool import (
+    GTISoftwareToolkitToSTIXTool,
 )
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_composite import (
     GTIThreatActorToSTIXComposite,
@@ -88,6 +92,9 @@ from connector.src.custom.models.gti.gti_malware_family_model import (
     GTIMalwareFamilyData,
 )
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
+from connector.src.custom.models.gti.gti_software_toolkit_model import (
+    GTISoftwareToolkitData,
+)
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
 )
@@ -253,6 +260,20 @@ GTI_THREAT_ACTOR_CAMPAIGN_CONVERTER_CONFIG = GenericConverterConfig(
     ),
 )
 
+GTI_THREAT_ACTOR_SOFTWARE_TOOLKIT_CONVERTER_CONFIG = GenericConverterConfig(
+    entity_type="software_toolkits",
+    mapper_class=GTISoftwareToolkitToSTIXTool,
+    output_stix_type="tool",
+    exception_class=GTISoftwareToolkitConversionError,
+    display_name="software toolkits",
+    input_model=GTISoftwareToolkitData,
+    display_name_singular="software toolkit",
+    validate_input=True,
+    postprocessing_function=uses_relationship(
+        GTISoftwareToolkitToSTIXTool, "intrusion_set"
+    ),
+)
+
 THREAT_ACTOR_CONVERTER_CONFIGS = {
     "threat_actor": GTI_THREAT_ACTOR_CONVERTER_CONFIG,
     "threat_actor_locations": GTI_THREAT_ACTOR_LOCATION_CONVERTER_CONFIG,
@@ -266,4 +287,5 @@ THREAT_ACTOR_CONVERTER_CONFIGS = {
     "threat_actor_urls": GTI_THREAT_ACTOR_URL_CONVERTER_CONFIG,
     "threat_actor_ip_addresses": GTI_THREAT_ACTOR_IP_CONVERTER_CONFIG,
     "threat_actor_campaigns": GTI_THREAT_ACTOR_CAMPAIGN_CONVERTER_CONFIG,
+    "threat_actor_software_toolkits": GTI_THREAT_ACTOR_SOFTWARE_TOOLKIT_CONVERTER_CONFIG,
 }

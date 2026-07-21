@@ -1,12 +1,18 @@
 {
   "title": "IPQS",
   "slug": "ipqs",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "IPQualityScore (IPQS) provides enterprise-grade fraud prevention, risk analysis, and threat detection. This connector drives three IPQS API families with a single API key:\n\n- Fraud-and-risk-scoring endpoints (/ip, /url, /email, /phone) for IPv4-Addr, Email-Addr, Phone-Number, Domain-Name, and Url observables\n- Darkweb-Leak endpoints (/leaked/email, /leaked/username, /leaked/password) for User-Account observables\n- Malware-file-scanner endpoints (/malware/scan, /malware/lookup, /postback) for Artifact observables\n\nKey features:\n\n- IP address fraud scoring and proxy detection\n- Email address validation and risk assessment\n- Phone number verification and fraud detection\n- URL and domain reputation analysis\n- Artifact malware scanning with cache-first lookup\n- Malware and phishing detection\n- Darkweb-Leak lookup for User-Account observables",
+  "short_description": "IPQualityScore connector enriches IPs, emails, phones, URLs, domains, user accounts, and file artifacts with fraud scores, risk analysis, darkweb leak data, and malware detection.",
   "logo": "internal-enrichment/ipqs/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Fraud, Financial Crime & Cryptocurrency Monitoring",
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

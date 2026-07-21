@@ -1,12 +1,18 @@
 {
   "title": "Comlaude",
   "slug": "comlaude",
-  "description": "The Comlaude Connector is designed to integrate with the Comlaude API to leverage the Domain Search Endpoint. This endpoint provides a comprehensive list of all domains within a specified group, along with detailed information for each domain.",
-  "short_description": "The Comlaude Connector is designed to integrate with the Comlaude API to leverage the Domain Search Endpoint. This endpoint provides a comprehensive list of all domains within a specified group, along with detailed information for each domain.",
+  "description": "Comlaude is a domain management platform that provides comprehensive domain portfolio intelligence. This connector integrates with the Comlaude API Domain Search Endpoint to retrieve all domains within a specified group along with detailed information for each domain.\n\nUse cases:\n\n- Allowlisting: Import known-good domains to prevent false positives in threat detection\n- Brand Protection: Track your organization's domains for security monitoring\n- Asset Inventory: Maintain an up-to-date inventory of domains within your organization",
+  "short_description": "Comlaude connector imports domain portfolio information from the Comlaude API into OpenCTI, supporting CTI allowlist management and domain intelligence.",
   "logo": "external-import/comlaude/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Brand, Digital Risk & Underground Exposure",
+    "Third-Party & Supply Chain Oversight"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-04-17",
   "playbook_supported": false,
@@ -14,7 +20,7 @@
   "support_version": ">=6.0.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/comlaude",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-comlaude",
   "container_type": "EXTERNAL_IMPORT"

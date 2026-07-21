@@ -1,3 +1,4 @@
+import logging
 import time
 from copy import deepcopy
 from datetime import date, datetime, timedelta, timezone
@@ -5,6 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pycti
+import pytest
 import stix2
 from api_client.models import EventRestSearchListItem
 from connector import ConnectorSettings, Misp
@@ -39,6 +41,7 @@ def fake_misp_connector(config_dict: dict) -> Misp:
 
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    helper.connector_logger = logging.getLogger("misp")
 
     return Misp(config=settings, helper=helper)
 
@@ -1058,7 +1061,11 @@ def _make_publish_timestamp_event(event_id: str, ts: int) -> EventRestSearchList
 
 
 def _run_process_events(
-    connector, events, buffering_at_event_index=None, initial_state=None
+    connector,
+    events,
+    buffering_at_event_index=None,
+    initial_state=None,
+    event_already_ingested=True,
 ):
     """
     Run `process_events` with all external dependencies mocked.
@@ -1067,6 +1074,9 @@ def _run_process_events(
         buffering_at_event_index: 0-based index of the event call at which
             ``_process_bundle_in_batch`` should return
             ``ProcessingOutcome.BUFFERING``.  ``None`` means no buffering.
+        event_already_ingested: If True (default), the ExternalReference
+            lookup returns a match (simulating the event was already ingested
+            into OpenCTI).  If False, returns no match (event never ingested).
 
     Returns:
         (state dict, mock for _process_bundle_in_batch, process_events return value)
@@ -1101,6 +1111,11 @@ def _run_process_events(
     ):
         mock_helper.get_state.return_value = initial_state or {}
         mock_helper.metric = MagicMock()
+        mock_helper.api.query.return_value = (
+            {"data": {"externalReferences": {"edges": [{"node": {"id": "x"}}]}}}
+            if event_already_ingested
+            else {"data": {"externalReferences": {"edges": []}}}
+        )
 
         mock_wm.get_state.side_effect = lambda: dict(state)
         mock_wm.update_state.side_effect = track_update_state
@@ -1221,3 +1236,1029 @@ def test_process_events_adds_one_second_after_loop_completion(
         ).isoformat()
         assert state.get("last_event_date") == expected
         assert result is None
+
+
+@pytest.mark.parametrize(
+    "import_from_date, expected_logs",
+    [
+        (
+            None,
+            [
+                "Retrieved state - {'prefix': '[Connector]', 'initial_state': {}}",
+                "Starting MISP full ingestion... - {'prefix': '[Connector]'}",
+                "Connector has never run - {'last_event_date': FakeDatetime(2025, 12, 22, 12, 0, tzinfo=datetime.timezone.utc)}",
+                "Fetching MISP events with filters: - {'prefix': '[Connector]', 'date_field_filter': 'timestamp', 'date_value_filter': FakeDatetime(2025, 12, 22, 12, 0, tzinfo=datetime.timezone.utc), 'datetime_attribute': 'publish_timestamp', 'keyword': None, 'included_tags': [], 'excluded_tags': [], 'included_org_creators': [], 'excluded_org_creators': [], 'enforce_warning_list': False, 'with_attachments': False, 'limit': 10}",
+                "MISP event found - Processing... - {'prefix': '[Connector]', 'event_id': '1', 'event_uuid': None}",
+                "Converted to STIX entities - {'prefix': '[Connector]', 'entities_count': 2}",
+                "Updating last event date (add 1 second) to avoid processing the same event again - {'prefix': '[Connector]', 'last_event_date': '2025-12-27T12:00:01+00:00'}",
+                "Batch processor: Flushed remaining items - {'prefix': '[Connector]'}",
+            ],
+        ),
+        (
+            "2026-01-01",
+            [
+                "Retrieved state - {'prefix': '[Connector]', 'initial_state': {}}",
+                "Starting MISP full ingestion... - {'prefix': '[Connector]'}",
+                "Connector has never run - {'last_event_date': FakeDatetime(2026, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)}",
+                "Fetching MISP events with filters: - {'prefix': '[Connector]', 'date_field_filter': 'timestamp', 'date_value_filter': FakeDatetime(2026, 1, 1, 0, 0, tzinfo=datetime.timezone.utc), 'datetime_attribute': 'publish_timestamp', 'keyword': None, 'included_tags': [], 'excluded_tags': [], 'included_org_creators': [], 'excluded_org_creators': [], 'enforce_warning_list': False, 'with_attachments': False, 'limit': 10}",
+                "MISP event found - Processing... - {'prefix': '[Connector]', 'event_id': '1', 'event_uuid': None}",
+                "Converted to STIX entities - {'prefix': '[Connector]', 'entities_count': 2}",
+                "Updating last event date (add 1 second) to avoid processing the same event again - {'prefix': '[Connector]', 'last_event_date': '2025-12-27T12:00:01+00:00'}",
+                "Batch processor: Flushed remaining items - {'prefix': '[Connector]'}",
+            ],
+        ),
+    ],
+)
+@freeze_time("2026-01-01 12:00:00")
+def test_process_events_first_run(
+    caplog, mock_opencti_connector_helper, mock_py_misp, import_from_date, expected_logs
+):
+    """
+    Test that if import_from_date is not set, last_event_date will be 10 days
+    before today. Else, use the import_from_date date.
+    """
+    caplog.set_level(logging.DEBUG)
+
+    # Given import_from_date
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    config_dict["misp"]["import_from_date"] = import_from_date
+    connector = fake_misp_connector(config_dict)
+
+    # And an event
+    ts = int((datetime.now(tz=timezone.utc) - timedelta(days=5)).timestamp())
+    event = EventRestSearchListItem.model_validate(
+        {"Event": {"id": "1", "publish_timestamp": str(ts)}}
+    )
+
+    # When we call process_events
+    _run_process_events(connector, [event])
+
+    # Then process_events should complete successfully with expected logs
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    missing_messages = [
+        msg
+        for msg in expected_logs
+        if not any(msg in log_msg for log_msg in all_messages)
+    ]
+
+    assert (  # noqa: S101
+        not missing_messages
+    ), f"Missing expected log messages: {missing_messages}"
+
+
+# --------------------------------------------------------------------------- #
+#  Attribute-level timestamp filtering tests
+# --------------------------------------------------------------------------- #
+
+
+def _make_event_with_attributes(
+    event_id: str,
+    event_ts: int,
+    attributes: list[dict] | None = None,
+    objects: list[dict] | None = None,
+) -> EventRestSearchListItem:
+    """Build an EventRestSearchListItem with explicit attributes and objects."""
+    event_dict: dict = {
+        "id": event_id,
+        "uuid": f"00000000-0000-0000-0000-{event_id.zfill(12)}",
+        "info": f"Test event {event_id}",
+        "date": "2026-01-15",
+        "timestamp": str(event_ts),
+        "publish_timestamp": str(event_ts),
+        "threat_level_id": "2",
+        "Orgc": {"name": "TestOrg"},
+    }
+    if attributes is not None:
+        event_dict["Attribute"] = attributes
+    if objects is not None:
+        event_dict["Object"] = objects
+    return EventRestSearchListItem.model_validate({"Event": event_dict})
+
+
+class TestEventAlreadyExistsInOpencti:
+    """Tests for ``Misp._event_already_exists_in_opencti``."""
+
+    @staticmethod
+    def _mock_query_result(found: bool):
+        """Return a mock GraphQL response for externalReferences query."""
+        if found:
+            return {"data": {"externalReferences": {"edges": [{"node": {"id": "x"}}]}}}
+        return {"data": {"externalReferences": {"edges": []}}}
+
+    def test_returns_true_when_external_ref_found(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes("1", 1000, attributes=[])
+
+        with patch.object(connector, "helper") as mock_helper:
+            mock_helper.api.query.return_value = self._mock_query_result(True)
+            assert connector._event_already_exists_in_opencti(event) is True
+            mock_helper.api.query.assert_called_once()
+
+    def test_returns_false_when_external_ref_not_found(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes("1", 1000, attributes=[])
+
+        with patch.object(connector, "helper") as mock_helper:
+            mock_helper.api.query.return_value = self._mock_query_result(False)
+            assert connector._event_already_exists_in_opencti(event) is False
+
+    def test_queries_by_event_uuid(self, mock_opencti_connector_helper, mock_py_misp):
+        """Verifies the query uses the MISP event UUID as external_id filter."""
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes("1", 1000, attributes=[])
+
+        with patch.object(connector, "helper") as mock_helper:
+            mock_helper.api.query.return_value = self._mock_query_result(False)
+            connector._event_already_exists_in_opencti(event)
+
+            call_args = mock_helper.api.query.call_args
+            variables = call_args[0][1]
+            filters = variables["filters"]["filters"]
+            ext_id_filter = next(f for f in filters if f["key"] == "external_id")
+            source_filter = next(f for f in filters if f["key"] == "source_name")
+            assert ext_id_filter["values"] == [event.Event.uuid]
+            assert source_filter["values"] == ["MISP"]
+
+
+class TestFilterEventAttributesByTimestamp:
+    """Tests for ``Misp._filter_event_attributes_by_timestamp``."""
+
+    def test_filters_old_top_level_attributes(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            100,
+            attributes=[
+                {"id": "1", "timestamp": "100", "value": "old"},
+                {"id": "2", "timestamp": "200", "value": "new"},
+                {"id": "3", "timestamp": "300", "value": "newest"},
+            ],
+        )
+
+        before, after = connector._filter_event_attributes_by_timestamp(event, 200)
+
+        assert before == 3
+        assert after == 2
+        assert len(event.Event.Attribute) == 2
+        assert {a.value for a in event.Event.Attribute} == {"new", "newest"}
+
+    def test_keeps_all_when_all_newer(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            500,
+            attributes=[
+                {"id": "1", "timestamp": "500", "value": "a"},
+                {"id": "2", "timestamp": "600", "value": "b"},
+            ],
+        )
+
+        before, after = connector._filter_event_attributes_by_timestamp(event, 500)
+
+        assert before == 2
+        assert after == 2
+
+    def test_filters_all_when_all_older(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            100,
+            attributes=[
+                {"id": "1", "timestamp": "100", "value": "a"},
+                {"id": "2", "timestamp": "200", "value": "b"},
+            ],
+        )
+
+        before, after = connector._filter_event_attributes_by_timestamp(event, 300)
+
+        assert before == 2
+        assert after == 0  # no attributes passed the filter
+        # First attribute kept as fallback for valid object_refs
+        assert len(event.Event.Attribute) == 1
+        assert event.Event.Attribute[0].value == "a"
+
+    def test_filters_object_attributes_and_prunes_empty_objects(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            100,
+            objects=[
+                {
+                    "id": "10",
+                    "name": "kept-obj",
+                    "timestamp": "50",
+                    "Attribute": [
+                        {"id": "1", "timestamp": "300", "value": "new-attr"},
+                    ],
+                },
+                {
+                    "id": "20",
+                    "name": "pruned-obj",
+                    "timestamp": "50",
+                    "Attribute": [
+                        {"id": "2", "timestamp": "100", "value": "old-attr"},
+                    ],
+                },
+            ],
+        )
+
+        before, after = connector._filter_event_attributes_by_timestamp(event, 200)
+
+        assert before == 2
+        assert after == 1
+        assert len(event.Event.Object) == 1
+        assert event.Event.Object[0].name == "kept-obj"
+
+    def test_removes_object_without_attributes_even_if_recently_modified(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """Objects with no attributes are always dropped — the converter requires
+        at least one attribute (object.Attribute[0]) and would raise IndexError."""
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            100,
+            objects=[
+                {
+                    "id": "10",
+                    "name": "meta-changed",
+                    "timestamp": "500",
+                    # No Attribute key at all
+                },
+            ],
+        )
+
+        before, after = connector._filter_event_attributes_by_timestamp(event, 200)
+
+        assert before == 0
+        assert after == 0
+        assert len(event.Event.Object) == 0
+
+    def test_removes_object_when_all_attributes_filtered_out(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """Regression test for IndexError: object.Attribute[0] in converter.
+        An object whose attributes are all older than the threshold must be
+        dropped entirely, not kept with an empty Attribute list.
+        The first attribute is kept as a top-level fallback for valid object_refs."""
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            600,
+            objects=[
+                {
+                    "id": "10",
+                    "name": "obj-all-old",
+                    "timestamp": "600",  # object itself is recent
+                    "Attribute": [
+                        {"id": "1", "timestamp": "100", "value": "old1"},
+                        {"id": "2", "timestamp": "200", "value": "old2"},
+                    ],
+                },
+            ],
+        )
+
+        before, after = connector._filter_event_attributes_by_timestamp(event, 500)
+
+        assert before == 2
+        assert after == 0  # no attributes passed the filter
+        # Object must be dropped — keeping it with Attribute=[] would crash the converter
+        assert len(event.Event.Object) == 0
+        # First attribute promoted to top-level as fallback
+        assert len(event.Event.Attribute) == 1
+        assert event.Event.Attribute[0].value == "old1"
+
+    def test_removes_object_without_attributes_if_old(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            100,
+            objects=[
+                {"id": "10", "name": "old-meta", "timestamp": "50"},
+            ],
+        )
+
+        connector._filter_event_attributes_by_timestamp(event, 200)
+
+        assert len(event.Event.Object) == 0
+
+    def test_handles_no_attributes_and_no_objects(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes("1", 100)
+
+        before, after = connector._filter_event_attributes_by_timestamp(event, 200)
+
+        assert before == 0
+        assert after == 0
+
+    def test_mixed_top_level_and_object_attributes(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            100,
+            attributes=[
+                {"id": "1", "timestamp": "100", "value": "old-top"},
+                {"id": "2", "timestamp": "500", "value": "new-top"},
+            ],
+            objects=[
+                {
+                    "id": "10",
+                    "name": "obj1",
+                    "timestamp": "50",
+                    "Attribute": [
+                        {"id": "3", "timestamp": "400", "value": "new-obj-attr"},
+                        {"id": "4", "timestamp": "100", "value": "old-obj-attr"},
+                    ],
+                },
+            ],
+        )
+
+        before, after = connector._filter_event_attributes_by_timestamp(event, 300)
+
+        assert before == 4
+        assert after == 2
+        assert len(event.Event.Attribute) == 1
+        assert event.Event.Attribute[0].value == "new-top"
+        assert len(event.Event.Object) == 1
+        assert len(event.Event.Object[0].Attribute) == 1
+        assert event.Event.Object[0].Attribute[0].value == "new-obj-attr"
+
+
+class TestGetMaxAttributeTimestamp:
+    """Tests for ``Misp._get_max_attribute_timestamp``."""
+
+    def test_returns_max_from_top_level_attributes(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            100,
+            attributes=[
+                {"id": "1", "timestamp": "100"},
+                {"id": "2", "timestamp": "300"},
+                {"id": "3", "timestamp": "200"},
+            ],
+        )
+
+        assert connector._get_max_attribute_timestamp(event) == 300
+
+    def test_returns_max_from_object_attributes(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            100,
+            attributes=[{"id": "1", "timestamp": "100"}],
+            objects=[
+                {
+                    "id": "10",
+                    "timestamp": "200",
+                    "Attribute": [{"id": "2", "timestamp": "500"}],
+                },
+            ],
+        )
+
+        assert connector._get_max_attribute_timestamp(event) == 500
+
+    def test_ignores_object_own_timestamp(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """Object timestamps are not considered — only attribute timestamps matter."""
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes(
+            "1",
+            100,
+            attributes=[{"id": "1", "timestamp": "100"}],
+            objects=[
+                {
+                    "id": "10",
+                    "timestamp": "999",
+                    "Attribute": [{"id": "2", "timestamp": "50"}],
+                },
+            ],
+        )
+
+        assert connector._get_max_attribute_timestamp(event) == 100
+
+    def test_returns_zero_when_no_attributes(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        connector = fake_misp_connector(deepcopy(minimal_config_dict))
+        event = _make_event_with_attributes("1", 100)
+
+        assert connector._get_max_attribute_timestamp(event) == 0
+
+
+@freeze_time("2026-01-01 00:00:00")
+def test_process_events_resume_with_attribute_filtering_does_not_crash(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Regression test: when resuming a buffered bundle (``_current_bundle`` is
+    already set) with ``attribute_timestamp_filtering`` enabled, the connector
+    must not raise ``UnboundLocalError`` on ``filter_passed_count``.
+
+    Before the fix, ``filter_passed_count`` was only initialised inside the
+    ``if self._current_bundle is None`` branch; on resume (else branch) it
+    was never set, causing a crash at the high-water mark update.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    config_dict["misp"]["attribute_timestamp_filtering"] = True
+    connector = fake_misp_connector(config_dict)
+
+    ts = int(datetime(2026, 1, 15, tzinfo=timezone.utc).timestamp())
+    event = _make_event_with_attributes(
+        "1",
+        ts,
+        attributes=[
+            {"id": "1", "timestamp": str(ts), "value": "1.2.3.4"},
+        ],
+    )
+
+    # Pre-set _current_bundle to simulate a resume after buffering.
+    # The 4th element is filter_passed_count from the original filtering pass;
+    # use None to simulate "no filtering was applied" (e.g. event not yet in
+    # OpenCTI on first ingestion).
+    fake_author = MagicMock()
+    fake_markings = []
+    fake_bundle_objects = [MagicMock()]
+    connector._current_bundle = (fake_author, fake_markings, fake_bundle_objects, None)
+
+    initial_state = {
+        "last_event_date": datetime(2026, 1, 14, tzinfo=timezone.utc).isoformat(),
+        "last_attribute_timestamp": ts - 100,
+    }
+
+    state = dict(initial_state)
+
+    def track_update_state(state_update=None, **kwargs):
+        if state_update:
+            state.update(state_update)
+
+    with (
+        patch.object(connector, "helper") as mock_helper,
+        patch.object(connector, "work_manager") as mock_wm,
+        patch.object(connector, "client_api") as mock_api,
+        patch.object(connector, "batch_processor"),
+        patch.object(
+            connector,
+            "_process_bundle_in_batch",
+            return_value=ProcessingOutcome.COMPLETED,
+        ),
+    ):
+        mock_helper.get_state.return_value = initial_state
+        mock_helper.metric = MagicMock()
+        mock_helper.api.query.return_value = {
+            "data": {"externalReferences": {"edges": [{"node": {"id": "x"}}]}}
+        }
+
+        mock_wm.get_state.side_effect = lambda: dict(state)
+        mock_wm.update_state.side_effect = track_update_state
+
+        mock_api.search_events.return_value = iter([event])
+
+        # This must not raise UnboundLocalError (caught by the inner
+        # except block which would swallow it and reset _current_bundle).
+        result = connector.process_events()
+
+    assert result is None
+    # _current_bundle should be cleared after successful processing
+    assert connector._current_bundle is None
+    # The watermark must advance — this only happens when the code does NOT
+    # crash on ``filter_passed_count``.  Before the fix, the UnboundLocalError
+    # was caught internally, the watermark was never updated, and the connector
+    # would re-ingest the same events indefinitely.
+    assert state.get("last_attribute_timestamp") == ts + 1
+
+
+class TestProcessEventsAttributeTimestampFiltering:
+    """Integration tests for attribute-level timestamp filtering in ``process_events``."""
+
+    def test_first_run_no_filtering_applied_state_saved(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """First run (no last_attribute_timestamp in state): all attributes processed,
+        state is updated with the max attribute timestamp."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        connector = fake_misp_connector(config_dict)
+
+        ts = int(datetime(2026, 1, 15, tzinfo=timezone.utc).timestamp())
+        event = _make_event_with_attributes(
+            "1",
+            ts,
+            attributes=[
+                {"id": "1", "timestamp": str(ts - 100), "value": "a"},
+                {"id": "2", "timestamp": str(ts), "value": "b"},
+            ],
+        )
+
+        state, _, result = _run_process_events(connector, [event])
+
+        assert result is None
+        # On first run, last_attribute_timestamp should be set to max + 1
+        assert state.get("last_attribute_timestamp") == ts + 1
+
+    def test_second_run_filters_old_attributes(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """Second run with saved state: only new attributes are kept."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        connector = fake_misp_connector(config_dict)
+
+        ts_old = 1000
+        ts_new = 2000
+        ts_threshold = 1500
+
+        event = _make_event_with_attributes(
+            "1",
+            ts_new,
+            attributes=[
+                {"id": "1", "timestamp": str(ts_old), "value": "old"},
+                {"id": "2", "timestamp": str(ts_new), "value": "new"},
+            ],
+        )
+
+        initial_state = {
+            "last_event_date": datetime.fromtimestamp(
+                ts_old, tz=timezone.utc
+            ).isoformat(),
+            "last_attribute_timestamp": ts_threshold,
+        }
+
+        state, mock_process, result = _run_process_events(
+            connector, [event], initial_state=initial_state
+        )
+
+        assert result is None
+        # _process_bundle_in_batch should have been called (event has new attrs)
+        assert mock_process.call_count == 1
+        # State should be updated with the max attr timestamp + 1
+        assert state.get("last_attribute_timestamp") == ts_new + 1
+
+    def test_metadata_only_update_when_all_attributes_old(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """Event is still processed for metadata when all its attributes are older than the threshold."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        connector = fake_misp_connector(config_dict)
+
+        ts = 1000
+        threshold = 2000
+
+        event = _make_event_with_attributes(
+            "1",
+            ts,
+            attributes=[
+                {"id": "1", "timestamp": str(ts), "value": "old1"},
+                {"id": "2", "timestamp": str(ts + 100), "value": "old2"},
+            ],
+        )
+
+        initial_state = {
+            "last_event_date": datetime.fromtimestamp(ts, tz=timezone.utc).isoformat(),
+            "last_attribute_timestamp": threshold,
+        }
+
+        state, mock_process, result = _run_process_events(
+            connector, [event], initial_state=initial_state
+        )
+
+        assert result is None
+        # Event should still be processed for metadata (tags, galaxies, threat level)
+        assert mock_process.call_count == 1
+        # First attribute kept as fallback for valid object_refs
+        processed_event = mock_process.call_args[1]["event"]
+        assert len(processed_event.Event.Attribute) == 1
+        assert processed_event.Event.Attribute[0].value == "old1"
+
+    def test_disabled_by_default(self, mock_opencti_connector_helper, mock_py_misp):
+        """When attribute_timestamp_filtering is False (default), no filtering occurs."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        # attribute_timestamp_filtering defaults to False
+        connector = fake_misp_connector(config_dict)
+
+        ts = 1000
+        event = _make_event_with_attributes(
+            "1",
+            ts,
+            attributes=[
+                {"id": "1", "timestamp": str(ts), "value": "a"},
+            ],
+        )
+
+        state, mock_process, result = _run_process_events(connector, [event])
+
+        assert result is None
+        assert mock_process.call_count == 1
+        # No last_attribute_timestamp should be saved
+        assert "last_attribute_timestamp" not in state
+
+    def test_fallback_to_last_event_date_when_no_attribute_timestamp(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """When attribute filtering is enabled on an existing connector (has last_event_date
+        but no last_attribute_timestamp), last_event_date is used as the filter threshold.
+        """
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        connector = fake_misp_connector(config_dict)
+
+        # last_event_date = 1500 as unix timestamp
+        last_event_ts = 1500
+        last_event_iso = datetime.fromtimestamp(
+            last_event_ts, tz=timezone.utc
+        ).isoformat()
+
+        # Event with one old attribute (ts=1000) and one new (ts=2000)
+        event = _make_event_with_attributes(
+            "1",
+            2000,
+            attributes=[
+                {"id": "1", "timestamp": "1000", "value": "old"},
+                {"id": "2", "timestamp": "2000", "value": "new"},
+            ],
+        )
+
+        initial_state = {
+            "last_event_date": last_event_iso,
+            # No last_attribute_timestamp — simulates enabling the feature on existing connector
+        }
+
+        state, mock_process, result = _run_process_events(
+            connector, [event], initial_state=initial_state
+        )
+
+        assert result is None
+        # Event should still be processed (has attributes newer than fallback)
+        assert mock_process.call_count == 1
+        # State should now have last_attribute_timestamp set
+        assert state.get("last_attribute_timestamp") == 2001
+
+    def test_fallback_sends_metadata_when_all_attributes_older_than_last_event_date(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """When using last_event_date as fallback, events with only old attributes
+        still get processed for metadata updates (tags, galaxies, threat level)."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        connector = fake_misp_connector(config_dict)
+
+        last_event_ts = 5000
+        last_event_iso = datetime.fromtimestamp(
+            last_event_ts, tz=timezone.utc
+        ).isoformat()
+
+        # All attributes are older than the fallback threshold
+        event = _make_event_with_attributes(
+            "1",
+            6000,
+            attributes=[
+                {"id": "1", "timestamp": "1000", "value": "old1"},
+                {"id": "2", "timestamp": "2000", "value": "old2"},
+            ],
+        )
+
+        initial_state = {
+            "last_event_date": last_event_iso,
+        }
+
+        state, mock_process, result = _run_process_events(
+            connector, [event], initial_state=initial_state
+        )
+
+        assert result is None
+        # Event should still be processed for metadata (tags, galaxies, threat level)
+        # even though no attributes matched the filter
+        assert mock_process.call_count == 1
+        # First attribute kept as fallback for valid object_refs
+        processed_event = mock_process.call_args[1]["event"]
+        assert len(processed_event.Event.Attribute) == 1
+        assert processed_event.Event.Attribute[0].value == "old1"
+
+    def test_new_event_skips_filtering_when_not_in_opencti(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """When the event's report does not exist in OpenCTI yet (first ingestion),
+        attribute filtering is skipped entirely — all attributes are kept."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        connector = fake_misp_connector(config_dict)
+
+        threshold = 5000
+        # All attributes are older than the threshold
+        event = _make_event_with_attributes(
+            "1",
+            6000,
+            attributes=[
+                {"id": "1", "timestamp": "1000", "value": "old1"},
+                {"id": "2", "timestamp": "2000", "value": "old2"},
+                {"id": "3", "timestamp": "3000", "value": "old3"},
+            ],
+        )
+
+        initial_state = {
+            "last_event_date": datetime.fromtimestamp(
+                1000, tz=timezone.utc
+            ).isoformat(),
+            "last_attribute_timestamp": threshold,
+        }
+
+        state, mock_process, result = _run_process_events(
+            connector,
+            [event],
+            initial_state=initial_state,
+            event_already_ingested=False,
+        )
+
+        assert result is None
+        assert mock_process.call_count == 1
+        # All 3 attributes should be kept (no filtering applied)
+        processed_event = mock_process.call_args[1]["event"]
+        assert len(processed_event.Event.Attribute) == 3
+
+    def test_fallback_attribute_does_not_regress_watermark(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """When all attributes are filtered out, the fallback attribute's old
+        timestamp must NOT lower the persisted last_attribute_timestamp."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        connector = fake_misp_connector(config_dict)
+
+        threshold = 5000
+        # All attributes are older than the threshold
+        event = _make_event_with_attributes(
+            "1",
+            6000,
+            attributes=[
+                {"id": "1", "timestamp": "1000", "value": "old1"},
+                {"id": "2", "timestamp": "2000", "value": "old2"},
+            ],
+        )
+
+        initial_state = {
+            "last_event_date": datetime.fromtimestamp(
+                1000, tz=timezone.utc
+            ).isoformat(),
+            "last_attribute_timestamp": threshold,
+        }
+
+        state, mock_process, result = _run_process_events(
+            connector, [event], initial_state=initial_state
+        )
+
+        assert result is None
+        assert mock_process.call_count == 1
+        # last_attribute_timestamp must NOT be regressed to 1000 or 2000
+        # It should remain at the original threshold (no update)
+        assert state.get("last_attribute_timestamp") == threshold
+
+
+class TestAttributeFilteringEndToEnd:
+    """End-to-end tests exercising the full pipeline (filter → converter → bundle)
+    without mocking the converter. Validates the 3 scenarios:
+    1. New event (first run, no filtering) → report + observables + galaxies
+    2. Updated event with some new attributes → report + subset of observables + galaxies
+    3. Metadata-only update (all attrs filtered) → report + galaxies, no observables
+    """
+
+    @staticmethod
+    def _make_event_with_galaxy(
+        event_id: str,
+        event_ts: int,
+        attributes: list[dict],
+        galaxy_name: str = "APT28",
+    ) -> EventRestSearchListItem:
+        """Build an event with attributes and a threat-actor galaxy."""
+        return EventRestSearchListItem.model_validate(
+            {
+                "Event": {
+                    "id": event_id,
+                    "uuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                    "info": f"Test event {event_id}",
+                    "date": "2026-01-15",
+                    "timestamp": str(event_ts),
+                    "publish_timestamp": str(event_ts),
+                    "threat_level_id": "2",
+                    "Orgc": {"name": "TestOrg"},
+                    "Attribute": attributes,
+                    "Object": [],
+                    "Galaxy": [
+                        {
+                            "uuid": "11111111-2222-3333-4444-555555555555",
+                            "name": "Threat Actor",
+                            "type": "threat-actor",
+                            "namespace": "misp",
+                            "GalaxyCluster": [
+                                {
+                                    "uuid": "66666666-7777-8888-9999-aaaaaaaaaaaa",
+                                    "value": galaxy_name,
+                                    "description": f"The {galaxy_name} group",
+                                    "meta": {
+                                        "synonyms": [
+                                            galaxy_name,
+                                            f"{galaxy_name}-alias",
+                                        ]
+                                    },
+                                }
+                            ],
+                        }
+                    ],
+                    "Tag": [
+                        {
+                            "id": "1",
+                            "name": "tlp:amber",
+                            "colour": "#FFC000",
+                            "is_galaxy": False,
+                        }
+                    ],
+                }
+            }
+        )
+
+    @staticmethod
+    def _ip_attribute(attr_id: str, timestamp: str, value: str) -> dict:
+        return {
+            "id": attr_id,
+            "uuid": f"attr-uuid-{attr_id}",
+            "type": "ip-dst",
+            "category": "Network activity",
+            "value": value,
+            "timestamp": timestamp,
+            "to_ids": True,
+            "comment": "",
+        }
+
+    def test_new_event_full_processing(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """Case 1: First run, no filtering — all attributes + galaxies in bundle."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        config_dict["misp"]["create_indicators"] = True
+        config_dict["misp"]["create_observables"] = True
+        connector = fake_misp_connector(config_dict)
+
+        ts = 1000
+        event = self._make_event_with_galaxy(
+            "1",
+            ts,
+            attributes=[
+                self._ip_attribute("1", str(ts - 100), "1.2.3.4"),
+                self._ip_attribute("2", str(ts), "5.6.7.8"),
+            ],
+        )
+
+        # No filtering (first run) — call converter directly
+        author, markings, bundle_objects = connector.converter.process(
+            event=event, include_relationships=True
+        )
+
+        # Should have: author, observables/indicators, galaxy intrusion-set, report
+        assert author is not None
+        assert author.name == "TestOrg"
+
+        stix_types = [obj["type"] for obj in bundle_objects]
+        assert "report" in stix_types
+        # Galaxy produces an intrusion-set
+        assert "intrusion-set" in stix_types
+        # Attributes produce observables (ipv4-addr)
+        assert "ipv4-addr" in stix_types
+        # Count IPs — should be 2
+        ip_count = sum(1 for t in stix_types if t == "ipv4-addr")
+        assert ip_count == 2
+
+    def test_partial_attribute_update(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """Case 2: Some attributes filtered, only new ones in bundle + galaxies."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        config_dict["misp"]["create_indicators"] = True
+        config_dict["misp"]["create_observables"] = True
+        connector = fake_misp_connector(config_dict)
+
+        ts_old = 1000
+        ts_new = 2000
+        threshold = 1500
+
+        event = self._make_event_with_galaxy(
+            "1",
+            ts_new,
+            attributes=[
+                self._ip_attribute("1", str(ts_old), "1.2.3.4"),
+                self._ip_attribute("2", str(ts_new), "5.6.7.8"),
+            ],
+        )
+
+        # Apply filtering
+        before, after = connector._filter_event_attributes_by_timestamp(
+            event, threshold
+        )
+        assert before == 2
+        assert after == 1
+
+        # Run converter on filtered event
+        author, markings, bundle_objects = connector.converter.process(
+            event=event, include_relationships=True
+        )
+
+        stix_types = [obj["type"] for obj in bundle_objects]
+        assert "report" in stix_types
+        assert "intrusion-set" in stix_types
+        # Only 1 IP should remain (5.6.7.8)
+        ip_count = sum(1 for t in stix_types if t == "ipv4-addr")
+        assert ip_count == 1
+        # The remaining IP should be 5.6.7.8
+        ips = [obj for obj in bundle_objects if obj["type"] == "ipv4-addr"]
+        assert ips[0]["value"] == "5.6.7.8"
+
+    def test_metadata_only_update_keeps_first_attribute_as_fallback(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """Case 3: All attributes filtered — first attribute kept as fallback,
+        report + galaxies + 1 observable (upsert no-op in OpenCTI)."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        config_dict["misp"]["create_indicators"] = True
+        config_dict["misp"]["create_observables"] = True
+        connector = fake_misp_connector(config_dict)
+
+        ts_old = 1000
+        threshold = 2000
+
+        event = self._make_event_with_galaxy(
+            "1",
+            threshold + 500,  # event.timestamp is recent (metadata changed)
+            attributes=[
+                self._ip_attribute("1", str(ts_old), "1.2.3.4"),
+                self._ip_attribute("2", str(ts_old + 100), "5.6.7.8"),
+            ],
+        )
+
+        # Apply filtering — all attrs are old, but first is kept as fallback
+        before, after = connector._filter_event_attributes_by_timestamp(
+            event, threshold
+        )
+        assert before == 2
+        assert after == 0  # no attributes passed the filter
+        # First attribute kept as fallback for valid object_refs
+        assert len(event.Event.Attribute) == 1
+        assert event.Event.Attribute[0].value == "1.2.3.4"
+
+        # Run converter on event with fallback attribute
+        author, markings, bundle_objects = connector.converter.process(
+            event=event, include_relationships=True
+        )
+
+        stix_types = [obj["type"] for obj in bundle_objects]
+        # Report is still produced
+        assert "report" in stix_types
+        # Galaxy intrusion-set is still produced
+        assert "intrusion-set" in stix_types
+        # Exactly 1 observable (the fallback attribute) — not 2
+        ip_count = sum(1 for t in stix_types if t == "ipv4-addr")
+        assert ip_count == 1
+        # Report's object_refs should contain the galaxy intrusion-set
+        report = next(obj for obj in bundle_objects if obj["type"] == "report")
+        assert any(
+            (
+                ref.startswith("intrusion-set--")
+                if isinstance(ref, str)
+                else ref["type"] == "intrusion-set"
+            )
+            for ref in report["object_refs"]
+        )

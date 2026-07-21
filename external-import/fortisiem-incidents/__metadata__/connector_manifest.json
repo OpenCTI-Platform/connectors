@@ -1,0 +1,26 @@
+{
+  "title": "FortiSIEM Incidents",
+  "slug": "fortisiem-incidents",
+  "description": "The OpenCTI FortiSIEM Incidents connector imports incidents from FortiSIEM into OpenCTI as STIX Incidents in near real time. It periodically pulls incidents from the FortiSIEM REST API, converts them to STIX 2.1 Incidents (with severity, timestamps and an external reference), and relates extracted network observables (IP addresses, hostnames). Paired with the FortiSIEM stream connector (which pushes IOCs to Watch Lists), it provides a bidirectional integration.",
+  "short_description": "Import FortiSIEM incidents into OpenCTI as STIX Incidents (bidirectional import side).",
+  "logo": "external-import/fortisiem-incidents/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260701.0",
+  "subscription_link": "https://www.fortinet.com/products/siem/fortisiem",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/fortisiem-incidents",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-fortisiem-incidents",
+  "container_type": "EXTERNAL_IMPORT"
+}

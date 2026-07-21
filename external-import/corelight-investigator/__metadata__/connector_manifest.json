@@ -1,0 +1,26 @@
+{
+  "title": "Corelight Investigator",
+  "slug": "corelight-investigator",
+  "description": "The OpenCTI Corelight Investigator connector imports alerts and detections from Corelight Investigator (SaaS NDR) into OpenCTI as STIX Incidents. It periodically queries the Investigator Detections and Alerts API (bearer API key), maps the normalized Investigator severity (1-10) to the OpenCTI severity, extracts the source/destination IP observables referenced by an alert, and attributes the imported objects to a Corelight Investigator author identity with a configurable TLP marking. Imports are incremental using the connector state.",
+  "short_description": "Import Corelight Investigator alerts and detections into OpenCTI as STIX Incidents.",
+  "logo": "external-import/corelight-investigator/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Network Security"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260701.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/corelight-investigator",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-corelight-investigator",
+  "container_type": "EXTERNAL_IMPORT"
+}

@@ -11,9 +11,7 @@ import traceback
 from polyswarm_enrichment import ConnectorSettings, ConnectorTemplate
 from pycti import OpenCTIConnectorHelper
 
-
-def main():
-    """Entry point for the PolySwarm Internal Enrichment Connector."""
+if __name__ == "__main__":
     try:
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(
@@ -22,14 +20,6 @@ def main():
         )
         connector = ConnectorTemplate(settings=settings, helper=helper)
         connector.run()
-    except KeyboardInterrupt:
-        print("\nConnector stopped by user")
-        sys.exit(0)
-    except Exception as e:
-        print(f"Error starting connector: {e}")
+    except Exception:
         traceback.print_exc()
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

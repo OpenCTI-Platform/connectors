@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'ReversingLabs Spectra Intelligence Submission'
+  scope: 'Artifact,Url,StixFile,File'
+  confidence_level: 100
+  log_level: 'info'
+  auto: false
+
+reversinglabs_spectra_intel_submission:
+  url: 'ChangeMe'
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  # max_tlp: 'TLP:AMBER'
+  # sandbox_os: 'windows10'
+  # sandbox_internet_sim: false
+  # create_indicators: true
+  # poll_interval: 250

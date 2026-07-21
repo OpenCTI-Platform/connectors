@@ -1,13 +1,17 @@
 {
   "title": "Tanium Intel",
   "slug": "tanium-intel",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The Tanium Intel connector streams OpenCTI threat intelligence to Tanium Threat Response for endpoint detection and hunting. It consumes the OpenCTI events stream in real time and creates detection and hunting intel in the Tanium platform.\n\nKey features:\n\n- Real-time streaming of indicators to Tanium\n- Hash management in Reputation shared service\n- Automatic quickscan triggering on intel insertion\n- Intel deployment to specified computer groups\n- Support for create, update, and delete operations",
+  "short_description": "Tanium Intel connector streams OpenCTI threat intelligence to Tanium Threat Response in real time for endpoint detection and hunting.",
   "logo": "stream/tanium-intel/__metadata__/logo.png",
   "use_cases": [
-    "EDR",
-    "SIEM & Analytics"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

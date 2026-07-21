@@ -1,12 +1,17 @@
 {
   "title": "IPsum",
   "slug": "ipsum",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
-  "logo": null,
+  "description": "IPsum is a threat intelligence feed based on 30+ different publicly available lists of suspicious and/or malicious IP addresses. All lists are automatically retrieved and parsed on a daily basis. The feed provides IP addresses together with a total number of blacklist occurrences \u2014 the greater the number, the lesser the chance of false positive detection.\n\nThis connector fetches malicious IP addresses from the IPsum feed and imports them into OpenCTI as IPv4-Addr observables and STIX 2.1 Indicators. It supports configurable threat levels (1-8), custom scoring, and TLP markings.",
+  "short_description": "IPsum connector imports malicious IP addresses from 30+ aggregated blacklists into OpenCTI as indicators, with confidence scoring based on cross-list occurrence count.",
+  "logo": "external-import/ipsum/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -14,7 +19,7 @@
   "support_version": ">=6.4.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ipsum",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-ipsum",
   "container_type": "EXTERNAL_IMPORT"

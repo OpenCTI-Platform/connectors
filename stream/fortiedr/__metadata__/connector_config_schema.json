@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/fortiedr_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "FortiEDR",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "fortiedr"
+      ],
+      "description": "The scope of the connector, used to filter the live stream events.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the OpenCTI live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "FORTIEDR_API_BASE_URL": {
+      "description": "Base URL of the FortiEDR Central Manager (e.g. https://console.fortiedr.example.com).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "FORTIEDR_ORGANIZATION": {
+      "default": "",
+      "description": "FortiEDR organization name (required on multi-tenant consoles, used as the user prefix).",
+      "type": "string"
+    },
+    "FORTIEDR_USERNAME": {
+      "description": "FortiEDR REST API user name.",
+      "type": "string"
+    },
+    "FORTIEDR_PASSWORD": {
+      "description": "FortiEDR REST API user password.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "FORTIEDR_IP_SET_NAME": {
+      "default": "OpenCTI",
+      "description": "Name of the FortiEDR IP Set managed by this connector. It is created automatically if it does not exist yet.",
+      "type": "string"
+    },
+    "FORTIEDR_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify the SSL certificate of the FortiEDR Central Manager.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "FORTIEDR_API_BASE_URL",
+    "FORTIEDR_USERNAME",
+    "FORTIEDR_PASSWORD"
+  ],
+  "additionalProperties": true
+}

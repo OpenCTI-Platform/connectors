@@ -1,0 +1,26 @@
+{
+  "title": "CTM360 ThreatCover",
+  "slug": "ctm360-threatcover",
+  "description": "The OpenCTI CTM360 ThreatCover connector imports curated threat intelligence from the CTM360 ThreatCover module into OpenCTI. ThreatCover exposes its indicators and observables through a TAXII 2.1 collection; using the same TAXII handling as the generic OpenCTI TAXII2 connector (server discovery with token, API-key or basic authentication), it polls the configured collection on a schedule (incrementally, via the TAXII added_after filter and connector state), imports the returned STIX 2.1 objects, attributes them to a CTM360 ThreatCover author identity and applies a configurable TLP marking. It complements the existing CTM360 CyberBlindSpot, Cyna and HackerView connectors.",
+  "short_description": "Imports CTM360 ThreatCover curated threat intelligence into OpenCTI via TAXII 2.1, with incremental polling, TLP markings, and CTM360 author attribution.",
+  "logo": "external-import/ctm360-threatcover/__metadata__/logo.png",
+  "use_cases": [
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260701.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ctm360-threatcover",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ctm360-threatcover",
+  "container_type": "EXTERNAL_IMPORT"
+}

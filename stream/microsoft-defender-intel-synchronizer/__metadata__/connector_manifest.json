@@ -2,9 +2,16 @@
   "title": "Microsoft Defender Intel Synchronizer",
   "slug": "microsoft-defender-intel-synchronizer",
   "description": "This OpenCTI connector allows to synchronize OpenCTI TAXII collections with Microsoft Defender legacy intelligence (15 000 indicators maximum, taking the most recent ones).",
-  "short_description": "This OpenCTI connector allows to synchronize OpenCTI TAXII collections with Microsoft Defender legacy intelligence (15 000 indicators maximum, taking the most recent ones).",
+  "short_description": "Synchronizes OpenCTI TAXII collections with Microsoft Defender Threat Intelligence, pushing up to 15,000 of the most recent indicators for automated endpoint detection.",
   "logo": "stream/microsoft-defender-intel-synchronizer/__metadata__/logo.png",
-  "use_cases": [],
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -1,0 +1,2 @@
+-r ../src/requirements.txt
+./external-import/google-secops-siem-incidents/.[test]

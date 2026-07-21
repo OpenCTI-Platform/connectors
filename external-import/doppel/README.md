@@ -75,6 +75,8 @@ Below are the parameters you'll need to set for running the connector properly:
 | Retry delay (seconds)   | doppel.retry_delay             | `DOPPEL_RETRY_DELAY`             |     Rate Management: Controls the frequency of requests during error recovery.     | 30      | No        | Delay between retry attempts          |
 | TLP Level               | doppel.tlp_level               | `DOPPEL_TLP_LEVEL`               |     Data Governance: Assigns sensitivity markings for downstream sharing.     | clear   | No        | TLP marking for created STIX objects. |
 | Page size               | doppel.page_size               | `DOPPEL_PAGE_SIZE`               |    Performance: Optimizes request volume and memory usage per fetch.      | 100                       | No        | Number of alerts to fetch per request |
+| Enable Grouping Case    | doppel.enable_grouping_case    | `DOPPEL_ENABLE_GROUPING_CASE`    |    Feature Control: Enables grouping case creation.     | false                     | No        | Enable grouping case processing      |
+| Enable RFT Case         | doppel.enable_rft_case         | `DOPPEL_ENABLE_RFT_CASE`         |    Feature Control: Enables RFT case creation.     | false                     | No        | Enable RFT case processing           |
 
 ## Deployment
 
@@ -108,6 +110,8 @@ Example:
       - DOPPEL_MAX_RETRIES=3
       - DOPPEL_RETRY_DELAY=30
       - DOPPEL_TLP_LEVEL=clear
+      - DOPPEL_ENABLE_GROUPING_CASE=false
+      - DOPPEL_ENABLE_RFT_CASE=false
     restart: always
 ```
 

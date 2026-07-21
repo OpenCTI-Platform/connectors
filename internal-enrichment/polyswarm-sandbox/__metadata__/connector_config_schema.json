@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/polyswarm-sandbox_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "PolySwarm Sandbox",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Artifact"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "POLYSWARM_API_KEY": {
+      "description": "PolySwarm API key for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "POLYSWARM_API_URL": {
+      "default": "https://api.polyswarm.network",
+      "description": "PolySwarm API base URL.",
+      "type": "string"
+    },
+    "POLYSWARM_COMMUNITY": {
+      "default": "default",
+      "description": "PolySwarm community (default or private).",
+      "type": "string"
+    },
+    "POLYSWARM_TIMEOUT": {
+      "default": 30,
+      "description": "HTTP timeout for PolySwarm API calls in seconds.",
+      "type": "integer"
+    },
+    "POLYSWARM_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Max TLP level of entities to enrich.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "POLYSWARM_REPLACE_WITH_LOWER_SCORE": {
+      "default": true,
+      "description": "If false, keep higher existing score instead of overwriting.",
+      "type": "boolean"
+    },
+    "POLYSWARM_SANDBOX_ENABLED": {
+      "default": true,
+      "description": "Enable sandbox analysis in addition to scan.",
+      "type": "boolean"
+    },
+    "POLYSWARM_SANDBOX_PROVIDER": {
+      "default": "cape",
+      "description": "Sandbox provider: cape, triage, or both.",
+      "type": "string"
+    },
+    "POLYSWARM_SANDBOX_VM_CAPE": {
+      "default": "win-10-build-19041",
+      "description": "VM slug for Cape sandbox submissions.",
+      "type": "string"
+    },
+    "POLYSWARM_SANDBOX_VM_TRIAGE": {
+      "default": "windows11-21h2-x64",
+      "description": "VM slug for Triage sandbox submissions.",
+      "type": "string"
+    },
+    "POLYSWARM_SANDBOX_VM": {
+      "default": null,
+      "description": "Legacy single VM slug (overrides per-provider if set).",
+      "type": "string"
+    },
+    "POLYSWARM_SANDBOX_NETWORK_ENABLED": {
+      "default": true,
+      "description": "Enable internet access during sandbox analysis.",
+      "type": "boolean"
+    },
+    "POLYSWARM_SANDBOX_TIMEOUT": {
+      "default": 600,
+      "description": "Maximum wait time for sandbox results in seconds.",
+      "type": "integer"
+    },
+    "POLYSWARM_POLL_INTERVAL": {
+      "default": 30,
+      "description": "Seconds between poll attempts for scan/sandbox results.",
+      "type": "integer"
+    },
+    "POLYSWARM_POLL_TIMEOUT": {
+      "default": 900,
+      "description": "Maximum wait time for scan results in seconds.",
+      "type": "integer"
+    },
+    "POLYSWARM_JSON_REPORT_ENABLED": {
+      "default": true,
+      "description": "Attach raw JSON scan/sandbox data as a file.",
+      "type": "boolean"
+    },
+    "POLYSWARM_PDF_REPORT_ENABLED": {
+      "default": true,
+      "description": "Request and attach PDF report from PolySwarm.",
+      "type": "boolean"
+    },
+    "POLYSWARM_LLM_REPORT_ENABLED": {
+      "default": false,
+      "description": "Request AI-generated analysis summary (opt-in).",
+      "type": "boolean"
+    },
+    "POLYSWARM_LLM_REPORT_TIMEOUT": {
+      "default": 120,
+      "description": "Maximum wait time for LLM report in seconds.",
+      "type": "integer"
+    },
+    "POLYSWARM_MIN_POLYSCORE": {
+      "default": 50,
+      "description": "Minimum PolyScore (0-100) to create indicators.",
+      "type": "integer"
+    },
+    "POLYSWARM_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Create STIX Indicator objects from scan results.",
+      "type": "boolean"
+    },
+    "POLYSWARM_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Create STIX Observable objects from sandbox IOCs.",
+      "type": "boolean"
+    },
+    "POLYSWARM_MAX_FILE_SIZE": {
+      "default": 33554432,
+      "description": "Maximum file size in bytes (default 32MB).",
+      "type": "integer"
+    },
+    "POLYSWARM_DOWNLOAD_ARTIFACTS": {
+      "default": true,
+      "description": "Download file artifacts from OpenCTI for scanning.",
+      "type": "boolean"
+    },
+    "POLYSWARM_POLYKG_API_URL": {
+      "default": null,
+      "description": "polykg REST API URL for malware profile enrichment (empty = disabled).",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "POLYSWARM_API_KEY"
+  ],
+  "additionalProperties": true
+}

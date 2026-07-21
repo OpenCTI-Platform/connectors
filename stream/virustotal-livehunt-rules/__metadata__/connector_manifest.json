@@ -2,11 +2,16 @@
   "title": "Virustotal Livehunt Rules",
   "slug": "virustotal-livehunt-rules",
   "description": "This connector allows organizations to create and manage VirusTotal Livehunts from OpenCTI. When enabling a Yara rule in OpenCTI automatically it does create a new Livehunt in VirusTotal.",
-  "short_description": "This connector allows organizations to create and manage VirusTotal Livehunts from OpenCTI. When enabling a Yara rule in OpenCTI automatically it does create a new Livehunt in VirusTotal.",
+  "short_description": "Synchronizes YARA rule indicators from OpenCTI to VirusTotal Livehunt, automatically creating and managing hunting rules for real-time malware detection.",
   "logo": "stream/virustotal-livehunt-rules/__metadata__/logo.png",
   "use_cases": [
-    "Malware Analysis"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

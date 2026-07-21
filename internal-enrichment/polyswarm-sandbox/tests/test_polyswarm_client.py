@@ -292,16 +292,277 @@ class TestLLMReport:
         result = client.create_llm_report()
         assert result is None
 
+    def test_create_llm_report_maps_sandbox_task_id_to_cape(self, client):
+        # The SDK accepts cape_/triage_sandbox_task_id, NOT a generic
+        # sandbox_task_id. fake_sdk carries the real signature, so forwarding
+        # the wrong kwarg would TypeError (swallowed -> None) and fail this.
+        captured = {}
+
+        def fake_sdk(
+            instance_id=None, cape_sandbox_task_id=None, triage_sandbox_task_id=None
+        ):
+            captured["cape"] = cape_sandbox_task_id
+            captured["triage"] = triage_sandbox_task_id
+            return MagicMock(id="llm-cape", state="PENDING")
+
+        client.api.llm_report_create = fake_sdk
+        result = client.create_llm_report(sandbox_task_id="sb-9", provider="cape")
+        assert result == "llm-cape"
+        assert captured == {"cape": "sb-9", "triage": None}
+
+    def test_create_llm_report_maps_sandbox_task_id_to_triage(self, client):
+        captured = {}
+
+        def fake_sdk(
+            instance_id=None, cape_sandbox_task_id=None, triage_sandbox_task_id=None
+        ):
+            captured["cape"] = cape_sandbox_task_id
+            captured["triage"] = triage_sandbox_task_id
+            return MagicMock(id="llm-triage", state="PENDING")
+
+        client.api.llm_report_create = fake_sdk
+        result = client.create_llm_report(sandbox_task_id="sb-7", provider="triage")
+        assert result == "llm-triage"
+        assert captured == {"cape": None, "triage": "sb-7"}
+
+    def test_sdk_llm_report_create_signature_contract(self):
+        """Guard the real SDK signature create_llm_report depends on.
+
+        The mapping tests above use a fake with the expected signature; a
+        MagicMock would accept any kwarg and hide a drift. This introspects
+        the installed SDK to confirm it really exposes the provider-specific
+        kwargs and has no generic ``sandbox_task_id``. If the SDK ever renames
+        or drops these, fix the mapping in ``create_llm_report``.
+        """
+        import inspect
+
+        from connector.polyswarm import PolyswarmAPI
+
+        params = inspect.signature(PolyswarmAPI.llm_report_create).parameters
+        assert "instance_id" in params
+        assert "cape_sandbox_task_id" in params
+        assert "triage_sandbox_task_id" in params
+        assert "sandbox_task_id" not in params
+
     def test_collect_llm_report_success(self, client):
-        task = MagicMock(state="SUCCEEDED", url="https://example.com/llm.txt")
+        # The report comes back inline on the task; no S3/HTTP download.
+        report = {"bottom_line": "Malicious."}
+        task = MagicMock(state="SUCCEEDED", report=report)
         client.api.llm_report_get = MagicMock(return_value=task)
-        client._session.get.return_value = MagicMock(
-            status_code=200, text="LLM analysis..."
-        )
 
         result = client.collect_llm_report("llm-task-1", timeout=5, poll_interval=0.01)
-        assert result == "LLM analysis..."
+        assert result == report
+        client._session.get.assert_not_called()
 
     def test_collect_llm_report_empty_id_returns_none(self, client):
         assert client.collect_llm_report("") is None
         assert client.collect_llm_report(None) is None
+
+
+# ── Additional PDF error paths ─────────────────────────────────────────────
+
+
+class TestPDFGenerationErrors:
+    """Verify generate_pdf returns None on FAILED state, network errors, and OS errors."""
+
+    @pytest.fixture
+    def client(self):
+        with patch("connector.polyswarm_client.PolyswarmAPI"):
+            c = PolySwarmClient.__new__(PolySwarmClient)
+            c.helper = MagicMock()
+            c.api = MagicMock()
+            c._session = MagicMock()
+            c._breaker = CircuitBreaker()
+            return c
+
+    def test_failed_state_returns_none(self, client):
+        finished = MagicMock(state="FAILED", url=None)
+        with patch.object(client, "_retry_sdk_call", return_value=finished):
+            assert client.generate_pdf("task-id", "scan") is None
+
+    def test_request_exception_returns_none(self, client):
+        with patch.object(
+            client, "_retry_sdk_call", side_effect=requests.RequestException("fail")
+        ):
+            assert client.generate_pdf("task-id", "scan") is None
+
+    def test_os_error_returns_none(self, client):
+        with patch.object(client, "_retry_sdk_call", side_effect=OSError("disk")):
+            assert client.generate_pdf("task-id", "scan") is None
+
+
+# ── Additional LLM error paths ─────────────────────────────────────────────
+
+
+class TestLLMReportErrors:
+    """Verify collect_llm_report handles failure states, timeouts, and exceptions."""
+
+    @pytest.fixture
+    def client(self):
+        with patch("connector.polyswarm_client.PolyswarmAPI"):
+            c = PolySwarmClient.__new__(PolySwarmClient)
+            c.helper = MagicMock()
+            c.api = MagicMock()
+            c._session = MagicMock()
+            c._breaker = CircuitBreaker()
+            return c
+
+    def test_failed_state_returns_none(self, client):
+        client.api.llm_report_get = MagicMock(return_value=MagicMock(state="FAILED"))
+        assert (
+            client.collect_llm_report("task-abc", timeout=1, poll_interval=0.1) is None
+        )
+
+    def test_timeout_returns_none(self, client):
+        client.api.llm_report_get = MagicMock(return_value=MagicMock(state="PENDING"))
+        assert (
+            client.collect_llm_report("task-abc", timeout=0.1, poll_interval=0.2)
+            is None
+        )
+
+    def test_exception_returns_none(self, client):
+        client.api.llm_report_get = MagicMock(side_effect=Exception("network"))
+        assert (
+            client.collect_llm_report("task-abc", timeout=1, poll_interval=0.1) is None
+        )
+
+    def test_unexpected_state_returns_none(self, client):
+        client.api.llm_report_get = MagicMock(
+            return_value=MagicMock(state="UNKNOWN_STATE")
+        )
+        assert (
+            client.collect_llm_report("task-abc", timeout=1, poll_interval=0.1) is None
+        )
+
+    def test_no_report_content_returns_none(self, client):
+        task = MagicMock(state="SUCCEEDED", report=None)
+        client.api.llm_report_get = MagicMock(return_value=task)
+        assert (
+            client.collect_llm_report("task-abc", timeout=1, poll_interval=0.1) is None
+        )
+
+
+# ── File and sandbox submission ────────────────────────────────────────────
+
+
+class TestFileSubmit:
+    """Verify submit_file_async and submit_sandbox_async result handling."""
+
+    @pytest.fixture
+    def client(self):
+        with patch("connector.polyswarm_client.PolyswarmAPI"):
+            c = PolySwarmClient.__new__(PolySwarmClient)
+            c.helper = MagicMock()
+            c.api = MagicMock()
+            c._session = MagicMock()
+            c._breaker = CircuitBreaker()
+            return c
+
+    def test_submit_file_async_returns_instance_id(self, client):
+        instance = MagicMock(id="scan-instance-123")
+        with patch.object(client, "_retry_sdk_call", return_value=instance):
+            assert client.submit_file_async(b"file", "test.exe") == "scan-instance-123"
+
+    def test_submit_file_async_no_id_returns_none(self, client):
+        instance = MagicMock(id=None)
+        with patch.object(client, "_retry_sdk_call", return_value=instance):
+            assert client.submit_file_async(b"file", "test.exe") is None
+
+    def test_submit_file_async_exception_returns_none(self, client):
+        with patch.object(client, "_retry_sdk_call", side_effect=Exception("crash")):
+            assert client.submit_file_async(b"file", "test.exe") is None
+
+    def test_submit_sandbox_async_returns_task_id(self, client):
+        task = MagicMock(id="sandbox-task-456")
+        with patch.object(client, "_retry_sdk_call", return_value=task):
+            result = client.submit_sandbox_async(
+                b"content", "test.exe", provider="cape", vm_slug="win-10"
+            )
+        assert result == "sandbox-task-456"
+
+    def test_submit_sandbox_async_no_id_returns_none(self, client):
+        task = MagicMock(id=None)
+        with patch.object(client, "_retry_sdk_call", return_value=task):
+            result = client.submit_sandbox_async(
+                b"content", "test.exe", provider="cape", vm_slug="win-10"
+            )
+        assert result is None
+
+    def test_submit_sandbox_async_exception_returns_none(self, client):
+        with patch.object(client, "_retry_sdk_call", side_effect=Exception("crash")):
+            result = client.submit_sandbox_async(
+                b"content", "test.exe", provider="cape", vm_slug="win-10"
+            )
+        assert result is None
+
+
+# ── Provider slugs ─────────────────────────────────────────────────────────
+
+
+class TestProviderSlugs:
+    """Verify get_provider_slugs cache and API-failure fallback."""
+
+    @pytest.fixture
+    def client(self):
+        with patch("connector.polyswarm_client.PolyswarmAPI"):
+            c = PolySwarmClient.__new__(PolySwarmClient)
+            c.helper = MagicMock()
+            c.api = MagicMock()
+            c._session = MagicMock()
+            c._breaker = CircuitBreaker()
+            c._providers_cache = None
+            c._providers_cache_time = 0
+            return c
+
+    def test_cache_hit_returns_slugs(self, client):
+        import time
+
+        client._providers_cache = [
+            {"slug": "cape", "name": "Cape", "tool": "cape", "vms": []}
+        ]
+        client._providers_cache_time = time.monotonic()
+        assert client.get_provider_slugs() == ["cape"]
+
+    def test_api_failure_returns_fallback(self, client):
+        with patch.object(client, "_retry_sdk_call", side_effect=Exception("down")):
+            result = client.get_provider_slugs()
+        assert isinstance(result, list)
+        assert len(result) > 0
+
+
+# ── Sandbox result polling ─────────────────────────────────────────────────
+
+
+class TestSandboxResultsPolling:
+    """Verify get_sandbox_results handles non-terminal states correctly."""
+
+    @pytest.fixture
+    def client(self):
+        with patch("connector.polyswarm_client.PolyswarmAPI"):
+            c = PolySwarmClient.__new__(PolySwarmClient)
+            c.helper = MagicMock()
+            c.api = MagicMock()
+            c._session = MagicMock()
+            c._breaker = CircuitBreaker()
+            return c
+
+    def test_running_state_returns_none(self, client):
+        task = MagicMock(status="RUNNING")
+        client.api.sandbox_task_status = MagicMock(return_value=task)
+        assert client.get_sandbox_results("task-id") is None
+
+    def test_succeeded_state_returns_json(self, client):
+        task = MagicMock(status="SUCCEEDED", json={"status": "SUCCEEDED"})
+        client.api.sandbox_task_status = MagicMock(return_value=task)
+        result = client.get_sandbox_results("task-id")
+        assert result == {"status": "SUCCEEDED"}
+
+    def test_get_scan_results_debug_log_when_result_present(self, client):
+        """Cover the debug log line inside get_scan_results."""
+        result_mock = MagicMock()
+        result_mock.failed = False
+        result_mock.window_closed = False
+        client.api.lookup = MagicMock(return_value=result_mock)
+        # window not closed → returns None but debug log line is executed
+        outcome = client.get_scan_results("scan-id")
+        assert outcome is None

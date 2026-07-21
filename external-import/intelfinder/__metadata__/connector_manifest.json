@@ -1,12 +1,17 @@
 {
   "title": "IntelFinder",
   "slug": "intelfinder",
-  "description": "This connector is designed for integration with the OpenCTI platform and IntelFinder. The integration imports IntelFinder alerts and converts them into OpenCTI incidents. Applicable elements are transformed into their related Stix objects and linked to the parent incident.",
-  "short_description": "This connector is designed for integration with the OpenCTI platform and IntelFinder. The integration imports IntelFinder alerts and converts them into OpenCTI incidents. Applicable elements are transformed into their related Stix objects and linked to the parent incident.",
+  "description": "The IntelFinder connector integrates with the IntelFinder digital risk monitoring platform and imports its alerts into OpenCTI as Incidents. Applicable STIX entities (domains, IPs, credentials, URLs) are extracted from each alert and linked to the parent Incident, enabling analysts to track brand exposure, data leaks, and underground activity within OpenCTI.",
+  "short_description": "Imports IntelFinder digital risk alerts into OpenCTI as Incidents with linked STIX observables for brand exposure and underground monitoring.",
   "logo": "external-import/intelfinder/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Brand, Digital Risk & Underground Exposure"
   ],
+  "solution_categories": [
+    "Digital Risk Protection"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

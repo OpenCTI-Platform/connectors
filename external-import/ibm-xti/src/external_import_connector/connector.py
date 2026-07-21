@@ -271,7 +271,7 @@ class IBMXTIConnector:
         Example:
             - If `CONNECTOR_DURATION_PERIOD=PT5M`, then the connector is running every 5 minutes.
         """
-        self.__helper.schedule_process(
+        self.__helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.__config.connector.duration_period.total_seconds(),
+            duration_period=self.__config.connector.duration_period,
         )

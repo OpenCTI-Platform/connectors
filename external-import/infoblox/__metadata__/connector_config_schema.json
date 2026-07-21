@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/infoblox_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Infoblox",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "infoblox"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT12H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "INFOBLOX_API_KEY": {
+      "description": "The API key used to authenticate against the Infoblox TIDE API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "INFOBLOX_URL": {
+      "default": "https://csp.infoblox.com/tide/api/data/threats",
+      "description": "The Infoblox TIDE API endpoint to fetch threat data from.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "INFOBLOX_IOC_LIMIT": {
+      "default": "10000",
+      "description": "Limit of IOCs to import (for each IOC type).",
+      "type": "string"
+    },
+    "INFOBLOX_MARKING_DEFINITION": {
+      "default": "TLP:AMBER+STRICT",
+      "description": "The marking definition to apply to imported data (e.g. 'TLP:AMBER+STRICT').",
+      "type": "string"
+    },
+    "INFOBLOX_INTERVAL": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "INFOBLOX_API_KEY"
+  ],
+  "additionalProperties": true
+}

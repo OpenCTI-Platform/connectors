@@ -5,8 +5,13 @@
   "short_description": "Ransomware.live is a threat intelligence service focused on ransomware activities, providing real-time insights into ransomware campaigns.",
   "logo": "external-import/ransomwarelive/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-07-25",
   "playbook_supported": false,

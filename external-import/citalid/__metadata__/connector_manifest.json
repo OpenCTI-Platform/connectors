@@ -2,11 +2,16 @@
   "title": "Citalid",
   "slug": "citalid",
   "description": "The OpenCTI Citalid connector allows you to import latest Citalid CTI dataset. The connector leverages the Citalid API to retrieve the latest dataset in stix bundle format.\nDisclaimer You will need to have access to Citalid API. To learn more about our product you can book a demo on https://citalid.com/book-a-demo/.",
-  "short_description": "The OpenCTI Citalid connector allows you to import latest Citalid CTI dataset. The connector leverages the Citalid API to retrieve the latest dataset in stix bundle format.\nDisclaimer You will need to have access to Citalid API. To learn more about our product you can book a demo on https://citalid.com/book-a-demo/.",
+  "short_description": "Imports the latest Citalid CTI dataset into OpenCTI via the Citalid API as STIX bundles, covering threat actors, campaigns, and adversary intelligence. Requires a Citalid API subscription.",
   "logo": "external-import/citalid/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

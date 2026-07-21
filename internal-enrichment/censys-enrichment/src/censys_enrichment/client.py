@@ -1,5 +1,6 @@
 from typing import Dict, Generator
 
+from censys_enrichment.errors import EntityHasNoUsableHashError
 from censys_platform import (
     SDK,
     Certificate,
@@ -7,10 +8,6 @@ from censys_platform import (
     SearchQueryInputBody,
     V3GlobaldataSearchQueryResponse,
 )
-
-
-class EntityHasNoUsableHashError(Exception):
-    """Custom exception for entity having no usable hash"""
 
 
 class Client:

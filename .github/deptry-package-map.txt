@@ -1,0 +1,71 @@
+# deptry package name mapping
+# ============================
+# Maps PyPI install names to their actual Python import module names.
+# Required when the two differ, to avoid false-positive "unused dependency" warnings.
+#
+# Format (one entry per line):
+#   pypi-package-name=python_import_name
+#
+# Lines starting with # are comments and are ignored.
+# To add a new mapping, just append a line at the bottom of the relevant section.
+#
+# -------------------------------------------------------------------
+# SECTION: ignore (runtime-implicit packages, never imported directly)
+# -------------------------------------------------------------------
+# Format: ignore=pypi-package-name
+#
+# Packages loaded as plugins/transports at runtime without a direct import.
+ignore=stix-shifter-modules-splunk    # loaded by stix-shifter-utils as a runtime plugin
+ignore=email_validator                # required by pydantic for EmailStr; never imported directly
+ignore=google-auth-oauthlib           # optional HTTP transport for google-auth; alters behaviour without import
+ignore=google-auth-httplib2           # optional HTTP transport for google-auth; alters behaviour without import
+
+# -------------------------------------------------------------------
+# SECTION: map (PyPI name -> Python import module name)
+# -------------------------------------------------------------------
+
+# Well-known stdlib-adjacent mismatches
+beautifulsoup4=bs4
+GitPython=git
+PyGithub=github
+PyYAML=yaml
+python-dateutil=dateutil
+python-docx=docx
+pydantic-settings=pydantic_settings
+typing-extensions=typing_extensions
+vt-py=vt
+
+# STIX / TAXII ecosystem
+stix2-elevator=stix2elevator
+stix2-validator=stix2validator
+stix2-patterns=stix2patterns
+taxii2-client=taxii2client
+stix-shifter-utils=stix_shifter
+
+# Vendor SDKs
+anyrun-sdk=anyrun
+crowdstrike-falconpy=falconpy
+datalake-scripts=datalake
+domaintools-api=domaintools
+edgegrid-python=akamai
+feedly-client=feedly
+matrix-nio=nio
+msgraph-sdk=msgraph
+OTXv2=OTXv2
+pySigma=sigma
+sixgill-clients=cybersixgill
+valhallaAPI=valhallaAPI
+vmray-rest-api=vmray
+yara-python=yara
+
+# Google namespace packages (google.auth / google.oauth2 ship in google-auth)
+google-auth=google
+google-api-python-client=googleapiclient
+
+# Azure namespace packages
+azure-identity=azure
+
+# Other
+pdfminer.six=pdfminer
+pyjwt=jwt
+python-dotenv=dotenv

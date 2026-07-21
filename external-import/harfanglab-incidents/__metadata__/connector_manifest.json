@@ -5,9 +5,13 @@
   "short_description": "HarfangLab Connector imports endpoint incident data from HarfangLab EDR into OpenCTI, enriching threat intelligence.",
   "logo": "external-import/harfanglab-incidents/__metadata__/logo.png",
   "use_cases": [
-    "Incident Response & Ticketing",
-    "EDR"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

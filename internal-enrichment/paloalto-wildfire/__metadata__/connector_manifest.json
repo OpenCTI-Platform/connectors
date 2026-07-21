@@ -1,0 +1,26 @@
+{
+  "title": "Palo Alto Networks WildFire",
+  "slug": "paloalto-wildfire",
+  "description": "The OpenCTI Palo Alto Networks WildFire enrichment connector enriches StixFile and Artifact observables with WildFire file verdicts. For each observable it queries the WildFire public API by hash (MD5/SHA-1/SHA-256) and, when the hash is unknown and a file is attached, submits the file for analysis and polls for the verdict. It maps the WildFire verdict (benign, grayware, phishing, malware, command-and-control) to an OpenCTI score and label, completes the file hashes from the WildFire report, and attaches a STIX Malware Analysis object with the WildFire result. The connector is playbook compatible and always returns the enriched bundle.",
+  "short_description": "Enrich StixFile and Artifact observables with Palo Alto Networks WildFire verdicts.",
+  "logo": "internal-enrichment/paloalto-wildfire/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 60,
+  "support_version": ">=7.260701.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/paloalto-wildfire",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-paloalto-wildfire",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

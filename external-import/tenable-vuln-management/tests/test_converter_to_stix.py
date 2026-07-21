@@ -13,6 +13,7 @@ from tenable_vuln_management.converter_to_stix import (
     tlp_marking_definition_handler,
 )
 from tenable_vuln_management.models.opencti import (
+    DomainName,
     HasRelationship,
     System,
     Vulnerability,
@@ -395,26 +396,41 @@ def test_converter_to_stix_make_operating_systems(mock_helper, mock_config, fake
     assert operating_systems[0].name == "Microsoft Windows Server 2016 Standard"
 
 
-def test_converter_to_stix_make_domain_name(mock_helper, mock_config, fake_asset):
+@pytest.mark.parametrize(
+    "domain_value, is_domain_name_created, expected_value",
+    [
+        (
+            "sharepoint2016.target.example.com",
+            True,
+            "sharepoint2016.target.example.com",
+        ),
+        (None, False, None),
+        ("test..com", False, None),
+        ("test_domain.com", False, None),
+    ],
+)
+def test_converter_to_stix_make_domain_name(
+    mock_helper,
+    mock_config,
+    fake_asset,
+    domain_value,
+    is_domain_name_created,
+    expected_value,
+):
     # Given a converter to stix instance
     converter_to_stix = ConverterToStix(
         helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
     )
 
-    # Case 1: Asset with a valid FQDN
-    asset_with_fqdn = fake_asset
-    domain_name = converter_to_stix._make_domain_name(asset_with_fqdn)
+    # When calling _make_domain_name
+    asset_without_fqdn = fake_asset.model_copy(update={"fqdn": domain_value})
+    domain_name = converter_to_stix._make_domain_name(asset_without_fqdn)
 
-    # Then it should return a valid DomainName object
-    assert domain_name.value == "sharepoint2016.target.example.com"
-    assert len(domain_name.resolves_to_ips) == 2
-
-    # Case 2: Asset without an FQDN
-    asset_without_fqdn = fake_asset.model_copy(update={"fqdn": None})
-    domain_name_none = converter_to_stix._make_domain_name(asset_without_fqdn)
-
-    # Then it should return None
-    assert domain_name_none is None
+    # Then it should return a valid DomainName object or None
+    assert isinstance(domain_name, DomainName) == is_domain_name_created
+    if domain_name:
+        assert domain_name.value == expected_value
+        assert len(domain_name.resolves_to_ips) == 2
 
 
 def test_converter_to_stix_make_targeted_software_s(

@@ -677,6 +677,118 @@ def test_run_calls_schedule_process():
     )
 
 
+# --- _import_indicators per-page deduplication ---
+
+
+def test_import_indicators_deduplication_is_per_page():
+    """
+    Verify that deduplication is scoped per page, not cross-page.
+    If the same auxiliary object (e.g. a relationship target) appears on two
+    different pages, it must be included in both bundles so each bundle is
+    self-contained.
+    """
+    helper = _build_helper()
+    connector = _build_connector(helper=helper)
+
+    # Shared auxiliary object that will appear on both pages
+    shared_aux = Mock()
+    shared_aux.id = "malware--shared"
+    shared_aux.to_stix2_object.return_value = {
+        "type": "malware",
+        "id": "malware--shared",
+    }
+
+    # Page 1: indicator-1 + shared_aux
+    ind1 = Mock()
+    ind1.id = "indicator--1"
+    ind1.to_stix2_object.return_value = {"type": "indicator", "id": "indicator--1"}
+
+    # Page 2: indicator-2 + shared_aux (same object)
+    ind2 = Mock()
+    ind2.id = "indicator--2"
+    ind2.to_stix2_object.return_value = {"type": "indicator", "id": "indicator--2"}
+
+    converter_mock = Mock()
+    converter_mock.marking = Mock(id="marking--1")
+    converter_mock.marking.to_stix2_object.return_value = {"id": "marking--1"}
+    converter_mock.author = Mock(id="identity--1")
+    converter_mock.author.to_stix2_object.return_value = {"id": "identity--1"}
+
+    # First call on page 1 returns [ind1, shared_aux], second on page 2 returns [ind2, shared_aux]
+    converter_mock.convert_indicator_to_stix.side_effect = [
+        [ind1, shared_aux],
+        [ind2, shared_aux],
+    ]
+    connector.indicator_converter_to_stix = converter_mock
+
+    page1 = [{"modified_at": "2026-03-06T12:00:00+00:00"}]
+    page2 = [{"modified_at": "2026-03-06T13:00:00+00:00"}]
+    connector.client.iter_indicators_pages.return_value = [page1, page2]
+
+    connector._import_indicators(datetime(2026, 1, 1, tzinfo=timezone.utc))
+
+    # Two bundles should have been sent (one per page)
+    assert helper.stix2_create_bundle.call_count == 2
+
+    # shared_aux.to_stix2_object should have been called twice (once per page)
+    assert shared_aux.to_stix2_object.call_count == 2
+
+
+def test_import_indicators_deduplication_within_page():
+    """
+    Verify that within a single page, duplicate auxiliary objects are removed.
+    """
+    helper = _build_helper()
+    connector = _build_connector(helper=helper)
+
+    # Two indicators sharing the same auxiliary object within the same page
+    aux = Mock()
+    aux.id = "malware--dup"
+    aux.to_stix2_object.return_value = {"type": "malware", "id": "malware--dup"}
+
+    ind1 = Mock()
+    ind1.id = "indicator--a"
+    ind1.to_stix2_object.return_value = {"type": "indicator", "id": "indicator--a"}
+
+    ind2 = Mock()
+    ind2.id = "indicator--b"
+    ind2.to_stix2_object.return_value = {"type": "indicator", "id": "indicator--b"}
+
+    converter_mock = Mock()
+    converter_mock.marking = Mock(id="marking--1")
+    converter_mock.marking.to_stix2_object.return_value = {"id": "marking--1"}
+    converter_mock.author = Mock(id="identity--1")
+    converter_mock.author.to_stix2_object.return_value = {"id": "identity--1"}
+
+    # Both indicators on same page return the same aux object
+    converter_mock.convert_indicator_to_stix.side_effect = [
+        [ind1, aux],
+        [ind2, Mock(id="malware--dup")],  # duplicate id
+    ]
+    connector.indicator_converter_to_stix = converter_mock
+
+    page = [
+        {"modified_at": "2026-03-06T12:00:00+00:00"},
+        {"modified_at": "2026-03-06T12:01:00+00:00"},
+    ]
+    connector.client.iter_indicators_pages.return_value = [page]
+
+    connector._import_indicators(datetime(2026, 1, 1, tzinfo=timezone.utc))
+
+    # Only one bundle sent
+    assert helper.stix2_create_bundle.call_count == 1
+
+    # The bundle should contain: marking, author, ind1, ind2, aux (deduplicated)
+    # = 5 objects, not 6
+    bundle_call_objects = [
+        call[0][0] for call in helper.stix2_create_bundle.call_args_list
+    ]
+    # stix2_create_bundle receives a list of stix objects
+    stix_objects = bundle_call_objects[0]
+    # marking + author + 2 indicators + 1 deduplicated aux = 5
+    assert len(stix_objects) == 5
+
+
 # --- _import_indicators edge cases ---
 
 

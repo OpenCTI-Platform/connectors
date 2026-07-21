@@ -1,8 +1,6 @@
-import sys
 import traceback
 
-from external_import_connector import IBMXTIConnector
-from external_import_connector.settings import ConnectorSettings
+from external_import_connector import ConnectorSettings, IBMXTIConnector
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -23,4 +21,4 @@ if __name__ == "__main__":
         connector.run()
     except Exception:
         traceback.print_exc()
-        sys.exit(1)
+        exit(1)

@@ -2,11 +2,17 @@
   "title": "Greynoise",
   "slug": "greynoise",
   "description": "GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity.\nThe purpose of this connector is to answer to this question : \"Is everyone else seeing this stuff, or is it just me?\"\nIn other words:  \"Is this just regular Internet background noise or is machine actually targeting and attacking ME specifically?\"",
-  "short_description": "GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity.\nThe purpose of this connector is to answer to this question : \"Is everyone else seeing this stuff, or is it just me?\"\nIn other words:  \"Is this just regular Internet background noise or is machine actually targeting and attacking ME specifically?\"",
+  "short_description": "Enriches IP address observables in OpenCTI with GreyNoise data, classifying Internet background noise versus targeted attack activity to reduce false positives and focus on real threats.",
   "logo": "internal-enrichment/greynoise/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,

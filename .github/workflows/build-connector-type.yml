@@ -1,0 +1,249 @@
+name: Build Connector Type
+
+on:
+  workflow_call:
+    inputs:
+      type_name:
+        description: "Connector type (e.g. external-import, internal-enrichment)"
+        required: true
+        type: string
+      matrix_json:
+        description: "JSON string of the connector matrix for this type"
+        required: true
+        type: string
+      image_tags:
+        description: "Comma-separated image tags (e.g. 'rolling' or '7.260529.0,latest')"
+        required: true
+        type: string
+      build_mode:
+        description: "Build mode: rolling, prerelease, or release"
+        required: true
+        type: string
+      push:
+        description: "Whether to push images to registries"
+        required: false
+        type: boolean
+        default: true
+      dockerfile:
+        description: "Override Dockerfile path (e.g. 'Dockerfile_ubi9'). Defaults to per-connector Dockerfile when empty."
+        required: false
+        type: string
+        default: ""
+      variant:
+        description: "Build variant (e.g. 'ubi9'). Affects cache keys, OCI labels, and auto-generates build-args for shared Dockerfiles."
+        required: false
+        type: string
+        default: ""
+      sdk_ref:
+        description: "Git ref to pin connectors-sdk to. When empty, no pinning is performed (only release-connector sets this)."
+        required: false
+        type: string
+        default: ""
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_PASSWORD:
+        required: false
+      GHCR_USERNAME:
+        required: false
+      GHCR_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-amd64:
+    name: "Build ${{ inputs.type_name }}/${{ matrix.name }} (amd64)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix_json) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          sparse-checkout: |
+            ${{ matrix.path }}
+            .github
+            shared
+            connectors-sdk
+            ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Login to DockerHub
+        if: inputs.push
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        if: inputs.push
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push connector image
+        uses: ./.github/actions/build-connector-image
+        with:
+          connector_path: ${{ matrix.path }}
+          connector_name: ${{ matrix.name }}
+          fips: ${{ matrix.fips || 'false' }}
+          image_tags: ${{ inputs.image_tags }}
+          build_mode: ${{ inputs.build_mode }}
+          platforms: linux/amd64
+          tag_suffix: "-amd64"
+          push: ${{ inputs.push }}
+          digests_dir: /tmp/digests
+          dockerfile: ${{ inputs.dockerfile }}
+          variant: ${{ inputs.variant }}
+          sdk_ref: ${{ inputs.sdk_ref }}
+
+      - name: Upload digest
+        if: inputs.push
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: digests-${{ inputs.type_name }}-${{ matrix.name }}-amd64
+          path: /tmp/digests/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Upload pinned dependency files
+        # Only when connectors-sdk was pinned (release-connector sets sdk_ref).
+        # Uploaded once from the amd64 job — content is identical across platforms.
+        if: inputs.sdk_ref != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pinned-deps-${{ matrix.name }}
+          path: |
+            ${{ matrix.path }}/**/requirements.txt
+            ${{ matrix.path }}/**/pyproject.toml
+          if-no-files-found: warn
+          retention-days: 90
+
+  build-arm64:
+    name: "Build ${{ inputs.type_name }}/${{ matrix.name }} (arm64)"
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix_json) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          sparse-checkout: |
+            ${{ matrix.path }}
+            .github
+            shared
+            connectors-sdk
+            ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Login to DockerHub
+        if: inputs.push
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        if: inputs.push
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push connector image
+        uses: ./.github/actions/build-connector-image
+        with:
+          connector_path: ${{ matrix.path }}
+          connector_name: ${{ matrix.name }}
+          fips: ${{ matrix.fips || 'false' }}
+          image_tags: ${{ inputs.image_tags }}
+          build_mode: ${{ inputs.build_mode }}
+          platforms: linux/arm64
+          tag_suffix: "-arm64"
+          push: ${{ inputs.push }}
+          digests_dir: /tmp/digests
+          dockerfile: ${{ inputs.dockerfile }}
+          variant: ${{ inputs.variant }}
+          sdk_ref: ${{ inputs.sdk_ref }}
+
+      - name: Upload digest
+        if: inputs.push
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: digests-${{ inputs.type_name }}-${{ matrix.name }}-arm64
+          path: /tmp/digests/
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: "Merge ${{ inputs.type_name }}/${{ matrix.name }}"
+    needs: [build-amd64, build-arm64]
+    if: inputs.push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix_json) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          sparse-checkout: .github/scripts
+          sparse-checkout-cone-mode: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Login to DockerHub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Download amd64 digest
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: digests-${{ inputs.type_name }}-${{ matrix.name }}-amd64
+          path: /tmp/digests-amd64
+
+      - name: Download arm64 digest
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: digests-${{ inputs.type_name }}-${{ matrix.name }}-arm64
+          path: /tmp/digests-arm64
+
+      - name: Merge multi-arch manifest
+        env:
+          CONNECTOR_NAME: ${{ matrix.name }}
+          IMAGE_TAGS: ${{ inputs.image_tags }}
+          DIGESTS_DIR_AMD64: /tmp/digests-amd64
+          DIGESTS_DIR_ARM64: /tmp/digests-arm64
+        run: bash .github/scripts/merge_connector_manifest.sh

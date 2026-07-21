@@ -185,8 +185,23 @@ def paginate(func):
             errors = response["errors"]
             if errors:
                 logger.error("Query completed with errors")
-                for error in errors:
-                    logger.error("Error: %s (code: %s)", error.message, error.code)
+                # ``errors`` may be a single dict, a list of dicts, or another
+                # shape, so normalize to a list before iterating (iterating a
+                # bare dict would yield its keys and mask the real error).
+                # FalconPy returns each error as a dict (e.g.
+                # ``{"code": 400, "message": "..."}``), not an object with
+                # ``.message`` / ``.code`` attributes; read the fields
+                # defensively and fall back to the raw error when no message is
+                # present so the underlying API error is never lost.
+                error_list = errors if isinstance(errors, (list, tuple)) else [errors]
+                for error in error_list:
+                    if isinstance(error, dict):
+                        error_message = error.get("message") or error
+                        error_code = error.get("code")
+                    else:
+                        error_message = error
+                        error_code = None
+                    logger.error("Error: %s (code: %s)", error_message, error_code)
 
             meta = response["meta"]
             if meta["pagination"] is not None:
@@ -1130,6 +1145,7 @@ def create_indicator(
     description: Optional[str] = None,
     valid_from: Optional[datetime] = None,
     created: Optional[datetime] = None,
+    modified: Optional[datetime] = None,
     kill_chain_phases: Optional[List[stix2.KillChainPhase]] = None,
     labels: Optional[List[str]] = None,
     confidence: Optional[int] = None,
@@ -1159,6 +1175,7 @@ def create_indicator(
         pattern_type=pattern_type,
         valid_from=valid_from,
         created=created,
+        modified=modified,
         kill_chain_phases=kill_chain_phases,
         labels=labels,
         confidence=confidence,

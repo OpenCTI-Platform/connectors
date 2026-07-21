@@ -6,8 +6,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import requests
-
-from .polyswarm_client import PolyswarmAPI, polyswarm_exceptions
+from polyswarm_enrichment.polyswarm_client import PolyswarmAPI, polyswarm_exceptions
 
 
 def _is_private_or_noise(ip_str: str) -> bool:
@@ -128,11 +127,11 @@ class ConnectorClient:
                 key=self.polyswarm_api_key, community="default"
             )
             self._circuit_breakers["default"] = CircuitBreaker()
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "PolySwarm SDK initialized for DUAL communities: private + default"
             )
         else:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"PolySwarm SDK initialized (Community: {self.polyswarm_community})"
             )
 
@@ -143,10 +142,20 @@ class ConnectorClient:
         self._polykg_url = config.polykg_api_url
         if self._polykg_url:
             self._polykg_url = self._polykg_url.rstrip("/")
+        # polykg enrichment is opt-in: a blank POLYKG_API_URL disables every
+        # profile / attack-pattern lookup. Guard on this flag rather than
+        # building a schemeless "/v3/kg/..." URL, which raises MissingSchema.
+        self._polykg_enabled = bool(self._polykg_url)
         self._circuit_breakers["polykg"] = CircuitBreaker(
             failure_threshold=1, cooldown_seconds=300
         )
-        self._check_polykg_connectivity()
+        if self._polykg_enabled:
+            self._check_polykg_connectivity()
+        else:
+            self.helper.connector_logger.info(
+                "[CLIENT] polykg enrichment disabled (POLYKG_API_URL not set); "
+                "skipping malware-profile and attack-pattern lookups"
+            )
 
     def _validate_api_access(self) -> None:
         """Verify API key and community access. Raises on auth failure."""
@@ -160,12 +169,12 @@ class ConnectorClient:
             try:
                 # exists() is a lightweight HEAD request — no data transfer
                 api_instance.exists("a" * 64, hash_type="sha256")
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CLIENT] API access verified for community: {community_name}"
                 )
             except polyswarm_exceptions.NoResultsException:
                 # Hash not found is fine — means API access works
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CLIENT] API access verified for community: {community_name}"
                 )
             except polyswarm_exceptions.RequestException as e:
@@ -176,12 +185,12 @@ class ConnectorClient:
                         f"Check POLYSWARM_API_KEY and POLYSWARM_COMMUNITY. Error: {error_str}"
                     ) from e
                 # Other request errors (429, 5xx) are transient — warn but don't die
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[CLIENT] Could not verify API access for {community_name} "
                     f"(transient error: {error_str}). Will retry on first enrichment."
                 )
             except (ConnectionError, TimeoutError, OSError) as e:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[CLIENT] Could not reach PolySwarm API for {community_name}: {e}. "
                     "Will retry on first enrichment."
                 )
@@ -284,13 +293,15 @@ class ConnectorClient:
                         for family in tag_link_families:
                             poly_labels.append(f"polyswarm-family:{family}")
                     if tag_link_tags or tag_link_families:
-                        self.helper.log_info(
+                        self.helper.connector_logger.info(
                             f"[CLIENT] TagLink: tags={tag_link_tags}, families={tag_link_families}"
                         )
             except polyswarm_exceptions.NoResultsException:
                 pass  # Not all artifacts have tag links
             except Exception as e:
-                self.helper.log_debug(f"[CLIENT] TagLink fetch failed: {e}")
+                self.helper.connector_logger.debug(
+                    f"[CLIENT] TagLink fetch failed: {e}"
+                )
 
             # Build data dictionary
             return {
@@ -322,7 +333,9 @@ class ConnectorClient:
             }
 
         except (AttributeError, TypeError, KeyError) as e:
-            self.helper.log_error(f"Error parsing PolySwarm result: {str(e)}")
+            self.helper.connector_logger.error(
+                f"Error parsing PolySwarm result: {str(e)}"
+            )
             return None
 
     def _parse_api_error(self, error: Exception, community_name: str) -> dict[str, Any]:
@@ -413,7 +426,7 @@ class ConnectorClient:
         if circuit:
             can_execute, reason = circuit.can_execute()
             if not can_execute:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[CLIENT] Circuit breaker OPEN for {community_name}: {reason}"
                 )
                 return None, {
@@ -428,7 +441,7 @@ class ConnectorClient:
                 }
 
         try:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"Searching PolySwarm ({community_name}) for hash: {hash_value}"
             )
 
@@ -441,7 +454,7 @@ class ConnectorClient:
                     if circuit:
                         circuit.record_success()
 
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CLIENT] PolySwarm ({community_name}) data: "
                         f"SHA256={data['sha256']}, Score={data['x_opencti_score']}, "
                         f"Last Seen={data['last_seen']}"
@@ -449,7 +462,9 @@ class ConnectorClient:
                     return data, None
 
             # No results found (but no error) - this is not a failure
-            self.helper.log_info(f"Hash not found in PolySwarm ({community_name})")
+            self.helper.connector_logger.info(
+                f"Hash not found in PolySwarm ({community_name})"
+            )
             error_info = {
                 "community": community_name,
                 "error_type": "no_results",
@@ -462,7 +477,9 @@ class ConnectorClient:
             return None, error_info
 
         except polyswarm_exceptions.NoResultsException:
-            self.helper.log_info(f"No results in PolySwarm ({community_name})")
+            self.helper.connector_logger.info(
+                f"No results in PolySwarm ({community_name})"
+            )
             error_info = {
                 "community": community_name,
                 "error_type": "no_results",
@@ -478,12 +495,14 @@ class ConnectorClient:
             # Record failure in circuit breaker
             if circuit:
                 circuit.record_failure()
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[CLIENT] Circuit breaker status for {community_name}: "
                     f"{circuit.get_status()}"
                 )
 
-            self.helper.log_error(f"PolySwarm API error ({community_name}): {str(e)}")
+            self.helper.connector_logger.error(
+                f"PolySwarm API error ({community_name}): {str(e)}"
+            )
             error_info = self._parse_api_error(e, community_name)
             return None, error_info
 
@@ -491,12 +510,12 @@ class ConnectorClient:
             # Network/connection errors - record in circuit breaker
             if circuit:
                 circuit.record_failure()
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[CLIENT] Circuit breaker status for {community_name}: "
                     f"{circuit.get_status()}"
                 )
 
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Network error querying PolySwarm ({community_name}): {str(e)}"
             )
             error_info = {
@@ -512,10 +531,10 @@ class ConnectorClient:
 
         except (ValueError, TypeError, KeyError, AttributeError) as e:
             # Data parsing errors - don't necessarily trigger circuit breaker
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Data parsing error for PolySwarm ({community_name}): {str(e)}"
             )
-            self.helper.log_error(f"Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(f"Traceback: {traceback.format_exc()}")
             error_info = self._parse_api_error(e, community_name)
             return None, error_info
 
@@ -524,10 +543,10 @@ class ConnectorClient:
             if circuit:
                 circuit.record_failure()
 
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Unexpected error querying PolySwarm ({community_name}): {str(e)}"
             )
-            self.helper.log_error(f"Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(f"Traceback: {traceback.format_exc()}")
             error_info = self._parse_api_error(e, community_name)
             return None, error_info
 
@@ -561,7 +580,7 @@ class ConnectorClient:
         try:
             # If community is private, query both communities IN PARALLEL
             if self.polyswarm_community.lower() == "private" and self.polyswarm_default:
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"Querying BOTH private and default communities in PARALLEL for hash: {hash_value}"
                 )
                 result["multi_community"] = True
@@ -595,7 +614,7 @@ class ConnectorClient:
                             else:
                                 default_data, default_error = data, error
                         except Exception as e:
-                            self.helper.log_error(
+                            self.helper.connector_logger.error(
                                 f"[CLIENT] Parallel query failed for {community}: {str(e)}"
                             )
                             if community == "private":
@@ -622,7 +641,7 @@ class ConnectorClient:
                 # Determine what to return based on results
                 if private_data and default_data:
                     # Both have results - determine which is more recent
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "[CLIENT] Results found in BOTH private and default communities"
                     )
 
@@ -633,14 +652,14 @@ class ConnectorClient:
                         if private_last_seen >= default_last_seen:
                             result["primary"] = private_data
                             result["secondary"] = default_data
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[CLIENT] Using PRIVATE as primary "
                                 f"(last_seen: {private_data['last_seen']} >= {default_data['last_seen']})"
                             )
                         else:
                             result["primary"] = default_data
                             result["secondary"] = private_data
-                            self.helper.log_info(
+                            self.helper.connector_logger.info(
                                 f"[CLIENT] Using DEFAULT as primary "
                                 f"(last_seen: {default_data['last_seen']} > {private_data['last_seen']})"
                             )
@@ -657,21 +676,21 @@ class ConnectorClient:
                     result["data"] = result["primary"]
 
                 elif private_data:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "[CLIENT] Results found only in PRIVATE community"
                     )
                     result["data"] = private_data
                     result["primary"] = private_data
 
                 elif default_data:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "[CLIENT] Results found only in DEFAULT community"
                     )
                     result["data"] = default_data
                     result["primary"] = default_data
 
                 else:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "[CLIENT] No results found in either community"
                     )
                     # Add "no results" info if no other errors
@@ -707,8 +726,10 @@ class ConnectorClient:
             return result
 
         except Exception as e:
-            self.helper.log_error(f"Error querying PolySwarm SDK: {str(e)}")
-            self.helper.log_error(f"Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(
+                f"Error querying PolySwarm SDK: {str(e)}"
+            )
+            self.helper.connector_logger.error(f"Traceback: {traceback.format_exc()}")
             result["errors"].append(
                 {
                     "community": self.polyswarm_community,
@@ -741,13 +762,13 @@ class ConnectorClient:
                 timeout=2,
             )
             if resp.status_code in (200, 204):
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CLIENT] Connected to polykg profile API at {self._polykg_url}"
                 )
             else:
                 resp.raise_for_status()
         except requests.RequestException as e:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[CLIENT] polykg profile API at {self._polykg_url} is not reachable: {e}. "
                 "Profile enrichment will attempt lookups on demand."
             )
@@ -757,13 +778,17 @@ class ConnectorClient:
 
         Returns the profile dict or None if not found / unreachable.
         """
+        if not self._polykg_enabled:
+            return None
         if not family_name:
             return None
 
         circuit = self._circuit_breakers["polykg"]
         can_execute, reason = circuit.can_execute()
         if not can_execute:
-            self.helper.log_debug(f"[CLIENT] polykg circuit open: {reason}")
+            self.helper.connector_logger.debug(
+                f"[CLIENT] polykg circuit open: {reason}"
+            )
             return None
 
         try:
@@ -775,30 +800,36 @@ class ConnectorClient:
             )
 
             if resp.status_code == 404:
-                self.helper.log_debug(f"[CLIENT] No polykg profile for: {family_name}")
+                self.helper.connector_logger.debug(
+                    f"[CLIENT] No polykg profile for: {family_name}"
+                )
                 return None
 
             resp.raise_for_status()
             circuit.record_success()
             profile = resp.json()
-            self.helper.log_info(f"[CLIENT] Fetched polykg profile for: {family_name}")
+            self.helper.connector_logger.info(
+                f"[CLIENT] Fetched polykg profile for: {family_name}"
+            )
             return profile
 
         except requests.exceptions.ConnectionError:
             circuit.record_failure()
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[CLIENT] Cannot reach polykg API for {family_name}. "
                 f"Circuit breaker open for {circuit.cooldown_seconds}s."
             )
             return None
         except requests.RequestException as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CLIENT] Error fetching profile for {family_name}: {e}"
             )
             return None
 
     def has_profiles(self) -> bool:
         """Check if the polykg profile endpoint is reachable."""
+        if not self._polykg_enabled:
+            return False
         try:
             resp = requests.get(
                 f"{self._polykg_url}/v3/kg/profile",
@@ -815,10 +846,14 @@ class ConnectorClient:
         Returns dict with 'techniques' and 'type_mappings' keys,
         or None if polykg is unreachable.
         """
+        if not self._polykg_enabled:
+            return None
         circuit = self._circuit_breakers["polykg"]
         can_execute, reason = circuit.can_execute()
         if not can_execute:
-            self.helper.log_debug(f"[CLIENT] polykg circuit open: {reason}")
+            self.helper.connector_logger.debug(
+                f"[CLIENT] polykg circuit open: {reason}"
+            )
             return None
 
         try:
@@ -830,20 +865,20 @@ class ConnectorClient:
             resp.raise_for_status()
             circuit.record_success()
             data = resp.json()
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CLIENT] Loaded {len(data.get('techniques', {}))} techniques, "
                 f"{len(data.get('type_mappings', {}))} type mappings from polykg"
             )
             return data
         except requests.exceptions.ConnectionError:
             circuit.record_failure()
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[CLIENT] Cannot reach polykg for attack patterns. "
                 f"Circuit breaker open for {circuit.cooldown_seconds}s."
             )
             return None
         except requests.RequestException as e:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[CLIENT] polykg attack-patterns fetch failed: {e}"
             )
             return None
@@ -862,7 +897,9 @@ class ConnectorClient:
             return None
 
         try:
-            self.helper.log_info(f"[CLIENT] Fetching IOCs for hash: {sha256}")
+            self.helper.connector_logger.info(
+                f"[CLIENT] Fetching IOCs for hash: {sha256}"
+            )
             result = self.polyswarm.iocs_by_hash("sha256", sha256, hide_known_good=True)
             data = result.json
 
@@ -888,7 +925,7 @@ class ConnectorClient:
                 "imphash": data.get("imphash", ""),
             }
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CLIENT] IOCs found: {len(filtered_ips)} IPs "
                 f"(filtered from {len(raw_ips)}), "
                 f"{len(ioc_data['urls'])} URLs, "
@@ -898,11 +935,15 @@ class ConnectorClient:
             return ioc_data
 
         except polyswarm_exceptions.NoResultsException:
-            self.helper.log_info(f"[CLIENT] No IOC data for hash: {sha256}")
+            self.helper.connector_logger.info(
+                f"[CLIENT] No IOC data for hash: {sha256}"
+            )
             return None
         except (ConnectionError, TimeoutError, OSError) as e:
-            self.helper.log_warning(f"[CLIENT] IOC fetch network error: {e}")
+            self.helper.connector_logger.warning(
+                f"[CLIENT] IOC fetch network error: {e}"
+            )
             return None
         except polyswarm_exceptions.RequestException as e:
-            self.helper.log_warning(f"[CLIENT] IOC fetch API error: {e}")
+            self.helper.connector_logger.warning(f"[CLIENT] IOC fetch API error: {e}")
             return None

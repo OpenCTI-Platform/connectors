@@ -19,9 +19,9 @@ from connector.models import (
     ReputationResponseModel,
 )
 from connector.services.client_api import ProofpointEtIntelligenceClient
-from connector.services.config_variables import ProofpointEtIntelligenceConfig
 from connector.services.converter_to_stix import ConverterToStix
 from connector.services.utils import DateTimeFormat, Utils
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
 from tenacity import RetryError
@@ -37,39 +37,15 @@ class ProofpointEtIntelligenceConnector:
     The STIX bundle in the queue will be processed by the workers.
     This type of connector uses the basic methods of the helper.
     Ingesting a bundle allow the connector to be compatible with the playbook automation feature.
-
-    Attributes
-        self.config (ProofpointEtIntelligenceConfig()):
-            Initialize the connector with necessary configuration environment variables
-
-        self.helper (OpenCTIConnectorHelper(config)):
-            This is the helper to use.
-            ALL connectors have to instantiate the connector helper with configurations.
-            Doing this will do a lot of operations behind the scene.
-
-        self.client (ProofpointEtIntelligenceClient(self.helper, self.config):
-
-        self.converter_to_stix (ConnectorConverter(helper)):
-            Provide methods for converting various types of input data into STIX 2.1 objects.
-
-        self.stix_objects (list):
-
-    Notes
-        - self.helper.connector_logger.[info/debug/warning/error] is used when logging a message
-        - self.helper.stix2_create_bundle(stix_objects) is used when creating a bundle
-        - self.helper.send_stix2_bundle(stix_objects_bundle) is used to send the bundle to RabbitMQ
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """Initialize the Connector with necessary configurations"""
-
-        # Load configuration file and connection helper
-        self.config = ProofpointEtIntelligenceConfig()
-        # playbook_compatible=True only if a bundle is sent !
-        self.helper = OpenCTIConnectorHelper(
-            config=self.config.load, playbook_compatible=True
+        self.helper = helper
+        self.config = config
+        self.client = ProofpointEtIntelligenceClient(
+            self.helper, self.config.proofpoint_et_intelligence
         )
-        self.client = ProofpointEtIntelligenceClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper)
         self.utils = Utils()
 
@@ -80,16 +56,14 @@ class ProofpointEtIntelligenceConnector:
         self, entity_type: str, entity_value: str, stix_object: list[dict]
     ) -> int:
         """
-
         Args:
             entity_type:
             entity_value:
             stix_object:
 
         Returns:
-
+            int: number of bundles sent
         """
-
         work_id = self._initiate_work(entity_type, entity_value)
         bundle_sent = self._send_intelligence(
             stix_object, (None if self.is_playbook else work_id)
@@ -129,13 +103,11 @@ class ProofpointEtIntelligenceConnector:
         """Send the transformed intelligence data to OpenCTI.
 
         This method prepares and sends unique STIX objects to OpenCTI.
-        This method takes a list of objects prepared by the models, extracts their STIX representations, creates a serialized STIX bundle and It then sends this bundle to OpenCTI.
-        If prepared objects exist, the method ensures that only unique objects with an 'id' attribute are included. After sending the STIX objects, it keeps inform of the number of bundles sent.
         Args:
             work_id (str): The unique identifier for the work process associated with the STIX objects.
             stix_objects (list): A list of objects containing STIX representations to be sent to OpenCTI.
         Returns:
-            None
+            int: number of bundles sent
         """
         self.helper.connector_logger.info(
             "[CONNECTOR] Start sending data for ProofPoint ET Intelligence..."
@@ -157,10 +129,9 @@ class ProofpointEtIntelligenceConnector:
     def _complete_work(self, entity_type: str, entity_value: str, work_id: str) -> None:
         """
         Marks the work process as complete.
-        This method logs the completion of the work for a specific work ID.
-        Sends a request to the API with the to_processed method to complete the work.
         Args:
             entity_type (str): Enriched entity type ("IPv4-Addr", "Domain-Name", "StixFile").
+            entity_value (str):
             work_id (str): The unique identifier of the work to mark as complete.
         Returns:
             None
@@ -229,13 +200,12 @@ class ProofpointEtIntelligenceConnector:
         self, entity_value: str, source_entity_type: str
     ) -> dict:
         """
-
         Args:
             entity_value:
             source_entity_type:
 
         Returns:
-
+            dict
         """
         try:
             tasks = {
@@ -244,7 +214,6 @@ class ProofpointEtIntelligenceConnector:
                 ),
             }
             raw_results = await asyncio.gather(*tasks.values(), return_exceptions=True)
-            # Reassign keys by task name
             results = {
                 task_name: result
                 for task_name, result in zip(tasks.keys(), raw_results)
@@ -263,13 +232,12 @@ class ProofpointEtIntelligenceConnector:
         self, entity_value: str, source_entity_type: str
     ) -> dict:
         """
-
         Args:
             entity_value:
             source_entity_type:
 
         Returns:
-
+            dict
         """
         try:
             tasks = {
@@ -282,7 +250,6 @@ class ProofpointEtIntelligenceConnector:
                 ),
             }
             raw_results = await asyncio.gather(*tasks.values(), return_exceptions=True)
-            # Reassign keys by task name
             results = {
                 task_name: result
                 for task_name, result in zip(tasks.keys(), raw_results)
@@ -301,13 +268,12 @@ class ProofpointEtIntelligenceConnector:
         self, entity_value: str, source_entity_type: str
     ) -> dict:
         """
-
         Args:
             entity_value:
             source_entity_type:
 
         Returns:
-
+            dict
         """
         try:
             tasks = {
@@ -326,7 +292,6 @@ class ProofpointEtIntelligenceConnector:
                 "get_asn": self.client.get_asn(entity_value, source_entity_type),
             }
             raw_results = await asyncio.gather(*tasks.values(), return_exceptions=True)
-            # Reassign keys by task name
             results = {
                 task_name: result
                 for task_name, result in zip(tasks.keys(), raw_results)
@@ -345,13 +310,12 @@ class ProofpointEtIntelligenceConnector:
         self, entity_type: str, entity_value: str
     ) -> dict:
         """
-
         Args:
             entity_type:
             entity_value:
 
         Returns:
-
+            dict
         """
         try:
             self.helper.connector_logger.info(
@@ -393,9 +357,11 @@ class ProofpointEtIntelligenceConnector:
         """
         Verify, transform and prepare the collected intelligence data.
         Args:
+            stix_entity:
             collected_intelligence:
 
         Returns:
+            list[dict]
 
         Notes:
             1. Validate collected intelligence with models
@@ -429,12 +395,11 @@ class ProofpointEtIntelligenceConnector:
 
     def _valid_intelligence(self, collected_intelligence: dict) -> dict:
         """
-
         Args:
             collected_intelligence:
 
         Returns:
-
+            dict
         """
         try:
             self.helper.connector_logger.info(
@@ -457,7 +422,6 @@ class ProofpointEtIntelligenceConnector:
             }
 
             for task_name, results in collected_intelligence.items():
-
                 if task_name not in task_models:
                     continue
 
@@ -542,12 +506,11 @@ class ProofpointEtIntelligenceConnector:
 
     def _aggregate_and_filter_intelligence(self, validated_intelligence: dict) -> dict:
         """
-
         Args:
             validated_intelligence:
 
         Returns:
-
+            dict
         """
         try:
             self.helper.connector_logger.info(
@@ -558,12 +521,12 @@ class ProofpointEtIntelligenceConnector:
             # We calculate the deadline according to the time window chosen by the user.
             limit_date = (
                 self.utils.get_now(DateTimeFormat.DATETIME)
-                - self.config.extra_import_last_seen_time_window
+                - self.config.proofpoint_et_intelligence.import_last_seen_time_window
             )
 
             # Filters out entities whose last activity date (`last_seen`) is later than `limit_date`.
             # Used for domains, malwares, ips
-            filter_by_last_seen = lambda entities: [
+            filter_by_last_seen = lambda entities: [  # noqa: E731
                 entity
                 for entity in entities
                 if entity.get("last_seen") and entity["last_seen"] >= limit_date.date()
@@ -600,12 +563,12 @@ class ProofpointEtIntelligenceConnector:
         self, stix_entity: dict, aggregated_intelligence: dict
     ) -> list[dict]:
         """
-
         Args:
+            stix_entity:
             aggregated_intelligence:
 
         Returns:
-
+            list[dict]
         """
         try:
             self.helper.connector_logger.info(
@@ -719,7 +682,6 @@ class ProofpointEtIntelligenceConnector:
                         stix_objects.append(make_relationship)
 
             # Filters objects to retain only those with a unique ID, preventing duplication in the final list.
-
             unique_ids = set()
             stix_representation_objects = [
                 obj.stix2_representation
@@ -742,25 +704,15 @@ class ProofpointEtIntelligenceConnector:
         """Extracts the highest TLP marking from the specified OpenCTI entity and ensures it is within the maximum
         allowed TLP level configured for the connector.
 
-        This method processes the `objectMarking` list from the `opencti_entity`, identifies all TLP markings, and
-        retains the highest TLP level based on a predefined hierarchy. If the highest TLP level exceeds the connector's
-        configured maximum TLP level, an exception is raised, indicating that enrichment of the entity was unsuccessful.
-
         Args:
-            opencti_entity (dict): A dictionary representing an entity from OpenCTI. The dictionary must include an
-            `objectMarking` key, which contains a list of marking definitions, including TLP levels.
+            opencti_entity (dict): A dictionary representing an entity from OpenCTI.
 
         Raises:
             ValueError: If the entity's highest TLP level exceeds the maximum TLP level allowed by the connector
             configuration.
 
         Returns:
-            None: This method does not return any value. It performs a validation check to determine whether the
-            entity's TLP level meets the configured requirements.
-
-        Notes :
-            - The method defines a hierarchy for TLP levels as follows:
-            "TLP:WHITE" < "TLP:CLEAR" < "TLP:GREEN" < "TLP:AMBER" < "TLP:AMBER+STRICT" < "TLP:RED".
+            None
         """
         highest_tlp_entity = None
         entity_marking = opencti_entity.get("objectMarking", [])
@@ -789,7 +741,7 @@ class ProofpointEtIntelligenceConnector:
                 highest_tlp_entity = current_tlp
 
         valid_max_tlp = self.helper.check_max_tlp(
-            highest_tlp_entity, self.config.extra_max_tlp
+            highest_tlp_entity, self.config.proofpoint_et_intelligence.max_tlp
         )
 
         if not valid_max_tlp:
@@ -803,11 +755,11 @@ class ProofpointEtIntelligenceConnector:
         """
         Security to limit playbook triggers to something other than the initial entity scope
         """
-        scopes = self.config.connector_scope.lower().split(",")
+        scopes = [scope.strip().lower() for scope in self.config.connector.scope]
         entity_type = data.get("x_opencti_type", data.get("type")).lower()
 
         if entity_type == "stixfile" or entity_type == "file":
-            if not "MD5" in data.get("hashes", {}):
+            if "MD5" not in data.get("hashes", {}):
                 self.helper.connector_logger.debug(
                     "[CONNECTOR] Enrichment of the entity was unsuccessful: the entity of type 'StixFile' or 'File' "
                     "does not contain an 'MD5' hash in the 'hashes' attribute, which is required for "
@@ -817,12 +769,11 @@ class ProofpointEtIntelligenceConnector:
 
         return entity_type in scopes
 
-    def process_message(self, data: dict) -> str:
-        """The main process used by the connector to collect intelligence
-        This method launches the connector, processes the current state, collects .
+    def process_message(self, data: dict) -> str | None:
+        """The main process used by the connector to collect intelligence.
 
         Returns:
-            str : messages
+            str: messages
         """
         try:
             get_now = self.utils.get_now()

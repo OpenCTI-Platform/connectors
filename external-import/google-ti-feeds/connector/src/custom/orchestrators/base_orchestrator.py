@@ -128,3 +128,31 @@ class BaseOrchestrator:
         batch_processor.add_item(converter.organization)
         batch_processor.add_item(converter.tlp_marking)
         batch_processor.add_items(all_entities)
+
+    @staticmethod
+    def _filter_subentity_types(subentity_types: list[str], entity: Any) -> list[str]:
+        """Filter subentity types based on the entity's counters.
+
+        When the entity exposes a ``counters`` object (via ``attributes.counters``),
+        subentity types whose counter is explicitly ``0`` are removed from the
+        list to avoid unnecessary API calls.
+
+        See: https://github.com/OpenCTI-Platform/connectors/issues/6562
+
+        Args:
+            subentity_types: The full list of subentity types to fetch.
+            entity: The GTI entity object (must have ``attributes.counters``).
+
+        Returns:
+            A filtered list of subentity types worth fetching.
+
+        """
+        counters = getattr(getattr(entity, "attributes", None), "counters", None)
+        if counters is None:
+            return subentity_types
+
+        return [
+            subentity_type
+            for subentity_type in subentity_types
+            if getattr(counters, subentity_type, None) != 0
+        ]

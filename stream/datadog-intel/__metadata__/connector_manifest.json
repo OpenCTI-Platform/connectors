@@ -1,0 +1,26 @@
+{
+  "title": "Datadog Intel",
+  "slug": "datadog-intel",
+  "description": "The Datadog Intel connector streams OpenCTI indicators to a configurable HTTP endpoint for ingestion into Datadog. It supports create, update, and delete operations and performs an initial full synchronization on first run.",
+  "short_description": "Stream OpenCTI STIX indicators to a Datadog HTTP endpoint.",
+  "logo": "stream/datadog-intel/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.13",
+  "subscription_link": "https://www.datadoghq.com/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/datadog-intel",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-datadog-intel",
+  "container_type": "STREAM"
+}

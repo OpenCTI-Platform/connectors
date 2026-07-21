@@ -21,11 +21,18 @@ def parse_version(version) -> Tuple[int, int, int]:
     return nums[0], nums[1], nums[2]
 
 
-def media_type_by_version(version: str) -> str:
+def accept_header_by_taxii_version(version: str) -> str:
     if parse_version(version) >= (2, 1, 0):
         return f"application/taxii+json; version={version}"
     else:
         return f"application/vnd.oasis.taxii+json; version={version}"
+
+
+def content_type_by_stix_version(version: str) -> str:
+    if parse_version(version) >= (2, 1, 0):
+        return f"application/stix+json; version={version}"
+    else:
+        return f"application/vnd.oasis.stix+json; version={version}"
 
 
 class TaxiiPostConnector:
@@ -59,8 +66,8 @@ class TaxiiPostConnector:
             + "/objects/"
         )
         headers = {
-            "Content-Type": media_type_by_version(self.config.stix_version),
-            "Accept": media_type_by_version(self.config.version),
+            "Content-Type": content_type_by_stix_version(self.config.stix_version),
+            "Accept": accept_header_by_taxii_version(self.config.version),
         }
         try:
             data_object = data
@@ -111,7 +118,11 @@ class TaxiiPostConnector:
                     url,
                     headers=headers,
                     auth=(
-                        self.config.login,
+                        (
+                            self.config.login.get_secret_value()
+                            if self.config.login is not None
+                            else None
+                        ),
                         (
                             self.config.password.get_secret_value()
                             if self.config.password

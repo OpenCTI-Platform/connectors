@@ -5,8 +5,14 @@
   "short_description": "MITRE ATLAS is a globally accessible, living knowledge base of adversary tactics and techniques against AI-enabled systems based on real-world attack observations and realistic demonstrations from AI red teams and security groups.",
   "logo": "external-import/mitre-atlas/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed",
+    "AI Security"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

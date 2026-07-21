@@ -1,0 +1,37 @@
+{
+  "data": [
+    {
+      "added_rules": [
+        {
+          "id": "sig-001",
+          "name": "Exposed admin panel",
+          "description": "An administrative interface is publicly accessible.",
+          "classification": "high",
+          "rule_metadata": {
+            "entity_counts": {
+              "domains": 2,
+              "ips": 1
+            }
+          }
+        }
+      ],
+      "removed_rules": [
+        {
+          "id": "sig-002",
+          "name": "Open port 22",
+          "description": "SSH port detected on public IP.",
+          "classification": "moderate",
+          "rule_metadata": {
+            "entity_counts": {
+              "domains": 0,
+              "ips": 3
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "project_id": "test-project-id"
+  }
+}

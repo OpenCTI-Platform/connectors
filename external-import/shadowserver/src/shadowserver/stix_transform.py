@@ -1,5 +1,6 @@
 import base64
 import copy
+import logging
 from datetime import datetime
 
 import magic
@@ -24,9 +25,9 @@ class ShadowserverStixTransformation:
         marking_refs: stix2.MarkingDefinition,
         report_list: list,
         report: dict,
-        api_helper: pycti.OpenCTIConnectorHelper,
         incident: dict = {},
         labels: list = ["Shadowserver"],
+        logger: logging.Logger = None,
     ):
         """
         Initializes a ShadowserverStixTransformation object with the provided parameters.
@@ -35,13 +36,12 @@ class ShadowserverStixTransformation:
             marking_refs (stix2.MarkingDefinition): The marking references for the transformation.
             report_list (list): The list of reports for transformation.
             report (dict): The report details for transformation.
-            api_helper (OpenCTIConnectorHelper): The helper for the OpenCTI connector.
             labels (list): The labels associated with the transformation (default is ['Shadowserver']).
 
         Returns:
             None
         """
-        self.helper = api_helper
+        self._logger = logger
         self.validate_inputs(marking_refs, report_list, report)
         self.type = report.get("type", None)
         self.url = report.get("url", None)
@@ -83,13 +83,13 @@ class ShadowserverStixTransformation:
             if self.incident.get("create", False):
                 self.create_opencti_case(labels=label_list, severity=severity)
             else:
-                self.helper.connector_logger.info(
+                self._logger.info(
                     "Not creating incident because 'create' is set to False."
                 )
             self.create_stix_report(labels=label_list)
             self.create_stix_note_from_data(labels=label_list)
         else:
-            self.helper.connector_logger.error(
+            self._logger.error(
                 "No object references found, not creating incident, report, or note."
             )
 
@@ -121,20 +121,16 @@ class ShadowserverStixTransformation:
         stix_object = None
 
         if value:
-            self.helper.connector_logger.debug(f"Creating {key} STIX object: {value}")
+            self._logger.debug(f"Creating {key} STIX object: {value}")
             stix_object = create_method(value=value, labels=labels)
 
         if stix_object:
-            self.helper.connector_logger.debug(
-                f"Created {key} STIX object: {stix_object.id}"
-            )
+            self._logger.debug(f"Created {key} STIX object: {stix_object.id}")
             self.object_refs.append(stix_object.id)
             self.stix_objects.append(stix_object)
             return stix_object.get("id")
         elif stix_object is None and value:
-            self.helper.connector_logger.warning(
-                f"Failed to create {key}", {"value": value}
-            )
+            self._logger.warning(f"Failed to create {key}", {"value": value})
 
     def validate_inputs(self, marking_refs, report_list, report):
         """
@@ -148,7 +144,7 @@ class ShadowserverStixTransformation:
         Raises:
             ValueError: If the marking references are invalid, the report list is empty, or the report is not a dictionary.
         """
-        self.helper.connector_logger.debug("Validating inputs.")
+        self._logger.debug("Validating inputs.")
         if not isinstance(marking_refs, stix2.MarkingDefinition):
             raise ValueError(f"Invalid marking references: {marking_refs}")
         if not isinstance(report_list, list) or not report_list:
@@ -166,7 +162,7 @@ class ShadowserverStixTransformation:
         Returns:
             A string representing the published date, converted to a specific format.
         """
-        self.helper.connector_logger.debug("Getting published date.")
+        self._logger.debug("Getting published date.")
         try:
             if (
                 report_list
@@ -177,7 +173,7 @@ class ShadowserverStixTransformation:
                     string_to_datetime(report_list[0].get("timestamp"))
                 )
         except Exception as e:
-            self.helper.connector_logger.error(f"Error parsing published date: {e}")
+            self._logger.error(f"Error parsing published date: {e}")
         return datetime_to_string(datetime.now())
 
     def get_stix_objects(self):
@@ -190,7 +186,7 @@ class ShadowserverStixTransformation:
         """
         Creates an external reference with source name 'source', description 'Shadowserver Report', and URL based on the provided self.url.
         """
-        self.helper.connector_logger.info(f"Creating external reference: ({self.url}).")
+        self._logger.info(f"Creating external reference: ({self.url}).")
         self.external_reference = {
             "source_name": "source",
             "description": "Shadowserver Report",
@@ -207,9 +203,7 @@ class ShadowserverStixTransformation:
         Returns:
             None
         """
-        self.helper.connector_logger.debug(
-            f"Creating OpenCTI case: {self.report.get('id')}"
-        )
+        self._logger.debug(f"Creating OpenCTI case: {self.report.get('id')}")
         description = self.create_description()
         kwargs = {
             "id": pycti.CaseIncident.generate_id(
@@ -233,7 +227,7 @@ class ShadowserverStixTransformation:
         if self.case_id:
             self.stix_objects.append(opencti_obj)
         else:
-            self.helper.connector_logger.warning(
+            self._logger.warning(
                 "Failed to create OpenCTI case",
                 {"report_id": self.report.get("id", None)},
             )
@@ -257,14 +251,12 @@ class ShadowserverStixTransformation:
         Returns:
             None
         """
-        self.helper.connector_logger.debug("Uploading Shadowserver report as artifact.")
+        self._logger.debug("Uploading Shadowserver report as artifact.")
         csv_str_enc = from_list_to_csv(report_list).encode()
         mime_type = magic.from_buffer(csv_str_enc, mime=True)
         base64_encoded_str = base64.b64encode(csv_str_enc).decode("utf-8")
 
-        self.helper.connector_logger.info(
-            f"Uploading Shadowserver report as artifact: {self.report}."
-        )
+        self._logger.info(f"Uploading Shadowserver report as artifact: {self.report}.")
 
         artifact = stix2.Artifact(
             payload_bin=base64_encoded_str,
@@ -279,7 +271,7 @@ class ShadowserverStixTransformation:
             self.artifact_id = artifact.get("id")
             self.stix_objects.append(artifact)
         else:
-            self.helper.connector_logger.warning(
+            self._logger.warning(
                 "Failed to upload Shadowserver report as artifact",
                 {"report": self.report},
             )
@@ -325,14 +317,14 @@ class ShadowserverStixTransformation:
         if self.report_id:
             self.stix_objects.append(stix_report)
         else:
-            self.helper.connector_logger.warning(
+            self._logger.warning(
                 "Failed to create OpenCTI case",
                 {"report_id": self.report.get("id", None)},
             )
 
     def create_author(self):
         """Creates the author of the report."""
-        self.helper.connector_logger.debug("Creating author: Shadowserver Connector")
+        self._logger.debug("Creating author: Shadowserver Connector")
         kwargs = {
             "name": "Shadowserver Connector",
             "identity_class": "Organization",
@@ -385,7 +377,7 @@ class ShadowserverStixTransformation:
             "src_ip": self.create_ip,
             "dst_ip": self.create_ip,
         }
-        self.helper.connector_logger.debug("Mapping Shadowserver report to STIX.")
+        self._logger.debug("Mapping Shadowserver report to STIX.")
         observed_data_list = []
         labels_list = self.custom_properties.get("x_opencti_labels", []).copy()
 
@@ -423,9 +415,7 @@ class ShadowserverStixTransformation:
                 first_observed=first_observed,
             )
         else:
-            self.helper.connector_logger.error(
-                f"Unable to create observed data for element: {element}"
-            )
+            self._logger.error(f"Unable to create observed data for element: {element}")
 
         return labels_list
 
@@ -445,10 +435,10 @@ class ShadowserverStixTransformation:
             custom_labels = element.get("tag").split(";")
             for label in custom_labels:
                 if label.upper().startswith("CVE"):
-                    self.helper.connector_logger.debug(f"Label is CVE: {label}")
+                    self._logger.debug(f"Label is CVE: {label}")
                     self.create_vulnerability(label)
             labels_list.extend(custom_labels)
-        self.helper.connector_logger.debug(f"Labels: {labels_list}")
+        self._logger.debug(f"Labels: {labels_list}")
         return labels_list
 
     def extend_stix_object(self, kwargs: dict, labels: list = []):
@@ -463,9 +453,7 @@ class ShadowserverStixTransformation:
 
     def create_vulnerability(self, name: str):
         """Creates a vulnerability STIX object."""
-        self.helper.connector_logger.debug(
-            f"Creating vulnerability STIX object: {name}"
-        )
+        self._logger.debug(f"Creating vulnerability STIX object: {name}")
         kwargs = {
             "type": "vulnerability",
             "name": name.upper(),
@@ -487,7 +475,7 @@ class ShadowserverStixTransformation:
 
     def create_asn(self, value: int, labels: list = []):
         """Creates an autonomous system STIX object."""
-        self.helper.connector_logger.debug(f"Creating ASN STIX object: {value}")
+        self._logger.debug(f"Creating ASN STIX object: {value}")
         kwargs = {
             "type": "autonomous-system",
             "number": value,
@@ -497,7 +485,7 @@ class ShadowserverStixTransformation:
 
     def create_ip(self, value: str, labels: list = []):
         """Creates an IP address STIX object."""
-        self.helper.connector_logger.debug(f"Creating IP STIX object: {value}")
+        self._logger.debug(f"Creating IP STIX object: {value}")
         kwargs = {"value": value}
         self.extend_stix_object(kwargs, labels)
 
@@ -508,16 +496,16 @@ class ShadowserverStixTransformation:
             kwargs["type"] = "ipv6-addr"
             return stix2.IPv6Address(**kwargs)
         else:
-            self.helper.connector_logger.error(f"Invalid IP address: {value}")
+            self._logger.error(f"Invalid IP address: {value}")
             return {}
 
     def create_hostname(self, value: str, labels: list = []):
         """Creates a hostname STIX object."""
         if not value:
-            self.helper.connector_logger.error("Hostname value is missing.")
+            self._logger.error("Hostname value is missing.")
             return None
 
-        self.helper.connector_logger.debug(f"Creating hostname STIX object: {value}")
+        self._logger.debug(f"Creating hostname STIX object: {value}")
         kwargs = {"type": "domain-name", "value": value}
         self.extend_stix_object(kwargs, labels)
         return stix2.DomainName(**kwargs)
@@ -525,10 +513,10 @@ class ShadowserverStixTransformation:
     def create_mac_address(self, value: str, labels: list = []):
         """Creates a MAC address STIX object."""
         if not value:
-            self.helper.connector_logger.error("MAC address value is missing.")
+            self._logger.error("MAC address value is missing.")
             return None
 
-        self.helper.connector_logger.debug(f"Creating MAC address STIX object: {value}")
+        self._logger.debug(f"Creating MAC address STIX object: {value}")
         kwargs = {"type": "mac-addr", "value": value}
         self.extend_stix_object(kwargs, labels)
         return stix2.MACAddress(**kwargs)
@@ -551,7 +539,7 @@ class ShadowserverStixTransformation:
         if labels is None:
             labels = []
 
-        self.helper.connector_logger.debug("Creating network traffic STIX object.")
+        self._logger.debug("Creating network traffic STIX object.")
         kwargs = {
             "type": "network-traffic",
             "start": self.published,
@@ -591,14 +579,12 @@ class ShadowserverStixTransformation:
         stix_object = stix2.NetworkTraffic(**kwargs)
 
         if stix_object:
-            self.helper.connector_logger.debug(
-                f"Created network traffic STIX object: {stix_object.id}"
-            )
+            self._logger.debug(f"Created network traffic STIX object: {stix_object.id}")
             stix_object_id = stix_object.get("id", str())
             self.object_refs.append(stix_object.id)
             self.stix_objects.append(stix_object)
         else:
-            self.helper.connector_logger.warning(
+            self._logger.warning(
                 "Failed to create network traffic STIX object",
                 {"stix_object_id": stix_object.id},
             )
@@ -607,9 +593,7 @@ class ShadowserverStixTransformation:
     def create_x509_certificate(self, data: dict, labels: list = []):
         """Creates an X509 certificate STIX object."""
         stix_object_id = str()
-        self.helper.connector_logger.debug(
-            f"Creating X509 certificate STIX object: {data}"
-        )
+        self._logger.debug(f"Creating X509 certificate STIX object: {data}")
         kwargs = {"type": "x509-certificate"}
 
         hashes = {
@@ -640,15 +624,16 @@ class ShadowserverStixTransformation:
         stix_object = stix2.X509Certificate(**kwargs)
 
         if stix_object:
-            self.helper.connector_logger.debug(
+            self._logger.debug(
                 f"Created X509 certificate STIX object: {stix_object.get('id')}"
             )
             self.object_refs.append(stix_object.get("id"))
             self.stix_objects.append(stix_object)
             stix_object_id = stix_object.get("id", str())
         else:
-            self.helper.connector_logger.warning(
-                "Failed to create X509 certificate STIX object", {"data": data}
+            self._logger.warning(
+                "Failed to create X509 certificate STIX object",
+                {"data": data},
             )
         return stix_object_id
 
@@ -660,9 +645,7 @@ class ShadowserverStixTransformation:
         last_observed: datetime = None,
     ):
         """Creates an observed data STIX object."""
-        self.helper.connector_logger.debug(
-            f"Creating observed data STIX object: {observables_list}"
-        )
+        self._logger.debug(f"Creating observed data STIX object: {observables_list}")
         try:
             observables = [obs for obs in observables_list if obs]
             if not observables:
@@ -684,12 +667,12 @@ class ShadowserverStixTransformation:
             )
 
             if stix_object:
-                self.helper.connector_logger.debug(
+                self._logger.debug(
                     f"Created observed data STIX object: {stix_object.get('id')}"
                 )
                 self.stix_objects.append(stix_object)
         except Exception as e:
-            self.helper.connector_logger.error(f"Error creating observed data: {e}")
+            self._logger.error(f"Error creating observed data: {e}")
 
     def create_stix_note_from_data(self, labels: list = []):
         """
@@ -745,8 +728,8 @@ class ShadowserverStixTransformation:
                     self.stix_objects.append(stix_object)
                     self.object_refs.append(stix_object.get("id"))
             else:
-                self.helper.connector_logger.warning(
-                    "Failed to create STIX note from data", {"report": element}
+                self._logger.warning(
+                    f"Failed to create STIX note from data | report={element}"
                 )
 
     def stix_object_exists(self, stix_object_id: str) -> bool:

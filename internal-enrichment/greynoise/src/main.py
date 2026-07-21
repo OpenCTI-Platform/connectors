@@ -217,7 +217,7 @@ class GreyNoiseConnector:
                 "#57B9FF",
             )
 
-        if data["internet_scanner_intelligence"]["bot"] is True:
+        if data["internet_scanner_intelligence"].get("bot") is True:
             # Create label for "Known Bot Activity"
             self._create_custom_label("Known BOT Activity", "#7e4ec2")
 

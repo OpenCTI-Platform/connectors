@@ -19,12 +19,15 @@ services:
       - CONNECTOR_DURATION_PERIOD=PT12H # ISO 8601 period between two scheduled runs
       - CONNECTOR_PULL_HISTORY=false # Set to true to backfill historical data; produces a large initial ingest
       - CONNECTOR_HISTORY_START_YEAR=2023 # Data only goes back to 2020
-      # Optional entity-creation flags. Every flag defaults to false so
-      # the connector's default bundle stays minimal; opt in explicitly.
+      # Entity-creation flags.
+      # create_intrusion_set and create_report default to true (pre-PR #5590 behaviour).
+      # create_threat_actor and create_campaign default to false (new capabilities).
       - CONNECTOR_CREATE_THREAT_ACTOR=false
-      - CONNECTOR_CREATE_INTRUSION_SET=false
+      - CONNECTOR_CREATE_INTRUSION_SET=true
       - CONNECTOR_CREATE_CAMPAIGN=false
-      - CONNECTOR_CREATE_REPORT=false
+      - CONNECTOR_CREATE_REPORT=true
+      - CONNECTOR_CREATE_LEAK_SITE_DOMAINS=false
+      - CONNECTOR_CREATE_LEAK_POST_REFS=false
       # TLP marking applied to every emitted STIX object. Allowed values:
       # TLP:CLEAR (default) / TLP:WHITE / TLP:GREEN / TLP:AMBER /
       # TLP:AMBER+STRICT / TLP:RED.

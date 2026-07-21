@@ -9,22 +9,24 @@ services:
 
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe
-      - "CONNECTOR_NAME=Microsoft Defender Incidents"
-      - CONNECTOR_SCOPE=defender # MIME type or Stix Object - Not used
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT1H
-      
+      # - "CONNECTOR_NAME=Microsoft Defender Incidents"
+      # - CONNECTOR_SCOPE=defender
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT1H
+
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
-      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
-      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
-      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
-      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_RUN_AND_TERMINATE=false # Default false, true run connector once
+      # - CONNECTOR_SEND_TO_QUEUE=true # Default true
+      # - CONNECTOR_SEND_TO_DIRECTORY=false # Default false
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe # if CONNECTOR_SEND_TO_DIRECTORY is true, you must specify a path
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - MICROSOFT_DEFENDER_INCIDENTS_TENANT_ID=ChangeMe # Azure Tentant ID
-      - MICROSOFT_DEFENDER_INCIDENTS_CLIENT_ID=ChangeMe # Azure App Client ID
-      - MICROSOFT_DEFENDER_INCIDENTS_CLIENT_SECRET=ChangeMe # Azure App Client Secret
-      - MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE=2025-01-01T00:00:00Z
+      - MICROSOFT_DEFENDER_INCIDENTS_TENANT_ID=ChangeMe
+      - MICROSOFT_DEFENDER_INCIDENTS_CLIENT_ID=ChangeMe
+      - MICROSOFT_DEFENDER_INCIDENTS_CLIENT_SECRET=ChangeMe
+      # - MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE=
+      # - MICROSOFT_DEFENDER_INCIDENTS_API_BASE_URL=https://graph.microsoft.com/v1.0
+      # - MICROSOFT_DEFENDER_INCIDENTS_INCIDENT_PATH=/security/incidents
     restart: always

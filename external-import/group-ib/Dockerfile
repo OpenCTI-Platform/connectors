@@ -12,6 +12,9 @@ WORKDIR /opt/connector/src
 RUN pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt
 RUN rm -rf /var/cache/apk/*
 
+# Support arbitrary user id
+RUN chown -R :root /opt/connector && chmod -R g+rwX /opt/connector
+
 # Expose and entrypoint
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh

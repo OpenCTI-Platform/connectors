@@ -2,6 +2,14 @@
 Thank you very much for your pull request to the OpenCTI project! We as a community driven project depend on support and contributions like this!
 
 Thus already a BIG THANK YOU upfront to you for choosing to help with your PR.
+
+PR TITLE FORMAT (enforced by CI):
+  type(scope?)!?: description (#123)
+  - type: feat | fix | chore | docs | style | refactor | perf | test | build | ci | revert
+  - scope: optional, e.g. connector name
+  - description: must start with a lowercase letter
+  - (#123): required linked issue number
+  Example: feat(alienvault): add pagination support (#42)
 -->
 
 ### Proposed changes

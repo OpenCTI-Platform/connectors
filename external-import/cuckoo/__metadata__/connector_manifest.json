@@ -1,13 +1,17 @@
 {
   "title": "Cuckoo Feed",
   "slug": "cuckoo",
-  "description": "This is a connector for syncing Cuckoo Sandbox analysis as reports and IOCs OpenCTI.",
-  "short_description": "This is a connector for syncing Cuckoo Sandbox analysis as reports and IOCs OpenCTI.",
+  "description": "Cuckoo Sandbox is an open-source automated malware analysis system that executes suspicious files in an isolated environment and monitors their behavior.\n\nThis connector polls the Cuckoo Sandbox API for completed analysis tasks and imports the results into OpenCTI as comprehensive malware analysis reports. For each completed task, it extracts behavioral indicators including network activity, dropped files, processes, and signatures, then converts them into STIX 2.1 objects.\n\nKey features:\n\n- Automatic polling for new completed analysis tasks\n- Extraction of behavioral IOCs: file hashes, network connections, dropped files, registry keys\n- Optional STIX Indicator creation for observables\n- Configurable score threshold to filter low-confidence results\n- Supports Network Traffic and Registry Key observables (configurable)\n- Incremental sync via configurable start task ID",
+  "short_description": "Polls Cuckoo Sandbox for completed malware analysis tasks and imports behavioral IOCs (file hashes, network activity, dropped files, signatures) into OpenCTI as STIX 2.1 reports and indicators.",
   "logo": "external-import/cuckoo/__metadata__/logo.png",
   "use_cases": [
-    "Malware Analysis",
-    "Sandbox"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

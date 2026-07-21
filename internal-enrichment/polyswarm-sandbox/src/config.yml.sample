@@ -6,7 +6,7 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'PolySwarm Sandbox'
-  scope: 'StixFile,Artifact'
+  scope: 'Artifact'
   auto: false
   log_level: 'error'
 
@@ -33,7 +33,7 @@ polyswarm:
   # Reports
   json_report_enabled: true
   pdf_report_enabled: true
-  llm_report_enabled: true
+  llm_report_enabled: false
   llm_report_timeout: 120
 
   # STIX creation

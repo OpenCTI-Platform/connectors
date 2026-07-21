@@ -9,6 +9,7 @@ The Google SecOps SIEM connector streams OpenCTI STIX indicators to Google SecOp
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
+    - [Google Cloud Service Account Setup](#google-cloud-service-account-setup)
   - [Configuration variables](#configuration-variables)
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
@@ -41,6 +42,33 @@ Key features:
 - pycti >= 6.4.x
 - Google Cloud service account with SecOps SIEM API access
 
+### Google Cloud Service Account Setup
+
+Follow these steps to create and configure a service account for the connector:
+
+1. **Enable the Chronicle API**
+   In the Google Cloud project linked to your SecOps instance, enable the Chronicle API (`chronicle.googleapis.com`).
+   Navigate to **APIs & Services > Library**, search for "Chronicle API", and click **Enable**.
+
+2. **Create a service account**
+   Go to **IAM & Admin > Service Accounts** and click **Create Service Account**.
+   Give it a descriptive name (e.g. `opencti-secops-connector`) and proceed to the next step.
+
+3. **Grant the Chronicle API Editor role**
+   On the "Grant this service account access to project" step, assign the role **Chronicle API Editor** (`roles/chronicle.editor`).
+   This role grants the permissions required to create, update, and delete UDM entities via the Chronicle API.
+
+4. **Create and download a JSON key**
+   Once the service account is created, go to its **Keys** tab, click **Add Key > Create new key**, select **JSON**, and download the file.
+   This JSON file contains all the fields required by the connector configuration (`private_key_id`, `private_key`, `client_email`, `client_id`, etc.).
+
+5. **Configure the connector**
+   Use the values from the downloaded JSON key file to populate the connector environment variables:
+   - `SECOPS_SIEM_PROJECT_REGION` : Your SecOps instance region (e.g. `us`, `europe`).
+   - `SECOPS_SIEM_PROJECT_ID` : The Google Cloud project ID linked to your SecOps instance.
+   - `SECOPS_SIEM_PROJECT_INSTANCE` :  Your SecOps customer ID (found under **Settings > SIEM Settings > Profile** in the SecOps UI).
+   - All other `SECOPS_SIEM_*` variables map directly to fields in the service account JSON key.
+
 ## Configuration variables
 
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
@@ -54,31 +82,31 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Base connector environment variables
 
-| Parameter                      | config.yml                | Docker environment variable             | Default | Mandatory | Description                                                                    |
-|--------------------------------|---------------------------|-----------------------------------------|---------|-----------|--------------------------------------------------------------------------------|
-| Connector ID                   | id                        | `CONNECTOR_ID`                          |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
-| Connector Type                 | type                      | `CONNECTOR_TYPE`                        | STREAM  | Yes       | Should always be set to `STREAM` for this connector.                           |
-| Connector Name                 | name                      | `CONNECTOR_NAME`                        |         | Yes       | Name of the connector.                                                         |
-| Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |         | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
-| Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true    | Yes       | Listen to delete events for the entity.                                        |
-| Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| true    | Yes       | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info    | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.     |
+| Parameter                   | config.yml                  | Docker environment variable             | Default | Mandatory | Description                                                                |
+|-----------------------------|-----------------------------|-----------------------------------------|---------|-----------|----------------------------------------------------------------------------|
+| Connector ID                | id                          | `CONNECTOR_ID`                          |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                  |
+| Connector Type              | type                        | `CONNECTOR_TYPE`                        | STREAM  | Yes       | Should always be set to `STREAM` for this connector.                       |
+| Connector Name              | name                        | `CONNECTOR_NAME`                        |         | Yes       | Name of the connector.                                                     |
+| Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              |         | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.         |
+| Live Stream Listen Delete   | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true    | Yes       | Listen to delete events for the entity.                                    |
+| Live Stream No Dependencies | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true    | Yes       | Set to `true` unless synchronizing between OpenCTI platforms.              |
+| Log Level                   | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info    | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`. |
 
 ### Connector extra parameters environment variables
 
-| Parameter                  | config.yml              | Docker environment variable      | Default | Mandatory | Description                                                |
-|----------------------------|-------------------------|----------------------------------|---------|-----------|-----------------------------------------------------------|
-| Google Project Region      | secops_siem.project_region | `SECOPS_SIEM_PROJECT_REGION`  |         | Yes       | Region where the Google SecOps instance is located.        |
-| Google Project ID          | secops_siem.project_id  | `SECOPS_SIEM_PROJECT_ID`         |         | Yes       | GCP Project ID.                                            |
-| Google Project Instance    | secops_siem.project_instance | `SECOPS_SIEM_PROJECT_INSTANCE` |       | Yes       | Google SecOps customer ID.                                 |
-| Google Private Key ID      | secops_siem.private_key_id | `SECOPS_SIEM_PRIVATE_KEY_ID`  |         | Yes       | Service account `private_key_id` value.                    |
-| Google Private Key         | secops_siem.private_key | `SECOPS_SIEM_PRIVATE_KEY`        |         | Yes       | Service account `private_key` value.                       |
-| Google Client Email        | secops_siem.client_email | `SECOPS_SIEM_CLIENT_EMAIL`      |         | Yes       | Service account `client_email` value.                      |
-| Google Client ID           | secops_siem.client_id   | `SECOPS_SIEM_CLIENT_ID`          |         | Yes       | Service account `client_id` value.                         |
-| Google Auth URI            | secops_siem.auth_uri    | `SECOPS_SIEM_AUTH_URI`           |         | Yes       | Service account `auth_uri` value.                          |
-| Google Token URI           | secops_siem.token_uri   | `SECOPS_SIEM_TOKEN_URI`          |         | Yes       | Service account `token_uri` value.                         |
-| Google Auth Provider Cert  | secops_siem.auth_provider_cert | `SECOPS_SIEM_AUTH_PROVIDER_CERT` |     | Yes       | Service account `auth_provider_x509_cert_url` value.       |
-| Google Client Cert URL     | secops_siem.client_cert_url | `SECOPS_SIEM_CLIENT_CERT_URL` |         | Yes       | Service account `client_x509_cert_url` value.              |
+| Parameter                 | config.yml                     | Docker environment variable      | Default | Mandatory | Description                                          |
+|---------------------------|--------------------------------|----------------------------------|---------|-----------|------------------------------------------------------|
+| Google Project Region     | secops_siem.project_region     | `SECOPS_SIEM_PROJECT_REGION`     |         | Yes       | Region where the Google SecOps instance is located.  |
+| Google Project ID         | secops_siem.project_id         | `SECOPS_SIEM_PROJECT_ID`         |         | Yes       | GCP Project ID.                                      |
+| Google Project Instance   | secops_siem.project_instance   | `SECOPS_SIEM_PROJECT_INSTANCE`   |         | Yes       | Google SecOps customer ID.                           |
+| Google Private Key ID     | secops_siem.private_key_id     | `SECOPS_SIEM_PRIVATE_KEY_ID`     |         | Yes       | Service account `private_key_id` value.              |
+| Google Private Key        | secops_siem.private_key        | `SECOPS_SIEM_PRIVATE_KEY`        |         | Yes       | Service account `private_key` value.                 |
+| Google Client Email       | secops_siem.client_email       | `SECOPS_SIEM_CLIENT_EMAIL`       |         | Yes       | Service account `client_email` value.                |
+| Google Client ID          | secops_siem.client_id          | `SECOPS_SIEM_CLIENT_ID`          |         | Yes       | Service account `client_id` value.                   |
+| Google Auth URI           | secops_siem.auth_uri           | `SECOPS_SIEM_AUTH_URI`           |         | Yes       | Service account `auth_uri` value.                    |
+| Google Token URI          | secops_siem.token_uri          | `SECOPS_SIEM_TOKEN_URI`          |         | Yes       | Service account `token_uri` value.                   |
+| Google Auth Provider Cert | secops_siem.auth_provider_cert | `SECOPS_SIEM_AUTH_PROVIDER_CERT` |         | Yes       | Service account `auth_provider_x509_cert_url` value. |
+| Google Client Cert URL    | secops_siem.client_cert_url    | `SECOPS_SIEM_CLIENT_CERT_URL`    |         | Yes       | Service account `client_x509_cert_url` value.        |
 
 For `secops_siem.private_key` in `config.yml`, prefer YAML multiline format to preserve PEM newlines:
 
@@ -250,12 +278,12 @@ Log output includes:
 
 ### Common Issues
 
-| Issue                          | Solution                                              |
-|--------------------------------|-------------------------------------------------------|
-| Rate limiting (429 errors)     | Implement backoff mechanism; check quota limits       |
-| OAuth token expiry             | Tokens expire after 1 hour; refresh automatically     |
-| Update latency                 | Changes reflect in 2-3 hours on dashboard, 5 min on search |
-| Authentication errors          | Verify service account credentials                    |
+| Issue                      | Solution                                                   |
+|----------------------------|------------------------------------------------------------|
+| Rate limiting (429 errors) | Implement backoff mechanism; check quota limits            |
+| OAuth token expiry         | Tokens expire after 1 hour; refresh automatically          |
+| Update latency             | Changes reflect in 2-3 hours on dashboard, 5 min on search |
+| Authentication errors      | Verify service account credentials                         |
 
 ## Additional information
 

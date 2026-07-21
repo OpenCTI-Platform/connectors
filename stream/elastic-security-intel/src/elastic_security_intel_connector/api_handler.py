@@ -175,7 +175,7 @@ class ElasticApiHandler:
                 "from": "now-6m",
                 "enabled": True,
                 "tags": ["opencti", "threat-intel"],
-                "references": [f"{self.opencti_url}/id/{opencti_id}"],
+                "references": [f"{self.opencti_url}/dashboard/id/{opencti_id}"],
                 "meta": {
                     "opencti_id": opencti_id,
                     "pattern_type": pattern_type,
@@ -488,7 +488,7 @@ class ElasticApiHandler:
             threat_indicator["sightings"] = observable_data["x_opencti_score"]
 
         # Reference (OpenCTI source) - use proper URL format with /id/{ID}
-        threat_indicator["reference"] = f"{self.opencti_url}/id/{opencti_id}"
+        threat_indicator["reference"] = f"{self.opencti_url}/dashboard/id/{opencti_id}"
         threat_indicator["provider"] = ["OpenCTI"]  # ECS expects array
 
         # Feed information

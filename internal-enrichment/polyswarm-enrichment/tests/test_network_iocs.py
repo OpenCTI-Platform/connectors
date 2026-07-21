@@ -26,8 +26,25 @@ UNKNOWN_HASH = "0000000000000000000000000000000000000000000000000000000000000000
 # ── Helpers ──────────────────────────────────────────────────────────
 
 
+class _StubLogger:
+    def info(self, msg, *a, **kw):
+        pass
+
+    def warning(self, msg, *a, **kw):
+        pass
+
+    def error(self, msg, *a, **kw):
+        pass
+
+    def debug(self, msg, *a, **kw):
+        pass
+
+
 class StubHelper:
     """Minimal helper stub for tests."""
+
+    def __init__(self):
+        self.connector_logger = _StubLogger()
 
     def log_info(self, msg, *a, **kw):
         pass

@@ -1,0 +1,26 @@
+{
+  "title": "FortiEDR",
+  "slug": "fortiedr",
+  "description": "The OpenCTI FortiEDR connector synchronises IP indicators of compromise from OpenCTI to a FortiEDR IP Set in real time. Leveraging OpenCTI live streams, IPv4 and IPv6 indicators are kept in sync with a managed FortiEDR IP Set through the FortiEDR Central Manager REST API, so endpoint policies can act on known-bad infrastructure. File hashes, domains and URLs are best ingested through FortiEDR's native STIX/TAXII Threat Intelligence Feed pointed at OpenCTI's TAXII server.",
+  "short_description": "Sync IPv4/IPv6 IOCs from OpenCTI to a FortiEDR IP Set in real time.",
+  "logo": "stream/fortiedr/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260701.0",
+  "subscription_link": "https://www.fortinet.com/products/endpoint-security/fortiedr",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/fortiedr",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-fortiedr",
+  "container_type": "STREAM"
+}

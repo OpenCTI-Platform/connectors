@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-arcsight-incidents:
+    image: opencti/connector-arcsight-incidents:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_SCOPE=ChangeMe # required, e.g. 'arcsight'
+      # - CONNECTOR_NAME=ArcSight Incidents # optional (default: 'ArcSight Incidents')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_DURATION_PERIOD=PT15M # optional (default: 'PT15M')
+      # ArcSight parameters
+      - ARCSIGHT_INCIDENTS_API_BASE_URL=ChangeMe # e.g. https://arcsight.example.com:8443
+      - ARCSIGHT_INCIDENTS_USERNAME=ChangeMe
+      - ARCSIGHT_INCIDENTS_PASSWORD=ChangeMe
+      # - ARCSIGHT_INCIDENTS_MAX_CASES=200 # optional (default: 200)
+      # - ARCSIGHT_INCIDENTS_TLP_LEVEL=amber # optional (default: 'amber')
+      # - ARCSIGHT_INCIDENTS_SSL_VERIFY=true # optional (default: true)
+    restart: always
