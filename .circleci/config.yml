@@ -150,12 +150,15 @@ jobs:
               git config commit.gpgsign true
 
               manifest_changed=$(git diff manifest.json)
-              flag_detected=$(git log -1 --pretty=%B | grep '\[ci build-manifest\]' || echo "")
+              # Detect the automation's own commit by committer identity rather
+              # than grepping the message, so a human commit that merely mentions
+              # the build-manifest flag does not get treated as the bot's commit.
+              flag_detected=$(git log -1 --pretty=%cn | grep -F 'Filigran Automation' || echo "")
               if [ -n "$manifest_changed" ] && [ -z "$flag_detected" ] ; then
                 echo "Manifest changed. Committing changes..."
                 git add .
                 # Add custom flag to avoid triggering workflows
-                git commit -m "[Automation] Build and update manifest [ci build-manifest]"
+                git commit -m "chore(manifest): build and update manifest [ci build-manifest]"
                 # Push quietly to prevent showing the token in log
                 if git push -q https://${GITHUB_TOKEN}@github.com/OpenCTI-Platform/connectors.git ${CIRCLE_BRANCH}; then
                   echo "Manifest changes pushed successfully."
@@ -177,10 +180,10 @@ jobs:
               echo "Skipping, not $RELEASE_REF branch."
             fi
       - run:
-          name: Skip steps if flag detected
+          name: Skip steps if commit authored by automation
           command: |
-            if git log -1 --pretty=%B | grep -q '\[ci build-manifest\]'; then
-              echo "Skipping steps due to [ci build-manifest] flag."
+            if git log -1 --pretty=%cn | grep -qF 'Filigran Automation'; then
+              echo "Skipping steps: last commit was authored by the manifest automation."
               exit 0
             fi
   test:

@@ -16,11 +16,10 @@ Enriches file observables with comprehensive threat intelligence including:
 import traceback
 from datetime import datetime, timezone
 
+from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
+from polyswarm_enrichment.converter_to_stix import ConverterToStix
+from polyswarm_enrichment.settings import ConnectorSettings
 from pycti import Note, OpenCTIConnectorHelper
-
-from .attack_pattern_handler import AttackPatternHandler
-from .converter_to_stix import ConverterToStix
-from .settings import ConnectorSettings
 
 # Standard TLP marking definition IDs (STIX 2.1)
 _TLP_MARKING_TO_NAME = {
@@ -55,7 +54,7 @@ class ConnectorTemplate:
         self.ioc_types = list(ps.ioc_types)
 
         # Initialize client (PolySwarm SDK + polykg profile API)
-        from .client_api import ConnectorClient
+        from polyswarm_enrichment.client_api import ConnectorClient
 
         self.client = ConnectorClient(self.helper, ps)
 
@@ -66,21 +65,21 @@ class ConnectorTemplate:
         ttp_data = self.client.fetch_attack_patterns()
         self.attack_pattern_handler = AttackPatternHandler(
             self.helper,
-            self.converter_to_stix.author["id"],
+            self.converter_to_stix.author.id,
             ttp_data=ttp_data,
         )
         if self.attack_pattern_handler.has_ttp_data():
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "[CONNECTOR] Attack Pattern Handler loaded TTP data from polykg"
             )
         else:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 "[CONNECTOR] Attack Pattern Handler has no TTP data — "
                 "attack patterns will not be created"
             )
 
         self.stix_objects_list = []
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Enhanced ConnectorTemplate initialized successfully with "
             "comprehensive profile enrichment and MITRE ATT&CK support."
         )
@@ -204,7 +203,7 @@ class ConnectorTemplate:
             "modified": current_time,
             "content": note_content,
             "abstract": abstract,
-            "created_by_ref": self.converter_to_stix.author["id"],
+            "created_by_ref": self.converter_to_stix.author.id,
             "object_refs": [observable_id],
         }
 
@@ -278,7 +277,7 @@ class ConnectorTemplate:
             "modified": current_time,
             "content": note_content,
             "abstract": abstract,
-            "created_by_ref": self.converter_to_stix.author["id"],
+            "created_by_ref": self.converter_to_stix.author.id,
             "object_refs": [observable_id],
         }
 
@@ -315,19 +314,21 @@ class ConnectorTemplate:
             "modified": current_time,
             "content": note_content,
             "abstract": "ℹ️ PolySwarm — Hash Not Found",
-            "created_by_ref": self.converter_to_stix.author["id"],
+            "created_by_ref": self.converter_to_stix.author.id,
             "object_refs": [observable_id],
         }
 
     def _collect_intelligence(self, observable, polyswarm_result) -> list:
         """Collect comprehensive intelligence from PolySwarm and malware profiles."""
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "[CONNECTOR] Starting comprehensive intelligence collection..."
         )
 
         # Handle the new result format
         if polyswarm_result is None:
-            self.helper.log_warning("[CONNECTOR] No PolySwarm result available")
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] No PolySwarm result available"
+            )
             return []
 
         # Extract data and errors from result
@@ -347,22 +348,26 @@ class ConnectorTemplate:
             # Add the author identity to the bundle so OpenCTI can resolve created_by_ref
             if self.converter_to_stix.author:
                 stix_objects.append(self.converter_to_stix.author)
-                self.helper.log_debug("[CONNECTOR] Added author identity to bundle")
+                self.helper.connector_logger.debug(
+                    "[CONNECTOR] Added author identity to bundle"
+                )
 
             # If there are reportable API errors, create error note
             if reportable_errors:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[CONNECTOR] API errors detected: {len(reportable_errors)} error(s)"
                 )
                 error_note = self._create_error_note(
                     observable["id"], reportable_errors
                 )
                 stix_objects.append(error_note)
-                self.helper.log_info("[CONNECTOR] Created error note for API issues")
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Created error note for API issues"
+                )
 
             # If no data available, create "Hash Not Found" note so user sees feedback
             if polyswarm_data is None:
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     "[CONNECTOR] No PolySwarm data available for enrichment"
                 )
                 # Extract hash for the note message
@@ -376,7 +381,7 @@ class ConnectorTemplate:
                     observable["id"], obs_hash
                 )
                 stix_objects.append(not_found_note)
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     "[CONNECTOR] Created 'Hash Not Found' note for user visibility"
                 )
                 return stix_objects
@@ -391,7 +396,7 @@ class ConnectorTemplate:
             if is_multi_community:
                 # primary_data and secondary_data already extracted above
                 if primary_data and secondary_data:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] Multi-community results: "
                         f"Primary={primary_data.get('community')}, Secondary={secondary_data.get('community')}"
                     )
@@ -400,7 +405,7 @@ class ConnectorTemplate:
             else:
                 # Single community result
                 enrichment_data = polyswarm_data
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONNECTOR] Single community result: {enrichment_data.get('community', 'default')}"
                 )
 
@@ -413,11 +418,11 @@ class ConnectorTemplate:
             if malware_family:
                 profile = self.client.get_profile(malware_family)
                 if profile:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] Found profile for {malware_family}"
                     )
                 else:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] No profile found for {malware_family}"
                     )
 
@@ -475,12 +480,12 @@ class ConnectorTemplate:
                         for hash_type, hash_value in observable["hashes"].items():
                             if hash_type in ["SHA-256", "MD5", "SHA-1"] and hash_value:
                                 valid_hashes[hash_type] = hash_value
-                                self.helper.log_warning(
+                                self.helper.connector_logger.warning(
                                     f"[CONNECTOR] Restoring original query hash {hash_type} as failsafe."
                                 )
 
                     if not valid_hashes:
-                        self.helper.log_error(
+                        self.helper.connector_logger.error(
                             "[CONNECTOR] CRITICAL: No valid MD5, SHA1, or SHA256 hashes found."
                         )
 
@@ -504,11 +509,11 @@ class ConnectorTemplate:
                                 enriched_obs["name"] = (
                                     f"file_unknown_{observable['id'][-8:]}"
                                 )
-                                self.helper.log_warning(
+                                self.helper.connector_logger.warning(
                                     "[CONNECTOR] No usable file name or valid hash found. Using UUID fallback."
                                 )
 
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] Observable enriched - Name: {enriched_obs.get('name')}, "
                         f"Valid Hashes: {len(enriched_obs.get('hashes', {}))}"
                     )
@@ -539,11 +544,11 @@ class ConnectorTemplate:
                     # STIX validation when the platform re-emits the
                     # bundle over the stream API.
                     enriched_obs["x_opencti_created_by_ref"] = (
-                        self.converter_to_stix.author["id"]
+                        self.converter_to_stix.author.id
                     )
 
                     stix_objects[i] = enriched_obs
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "[CONNECTOR] Updated observable with enrichment data and set author."
                     )
                     break
@@ -559,7 +564,7 @@ class ConnectorTemplate:
                     profile=profile,  # Only primary gets full profile
                 )
                 stix_objects.append(note_obj_primary)
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONNECTOR] Created Note for PRIMARY community ({primary_data.get('community')})"
                 )
 
@@ -570,7 +575,7 @@ class ConnectorTemplate:
                     profile=None,  # No profile for secondary to avoid duplicate info
                 )
                 stix_objects.append(note_obj_secondary)
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONNECTOR] Created Note for SECONDARY community ({secondary_data.get('community')})"
                 )
             else:
@@ -581,7 +586,7 @@ class ConnectorTemplate:
                     profile=profile,
                 )
                 stix_objects.append(note_obj)
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONNECTOR] Created enriched PolySwarm Note ({enrichment_data.get('community', 'default')})"
                 )
 
@@ -592,7 +597,7 @@ class ConnectorTemplate:
 
             if enriched_indicator:
                 stix_objects.append(enriched_indicator)
-                self.helper.log_info("[CONNECTOR] Created Indicator")
+                self.helper.connector_logger.info("[CONNECTOR] Created Indicator")
 
                 # Observable-Indicator relationship
                 obs_indicator_rel = (
@@ -605,7 +610,7 @@ class ConnectorTemplate:
                     stix_objects.append(obs_indicator_rel)
 
             # Create Malware with COMPREHENSIVE profile enrichment (using primary/enrichment data)
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "[CONNECTOR] Creating malware object with comprehensive enrichment..."
             )
             malware_obj, additional_objects, relationships = (
@@ -616,13 +621,15 @@ class ConnectorTemplate:
 
             if malware_obj:
                 stix_objects.append(malware_obj)
-                self.helper.log_info("[CONNECTOR] Created primary Malware object")
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Created primary Malware object"
+                )
 
                 # Add all profile-related objects
                 stix_objects.extend(additional_objects)
                 stix_objects.extend(relationships)
 
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONNECTOR] Enrichment complete: {len(additional_objects)} objects, "
                     f"{len(relationships)} relationships added"
                 )
@@ -644,7 +651,7 @@ class ConnectorTemplate:
                 ttp_relationships = []
 
                 if malware_types:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] Creating attack patterns for malware types: {malware_types}"
                     )
 
@@ -669,7 +676,7 @@ class ConnectorTemplate:
                     if attack_patterns:
                         stix_objects.extend(attack_patterns)
                         stix_objects.extend(ttp_relationships)
-                        self.helper.log_info(
+                        self.helper.connector_logger.info(
                             f"[CONNECTOR] Added {len(attack_patterns)} attack patterns, "
                             f"{len(ttp_relationships)} TTP relationships"
                         )
@@ -695,7 +702,6 @@ class ConnectorTemplate:
                     relationship_type="related-to",
                     target_id=malware_obj["id"],
                     description=f"Observable is related to {malware_family}",
-                    confidence=enrichment_data.get("confidence", 100),
                 )
                 if obs_mal_rel:
                     stix_objects.append(obs_mal_rel)
@@ -715,7 +721,7 @@ class ConnectorTemplate:
                             )
                             if ioc_objects:
                                 stix_objects.extend(ioc_objects)
-                                self.helper.log_info(
+                                self.helper.connector_logger.info(
                                     f"[CONNECTOR] Added {len(ioc_objects)} network IOC objects"
                                 )
 
@@ -733,7 +739,7 @@ class ConnectorTemplate:
                                 if ioc_attack_patterns:
                                     stix_objects.extend(ioc_attack_patterns)
                                     stix_objects.extend(ioc_ttp_rels)
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         f"[CONNECTOR] Added {len(ioc_attack_patterns)} "
                                         f"IOC-derived attack patterns"
                                     )
@@ -750,21 +756,23 @@ class ConnectorTemplate:
                     type_summary = ", ".join(
                         [f"{count} {otype}(s)" for otype, count in object_types.items()]
                     )
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] Object breakdown: {type_summary}"
                     )
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONNECTOR] Final bundle contains {len(stix_objects)} STIX objects"
             )
 
             return stix_objects
 
         except Exception as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONNECTOR] Error collecting intelligence: {str(e)}"
             )
-            self.helper.log_error(f"[CONNECTOR] Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(
+                f"[CONNECTOR] Traceback: {traceback.format_exc()}"
+            )
             return []
 
     def entity_in_scope(self, data) -> bool:
@@ -774,8 +782,15 @@ class ConnectorTemplate:
         return entity_type in scopes
 
     @staticmethod
-    def _get_tlp(stix_entity: dict) -> str | None:
-        """Extract TLP marking name from a STIX entity's object_marking_refs."""
+    def _get_tlp(stix_entity: dict, opencti_entity: dict = None) -> str | None:
+        """Extract TLP marking name from a STIX entity or OpenCTI entity."""
+        # Try OpenCTI entity objectMarking first
+        if opencti_entity:
+            for marking in opencti_entity.get("objectMarking", []):
+                definition = marking.get("definition", "")
+                if definition.startswith("TLP:"):
+                    return definition
+        # Fallback to STIX object_marking_refs
         for ref in stix_entity.get("object_marking_refs", []):
             if ref in _TLP_MARKING_TO_NAME:
                 return _TLP_MARKING_TO_NAME[ref]
@@ -789,13 +804,31 @@ class ConnectorTemplate:
             self.stix_objects_list = data["stix_objects"]
             observable = data["stix_entity"]
 
+            # Preserve original file name to avoid artifact.bin fallback in pycti
+            if opencti_entity.get("entity_type") == "Artifact":
+                entity_id = opencti_entity.get("standard_id") or observable.get("id")
+                x_opencti_files = observable.get("x_opencti_files", [])
+                if x_opencti_files:
+                    file_name = x_opencti_files[0].get("name")
+                    if file_name:
+                        for obj in self.stix_objects_list:
+                            if isinstance(obj, dict) and obj.get("id") == entity_id:
+                                self.helper.connector_logger.info(
+                                    f"[CONNECTOR] Setting x_opencti_additional_names "
+                                    f"for Artifact to preserve original file name: {file_name}"
+                                )
+                                obj.setdefault(
+                                    "x_opencti_additional_names", [file_name]
+                                )
+                                break
+
             # #38 — max_tlp: refuse enrichment for high-TLP observables
             if self.max_tlp:
-                entity_tlp = self._get_tlp(observable)
+                entity_tlp = self._get_tlp(observable, opencti_entity)
                 if entity_tlp and not OpenCTIConnectorHelper.check_max_tlp(
                     entity_tlp, self.max_tlp
                 ):
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONNECTOR] Skipping: observable TLP {entity_tlp} "
                         f"exceeds configured max_tlp {self.max_tlp}"
                     )
@@ -810,11 +843,15 @@ class ConnectorTemplate:
                         break
 
             if not hash_value:
-                self.helper.log_info("Observable does not contain a usable hash")
+                self.helper.connector_logger.info(
+                    "Observable does not contain a usable hash"
+                )
                 return "[CONNECTOR] No hash found to enrich"
 
             if self.entity_in_scope(data):
-                self.helper.log_info(f"Enrichment starting for hash: {hash_value}...")
+                self.helper.connector_logger.info(
+                    f"Enrichment starting for hash: {hash_value}..."
+                )
 
                 # Query PolySwarm
                 polyswarm_data = self.client.query_polyswarm(hash_value)
@@ -847,7 +884,7 @@ class ConnectorTemplate:
                             if existing_score is not None and int(existing_score) > int(
                                 score
                             ):
-                                self.helper.log_info(
+                                self.helper.connector_logger.info(
                                     f"[CONNECTOR] Keeping existing score {existing_score} "
                                     f"(higher than new score {score})"
                                 )
@@ -862,7 +899,7 @@ class ConnectorTemplate:
                                     },
                                 )
                             except Exception as score_err:
-                                self.helper.log_warning(
+                                self.helper.connector_logger.warning(
                                     f"[CONNECTOR] Could not update score: {score_err}"
                                 )
                     return result
@@ -898,24 +935,28 @@ class ConnectorTemplate:
                     unique_objects.append(obj)
 
             if duplicate_count > 0:
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONNECTOR] Deduplicated {duplicate_count} duplicate STIX objects "
                     f"({len(stix_objects)} -> {len(unique_objects)})"
                 )
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONNECTOR] Sending bundle with {len(unique_objects)} STIX objects"
             )
 
             stix_objects_bundle = self.helper.stix2_create_bundle(unique_objects)
-            bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
+            bundles_sent = self.helper.send_stix2_bundle(
+                stix_objects_bundle, cleanup_inconsistent_bundle=True
+            )
 
             return f"[CONNECTOR] Successfully sent {len(bundles_sent)} bundle(s)"
 
         except Exception as e:
             error_msg = f"[CONNECTOR] Error sending bundle: {str(e)}"
-            self.helper.log_error(error_msg)
-            self.helper.log_error(f"[CONNECTOR] Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(error_msg)
+            self.helper.connector_logger.error(
+                f"[CONNECTOR] Traceback: {traceback.format_exc()}"
+            )
             raise
 
     def run(self) -> None:

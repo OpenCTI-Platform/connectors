@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/google-secops-siem-incidents_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Google SecOps",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "google-secops-siem-incidents"
+      ],
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_BASE_URL": {
+      "default": "https://chronicle.googleapis.com",
+      "description": "API base URL (region prefix added at runtime).",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_ID": {
+      "description": "GCP project ID.",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_REGION": {
+      "description": "Region (e.g. 'us', 'eu', 'asia').",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_INSTANCE": {
+      "description": "Instance UUID.",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PRIVATE_KEY": {
+      "description": "Service account private key (PEM).",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PRIVATE_KEY_ID": {
+      "description": "Service account private key ID.",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_EMAIL": {
+      "description": "Service account client email.",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_ID": {
+      "description": "Service account client ID.",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_AUTH_URI": {
+      "default": "https://accounts.google.com/o/oauth2/auth",
+      "description": "OAuth2 auth URI.",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_TOKEN_URI": {
+      "default": "https://oauth2.googleapis.com/token",
+      "description": "OAuth2 token URI.",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_AUTH_PROVIDER_CERT": {
+      "default": "https://www.googleapis.com/oauth2/v1/certs",
+      "description": "OAuth2 auth provider cert URL.",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_CERT_URL": {
+      "description": "Service account client cert URL.",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_TLP_LEVEL": {
+      "default": "amber",
+      "description": "Default TLP level of the imported entities.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_FIRST_START_TIME": {
+      "default": "P1D",
+      "description": "How far back to fetch alerts on the very first run (ISO-8601 duration, e.g. P1D). Used only when no prior state exists.",
+      "format": "duration",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_SEVERITY_FILTER": {
+      "description": "Minimum severity level to import. All alerts at or above this level are imported (CRITICAL > HIGH > MEDIUM > LOW > INFO). When not set, all severities are imported. Alerts with unknown severity are always imported.",
+      "enum": [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "INFO"
+      ],
+      "type": "string",
+      "default": null
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PRIORITY_FILTER": {
+      "description": "Minimum priority level to import. All alerts at or above this level are imported (CRITICAL > HIGH > MEDIUM > LOW > INFO). When not set, all priorities are imported. Alerts with unknown priority are always imported.",
+      "enum": [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "INFO"
+      ],
+      "type": "string",
+      "default": null
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_RISK_SCORE_FILTER": {
+      "default": null,
+      "description": "Minimum risk score to import. All alerts with a risk score greater than or equal to this value are imported. Alerts without a risk score always pass. When not set, all alerts are imported regardless of risk score.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_TAGS_INCLUDE": {
+      "default": [],
+      "description": "Comma-separated list of tags to include. Only alerts that have at least one of these tags are imported. When empty, no inclusion filter is applied.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_TAGS_EXCLUDE": {
+      "default": [],
+      "description": "Comma-separated list of tags to exclude. Alerts that have any of these tags are excluded. When empty, no exclusion filter is applied.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_ID",
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_REGION",
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_INSTANCE",
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PRIVATE_KEY",
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PRIVATE_KEY_ID",
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_EMAIL",
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_ID",
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_CERT_URL"
+  ],
+  "additionalProperties": true
+}

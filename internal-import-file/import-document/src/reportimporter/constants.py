@@ -3,6 +3,7 @@ MIME_TXT = "text/plain"
 MIME_HTML = "text/html"
 MIME_CSV = "text/csv"
 MIME_MD = "text/markdown"
+MIME_DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
 RESULT_FORMAT_TYPE = "type"
 RESULT_FORMAT_CATEGORY = "category"

@@ -1,0 +1,34 @@
+services:
+  connector-ctm360-cyberblindspot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_NAME=CTM360-CyberBlindSpot
+      - CONNECTOR_SCOPE=CTM360-CyberBlindSpot
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT24H
+      - CTM360_CBS_API_BASE_URL=https://cbs.ctm360.com
+      - CTM360_CBS_API_KEY=${CTM360_CBS_API_KEY}
+      - CTM360_CBS_IMPORT_INTERVAL=86400
+      - CTM360_CBS_IMPORT_INCIDENTS=true
+      - CTM360_CBS_IMPORT_MALWARE_LOGS=true
+      - CTM360_CBS_IMPORT_BREACHED_CREDENTIALS=true
+      - CTM360_CBS_IMPORT_CARD_LEAKS=true
+      - CTM360_CBS_IMPORT_DOMAIN_PROTECTION=true
+      - CTM360_CBS_ENABLE_STATUS_TRACKING=true
+      - CTM360_CBS_STATUS_POLL_INTERVAL=3600
+    restart: always
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+    pids_limit: 100

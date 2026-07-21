@@ -1,0 +1,26 @@
+{
+  "title": "Recorded Future ASI",
+  "slug": "recorded-future-asi",
+  "description": "Recorded Future Attack Surface Intelligence (ASI) continuously discovers and prioritizes exposure risks across your organization's internet-facing assets. The platform identifies misconfigurations, vulnerable services, and other attack surface findings with severity scoring, CVE linkage, and remediation guidance.\n\nThis connector imports ASI exposure data from a configured project via the ASI API (SecurityTrails v2 for initial sync and v1 for incremental history). Findings are converted to STIX 2.1 and sent to OpenCTI as incidents with linked observables (IPv4/IPv6 addresses, domain names), vulnerabilities (CVEs), and relationships. It supports initial and incremental synchronization, optional severity filtering, cursor-based pagination, and configurable batch limits per run.\n\nRequires a Recorded Future ASI API key and project ID. Have a look at the connector configuration to tailor sync frequency, TLP marking, retry behavior, and severity filters to your use case.",
+  "short_description": "Import Recorded Future Attack Surface Intelligence (ASI) exposure findings into OpenCTI as STIX 2.1 incidents, observables, vulnerabilities, and relationships.",
+  "logo": "external-import/recorded-future-asi/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility"
+  ],
+  "solution_categories": [
+    "Attack Surface Management"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://www.recordedfuture.com/get-started",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/recorded-future-asi",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-recorded-future-asi",
+  "container_type": "EXTERNAL_IMPORT"
+}

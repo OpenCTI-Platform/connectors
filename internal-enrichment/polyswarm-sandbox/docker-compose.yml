@@ -1,11 +1,11 @@
 services:
   connector-polyswarm-sandbox:
-    image: opencti/connector-polyswarm-sandbox:rolling
+    image: opencti/connector-polyswarm-sandbox:latest
     environment:
       # ═══════════════════════════════════════════════════════════════════════
       # OpenCTI Configuration
       # ═══════════════════════════════════════════════════════════════════════
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       
       # ═══════════════════════════════════════════════════════════════════════
@@ -43,7 +43,7 @@ services:
       # Enable/disable report generation and attachment
       - POLYSWARM_JSON_REPORT_ENABLED=true
       - POLYSWARM_PDF_REPORT_ENABLED=true
-      - POLYSWARM_LLM_REPORT_ENABLED=true
+      - POLYSWARM_LLM_REPORT_ENABLED=false
       - POLYSWARM_LLM_REPORT_TIMEOUT=120
       
       # ═══════════════════════════════════════════════════════════════════════

@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  #name: 'Flare' # optional (default: 'Flare')
+  #scope: 'Flare' # optional (default: 'Flare')
+  #log_level: 'error' # optional (default: 'error')
+  #duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs (default: 'PT1H')
+
+flare:
+  api_key: 'ChangeMe'
+  #api_domain: 'api.flare.io' # optional (default: 'api.flare.io')
+  #tenant_id: # optional, Flare tenant ID (default: none)
+  #event_types: 'stealer_log,domain,ransomleak,leak' # optional (default: 'stealer_log,domain,ransomleak,leak')
+  #event_actions: '' # optional, filter by event actions: 'ignored', 'remediated' (default: none)
+  #lookback_days: 30 # optional, number of days to look back on first run (default: 30)
+  #tlp_level: 'white' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'white')

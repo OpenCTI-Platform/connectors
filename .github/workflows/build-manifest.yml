@@ -14,10 +14,13 @@ name: Build Manifest
 
 on:
   push:
-    
+    branches:
+      - master
+      - 'release/*'
+      - 'lts/*'
 
 concurrency:
-  group: build-manifest-${{ github.event.workflow_run.head_branch || github.ref }}
+  group: build-manifest-${{ github.event.pull_request.head.ref || github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -38,9 +41,10 @@ jobs:
     #   PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -139,7 +143,7 @@ jobs:
     #       git config commit.gpgsign true
 
     #       git add .
-    #       git commit -m "[Automation] Build and update manifest [ci build-manifest]"
+    #       git commit -m "chore(manifest): build and update manifest [ci build-manifest]"
 
     #       git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
     #       if git push -q origin "${TARGET_BRANCH}"; then

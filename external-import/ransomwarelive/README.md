@@ -2,7 +2,7 @@
 
 The Ransomware.live connector is an OpenCTI **external-import** connector that ingests publicly disclosed ransomware victims (and the operators behind them) from the community-maintained [ransomware.live](https://www.ransomware.live/) feed. On every scheduled tick it queries the upstream `recentvictims` endpoint (or the historical `victims/<year>/<month>` archive when `pull_history=true`), normalises every disclosure to STIX 2.1, and sends the resulting bundle into the configured OpenCTI worker.
 
-The bundle the connector produces for each disclosed victim always includes the `Identity` (victim), the matched `Domain-Name` / `Location` observables when present, and a `Sector` linkage when the victim's industry is known. Four optional flags (`create_threat_actor`, `create_intrusion_set`, `create_campaign`, `create_report`) gate the broader Threat Actor / Intrusion Set / Campaign / Report SDOs and their relationships — every flag defaults to `false` so the bundle stays minimal and existing deployments do not see a sudden surge of new entities after upgrade.
+The bundle the connector produces for each disclosed victim always includes the `Identity` (victim), the matched `Domain-Name` / `Location` observables when present, and a `Sector` linkage when the victim's industry is known. Configuration flags gate the optional SDOs: `create_intrusion_set` and `create_report` default to `true` to preserve the behaviour that existed before PR #5590 (the connector always emitted an `IntrusionSet` and a `Report` per disclosure); `create_threat_actor` and `create_campaign` default to `false` because they are new capabilities introduced by that PR.
 
 | Status              | Date       | Comment |
 | ------------------- | ---------- | ------- |
@@ -12,7 +12,7 @@ The bundle the connector produces for each disclosed victim always includes the 
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260527.0 (matches the `pycti==7.260522.0` pin in `requirements.txt`)
+- OpenCTI Platform >= 7.260715.0 (matches the `pycti==7.260522.0` pin in `requirements.txt`)
 
 ### Configuration
 
@@ -37,9 +37,11 @@ Configuration parameters are provided via environment variables (or a `.env` fil
 | Pull History          | `pull_history`         | `CONNECTOR_PULL_HISTORY`         | `false`      | No        | When `true`, the connector backfills from `history_start_year` on first run. Produces a large initial ingest — leave at `false` unless you need the archive. |
 | History Start Year    | `history_start_year`   | `CONNECTOR_HISTORY_START_YEAR`   | `2023`       | No        | Year (or `YYYYMM`) to start the historical backfill from. The feed only goes back to 2020.                                                                   |
 | Create Threat Actor   | `create_threat_actor`  | `CONNECTOR_CREATE_THREAT_ACTOR`  | `false`      | No        | When `true`, emit a `Threat Actor` SDO for the ransomware operator + a `targets` relationship to the victim.                                                 |
-| Create Intrusion Set  | `create_intrusion_set` | `CONNECTOR_CREATE_INTRUSION_SET` | `false`      | No        | When `true`, emit an `Intrusion Set` SDO and link it to the victim, sector and location.                                                                     |
+| Create Intrusion Set  | `create_intrusion_set` | `CONNECTOR_CREATE_INTRUSION_SET` | `true`       | No        | When `true`, emit an `Intrusion Set` SDO and link it to the victim, sector and location.                                                                     |
 | Create Campaign       | `create_campaign`      | `CONNECTOR_CREATE_CAMPAIGN`      | `false`      | No        | When `true`, emit a `Campaign` SDO per disclosed victim and link it to the matching Intrusion Set / Sector / Location entities.                              |
-| Create Report         | `create_report`        | `CONNECTOR_CREATE_REPORT`        | `false`      | No        | When `true`, emit a `Report` SDO whose `object_refs` carry every other SDO the bundle produced for the disclosure.                                           |
+| Create Report         | `create_report`        | `CONNECTOR_CREATE_REPORT`        | `true`       | No        | When `true`, emit a `Report` SDO whose `object_refs` carry every other SDO the bundle produced for the disclosure.                                           |
+| Create Leak Site Domains | `create_leak_site_domains` | `CONNECTOR_CREATE_LEAK_SITE_DOMAINS` | `false` | No | When `true` (and `create_intrusion_set` is on), ingest ransomware group leak-site FQDNs as `Domain-Name` observables `related-to` the Intrusion Set, and add leak-site URLs as external references. Off by default to ease compliance with local rules on handling leaked-data links. |
+| Create Leak Post Refs | `create_leak_post_refs` | `CONNECTOR_CREATE_LEAK_POST_REFS` | `false` | No | When `true`, include the direct leak-post URL (`post_url`) as an external reference on victim reports. Off by default for the same compliance reasons. |
 | Marking Value         | `marking_value`        | `CONNECTOR_MARKING_VALUE`        | `TLP:CLEAR`  | No        | TLP marking attached to every emitted SDO. Allowed: `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`.                        |
 
 > The `MARKING_VALUE` environment variable from an earlier draft has been renamed to `CONNECTOR_MARKING_VALUE` to match the pydantic-settings nested-env-var convention (`connector.marking_value` → `CONNECTOR_MARKING_VALUE`). The connector reads it via `self.config.connector.marking_value`, which is type-checked against the allowed `Literal` enum at startup.

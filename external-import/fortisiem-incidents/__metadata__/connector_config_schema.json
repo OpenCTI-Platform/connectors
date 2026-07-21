@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/fortisiem-incidents_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "FortiSIEM Incidents",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "fortisiem"
+      ],
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT15M",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "FORTISIEM_INCIDENTS_API_BASE_URL": {
+      "description": "Base URL of the FortiSIEM Supervisor (e.g. https://fortisiem.example.com).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "FORTISIEM_INCIDENTS_ORGANIZATION": {
+      "default": "super",
+      "description": "FortiSIEM organization used to scope the REST API user (e.g. 'super').",
+      "type": "string"
+    },
+    "FORTISIEM_INCIDENTS_USERNAME": {
+      "description": "FortiSIEM REST API user name.",
+      "type": "string"
+    },
+    "FORTISIEM_INCIDENTS_PASSWORD": {
+      "description": "FortiSIEM REST API user password.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "FORTISIEM_INCIDENTS_IMPORT_WINDOW_DAYS": {
+      "default": 7,
+      "description": "Number of days of incidents to import on the first run.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "FORTISIEM_INCIDENTS_TLP_LEVEL": {
+      "default": "amber",
+      "description": "TLP marking applied to the imported incidents.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "FORTISIEM_INCIDENTS_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify the SSL certificate of the FortiSIEM Supervisor.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "FORTISIEM_INCIDENTS_API_BASE_URL",
+    "FORTISIEM_INCIDENTS_USERNAME",
+    "FORTISIEM_INCIDENTS_PASSWORD"
+  ],
+  "additionalProperties": true
+}

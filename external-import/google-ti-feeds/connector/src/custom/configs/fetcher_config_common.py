@@ -9,6 +9,7 @@ from connector.src.custom.exceptions import (
     GTIFileFetchError,
     GTIIPFetchError,
     GTIRelationshipFetchError,
+    GTISoftwareToolkitFetchError,
     GTITechniqueFetchError,
     GTIUrlFetchError,
 )
@@ -23,6 +24,9 @@ from connector.src.custom.models.gti.gti_file_model import (
 )
 from connector.src.custom.models.gti.gti_ip_addresses_model import (
     GTIIPData,
+)
+from connector.src.custom.models.gti.gti_software_toolkit_model import (
+    GTISoftwareToolkitData,
 )
 from connector.src.custom.models.gti.gti_url_model import (
     GTIURLData,
@@ -102,6 +106,19 @@ GTI_IP_FETCHER_CONFIG = GenericFetcherConfig(
     response_key="data",
 )
 
+GTI_SOFTWARE_TOOLKIT_FETCHER_CONFIG = GenericFetcherConfig(
+    entity_type="software_toolkits",
+    endpoint="/collections/{entity_id}",
+    display_name="software toolkits",
+    display_name_singular="software toolkit",
+    exception_class=GTISoftwareToolkitFetchError,
+    response_model=GTISoftwareToolkitData,
+    method="GET",
+    headers={"accept": "application/json"},
+    timeout=60.0,
+    response_key="data",
+)
+
 COMMON_FETCHER_CONFIGS = {
     "attack_techniques": GTI_ATTACK_TECHNIQUE_FETCHER_CONFIG,
     "relationships": GTI_RELATIONSHIP_FETCHER_CONFIG,
@@ -109,4 +126,5 @@ COMMON_FETCHER_CONFIGS = {
     "files": GTI_FILE_FETCHER_CONFIG,
     "urls": GTI_URL_FETCHER_CONFIG,
     "ip_addresses": GTI_IP_FETCHER_CONFIG,
+    "software_toolkits": GTI_SOFTWARE_TOOLKIT_FETCHER_CONFIG,
 }

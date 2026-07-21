@@ -1,0 +1,28 @@
+{
+  "title": "OSINT Industries",
+  "slug": "osint-industries",
+  "description": "OSINT Industries is a digital-footprint and account-discovery service. Given a selector (email address, phone number, username, or cryptocurrency wallet), it queries 300+ modules and returns the online accounts, profiles and breach exposures associated with that selector, along with profile details such as creation dates, locations, linked emails/URLs and profile pictures.\n\nIntegrating OSINT Industries with OpenCTI lets analysts enrich an observable (Email-Addr, Phone-Number, User-Account or Cryptocurrency-Wallet) into a star-shaped map of the discovered accounts, all linked back to the queried observable. The connector also attaches human-readable summary notes and a self-contained HTML report (cards with profile photos) to the enriched observable. This data contains personal information and must only be used for lawful, authorised investigations (GDPR / legal basis / proper investigative framework).",
+  "short_description": "Enrich an email, phone, username or wallet into its associated online accounts, profiles and breach exposures, linked back to the queried observable, with summary notes and an HTML card report.",
+  "logo": "internal-enrichment/osint-industries/__metadata__/logo.png",
+  "use_cases": [
+    "Brand, Digital Risk & Underground Exposure",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Digital Risk Protection"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 75,
+  "support_version": ">= 6.8.12",
+  "subscription_link": "https://www.osint.industries/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/osint-industries",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-osint-industries",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

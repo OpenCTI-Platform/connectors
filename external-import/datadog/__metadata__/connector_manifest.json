@@ -3,10 +3,15 @@
   "slug": "datadog",
   "description": "Datadog Cloud SIEM ingests security signals raised by Datadog's Security Monitoring (Cloud SIEM, Cloud Security Management and Application Security Management) and surfaces them as STIX 2.1 incidents in OpenCTI. The connector pulls signals from the Security Monitoring v2 API on a configurable interval, extracts the observables embedded in the signal payload (IP addresses, domains, URLs, user-agents, email addresses), creates a STIX `Incident` per signal, optionally creates a Case Incident response object, attaches the observables as `related-to` related objects and emits an explanatory `Note` carrying the Datadog tags, monitor query and assignee context. Operators can scope ingestion via priority and tag filters and pin the marking applied to every emitted object.",
   "short_description": "Ingest Datadog Cloud SIEM security signals as STIX incidents (with optional Case Incident response objects, observables and contextual notes).",
-  "logo": null,
+  "logo": "external-import/datadog/__metadata__/logo.png",
   "use_cases": [
-    "Cloud SIEM"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

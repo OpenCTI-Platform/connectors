@@ -1,9 +1,21 @@
 import json
 import os
-from datetime import date
 from pathlib import Path
 
 import pytest
+
+from tests._manifest_validators import (
+    is_boolean,
+    is_valid_container_image,
+    is_valid_container_type,
+    is_valid_date_str,
+    is_valid_license_type,
+    is_valid_max_confidence_level,
+    is_valid_solution_categories,
+    is_valid_source_code,
+    is_valid_str,
+    is_valid_use_cases,
+)
 
 CONNECTOR_TYPES_DIRECTORIES = [
     "external-import",
@@ -15,6 +27,8 @@ CONNECTOR_TYPES_DIRECTORIES = [
 
 
 def get_manifests_paths() -> list[str]:
+    """Return all connector manifest paths found in connector type directories."""
+
     manifests_paths = []
     for connector_type_directory in CONNECTOR_TYPES_DIRECTORIES:
         directory_path = Path(".") / connector_type_directory
@@ -29,69 +43,71 @@ def get_manifests_paths() -> list[str]:
 
 @pytest.mark.parametrize("manifest_path", get_manifests_paths())
 def test_connectors_manifests_are_valid(manifest_path: str):
+    """Assert that each connector manifest satisfies repository validity rules.
+
+    Important: All fields are required. Some fields are nullable, which means
+    the key is still required but the value may be `None`.
+
+    Field validation rules:
+    - title: string (required)
+    - slug: string (required)
+    - description: string (required)
+    - short_description: string (required)
+    - logo: string or None (required key, nullable value)
+    - use_cases: 1-3 items from allowed use cases (required)
+    - solution_categories: 1-3 items from allowed solution categories (required)
+    - contact: string or None (required key, nullable value)
+    - license_type: one of allowed license types (required key, nullable value)
+    - verified: bool (required)
+    - last_verified_date: ISO-8601 string or None (required key, nullable value)
+    - playbook_supported: bool (required)
+    - max_confidence_level: integer between 0 and 100 (required)
+    - subscription_link: string or None (required key, nullable value)
+    - source_code: Github URL (required)
+    - manager_supported: bool (required)
+    - container_version: string (required)
+    - container_image: string with correct prefix (required)
+    - container_type: correct type of connector (required)
+    """
+
     # Given a connectors' manifest path:
     with open(manifest_path, "r", encoding="utf-8") as file:
         # When reading the manifest
         connector_manifest = json.load(file)
 
         # Then the manifest is valid
-        # Title is a str
-        assert isinstance(connector_manifest["title"], str)
-        # Slug is a str
-        assert isinstance(connector_manifest["slug"], str)
-        # Description is a str
-        assert isinstance(connector_manifest["description"], str)
-        # Short Description is a str
-        assert isinstance(connector_manifest["short_description"], str)
-        # Logo is an optional str
+        assert is_valid_str(connector_manifest["title"])
+        assert is_valid_str(connector_manifest["slug"])
+        assert is_valid_str(connector_manifest["description"])
+        assert is_valid_str(connector_manifest["short_description"])
         assert (
-            isinstance(connector_manifest["logo"], str)
+            is_valid_str(connector_manifest["logo"])
             or connector_manifest["logo"] is None
         )
-        # Use Cases is a list of str
-        assert isinstance(connector_manifest["use_cases"], list) and all(
-            isinstance(use_case, str) for use_case in connector_manifest["use_cases"]
-        )
-        # Verified is a bool
-        assert isinstance(connector_manifest["verified"], bool)
-        # Last Verified Date is an optional ISO date string
+        assert is_valid_use_cases(connector_manifest["use_cases"])
+        assert is_valid_solution_categories(connector_manifest["solution_categories"])
         assert (
-            isinstance(connector_manifest["last_verified_date"], str)
-            and date.fromisoformat(connector_manifest["last_verified_date"])
-        ) or connector_manifest["last_verified_date"] is None
-        # Playbook Supported is a bool
-        assert isinstance(connector_manifest["playbook_supported"], bool)
-        # Max Confidence Level is between 0 and 100
-        assert isinstance(connector_manifest["max_confidence_level"], int) and (
-            connector_manifest["max_confidence_level"] >= 0
-            and connector_manifest["max_confidence_level"] <= 100
+            is_valid_str(connector_manifest["contact"])
+            or connector_manifest["contact"] is None
         )
-        # Support Version is a str
-        assert isinstance(connector_manifest["support_version"], str)
-        # Subscription Link is an optional str
         assert (
-            isinstance(connector_manifest["subscription_link"], str)
+            is_valid_license_type(connector_manifest["license_type"])
+            or connector_manifest["license_type"] is None
+        )
+        assert is_boolean(connector_manifest["verified"])
+        assert (
+            is_valid_date_str(connector_manifest["last_verified_date"])
+            or connector_manifest["last_verified_date"] is None
+        )
+        assert is_boolean(connector_manifest["playbook_supported"])
+        assert is_valid_max_confidence_level(connector_manifest["max_confidence_level"])
+        assert is_valid_str(connector_manifest["support_version"])
+        assert (
+            is_valid_str(connector_manifest["subscription_link"])
             or connector_manifest["subscription_link"] is None
         )
-        # Source Code is a str
-        assert isinstance(connector_manifest["source_code"], str) and (
-            connector_manifest["source_code"].startswith(
-                "https://github.com/OpenCTI-Platform/connectors/"
-            )
-        )
-        # Manager Supported is a bool
-        assert isinstance(connector_manifest["manager_supported"], bool)
-        # Container Version is a str
-        assert isinstance(connector_manifest["container_version"], str)
-        # Container Image is a str
-        assert isinstance(
-            connector_manifest["container_image"], str
-        ) and connector_manifest["container_image"].startswith("opencti/connector-")
-        # Container Type is a literal
-        assert connector_manifest["container_type"] in [
-            "EXTERNAL_IMPORT",
-            "INTERNAL_ENRICHMENT",
-            "INTERNAL_EXPORT_FILE",
-            "INTERNAL_IMPORT_FILE",
-            "STREAM",
-        ]
+        assert is_valid_source_code(connector_manifest["source_code"])
+        assert is_boolean(connector_manifest["manager_supported"])
+        assert is_valid_str(connector_manifest["container_version"])
+        assert is_valid_container_image(connector_manifest["container_image"])
+        assert is_valid_container_type(connector_manifest["container_type"])

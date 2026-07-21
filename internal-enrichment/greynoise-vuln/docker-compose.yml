@@ -5,13 +5,13 @@ services:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME="GreyNoise Vulnerability Enrichment"
-      - CONNECTOR_SCOPE=vulnerability
-      - CONNECTOR_AUTO=true
-      - CONNECTOR_LOG_LEVEL=error
-      - GREYNOISE_KEY=ChangeMe
-      - GREYNOISE_MAX_TLP=TLP:AMBER
-      - "GREYNOISE_NAME=GreyNoise Internet Scanner"
-      - "GREYNOISE_DESCRIPTION=GreyNoise collects and analyzes opportunistic scan and attack activity for devices connected directly to the Internet."
+      #- CONNECTOR_ID=52a897dc-d4b0-46b0-8694-bf94a814da4e
+      #- CONNECTOR_NAME=GreyNoise Vulnerability Enrichment # Optional (default: 'GreyNoise Vulnerability Enrichment')
+      #- CONNECTOR_SCOPE=vulnerability # Optional (default: ['vulnerability'])
+      #- CONNECTOR_AUTO=true # Optional (default: false)
+      #- CONNECTOR_LOG_LEVEL=error # Optional (default: error)
+      - GREYNOISE_VULN_KEY=ChangeMe
+      #- GREYNOISE_VULN_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
+      #- GREYNOISE_VULN_NAME=GreyNoise Internet Scanner # Optional (default: 'GreyNoise Internet Scanner')
+      #- GREYNOISE_VULN_DESCRIPTION=GreyNoise collects and analyzes opportunistic scan and attack activity for devices connected directly to the Internet. # Optional
     restart: always

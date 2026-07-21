@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/ibm-xti_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "IBMXTIConnector",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5M",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "IBM_XTI_TAXII_SERVER_URL": {
+      "description": "The base URL of the IBM X-Force PTI TAXII Server.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "IBM_XTI_TAXII_USER": {
+      "description": "Your TAXII Server username.",
+      "type": "string"
+    },
+    "IBM_XTI_TAXII_PASS": {
+      "description": "Your TAXII Server password.",
+      "type": "string"
+    },
+    "IBM_XTI_TAXII_COLLECTIONS": {
+      "default": "",
+      "description": "Comma-separated list of collection IDs to ingest.",
+      "type": "string"
+    },
+    "IBM_XTI_CREATE_OBSERVABLES": {
+      "default": false,
+      "description": "Create observables from indicators.",
+      "type": "boolean"
+    },
+    "IBM_XTI_DEBUG": {
+      "default": false,
+      "description": "Enable debug mode (developers only)",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "IBM_XTI_TAXII_SERVER_URL",
+    "IBM_XTI_TAXII_USER",
+    "IBM_XTI_TAXII_PASS"
+  ],
+  "additionalProperties": true
+}

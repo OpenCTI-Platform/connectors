@@ -27,7 +27,6 @@ class SnortParser:
     """Snort rules parser."""
 
     _RULE_STARTS: tuple[str] = ("alert",)
-    _RULE_ENDS = (";)\n",)
 
     _NAME_PATTERN = r"msg: \".*\[(CS[A-Z]+-\d+)\]\";"
     _NAME_REGEX = re.compile(_NAME_PATTERN, re.MULTILINE)
@@ -72,7 +71,7 @@ class SnortParser:
             if rule_buffer is not None:
                 rule_buffer.write(line)
 
-            if rule_buffer is not None and line.endswith(cls._RULE_ENDS):
+            if rule_buffer is not None and line.rstrip("\n").endswith(";)"):
                 rule = rule_buffer.getvalue()
                 result.append(rule)
 

@@ -6,17 +6,15 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=CybelAngel
       - CONNECTOR_SCOPE=all
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT6H # ISO 8601 duration period (every 6 hours)
-      - CYBELANGEL_CLIENT_ID=ChangeMe # Required
-      - CYBELANGEL_CLIENT_SECRET=ChangeMe # Required
-      - CYBELANGEL_API_URL=https://platform.cybelangel.com
-      - CYBELANGEL_AUTH_URL=https://auth.cybelangel.com/oauth/token
-      # OAuth2 "audience" claim. Defaults to CYBELANGEL_API_URL with a trailing slash.
-      # - CYBELANGEL_AUDIENCE=https://platform.cybelangel.com/
-      - CYBELANGEL_MARKING=TLP:AMBER+STRICT
-      - CYBELANGEL_FETCH_PERIOD=7 # Number of days to look back on the first run. Use "all" to fetch all available data.
+      - CYBELANGEL_CLIENT_ID=ChangeMe
+      - CYBELANGEL_CLIENT_SECRET=ChangeMe
+      # - CYBELANGEL_API_URL=https://platform.cybelangel.com
+      # - CYBELANGEL_AUTH_URL=https://auth.cybelangel.com/oauth/token
+      # - CYBELANGEL_AUDIENCE=https://platform.cybelangel.com/ # Defaults to CYBELANGEL_API_URL with a trailing slash
+      # - CYBELANGEL_MARKING=TLP:AMBER+STRICT # TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+      # - CYBELANGEL_FETCH_PERIOD=7 # Number of days to look back on the first run. Use "all" to fetch all available data.
     restart: always

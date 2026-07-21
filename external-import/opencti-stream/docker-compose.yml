@@ -34,4 +34,8 @@ services:
       # - CONNECTOR_SEND_TO_S3_BUCKET=my-bucket # optional, uses OpenCTI bucket if empty
       # - CONNECTOR_SEND_TO_S3_FOLDER=connectors
       # - CONNECTOR_SEND_TO_S3_RETENTION=7
+      # Fallback applicant used when a stream event has no origin.user_id (e.g. system-generated
+      # events). Leave unset to emit a null applicant; set a user UUID to avoid bundles the
+      # diode-import connector would reject.
+      # - STREAM_DEFAULT_APPLICANT_ID=ChangeMeUserUUID
     restart: always

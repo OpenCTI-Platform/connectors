@@ -21,6 +21,7 @@ status: Accepted
     - [Technical Requirements](#technical-requirements)
     - [Knowledge Requirements](#knowledge-requirements)
     - [Development Environment](#development-environment)
+    - [Mise (Development Tooling \& Task Runner)](#mise-development-tooling--task-runner)
   - [Getting Started](#getting-started)
     - [Quick Start](#quick-start)
     - [Initial Setup](#initial-setup)
@@ -123,6 +124,101 @@ You can develop connectors using either:
     - Faster iteration cycle
     - Easier debugging
     - See [Local Setup Guide](./docs/01-common-implementation.md#local-environment)
+
+### Mise (Development Tooling & Task Runner)
+
+This repository uses [mise](https://mise.jdx.dev/) as a polyglot tool version manager and task runner. Mise
+automatically installs the required development tools (Python, uv, ruff, pre-commit, etc.) and provides shared tasks
+for common workflows like building Docker images and generating config schemas.
+
+#### Installation
+
+```bash
+# macOS
+brew install mise
+
+# or via the official installer (Linux/macOS)
+curl https://mise.run | sh
+```
+
+Then activate mise in your shell (add to `~/.zshrc` or `~/.bashrc`):
+
+```bash
+eval "$(mise activate zsh)"  # or bash/fish
+```
+
+#### Setup
+
+Once installed, navigate to the repository root and let mise install all required tools:
+
+```bash
+cd connectors
+mise install
+```
+
+This reads `.mise/config.toml` and installs the declared tools (uv, ruff, pre-commit, gh, etc.) at the correct
+versions.
+
+#### Available Tasks
+
+List all available tasks:
+
+```bash
+mise tasks
+```
+
+Key tasks included:
+
+| Task | Alias | Description |
+|------|-------|-------------|
+| `build_docker` | `build`, `b` | Build the connector Docker image |
+| `push_docker` | `push`, `p` | Push the image to the local registry |
+| `generate_config_schema` | `gs` | Generate JSON schema from connector settings |
+| `global_manifest` | — | Regenerate the global manifest file |
+| `deploy_to_catalog` | `deploy` | Build the connector, push to local registry, and restart OpenCTI |
+
+Run a task from inside a connector directory:
+
+```bash
+cd external-import/misp
+mise run build        # or: mise run b
+mise run gs
+```
+
+> **Note:** Docker-related tasks (`build_docker`, `push_docker`, `deploy_to_catalog`) are designed for a local
+> development setup based on [OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker) (Docker Compose)
+> with a **local registry service** included in the stack (default: `registry:5000`). The build task tags images for
+> this registry, push sends them there, and deploy restarts the OpenCTI container so it pulls the updated image.
+> If your registry address differs, override it via the `DOCKER_REGISTRY` environment variable.
+
+#### Local Configuration
+
+User-specific settings (paths, registries, env vars) should go in `.mise/config.local.toml`, which is git-ignored:
+
+```toml
+# .mise/config.local.toml (not committed)
+[env]
+DOCKER_REPO_PATH = "/path/to/your/opencti-docker-compose"  # path to your OpenCTI-Platform/docker clone
+DOCKER_REGISTRY = "localhost:5000"                          # override if your registry differs
+```
+
+You can also add personal tasks in `.mise/tasks/local/` (also git-ignored).
+
+#### Adding New Tasks
+
+Shared tasks live in `.mise/tasks/` as shell scripts with `#MISE` directives at the top:
+
+```bash
+#!/usr/bin/env bash
+#MISE description="My new task"
+#MISE alias=["mytask"]
+#MISE dir="{{cwd}}"
+
+set -euo pipefail
+# task logic here
+```
+
+See the [mise task documentation](https://mise.jdx.dev/tasks/) for the full directive reference.
 
 ## Getting Started
 
@@ -432,6 +528,41 @@ flake8 --ignore=E,W .
   - Short Description: 250 characters maximum 
   - Description: No size limit 
   - Logo: Must be a square PNG or JPEG file, minimum 96x96 pixels
+  - Use cases: Choose 1-3 values from
+    - Adversary & Campaign Insights
+    - Vulnerability & Exploit Awareness
+    - Infrastructure & Attack Surface Visibility
+    - Detection & Response Enablement
+    - Fraud, Financial Crime & Cryptocurrency Monitoring
+    - Brand, Digital Risk & Underground Exposure
+    - Third-Party & Supply Chain Oversight
+    - Cloud, SaaS & Platform Security
+    - Geopolitical, Physical & Hybrid Risk Analysis
+    - Market Vertical & Mission-Specific Intelligence
+    - FIMI & Disinformation
+    - Other
+  - Solution categories: Choose 1-3 values from
+    - Threat Intelligence Feed
+    - Endpoint Detection & Response
+    - SIEM & Security Analytics
+    - Malware Analysis & Sandbox
+    - SOAR & Security Automation
+    - Vulnerability & Exposure Management
+    - Attack Surface Management
+    - Network Security
+    - Email Security
+    - AI Security
+    - Incident Response & Case Management
+    - Digital Risk Protection
+    - Governance, Risk & Compliance
+    - Cloud Security
+    - Enrichment & Reputation
+    - Import, Export & Sharing
+    - Other
+  - License type:
+    - Free
+    - Commercial
+  - Contact: Email address or GitHub profile URL of the maintainer
   - The remaining fields are optional and will be completed by the Integrations team during the verification process.
 - **Configuration parameters with examples**
   - By using the template, settings is defined with Pydantic models, which allows you to include descriptions and examples for each configuration parameter. This information will be used to automatically generate documentation and provide clear guidance to users when configuring the connector.
@@ -464,12 +595,27 @@ When your connector is ready:
 
 1. **Ensure all quality checks pass** (linting, tests, documentation)
 2. **Test in a production-like environment**
-3. **Create a Pull Request** on the [connectors repository](https://github.com/OpenCTI-Platform/connectors)
-   - Always start your PR title with _[Connector Name]_ followed by a meaningful description
+3. **Follow the commit message convention** — individual commit messages should use the same [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format as PR titles:
+   ```
+   type(scope?)!?: description (#123)
+   ```
+4. **Create a Pull Request** on the [connectors repository](https://github.com/OpenCTI-Platform/connectors)
+   - PR titles **must** follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format, enforced automatically by CI:
+     ```
+     type(scope?)!?: description (#123)
+     ```
+     - **type**: one of `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `revert`
+     - **scope**: optional — use the connector name or affected area (e.g. `alienvault`)
+     - **description**: must start with a lowercase letter
+     - **`(#123)`**: required — the linked issue number at the end
+   - Examples:
+     - `feat(alienvault): add pagination support (#42)`
+     - `fix: resolve config loading issue (#99)`
+     - `feat(misp)!: remove deprecated feed endpoint (#150)`
    - Describe the changes introduced by the PR
    - Reference any issues that will be closed upon merging, using the _Close_ keyword followed by the GitHub issue link
-4. **Respond to review feedback** from maintainers
-5. **Update documentation** as needed
+5. **Respond to review feedback** from maintainers
+6. **Update documentation** as needed
 
 > [!IMPORTANT]  
 > When creating a Pull Request on this repository, ALWAYS create along with an associated GitHub issue describing the purpose of your contribution (what problem it fixes, what improvement it brings, or what new integration it provides).

@@ -14,7 +14,6 @@ from pycti import OpenCTIConnectorHelper
 
 
 class ConverterToStix:
-
     def __init__(self, helper: OpenCTIConnectorHelper):
         """Initializes the `ConverterToStix` class.
 
@@ -33,7 +32,7 @@ class ConverterToStix:
             Author: A Author object and its representation in STIX 2.1 format.
         """
         return Author(
-            name=self.helper.connector.name,
+            name=self.helper.connect_name,
             organization_type="vendor",
             description="The ET Intelligence API is organized around REST with JSON responses. Our API is designed to use HTTP response codes to indicate API success/errors. We support cross-origin resource sharing (CORS) to allow you to interact with our API from a client-side web application. JSON will be returned in all responses from the API. The ET Intelligence API can be used to get information such as up-to-date reputation of domains and IPs, as well as related information on our entire database of over 300 million malware samples.We currently have code examples using curl and Python. If you have a particular language you'd like to see API examples for, please let us know. You can view code examples in the dark area to the right, and you can switch the programming language of the examples with the tabs in the top right.",
         )

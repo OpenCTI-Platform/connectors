@@ -1,0 +1,112 @@
+{
+  "activity": {
+    "data": {
+      "es_id": null,
+      "es_score": null,
+      "highlights": null,
+      "id": "example@example.com",
+      "index": "leak",
+      "metadata": {
+        "estimated_created_at": "2025-10-27T23:22:16.249066+00:00",
+        "event_id": null,
+        "first_crawled_at": "2025-10-27T23:22:16.249066+00:00",
+        "last_crawled_at": "2025-10-27T23:22:16.249066+00:00",
+        "payload_digest": null,
+        "scraped_at": null,
+        "source": "url_login_pass",
+        "crawled_by": null,
+        "flare_url": "https://app.flare.io/#/leak\/groups\/email\/example@example.com\/url_login_pass\/1@1"
+      },
+      "uid": "leak\/groups\/email\/example@example.com\/url_login_pass\/1@1",
+      "url": null,
+      "browser_url": null,
+      "identities": {
+        "name": null,
+        "passwords": {
+          "domain": null,
+          "hash": null,
+          "hash_type": null,
+          "extra": null,
+          "id": null,
+          "imported_at": null,
+          "source_id": null,
+          "source_params": null
+        }
+      },
+      "leak_source": {
+        "id": "url_login_pass",
+        "name": "URL Login Pass",
+        "description_en": "Credentials found by our team on various dark web forums and telegram chats, under the format url:login:password. These credentials are typically extracted by malicious actors from Stealer Logs and then shared extensively on cybercrime platforms.",
+        "description_fr": "Informations d'identification trouv\u00e9es par notre \u00e9quipe sur divers forums du dark web et sur des chats Telegram, sous le format url:login:password. Ces informations d'identification sont g\u00e9n\u00e9ralement extraites par des acteurs malveillants des Stealer Logs et sont ensuite largement partag\u00e9es sur les plateformes de cybercriminalit\u00e9.",
+        "breached_at": null,
+        "leaked_at": null,
+        "pii_tags": []
+      }
+    },
+    "duplicates": null,
+    "header": {
+      "actor": null,
+      "actor_id": null,
+      "bank": null,
+      "bin": null,
+      "brand": null,
+      "credential_count": null,
+      "category_name": null,
+      "content_hash": "0000000000000000000000000000000000000000",
+      "content_preview": null,
+      "country": null,
+      "duplicates": null,
+      "es_score": null,
+      "expiration": null,
+      "highlights": null,
+      "host": null,
+      "id": "example@example.com",
+      "infection_date": null,
+      "parent_id": null,
+      "parent_title": null,
+      "parent_title_en": null,
+      "parent_uid": null,
+      "parent_uids": null,
+      "risk": {
+        "score": 4
+      },
+      "similar_items_count": null,
+      "source": "groups",
+      "source_name": "URL Login Pass",
+      "target_name": null,
+      "tags": null,
+      "notes": null,
+      "state_code": null,
+      "timestamp": null,
+      "title": "example@example.com leak on URL Login Pass",
+      "type": "leak",
+      "uid": "leak\/groups\/email\/example@example.com\/url_login_pass\/1@1",
+      "user_risk_score": null,
+      "user_notes": null,
+      "ignored_at": null,
+      "remediated_at": null,
+      "verb": null,
+      "external_url": null,
+      "external_netloc": null,
+      "can_have_duplicates": null,
+      "priority_action_uuid_related": null,
+      "analyzers_items_uids": null,
+      "victim_name": null,
+      "contains_secrets": null,
+      "secrets_metadata": null
+    },
+    "history_logs": null,
+    "metadata": {
+      "estimated_created_at": "2025-10-27T23:22:16.249066+00:00",
+      "event_id": null,
+      "first_crawled_at": "2025-10-27T23:22:16.249066+00:00",
+      "last_crawled_at": "2025-10-27T23:22:16.249066+00:00",
+      "payload_digest": null,
+      "scraped_at": null,
+      "source": "url_login_pass",
+      "crawled_by": null,
+      "flare_url": "https://app.flare.io/#/leak\/groups\/email\/example@example.com\/url_login_pass\/1@1"
+    },
+    "similar_items": null
+  }
+}

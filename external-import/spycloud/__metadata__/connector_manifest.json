@@ -5,8 +5,14 @@
   "short_description": "SpyCloud monitors and tracks compromised data, such as login credentials and personal information, across the web and other sources.",
   "logo": "external-import/spycloud/__metadata__/logo.png",
   "use_cases": [
-    "Incident Response & Ticketing"
+    "Brand, Digital Risk & Underground Exposure"
   ],
+  "solution_categories": [
+    "Digital Risk Protection",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

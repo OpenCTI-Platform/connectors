@@ -1,0 +1,97 @@
+{
+  "items": [
+    {
+      "metadata": {
+        "uid": "stealer_logs/123456789",
+        "estimated_created_at": "2024-03-28T18:04:10Z",
+        "matched_at": "2025-09-14T00:07:13.263096Z",
+        "type": "stealer_log",
+        "severity": "medium",
+        "flare_url": "https://app.flare.io/#/stealer_log/stealer_logs/123456789"
+      },
+      "tenant_metadata": {
+        "severity": 2,
+        "notes": "Some notes",
+        "tags": []
+      },
+      "identifiers": [
+        {
+          "id": 1,
+          "name": "https://example.com"
+        }
+      ],
+      "highlights": {
+        "credentials": [
+          "user@example.com"
+        ]
+      }
+    },
+    {
+      "metadata": {
+        "uid": "leak\/groups\/email\/example@example.com\/url_login_pass\/1@1",
+        "estimated_created_at": "2025-10-27T23:22:16.249066+00:00",
+        "matched_at": "2025-09-14T00:07:13.263096Z",
+        "type": "leak",
+        "severity": "high",
+        "flare_url": "https://app.flare.io/#/leak\/groups\/email\/example@example.com\/url_login_pass\/1@1"
+      },
+      "tenant_metadata": {
+        "severity": 3,
+        "notes": "Some more notes",
+        "tags": []
+      },
+      "identifiers": [
+        {
+          "id": 1,
+          "name": "https://example.com"
+        }
+      ],
+      "highlights": {}
+    },
+    {
+      "metadata": {
+        "uid": "domain\/flare\/examples.com",
+        "estimated_created_at": "2025-10-27T23:22:16.249066+00:00",
+        "matched_at": "2025-09-14T00:07:13.263096Z",
+        "type": "domain",
+        "severity": "low",
+        "flare_url": "https:\/\/app.flare.io\/#\/domain\/flare\/examples.com"
+      },
+      "tenant_metadata": {
+        "severity": 1,
+        "notes": null,
+        "tags": []
+      },
+      "identifiers": [
+        {
+          "id": 1,
+          "name": "https://example.com"
+        }
+      ],
+      "highlights": {}
+    },
+    {
+      "metadata": {
+        "uid": "document\/dark\/example.com",
+        "estimated_created_at": "2025-10-27T23:22:16.249066+00:00",
+        "matched_at": "2025-09-14T00:07:13.263096Z",
+        "type": "document",
+        "severity": "high",
+        "flare_url": "https:\/\/app.flare.io\/#\/document\/dark\/example.com"
+      },
+      "tenant_metadata": {
+        "severity": 3,
+        "notes": null,
+        "tags": []
+      },
+      "identifiers": [
+        {
+          "id": 1,
+          "name": "https://example.com"
+        }
+      ],
+      "highlights": {}
+    }
+  ],
+  "next": "thisisacursor"
+}

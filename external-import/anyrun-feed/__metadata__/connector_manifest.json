@@ -1,13 +1,17 @@
 {
   "title": "ANY.RUN Feed",
   "slug": "anyrun-feed",
-  "description": "ANY.RUN’s TI Feeds is a continuously updated source of fresh network-based Indicators of Compromise (IOCs): IPs, domains, and URLs.",
-  "short_description": "The connector for Threat Intelligence Feeds provides OpenCTI users with simple, automated access to uniquely sourced and accurate indicators of compromise.",
+  "description": "ANY.RUN's Threat Intelligence Feeds (TI Feeds) is a continuously updated source of fresh network-based Indicators of Compromise (IOCs): IPs, domains, and URLs. The IOCs are extracted from real-time analyses done by experts from 15,000 companies in ANY.RUN's Interactive Sandbox.\n\nThis connector provides OpenCTI users with automated access to uniquely sourced and accurate indicators of compromise.\n\nKey benefits:\n\n- Expanded Coverage: Exclusive IOCs from Memory Dumps, Suricata IDS, in-browser data, and internal threat categorization systems\n- Reduced Workload: Pre-processed indicators with minimum false positives, ready for analysis or investigation\n- Informed Response: Rich metadata providing context for in-depth threat investigations and faster response",
+  "short_description": "ANY.RUN Feed connector imports fresh network-based IOCs (IPs, domains, URLs) extracted from real-time sandbox analyses, with rich metadata and minimal false positives.",
   "logo": "external-import/anyrun-feed/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence",
-    "Commercial Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -15,7 +19,7 @@
   "support_version": ">=6.0.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/anyrun-feed",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-anyrun-feed",
   "container_type": "EXTERNAL_IMPORT"

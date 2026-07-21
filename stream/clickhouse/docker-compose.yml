@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-clickhouse:
+    image: opencti/connector-clickhouse:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type STREAM
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=ClickHouse # optional (default: 'ClickHouse')
+      # - CONNECTOR_SCOPE=clickhouse # optional (default: 'clickhouse')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true # optional (default: true)
+      # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
+      # ClickHouse parameters
+      - CLICKHOUSE_BASE_URL=ChangeMe # e.g. http://clickhouse:8123
+      # - CLICKHOUSE_USERNAME=default # optional (default: 'default')
+      - CLICKHOUSE_PASSWORD=ChangeMe
+      # - CLICKHOUSE_DATABASE=default # optional (default: 'default')
+      # - CLICKHOUSE_TABLE=opencti_stream # optional (default: 'opencti_stream')
+      # - CLICKHOUSE_CREATE_TABLE=true # optional (default: true)
+      # - CLICKHOUSE_SSL_VERIFY=true # optional (default: true)
+    restart: always

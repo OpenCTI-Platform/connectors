@@ -11,7 +11,7 @@ from utils.work_manager import WorkManager
 
 if TYPE_CHECKING:
     import stix2
-    from api_client.models import EventRestSearchListItem
+    from api_client.models import EventRestSearchListItem, ExtendedAttributeItem
     from connector.settings import ConnectorSettings
     from pycti import OpenCTIConnectorHelper
 
@@ -75,6 +75,116 @@ class Misp:
         )
 
         self._current_bundle = None
+
+    def _filter_event_attributes_by_timestamp(
+        self,
+        event: "EventRestSearchListItem",
+        since_timestamp: int,
+    ) -> tuple[int, int]:
+        """Filter event attributes to only those modified since the given timestamp.
+
+        Modifies the event in place, removing attributes (both at event level
+        and within objects) whose timestamp is older than `since_timestamp`.
+        Objects with no remaining attributes after filtering are removed entirely,
+        even if the object-level timestamp is recent: the converter requires at
+        least one attribute per object.
+
+        When ALL attributes are filtered out, the first original attribute is
+        kept to ensure the converter can produce a valid report with at least
+        one object_ref (the resulting observable already exists in OpenCTI from
+        a previous run, so the upsert is a no-op).
+
+        Args:
+            event: The MISP event to filter (modified in place).
+            since_timestamp: Unix timestamp; only attributes with timestamp >= this value are kept.
+
+        Returns:
+            Tuple of (total_attributes_before, total_attributes_after) for logging.
+        """
+        total_before = 0
+        total_after = 0
+
+        # Save the first available attribute before filtering, as a fallback
+        first_attribute: "ExtendedAttributeItem | None" = None
+        if event.Event.Attribute:
+            first_attribute = event.Event.Attribute[0]
+        elif event.Event.Object:
+            for obj in event.Event.Object:
+                if obj.Attribute:
+                    first_attribute = obj.Attribute[0]
+                    break
+
+        # Filter top-level event attributes
+        if event.Event.Attribute:
+            total_before += len(event.Event.Attribute)
+            filtered: list[ExtendedAttributeItem] = [
+                attr
+                for attr in event.Event.Attribute
+                if int(attr.timestamp or "0") >= since_timestamp
+            ]
+            total_after += len(filtered)
+            # Pydantic frozen model — we need to use model internals to mutate
+            object.__setattr__(event.Event, "Attribute", filtered)
+
+        # Filter attributes within objects, then remove objects with no remaining attributes.
+        # Objects without attributes are dropped even if their own timestamp is recent:
+        # the converter always expects at least one attribute (object.Attribute[0]) and
+        # there is no meaningful data to send to OpenCTI for an attribute-less object.
+        if event.Event.Object:
+            remaining_objects = []
+            for obj in event.Event.Object:
+                if obj.Attribute:
+                    total_before += len(obj.Attribute)
+                    filtered_obj_attrs: list[ExtendedAttributeItem] = [
+                        attr
+                        for attr in obj.Attribute
+                        if int(attr.timestamp or "0") >= since_timestamp
+                    ]
+                    total_after += len(filtered_obj_attrs)
+                    if filtered_obj_attrs:
+                        object.__setattr__(obj, "Attribute", filtered_obj_attrs)
+                        remaining_objects.append(obj)
+            object.__setattr__(event.Event, "Object", remaining_objects)
+
+        # If everything was filtered out, keep the first original attribute so the
+        # converter can produce a valid report with a real object_ref.
+        if total_after == 0 and first_attribute is not None:
+            self.logger.info(
+                "No attributes passed the filter, keeping first attribute "
+                "as fallback",
+                {
+                    "prefix": LOG_PREFIX,
+                    "event_id": event.Event.id,
+                },
+            )
+            object.__setattr__(event.Event, "Attribute", [first_attribute])
+
+        return total_before, total_after
+
+    def _get_max_attribute_timestamp(self, event: "EventRestSearchListItem") -> int:
+        """Get the maximum attribute timestamp from an event.
+
+        Only considers actual attribute timestamps (event-level and within
+        objects), NOT object-level timestamps. This is important because
+        the high-water mark is used as the MISP API `attribute_timestamp`
+        parameter which only filters on attribute timestamps.
+
+        Args:
+            event: The MISP event.
+
+        Returns:
+            The highest attribute timestamp found, or 0 if no attributes.
+        """
+        max_ts = 0
+
+        for attr in event.Event.Attribute or []:
+            max_ts = max(max_ts, int(attr.timestamp or "0"))
+
+        for obj in event.Event.Object or []:
+            for attr in obj.Attribute or []:
+                max_ts = max(max_ts, int(attr.timestamp or "0"))
+
+        return max_ts
 
     def _check_batch_size_and_flush(
         self,
@@ -277,6 +387,48 @@ class Misp:
 
         return event_datetime
 
+    def _event_already_exists_in_opencti(
+        self, event: "EventRestSearchListItem"
+    ) -> bool:
+        """Check whether this MISP event was already ingested into OpenCTI.
+
+        Looks up the ExternalReference created by the converter (source_name=MISP,
+        external_id=event.uuid). This is timezone-independent and relies solely
+        on the MISP event UUID.
+
+        Args:
+            event: The MISP event to check.
+
+        Returns:
+            True if the event was already ingested, False otherwise.
+        """
+        result = self.helper.api.query(
+            """
+            query CheckMISPEvent($filters: FilterGroup) {
+              externalReferences(first: 1, filters: $filters) {
+                edges { node { id } }
+              }
+            }
+            """,
+            {
+                "filters": {
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "external_id",
+                            "values": [event.Event.uuid],
+                        },
+                        {
+                            "key": "source_name",
+                            "values": ["MISP"],
+                        },
+                    ],
+                    "filterGroups": [],
+                }
+            },
+        )
+        return len(result["data"]["externalReferences"]["edges"]) > 0
+
     @staticmethod
     def _compute_completion_percentage(
         bundle_size: int, remaining_objects_count: int
@@ -446,8 +598,12 @@ class Misp:
                     },
                 )
             else:
-                last_event_date = self.config.misp.import_from_date or now
-                self.logger.info("Connector has never run")
+                last_event_date = self.config.misp.import_from_date or now - timedelta(
+                    days=10
+                )
+                self.logger.info(
+                    "Connector has never run", {"last_event_date": last_event_date}
+                )
 
             filter_params = {
                 "date_field_filter": self.config.misp.date_filter_field,
@@ -462,6 +618,42 @@ class Misp:
                 "with_attachments": self.config.misp.import_with_attachments,
                 "limit": self.config.misp.search_limit,
             }
+
+            # Attribute-level timestamp filtering (client-side only).
+            # We separate the *filter threshold* (stable for the entire run)
+            # from the *high-water mark* (updated per-event, persisted at end).
+            attribute_ts_filtering = self.config.misp.attribute_timestamp_filtering
+            since_attr_timestamp: int | None = None
+            max_attr_timestamp_seen: int | None = None
+            if attribute_ts_filtering:
+                since_attr_timestamp = initial_state.get("last_attribute_timestamp")
+                if since_attr_timestamp is not None:
+                    self.logger.info(
+                        "Attribute-level timestamp filtering enabled",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "last_attribute_timestamp": since_attr_timestamp,
+                        },
+                    )
+                elif last_event:
+                    # Connector was already running but attribute filtering was
+                    # just enabled — use last_event_date as a reasonable fallback
+                    # to avoid reprocessing all attributes from returned events.
+                    since_attr_timestamp = int(last_event_date.timestamp())
+                    self.logger.info(
+                        "Attribute-level timestamp filtering enabled "
+                        "(using last_event_date as initial fallback)",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "fallback_attribute_timestamp": since_attr_timestamp,
+                        },
+                    )
+                else:
+                    self.logger.info(
+                        "Attribute-level timestamp filtering enabled "
+                        "(first run, no filtering will be applied)",
+                        {"prefix": LOG_PREFIX},
+                    )
 
             self.logger.info(
                 "Fetching MISP events with filters:",
@@ -486,9 +678,44 @@ class Misp:
                         self.logger.info(
                             "MISP event found - Processing...", event_log_data
                         )
+
+                        # Apply attribute-level timestamp filtering if enabled
+                        # Track whether real attributes passed the filter for
+                        # high-water mark calculation (fallback attributes must
+                        # not regress the watermark).
+                        filter_passed_count: int | None = None
+                        if attribute_ts_filtering and since_attr_timestamp is not None:
+                            if self._event_already_exists_in_opencti(event):
+                                before, after = (
+                                    self._filter_event_attributes_by_timestamp(
+                                        event, int(since_attr_timestamp)
+                                    )
+                                )
+                                filter_passed_count = after
+                                self.logger.info(
+                                    "Attribute-level filtering applied",
+                                    {
+                                        **event_log_data,
+                                        "attributes_before_filter": before,
+                                        "attributes_after_filter": after,
+                                    },
+                                )
+                            else:
+                                self.logger.info(
+                                    "Event not yet in OpenCTI, skipping "
+                                    "attribute-level filtering to ingest "
+                                    "all attributes",
+                                    event_log_data,
+                                )
+
                         try:
-                            self._current_bundle = author, markings, bundle_objects = (
-                                self.converter.process(
+                            self._current_bundle = (
+                                author,
+                                markings,
+                                bundle_objects,
+                                filter_passed_count,
+                            ) = (
+                                *self.converter.process(
                                     event=event,
                                     include_relationships=(
                                         len(event.Event.Attribute or [])
@@ -496,7 +723,8 @@ class Misp:
                                     )
                                     # TODO: Add a configuration for the maximum number of attributes and objects
                                     < 10000,
-                                )
+                                ),
+                                filter_passed_count,
                             )
                         except ConverterError as err:
                             self.logger.error(
@@ -510,7 +738,9 @@ class Misp:
                             "Resuming processing of MISP event...",
                             event_log_data,
                         )
-                        author, markings, bundle_objects = self._current_bundle
+                        author, markings, bundle_objects, filter_passed_count = (
+                            self._current_bundle
+                        )
 
                     self.logger.debug(
                         "Converted to STIX entities",
@@ -529,6 +759,20 @@ class Misp:
                     if outcome is ProcessingOutcome.BUFFERING:
                         break
 
+                    # Update the high-water mark for attribute timestamps.
+                    # Only advance the watermark when real attributes passed the
+                    # filter (filter_passed_count > 0) or no filtering was applied
+                    # (filter_passed_count is None).  When filter_passed_count == 0
+                    # the event only contains a fallback attribute whose old
+                    # timestamp must NOT regress the watermark.
+                    if attribute_ts_filtering and filter_passed_count != 0:
+                        cur_max = self._get_max_attribute_timestamp(event)
+                        if cur_max > 0 and (
+                            max_attr_timestamp_seen is None
+                            or cur_max > max_attr_timestamp_seen
+                        ):
+                            max_attr_timestamp_seen = cur_max
+
                     self._current_bundle = None
 
                 else:
@@ -536,6 +780,24 @@ class Misp:
                     # broken, meaning all events have been processed. We then
                     # add 1 second to the last event date to avoid processing
                     # the same event again during the next run.
+                    if attribute_ts_filtering and max_attr_timestamp_seen:
+                        # Persist the attribute timestamp high-water mark.
+                        # Add 1 to avoid reprocessing the last attribute.
+                        self.work_manager.update_state(
+                            state_update={
+                                "last_attribute_timestamp": int(max_attr_timestamp_seen)
+                                + 1
+                            }
+                        )
+                        self.logger.info(
+                            "Updated last_attribute_timestamp in state",
+                            {
+                                "prefix": LOG_PREFIX,
+                                "last_attribute_timestamp": int(max_attr_timestamp_seen)
+                                + 1,
+                            },
+                        )
+
                     if self.config.misp.datetime_attribute != "date":
                         # If the datetime attribute is not date, we need to update
                         # the last event date to avoid processing the same event again

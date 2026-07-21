@@ -17,7 +17,7 @@ The following table outlines the data availability across both platforms.
 
 | Stream | Titan Support | Verity471 Support | Produced Objects | Platform Notes |
 | :--- | :---: | :---: | :--- | :--- |
-| **Indicators** | ✅ | ✅ | `Indicator`, `Malware`, Observables | **Titan:** IPv4, File, URL.<br>**Verity:** Adds Domain and Email. |
+| **Indicators** | ✅ | ✅ | `Indicator`, `Malware`, `Infrastructure`, Observables | **Titan:** IPv4, File, URL.<br>**Verity:** Adds Domain and Email. |
 | **YARA** | ✅ | ❌ | `Indicator`, `Malware` | **Verity:** Merged into the **Indicators** stream for a unified experience. |
 | **Reports** | ✅ | ✅ | `Report`, `Malware`, Observables | **Titan:** Fintel, Info, Malware, Spot, Breach Alerts.<br>**Verity:** Adds Geopol intel reports. |
 | **Vulnerabilities** | ✅ | ✅ | `Vulnerability` | Full parity across both platforms. |

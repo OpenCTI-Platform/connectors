@@ -1,10 +1,17 @@
 {
   "title": "Pgl Yoyo",
   "slug": "pgl-yoyo",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "Peter Lowe (PGL / yoyo.org) maintains curated blocklists of ad-serving, tracking, and malicious domains and IP addresses. This connector imports PGL blocklists into OpenCTI and transforms entries into STIX 2.1 Indicators for IPv4 addresses and domain names.\n\nKey features:\n\n- Parses plain-text feeds and emits canonical STIX 2.1 Indicator patterns\n- Supports both IPv4 and Domain-Name indicator types\n- Input sanitization and validation before emission\n- Configurable multiple feeds with custom labels\n- Scheduled imports with configurable interval",
+  "short_description": "PGL Yoyo connector imports Peter Lowe's ad/tracking blocklists into OpenCTI as STIX 2.1 Indicators for IPv4 addresses and domain names.",
   "logo": null,
-  "use_cases": [],
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

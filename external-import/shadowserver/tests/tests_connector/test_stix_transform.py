@@ -1,8 +1,9 @@
+import logging
 import unittest
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from pycti import CustomObjectCaseIncident, OpenCTIConnectorHelper
+from pycti import CustomObjectCaseIncident
 from shadowserver.stix_transform import ShadowserverStixTransformation
 from shadowserver.utils import datetime_to_string
 from stix2 import (
@@ -18,12 +19,6 @@ from stix2 import (
 
 class TestShadowserverStixTransformation(unittest.TestCase):
     def setUp(self):
-        self.api_helper = MagicMock(spec=OpenCTIConnectorHelper)
-        self.api_helper.connector_logger = MagicMock()
-        self.api_helper.connector_logger.debug = MagicMock()
-        self.api_helper.connector_logger.info = MagicMock()
-        self.api_helper.connector_logger.error = MagicMock()
-
         self.marking_refs = MarkingDefinition(
             type="marking-definition",
             spec_version="2.1",
@@ -45,13 +40,13 @@ class TestShadowserverStixTransformation(unittest.TestCase):
             marking_refs=self.marking_refs,
             report_list=self.report_list,
             report=self.report,
-            api_helper=self.api_helper,
             labels=self.labels,
             incident={
                 "create": True,
                 "severity": "medium",
                 "priority": "P4",
             },
+            logger=logging.getLogger(__name__),
         )
 
     def test_create_author(self):

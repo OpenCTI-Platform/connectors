@@ -11,7 +11,7 @@ from pycti import (
     StixCoreRelationship,
     ThreatActorGroup,
 )
-from ransomwarelive.utils import threat_description_generator
+from ransomwarelive.utils import get_group_entry, threat_description_generator
 
 
 class ConverterToStix:
@@ -22,9 +22,15 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, marking_value: str):
+    def __init__(self, marking_value: str, create_leak_site_domains: bool = False):
+        # Defaults to ``False`` so leak-site URL/domain enrichment is opt-in:
+        # this mirrors the ``CONNECTOR_CREATE_LEAK_SITE_DOMAINS`` config default
+        # and fails closed for the compliance-sensitive behaviour, so any call
+        # site that forgets to pass the flag does not silently emit leak-site
+        # links. The connector always passes the configured value explicitly.
         self.marking = self.load_marking_definition(marking_value)
         self.author = self.create_author()
+        self.create_leak_site_domains = create_leak_site_domains
 
     def load_marking_definition(self, marking_value: str) -> stix2.MarkingDefinition:
         """Return the ``stix2.MarkingDefinition`` for ``marking_value``.
@@ -222,6 +228,8 @@ class ConverterToStix:
         self,
         name: str,
         intrusion_description: str,
+        aliases: list[str] | None = None,
+        external_references: list | None = None,
     ):
         """
         Create STIX 2.1 IntrusionSet object
@@ -232,6 +240,8 @@ class ConverterToStix:
                 space is appended to ensure a valid STIX ID can be
                 generated.
             intrusion_description: description in string
+            aliases: optional list of alternative names
+            external_references: optional list of stix2 ExternalReference objects
         Return:
             IntrusionSet in STIX 2.1 format
         """
@@ -244,6 +254,8 @@ class ConverterToStix:
             resource_level="organization",
             created_by_ref=self.author.get("id"),
             description=intrusion_description,
+            aliases=aliases or None,
+            external_references=external_references or None,
             object_marking_refs=[self.marking.id] if self.marking else [],
         )
         return intrusionset
@@ -363,6 +375,8 @@ class ConverterToStix:
         self,
         threat_actor_name: str,
         threat_description: str,
+        aliases: list[str] | None = None,
+        external_references: list | None = None,
     ):
         """
         Create STIX2.1 ThreatActor object
@@ -370,6 +384,8 @@ class ConverterToStix:
         Params:
             threat_actor_name: name of threat actor in string
             threat_description: description in string
+            aliases: optional list of alternative names
+            external_references: optional list of stix2 ExternalReference objects
         Return:
             ThreatActor in STIX 2.1 format
         """
@@ -379,6 +395,8 @@ class ConverterToStix:
             labels=["ransomware"],
             created_by_ref=self.author.get("id"),
             description=threat_description,
+            aliases=aliases or None,
+            external_references=external_references or None,
             object_marking_refs=[self.marking.id] if self.marking else [],
         )
         return threat_actor
@@ -402,17 +420,28 @@ class ConverterToStix:
 
         return domain, relation_victim_domain
 
-    def process_external_references(self, item: dict):
+    def process_external_references(
+        self, item: dict, create_leak_post_refs: bool = False
+    ):
         """
         Process external references to stix2
 
         Params:
             item (dict): dict of data from api call
+            create_leak_post_refs (bool): whether to include the direct leak post
+                URL (``post_url``) as an external reference. Defaults to ``False``
+                (opt-in) to mirror the ``CONNECTOR_CREATE_LEAK_POST_REFS`` config
+                default and fail closed for this compliance-sensitive behaviour;
+                the connector always passes the configured value explicitly
         Returns:
-            external_references: stix2 ExternalReference object
+            external_references: list of stix2 ExternalReference objects
+                (empty list when ``item`` carries none of the expected fields)
         """
         external_references = []
-        for field in ["screenshot", "website", "post_url"]:
+        fields = ["screenshot", "website"]
+        if create_leak_post_refs:
+            fields.append("post_url")
+        for field in fields:
             if item.get(field):
                 external_reference = self.create_external_reference(
                     url=item[field],
@@ -420,6 +449,88 @@ class ConverterToStix:
                 )
                 external_references.append(external_reference)
         return external_references
+
+    def _extract_group_aliases(self, group_entry: dict | None) -> list[str] | None:
+        """Return [altname] if group_entry has a non-empty altname, else None."""
+        if not group_entry:
+            return None
+        altname = group_entry.get("altname")
+        if altname and str(altname).strip():
+            return [str(altname).strip()]
+        return None
+
+    def _extract_group_aliases_and_refs(
+        self, group_entry: dict | None
+    ) -> tuple[list[str] | None, list | None]:
+        """
+        Extract aliases and external references from a group entry.
+        Location slug URLs are only included when self.create_leak_site_domains is True.
+
+        Returns:
+            (aliases, external_references) both may be None
+        """
+        aliases = self._extract_group_aliases(group_entry)
+
+        if not group_entry:
+            return aliases, None
+
+        ext_refs = []
+        seen_urls: set[str] = set()
+
+        group_url = group_entry.get("url")
+        if group_url and group_url not in seen_urls:
+            seen_urls.add(group_url)
+            ext_refs.append(
+                self.create_external_reference(
+                    url=group_url,
+                    description="ransomware.live group profile page",
+                )
+            )
+
+        if self.create_leak_site_domains:
+            for loc in group_entry.get("locations") or []:
+                slug = loc.get("slug")
+                if slug and slug not in seen_urls:
+                    seen_urls.add(slug)
+                    title = loc.get("title") or "Leak site"
+                    ext_refs.append(
+                        self.create_external_reference(
+                            url=slug,
+                            description=f"Leak site: {title}",
+                        )
+                    )
+
+        return aliases, ext_refs or None
+
+    def process_group_leak_sites(
+        self,
+        group_entry: dict,
+        intrusion_set: stix2.IntrusionSet,
+    ) -> list:
+        """
+        Create DomainName observables and related-to relationships for each leak
+        site listed in the group entry's locations.
+
+        Params:
+            group_entry (dict): single group entry from /v2/groups API
+            intrusion_set (stix2.IntrusionSet): the group's IntrusionSet object
+        Returns:
+            list of stix2 objects (domain + relationship pairs)
+        """
+        objects = []
+        for loc in group_entry.get("locations") or []:
+            fqdn = loc.get("fqdn")
+            if not fqdn or not str(fqdn).strip():
+                continue
+            domain = self.create_domain(domain_name=fqdn.strip())
+            relation = self.create_relationship(
+                source_ref=domain.get("id"),
+                target_ref=intrusion_set.get("id"),
+                relationship_type="related-to",
+            )
+            objects.append(domain)
+            objects.append(relation)
+        return objects
 
     def process_intrusion_set(
         self,
@@ -448,20 +559,28 @@ class ConverterToStix:
             relation_victim_intrusion: stix2 Relationship between victim and intrusionset
         """
         if intrusion_set_name in ["lockbit3", "lockbit2"]:
+            group_entry = get_group_entry(group_name_lockbit, group_data)
+            aliases, ext_refs = self._extract_group_aliases_and_refs(group_entry)
             intrusion_description = threat_description_generator(
                 group_name_lockbit, group_data
             )
             intrusion_set = self.create_intrusionset(
                 name="lockbit",
                 intrusion_description=intrusion_description,
+                aliases=aliases,
+                external_references=ext_refs,
             )
         else:
+            group_entry = get_group_entry(intrusion_set_name, group_data)
+            aliases, ext_refs = self._extract_group_aliases_and_refs(group_entry)
             intrusion_description = threat_description_generator(
                 intrusion_set_name, group_data
             )
             intrusion_set = self.create_intrusionset(
                 name=intrusion_set_name,
                 intrusion_description=intrusion_description,
+                aliases=aliases,
+                external_references=ext_refs,
             )
 
         relation_victim_intrusion = self.create_relationship(
@@ -754,10 +873,14 @@ class ConverterToStix:
             threat_actor: stix2 ThreatActor object
             target_relation: stix2 Relationship between threatactor and victim
         """
+        group_entry = get_group_entry(threat_actor_name, group_data)
+        aliases, ext_refs = self._extract_group_aliases_and_refs(group_entry)
         threat_description = threat_description_generator(threat_actor_name, group_data)
         threat_actor = self.create_threat_actor(
             threat_actor_name=threat_actor_name,
             threat_description=threat_description,
+            aliases=aliases,
+            external_references=ext_refs,
         )
 
         target_relation = self.create_relationship(

@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'ArcSight Incidents' # optional (default: 'ArcSight Incidents')
+  scope: 'arcsight' # required
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT15M' # optional (default: 'PT15M')
+
+arcsight_incidents:
+  api_base_url: 'ChangeMe' # Base URL of the ArcSight ESM Manager, e.g. https://arcsight.example.com:8443
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  max_cases: 200 # optional (default: 200)
+  tlp_level: 'amber' # optional, one of clear/white/green/amber/amber+strict/red (default: 'amber')
+  ssl_verify: true # optional (default: true)

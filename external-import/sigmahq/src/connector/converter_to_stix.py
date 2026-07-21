@@ -3,6 +3,7 @@ from typing import Literal
 
 import pycti
 import stix2
+from connector.utils import is_valid_technique_id
 from pycti import (
     AttackPattern,
     Identity,
@@ -11,8 +12,6 @@ from pycti import (
     Vulnerability,
 )
 from sigma.rule import SigmaRule
-
-from .utils import is_valid_technique_id
 
 
 class ConverterToStix:

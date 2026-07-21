@@ -168,7 +168,6 @@ Validates connector metadata (manifest, identity).
 
 | Code | Severity | Name | Description |
 |------|----------|------|-------------|
-| VC201 | ERROR | `manifest-verified-date` | `connector_manifest.json` must have `"verified": true` and a valid `"last_verified_date"` in YYYY-MM-DD format |
 | VC202 | ERROR | `manifest-container-image` | `container_version` must be `"rolling"`, `container_image` must match `opencti/connector-<dirname>` |
 
 ### VC3xx — Code

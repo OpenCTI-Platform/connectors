@@ -388,13 +388,17 @@ class IndicatorBundleBuilder:
     def _determine_score_by_labels(self, labels: List[str]) -> int:
         label_score = None
 
-        low = {lbl.lower() for lbl in self.indicator_low_score_labels}
-        medium = {lbl.lower() for lbl in self.indicator_medium_score_labels}
-        high = {lbl.lower() for lbl in self.indicator_high_score_labels}
+        low = {lbl.lower().replace(" ", "") for lbl in self.indicator_low_score_labels}
+        medium = {
+            lbl.lower().replace(" ", "") for lbl in self.indicator_medium_score_labels
+        }
+        high = {
+            lbl.lower().replace(" ", "") for lbl in self.indicator_high_score_labels
+        }
 
         # Score will be given floored at lowest score label found.
         for label in labels:
-            lbl = str(label).lower()
+            lbl = str(label).lower().replace(" ", "")
 
             if lbl in low:
                 label_score = self.indicator_low_score
@@ -427,6 +431,15 @@ class IndicatorBundleBuilder:
             indicator_published = timestamp_to_datetime(
                 self.indicator["published_date"]
             )
+            # `last_updated` drives the STIX `modified` date. Guard against it
+            # being absent so an IOC without it is still created (rather than
+            # dropped by the surrounding try/except) — `modified` then defaults
+            # to `created`.
+            indicator_modified = (
+                timestamp_to_datetime(self.indicator["last_updated"])
+                if self.indicator.get("last_updated")
+                else None
+            )
 
             return create_indicator(
                 indicator_pattern.pattern,
@@ -435,6 +448,7 @@ class IndicatorBundleBuilder:
                 name=indicator_value,
                 valid_from=indicator_published,
                 created=indicator_published,
+                modified=indicator_modified,
                 kill_chain_phases=kill_chain_phases,
                 labels=labels,
                 confidence=self.confidence_level,

@@ -141,29 +141,71 @@ class ImportDocumentAIClient:
 
         try:
             result = response.json()
-            self.helper.connector_logger.info(
-                "[API] Chatbot agent response received",
-                {"keys": list(result.keys())},
+        except ValueError as err:
+            raise ValueError(
+                f"XTM One agent '{agent_slug}' returned a non-JSON response "
+                f"(HTTP {response.status_code}): {response.text[:500]!r}"
+            ) from err
+
+        # Fail fast on a non-object JSON payload (e.g. a bare list or string).
+        # Everything below assumes a JSON object; without this guard such a
+        # response would misleadingly surface as an "empty response" error.
+        if not isinstance(result, dict):
+            raise ValueError(
+                f"XTM One agent '{agent_slug}' returned an unexpected response "
+                f"type: {type(result).__name__} (expected a JSON object)"
             )
-            # The OpenCTI proxy relays the XTM One SendMessageResponse:
-            # { "user_message": {...}, "assistant_message": { "content": "..." }, "conversation_id": "..." }
-            # The assistant_message.content contains the STIX bundle as JSON text
-            assistant_content = None
-            if "assistant_message" in result:
-                assistant_content = result["assistant_message"].get("content", "")
-            elif "content" in result:
-                # Fallback: direct content field
-                assistant_content = result["content"]
 
-            if assistant_content and isinstance(assistant_content, str):
-                bundle_data = json.loads(assistant_content)
-            elif isinstance(assistant_content, dict):
-                bundle_data = assistant_content
-            else:
-                raise ValueError(
-                    f"Unexpected response format from XTM One agent: {list(result.keys())}"
-                )
+        self.helper.connector_logger.info(
+            "[API] Chatbot agent response received",
+            {"keys": list(result.keys())},
+        )
 
+        # The OpenCTI ``/chatbot/agent`` proxy answers HTTP 200 even when the
+        # upstream XTM One call fails, signalling the failure through an error
+        # envelope:
+        #   {"content": "", "status": "error", "error": "<detail>", "code": <int>}
+        # Surface the real upstream error (timeout, unreachable, LLM failure,
+        # ...) instead of the misleading generic "unexpected response format",
+        # so the failure is actionable in the OpenCTI work status and the
+        # connector logs.
+        if result.get("status") == "error":
+            upstream_error = result.get("error") or "unknown error"
+            upstream_code = result.get("code")
+            self.helper.connector_logger.error(
+                "[API] XTM One agent reported an error",
+                {
+                    "agent_slug": agent_slug,
+                    "code": upstream_code,
+                    "error": upstream_error,
+                },
+            )
+            raise ValueError(
+                f"XTM One agent '{agent_slug}' returned an error "
+                f"(code={upstream_code}): {upstream_error}"
+            )
+
+        # Locate the STIX bundle content. Multipart (file) calls relay the XTM
+        # One SendMessageResponse ({"assistant_message": {"content": ...}});
+        # text-mode calls return {"content": ...} directly.
+        assistant_content = None
+        assistant_message = result.get("assistant_message")
+        if isinstance(assistant_message, dict):
+            assistant_content = assistant_message.get("content")
+        elif "content" in result:
+            assistant_content = result.get("content")
+
+        if assistant_content is None or (
+            isinstance(assistant_content, str) and not assistant_content.strip()
+        ):
+            raise ValueError(
+                f"XTM One agent '{agent_slug}' returned an empty response "
+                f"(keys: {list(result.keys())})"
+            )
+
+        bundle_data = self._parse_agent_bundle_content(assistant_content, agent_slug)
+
+        try:
             bundle = stix2.Bundle(**bundle_data, allow_custom=True)
             bundle = deduplicate_bundle_objects(bundle)
             bundle = filter_relationship_triplets(bundle, allowed_relationship_triplets)
@@ -174,3 +216,66 @@ class ImportDocumentAIClient:
                 {"error": str(e)},
             )
             raise e
+
+    @staticmethod
+    def _strip_json_code_fence(text: str) -> str:
+        """Strip a single surrounding Markdown code fence from *text*.
+
+        LLM-backed agents frequently wrap their JSON answer in a
+        ```` ```json ... ``` ```` fence even when instructed to return raw
+        JSON. Returns the inner content, or the stripped text unchanged when
+        no fence is present.
+        """
+        stripped = text.strip()
+        if not stripped.startswith("```"):
+            return stripped
+        lines = stripped.splitlines()
+        # Drop the opening fence line (``` or ```json).
+        lines = lines[1:]
+        # Drop the closing fence line when present.
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        return "\n".join(lines).strip()
+
+    def _parse_agent_bundle_content(self, content, agent_slug: str) -> dict:
+        """Parse the agent's response content into a STIX bundle dict.
+
+        Handles the shapes an XTM One agent may legitimately produce:
+        - a JSON object already decoded to a dict;
+        - a JSON string, optionally wrapped in a Markdown code fence;
+        - an ``output_format=json`` envelope nesting the bundle under a
+          top-level ``response`` key.
+        """
+        if isinstance(content, dict):
+            data = content
+        elif isinstance(content, str):
+            cleaned = self._strip_json_code_fence(content)
+            try:
+                data = json.loads(cleaned)
+            except json.JSONDecodeError as err:
+                raise ValueError(
+                    f"XTM One agent '{agent_slug}' returned content that is not "
+                    f"valid JSON: {err}. First 500 chars: {cleaned[:500]!r}"
+                ) from err
+        else:
+            raise ValueError(
+                f"XTM One agent '{agent_slug}' returned an unexpected content "
+                f"type: {type(content).__name__}"
+            )
+
+        # ``output_format=json`` can nest the payload under a top-level
+        # "response" key. Unwrap it only when the wrapper is not itself a
+        # bundle and the nested value holds the actual bundle object.
+        if (
+            isinstance(data, dict)
+            and data.get("type") != "bundle"
+            and isinstance(data.get("response"), dict)
+        ):
+            data = data["response"]
+
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"XTM One agent '{agent_slug}' returned a JSON "
+                f"{type(data).__name__}, expected a STIX bundle object"
+            )
+        return data

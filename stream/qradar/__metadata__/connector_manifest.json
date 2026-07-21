@@ -5,8 +5,13 @@
   "short_description": "IBM\u00ae QRadar\u00ae is a threat detection and response solution designed to help security teams manage and respond to incidents more efficiently. It supports enterprise-scale operations and enables organizations to strengthen their security posture across core technologies.",
   "logo": "stream/qradar/__metadata__/logo.png",
   "use_cases": [
-    "SIEM & Analytics"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

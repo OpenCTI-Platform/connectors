@@ -5,8 +5,13 @@
   "short_description": "This connector allows organizations to feed a Splunk KV Store using OpenCTI knowledge.",
   "logo": "stream/splunk/__metadata__/logo.png",
   "use_cases": [
-    "SIEM & Analytics"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -14,7 +19,7 @@
   "support_version": ">=5.6.1",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/splunk",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-splunk",
   "container_type": "STREAM"

@@ -57,21 +57,16 @@ class SigmaHQConnector:
         # download or zip extraction fails; iterating over the empty default
         # is safe and lets the connector log a graceful "nothing to do" run.
         rules: list[dict[str, str]] = []
-        # SigmaHQ release assets are named ``<rule_package>_<date>.zip``
-        # (e.g. ``sigma_core_20251119.zip`` / ``sigma_core+_20251119.zip`` /
-        # ``sigma_core++_20251119.zip``). A naive ``rule_package in
-        # asset["name"]`` substring match would let ``sigma_core`` also
-        # match ``sigma_core+`` and ``sigma_core++`` assets, and (without
-        # ``break``) the loop would have overwritten ``rules`` with the
-        # *last* matching asset on every iteration — silently downloading
-        # the wrong package whenever GitHub returns the assets in a
-        # different order. Match on the canonical ``<rule_package>_``
-        # prefix so the three overlapping ``sigma_core`` variants are
-        # disambiguated, and ``break`` on first match so the result is
-        # deterministic regardless of asset ordering.
-        asset_prefix = f"{rule_package}_"
+        # SigmaHQ release assets are named ``<rule_package>.zip``
+        # (e.g. ``sigma_core.zip`` / ``sigma_core+.zip`` /
+        # ``sigma_core++.zip``). A naive ``rule_package in asset["name"]``
+        # substring match would let ``sigma_core`` also match ``sigma_core+``
+        # and ``sigma_core++`` assets. Matching on the full filename
+        # ``<rule_package>.zip`` disambiguates the three variants; ``break``
+        # on first match keeps the result deterministic regardless of the
+        # order in which GitHub returns the assets.
         for asset in release_metadata["assets"]:
-            if asset["name"].startswith(asset_prefix):
+            if asset["name"] == f"{rule_package}.zip":
                 rules = (
                     self.client.download_and_convert_package(
                         asset["browser_download_url"]

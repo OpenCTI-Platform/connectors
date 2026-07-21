@@ -1,14 +1,17 @@
 {
   "title": "ANY.RUN Task",
   "slug": "anyrun-task",
-  "description": "ANY.RUN's Interactive Sandbox is a cloud-based service that provides SOC teams with a simple way to analyze cyber threats, enabling rapid threat intelligence and deep analysis in a secure environment.",
-  "short_description": "Analyze Url or StixFile in ANY.RUN Interactive Sandbox",
+  "description": "ANY.RUN's Interactive Sandbox is a cloud-based service that provides SOC teams with a simple way to analyze cyber threats, enabling rapid threat intelligence and deep analysis in a secure environment.\n\nThis connector enables OpenCTI users to submit files and URLs for real-time analysis in the cloud sandbox. It returns detailed reports including network activity, dropped files, and MITRE ATT&CK technique mappings, enriching observables directly within OpenCTI.\n\nKey benefits:\n\n- Streamlined Triage and Detection: Automate threat analysis to receive actionable verdicts and prioritize incidents effectively\n- Shorter MTTD and MTTR: Gain a full understanding of threat behavior in seconds\n- Higher Detection Rates: Deep visibility into complex threats through advanced detection mechanisms\n- Minimized Workload: Reduce analyst workload by automating repetitive analysis tasks\n- Stronger Security: Use sandbox reports to refine rules, update playbooks, and train detection models",
+  "short_description": "ANY.RUN Interactive Sandbox connector permits to detonate files and URLs in a cloud sandbox, returning detailed behavioral reports with network activity, dropped files, and MITRE ATT&CK mappings.",
   "logo": "internal-enrichment/anyrun-task/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis",
-    "Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -1,0 +1,32 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Google SecOps'   # optional (default: 'Google SecOps')
+  scope: 'google-secops-siem-incidents'
+  log_level: 'error'      # optional (default: 'error')
+  duration_period: 'PT1H' # optional (default: 'PT1H')
+
+google_secops_siem_incidents:
+  base_url: 'https://chronicle.googleapis.com'  # optional (default: 'https://chronicle.googleapis.com')
+  project_id: 'ChangeMe'
+  project_region: 'us'                          # e.g. 'us', 'eu', 'asia'
+  project_instance: 'ChangeMe'                  # Chronicle instance UUID
+  private_key: 'ChangeMe'                       # Service account private key (PEM)
+  private_key_id: 'ChangeMe'
+  client_email: 'ChangeMe'
+  client_id: 'ChangeMe'
+  auth_uri: 'https://accounts.google.com/o/oauth2/auth'    # optional
+  token_uri: 'https://oauth2.googleapis.com/token'         # optional
+  auth_provider_cert: 'https://www.googleapis.com/oauth2/v1/certs'  # optional
+  client_cert_url: 'ChangeMe'
+  tlp_level: 'amber'    # optional: clear/white/green/amber/amber+strict/red (default: 'amber')
+  first_start_time: 'P1D' # optional, ISO-8601 duration to look back on first run (default: 'P1D')
+  severity_filter:       # optional: minimum severity to import (CRITICAL/HIGH/MEDIUM/LOW/INFO). Empty means all.
+  priority_filter:       # optional: minimum priority to import (CRITICAL/HIGH/MEDIUM/LOW/INFO). Empty means all.
+  risk_score_filter:     # optional: minimum risk score to import (integer >= 0). Alerts without a risk score always pass. Empty means all.
+  tags_include: ''       # optional: comma-separated tags to include. Only alerts with at least one matching tag are imported. Empty means all.
+  tags_exclude: ''       # optional: comma-separated tags to exclude. Alerts with any matching tag are rejected. Empty means none excluded.

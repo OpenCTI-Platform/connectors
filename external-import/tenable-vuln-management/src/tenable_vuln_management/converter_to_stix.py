@@ -6,8 +6,8 @@ import re
 from typing import TYPE_CHECKING, Any, Literal
 
 import stix2
+import validators
 
-from .config_variables import ConfigConnector
 from .models.opencti import (
     Author,
     BaseEntity,
@@ -23,6 +23,7 @@ from .models.opencti import (
     Vulnerability,
 )
 from .models.tenable import Asset, Plugin, VulnerabilityFinding
+from .settings import ConnectorSettings
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
@@ -139,7 +140,7 @@ class ConverterToStix:
     def __init__(
         self,
         helper: "OpenCTIConnectorHelper",
-        config: "ConfigConnector",
+        config: "ConnectorSettings",
         default_marking: Literal[
             "TLP:CLEAR", "TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"
         ],
@@ -251,11 +252,10 @@ class ConverterToStix:
             asset (Asset): The asset containing the fully qualified domain name (FQDN).
 
         Returns:
-            DomainName | None: A DomainName object for the asset if an FQDN is available, otherwise None.
+            DomainName | None: A DomainName object for the asset if a valid FQDN is available, otherwise None.
         """
-
-        return (
-            DomainName(
+        if asset.fqdn and validators.domain(asset.fqdn):
+            return DomainName(
                 author=self.author,
                 object_marking_refs=self.object_marking_refs,
                 value=asset.fqdn,
@@ -263,9 +263,12 @@ class ConverterToStix:
                 resolves_to_ips=[self._make_ipv4_address(asset)]
                 + ([self._make_ipv6_address(asset)] if asset.ipv6 is not None else []),
             )
-            if asset.fqdn
-            else None
-        )
+        else:
+            self.helper.connector_logger.warning(
+                "fqdn empty or non-RFC-compliant. It will be ignored.",
+                {"fqdn_value": asset.fqdn},
+            )
+            return None
 
     def process_asset(self, asset: Asset) -> dict[str, Any]:
         system = self._make_system(asset=asset)
@@ -453,7 +456,7 @@ class ConverterToStix:
                 external_references=[
                     {
                         "source_name": "Tenable Vulnerability Management",
-                        "url": f"{self.config.tio_api_base_url}/tio/app.html#/findings/host-vulnerabilities/details/"
+                        "url": f"{self.config.tenable_vuln_management.api_base_url}/tio/app.html#/findings/host-vulnerabilities/details/"
                         f"{vuln_finding.finding_id}/asset/{vuln_finding.asset.uuid}/asset-affected",
                         "description": "A detailed analysis of the vulnerability.",
                     }

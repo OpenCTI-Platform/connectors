@@ -5,9 +5,13 @@
   "short_description": "Real-time push connector that exports OpenCTI incidents as SOAR events and containers as SOAR cases for automated incident response.",
   "logo": "stream/splunk-soar-push/__metadata__/logo.png",
   "use_cases": [
-    "SIEM/SOAR",
-    "Incident Response & Ticketing"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SOAR & Security Automation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-01-06",
   "playbook_supported": false,

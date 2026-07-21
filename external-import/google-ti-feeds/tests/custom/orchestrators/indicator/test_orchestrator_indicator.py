@@ -98,6 +98,8 @@ class DummyConfig:
         self.malware_family_origins = "All"
         self.vulnerability_origins = "All"
         self.vulnerability_get_related_softwares = True
+        self.import_software_toolkits = False
+        self.software_toolkit_import_start_date = timedelta(days=1)
 
 
 # Sample IOC delta entries (file IOC with a malware family relationship)

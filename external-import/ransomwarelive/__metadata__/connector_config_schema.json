@@ -75,7 +75,7 @@
       "type": "boolean"
     },
     "CONNECTOR_CREATE_INTRUSION_SET": {
-      "default": false,
+      "default": true,
       "description": "Whether to create an Intrusion Set object.",
       "type": "boolean"
     },
@@ -85,7 +85,7 @@
       "type": "boolean"
     },
     "CONNECTOR_CREATE_REPORT": {
-      "default": false,
+      "default": true,
       "description": "Whether to create a Report object.",
       "type": "boolean"
     },
@@ -101,6 +101,16 @@
         "TLP:RED"
       ],
       "type": "string"
+    },
+    "CONNECTOR_CREATE_LEAK_SITE_DOMAINS": {
+      "default": false,
+      "description": "Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet",
+      "type": "boolean"
+    },
+    "CONNECTOR_CREATE_LEAK_POST_REFS": {
+      "default": false,
+      "description": "Whether to include the leak post URL as an external reference on victim reports",
+      "type": "boolean"
     }
   },
   "required": [

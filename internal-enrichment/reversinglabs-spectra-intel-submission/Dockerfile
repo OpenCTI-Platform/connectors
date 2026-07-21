@@ -7,8 +7,8 @@ COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
 
 # Copy the connector
-COPY src /opt/opencti-connector-reversinglabs-spectra-intelligence-file-submission
-WORKDIR /opt/opencti-connector-reversinglabs-spectra-intelligence-file-submission
+COPY src /opt/opencti-connector-reversinglabs-spectra-intel-submission
+WORKDIR /opt/opencti-connector-reversinglabs-spectra-intel-submission
 
 # Expose and entrypoint
 COPY entrypoint.sh /

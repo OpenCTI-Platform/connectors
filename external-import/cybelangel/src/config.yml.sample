@@ -4,7 +4,6 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  type: 'EXTERNAL_IMPORT'
   name: 'CybelAngel'
   scope: 'all'
   log_level: 'info'
@@ -13,8 +12,8 @@ connector:
 cybelangel:
   client_id: 'ChangeMe' # Required
   client_secret: 'ChangeMe' # Required
-  api_url: 'https://platform.cybelangel.com'
-  auth_url: 'https://auth.cybelangel.com/oauth/token'
+  # api_url: 'https://platform.cybelangel.com'
+  # auth_url: 'https://auth.cybelangel.com/oauth/token'
   # audience: 'https://platform.cybelangel.com/' # Optional. Defaults to api_url with a trailing slash.
-  marking: 'TLP:AMBER+STRICT' # TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
-  fetch_period: 7 # Days to look back on the first run. Use "all" to fetch all available data.
+  # marking: 'TLP:AMBER+STRICT' # TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+  # fetch_period: 7 # Days to look back on the first run. Use "all" to fetch all available data.

@@ -2,9 +2,16 @@
   "title": "LogRhythm",
   "slug": "logrhythm",
   "description": "This connector allows organizations to feed a LogRhythm lists using OpenCTI knowledge.\nNote:For a performance reasons, the connector designed to create multiple lists using the base name provided in the configuration LOGRHYTHM_LIST_NAME: opencti and the list in LogRhythm will be like that opencti_Url.It will be better to build a use case for each type.",
-  "short_description": "This connector allows organizations to feed a LogRhythm lists using OpenCTI knowledge.\nNote:For a performance reasons, the connector designed to create multiple lists using the base name provided in the configuration LOGRHYTHM_LIST_NAME: opencti and the list in LogRhythm will be like that opencti_Url.It will be better to build a use case for each type.",
+  "short_description": "Streams OpenCTI indicators to LogRhythm list-based detection rules, enabling real-time threat intelligence enforcement across network and endpoint data sources.",
   "logo": "stream/logrhythm/__metadata__/logo.png",
-  "use_cases": [],
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

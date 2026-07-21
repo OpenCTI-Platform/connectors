@@ -1,0 +1,160 @@
+name: Unused Dependencies (warning)
+
+on:
+  pull_request:
+    paths:
+      - 'external-import/**'
+      - 'internal-enrichment/**'
+      - 'internal-export-file/**'
+      - 'internal-import-file/**'
+      - 'stream/**'
+      - '.github/deptry-package-map.txt'
+      - '.github/workflows/unused-deps.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  deptry:
+    name: Check Unused Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install deptry
+        run: pip install deptry==0.25.1
+
+      - name: Run deptry on changed connectors
+        id: deptry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr_files=$(gh pr diff ${{ github.event.pull_request.number }} --name-only)
+          warnings=""
+          config=".github/deptry-package-map.txt"
+
+          # Build deptry CLI args from the config file
+          # NOTE: deptry's --package-module-name-map replaces the whole dict on each
+          # invocation (Click MAPPING type), so ALL mappings must be in ONE argument
+          # as comma-separated key=value pairs: --package-module-name-map "k1=v1,k2=v2"
+          MAP_ENTRIES=""
+          IGNORE_PKGS=""
+          while IFS= read -r line || [ -n "$line" ]; do
+            # Strip inline comments and trim whitespace
+            line=$(echo "$line" | sed 's/#.*//' | xargs)
+            [ -z "$line" ] && continue
+            if echo "$line" | grep -q "^ignore="; then
+              pkg="${line#ignore=}"
+              # Accumulate as pipe-separated list under a single DEP002= key
+              IGNORE_PKGS="${IGNORE_PKGS:+$IGNORE_PKGS|}$pkg"
+            else
+              # Accumulate as comma-separated key=value pairs for a single --package-module-name-map arg
+              MAP_ENTRIES="${MAP_ENTRIES:+$MAP_ENTRIES,}$line"
+            fi
+          done < "$config"
+          MAP_ARGS="${MAP_ENTRIES:+--package-module-name-map $MAP_ENTRIES}"
+
+          for dir in external-import internal-enrichment internal-import-file internal-export-file stream; do
+            for req in $dir/*/src/requirements.txt; do
+              [ -f "$req" ] || continue
+              connector="$(dirname "$(dirname "$req")")"
+              src="$(dirname "$req")"
+
+              # Only scan connectors with files changed in this PR
+              changed=$(echo "$pr_files" | grep "^${connector}/" || true)
+              [ -z "$changed" ] && continue
+
+              while IFS= read -r line; do
+                # Extract package name from deptry output: DEP002 'pkg-name' defined ...
+                pkg=$(echo "$line" | sed "s/.*DEP002 '\([^']*\)'.*/\1/")
+                # Find the line number of the package in requirements.txt
+                escaped_pkg=$(printf '%s' "$pkg" | sed 's/[.[\'\''/^$*+?(){}|]/\\&/g')
+                lineno=$(grep -n -iE "^${escaped_pkg}(\[[^\]]+\])?([[:space:]]|[=<>~!]|$)" "$req" | head -1 | cut -d: -f1 || true)
+                lineno=${lineno:-1}
+                echo "::warning file=$req,line=$lineno,title=Unused dependency::$pkg is listed in $req but not imported in $src"
+                warnings="${warnings}- \`${pkg}\` in \`${req}\`\n"
+              done < <(deptry "$src" --requirements-files "$req" --no-ansi \
+                $MAP_ARGS \
+                ${IGNORE_PKGS:+--per-rule-ignores "DEP002=$IGNORE_PKGS"} \
+                2>&1 | grep "DEP002" || true)
+            done
+          done
+
+          if [ -n "$warnings" ]; then
+            echo "::notice title=How to fix unused dependency warnings::For each warning: (1) if the package IS used but under a different import name (e.g. 'PyYAML' -> 'yaml'), add a mapping line to .github/deptry-package-map.txt. (2) if the package is truly unused, remove it from the connector's requirements.txt."
+          fi
+
+          # Pass warnings to next step
+          {
+            echo "warnings<<EOF"
+            echo -e "$warnings"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR
+        if: steps.deptry.outputs.warnings != '' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- unused-deps-bot -->';
+            const body = `${marker}\n⚠️ **Unused dependencies detected**\n\nThe following packages appear to be unused:\n\n${process.env.WARNINGS}\n> **How to fix:** (1) if the package is used but under a different import name (e.g. \`PyYAML\` → \`yaml\`), add a mapping line to \`.github/deptry-package-map.txt\`. (2) if truly unused, remove it from the connector's \`requirements.txt\`.`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+        env:
+          WARNINGS: ${{ steps.deptry.outputs.warnings }}
+
+      - name: Remove comment if no warnings
+        if: steps.deptry.outputs.warnings == '' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- unused-deps-bot -->';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+              });
+            }

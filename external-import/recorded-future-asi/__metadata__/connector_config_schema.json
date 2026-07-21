@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/recorded-future-asi_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Recorded Future ASI Exposures",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "incident",
+        "vulnerability",
+        "ipv4-addr",
+        "ipv6-addr",
+        "domain-name"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "RECORDED_FUTURE_ASI_API_BASE_URL": {
+      "default": "https://api.securitytrails.com/v2",
+      "description": "API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "RECORDED_FUTURE_ASI_API_V1_BASE_URL": {
+      "default": "https://api.securitytrails.com/v1",
+      "description": "v1 API base URL for exposure history activity.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "RECORDED_FUTURE_ASI_API_KEY": {
+      "description": "API key for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "RECORDED_FUTURE_ASI_PROJECT_ID": {
+      "description": "ASI project ID to fetch exposures from.",
+      "type": "string"
+    },
+    "RECORDED_FUTURE_ASI_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "Default TLP level of the imported entities.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "RECORDED_FUTURE_ASI_PORTAL_BASE_URL": {
+      "default": null,
+      "description": "Optional portal base URL for external reference deep links.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "RECORDED_FUTURE_ASI_PAGE_LIMIT": {
+      "default": 100,
+      "description": "Number of exposures to fetch per API page.",
+      "maximum": 1000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_ASI_RUN_LIMIT": {
+      "default": null,
+      "description": "Max exposures to import per connector run. None = no limit (current behavior).",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_ASI_RETRY_MAX_ATTEMPTS": {
+      "default": 3,
+      "description": "Maximum HTTP request attempts (including the first) before giving up.",
+      "maximum": 10,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RECORDED_FUTURE_ASI_RETRY_INITIAL_SECONDS": {
+      "default": 1,
+      "description": "Initial backoff delay in seconds for retried requests.",
+      "maximum": 30,
+      "minimum": 0.1,
+      "type": "number"
+    },
+    "RECORDED_FUTURE_ASI_RETRY_MAX_SECONDS": {
+      "default": 60,
+      "description": "Maximum backoff delay in seconds between retry attempts.",
+      "maximum": 300,
+      "minimum": 1,
+      "type": "number"
+    },
+    "RECORDED_FUTURE_ASI_FILTER_SEVERITY_MIN": {
+      "default": null,
+      "description": "Only import exposures at or above this severity.",
+      "enum": [
+        "unknown",
+        "informational",
+        "moderate",
+        "critical"
+      ],
+      "type": "string"
+    },
+    "RECORDED_FUTURE_ASI_FILTER_SEVERITY_EXACT": {
+      "default": null,
+      "description": "Only import exposures matching this severity exactly.",
+      "enum": [
+        "unknown",
+        "informational",
+        "moderate",
+        "critical"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "RECORDED_FUTURE_ASI_API_KEY",
+    "RECORDED_FUTURE_ASI_PROJECT_ID"
+  ],
+  "additionalProperties": true
+}

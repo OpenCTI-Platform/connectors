@@ -1,12 +1,17 @@
 {
   "title": "ESET",
   "slug": "eset",
-  "description": "This connector connects to the ESET and gather all data from a given date.",
-  "short_description": "This connector connects to the ESET and gather all data from a given date.",
+  "description": "ESET is a global cybersecurity leader providing endpoint protection, threat intelligence, and advanced detection capabilities. ESET Threat Intelligence delivers curated feeds of IOCs, malware samples, and campaign reports based on ESET's global telemetry.\n\nThis connector connects to the ESET Threat Intelligence API and gathers all available data from a given start date, importing it into OpenCTI as STIX 2.1 objects including threat actors, malware families, campaigns, and indicators of compromise.",
+  "short_description": "Imports ESET Threat Intelligence data (threat actors, malware families, campaigns, and IOCs) from the ESET API into OpenCTI as STIX 2.1 objects from a configurable start date.",
   "logo": "external-import/eset/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

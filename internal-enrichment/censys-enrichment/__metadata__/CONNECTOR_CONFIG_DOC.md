@@ -11,7 +11,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CENSYS_ENRICHMENT_ORGANISATION_ID | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Censys organisation ID. |
 | CENSYS_ENRICHMENT_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Censys API token. |
 | CONNECTOR_NAME | `string` |  | string | `"Censys Enrichment"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["IPv4-Addr", "IPv6-Addr", "X509-Certificate", "Domain-Name"]` | The scope of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string | `["IPv4-Addr", "IPv6-Addr", "X509-Certificate", "Domain-Name"]` | The scope of the connector. Must be a subset of: ['Domain-Name', 'IPv4-Addr', 'IPv6-Addr', 'X509-Certificate']. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |

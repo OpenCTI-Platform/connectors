@@ -104,7 +104,12 @@ class VulmatchConnector:
         objects: list[dict] = []
         total_results_count = 1
         while total_results_count > len(objects):
-            resp = self.session.get(urljoin(self.base_url, path), params=params)
+            url = urljoin(self.base_url, path)
+            resp = self.session.get(url, params=params)
+            if not resp.ok:
+                raise VulmatchException(
+                    f"Unexpected response for url `{resp.url}`: [{resp.status_code}] {resp.content}"
+                )
             params.update(page=params["page"] + 1)
             data = resp.json()
             total_results_count = data["total_results_count"]
@@ -283,7 +288,7 @@ class VulmatchConnector:
 
 def chunked(lst):
     start = 0
-    size = 50
+    size = 20
     while start < len(lst):
         end = start + size
         yield lst[start : start + size]

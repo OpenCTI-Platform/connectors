@@ -1,0 +1,26 @@
+{
+  "title": "FortiSIEM",
+  "slug": "fortisiem",
+  "description": "The OpenCTI FortiSIEM connector synchronises indicators of compromise from OpenCTI to a FortiSIEM Watch List in real time. Leveraging OpenCTI live streams, IPv4/IPv6 addresses, domain names, URLs and file hashes are added as Watch List entries through the FortiSIEM REST API, so rules and analytics can match events against the threat intelligence curated in OpenCTI. Entries expire automatically through the configured age-out.",
+  "short_description": "Push IOCs from OpenCTI to a FortiSIEM Watch List in real time.",
+  "logo": "stream/fortisiem/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260701.0",
+  "subscription_link": "https://www.fortinet.com/products/siem/fortisiem",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/fortisiem",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-fortisiem",
+  "container_type": "STREAM"
+}

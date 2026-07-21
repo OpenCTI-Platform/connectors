@@ -1,0 +1,26 @@
+{
+  "title": "ArcSight",
+  "slug": "arcsight",
+  "description": "The OpenCTI ArcSight connector synchronises indicators of compromise from OpenCTI to an ArcSight ESM Active List in real time. Leveraging OpenCTI live streams, IPv4/IPv6 addresses, domain names, URLs and file hashes are added to (and removed from) a configurable Active List through the ESM Service Layer REST API, so correlation rules can match events against the threat intelligence curated in OpenCTI.",
+  "short_description": "Sync IOCs from OpenCTI to an ArcSight ESM Active List in real time.",
+  "logo": "stream/arcsight/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260701.0",
+  "subscription_link": "https://www.opentext.com/products/arcsight-enterprise-security-manager",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/arcsight",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-arcsight",
+  "container_type": "STREAM"
+}

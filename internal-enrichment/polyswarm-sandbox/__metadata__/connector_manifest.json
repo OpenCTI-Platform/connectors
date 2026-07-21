@@ -1,22 +1,25 @@
 {
   "title": "PolySwarm Scan & Sandbox",
   "slug": "polyswarm-sandbox",
-  "short_description": "Enrich file artifacts with PolySwarm multi-engine scanning and CAPE/Triage sandbox analysis.",
   "description": "Submits Artifact observables to PolySwarm for multi-engine scanning and sandbox analysis (CAPE, Triage, or both). Creates STIX Notes with scan verdicts, sandbox behavioral reports, LLM threat summaries, and network IOCs. Optionally enriches with malware family profiles (threat actors, CVEs, ATT&CK patterns) via polykg. Attaches JSON, PDF, and LLM reports as files to the observable.",
-  "logo": "logo.png",
+  "short_description": "Enrich file artifacts with PolySwarm multi-engine scanning and CAPE/Triage sandbox analysis.",
+  "logo": "internal-enrichment/polyswarm-sandbox/__metadata__/logo.png",
   "use_cases": [
-    "File Hash Analysis",
-    "Malware Sandbox Analysis",
-    "Threat Intelligence Enrichment"
+    "Detection & Response Enablement"
   ],
-  "verified": false,
-  "last_verified_date": null,
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": true,
+  "last_verified_date": "2026-06-23",
   "playbook_supported": true,
   "max_confidence_level": 80,
   "support_version": ">=6.8.12",
   "subscription_link": "https://polyswarm.network",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/polyswarm-sandbox",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-polyswarm-sandbox",
   "container_type": "INTERNAL_ENRICHMENT"

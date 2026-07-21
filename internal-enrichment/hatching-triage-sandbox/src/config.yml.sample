@@ -3,16 +3,15 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_ENRICHMENT'
-  id: 'Hatching_Triage_Sandbox'
+  id: 'ChangeMe'
   name: 'Hatching Triage Sandbox'
   scope: 'Artifact,Url'
   auto: false # Enable/disable auto-enrichment of observables
   log_level: 'info'
 
 hatching_triage_sandbox:
-  base_url: 'https://tria.ge/api' # See https://tria.ge/docs/
   token: 'ChangeMe' # See https://tria.ge/account
+  base_url: 'https://tria.ge/api' # See https://tria.ge/docs/
   use_existing_analysis: true # If true, get existing analysis if any
   family_color: '#0059f7' # Label color for family
   botnet_color: '#f79e00' # Label color for botnet

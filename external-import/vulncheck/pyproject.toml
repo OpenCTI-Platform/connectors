@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vclib"
+name = "vulncheck-connector"
 version = "0.1.0"
 description = "VulnCheck connector for OpenCTI"
 readme = "README.md"
@@ -11,21 +11,34 @@ authors = [{ name = "VulnCheck" }]
 requires-python = ">= 3.12, <3.13"
 dependencies = [
   "vulncheck-sdk==0.0.40",
-  "pycti==7.260527.0",
+  "pycti==7.260715.0",
   "pydantic==2.11.9",
   "validators==0.35.0",
   "psutil==7.1.2",
   "stix2==3.0.1",
+  "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
 ]
 
 [project.optional-dependencies]
-dev = [
-  "pytest==9.0.3",
-  "pytest-mock==3.14.0",
-  "flake8==7.3.0",
-  "black==26.3.1",
-  "isort==6.1.0",
+test = [
+  "pytest>=9.0.3,<10",
+  "pytest-mock>=3.14,<4",
 ]
+dev = [
+  "black>=26.1,<27",
+  "isort>=7,<8",
+  "flake8>=7.3,<8",
+]
+all = ["vulncheck-connector[test,dev]"]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
+
+[tool.isort]
+profile = "black"
+
+[tool.black]
+target-version = ['py312']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -311,8 +311,8 @@ class FindingPort(ABC):
 
     @property
     @abstractmethod
-    def asset_exposure_score(self) -> float:
-        """Score representing the exposure of the asset."""
+    def asset_exposure_score(self) -> Optional[float]:
+        """Score representing the exposure of the asset (optional, may be unavailable)."""
 
     @property
     @abstractmethod

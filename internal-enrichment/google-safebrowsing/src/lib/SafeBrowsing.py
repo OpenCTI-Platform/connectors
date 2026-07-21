@@ -25,22 +25,26 @@ class SafeBrowsingConnector:
         if update_existing_data.lower() in ["true", "false"]:
             self.update_existing_data = update_existing_data.lower()
         else:
-            msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{self.interval}'. It SHOULD be either `true` or `false`. `false` is assumed. "
+            msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
 
     def google_safe_browsing(self, observable):
+        """Checks an observable against the configured Safe Browsing API (Google or Yandex)."""
+        self.helper.log_info(f"Checking {observable['value']} against Safe Browsing")
 
-        self.helper.log_info(
-            f"Checking domain {observable['value']} against Google Safe Browsing"
+        API_KEY = os.environ.get("SAFE_BROWSING_API_KEY") or os.environ.get(
+            "GOOGLE_SAFE_BROWSING_API_KEY", ""
         )
-
-        """Checks a domain against the Google Safe Browsing API."""
-
-        API_KEY = os.environ.get("GOOGLE_SAFE_BROWSING_API_KEY", "")
+        # Treat an empty value (e.g. `SAFE_BROWSING_API_URL=` in docker-compose) as
+        # unset so the default Google endpoint is always used.
+        API_URL = (
+            os.environ.get("SAFE_BROWSING_API_URL")
+            or "https://safebrowsing.googleapis.com"
+        )
         domain = observable["value"]
         stix_objects = []
-        url = f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={API_KEY}"
+        url = f"{API_URL.rstrip('/')}/v4/threatMatches:find?key={API_KEY}"
         payload = {
             "client": {
                 "clientId": "testing",  # A descriptive name for your client
@@ -63,10 +67,17 @@ class SafeBrowsingConnector:
                 "threatEntries": [{"url": domain}],
             },
         }
-        response = requests.post(
-            url,
-            json=payload,
-        )
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as e:
+            # A timeout / connection error / etc. must not crash the enrichment
+            # worker; log it and treat it as an error (no-match) path.
+            self.helper.log_error(f"Safe Browsing request failed: {e}")
+            return None
         if response.status_code == 200:
             if response.json():
 
@@ -144,14 +155,10 @@ class SafeBrowsingConnector:
         self.entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=self.entity_id)
 
-        if observable["entity_type"] == "Domain-Name":
-            self.helper.log_info(
-                f"Checking domain {observable} against Google Safe Browsing"
-            )
-            return self.google_safe_browsing(observable)
-        elif observable["entity_type"] == "Url":
-            return self.google_safe_browsing(observable)
-        elif observable["entity_type"] == "Hostname":
+        # google_safe_browsing() already logs a single "Checking ... against Safe
+        # Browsing" line for every supported type, so don't log again here (it
+        # previously produced duplicate entries for Domain-Name only).
+        if observable["entity_type"] in ("Domain-Name", "Url", "Hostname"):
             return self.google_safe_browsing(observable)
 
     # Start the main loop

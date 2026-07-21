@@ -5,8 +5,13 @@
   "short_description": "This connector allows you to ingest Orange Cyberdefense Datalake indicators to OpenCTI.",
   "logo": "external-import/orange-cyberdefense-v3/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

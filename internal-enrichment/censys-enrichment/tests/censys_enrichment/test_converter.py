@@ -1,15 +1,15 @@
 import stix2
-from censys_enrichment.converter import Converter
+from censys_enrichment.converters.host import HostConverter
 from censys_platform import Host
 
 
 def test_converter_ipv4(host_ipv4: Host) -> None:
-    converter = Converter()
+    converter = HostConverter()
 
     stix_objects = [
         octi_object.to_stix2_object()
-        for octi_object in converter.generate_octi_objects(
-            stix_entity=stix2.IPv4Address(value="1.1.1.1"),
+        for octi_object in converter.to_stix(
+            observable=stix2.IPv4Address(value="1.1.1.1"),
             data=host_ipv4,
         )
     ]

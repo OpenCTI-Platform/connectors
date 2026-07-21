@@ -16,6 +16,7 @@ from connector.src.custom.exceptions import (
     GTIIPConversionError,
     GTIMalwareConversionError,
     GTIReportConversionError,
+    GTISoftwareToolkitConversionError,
     GTITechniqueConversionError,
     GTIUrlConversionError,
     GTIVulnerabilityConversionError,
@@ -50,6 +51,9 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_identity import
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_location import (
     GTIReportToSTIXLocation,
 )
+from connector.src.custom.mappers.gti_software_toolkits.gti_software_toolkit_to_stix_tool import (
+    GTISoftwareToolkitToSTIXTool,
+)
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_composite import (
     GTIThreatActorToSTIXComposite,
 )
@@ -75,6 +79,9 @@ from connector.src.custom.models.gti.gti_malware_family_model import (
     GTIMalwareFamilyData,
 )
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
+from connector.src.custom.models.gti.gti_software_toolkit_model import (
+    GTISoftwareToolkitData,
+)
 from connector.src.custom.models.gti.gti_threat_actor_model import (
     GTIThreatActorData,
 )
@@ -230,6 +237,18 @@ GTI_REPORT_CAMPAIGN_CONVERTER_CONFIG = GenericConverterConfig(
     postprocessing_function=link_to_report(["campaign"]),
 )
 
+GTI_REPORT_SOFTWARE_TOOLKIT_CONVERTER_CONFIG = GenericConverterConfig(
+    entity_type="software_toolkits",
+    mapper_class=GTISoftwareToolkitToSTIXTool,
+    output_stix_type="tool",
+    exception_class=GTISoftwareToolkitConversionError,
+    display_name="software toolkits",
+    input_model=GTISoftwareToolkitData,
+    display_name_singular="software toolkit",
+    validate_input=True,
+    postprocessing_function=link_to_report(["tool"]),
+)
+
 REPORT_CONVERTER_CONFIGS = {
     "reports": GTI_REPORT_CONVERTER_CONFIG,
     "report_locations": GTI_REPORT_LOCATION_CONVERTER_CONFIG,
@@ -243,4 +262,5 @@ REPORT_CONVERTER_CONFIGS = {
     "report_urls": GTI_REPORT_URL_CONVERTER_CONFIG,
     "report_ip_addresses": GTI_REPORT_IP_CONVERTER_CONFIG,
     "report_campaigns": GTI_REPORT_CAMPAIGN_CONVERTER_CONFIG,
+    "report_software_toolkits": GTI_REPORT_SOFTWARE_TOOLKIT_CONVERTER_CONFIG,
 }
