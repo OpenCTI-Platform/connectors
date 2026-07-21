@@ -171,9 +171,10 @@ class DoppelConnector:
                 f"Failed to process observable, {opencti_entity['entity_type']} is not a supported entity type."
             )
         except Exception as err:
-            return self.helper.connector_logger.error(
+            self.helper.connector_logger.error(
                 "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
             )
+            raise err
 
     def _send_bundle(self, stix_objects: list) -> str:
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
