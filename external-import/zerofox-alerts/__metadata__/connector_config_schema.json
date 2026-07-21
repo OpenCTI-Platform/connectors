@@ -55,6 +55,9 @@
     "ZEROFOX_ALERTS_API_BASE_URL": {
       "default": "https://api.zerofox.com",
       "description": "Base URL of the ZeroFox API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "ZEROFOX_ALERTS_API_TOKEN": {
@@ -64,17 +67,17 @@
       "writeOnly": true
     },
     "ZEROFOX_ALERTS_MARKING": {
-      "default": "TLP:AMBER",
-      "description": "TLP marking definition to apply to created objects.",
+      "description": "TLP marking level applied to created STIX objects.",
       "enum": [
-        "TLP:CLEAR",
-        "TLP:WHITE",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED"
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
       ],
-      "type": "string"
+      "type": "string",
+      "default": "amber"
     },
     "ZEROFOX_ALERTS_IMPORT_START_DATE": {
       "default": "P30D",
