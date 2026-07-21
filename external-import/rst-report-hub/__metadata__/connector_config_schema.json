@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/rst-report-hub_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "RstReportHub",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "RST_REPORT_HUB_BASE_URL": {
+      "default": "https://api.rstcloud.net/v1",
+      "description": "RST Report Hub Base URL. By default, use https://api.rstcloud.net/v1. In some cases, you may want to use a local API endpoint.",
+      "type": "string"
+    },
+    "RST_REPORT_HUB_API_KEY": {
+      "description": "Your API Key for accessing RST Cloud.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "RST_REPORT_HUB_CONNECTION_TIMEOUT": {
+      "default": 30,
+      "description": "Connection timeout to the API in seconds.",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_READ_TIMEOUT": {
+      "default": 60,
+      "description": "Read timeout for each feed in seconds.",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_RETRY_DELAY": {
+      "default": 30,
+      "description": "How long to wait in seconds before next attempt to connect to the API.",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_RETRY_ATTEMPTS": {
+      "default": 5,
+      "description": "Download retry count (number of attempts).",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_IMPORT_START_DATE": {
+      "default": "",
+      "description": "Date from which you want to retrieve the reports in the format \"%Y%m%d\" (for example, 20240527). By default, this start date is calculated as 7 days ago.",
+      "type": "string"
+    },
+    "RST_REPORT_HUB_FETCH_INTERVAL": {
+      "default": 300,
+      "description": "Fetch interval in seconds.",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_LANGUAGE": {
+      "default": "eng",
+      "description": "Language of the RST Report Hub content. Reach out to support@rstcloud.net if you want to update this parameter.",
+      "type": "string"
+    },
+    "RST_REPORT_HUB_CREATE_OBSERVABLES": {
+      "default": false,
+      "description": "Whether observables are to be created in addition to indicators.",
+      "type": "boolean"
+    },
+    "RST_REPORT_HUB_CREATE_RELATED_TO": {
+      "default": true,
+      "description": "Whether `related-to` relationships are to be created or not.",
+      "type": "boolean"
+    },
+    "RST_REPORT_HUB_CREATE_CUSTOM_TTPS": {
+      "default": true,
+      "description": "Whether `attack-pattern` objects with custom names (not present in MITRE ATT&CK) are to be created or not.",
+      "type": "boolean"
+    },
+    "RST_REPORT_HUB_REPORT_LABELS_DISABLED": {
+      "default": "",
+      "description": "Comma-separated list of labels to ignore when creating Report objects. It does not prevent reports from being created.",
+      "type": "string"
+    },
+    "RST_REPORT_HUB_SET_DETECTION_FLAG": {
+      "default": false,
+      "description": "Whether indicators from reports should be set for detection or not.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "RST_REPORT_HUB_API_KEY"
+  ],
+  "additionalProperties": true
+}
