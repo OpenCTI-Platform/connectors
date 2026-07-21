@@ -11,6 +11,7 @@
     "Threat Intelligence Feed"
   ],
   "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": "2025-03-06",
   "playbook_supported": false,
