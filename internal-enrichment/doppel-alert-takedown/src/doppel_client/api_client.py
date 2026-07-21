@@ -63,7 +63,7 @@ class DoppelClient:
             response = self.session.post(url, json=payload, timeout=30)
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as err:
+        except (requests.RequestException, requests.HTTPError) as err:
             raise DoppelClientError(
                 f"Failed to create Doppel alert for '{entity}': {err}"
             ) from err
@@ -91,7 +91,7 @@ class DoppelClient:
             )
             response.raise_for_status()
             return response.json() if response.content else {}
-        except requests.RequestException as err:
+        except (requests.RequestException, requests.HTTPError) as err:
             raise DoppelClientError(
                 f"Failed to request Doppel takedown for '{entity}': {err}"
             ) from err

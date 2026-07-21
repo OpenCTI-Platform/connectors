@@ -44,31 +44,25 @@ class DoppelConnector:
         """
         Security to limit playbook triggers to something other than the initial scope
         :param data: Dictionary of data
-        :return: boolean
+        :return: True if the entity type is in the connector's scope, False otherwise.
         """
         scopes = [scope.lower() for scope in self.config.connector.scope]
-        entity_split = data["entity_id"].split("--")
-        entity_type = entity_split[0].lower()
+        entity_type = data["enrichment_entity"]["entity_type"].lower()
+
         return entity_type in scopes
 
-    def extract_and_check_markings(self, opencti_entity: dict) -> None:
+    def extract_and_check_markings(self, opencti_entity: dict) -> bool:
         """
         Extract TLP and check that the observable's marking is not above `max_tlp`.
-        No check is performed when `max_tlp` is empty (no limit).
         :param opencti_entity: Dict of observable from OpenCTI
+        :return: True if the observable's marking is within the limit, False otherwise.
         """
         self.tlp = None
-        if len(opencti_entity["objectMarking"]) != 0:
-            for marking_definition in opencti_entity["objectMarking"]:
-                if marking_definition["definition_type"] == "TLP":
-                    self.tlp = marking_definition["definition"]
+        for marking_definition in opencti_entity["objectMarking"]:
+            if marking_definition["definition_type"] == "TLP":
+                self.tlp = marking_definition["definition"]
 
-        valid_entity_tlp = self.helper.check_max_tlp(self.tlp, self.config.doppel_alert_takedown.max_tlp)  # type: ignore[arg-type]
-        if not valid_entity_tlp:
-            raise ValueError(
-                f"[CONNECTOR] Observable TLP ({self.tlp}) exceeds "
-                f"maximum allowed TLP ({self.config.doppel_alert_takedown.max_tlp})."
-            )
+        return self.helper.check_max_tlp(self.tlp, self.config.doppel_alert_takedown.max_tlp)  # type: ignore[arg-type]
 
     def _collect_intelligence(self, obs_type: str, obs_value: str, obs_id: str) -> list:
         """
@@ -90,7 +84,6 @@ class DoppelConnector:
             {"alert_id": alert.get("id"), "entity": obs_value},
         )
 
-        takedown_requested = False
         try:
             self.client.request_takedown(
                 entity=obs_value,
@@ -102,8 +95,10 @@ class DoppelConnector:
                 {"alert_id": alert.get("id"), "entity": obs_value},
             )
         except DoppelClientError as err:
+            takedown_requested = False
             self.helper.connector_logger.error(
-                "[CONNECTOR] Doppel takedown request failed",
+                "[CONNECTOR] Doppel takedown request failed, "
+                "enrichment continues with takedown marked as not requested",
                 {"entity": obs_value, "error": str(err)},
             )
 
@@ -135,13 +130,22 @@ class DoppelConnector:
         """
         Get the observable created/modified in OpenCTI and enrich it through Doppel.
         :param data: dict of data to process
-        :return: string
+        :return: Message to attach to enrichment work.
         """
         try:
-            opencti_entity = data["enrichment_entity"]
-            self.extract_and_check_markings(opencti_entity)
-
             self.stix_objects_list = data["stix_objects"]
+            opencti_entity = data["enrichment_entity"]
+
+            if not self.entity_in_scope(data):
+                raise ValueError(
+                    f"Failed to process observable, {opencti_entity['entity_type']} is not a supported entity type."
+                )
+            if not self.extract_and_check_markings(opencti_entity):
+                raise ValueError(
+                    f"Observable TLP ({self.tlp}) exceeds "
+                    f"maximum allowed TLP ({self.config.doppel_alert_takedown.max_tlp})."
+                )
+
             observable = data["stix_entity"]
 
             obs_standard_id = observable["id"]
@@ -153,31 +157,42 @@ class DoppelConnector:
                 {"type": obs_type},
             )
 
-            if self.entity_in_scope(data):
-                stix_objects = self._collect_intelligence(
-                    obs_type, obs_value, obs_standard_id
-                )
-                if stix_objects:
-                    self.stix_objects_list.extend(stix_objects)
-                    return self._send_bundle(self.stix_objects_list)
-                return "[CONNECTOR] No information found"
-
-            if not data.get("event_type"):
-                # Not in scope but passed through a playbook: return the bundle unchanged
-                return self._send_bundle(self.stix_objects_list)
-
-            raise ValueError(
-                f"Failed to process observable, {opencti_entity['entity_type']} is not a supported entity type."
+            stix_objects = self._collect_intelligence(
+                obs_type, obs_value, obs_standard_id
             )
+            if stix_objects:
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Enrichment completed", {"entity": obs_value}
+                )
+                return self._send_bundle(self.stix_objects_list + stix_objects)
+
+            # Safeguard - not reachable in theory
+            message = "[CONNECTOR] No information found"
+            self.helper.connector_logger.info(message, {"entity": obs_value})
+            if self.helper.playbook:
+                # If inside a playbook, return the bundle unchanged to continue playbook flow
+                return self._send_bundle(self.stix_objects_list)
+            else:
+                return message
+
         except Exception as err:
             self.helper.connector_logger.error(
-                "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
+                "[CONNECTOR] An error occurred while processing the observable",
+                {"error": str(err)},
             )
-            raise err
+
+            if self.helper.playbook:
+                # If inside a playbook, return the bundle unchanged to continue playbook flow
+                return self._send_bundle(self.stix_objects_list)
+            else:
+                raise
 
     def _send_bundle(self, stix_objects: list) -> str:
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-        bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle, cleanup_inconsistent_bundle=True)  # type: ignore[arg-type]
+        bundles_sent = self.helper.send_stix2_bundle(
+            stix_objects_bundle,  # type: ignore[arg-type]
+            cleanup_inconsistent_bundle=True,
+        )
         return f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
 
     def run(self) -> None:
