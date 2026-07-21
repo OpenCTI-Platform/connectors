@@ -5,9 +5,11 @@
   "short_description": "Enrich IP, domain and AS observables with relationship context from the Whisper graph: DNS, BGP, WHOIS, threat-feed listings, lookalikes, and ASN/prefix infrastructure.",
   "logo": "internal-enrichment/whisper/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Infrastructure & Attack Surface Visibility"
   ],
-  "solution_categories": [],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
   "license_type": null,
   "contact": null,
   "verified": false,
