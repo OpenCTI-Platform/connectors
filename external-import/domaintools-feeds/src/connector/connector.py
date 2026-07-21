@@ -55,11 +55,13 @@ class DomainToolsFeedsConnector:
         
         self.params = {}
         for k,v in self.config.domaintools:
-            if (not k in ['session_id', 'after', 'before', 'domain', 'fromBeginning', 'top']): continue
+            if (not k in ['session_id', 'after', 'before', 'domain', 'frombeginning', 'top']): continue
             
             if (v):
                 if (v == 'session_id'):
                     self.params['sessionID'] = v
+                elif (v == 'frombeginning'):
+                    self.params['fromBeginning'] = v
                 else:
                     self.params[k] = v
 

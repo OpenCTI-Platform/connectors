@@ -19,14 +19,12 @@
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
-    - [Mapping to OpenCTI entities](#mapping-to-opencti-entities)
-    - [Entity type detection](#entity-type-detection)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
 ## Introduction
 
-This connector fetches data from DomainTools Feeds and imports them into OpenCTI as Observables. Each feed entry is mapped to a STIX 2.1 Observable object, enriched with metadata such as severity, entity state, platform, audit logs, etc.
+This connector fetches data from DomainTools Threat Feeds (via the Real-time Feed API) and imports it into OpenCTI as Observables. Each feed entry is mapped to a Structured Threat Information Expression (STIX) 2.1 Observable object, enriched with metadata such as severity, entity state, platform, audit logs, etc. Created objects carry a Traffic Light Protocol (TLP) marking for downstream sharing.
 
 ## Installation
 
@@ -62,7 +60,7 @@ Below are the parameters you'll need to set for running the connector properly:
 
 ### DomainTools extra parameters environment variables
 
-| Parameter               | config.yml                     | Docker environment variable      | Role |  Default | Mandatory | Description                           |
+| Parameter               | config.yml                     | Docker environment variable      | Role | Default | Mandatory | Description                           |
 |-------------------------|--------------------------------|----------------------------------|---------|---------|-----------|---------------------------------------|
 | API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.domaintools.com        | Yes       | DomainTools API base URL                   |
 | API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |    Authentication: Provides the primary security credentials for service access.      |         | Yes       | DomainTools API key                        |
@@ -72,7 +70,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | After (minutes)         | domaintools.after       | `DOMAINTOOLS_AFTER`            |     Synchronization: Determines the time-window for data fetching.     |         | No        | The start of the query window (inclusive).   |
 | Before (minutes)        | domaintools.before       | `DOMAINTOOLS_BEFORE`            |     Synchronization: Determines the time-window for data fetching.     |         | No        | The end of the query window (inclusive).   |
 | Domain Filter           | domaintools.domain       | `DOMAINTOOLS_DOMAIN`            |     Filtering: Limits results to specific domains.     |         | No        | Filter for an exact domain or a domain substring by prefixing or suffixing your string with *. |
-| From Beginning          | domaintools.fromBeginning       | `DOMAINTOOLS_FROM_BEGINSING`            |     Synchronization: Determines if fetching starts from the beginning.     |         | No        | When used with a new session ID, returns the first hour of data in the time window (rather than the last). |
+| From Beginning          | domaintools.frombeginning       | `DOMAINTOOLS_FROMBEGINNING`            |     Synchronization: Determines if fetching starts from the beginning.     |         | No        | When used with a new session ID, returns the first hour of data in the time window (rather than the last). |
 | Top Results             | domaintools.top       | `DOMAINTOOLS_TOP`            |     Performance: Limits the number of results returned.     |         | No        | Limits the number of results in the response payload.    |
 
 ## Deployment
@@ -147,11 +145,10 @@ Find the "DomainTools Feeds" connector, and click on the refresh button to reset
 - Converts each feed entry into a STIX 2.1 Observable object
 - Bundles and sends the STIX objects to OpenCTI
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
-- On first run, fetches up to `HISTORICAL_POLLING_DAYS`; subsequent runs are delta-based
 
 ## Debugging
 
-The connector can be debugged by setting the appropriate log level. Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
+The connector can be debugged by setting the appropriate log level. Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, for example, `self.helper.connector_logger.error("An error message")`.
 
 Set `CONNECTOR_LOG_LEVEL=debug` for verbose logging. Log output includes:
 
