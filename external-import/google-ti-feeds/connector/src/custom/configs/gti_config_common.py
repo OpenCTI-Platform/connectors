@@ -40,6 +40,77 @@ ALLOWED_ORIGINS = [
     "google threat intelligence",
 ]
 
+# Sub-entity types that can be fetched for each data collection, so that customers
+# can fine-tune which relationships to retrieve depending on their quota allowance.
+# See: https://github.com/OpenCTI-Platform/connectors/issues/7053
+ALLOWED_REPORT_SUBENTITIES = [
+    "malware_families",
+    "threat_actors",
+    "attack_techniques",
+    "vulnerabilities",
+    "campaigns",
+    "domains",
+    "files",
+    "urls",
+    "ip_addresses",
+    "software_toolkits",
+]
+
+ALLOWED_CAMPAIGN_SUBENTITIES = [
+    "malware_families",
+    "attack_techniques",
+    "vulnerabilities",
+    "threat_actors",
+    "domains",
+    "files",
+    "urls",
+    "ip_addresses",
+    "software_toolkits",
+    "reports",
+]
+
+ALLOWED_THREAT_ACTOR_SUBENTITIES = [
+    "malware_families",
+    "attack_techniques",
+    "vulnerabilities",
+    # "campaigns",
+    # "reports",
+    # "domains",
+    # "files",
+    # "urls",
+    # "ip_addresses",
+    "software_toolkits",
+]
+
+ALLOWED_MALWARE_FAMILY_SUBENTITIES = [
+    "threat_actors",
+    "attack_techniques",
+    "vulnerabilities",
+    # "campaigns",
+    # "reports",
+    # "domains",
+    # "files",
+    # "urls",
+    # "ip_addresses",
+]
+
+ALLOWED_VULNERABILITY_SUBENTITIES = [
+    "malware_families",
+    "attack_techniques",
+    "threat_actors",
+    # "campaigns",
+    # "reports",
+    # "domains",
+    # "files",
+    # "urls",
+    # "ip_addresses",
+]
+
+ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES = [
+    "malware_families",
+    "attack_techniques",
+]
+
 
 def validate_origins_list(
     v: list[str], field_name: str, allowed_origins: list[str] | None = None
@@ -70,6 +141,41 @@ def validate_origins_list(
             raise GTIConfigurationError(
                 f"Invalid {field_name}: {', '.join(invalid)}. "
                 f"Allowed values: {', '.join(allowed_origins)}."
+            )
+        return v
+    except GTIConfigurationError:
+        raise
+    except Exception as e:
+        raise GTIConfigurationError(f"Failed to validate {field_name}: {str(e)}") from e
+
+
+def validate_subentities_list(
+    v: list[str], field_name: str, allowed_subentities: list[str]
+) -> list[str]:
+    """Validate a list of sub-entity types against the types supported for a data collection.
+
+    Unlike origins or report types, an empty list is a valid value: it means no
+    sub-entities should be fetched for that data collection, which is useful to
+    save on API quota.
+
+    Args:
+        v: list of sub-entity type values to validate
+        field_name: Name of the field for error messages
+        allowed_subentities: list of sub-entity types supported for this data collection
+
+    Returns:
+        list of validated sub-entity type strings
+
+    Raises:
+        GTIConfigurationError: If validation fails
+
+    """
+    try:
+        invalid = sorted(set(v) - set(allowed_subentities))
+        if invalid:
+            raise GTIConfigurationError(
+                f"Invalid {field_name}: {', '.join(invalid)}. "
+                f"Allowed values: {', '.join(allowed_subentities)}."
             )
         return v
     except GTIConfigurationError:
