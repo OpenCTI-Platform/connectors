@@ -4,8 +4,9 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
 )
-from pydantic import Field, HttpUrl, field_validator
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -14,17 +15,21 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     to the configuration for the `Doppel Alert And Takedown` connector.
     """
 
+    id: str = Field(
+        description="The unique identifier of the connector.",
+        default="b8821b12-470d-4037-a8c2-4bcf5432a000",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="Doppel Alert and Takedown",
     )
-    scope: str = Field(
+    scope: ListFromString = Field(
         description="The scope of the connector (types of observables to enrich).",
-        default="Url,Domain-Name",
+        default=["Url", "Domain-Name"],
     )
 
 
-class DoppelConfig(BaseConfigModel):
+class DoppelAlertTakedownConfig(BaseConfigModel):
     """
     Define parameters and/or defaults for the configuration specific to the `Doppel Alert And Takedown` connector.
     """
@@ -33,15 +38,15 @@ class DoppelConfig(BaseConfigModel):
         description="Doppel API base URL.",
         default=HttpUrl("https://api.doppel.com"),
     )
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         description="Doppel API key, sent as the `x-api-key` header.",
     )
-    user_api_key: str = Field(
+    user_api_key: SecretStr = Field(
         description="Doppel user API key, sent as the `x-user-api-key` header.",
     )
-    tags: list[str] = Field(
+    tags: ListFromString = Field(
         description="List of tags to attach to the alerts created in Doppel.",
-        default_factory=list,
+        default=[],
     )
     takedown_comment: str = Field(
         description="Comment sent to Doppel when requesting a takedown.",
@@ -54,19 +59,10 @@ class DoppelConfig(BaseConfigModel):
         "TLP:AMBER",
         "TLP:AMBER+STRICT",
         "TLP:RED",
-        "",
     ] = Field(
-        default="",
-        description="Max TLP level of entities to enrich (empty = no limit).",
+        default="TLP:RED",
+        description="Max TLP level of entities to enrich.",
     )
-
-    @field_validator("tags", mode="before")
-    @classmethod
-    def _split_tags(cls, value: object) -> object:
-        """Allow tags to be provided as a comma-separated string (env var friendly)."""
-        if isinstance(value, str):
-            return [tag.strip() for tag in value.split(",") if tag.strip()]
-        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):
@@ -77,4 +73,6 @@ class ConnectorSettings(BaseConnectorSettings):
     connector: InternalEnrichmentConnectorConfig = Field(
         default_factory=InternalEnrichmentConnectorConfig
     )
-    doppel: DoppelConfig = Field(default_factory=DoppelConfig)
+    doppel_alert_takedown: DoppelAlertTakedownConfig = Field(
+        default_factory=DoppelAlertTakedownConfig
+    )

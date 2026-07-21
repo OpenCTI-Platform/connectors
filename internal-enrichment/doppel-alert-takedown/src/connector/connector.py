@@ -30,9 +30,9 @@ class DoppelConnector:
 
         self.client = DoppelClient(
             self.helper,
-            base_url=self.config.doppel.api_base_url,
-            api_key=self.config.doppel.api_key,
-            user_api_key=self.config.doppel.user_api_key,
+            base_url=self.config.doppel_alert_takedown.api_base_url,
+            api_key=self.config.doppel_alert_takedown.api_key.get_secret_value(),
+            user_api_key=self.config.doppel_alert_takedown.user_api_key.get_secret_value(),
         )
         self.converter_to_stix = ConverterToStix(self.helper)
 
@@ -85,7 +85,7 @@ class DoppelConnector:
         alert = self.client.create_alert(
             entity=obs_value,
             entity_type=doppel_entity_type,
-            tags=self.config.doppel.tags,
+            tags=self.config.doppel_alert_takedown.tags,
         )
         self.helper.connector_logger.info(
             "[CONNECTOR] Doppel alert created",
@@ -96,7 +96,7 @@ class DoppelConnector:
         try:
             self.client.request_takedown(
                 entity=obs_value,
-                comment=self.config.doppel.takedown_comment,
+                comment=self.config.doppel_alert_takedown.takedown_comment,
             )
             takedown_requested = True
             self.helper.connector_logger.info(
@@ -121,7 +121,7 @@ class DoppelConnector:
             observable_ref=obs_id,
             alert=alert,
             takedown_requested=takedown_requested,
-            takedown_comment=self.config.doppel.takedown_comment,
+            takedown_comment=self.config.doppel_alert_takedown.takedown_comment,
             marking=marking,
         )
 

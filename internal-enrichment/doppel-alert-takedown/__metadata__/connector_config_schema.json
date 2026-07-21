@@ -20,9 +20,15 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "Url,Domain-Name",
+      "default": [
+        "Url",
+        "Domain-Name"
+      ],
       "description": "The scope of the connector (types of observables to enrich).",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
@@ -46,7 +52,7 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
-    "DOPPEL_API_BASE_URL": {
+    "DOPPEL_ALERT_TAKEDOWN_API_BASE_URL": {
       "default": "https://api.doppel.com/",
       "description": "Doppel API base URL.",
       "format": "uri",
@@ -54,37 +60,41 @@
       "minLength": 1,
       "type": "string"
     },
-    "DOPPEL_API_KEY": {
+    "DOPPEL_ALERT_TAKEDOWN_API_KEY": {
       "description": "Doppel API key, sent as the `x-api-key` header.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
-    "DOPPEL_USER_API_KEY": {
+    "DOPPEL_ALERT_TAKEDOWN_USER_API_KEY": {
       "description": "Doppel user API key, sent as the `x-user-api-key` header.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
-    "DOPPEL_TAGS": {
+    "DOPPEL_ALERT_TAKEDOWN_TAGS": {
+      "default": [],
       "description": "List of tags to attach to the alerts created in Doppel.",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
-    "DOPPEL_TAKEDOWN_COMMENT": {
+    "DOPPEL_ALERT_TAKEDOWN_TAKEDOWN_COMMENT": {
       "default": "Confirmed by OpenCTI \u2014 requesting takedown.",
       "description": "Comment sent to Doppel when requesting a takedown.",
       "type": "string"
     },
-    "DOPPEL_MAX_TLP": {
-      "default": "",
-      "description": "Max TLP level of entities to enrich (empty = no limit).",
+    "DOPPEL_ALERT_TAKEDOWN_MAX_TLP": {
+      "default": "TLP:RED",
+      "description": "Max TLP level of entities to enrich.",
       "enum": [
         "TLP:CLEAR",
         "TLP:WHITE",
         "TLP:GREEN",
         "TLP:AMBER",
         "TLP:AMBER+STRICT",
-        "TLP:RED",
-        ""
+        "TLP:RED"
       ],
       "type": "string"
     }
@@ -92,8 +102,8 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "DOPPEL_API_KEY",
-    "DOPPEL_USER_API_KEY"
+    "DOPPEL_ALERT_TAKEDOWN_API_KEY",
+    "DOPPEL_ALERT_TAKEDOWN_USER_API_KEY"
   ],
   "additionalProperties": true
 }

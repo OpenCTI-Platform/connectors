@@ -38,7 +38,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "log_level": "error",
                     "auto": True,
                 },
-                "doppel": {
+                "doppel_alert_takedown": {
                     "api_base_url": "https://api.doppel.com",
                     "api_key": "test-api-key",
                     "user_api_key": "test-user-api-key",

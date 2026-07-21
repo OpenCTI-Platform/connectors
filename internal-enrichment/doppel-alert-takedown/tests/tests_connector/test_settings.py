@@ -21,7 +21,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "log_level": "error",
                     "auto": True,
                 },
-                "doppel": {
+                "doppel_alert_takedown": {
                     "api_base_url": "https://api.doppel.com",
                     "api_key": "test-api-key",
                     "user_api_key": "test-user-api-key",
@@ -42,7 +42,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "id": "connector-id",
                     "scope": "Url,Domain-Name",
                 },
-                "doppel": {
+                "doppel_alert_takedown": {
                     "api_key": "test-api-key",
                     "user_api_key": "test-user-api-key",
                 },
@@ -65,7 +65,7 @@ def test_settings_should_accept_valid_input(settings_dict):
 
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.doppel, BaseConfigModel) is True
+    assert isinstance(settings.doppel_alert_takedown, BaseConfigModel) is True
 
 
 def test_settings_should_split_comma_separated_tags():
@@ -84,7 +84,7 @@ def test_settings_should_split_comma_separated_tags():
                         "id": "connector-id",
                         "scope": "Url,Domain-Name",
                     },
-                    "doppel": {
+                    "doppel_alert_takedown": {
                         "api_key": "test-api-key",
                         "user_api_key": "test-user-api-key",
                         "tags": "test, filigran-poc ,phishing",
@@ -93,7 +93,7 @@ def test_settings_should_split_comma_separated_tags():
             )
 
     settings = FakeConnectorSettings()
-    assert settings.doppel.tags == ["test", "filigran-poc", "phishing"]
+    assert settings.doppel_alert_takedown.tags == ["test", "filigran-poc", "phishing"]
 
 
 @pytest.mark.parametrize(
@@ -114,29 +114,12 @@ def test_settings_should_split_comma_separated_tags():
                     "id": "connector-id",
                     "scope": "Url,Domain-Name",
                 },
-                "doppel": {
+                "doppel_alert_takedown": {
                     "api_key": "test-api-key",
                 },
             },
-            "doppel.user_api_key",
+            "doppel_alert_takedown.user_api_key",
             id="missing_user_api_key",
-        ),
-        pytest.param(
-            {
-                "opencti": {
-                    "url": "http://localhost:8080",
-                    "token": "test-token",
-                },
-                "connector": {
-                    "scope": "Url,Domain-Name",
-                },
-                "doppel": {
-                    "api_key": "test-api-key",
-                    "user_api_key": "test-user-api-key",
-                },
-            },
-            "connector.id",
-            id="missing_connector_id",
         ),
     ],
 )
