@@ -45,7 +45,7 @@ class DoppelConnector:
         :param data: Dictionary of data
         :return: boolean
         """
-        scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
+        scopes = [scope.lower() for scope in self.config.connector.scope]
         entity_split = data["entity_id"].split("--")
         entity_type = entity_split[0].lower()
         return entity_type in scopes
@@ -56,20 +56,17 @@ class DoppelConnector:
         No check is performed when `max_tlp` is empty (no limit).
         :param opencti_entity: Dict of observable from OpenCTI
         """
+        self.tlp = None
         if len(opencti_entity["objectMarking"]) != 0:
             for marking_definition in opencti_entity["objectMarking"]:
                 if marking_definition["definition_type"] == "TLP":
                     self.tlp = marking_definition["definition"]
 
-        max_tlp = self.config.doppel.max_tlp
-        if not max_tlp:
-            return
-
-        valid_max_tlp = self.helper.check_max_tlp(self.tlp, max_tlp)
-        if not valid_max_tlp:
+        valid_entity_tlp = self.helper.check_max_tlp(self.tlp, self.config.doppel_alert_takedown.max_tlp)  # type: ignore[arg-type]
+        if not valid_entity_tlp:
             raise ValueError(
-                "[CONNECTOR] Do not send any data, TLP of the observable is greater than MAX TLP,"
-                "the connector does not has access to this observable, please check the group of the connector user"
+                f"[CONNECTOR] Observable TLP ({self.tlp}) exceeds "
+                f"maximum allowed TLP ({self.config.doppel_alert_takedown.max_tlp})."
             )
 
     def _collect_intelligence(self, obs_type: str, obs_value: str, obs_id: str) -> list:
