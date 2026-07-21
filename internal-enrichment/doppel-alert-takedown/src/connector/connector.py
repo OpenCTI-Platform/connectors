@@ -1,5 +1,6 @@
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from connectors_sdk.models import BaseIdentifiedObject
 from doppel_client import DoppelClient, DoppelClientError
 from pycti import OpenCTIConnectorHelper
 
@@ -122,12 +123,13 @@ class DoppelConnector:
             marking=marking,
         )
 
-        stix_objects = [self.converter_to_stix.author.to_stix2_object()]
+        stix_objects: list[BaseIdentifiedObject] = [self.converter_to_stix.author]
         if marking is not None:
-            stix_objects.append(marking.to_stix2_object())
-        stix_objects.append(observable.to_stix2_object())
-        stix_objects.append(note.to_stix2_object())
-        return stix_objects
+            stix_objects.append(marking)
+        stix_objects.append(observable)
+        stix_objects.append(note)
+
+        return [obj.to_stix2_object() for obj in stix_objects]
 
     def process_message(self, data: dict) -> str:
         """
