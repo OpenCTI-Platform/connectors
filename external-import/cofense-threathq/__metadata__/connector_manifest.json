@@ -5,10 +5,14 @@
   "short_description": "Cofense ThreatHQ connector imports phishing campaign reports, malware indicators, and associated observables from Cofense's phishing-focused threat intelligence platform.",
   "logo": "external-import/cofense-threathq/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
-    "Email Security",
     "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Email Security",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

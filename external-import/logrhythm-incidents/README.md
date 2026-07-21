@@ -39,7 +39,7 @@ the Incident severity.
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260710.0
+- OpenCTI Platform >= 7.260715.0
 - A reachable LogRhythm API gateway (Case API enabled)
 - A LogRhythm API token (Bearer)
 

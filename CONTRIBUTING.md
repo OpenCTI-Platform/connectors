@@ -528,6 +528,41 @@ flake8 --ignore=E,W .
   - Short Description: 250 characters maximum 
   - Description: No size limit 
   - Logo: Must be a square PNG or JPEG file, minimum 96x96 pixels
+  - Use cases: Choose 1-3 values from
+    - Adversary & Campaign Insights
+    - Vulnerability & Exploit Awareness
+    - Infrastructure & Attack Surface Visibility
+    - Detection & Response Enablement
+    - Fraud, Financial Crime & Cryptocurrency Monitoring
+    - Brand, Digital Risk & Underground Exposure
+    - Third-Party & Supply Chain Oversight
+    - Cloud, SaaS & Platform Security
+    - Geopolitical, Physical & Hybrid Risk Analysis
+    - Market Vertical & Mission-Specific Intelligence
+    - FIMI & Disinformation
+    - Other
+  - Solution categories: Choose 1-3 values from
+    - Threat Intelligence Feed
+    - Endpoint Detection & Response
+    - SIEM & Security Analytics
+    - Malware Analysis & Sandbox
+    - SOAR & Security Automation
+    - Vulnerability & Exposure Management
+    - Attack Surface Management
+    - Network Security
+    - Email Security
+    - AI Security
+    - Incident Response & Case Management
+    - Digital Risk Protection
+    - Governance, Risk & Compliance
+    - Cloud Security
+    - Enrichment & Reputation
+    - Import, Export & Sharing
+    - Other
+  - License type:
+    - Free
+    - Commercial
+  - Contact: Email address or GitHub profile URL of the maintainer
   - The remaining fields are optional and will be completed by the Integrations team during the verification process.
 - **Configuration parameters with examples**
   - By using the template, settings is defined with Pydantic models, which allows you to include descriptions and examples for each configuration parameter. This information will be used to automatically generate documentation and provide clear guidance to users when configuring the connector.

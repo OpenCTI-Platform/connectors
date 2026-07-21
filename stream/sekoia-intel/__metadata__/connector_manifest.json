@@ -5,8 +5,13 @@
   "short_description": "Sekoia.io Cyber Threat Intelligence provides assimilable and relevant reports on the evolving threat landscape, accessible to a broader audience.",
   "logo": "stream/sekoia-intel/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

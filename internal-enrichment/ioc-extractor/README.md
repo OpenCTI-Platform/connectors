@@ -41,33 +41,14 @@ The **IOC Extractor** enrichment connector extracts Observables from unstructure
 
 ## Configuration
 
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+
 ### OpenCTI environment variables
 
-| Parameter     | Docker environment variable | Mandatory | Description                                          |
-| ------------- | --------------------------- | --------- | ---------------------------------------------------- |
-| OpenCTI URL   | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### Base connector environment variables
-
-| Parameter       | Docker environment variable | Default       | Mandatory | Description                                                   |
-|-----------------|-----------------------------|---------------|-----------|---------------------------------------------------------------|
-| Connector ID    | `CONNECTOR_ID`              | /             | Yes       | A unique `UUIDv4` identifier for this connector instance.     |
-| Connector Name  | `CONNECTOR_NAME`            | IOC Extractor | No        | Name of the connector.                                        |
-| Connector Scope | `CONNECTOR_SCOPE`           | Report,...    | No        | The scope of entities to enrich (comma-separated STIX types). |
-| Log Level       | `CONNECTOR_LOG_LEVEL`       | info          | No        | Log verbosity: `debug`, `info`, `warn`, or `error`.           |
-| Connector Auto  | `CONNECTOR_AUTO`            | false         | No        | Enable auto-enrichment on entity creation.                    |
-
-### Connector-specific parameters
-
-| Parameter                 | Docker environment variable               | Default | Description                                                   |
-|---------------------------|-------------------------------------------|---------|---------------------------------------------------------------|
-| Extract hashes            | `IOC_EXTRACTOR_EXTRACT_HASHES`            | `true`  | Extract MD5, SHA-1, SHA-256 file hashes                       |
-| Extract IPv4              | `IOC_EXTRACTOR_EXTRACT_IPV4`              | `true`  | Extract IPv4 addresses                                        |
-| Extract IPv6              | `IOC_EXTRACTOR_EXTRACT_IPV6`              | `true`  | Extract IPv6 addresses                                        |
-| Extract domains           | `IOC_EXTRACTOR_EXTRACT_DOMAINS`           | `true`  | Extract domain names                                          |
-| Extract URLs              | `IOC_EXTRACTOR_EXTRACT_URLS`              | `true`  | Extract URLs                                                  |
-| Skip private IPs          | `IOC_EXTRACTOR_SKIP_PRIVATE_IPS`          | `true`  | Skip private/reserved IP addresses (RFC 1918, loopback, etc.) |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

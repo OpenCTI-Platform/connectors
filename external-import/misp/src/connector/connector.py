@@ -709,8 +709,13 @@ class Misp:
                                 )
 
                         try:
-                            self._current_bundle = author, markings, bundle_objects = (
-                                self.converter.process(
+                            self._current_bundle = (
+                                author,
+                                markings,
+                                bundle_objects,
+                                filter_passed_count,
+                            ) = (
+                                *self.converter.process(
                                     event=event,
                                     include_relationships=(
                                         len(event.Event.Attribute or [])
@@ -718,7 +723,8 @@ class Misp:
                                     )
                                     # TODO: Add a configuration for the maximum number of attributes and objects
                                     < 10000,
-                                )
+                                ),
+                                filter_passed_count,
                             )
                         except ConverterError as err:
                             self.logger.error(
@@ -732,7 +738,9 @@ class Misp:
                             "Resuming processing of MISP event...",
                             event_log_data,
                         )
-                        author, markings, bundle_objects = self._current_bundle
+                        author, markings, bundle_objects, filter_passed_count = (
+                            self._current_bundle
+                        )
 
                     self.logger.debug(
                         "Converted to STIX entities",

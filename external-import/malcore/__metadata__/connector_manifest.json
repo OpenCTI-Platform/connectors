@@ -4,7 +4,14 @@
   "description": "The Malcore connector imports malware intelligence data from Malcore into OpenCTI.\n\nThe connector creates the following OpenCTI entity types:\n\n- File observables (MD5, SHA-1, and SHA-256)\n- StixFile indicators (SHA-256)\n- Malware\n\nThis enables organizations to enrich their threat intelligence with malware file intelligence sourced from Malcore.",
   "short_description": "The Malcore connector imports malware intelligence from Malcore into OpenCTI, creating file observables (MD5, SHA-1, SHA-256), StixFile indicators, and malware entities.",
   "logo": "external-import/malcore/__metadata__/logo.png",
-  "use_cases": [],
+  "use_cases": [
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

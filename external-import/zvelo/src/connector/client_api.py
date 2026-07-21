@@ -2,13 +2,15 @@ import json
 
 import requests
 
+from .settings import ConnectorSettings
+
 
 class ConnectorClient:
     """
     Represent Zvelo API client interface.
     """
 
-    def __init__(self, helper, config):
+    def __init__(self, helper, config: ConnectorSettings):
         """
         Initialize the client with necessary configurations
         """
@@ -37,8 +39,8 @@ class ConnectorClient:
         """
         token_headers = {"Content-Type": "application/json"}
         data = {
-            "client_id": self.config.zvelo_client_id,
-            "client_secret": self.config.zvelo_client_secret,
+            "client_id": self.config.zvelo.client_id,
+            "client_secret": self.config.zvelo.client_secret.get_secret_value(),
             "audience": "https://api.zvelo.io/v1/",
             "grant_type": "client_credentials",
         }

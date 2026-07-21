@@ -5,8 +5,13 @@
   "short_description": "Import Mattermost messages, attachments and threads into OpenCTI.",
   "logo": "external-import/mattermost/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Other"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

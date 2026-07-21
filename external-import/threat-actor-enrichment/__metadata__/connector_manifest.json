@@ -5,15 +5,19 @@
   "short_description": "Enriches threat actor groups with computed last_seen dates from related indicators and reports.",
   "logo": null,
   "use_cases": [
-    "Enrichment & Analysis",
-    "Threat Intelligence Management"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 75,
   "support_version": ">=6.8.0",
-  "subscription_link": "",
+  "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/threat-actor-enrichment",
   "manager_supported": false,
   "container_version": "rolling",

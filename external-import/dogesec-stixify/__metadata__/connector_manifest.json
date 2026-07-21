@@ -5,9 +5,13 @@
   "short_description": "The OpenCTI Stixify Connector synchronizes intelligence from Stixify Dossiers into OpenCTI, enabling automated ingestion of structured STIX data extracted from reports.",
   "logo": "external-import/dogesec-stixify/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
-    "Open Source Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

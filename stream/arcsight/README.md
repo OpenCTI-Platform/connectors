@@ -31,7 +31,7 @@ using the ESM Service Layer REST API (`LoginService` for authentication and
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260710.0
+- OpenCTI Platform >= 7.260715.0
 - A reachable ArcSight ESM Manager (Service Layer REST API enabled)
 - An ESM account allowed to read/write the target Active List
 - The resource ID of the target Active List (with a column to store IOC values)
