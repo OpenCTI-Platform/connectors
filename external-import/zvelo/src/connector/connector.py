@@ -5,8 +5,8 @@ import stix2
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterError, ConverterToStix
+from .settings import ConnectorSettings
 from .utils import SUPPORTED_COLLECTIONS
 
 
@@ -15,13 +15,12 @@ class ConnectorZvelo:
     Represents Zvelo external import connector.
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = config
+        self.helper = helper
         self.converter_to_stix = ConverterToStix(self.helper)
 
     def _collect_intelligence(self, from_date: str) -> list[stix2.v21._STIXBase21]:
@@ -35,21 +34,20 @@ class ConnectorZvelo:
         api_client = ConnectorClient(self.helper, self.config)
 
         # validate collection configured
-        for collection in self.config.zvelo_collections:
+        collections = list(self.config.zvelo.collections)
+        for collection in collections:
             if collection not in SUPPORTED_COLLECTIONS:
                 self.helper.connector_logger.error(
                     f"Unsupported configured: {collection}"
                 )
-                self.config.zvelo_collections.remove(collection)
+                collections.remove(collection)
 
-        self.helper.connector_logger.debug(
-            f"Collections configured: {self.config.zvelo_collections}"
-        )
+        self.helper.connector_logger.debug(f"Collections configured: {collections}")
 
         # init list and add the author in the stix bundle
         stix_objects = [self.converter_to_stix.author]
 
-        for collection in self.config.zvelo_collections:
+        for collection in collections:
             self.helper.connector_logger.info(
                 f"[CONNECTOR] Going to process collection: {collection}"
             )
@@ -177,16 +175,9 @@ class ConnectorZvelo:
     def run(self) -> None:
         """
         Run the main process encapsulated in a scheduler
-        It allows you to schedule the process to run at a certain intervals
-        This specific scheduler from the pycti connector helper will also check the queue size of a connector
-        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
-        the connector's main process will not run until the queue is ingested and reduced sufficiently,
-        allowing it to restart during the next scheduler check. (default is 500MB)
-        It requires the `duration_period` connector variable in ISO-8601 standard format
-        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         :return: None
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )
