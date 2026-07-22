@@ -170,6 +170,14 @@ jobs:
             ARGS+=("--include-released")
           fi
 
+          # bulk_release.py writes the resolved version, and the full
+          # pending/skipped table (with skip reasons), to $GITHUB_STEP_SUMMARY
+          # itself — this runs for both dry runs and real dispatches, unlike
+          # the dispatch step below which only runs on a real dispatch. This
+          # is also the only place the *actual* resolved version is visible:
+          # the run-name is rendered before this job starts, so it only ever
+          # has access to the raw `inputs.version` (possibly empty), never
+          # the value auto-computed here.
           python .github/scripts/bulk_release.py "${ARGS[@]}"
 
       - name: Dispatch per-connector releases

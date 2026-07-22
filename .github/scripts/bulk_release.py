@@ -43,6 +43,10 @@ Outputs (written to $GITHUB_OUTPUT when set, and always printed as a summary):
     skipped         JSON array of connector names skipped (already released)
     skipped_count   number of skipped connectors
     has_connectors  "true" if at least one connector will be released
+
+A resolution table (pending + skipped, with the reason each connector was
+skipped) is also appended to $GITHUB_STEP_SUMMARY when set, so it's visible
+in the Job Summary for both dry runs and real dispatches.
 """
 
 import argparse
@@ -301,6 +305,44 @@ def print_plan(plan: ReleasePlan) -> None:
             print(f"    = {build_tag(connector.name, plan.version)}", file=sys.stderr)
 
 
+def write_step_summary(plan: ReleasePlan, github_step_summary: str | None) -> None:
+    """Append a resolution table (pending + skipped, with reasons) to the Job
+    Summary. Written here — rather than in the workflow — so it's always
+    present regardless of dry-run vs. real dispatch, and stays in sync with
+    the single source of truth for *why* a connector was skipped.
+    """
+    if not github_step_summary:
+        return
+
+    total = len(plan.pending) + len(plan.skipped)
+    lines = [
+        f"### 🔖 Bulk release resolution — version `{plan.version}`",
+        "",
+        f"{total} connector(s) targeted: {len(plan.pending)} to release, "
+        f"{len(plan.skipped)} skipped.",
+        "",
+        "| Connector | Target | Status | Reason |",
+        "|-----------|--------|--------|--------|",
+    ]
+    for connector in plan.pending:
+        lines.append(
+            f"| {connector.name} | {build_tag(connector.name, plan.version)} "
+            "| ✅ to release | — |"
+        )
+    for connector in plan.skipped:
+        lines.append(
+            f"| {connector.name} | {build_tag(connector.name, plan.version)} "
+            "| ⏭️ skipped | Already released — tag "
+            f"`{build_tag(connector.name, plan.version)}` exists |"
+        )
+    if not plan.pending and not plan.skipped:
+        lines.append("| _(none)_ | | | |")
+    lines.append("")
+
+    with open(github_step_summary, "a", encoding="utf-8") as handle:
+        handle.write("\n".join(lines) + "\n")
+
+
 def emit_outputs(plan: ReleasePlan, github_output: str | None) -> None:
     """Write GitHub Actions job outputs (and echo them for local runs)."""
     connectors = json.dumps([c.name for c in plan.pending], separators=(",", ":"))
@@ -377,6 +419,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=os.environ.get("GITHUB_OUTPUT"),
         help="Path to write matrix outputs (defaults to $GITHUB_OUTPUT).",
     )
+    parser.add_argument(
+        "--github-step-summary",
+        default=os.environ.get("GITHUB_STEP_SUMMARY"),
+        help="Path to append the resolution table to (defaults to "
+        "$GITHUB_STEP_SUMMARY).",
+    )
     return parser
 
 
@@ -406,6 +454,7 @@ def run(args: argparse.Namespace) -> int:
     plan = build_plan(connectors, version, released_tags)
 
     print_plan(plan)
+    write_step_summary(plan, args.github_step_summary)
     emit_outputs(plan, args.github_output)
     return 0
 
