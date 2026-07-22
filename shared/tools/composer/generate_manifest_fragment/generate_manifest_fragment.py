@@ -172,7 +172,7 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
     )
 
     fragment = {
-        "id": slug,
+        "id": f"{slug}-{version}",
         "title": manifest["title"],
         "slug": slug,
         "description": manifest["description"],
