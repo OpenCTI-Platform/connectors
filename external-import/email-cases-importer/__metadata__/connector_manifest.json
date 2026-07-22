@@ -1,0 +1,19 @@
+{
+  "title": "Email Cases Importer",
+  "slug": "email-cases-importer",
+  "description": "Polls email inboxes (IMAP, Microsoft Graph, Gmail, EWS) for emails from specific senders matching configurable subject filters. Creates Incident Response Cases in OpenCTI, grouping email thread replies into the same case. Extracts and decrypts attachments (7z, zip, rar, xlsx, pdf) using passwords found in email bodies. Supports extensible attachment handlers.",
+  "short_description": "Email to Incident Response Case connector with multi-protocol support",
+  "logo": "logo.png",
+  "use_cases": ["Incident Response", "Threat Intelligence"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260715.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/email-cases-importer",
+  "manager_supported": false,
+  "container_version": "1.0.6",
+  "container_image": "opencti/connector-email-cases-importer",
+  "container_type": "EXTERNAL_IMPORT"
+}

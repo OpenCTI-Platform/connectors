@@ -1,0 +1,9 @@
+pycti==7.260715.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260715.0#subdirectory=connectors-sdk
+requests>=2.32.0
+py7zr>=0.22.0
+pikepdf>=9.0.0
+msoffcrypto-tool>=5.4.0
+openpyxl>=3.1.0
+exchangelib>=5.4.0
+google-auth>=2.29.0
