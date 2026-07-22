@@ -110,16 +110,17 @@
       "type": "boolean"
     },
     "COFENSE_THREATHQ_TLP_LEVEL": {
-      "default": "amber+strict",
-      "description": "TLP marking for exported data (clear, green, amber, amber+strict, red).",
+      "description": "TLP marking for exported data (clear, white, green, amber, amber+strict, red).",
       "enum": [
         "clear",
+        "white",
         "green",
         "amber",
         "amber+strict",
         "red"
       ],
-      "type": "string"
+      "type": "string",
+      "default": "amber+strict"
     },
     "COFENSE_THREATHQ_PROMOTE_OBSERVABLES_AS_INDICATORS": {
       "default": true,
