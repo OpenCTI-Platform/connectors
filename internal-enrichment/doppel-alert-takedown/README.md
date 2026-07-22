@@ -17,9 +17,6 @@ Table of Contents
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration variables](#configuration-variables)
-  - [OpenCTI environment variables](#opencti-environment-variables)
-  - [Base connector environment variables](#base-connector-environment-variables)
-  - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -46,37 +43,10 @@ platform: it opens a Doppel alert and requests a takedown in a single enrichment
 
 ## Configuration variables
 
-Configuration options are set either in `docker-compose.yml` (for Docker) or in
-`config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter       | config.yml | Docker environment variable | Default                     | Mandatory | Description                                                             |
-| --------------- | ---------- | --------------------------- |-----------------------------| --------- | ---------------------------------------------------------------------- |
-| Connector ID    | id         | `CONNECTOR_ID`              | /                           | Yes       | A unique `UUIDv4` identifier for this connector instance.              |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | INTERNAL_ENRICHMENT         | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.     |
-| Connector Name  | name       | `CONNECTOR_NAME`            | Doppel Alert and Takedown   | No        | Name of the connector.                                                 |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | Url,Domain-Name             | No        | The types of observables the connector enriches.                       |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error                       | No        | Log verbosity: `debug`, `info`, `warn`, or `error`.                    |
-| Connector Auto  | auto       | `CONNECTOR_AUTO`            | false                       | No        | `true` or `false` to enable or disable auto-enrichment of observables. |
-
-### Connector extra parameters environment variables
-
-| Parameter        | config.yml         | Docker environment variable | Default                                        | Mandatory | Description                                                          |
-| ---------------- | ------------------ | --------------------------- | ---------------------------------------------- | --------- | ------------------------------------------------------------------- |
-| API key          | api_key            | `DOPPEL_API_KEY`            | /                                              | Yes       | Doppel API key, sent as the `x-api-key` header.                     |
-| User API key     | user_api_key       | `DOPPEL_USER_API_KEY`       | /                                              | Yes       | Doppel user API key, sent as the `x-user-api-key` header.           |
-| API base URL     | api_base_url       | `DOPPEL_API_BASE_URL`       | `https://api.doppel.com`                       | No        | Doppel API base URL.                                                |
-| Tags             | tags               | `DOPPEL_TAGS`               | empty                                          | No        | Comma-separated list of tags added to every alert created.          |
-| Takedown comment | takedown_comment   | `DOPPEL_TAKEDOWN_COMMENT`   | `Confirmed by OpenCTI — requesting takedown.`  | No        | Comment sent to Doppel with the takedown request.                   |
-| Max TLP level    | max_tlp            | `DOPPEL_MAX_TLP`            | empty (no limit)                               | No        | Max TLP of the observables the connector is allowed to enrich. Values: `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`. Empty means no limit. |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
