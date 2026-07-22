@@ -140,7 +140,7 @@ class DomainToolsIrisQLConnector:
 
                 stix_objects.append(email_obs)
     
-                entity_relation = self.converter_to_stix.create_relationship(domain_obs.id, 'resolves-to', email_obs.id)
+                entity_relation = self.converter_to_stix.create_relationship(domain_obs.id, 'related-to', email_obs.id)
                 stix_objects.append(entity_relation)
             
         # ===========================
