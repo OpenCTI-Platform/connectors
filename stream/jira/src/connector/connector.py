@@ -11,11 +11,7 @@ class JiraConnector:
         self.jira_url = self.config.jira.url
         self.jira_ssl_verify = self.config.jira.ssl_verify
         self.jira_login_email = self.config.jira.login_email
-        self.jira_api_token = (
-            self.config.jira.api_token.get_secret_value()
-            if self.config.jira.api_token is not None
-            else None
-        )
+        self.jira_api_token = self.config.jira.api_token.get_secret_value()
         self.jira_project_key = self.config.jira.project_key
         self.jira_issue_type_name = self.config.jira.issue_type_name
 
