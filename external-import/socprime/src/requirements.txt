@@ -5,3 +5,4 @@ python-dateutil==2.9.0.post0
 PyYAML==6.0.3
 requests==2.33.0
 stix2==3.0.1
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
