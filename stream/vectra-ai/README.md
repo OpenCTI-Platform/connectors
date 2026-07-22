@@ -35,7 +35,7 @@ API. The feed is created automatically on the first run if it does not exist yet
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260715.0
+- OpenCTI Platform >= 7.260722.0
 - A Vectra AI Platform / Brain reachable over HTTPS
 - A Vectra API token with permission to manage threat feeds
 
