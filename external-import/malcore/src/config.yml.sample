@@ -8,10 +8,10 @@ connector:
   name: 'Malcore'
   scope: 'malcore' # MIME type or SCO
   log_level: 'info'
+  duration_period: 'PT12H' # ISO 8601 duration (12 hours)
 
 malcore:
   api_url: 'https://api.malcore.io/api/feed'
   api_key: 'ChangeMe'
   score: 100
   limit: 10000
-  interval: 12 # In hours, must be strictly greater than 1

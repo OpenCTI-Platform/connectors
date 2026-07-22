@@ -11,6 +11,7 @@
     "Threat Intelligence Feed"
   ],
   "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -21,7 +22,5 @@
   "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-usta",
-  "container_type": "EXTERNAL_IMPORT",
-  "config_schema": "external-import/usta/__metadata__/connector_config_schema.json",
-  "config_documentation": "external-import/usta/__metadata__/CONNECTOR_CONFIG_DOC.md"
+  "container_type": "EXTERNAL_IMPORT"
 }

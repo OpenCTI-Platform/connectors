@@ -51,7 +51,7 @@ The **Google Threat Intelligence (GTI) Feeds Connector** ingests threat intellig
 | Collection        | Config toggle                  | Enabled by default | Main OpenCTI entity | Related OpenCTI entity(s) produced                                                                                                 |
 |-------------------|--------------------------------|--------------------|---------------------|------------------------------------------------------------------------------------------------------------------------------------|
 | Reports           | `GTI_IMPORT_REPORTS`           | ✅ Yes              | Report              | Location, Sector, Malware, Tool, Intrusion-Set, Attack-Pattern, Vulnerability, Indicator, Observable (Domain, File, IP, URL), Note |
-| Campaigns         | `GTI_IMPORT_CAMPAIGNS`         | ❌ No               | Campaign            | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool, Indicator, Observable (Domain, File, IP, URL)     |
+| Campaigns         | `GTI_IMPORT_CAMPAIGNS`         | ❌ No               | Campaign            | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool                                                    |
 | Threat Actors     | `GTI_IMPORT_THREAT_ACTORS`     | ❌ No               | Intrusion-Set       | Location, Sector, Attack-Pattern, Malware, Vulnerabilities, Tool                                                                   |
 | Malware Families  | `GTI_IMPORT_MALWARE_FAMILIES`  | ❌ No               | Malware             | Location, Sector, Intrusion-Set, Attack-Pattern, Vulnerabilities                                                                   |
 | Software Toolkits | `GTI_IMPORT_SOFTWARE_TOOLKITS` | ❌ No               | Tool                | Location, Sector, Malware, Attack-Pattern                                                                                          |
@@ -108,7 +108,7 @@ Fetches Google TI **[Campaigns](https://gtidocs.virustotal.com/reference/campaig
 
 The connector calls **`GET /collections`** with a filter on `collection_type:campaign` and `last_modification_date` to retrieve only campaigns modified since the last successful execution. The date is persisted in the connector state as `campaign_next_cursor_start_date`; on first run, it is calculated from `GTI_CAMPAIGN_IMPORT_START_DATE`.
 
-For each campaign returned, the connector fetches related sub-entities by calling **`GET /collections/{campaign_id}/{subentity_type}`** for: `malware_families`, `threat_actors`, `attack_techniques`, `vulnerabilities`, `domains`, `files`, `urls`, `ip_addresses`, and `software_toolkits`.
+For each campaign returned, the connector fetches related sub-entities by calling **`GET /collections/{campaign_id}/{subentity_type}`** for: `malware_families`, `threat_actors`, `attack_techniques`, `vulnerabilities`, and `software_toolkits`.
 
 All sub-entities are converted to STIX 2.1 objects and linked to the parent Campaign entity.
 
@@ -116,17 +116,13 @@ All sub-entities are converted to STIX 2.1 objects and linked to the parent Camp
 
 #### Sub-entities mapping
 
-| Sub-entity type       | OpenCTI entity produced                    |
-|-----------------------|--------------------------------------------|
-| `malware_families`    | Malware                                    |
-| `threat_actors`       | Intrusion-Set                              |
-| `attack_techniques`   | Attack-Pattern                             |
-| `vulnerabilities`     | Vulnerability                              |
-| `domains`             | Domain-Name observable + Indicator         |
-| `files`               | File observable + Indicator                |
-| `urls`                | URL observable + Indicator                 |
-| `ip_addresses`        | IPv4-Addr/IPv6-Addr observable + Indicator |
-| `software_toolkits`   | Tool                                       |
+| Sub-entity type       | OpenCTI entity produced |
+|-----------------------|-------------------------|
+| `malware_families`    | Malware                 |
+| `threat_actors`       | Intrusion-Set           |
+| `attack_techniques`   | Attack-Pattern          |
+| `vulnerabilities`     | Vulnerability           |
+| `software_toolkits`   | Tool                    |
 
 
 #### Configurable filters
@@ -479,17 +475,13 @@ These are **direct attributes** of the GTI Campaign object, but they are modeled
 
 These relationships are **only produced when the Campaigns collection is enabled**, as they require fetching additional sub-entities via dedicated API calls.
 
-| GTI Concept              | STIX Source Object | STIX Relationship   | STIX Target Object                 |
-|--------------------------|--------------------|---------------------|------------------------------------|
-| `threat_actors`          | Campaign           | `attributed-to`     | Intrusion-Set                      |
-| `malware_families`       | Campaign           | `uses`              | Malware                            |
-| `software_toolkits`      | Campaign           | `uses`              | Tool                               |
-| `attack_techniques`      | Campaign           | `uses`              | Attack-Pattern                     |
-| `vulnerabilities`        | Campaign           | `targets`           | Vulnerability                      |
-| `domains`                | Indicator          | `related-to`        | Campaign (Domain-Name + Indicator) |
-| `files`                  | Indicator          | `related-to`        | Campaign (File + Indicator)        |
-| `urls`                   | Indicator          | `related-to`        | Campaign (URL + Indicator)         |
-| `ip_addresses`           | Indicator          | `related-to`        | Campaign (IPv4/IPv6 + Indicator)   |
+| GTI Concept              | STIX Source Object | STIX Relationship   | STIX Target Object |
+|--------------------------|--------------------|---------------------|--------------------|
+| `threat_actors`          | Campaign           | `attributed-to`     | Intrusion-Set      |
+| `malware_families`       | Campaign           | `uses`              | Malware            |
+| `software_toolkits`      | Campaign           | `uses`              | Tool               |
+| `attack_techniques`      | Campaign           | `uses`              | Attack-Pattern     |
+| `vulnerabilities`        | Campaign           | `targets`           | Vulnerability      |
 
 ---
 

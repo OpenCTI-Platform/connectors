@@ -11,8 +11,9 @@
     "Enrichment & Reputation"
   ],
   "license_type": "Free",
-  "verified": false,
-  "last_verified_date": null,
+  "contact": null,
+  "verified": true,
+  "last_verified_date": "2026-07-10",
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">=7.260701.0",
