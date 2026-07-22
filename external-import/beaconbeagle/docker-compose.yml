@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-beaconbeagle:
-    image: opencti/connector-beaconbeagle:rolling
+    image: opencti/connector-beaconbeagle:7.260722.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGEME

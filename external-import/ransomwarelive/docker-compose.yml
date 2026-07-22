@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector_ransomwarelive:
-    image: opencti/connector-ransomwarelive:rolling
+    image: opencti/connector-ransomwarelive:7.260722.0
     container_name: connector_ransomwarelive
     environment:
       - OPENCTI_URL=http://opencti:8080

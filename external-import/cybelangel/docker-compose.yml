@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-cybelangel:
-    image: opencti/connector-cybelangel:rolling
+    image: opencti/connector-cybelangel:7.260722.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe

@@ -1,7 +1,7 @@
 version: '1'
 services:
   connector-nameshield:
-    image: opencti/connector-nameshield:rolling
+    image: opencti/connector-nameshield:7.260722.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=CHANGEME
