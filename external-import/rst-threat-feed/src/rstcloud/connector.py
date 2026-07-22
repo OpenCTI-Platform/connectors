@@ -244,7 +244,6 @@ class RSTThreatFeed:
             isfamily = True if "/" not in threat["name"] else False
 
             shared_parameters = {
-                "id": threat_key,
                 "name": threat["name"],
                 "created_by_ref": organization.id,
                 "external_references": external_references,
@@ -256,36 +255,44 @@ class RSTThreatFeed:
             malware_parameters["is_family"] = isfamily
 
             if threat["type"] == ThreatTypes.MALWARE:
-                threat_object = stix2.v21.Malware(**malware_parameters)
+                threat_object = stix2.v21.Malware(id=threat_key, **malware_parameters)
             elif threat["type"] == ThreatTypes.RANSOMWARE:
                 threat_object = stix2.v21.Malware(
-                    malware_types=["ransomware"], **malware_parameters
+                    id=threat_key, malware_types=["ransomware"], **malware_parameters
                 )
             elif threat["type"] == ThreatTypes.BACKDOOR:
                 threat_object = stix2.v21.Malware(
-                    malware_types=["backdoor"], **malware_parameters
+                    id=threat_key, malware_types=["backdoor"], **malware_parameters
                 )
             elif threat["type"] == ThreatTypes.RAT:
                 threat_object = stix2.v21.Malware(
-                    malware_types=["remote-access-trojan"], **malware_parameters
+                    id=threat_key,
+                    malware_types=["remote-access-trojan"],
+                    **malware_parameters,
                 )
             elif threat["type"] == ThreatTypes.EXPLOIT:
                 threat_object = stix2.v21.Malware(
-                    malware_types=["exploit-kit"], **malware_parameters
+                    id=threat_key, malware_types=["exploit-kit"], **malware_parameters
                 )
             elif threat["type"] == ThreatTypes.CRYPTOMINER:
                 threat_object = stix2.v21.Malware(
-                    malware_types=["resource-exploitation"], **malware_parameters
+                    id=threat_key,
+                    malware_types=["resource-exploitation"],
+                    **malware_parameters,
                 )
             elif threat["type"] == ThreatTypes.GROUP:
-                threat_object = stix2.v21.IntrusionSet(**shared_parameters)
+                threat_object = stix2.v21.IntrusionSet(
+                    id=threat_key, **shared_parameters
+                )
             elif threat["type"] == ThreatTypes.CAMPAIGN:
-                threat_object = stix2.v21.Campaign(**shared_parameters)
+                threat_object = stix2.v21.Campaign(id=threat_key, **shared_parameters)
             elif threat["type"] == ThreatTypes.TOOL:
-                threat_object = stix2.v21.Tool(**shared_parameters)
+                threat_object = stix2.v21.Tool(id=threat_key, **shared_parameters)
             elif threat["type"] == ThreatTypes.TTP:
                 if "mitre_id" not in threat and self._create_custom_ttps:
-                    threat_object = stix2.v21.AttackPattern(**shared_parameters)
+                    threat_object = stix2.v21.AttackPattern(
+                        id=threat_key, **shared_parameters
+                    )
                 elif "mitre_id" in threat and self._create_mitre_ttps:
                     threat_object = stix2.v21.AttackPattern(
                         id=threat_key,
@@ -311,7 +318,9 @@ class RSTThreatFeed:
                     shared_parameters["external_references"] = external_references
 
                 shared_parameters.pop("aliases", None)
-                threat_object = stix2.v21.Vulnerability(**shared_parameters)
+                threat_object = stix2.v21.Vulnerability(
+                    id=threat_key, **shared_parameters
+                )
 
             if threat_object:
                 stix_bundle.append(threat_object)
