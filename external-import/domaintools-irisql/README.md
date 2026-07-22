@@ -32,7 +32,7 @@ This connector uses IrisQL to fetch data from DomainTools Iris Investigate and i
 ### Requirements
 
 - OpenCTI Platform version >= 6.x
-- DomainTools API access (API Key + Other)
+- DomainTools API credential
 
 ## Configuration variables
 
@@ -61,12 +61,12 @@ Below are the parameters you'll need to set for running the connector properly:
 
 ### DomainTools extra parameters environment variables
 
-| Parameter               | config.yml                     | Docker environment variable      | Role | Default | Mandatory | Description                           |
-|-------------------------|--------------------------------|----------------------------------|---------|---------|-----------|---------------------------------------|
-| API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.domaintools.com/v1/iris-investigate/       | Yes       | DomainTools API base URL                   |
-| API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |    Authentication: Provides the primary security credentials for service access.      |         | Yes       | DomainTools API key                        |
-| IrisQL Query            | domaintools.iris_ql         | `DOMAINTOOLS_IRIS_QL`         |     Query: Specifies the IrisQL query to execute.     |         | Yes       | IrisQL query to execute                        |
-| TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`               |     Data Governance: Assigns sensitivity markings for downstream sharing.     | clear   | No        | TLP marking for created STIX objects. |
+| Parameter               | config.yml                     | Docker environment variable       | Default | Mandatory | Description                           |
+|-------------------------|--------------------------------|----------------------------------|---------|-----------|---------------------------------------|
+| API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |  | https://api.domaintools.com/v1/iris-investigate/       | Yes       | DomainTools API base URL                   |
+| API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |      | Yes       | DomainTools API key                        |
+| IrisQL Query            | domaintools.iris_ql         | `DOMAINTOOLS_IRIS_QL`         |             | Yes       | IrisQL query to execute                        |
+| TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`                  | clear   | No        | TLP marking for created STIX objects. |
 
 ## Deployment
 

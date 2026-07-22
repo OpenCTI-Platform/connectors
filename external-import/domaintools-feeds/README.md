@@ -31,7 +31,7 @@ This connector fetches data from DomainTools Threat Feeds (via the Real-time Fee
 ### Requirements
 
 - OpenCTI Platform version >= 6.x
-- DomainTools API access (API Key + Other)
+- DomainTools API credential
 
 ## Configuration variables
 
@@ -60,15 +60,15 @@ Below are the parameters you'll need to set for running the connector properly:
 
 ### DomainTools extra parameters environment variables
 
-| Parameter               | config.yml                     | Docker environment variable      | Role | Default | Mandatory | Description                           |
-|-------------------------|--------------------------------|----------------------------------|---------|---------|-----------|---------------------------------------|
-| API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.domaintools.com        | Yes       | DomainTools API base URL                   |
-| API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |    Authentication: Provides the primary security credentials for service access.      |         | Yes       | DomainTools API key                        |
-| Feed Type               | domaintools.feed_type         | `DOMAINTOOLS_FEED_TYPE`         |     Routing: Specifies the type of feed to ingest.     | nod      | Yes       | Type of feed to ingest (domainhotlist, domainrisk, nod, nad, noh, domaindiscovery)      |
-| Session ID              | domaintools.session_id       | `DOMAINTOOLS_SESSION_ID`            |     Scope: Identifies the specific session for feed access.     |         | No        | A unique identifier for the session, used for resuming data retrieval from the last point. |
-| TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`               |     Data Governance: Assigns sensitivity markings for downstream sharing.     | clear   | No        | TLP marking for created STIX objects. |
-| Domain Filter           | domaintools.domain       | `DOMAINTOOLS_DOMAIN`            |     Filtering: Limits results to specific domains.     |         | No        | Filter for an exact domain or a domain substring by prefixing or suffixing your string with *. |
-| Top Results             | domaintools.top       | `DOMAINTOOLS_TOP`            |     Performance: Limits the number of results returned.     |         | No        | Limits the number of results in the response payload.    |
+| Parameter               | config.yml                     | Docker environment variable      |  Default | Mandatory | Description                           |
+|-------------------------|--------------------------------|----------------------------------|---------|-----------|---------------------------------------|
+| API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |         https://api.domaintools.com        | Yes       | DomainTools API base URL                   |
+| API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |                   | Yes       | DomainTools API key                        |
+| Feed Type               | domaintools.feed_type         | `DOMAINTOOLS_FEED_TYPE`         |           nod      | Yes       | Type of feed to ingest (domainhotlist, domainrisk, nod, nad, noh, domaindiscovery)      |
+| Session ID              | domaintools.session_id       | `DOMAINTOOLS_SESSION_ID`            |                  | No        | A unique identifier for the session, used for resuming data retrieval from the last point. |
+| TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`                         | clear   | No        | TLP marking for created STIX objects. |
+| Domain Filter           | domaintools.domain       | `DOMAINTOOLS_DOMAIN`            |                   | No        | Filter for an exact domain or a domain substring by prefixing or suffixing your string with *. |
+| Top Results             | domaintools.top       | `DOMAINTOOLS_TOP`            |                  | No        | Limits the number of results in the response payload.    |
 
 ## Deployment
 
@@ -141,7 +141,6 @@ Find the "DomainTools Feeds" connector, and click on the refresh button to reset
 - Fetches data from DomainTools Feeds paginated by `session_id`
 - Converts each feed entry into a STIX 2.1 Observable object
 - Bundles and sends the STIX objects to OpenCTI
-- Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
 
 ## Debugging
 
