@@ -15,5 +15,6 @@
   "publisher": "WhoisFreaks",
   "container_image": "opencti/connector-whoisfreaks",
   "subscription_link": "https://whoisfreaks.com/",
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/whoisfreaks"
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/whoisfreaks",
+  "playbook_supported": true
 }
