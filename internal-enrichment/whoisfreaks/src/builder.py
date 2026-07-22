@@ -217,8 +217,6 @@ class WhoisFreaksStixBuilder:
             )
         else:
             target_stix = stix2.DomainName(value=clean_target)
-        
-
         ssl_certificates = ssl_data.get("sslCertificates") or [ssl_data]
         for cert in ssl_certificates:
             cert_info = cert.get("certificate_info") or cert
@@ -342,8 +340,10 @@ class WhoisFreaksStixBuilder:
         objects: List[Any] = [self.author]
         clean_ip = ip_address.strip()
         ip_stix = (
-             stix2.IPv6Address(value=clean_ip) if ":" in clean_ip else stix2.IPv4Address(value=clean_ip)
-         )
+            stix2.IPv6Address(value=clean_ip)
+            if ":" in clean_ip
+            else stix2.IPv4Address(value=clean_ip)
+        )
         objects.append(ip_stix)
 
         sec_data = reputation_data.get("security") or reputation_data

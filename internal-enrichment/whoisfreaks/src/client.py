@@ -1,12 +1,6 @@
 import logging
-<<<<<<< HEAD
 import requests
 from typing import Dict, Any, Optional
-=======
-from typing import Any, Dict, Optional
-
-import requests
->>>>>>> 4dda110e79e395357e4a4994e692361ec9319ed8
 
 logger = logging.getLogger(__name__)
 
