@@ -53,14 +53,16 @@
       "type": "string"
     },
     "CONNECTOR_RUN_EVERY": {
-      "default": "1d",
-      "description": "Interval between two runs of the connector, e.g. '7d', '12h', '10m', '30s' where the final letter is one of 'd', 'h', 'm', 's'.",
-      "type": "string"
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
     "CONNECTOR_FIRST_RUN": {
-      "default": "1d",
-      "description": "Interval to look back on the connector's very first run, e.g. '7d', '12h', '10m', '30s'.",
-      "type": "string"
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use ZEROFOX_FIRST_RUN instead."
     },
     "CONNECTOR_UPDATE_EXISTING_DATA": {
       "default": false,
@@ -77,10 +79,28 @@
       "type": "string",
       "writeOnly": true
     },
-    "ZEROFOX_COLLECTORS": {
-      "default": null,
-      "description": "Comma-separated list of ZeroFox CTI feeds to collect. When unset, all available feeds are collected.",
+    "ZEROFOX_FIRST_RUN": {
+      "default": "P1D",
+      "description": "Start date to look back on the connector's very first run (ISO 8601 format, absolute date or duration, e.g. '2023-10-01' or 'P1D').",
+      "format": "date-time",
       "type": "string"
+    },
+    "ZEROFOX_COLLECTORS": {
+      "default": [
+        "c2-domains",
+        "exploits",
+        "malware",
+        "phishing",
+        "scanned_after",
+        "ransomware",
+        "vulnerabilities",
+        "botnet"
+      ],
+      "description": "Comma-separated list of ZeroFox CTI feeds to collect. When unset, all available feeds are collected.Available values are:  'c2-domains', 'exploits', 'malware', 'phishing', 'scanned_after', 'ransomware', 'vulnerabilities', 'botnet'. ",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [
