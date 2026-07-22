@@ -1,0 +1,16 @@
+# Environment & Configuration files containing live secrets
+.env
+config.yml
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# IDE / OS metadata
+.vscode/
+.idea/
+.DS_Store
