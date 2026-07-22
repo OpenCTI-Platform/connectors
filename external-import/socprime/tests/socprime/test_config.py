@@ -43,7 +43,7 @@ def test_config_settings() -> None:
     assert config["socprime"]["content_list_name"] == ["name1", "name2"]
     assert config["socprime"]["job_ids"] == ["job1", "job2"]
     assert config["socprime"]["siem_type"] == ["devo", "snowflake"]
-    assert config["socprime"]["indicator_siem_type"] == "ChangeMe"
+    assert config["socprime"]["indicator_siem_type"] == "sigma"
     assert config["socprime"]["tlp_level"] == "amber+strict"
     # `interval_sec` is deprecated: it is kept in the model but nulled after migration.
     assert config["socprime"]["interval_sec"] is None

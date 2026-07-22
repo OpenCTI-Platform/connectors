@@ -21,6 +21,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The name of the connector.",
         default="SocPrime",
     )
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="a7c557b2-4032-46ac-a956-5dc501257700",
+    )
     scope: ListFromString = Field(
         description="The scope of the connector.",
         default=["socprime"],
@@ -40,19 +44,80 @@ class SocPrimeConfig(BaseConfigModel):
         description="API key used to authenticate against the SOC Prime TDM API.",
     )
     content_list_name: ListFromString = Field(
-        description="List of SOC Prime content list names to import rules from.",
+        description=(
+            "List of SOC Prime content list names to import rules from. At least "
+            "one of `SOCPRIME_CONTENT_LIST_NAME` and `SOCPRIME_JOB_IDS` parameters "
+            "has to be provided. If `SOCPRIME_CONTENT_LIST_NAME` is provided, then "
+            "the parameter `SOCPRIME_INDICATOR_SIEM_TYPE` has to be provided too."
+        ),
         default=[],
     )
     job_ids: ListFromString = Field(
-        description="List of SOC Prime job ids to import rules from.",
+        description=(
+            "List of SOC Prime job ids to import rules from. At least one of "
+            "`SOCPRIME_CONTENT_LIST_NAME` and `SOCPRIME_JOB_IDS` parameters has "
+            "to be provided."
+        ),
         default=[],
     )
     siem_type: ListFromString = Field(
         description="List of SIEM types to request rules for (used with job ids).",
         default=[],
     )
-    indicator_siem_type: str = Field(
-        description="SIEM type used to render rules imported from content lists.",
+    indicator_siem_type: Literal[
+        "sigma",
+        "ala-rule",
+        "ala",
+        "elasticsearch",
+        "es-eql",
+        "xpack-watcher",
+        "elasticsearch-rule",
+        "es-rule-eql",
+        "kibana",
+        "elastalert",
+        "qradar",
+        "humio",
+        "humio-alert",
+        "splunk",
+        "splunk_alert",
+        "sumologic",
+        "sumologic-cse",
+        "sumologic-cse-rule",
+        "arcsight-esm",
+        "arcsight-keyword",
+        "logpoint",
+        "grep",
+        "powershell",
+        "graylog",
+        "kafka",
+        "rsa_netwitness",
+        "carbonblack",
+        "carbonblack-edr",
+        "open-ioc",
+        "fireeye-helix",
+        "chronicle",
+        "securonix",
+        "s1-events",
+        "s1-process",
+        "mdatp",
+        "qualys",
+        "sysmon",
+        "crowdstrike",
+        "limacharlie",
+        "devo",
+        "snowflake",
+        "athena",
+        "opendistro-query",
+        "opendistro-rule",
+        "fortisiem",
+        "axon-ads-query",
+        "axon-ads-rule",
+    ] = Field(
+        description=(
+            "SIEM type used to render rules imported from content lists. Only "
+            "applicable to `SOCPRIME_CONTENT_LIST_NAME` parameter and not to "
+            "`SOCPRIME_JOB_IDS`"
+        ),
         default="sigma",
     )
     tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
