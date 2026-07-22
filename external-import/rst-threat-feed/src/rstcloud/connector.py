@@ -55,9 +55,6 @@ class RSTThreatFeed:
         self._create_custom_ttps = bool(self.config.rst_threat_feed.create_custom_ttps)
         self._create_mitre_ttps = bool(self.config.rst_threat_feed.create_mitre_ttps)
 
-        # As requested by instructions
-        self.update_existing_data = False
-
         # MITRE mapping helper
         self.mitre_downloader = MitreTtpDownloader(self.config)
         self.mitre_ttp_mapping = self.mitre_downloader.load_ttp_mapping()
@@ -381,7 +378,6 @@ class RSTThreatFeed:
                 bundle = stix2.v21.Bundle(objects=stix_bundle, allow_custom=True)
                 self.helper.send_stix2_bundle(
                     bundle=bundle.serialize(),
-                    update=self.update_existing_data,
                     work_id=work_id,
                 )
                 self.helper.log_info(
