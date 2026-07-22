@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-import-file-stix
 
 # Start the connector
-python3 import-file-stix.py
+python3 main.py
