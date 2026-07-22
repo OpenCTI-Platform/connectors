@@ -1,0 +1,11 @@
+{
+  "title": "WhoisFreaks",
+  "slug": "whoisfreaks",
+  "description": "WhoisFreaks internal enrichment connector for Domain, IP, SSL, and DNS intelligence.",
+  "type": "INTERNAL_ENRICHMENT",
+  "logo": "https://whoisfreaks.com/images/logo.png",
+  "publisher": "WhoisFreaks",
+  "container_image": "opencti/connector-whoisfreaks",
+  "subscription_link": "https://whoisfreaks.com/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/whoisfreaks"
+}
