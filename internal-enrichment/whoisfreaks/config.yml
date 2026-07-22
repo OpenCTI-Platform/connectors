@@ -1,0 +1,15 @@
+opencti:
+  url: "http://localhost:8080"
+  token: "ChangeMe"
+
+connector:
+  id: "ChangeMe" # Must be a valid UUIDv4 (e.g. generated via `uuidgen`)
+  type: "INTERNAL_ENRICHMENT"
+  name: "WhoisFreaks"
+  scope: "Domain-Name,IPv4-Addr"
+  auto: false # Manual trigger recommended to manage API quota
+  confidence_level: 100
+  log_level: "INFO"
+
+whoisfreaks:
+  api_key: "9c0189f5a7a8457d88fdf22c91b4d9f1"
