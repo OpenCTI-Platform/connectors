@@ -79,9 +79,9 @@ on:
           CalVer tag push.
         required: false
         type: boolean
-        default: false
+        default: true
       dry_run:
-        description: "Dry run — resolve and preview connectors without dispatching releases."
+        description: "Dry run — Do not publish any tags or GitHub Releases, only test release process"
         required: false
         type: boolean
         default: true
@@ -181,7 +181,7 @@ jobs:
           python .github/scripts/bulk_release.py "${ARGS[@]}"
 
       - name: Dispatch per-connector releases
-        if: ${{ steps.trigger.outputs.dry_run != 'true' && steps.resolve.outputs.has_connectors == 'true' }}
+        if: ${{ steps.resolve.outputs.has_connectors == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CONNECTORS_JSON: ${{ steps.resolve.outputs.connectors }}
@@ -189,6 +189,7 @@ jobs:
           MANIFEST_ONLY: ${{ steps.trigger.outputs.manifest_only }}
           REF: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
+          DRY_RUN: ${{ steps.trigger.outputs.dry_run }}
         run: |
           set -euo pipefail
 
@@ -214,7 +215,7 @@ jobs:
                  --ref "$REF" \
                  -f connector_name="$name" \
                  -f version="$VERSION" \
-                 -f dry_run=false \
+                 -f dry_run="$DRY_RUN" \
                  -f manifest_only="$MANIFEST_ONLY"; then
               echo "| $name | $target_label | ✅ dispatched |" >> "$GITHUB_STEP_SUMMARY"
               ok=$((ok + 1))
@@ -237,10 +238,4 @@ jobs:
           if [ "$failed" -gt 0 ]; then
             exit 1
           fi
-
-      - name: Dry run notice
-        if: ${{ steps.trigger.outputs.dry_run == 'true' }}
-        run: |
-          echo "🔎 Dry run — connectors resolved and previewed above; no releases dispatched."
-          echo "Re-run with dry_run=false to dispatch the per-connector release workflows."
 
