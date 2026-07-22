@@ -1,0 +1,23 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Dark Web Informer'
+  scope: 'dark-web-informer'
+  log_level: 'error'
+  # DWI regenerates STIX exports every 30 min; hourly or slower is recommended.
+  duration_period: 'PT6H'
+
+dark_web_informer:
+  base_url: 'https://api.darkwebinformer.com'
+  api_key: 'ChangeMe'
+  # Which prebuilt STIX bundles to ingest: feed, ransomware, iocs (or all).
+  sources: 'feed,ransomware,iocs'
+  # Use the smaller on-demand /api/stix.json preview instead of the full
+  # bulk bundles (useful for testing).
+  use_preview_endpoint: false
+  # Object limit when use_preview_endpoint is true (max 5000).
+  preview_limit: 5000
