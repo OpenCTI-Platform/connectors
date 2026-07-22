@@ -22,19 +22,18 @@ class DomainToolsClient:
         self.session = requests.Session()
         self.session.headers.update(headers)
 
-    def _request_data(self, api_url: str, body=None):
+    def _request_data(self, api_url: str, params=None, body=None):
         """
         Internal method to handle API requests
         :return: Response in JSON format
-        """
+        """        
         try:
-            response = self.session.post(api_url,data=body)
-            self.helper.connector_logger.info(
-                "[API] HTTP Get Request to endpoint", {"url_path": api_url}
-            )
+            
+            response = self.session.post(api_url, params=params, data=body)
+            self.helper.connector_logger.info("[API] HTTP Get Request to endpoint", {"url_path": api_url})
 
             response.raise_for_status()
-            return response
+            return response           
 
         except requests.RequestException as err:
             error_msg = "[API] Error while fetching data: "
@@ -53,10 +52,22 @@ class DomainToolsClient:
             # ===========================
             # === Add your code below ===
             # ===========================
+            result_data = []
+            params = { }
+            while True:                
+                response = self._request_data(self.base_url, params=params, body=body)
+                response.raise_for_status()                
+                
+                json_response = response.json()   
+                current_results = json_response['response']['results']
+                result_data.extend(current_results)
+                
+                if not json_response['response']['has_more_results']: break
+                
+                # Update the 'position' field for pagination
+                params['position'] = json_response['response']['position'] 
             
-            response = self._request_data(self.base_url, body=body)            
-            return response.json()
-            #return response.text.splitlines()
+            return result_data
 
             # return response.json()
             # ===========================

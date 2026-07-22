@@ -7,6 +7,7 @@
 ## Table of Contents
 
 - [OpenCTI DomainTools IrisQL Connector](#opencti-domaintools-irisql-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -19,14 +20,12 @@
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
-    - [Mapping to OpenCTI entities](#mapping-to-opencti-entities)
-    - [Entity type detection](#entity-type-detection)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
 ## Introduction
 
-This connector fetches data from DomainTools IrisQL and imports them into OpenCTI as Observables. Each query result is mapped to a STIX 2.1 Observable object, enriched with metadata such as severity, entity state, platform, audit logs, etc.
+This connector fetches data from DomainTools Iris Investigate using IrisQL and imports it into OpenCTI as Observables. Each query result is mapped to a Structured Threat Information Expression (STIX) 2.1 Observable object, enriched with metadata such as severity, entity state, platform, audit logs, etc. Created objects carry a Traffic Light Protocol (TLP) marking for downstream sharing.
 
 ## Installation
 
@@ -62,9 +61,9 @@ Below are the parameters you'll need to set for running the connector properly:
 
 ### DomainTools extra parameters environment variables
 
-| Parameter               | config.yml                     | Docker environment variable      | Role |  Default | Mandatory | Description                           |
+| Parameter               | config.yml                     | Docker environment variable      | Role | Default | Mandatory | Description                           |
 |-------------------------|--------------------------------|----------------------------------|---------|---------|-----------|---------------------------------------|
-| API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.domaintools.com        | Yes       | DomainTools API base URL                   |
+| API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.domaintools.com/v1/iris-investigate/       | Yes       | DomainTools API base URL                   |
 | API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |    Authentication: Provides the primary security credentials for service access.      |         | Yes       | DomainTools API key                        |
 | IrisQL Query            | domaintools.iris_ql         | `DOMAINTOOLS_IRIS_QL`         |     Query: Specifies the IrisQL query to execute.     |         | Yes       | IrisQL query to execute                        |
 | TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`               |     Data Governance: Assigns sensitivity markings for downstream sharing.     | clear   | No        | TLP marking for created STIX objects. |
@@ -94,12 +93,7 @@ Register connector in the **main** OpenCTI `docker-compose.yml`:
       - CONNECTOR_DURATION_PERIOD=PT5M
       - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com/v1/iris-investigate/
       - DOMAINTOOLS_API_KEY=changeme
-      - DOMAINTOOLS_IRIS_QL=# IrisQL-1.0
-        domain contains "sso"
-        AND
-        first_seen within "the last 1 hour"
-        AND
-        risk_score greater_than_or_equal "90"
+      - DOMAINTOOLS_IRIS_QL="# IrisQL-1.0\ndomain contains \"sso\"\nAND\nfirst_seen within \"the last 3 hour\"\nAND\nrisk_score greater_than_or_equal \"90\""
       - DOMAINTOOLS_TLP_LEVEL=clear
     restart: always
 ```
@@ -145,11 +139,10 @@ Find the "DomainTools IrisQL" connector, and click on the refresh button to rese
 - Converts each query result into a STIX 2.1 Observable object
 - Bundles and sends the STIX objects to OpenCTI
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
-- On first run, fetches up to `HISTORICAL_POLLING_DAYS`; subsequent runs are delta-based
 
 ## Debugging
 
-The connector can be debugged by setting the appropriate log level. Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
+The connector can be debugged by setting the appropriate log level. Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, for example, `self.helper.connector_logger.error("An error message")`.
 
 Set `CONNECTOR_LOG_LEVEL=debug` for verbose logging. Log output includes:
 

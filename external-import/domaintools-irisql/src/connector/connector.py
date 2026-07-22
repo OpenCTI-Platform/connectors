@@ -83,13 +83,11 @@ class DomainToolsIrisQLConnector:
 
         # Get entities from external sources
         entities = self.client.get_entities(self.iris_ql)        
-        self.helper.connector_logger.info(f"Successfully downloaded {entities.get('response').get('results_count')} records.")          
+        self.helper.connector_logger.info(f"Successfully downloaded {len(entities)} records.")          
         
-        for entity in entities.get('response', {}).get('results', []):
+        for entity in entities:
             domain = entity.get('domain')
-            score = entity.get('domain_risk', {}).get('risk_score')
-            
-            print(f"-------------> {domain} {score}")
+            score = entity.get('domain_risk', {}).get('risk_score')                        
             
             labels = ['IrisQL']
             for component in entity.get('domain_risk', {}).get('components'):

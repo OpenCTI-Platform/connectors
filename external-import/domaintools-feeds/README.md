@@ -67,10 +67,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Feed Type               | domaintools.feed_type         | `DOMAINTOOLS_FEED_TYPE`         |     Routing: Specifies the type of feed to ingest.     | nod      | Yes       | Type of feed to ingest (domainhotlist, domainrisk, nod, nad, noh, domaindiscovery)      |
 | Session ID              | domaintools.session_id       | `DOMAINTOOLS_SESSION_ID`            |     Scope: Identifies the specific session for feed access.     |         | No        | A unique identifier for the session, used for resuming data retrieval from the last point. |
 | TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`               |     Data Governance: Assigns sensitivity markings for downstream sharing.     | clear   | No        | TLP marking for created STIX objects. |
-| After (minutes)         | domaintools.after       | `DOMAINTOOLS_AFTER`            |     Synchronization: Determines the time-window for data fetching.     |         | No        | The start of the query window (inclusive).   |
-| Before (minutes)        | domaintools.before       | `DOMAINTOOLS_BEFORE`            |     Synchronization: Determines the time-window for data fetching.     |         | No        | The end of the query window (inclusive).   |
 | Domain Filter           | domaintools.domain       | `DOMAINTOOLS_DOMAIN`            |     Filtering: Limits results to specific domains.     |         | No        | Filter for an exact domain or a domain substring by prefixing or suffixing your string with *. |
-| From Beginning          | domaintools.frombeginning       | `DOMAINTOOLS_FROMBEGINNING`            |     Synchronization: Determines if fetching starts from the beginning.     |         | No        | When used with a new session ID, returns the first hour of data in the time window (rather than the last). |
 | Top Results             | domaintools.top       | `DOMAINTOOLS_TOP`            |     Performance: Limits the number of results returned.     |         | No        | Limits the number of results in the response payload.    |
 
 ## Deployment
