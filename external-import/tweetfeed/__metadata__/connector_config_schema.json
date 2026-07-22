@@ -76,12 +76,12 @@
       "type": "boolean"
     },
     "TWEETFEED_ORG_NAME": {
-      "default": null,
+      "default": "Tweetfeed",
       "description": "Name of the author organization created in OpenCTI.",
       "type": "string"
     },
     "TWEETFEED_ORG_DESCRIPTION": {
-      "default": null,
+      "default": "Tweetfeed, a connector to import IOC from Twitter.",
       "description": "Description of the author organization created in OpenCTI.",
       "type": "string"
     },

@@ -18,6 +18,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | TWEETFEED_CREATE_OBSERVABLES | `boolean` |  | boolean | `true` | Whether to create observables from the imported IOCs. |
 | TWEETFEED_INTERVAL | `integer` |  | integer | `1` | Interval, in days, between two runs of the connector. |
 | TWEETFEED_UPDATE_EXISTING_DATA | `boolean` |  | boolean | `true` | Whether to update data already present in OpenCTI. |
-| TWEETFEED_ORG_NAME | `string` |  | string | `null` | Name of the author organization created in OpenCTI. |
-| TWEETFEED_ORG_DESCRIPTION | `string` |  | string | `null` | Description of the author organization created in OpenCTI. |
+| TWEETFEED_ORG_NAME | `string` |  | string | `"Tweetfeed"` | Name of the author organization created in OpenCTI. |
+| TWEETFEED_ORG_DESCRIPTION | `string` |  | string | `"Tweetfeed, a connector to import IOC from Twitter."` | Description of the author organization created in OpenCTI. |
 | TWEETFEED_DAYS_BACK_IN_TIME | `integer` |  | integer | `30` | Number of days to retrieve data back in time. |
