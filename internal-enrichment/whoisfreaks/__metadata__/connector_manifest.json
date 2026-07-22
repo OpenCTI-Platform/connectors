@@ -8,6 +8,7 @@
     "Threat Intelligence",
     "Domain Analysis"
   ],
+  "verified": false,
   "type": "INTERNAL_ENRICHMENT",
   "logo": "https://whoisfreaks.com/images/logo.png",
   "publisher": "WhoisFreaks",
