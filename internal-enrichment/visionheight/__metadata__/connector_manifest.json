@@ -3,7 +3,7 @@
   "slug": "visionheight",
   "description": "VisionHeight is a threat intelligence platform that aggregates risk signals across IP addresses and domains. This OpenCTI internal-enrichment connector queries the VisionHeight API to enrich IPv4 and Domain observables with risk scores, threat labels, infrastructure context (ASN, country, vulnerabilities), DNS resolutions, SSL certificates, and WHOIS data. Observables with risk score >= 75 are automatically promoted to Indicators with a based-on relationship. Every enriched object is stamped with a VisionHeight Identity (created_by_ref) and an external_reference linking back to the VisionHeight UI for analyst pivoting.",
   "short_description": "Enriches IPv4 and Domain observables with VisionHeight threat intelligence: risk score, labels, ASN/geolocation, vulnerabilities, DNS, certificates, and WHOIS. Promotes high-risk observables to Indicators.",
-  "logo": "__metadata__/logo.png",
+  "logo": "internal-enrichment/visionheight/__metadata__/logo.png",
   "use_cases": [
     "Infrastructure & Attack Surface Visibility"
   ],
@@ -11,6 +11,7 @@
     "Enrichment & Reputation"
   ],
   "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": true,

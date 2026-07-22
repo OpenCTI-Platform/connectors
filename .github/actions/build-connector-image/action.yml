@@ -42,6 +42,10 @@ inputs:
     description: "Build variant (e.g. 'ubi9'). Affects cache keys, OCI labels, and auto-generates build-args for shared Dockerfiles."
     required: false
     default: ""
+  sdk_ref:
+    description: "Git ref to pin connectors-sdk to. When empty, no pinning is performed (only release-connector sets this)."
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -109,6 +113,31 @@ runs:
         if [ -f src/requirements.txt ]; then
           echo "--- src/requirements.txt ---"
           grep -E 'pycti|connectors-sdk' src/requirements.txt || echo "(no matches)"
+        fi
+
+    - name: Pin connectors-sdk for release
+      # Only pins when a ref is explicitly provided by the caller (release-connector).
+      # Other release-mode builds (e.g. build-all-connectors) leave sdk_ref empty
+      # and are intentionally not pinned.
+      if: inputs.sdk_ref != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        CONNECTOR_DIR="${{ inputs.connector_path }}"
+        SDK_REF="${{ inputs.sdk_ref }}"
+
+        SDK_GIT="connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@${SDK_REF}#subdirectory=connectors-sdk"
+
+        cd "$CONNECTOR_DIR"
+        echo "🔒 Pinning connectors-sdk → ${SDK_REF} (release build)"
+
+        find . \( -name requirements.txt -o -name pyproject.toml \) -exec \
+          sed -i -E "s|connectors-sdk @ git\+https://github\.com/OpenCTI-Platform/connectors\.git@[^#]+#subdirectory=connectors-sdk|${SDK_GIT}|g" {} +
+
+        echo "✅ connectors-sdk pinned"
+        if [ -f src/requirements.txt ]; then
+          echo "--- src/requirements.txt ---"
+          grep -E 'connectors-sdk' src/requirements.txt || echo "(no connectors-sdk ref)"
         fi
 
     - name: Resolve Dockerfile and build args
