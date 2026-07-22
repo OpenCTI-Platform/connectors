@@ -25,7 +25,7 @@
 
 ## Introduction
 
-This connector fetches data from DomainTools Iris Investigate using IrisQL and imports it into OpenCTI as Observables. Each query result is mapped to a Structured Threat Information Expression (STIX) 2.1 Observable object, enriched with metadata such as severity, entity state, platform, audit logs, etc. Created objects carry a Traffic Light Protocol (TLP) marking for downstream sharing.
+This connector uses IrisQL to fetch data from DomainTools Iris Investigate and import it into OpenCTI. It maps each query result to a STIX 2.1 Observable, enriching it with context like IP addresses, name servers, mail servers, email addresses, etc. To ensure secure data handling, all created objects are assigned a Traffic Light Protocol (TLP) marking for downstream sharing.
 
 ## Installation
 
@@ -135,10 +135,8 @@ Find the "DomainTools IrisQL" connector, and click on the refresh button to rese
 
 ## Behavior
 
-- Fetches data from DomainTools IrisQL paginated by `session_id`
 - Converts each query result into a STIX 2.1 Observable object
 - Bundles and sends the STIX objects to OpenCTI
-- Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
 
 ## Debugging
 
