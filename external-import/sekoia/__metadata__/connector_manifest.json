@@ -24,6 +24,6 @@
   "limits": {
     "fetch_max_mb": 64,
     "memory_mb": 1024,
-    "fuel": 5000000000
+    "fuel": 100000000000
   }
 }
