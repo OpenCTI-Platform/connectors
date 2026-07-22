@@ -1,5 +1,4 @@
 import json
-import sys
 from typing import Dict, List
 
 from connector.settings import ConnectorSettings
@@ -33,9 +32,7 @@ class ImportFileStix:
         bypass_validation = data["bypass_validation"]
         file_markings = data.get("file_markings", [])
         file_uri = self.helper.opencti_url + file_fetch
-        self.helper.connector_logger.info(
-            "Importing the file", {"file_uri": file_uri}
-        )
+        self.helper.connector_logger.info("Importing the file", {"file_uri": file_uri})
 
         file_content = self.helper.api.fetch_opencti_file(file_uri)
         if data["file_mime"] == "text/xml":
@@ -111,8 +108,6 @@ class ImportFileStix:
                     self.helper.connector_logger.info(
                         "No container in Stix file. Updating current container"
                     )
-                    container_stix["object_refs"] = [
-                        object["id"] for object in bundle
-                    ]
+                    container_stix["object_refs"] = [object["id"] for object in bundle]
                 bundle.append(container_stix)
         return bundle

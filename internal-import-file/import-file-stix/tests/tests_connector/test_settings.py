@@ -89,17 +89,17 @@ def test_settings_should_accept_valid_input(settings_dict):
             {
                 "opencti": {
                     "url": "http://localhost:8080",
-                    "token": "test-token",
                 },
                 "connector": {
+                    "id": "connector-id",
                     "name": "ImportFileStix",
                     "scope": "application/json,text/xml",
                     "log_level": "error",
                 },
                 "import_file_stix": {},
             },
-            "connector.id",
-            id="missing_connector_id",
+            "opencti.token",
+            id="missing_opencti_token",
         ),
     ],
 )

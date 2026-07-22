@@ -43,6 +43,4 @@ class ConnectorSettings(BaseConnectorSettings):
     connector: InternalImportFileConnectorConfig = Field(
         default_factory=InternalImportFileConnectorConfig
     )
-    import_file_stix: ImportFileStixConfig = Field(
-        default_factory=ImportFileStixConfig
-    )
+    import_file_stix: ImportFileStixConfig = Field(default_factory=ImportFileStixConfig)
