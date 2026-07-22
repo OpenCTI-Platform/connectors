@@ -2,6 +2,7 @@
   "title": "WhoisFreaks",
   "slug": "whoisfreaks",
   "description": "WhoisFreaks internal enrichment connector for Domain, IP, SSL, and DNS intelligence.",
+  "short_description": "Enrich domain and IP observables with WHOIS, DNS, SSL, and Geolocation data using WhoisFreaks.",
   "type": "INTERNAL_ENRICHMENT",
   "logo": "https://whoisfreaks.com/images/logo.png",
   "publisher": "WhoisFreaks",
