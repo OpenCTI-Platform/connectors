@@ -38,3 +38,4 @@ servicenow:
   #tlp_level: 'ChangeMe' # Default: 'red' (available: clear, green, amber, amber+strict, red)
   #observables_default_score: ChangeMe # Default: 50
   #promote_observables_as_indicators: ChangeMe # Default: True
+  #sysparm_display_value: ChangeMe # Default: True
