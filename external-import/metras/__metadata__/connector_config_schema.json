@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/w_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Metras-Feed",
+      "examples": [
+        "Metras-Feed"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "examples": [
+        "PT1H"
+      ],
+      "format": "duration",
+      "type": "string"
+    },
+    "METRAS_API_BASE_URL": {
+      "default": "https://api.metras.sa/api",
+      "description": "Base URL of the Metras API.",
+      "examples": [
+        "https://api.metras.sa/api"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "METRAS_API_KEY": {
+      "description": "Metras API key (X-API-KEY header).",
+      "examples": [
+        "ChangeMe"
+      ],
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "METRAS_VERIFY_SSL": {
+      "default": true,
+      "description": "Verify TLS certificates.",
+      "examples": [
+        true
+      ],
+      "type": "boolean"
+    },
+    "METRAS_IMPORT_ALERTS": {
+      "default": true,
+      "description": "Import EDR alerts.",
+      "examples": [
+        true
+      ],
+      "type": "boolean"
+    },
+    "METRAS_IMPORT_BINARIES": {
+      "default": true,
+      "description": "Import binaries as StixFile.",
+      "examples": [
+        true
+      ],
+      "type": "boolean"
+    },
+    "METRAS_IMPORT_ENDPOINTS": {
+      "default": true,
+      "description": "Import endpoints as System identities.",
+      "examples": [
+        true
+      ],
+      "type": "boolean"
+    },
+    "METRAS_BINARY_MALICIOUS_ONLY": {
+      "default": true,
+      "description": "Only import banned/unsigned binaries (reduces noise).",
+      "examples": [
+        true
+      ],
+      "type": "boolean"
+    },
+    "METRAS_PAGE_SIZE": {
+      "default": 50,
+      "description": "Records per page.",
+      "examples": [
+        50
+      ],
+      "maximum": 500,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "METRAS_TLP_LEVEL": {
+      "default": "amber",
+      "description": "TLP marking applied to imported objects.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "red"
+      ],
+      "examples": [
+        "amber"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_SCOPE",
+    "METRAS_API_KEY"
+  ],
+  "additionalProperties": true
+}

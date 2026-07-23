@@ -1,0 +1,34 @@
+services:
+  connector-metras-feed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opencti/connector-metras-feed:1.0.0
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_METRAS_FEED_ID}
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Metras-Feed
+      - CONNECTOR_SCOPE=Metras
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - METRAS_API_BASE_URL=https://api.metras.sa/api
+      - METRAS_API_KEY=${METRAS_API_KEY}
+      - METRAS_VERIFY_SSL=true
+      - METRAS_IMPORT_ALERTS=true
+      - METRAS_IMPORT_BINARIES=true
+      - METRAS_IMPORT_ENDPOINTS=true
+      - METRAS_BINARY_MALICIOUS_ONLY=true
+      - METRAS_PAGE_SIZE=50
+      - METRAS_TLP_LEVEL=amber
+    restart: always
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+    pids_limit: 100
