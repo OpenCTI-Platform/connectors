@@ -111,6 +111,12 @@ class ThreatLibraryClient:
                 return response.json()
             except Exception as exc:
                 last_exc = exc
+                if isinstance(exc, requests.HTTPError):
+                    status = getattr(
+                        getattr(exc, "response", None), "status_code", None
+                    )
+                    if status is not None and 400 <= status < 500 and status != 429:
+                        raise
                 if attempt < self.retry:
                     delay = (attempt + 1) * 2
                     self.helper.connector_logger.warning(

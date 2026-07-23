@@ -86,6 +86,10 @@ def analyze_intrusion_set_merge_split(
         if sid:
             api_by_sid[sid] = item
 
+    opencti_by_sid: Dict[str, Dict[str, Any]] = {
+        e["standard_id"]: e for e in opencti_entities if e.get("standard_id")
+    }
+
     api_index = build_identifier_index(api_items)
     oc_index = build_identifier_index(opencti_entities, from_opencti=True)
 
@@ -156,10 +160,7 @@ def analyze_intrusion_set_merge_split(
             for oc_sid in oc_index.get(ident, set()):
                 if oc_sid == api_sid:
                     continue
-                entity = next(
-                    (e for e in opencti_entities if e.get("standard_id") == oc_sid),
-                    None,
-                )
+                entity = opencti_by_sid.get(oc_sid)
                 if entity:
                     oc_duplicates[oc_sid] = entity
 

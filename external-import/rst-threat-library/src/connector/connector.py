@@ -1133,7 +1133,6 @@ class RSTThreatLibrary:
                 cur = set(managed.get(obj_type, []))
                 cur.update(pushed_standard_ids)
                 managed[obj_type] = sorted(cur)
-                # Persist incrementally so a later crash/restart doesn't redo this type.
                 self.helper.set_state(state)
                 self.helper.connector_logger.info(
                     f"[{obj_type}] ingested {count} object(s), cursor now "

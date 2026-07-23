@@ -123,7 +123,8 @@ class ConverterToStix:
         if not sid:
             return None
         name = created_by.get("name") or sid
-        return stix2.v21.Identity(id=sid, name=name)
+        identity_class = str(created_by.get("identity_class") or "organization")
+        return stix2.v21.Identity(id=sid, name=name, identity_class=identity_class)
 
     def build_intrusion_set(self, item: Dict[str, Any]) -> Any:
         kwargs = self._base_sdo_kwargs(item)

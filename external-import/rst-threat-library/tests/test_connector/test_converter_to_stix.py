@@ -53,3 +53,17 @@ def test_build_identity_uses_upstream_standard_id(converter):
     payload = json.loads(identity.serialize())
     assert payload["id"] == "identity--a1b2c3d4-e5f6-4789-a012-3456789abcde"
     assert payload["name"] == "RST Cloud"
+    assert payload["identity_class"] == "organization"
+
+
+def test_build_identity_honors_upstream_identity_class(converter):
+    identity = converter.build_identity(
+        {
+            "standard_id": "identity--a1b2c3d4-e5f6-4789-a012-3456789abcde",
+            "name": "Analyst",
+            "identity_class": "individual",
+        }
+    )
+
+    payload = json.loads(identity.serialize())
+    assert payload["identity_class"] == "individual"
