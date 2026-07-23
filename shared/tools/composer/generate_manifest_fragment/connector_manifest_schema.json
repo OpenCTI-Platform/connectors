@@ -12,6 +12,11 @@
     "short_description",
     "logo",
     "use_cases",
+    "solution_categories",
+    "license_type",
+    "contact",
+    "verified",
+    "last_verified_date",
     "subscription_link",
     "source_code",
     "manager_supported",
@@ -24,7 +29,7 @@
     "additional_properties",
     "config_schema"
   ],
-  "additionalProperties": false,
+  "additionalProperties": true,
   "properties": {
     "id": {
       "type": "string",
@@ -66,15 +71,70 @@
       "description": "List of use case categories this connector supports.",
       "items": {
         "type": "string",
-        "minLength": 1
+        "enum": [
+          "Adversary & Campaign Insights",
+          "Vulnerability & Exploit Awareness",
+          "Infrastructure & Attack Surface Visibility",
+          "Detection & Response Enablement",
+          "Fraud, Financial Crime & Cryptocurrency Monitoring",
+          "Brand, Digital Risk & Underground Exposure",
+          "Third-Party & Supply Chain Oversight",
+          "Cloud, SaaS & Platform Security",
+          "Geopolitical, Physical & Hybrid Risk Analysis",
+          "Market Vertical & Mission-Specific Intelligence",
+          "FIMI & Disinformation",
+          "Other"
+        ]
       },
-      "minItems": 0,
+      "minItems": 1,
+      "maxItems": 3,
       "uniqueItems": true,
       "examples": [
-        ["Open Source Threat Intel"],
-        ["Commercial Threat Intel", "Threat Intelligence Enrichment"],
-        ["SIEM & Analytics", "Incident Response & Ticketing"]
+        ["Adversary & Campaign Insights"],
+        ["Vulnerability & Exploit Awareness", "Detection & Response Enablement"]
       ]
+    },
+    "solution_categories": {
+      "type": "array",
+      "description": "List of solution categories this connector belongs to.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Threat Intelligence Feed",
+          "Endpoint Detection & Response",
+          "SIEM & Security Analytics",
+          "Malware Analysis & Sandbox",
+          "SOAR & Security Automation",
+          "Vulnerability & Exposure Management",
+          "Attack Surface Management",
+          "Network Security",
+          "Email Security",
+          "AI Security",
+          "Incident Response & Case Management",
+          "Digital Risk Protection",
+          "Governance, Risk & Compliance",
+          "Cloud Security",
+          "Enrichment & Reputation",
+          "Import, Export & Sharing",
+          "Other"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 3,
+      "uniqueItems": true,
+      "examples": [
+        ["Threat Intelligence Feed"],
+        ["SIEM & Security Analytics", "Vulnerability & Exposure Management"]
+      ]
+    },
+    "license_type": {
+      "type": ["string"],
+      "description": "Licensing model of the connector.",
+      "enum": ["Free", "Commercial", ""]
+    },
+    "contact": {
+      "type": ["string"],
+      "description": "Contact information for support or questions about the connector."
     },
     "verified": {
       "type": ["boolean", "null"],
