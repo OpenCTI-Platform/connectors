@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/spur_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Spur",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "Interval between feed runs (ISO-8601).",
+      "format": "duration",
+      "type": "string"
+    },
+    "SPUR_API_KEY": {
+      "description": "Spur API token.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SPUR_FEED_URLS": {
+      "default": [
+        "https://feeds.spur.us/v2/anonymous/feed.json.gz",
+        "https://feeds.spur.us/v2/residential/feed.json.gz"
+      ],
+      "description": "Comma-separated list of Spur feed URLs to download.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "SPUR_TLP_LEVEL": {
+      "default": "amber",
+      "description": "TLP marking applied to all imported objects.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "SPUR_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Create STIX Indicators for flagged IPs.",
+      "type": "boolean"
+    },
+    "SPUR_CREATE_ASNS": {
+      "default": true,
+      "description": "Create AutonomousSystem objects and belongs-to relationships.",
+      "type": "boolean"
+    },
+    "SPUR_CREATE_LOCATIONS": {
+      "default": true,
+      "description": "Create Location objects and located-at relationships.",
+      "type": "boolean"
+    },
+    "SPUR_DEFAULT_SCORE": {
+      "default": 70,
+      "description": "Base OpenCTI score for Spur observables (0-100).",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "SPUR_BATCH_SIZE": {
+      "default": 5000,
+      "description": "Number of IP records per STIX bundle sent to OpenCTI.",
+      "minimum": 100,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_SCOPE",
+    "SPUR_API_KEY"
+  ],
+  "additionalProperties": true
+}
