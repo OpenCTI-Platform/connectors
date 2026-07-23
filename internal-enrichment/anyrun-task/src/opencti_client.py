@@ -1,12 +1,13 @@
 import stix2
+
 from anyrun_sandbox import AnyRunSandbox
 from config import config
 from pycti import (
+    OpenCTIConnectorHelper,
+    get_config_variable,
+    StixCoreRelationship,
     Identity,
     Indicator,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
 )
 
 ANYRUN_INDICATOR_TO_MAIN_OBSERVABLE = {
@@ -16,15 +17,11 @@ ANYRUN_INDICATOR_TO_MAIN_OBSERVABLE = {
     "sha256": "File",
 }
 
-# Patterns used to build STIX indicators from ANY.RUN IoC entries.
-# File hashes have to follow the canonical ``file:hashes.'<ALGO>'`` syntax so
-# OpenCTI's pattern parser can normalise them; the other observable types use
-# the simple ``<type>:value`` pattern.
-ANYRUN_INDICATOR_PATTERNS = {
-    "domain": "[domain-name:value = '{value}']",
-    "url": "[url:value = '{value}']",
-    "ip": "[ipv4-addr:value = '{value}']",
-    "sha256": "[file:hashes.'SHA-256' = '{value}']",
+ANYRUN_INDICATOR_TO_STIX = {
+    "domain": "domain-name",
+    "url": "url",
+    "ip": "ipv4-addr",
+    "sha256": "sha256",
 }
 
 
@@ -49,17 +46,13 @@ class OpenCTI:
         )
 
     def _process_message(self, data):
-        self._load_opencti_entity(data)
+        self._helper.log_info(f"Data {data}")
+        entity_id = data.get("entity_id")
+
+        self._load_opencti_entity(entity_id)
 
         self._anyrun.load_analysis_object(self._opencti_entity)
         self._helper.log_info("Preparing for the analysis.")
-
-        if self._opencti_entity.get(
-            "entity_type"
-        ) == "StixFile" and not self._opencti_entity.get("hashes"):
-            raise ValueError(
-                "StixFile entity must have at least one of the following hashes: SHA-256, SHA-1, MD5"
-            )
 
         analysis_summary = self._anyrun.process_analysis()["data"]
 
@@ -76,15 +69,16 @@ class OpenCTI:
         ):
             self._add_malicious_iocs(task_uuid)
 
-    def _load_opencti_entity(self, data) -> None:
+    def _load_opencti_entity(self, entity_id: str) -> None:
         """
         Loads OpenCTI entity object using message data
 
         :param data: Message data
         """
         opencti_entity = self._helper.api.stix_cyber_observable.read(
-            id=data.get("entity_id"), withFiles=True
+            id=entity_id, withFiles=True
         )
+        self._helper.log_info(f"Entity {opencti_entity}")
 
         if opencti_entity is None:
             raise ValueError(
@@ -102,6 +96,7 @@ class OpenCTI:
         :param task_uuid:  ANY.RUN Sandbox analysis uuid
         """
         labels = [tag.get("tag") for tag in analysis_summary["analysis"]["tags"]]
+        bundle = list()
 
         if self._opencti_entity.get("entity_type") == "Url":
             observable = stix2.URL(
@@ -144,8 +139,30 @@ class OpenCTI:
                 },
             )
 
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to",
+                    observable.id,
+                    self._opencti_entity.get("standard_id"),
+                ),
+                confidence=100,
+                description="Detected by ANY.RUN Sandbox",
+                relationship_type="related-to",
+                created_by_ref=self._identity.get("id"),
+                source_ref=observable.id,
+                target_ref=self._opencti_entity.get("standard_id"),
+                custom_properties={
+                    "x_opencti_external_references": self._get_external_reference(
+                        task_uuid
+                    )
+                },
+            )
+            bundle.append(relationship)
+
+        bundle.append(observable)
+
         self._helper.send_stix2_bundle(
-            self._helper.stix2_create_bundle([observable]), update=True
+            self._helper.stix2_create_bundle(bundle), update=True
         )
 
     def _get_score(self, anyrun_score: int) -> int:
@@ -174,6 +191,9 @@ class OpenCTI:
 
             for ioc in iocs:
                 if ioc.get("reputation") == 0:
+                    if ioc.get("category") == "Main object":
+                        continue
+
                     observable_type = ANYRUN_INDICATOR_TO_MAIN_OBSERVABLE.get(
                         ioc.get("type")
                     )
@@ -224,9 +244,6 @@ class OpenCTI:
                             },
                         )
 
-                    if observable.id == self._opencti_entity.get("standard_id"):
-                        continue
-
                     relationship = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
                             "related-to",
@@ -250,10 +267,10 @@ class OpenCTI:
                     objects.append(relationship)
 
                 elif ioc.get("reputation") in (1, 2):
-                    pattern_template = ANYRUN_INDICATOR_PATTERNS.get(ioc.get("type"))
-                    if not pattern_template:
-                        continue
-                    pattern = pattern_template.format(value=ioc.get("ioc"))
+                    pattern = "[{}:value = '{}']".format(
+                        ANYRUN_INDICATOR_TO_STIX.get(ioc.get("type")),
+                        ioc.get("ioc"),
+                    )
 
                     indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
