@@ -358,8 +358,8 @@ class WhoisFreaksStixBuilder:
         if threat_score is not None:
             note_stix = stix2.Note(
                 id=pycti.Note.generate_id(
+                    created=None,
                     content=f"Reputation Analysis for IP {clean_ip}: Threat Score: {threat_score}",
-                    object_refs=[ip_stix.id],
                 ),
                 abstract=f"WhoisFreaks Threat Score: {threat_score}",
                 content=f"Reputation Analysis for IP {clean_ip}:\nThreat Score: {threat_score}\nDetails: {sec_data}",
@@ -385,8 +385,8 @@ class WhoisFreaksStixBuilder:
         if score is not None:
             note_stix = stix2.Note(
                 id=pycti.Note.generate_id(
+                    created=None,
                     content=f"Domain Reputation Analysis for {clean_dom}: Score: {score}",
-                    object_refs=[dom_stix.id],
                 ),
                 abstract=f"WhoisFreaks Domain Reputation Score: {score}",
                 content=f"Domain Reputation Analysis for {clean_dom}:\nScore: {score}",
