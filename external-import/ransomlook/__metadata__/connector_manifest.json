@@ -1,0 +1,19 @@
+{
+  "title": "RansomLook",
+  "slug": "ransomlook",
+  "description": "RansomLook tracks ransomware victim claims, captured evidence, actors, infrastructure, notes, wallets, torrents, leaks, and technical intelligence. This connector maintains separately scoped claim and actor-profile graphs with bounded delivery and content-free operational metrics in OpenCTI.",
+  "short_description": "Imports ransomware claims, evidence, and actor profiles from RansomLook.",
+  "logo": "external-import/ransomlook/__metadata__/logo.png",
+  "use_cases": ["Open Source Threat Intel"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">= 7.260710.0",
+  "subscription_link": "https://www.ransomlook.io/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ransomlook",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ransomlook",
+  "container_type": "EXTERNAL_IMPORT"
+}
