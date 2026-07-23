@@ -1,17 +1,14 @@
 opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
-  json_logging: false
 
 connector:
-  type: 'INTERNAL_ENRICHMENT'
-  id: "ChangeMe"
-  name: "Shodan InternetDB"
-  scope: "IPv4-Addr"
-  auto: true
-  log_level: "info"
+  id: 'ChangeMe'
+  # name: 'Shodan InternetDB' # Optional (default: 'Shodan InternetDB')
+  # scope: 'IPv4-Addr' # Optional (default: 'IPv4-Addr')
+  # auto: false # Optional (default: false)
+  # log_level: 'error' # Optional (default: 'error')
 
 shodan:
-  max_tlp: "TLP:CLEAR"
-  ssl_verify: true
-
+  # max_tlp: 'TLP:WHITE' # Optional (default: 'TLP:WHITE')
+  # ssl_verify: true # Optional (default: true)
