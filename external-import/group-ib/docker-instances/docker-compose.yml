@@ -1,0 +1,279 @@
+# Optional multi-instance layout: same image, different env per service.
+# Root project docker-compose.yml is unchanged. See README.md in this folder.
+services:
+  connector_accounts_unique:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-accounts-unique
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/accounts-unique.env
+        required: false
+    volumes:
+      - ../logs/instances/accounts-unique:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_accounts_combolist:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-accounts-combolist
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/accounts-combolist.env
+        required: false
+    volumes:
+      - ../logs/instances/accounts-combolist:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_cards:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-cards
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/cards.env
+        required: false
+    volumes:
+      - ../logs/instances/cards:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_leaks:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-leaks
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/leaks.env
+        required: false
+    volumes:
+      - ../logs/instances/leaks:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_compromised_access:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-compromised-access
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/compromised-access.env
+        required: false
+    volumes:
+      - ../logs/instances/compromised-access:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_compromised_chat:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-compromised-chat
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/compromised-chat.env
+        required: false
+    volumes:
+      - ../logs/instances/compromised-chat:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_vulnerabilities:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-vulnerabilities
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/vulnerabilities.env
+        required: false
+    volumes:
+      - ../logs/instances/vulnerabilities:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_apt_reports:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-apt-reports
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/apt-reports.env
+        required: false
+    volumes:
+      - ../logs/instances/apt-reports:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_hi_reports:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-hi-reports
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/hi-reports.env
+        required: false
+    volumes:
+      - ../logs/instances/hi-reports:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_malware_reports:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-malware-reports
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/malware-reports.env
+        required: false
+    volumes:
+      - ../logs/instances/malware-reports:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_iocs:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-iocs
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/iocs.env
+        required: false
+    volumes:
+      - ../logs/instances/iocs:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_spd:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-spd
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/spd.env
+        required: false
+    volumes:
+      - ../logs/instances/spd:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_suspicious_ip:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-suspicious-ip
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/suspicious-ip.env
+        required: false
+    volumes:
+      - ../logs/instances/suspicious-ip:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_malware_cnc:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-malware-cnc
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/malware-cnc.env
+        required: false
+    volumes:
+      - ../logs/instances/malware-cnc:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_attacks:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-attacks
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/attacks.env
+        required: false
+    volumes:
+      - ../logs/instances/attacks:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+  connector_darkweb:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: opencti/connector-group-ib:rolling
+    container_name: gib-darkweb
+    env_file:
+      - path: ./env/common.env
+        required: true
+      - path: ./env/groups/darkweb.env
+        required: false
+    volumes:
+      - ../logs/instances/darkweb:/opt/connector/logs/
+    restart: always
+    networks:
+      - gib_connector_net
+
+networks:
+  gib_connector_net:
+    external: true
+    name: docker_default

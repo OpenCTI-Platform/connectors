@@ -4,6 +4,20 @@
             "__": "*Threat Report",
             "id": "id",
             "title": "title",
+            "description": "description",
+            "short_description": "shortDescription",
+            "report_number": "reportNumber",
+            "expertise": "expertise",
+            "sectors": "sectors",
+            "regions": "regions",
+            "targeted_companies": "targetedCompany",
+            "targeted_partners": "targetedPartnersAndClients",
+            "related_threat_actors": "relatedThreatActors",
+            "raw_labels": "labels",
+            "sources": "sources",
+            "is_tailored": "isTailored",
+            "is_autogen": "isAutogen",
+            "has_iocs": "hasIocs",
             "portal_link": {
                 "__concatenate": {
                     "__": "TI Portal: Report - external reference",
@@ -29,7 +43,8 @@
                 "__nested_dot_path_to_list": "indicators.params",
                 "domain": "domain",
                 "url": "url",
-                "ip-address": "ipv4"
+                "ip-address": "ipv4",
+                "ipv6-address": "ipv6"
             }
         },
         "malware_report": {
@@ -77,7 +92,9 @@
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "mitre_matrix": {
@@ -107,17 +124,11 @@
     "apt/threat_actor": {
         "malware_report": {
             "__": "*Malware Report",
-            "malware_report_list": {
-                "__nested_dot_path_to_list": "stat",
-                "name": "malware",
-                "category": "",
-                "platform": "",
-                "aliases": "",
-                "portal_link": {}
-            }
+            "malware_report_list": "stat.malware"
         },
         "threat_actor": {
             "__": "*Threat Actor",
+            "id": "id",
             "name": "name",
             "country": "country",
             "targeted_countries": "stat.countries",
@@ -125,6 +136,17 @@
             "description": "description",
             "goals": "goals",
             "roles": "roles",
+            "is_apt": "isAPT",
+            "langs": "langs",
+            "spoken_langs": "spokenOnLangs",
+            "expertise": "stat.expertise",
+            "sectors": "stat.sectors",
+            "regions": "stat.regions",
+            "targeted_companies": "stat.targetedCompany",
+            "targeted_partners": "stat.targetedPartnersAndClients",
+            "related_threat_actors_count": "stat.relatedThreatActorsCount",
+            "indicators_count": "stat.allIndicatorsCount",
+            "reports_count": "stat.allReportsCount",
             "portal_link": {
                 "__concatenate": {
                     "__": "TI Portal: Threat Actor - external reference",
@@ -135,11 +157,7 @@
         },
         "vulnerability": {
             "__": "*List of CVE",
-            "vulnerability_list": {
-                "__nested_dot_path_to_list": "stat",
-                "object_id": "cve",
-                "description": ""
-            }
+            "vulnerability_list": "stat.cve"
         },
         "date": {
             "__": "*Event date",
@@ -150,125 +168,155 @@
         }
     },
     "attacks/ddos": {
-        "network": {
-            "__": "*IoC Network",
-            "domain": "cnc.domain",
-            "url": "cnc.url",
-            "ip-address": "cnc.ipv4.ip"
-        },
-        "malware_report": {
-            "__": "*Malware Report",
-            "malware_report_list": {
-                "__nested_dot_path_to_list": "malware",
-                "name": "name",
-                "category": "category",
-                "platform": "platform",
-                "aliases": "",
-                "portal_link": {
-                    "__concatenate": {
-                        "__": "TI Portal: Malware - external reference",
-                        "static": "https://tap.group-ib.com/malware/reports/",
-                        "dynamic": "id"
-                    }
-                }
-            }
-        },
-        "threat_actor": {
-            "__": "*Threat Actor",
-            "name": "threatActor.name",
-            "country": "threatActor.country",
-            "targeted_countries": "",
-            "aliases": "",
-            "description": "",
-            "goals": "",
-            "roles": "",
+        "ddos": {
+            "__": "*DDoS attack",
+            "id": "id",
+            "source": "source",
+            "type": "type",
+            "protocol": "protocol",
+            "duration": "duration",
+            "message_link": "messageLink",
+            "target": {
+                "ip": "target.ipv4.ip",
+                "domain": "target.domain",
+                "url": "target.url",
+                "port": "target.port",
+                "category": "target.category",
+                "country_code": "target.ipv4.countryCode",
+                "country_name": "target.ipv4.countryName",
+                "asn": "target.ipv4.asn",
+                "city": "target.ipv4.city",
+                "region": "target.ipv4.region",
+                "provider": "target.ipv4.provider"
+            },
+            "cnc": {
+                "cnc": "cnc.cnc",
+                "domain": "cnc.domain",
+                "url": "cnc.url",
+                "ip": "cnc.ipv4.ip",
+                "country_code": "cnc.ipv4.countryCode"
+            },
+            "malware": {
+                "id": "malware.id",
+                "name": "malware.name"
+            },
+            "threat_actor": {
+                "id": "threatActor.id",
+                "name": "threatActor.name",
+                "country": "threatActor.country"
+            },
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal: Threat Actor - external reference",
-                    "static": "https://tap.group-ib.com/ta/actors?ta=",
-                    "dynamic": "threatActor.id"
+                    "__": "TI Portal: DDoS - external reference",
+                    "static": "https://tap.group-ib.com/attacks/ddos?id=",
+                    "dynamic": "id"
                 }
             }
         },
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
             "__": "*Event date",
             "detection-date": "dateReg",
             "submission-time": "dateBegin",
-            "takedown-time": "dateEnd"
+            "takedown-time": "dateEnd",
+            "date-first-seen": "dateBegin",
+            "date-last-seen": "dateEnd"
         }
     },
     "attacks/deface": {
-        "network": {
-            "__": "*DEFACE Network",
-            "domain": "targetDomain",
+        "deface": {
+            "__": "*Defacement",
+            "id": "id",
+            "source": "source",
+            "provider_domain": "providerDomain",
+            "site_url": "siteUrl",
             "url": "url",
-            "ip-address": "targetIp.ip"
-        },
-        "threat_actor": {
-            "__": "*Threat Actor",
-            "name": "threatActor.name",
-            "country": "threatActor.country",
-            "targeted_countries": "",
-            "aliases": "",
-            "description": "",
-            "goals": "",
-            "roles": "",
-            "portal_link": {
-                "__concatenate": {
-                    "__": "TI Portal: Threat Actor - external reference",
-                    "static": "https://tap.group-ib.com/ta/actors?ta=",
-                    "dynamic": "threatActor.id"
-                }
+            "target_domain": "targetDomain",
+            "mirror_link": "mirrorLink",
+            "source_url": "sourceUrl",
+            "portal_link": "portalLink",
+            "target_ip": {
+                "ip": "targetIp.ip",
+                "country_code": "targetIp.countryCode",
+                "country_name": "targetIp.countryName",
+                "asn": "targetIp.asn",
+                "city": "targetIp.city",
+                "region": "targetIp.region",
+                "provider": "targetIp.provider"
+            },
+            "threat_actor": {
+                "id": "threatActor.id",
+                "name": "threatActor.name",
+                "country": "threatActor.country",
+                "is_apt": "threatActor.isAPT"
             }
         },
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
             "__": "*Event date",
-            "detection-date": "date"
+            "detection-date": "date",
+            "date-created": "tsCreate"
         }
     },
     "attacks/phishing_group": {
-        "network": {
-            "__": "*Phishing Network",
-            "network_list": {
-                "__nested_dot_path_to_list": "phishing",
-                "domain": "phishing_domain.domain",
-                "url": "url",
-                "ip-address": "phishing_ip.ip"
-            }
-        },
-        "threat_actor": {
-            "__": "*Threat Actor",
-            "name": "threatActor.name",
-            "country": "",
-            "targeted_countries": "",
-            "aliases": "",
-            "description": "",
-            "goals": "",
-            "roles": "",
+        "phishing_group": {
+            "__": "*Phishing group",
+            "id": "id",
+            "brand": "brand",
+            "domain": "domain",
+            "domain_title": "domainTitle",
+            "objective": "objective",
+            "source": "source",
+            "count_phishing": "countPhishing",
             "portal_link": {
                 "__concatenate": {
-                    "__": "TI Portal: Threat Actor - external reference",
-                    "static": "https://tap.group-ib.com/ta/actors?ta=",
-                    "dynamic": "threatActor.id"
+                    "__": "TI Portal: Phishing - external reference",
+                    "static": "https://tap.group-ib.com/attacks/phishing?scope=all&q=id:",
+                    "dynamic": "id"
                 }
+            },
+            "ip_list": {
+                "__nested_dot_path_to_list": "ip",
+                "ip": "ip",
+                "country_code": "countryCode",
+                "country_name": "countryName",
+                "provider": "provider"
+            },
+            "phishing_list": {
+                "__nested_dot_path_to_list": "phishing",
+                "id": "id",
+                "url": "url",
+                "domain": "domain.domain",
+                "ip": "ip.ip",
+                "country_code": "ip.countryCode",
+                "country_name": "ip.countryName"
+            },
+            "threat_actor": {
+                "id": "threatActor.id",
+                "name": "threatActor.name",
+                "is_apt": "threatActor.isAPT"
             }
         },
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
@@ -280,31 +328,41 @@
         }
     },
     "attacks/phishing_kit": {
-        "file": {
-            "__": "*Phishing File",
-            "md5": "hash",
-            "sha1": "hash",
-            "sha256": "hash",
-            "filename": "",
-            "size-in-bytes": ""
-        },
-        "network": {
-            "__": "*Phishing source Network",
-            "network_list": {
+        "phishing_kit": {
+            "__": "*Phishing kit",
+            "id": "id",
+            "hash": "hash",
+            "login": "login",
+            "source": "source",
+            "emails": "emails",
+            "target_brand": "targetBrand",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Phishing Kit - external reference",
+                    "static": "https://tap.group-ib.com/malware/phishing-kit?p=1&q=",
+                    "dynamic": "hash"
+                }
+            },
+            "downloaded_from": {
                 "__nested_dot_path_to_list": "downloadedFrom",
-                "domain": "domain",
                 "url": "url",
-                "ip-address": ""
+                "domain": "domain",
+                "phishing_url": "phishingUrl",
+                "file_name": "fileName",
+                "date": "date"
+            },
+            "variables": {
+                "__nested_dot_path_to_list": "variables",
+                "type": "type",
+                "file_path": "filePath"
             }
-        },
-        "ungrouped": {
-            "__": "*Ungrouped items",
-            "emails": "emails"
         },
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
@@ -316,11 +374,79 @@
             "date-modified": "dateLastSeen"
         }
     },
+    "hi/open_threats": {
+        "open_threat": {
+            "__": "*Open Threat Report",
+            "id": "id",
+            "title": "title",
+            "text": "text",
+            "original": "original",
+            "link": "link",
+            "source": "source",
+            "sourceType": "sourceType",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Open Threat - external reference",
+                    "static": "https://tap.group-ib.com/ta/open-threats?stab=info&threat=",
+                    "dynamic": "id"
+                }
+            },
+            "threat_actor_list": {
+                "__nested_dot_path_to_list": "threatActors",
+                "id": "id",
+                "name": "name"
+            },
+            "malware": {
+                "__nested_dot_path_to_list": "data.malware",
+                "id": "id",
+                "name": "name"
+            },
+            "cve": {
+                "__nested_dot_path_to_list": "data.cve",
+                "id": "id"
+            },
+            "domains": "data.domains",
+            "ips": "data.ip",
+            "urls": "data.urls",
+            "files": "data.files",
+            "hashes": "data.hashes",
+            "tags": "data.tags",
+            "countries": "data.countries"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-created": "createdAt",
+            "date-detected": "dateDetected",
+            "date-updated": "updatedAt"
+        }
+    },
     "hi/threat": {
         "threat_report": {
             "__": "*Threat Report",
             "id": "id",
             "title": "title",
+            "description": "description",
+            "short_description": "shortDescription",
+            "report_number": "reportNumber",
+            "expertise": "expertise",
+            "sectors": "sectors",
+            "regions": "regions",
+            "targeted_companies": "targetedCompany",
+            "targeted_partners": "targetedPartnersAndClients",
+            "related_threat_actors": "relatedThreatActors",
+            "raw_labels": "labels",
+            "sources": "sources",
+            "is_tailored": "isTailored",
+            "is_autogen": "isAutogen",
+            "has_iocs": "hasIocs",
             "portal_link": {
                 "__concatenate": {
                     "__": "TI Portal: Report - external reference",
@@ -346,7 +472,8 @@
                 "__nested_dot_path_to_list": "indicators.params",
                 "domain": "domain",
                 "url": "url",
-                "ip-address": "ipv4"
+                "ip-address": "ipv4",
+                "ipv6-address": "ipv6"
             }
         },
         "malware_report": {
@@ -394,7 +521,9 @@
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "mitre_matrix": {
@@ -424,17 +553,11 @@
     "hi/threat_actor": {
         "malware_report": {
             "__": "*Malware Report",
-            "malware_report_list": {
-                "__nested_dot_path_to_list": "stat",
-                "name": "malware",
-                "category": "",
-                "platform": "",
-                "aliases": "",
-                "portal_link": {}
-            }
+            "malware_report_list": "stat.malware"
         },
         "threat_actor": {
             "__": "*Threat Actor",
+            "id": "id",
             "name": "name",
             "country": "country",
             "targeted_countries": "stat.countries",
@@ -442,6 +565,17 @@
             "description": "description",
             "goals": "goals",
             "roles": "roles",
+            "is_apt": "isAPT",
+            "langs": "langs",
+            "spoken_langs": "spokenOnLangs",
+            "expertise": "stat.expertise",
+            "sectors": "stat.sectors",
+            "regions": "stat.regions",
+            "targeted_companies": "stat.targetedCompany",
+            "targeted_partners": "stat.targetedPartnersAndClients",
+            "related_threat_actors_count": "stat.relatedThreatActorsCount",
+            "indicators_count": "stat.allIndicatorsCount",
+            "reports_count": "stat.allReportsCount",
             "portal_link": {
                 "__concatenate": {
                     "__": "TI Portal: Threat Actor - external reference",
@@ -452,11 +586,7 @@
         },
         "vulnerability": {
             "__": "*List of CVE",
-            "vulnerability_list": {
-                "__nested_dot_path_to_list": "stat",
-                "object_id": "cve",
-                "description": ""
-            }
+            "vulnerability_list": "stat.cve"
         },
         "date": {
             "__": "*Event date",
@@ -473,6 +603,21 @@
             "category": "category",
             "platform": "platform",
             "aliases": "malwareAliasList",
+            "short_description": "shortDescription",
+            "description": "description",
+            "threat_level": "threatLevel",
+            "is_published": "isPublished",
+            "langs": "langs",
+            "linked_malware": "linkedMalware",
+            "ta_list": "taList",
+            "threat_actor_list": "threatActorList",
+            "mitre_matrix": "mitreMatrix",
+            "source_countries": "sourceCountry",
+            "geo_regions": "geoRegion",
+            "file_ioc_list": "fileIocList",
+            "network_ioc_list": "networkIocList",
+            "signature_id_list": "signatureIdList",
+            "yara_id_list": "yaraIdList",
             "portal_link": {
                 "__concatenate": {
                     "__": "TI Portal: Malware - external reference",
@@ -545,8 +690,31 @@
     "osi/vulnerability": {
         "vulnerability": {
             "__": "*List of CVE",
+            "id": "id",
             "object_id": "id",
-            "description": "description"
+            "title": "title",
+            "description": "description",
+            "href": "href",
+            "bulletin_family": "bulletinFamily",
+            "reporter": "reporter",
+            "has_exploit": "hasExploit",
+            "exploit_count": "exploitCount",
+            "seen_in_the_wild": "seenInTheWild",
+            "cvss_attack_vector": "cvssAttackVector",
+            "cvss_base": "cvss.score",
+            "cvss_base_vector": "cvss.vector",
+            "provider": "provider",
+            "references": "references",
+            "epss_score": "epss.epss",
+            "epss_percentile": "epss.percentile",
+            "cve_list": "cveList",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Vulnerability - external reference",
+                    "static": "https://tap.group-ib.com/malware/vulnerabilities?p=1&scope=all&q=",
+                    "dynamic": "id"
+                }
+            }
         },
         "cpe_table": {
             "__description": "*CPE table for vulnerability",
@@ -562,19 +730,106 @@
         },
         "cvssv3": {
             "__description": "*CVSSv3 information",
-            "score": "cvss.score",
-            "vector": "cvss.vector"
+            "score": "mergedCvss",
+            "vector": "mergedCvssVector"
         },
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
             "__": "*Event date",
             "date-published": "datePublished",
             "date-modified": "dateModified"
+        }
+    },
+    "osi/git_repository": {
+        "git_repository": {
+            "__": "*OSI Git Repository leak",
+            "id": "id",
+            "name": "name",
+            "leaked_file_name": "name",
+            "source": "source",
+            "dateDetected": "dateDetected",
+            "dateCreated": "dateCreated",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Git Repository Leak - external reference",
+                    "static": "https://tap.group-ib.com/cd/git-leaks?id=",
+                    "dynamic": "id"
+                }
+            },
+            "files": {
+                "__nested_dot_path_to_list": "files",
+                "file_id": "id",
+                "file_name": "name",
+                "hash": "revisions.hash",
+                "dateCreated": "dateCreated",
+                "dateDetected": "dateDetected",
+                "authorName": "revisions.info.authorName",
+                "authorEmail": "revisions.info.authorEmail",
+                "url": "url",
+                "dataFound": "dataFound"
+            },
+            "source_type": "sourceType",
+            "system_severity": "systemSeverity"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-detected": "dateDetected",
+            "date-created": "dateCreated"
+        }
+    },
+    "osi/public_leak": {
+        "public_leak": {
+            "__": "*OSI Public leak",
+            "id": "id",
+            "name": "hash",
+            "hash": "hash",
+            "created": "created",
+            "data": "data",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Public Leak - external reference",
+                    "static": "https://tap.group-ib.com/cd/leaks?id=",
+                    "dynamic": "id"
+                }
+            },
+            "link_list": {
+                "__nested_dot_path_to_list": "linkList",
+                "author": "author",
+                "hash": "hash",
+                "link": "link",
+                "title": "title",
+                "source": "source",
+                "dateDetected": "dateDetected",
+                "datePublished": "datePublished"
+            },
+            "matches": "matches"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-created": "created"
         }
     },
     "suspicious_ip/open_proxy": {
@@ -585,7 +840,9 @@
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
@@ -605,7 +862,9 @@
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
@@ -625,7 +884,9 @@
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
@@ -645,7 +906,9 @@
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
@@ -657,6 +920,252 @@
             "date-modified": "dateLastSeen"
         }
     },
+    "compromised/account_group": {
+        "account_group": {
+            "__": "*Compromised account group",
+            "id": "id",
+            "name": "login",
+            "login": "login",
+            "password": "password",
+            "parsedLogin": {
+                "domain": "parsedLogin.domain",
+                "ip": "parsedLogin.ip"
+            },
+            "service": {
+                "domain": "service.domain",
+                "ip": "service.ip",
+                "url": "service.url",
+                "host": "service.host"
+            },
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Compromised Account Group - external reference",
+                    "static": "https://tap.group-ib.com/cd/accounts?id=",
+                    "dynamic": "id"
+                }
+            },
+            "events_table": {
+                "__nested_dot_path_to_list": "events",
+                "cnc": "cnc.cnc",
+                "asn": "client.ipv4.asn",
+                "city": "client.ipv4.city",
+                "region": "client.ipv4.region",
+                "provider": "client.ipv4.provider",
+                "countryCode": "client.ipv4.countryCode",
+                "countryName": "client.ipv4.countryName",
+                "events_ipv4_ip": "client.ipv4.ip",
+                "malware": "malware.name",
+                "threatActor": "threatActor.name",
+                "dateDetected": "dateDetected",
+                "dateCompromised": "dateCompromised",
+                "phone": "person.phone",
+                "name": "person.name",
+                "email": "person.email",
+                "address": "person.address"
+            },
+            "malware_list": {
+                "__nested_dot_path_to_list": "malware",
+                "id": "id",
+                "name": "name"
+            },
+            "threat_actor_list": {
+                "__nested_dot_path_to_list": "threatActor",
+                "id": "id",
+                "name": "name"
+            },
+            "source": {
+                "__nested_dot_path_to_list": "source",
+                "id": "id",
+                "type": "type",
+                "idType": "idType"
+            },
+            "source_type": "sourceType"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-first-compromised": "dateFirstCompromised",
+            "date-last-compromised": "dateLastCompromised",
+            "date-first-seen": "dateFirstSeen",
+            "date-last-seen": "dateLastSeen"
+        }
+    },
+    "compromised/access": {
+        "access": {
+            "__": "*Compromised access",
+            "id": "id",
+            "type": "type",
+            "description": "description",
+            "dateDetected": "dateDetected",
+            "dateCompromised": "dateCompromised",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Compromised Access (shops) - external reference",
+                    "static": "https://tap.group-ib.com/cd/shops?id=",
+                    "dynamic": "id"
+                }
+            },
+            "target": {
+                "host": "target.host",
+                "domain": "target.domain",
+                "ip": "target.ipv4.ip",
+                "provider": "target.provider",
+                "country": "target.geo.country",
+                "device_os": "target.device.os",
+                "device_browser": "target.device.browser"
+            },
+            "cnc": {
+                "cnc": "cnc.cnc",
+                "domain": "cnc.domain",
+                "url": "cnc.url",
+                "ip": "cnc.ipv4.ip",
+                "port": "cnc.port",
+                "proto": "cnc.proto"
+            },
+            "malware": {
+                "id": "malware.id",
+                "name": "malware.name"
+            },
+            "sourceInfo": {
+                "name": "sourceInfo.name",
+                "externalId": "sourceInfo.externalId",
+                "seller": "sourceInfo.seller"
+            },
+            "price": {
+                "currency": "price.currency",
+                "value": "price.value"
+            },
+            "rawDataPreview": "rawData"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-detected": "dateDetected",
+            "date-compromised": "dateCompromised"
+        }
+    },
+    "compromised/spd": {
+        "spd": {
+            "__": "*Suspicious payment details",
+            "id": "id",
+            "type": "type",
+            "service_type": "serviceType",
+            "ownerName": "ownerName",
+            "illegalScore": "illegalScore",
+            "value": "value",
+            "tags": "tags",
+            "country": "country",
+            "createdAt": "createdAt",
+            "firstSeenAt": "firstSeenAt",
+            "lastSeenAt": "lastSeenAt",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Suspicious Payment Details - external reference",
+                    "static": "https://tap.group-ib.com/cd/suspicious-payment-details?id=",
+                    "dynamic": "id"
+                }
+            },
+            "events": {
+                "__nested_dot_path_to_list": "events",
+                "compromisedAt": "compromisedAt",
+                "detectedAt": "detectedAt",
+                "source_name": "source.name",
+                "source_type": "source.type",
+                "tags": "tags",
+                "illegalScore": "illegalScore"
+            },
+            "sources": {
+                "__nested_dot_path_to_list": "sources",
+                "name": "name",
+                "type": "type"
+            },
+            "malware_list": {
+                "__nested_dot_path_to_list": "malware",
+                "id": "id",
+                "name": "name"
+            },
+            "threat_actor_list": {
+                "__nested_dot_path_to_list": "threatActor",
+                "id": "id",
+                "name": "name"
+            }
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-created": "createdAt",
+            "date-first-seen": "firstSeenAt",
+            "date-last-seen": "lastSeenAt"
+        }
+    },
+    "malware/config": {
+        "malware_config": {
+            "__": "*Malware config",
+            "id": "id",
+            "hash": "hash",
+            "malwareId": "malwareId",
+            "dateFirstSeen": "dateFirstSeen",
+            "dateLastSeen": "dateLastSeen",
+            "content": "content",
+            "configSummary": "configSummary",
+            "contentLen": "contentLen",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Malware Config - external reference",
+                    "static": "https://tap.group-ib.com/malware/configs?id=",
+                    "dynamic": "id"
+                }
+            },
+            "malware": {
+                "id": "malware.id",
+                "name": "malware.name"
+            },
+            "file_list": {
+                "__nested_dot_path_to_list": "file",
+                "name": "name",
+                "sha1": "sha1",
+                "sha256": "sha256",
+                "md5": "md5",
+                "timestamp": "timestamp"
+            },
+            "domainList": "domainList",
+            "ipList": "ipList"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-first-seen": "dateFirstSeen",
+            "date-last-seen": "dateLastSeen"
+        }
+    },
     "suspicious_ip/vpn": {
         "network": {
             "__": "*VPN Network",
@@ -665,7 +1174,9 @@
         "evaluation": {
             "__": "*Evaluation",
             "tlp": "evaluation.tlp",
-            "admiralty_code": "evaluation.admiralty_code",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
             "severity": "evaluation.severity"
         },
         "date": {
@@ -675,6 +1186,406 @@
             "detection-date": "dateDetected",
             "date-created": "dateFirstSeen",
             "date-modified": "dateLastSeen"
+        }
+    },
+    "compromised/bank_card_group": {
+        "bank_card_group": {
+            "__": "*Compromised bank card group",
+            "id": "id",
+            "name": "cardInfo.number",
+            "cardInfo": {
+                "number": "cardInfo.number",
+                "type": "cardInfo.type",
+                "system": "cardInfo.system",
+                "issuer": "cardInfo.issuer.issuer",
+                "issuer_country": "cardInfo.issuer.countryCode",
+                "category": "cardInfo.category",
+                "bin": "cardInfo.bin"
+            },
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Compromised Bank Card Group - external reference",
+                    "static": "https://tap.group-ib.com/cd/cards?id=",
+                    "dynamic": "id"
+                }
+            },
+            "events_table": {
+                "__nested_dot_path_to_list": "events",
+                "event_id": "id",
+                "dateDetected": "dateDetected",
+                "dateCompromised": "dateCompromised",
+                "cvv": "cardInfo.cvv",
+                "pin": "cardInfo.pin",
+                "dump": "cardInfo.dump",
+                "valid_thru": "cardInfo.validThru",
+                "valid_thru_date": "cardInfo.validThruDate",
+                "client_ipv4_ip": "client.ipv4.ip",
+                "cnc": "cnc.cnc",
+                "cnc_domain": "cnc.domain",
+                "cnc_url": "cnc.url",
+                "cnc_port": "cnc.port",
+                "cnc_proto": "cnc.proto",
+                "cnc_ipv4_ip": "cnc.ipv4.ip",
+                "cnc_ipv4_asn": "cnc.ipv4.asn",
+                "cnc_ipv4_country_name": "cnc.ipv4.countryName",
+                "cnc_ipv4_region": "cnc.ipv4.region",
+                "cnc_ipv6_ip": "cnc.ipv6.ip",
+                "price": "price",
+                "malware_name": "malware.name",
+                "malware_id": "malware.id",
+                "threatActor_name": "threatActor.name",
+                "threatActor_id": "threatActor.id",
+                "threatActor_isAPT": "threatActor.isAPT",
+                "source_id": "source.id",
+                "source_type": "source.type",
+                "source_idType": "source.idType",
+                "owner_phone": "owner.phone",
+                "owner_name": "owner.name",
+                "owner_country": "owner.countryCode",
+                "isDump": "isDump",
+                "isExpired": "isExpired",
+                "oldId": "oldId",
+                "externalId": "externalId"
+            },
+            "malware_list": {
+                "__nested_dot_path_to_list": "malware",
+                "id": "id",
+                "name": "name"
+            },
+            "threat_actor_list": {
+                "__nested_dot_path_to_list": "threatActor",
+                "id": "id",
+                "name": "name"
+            },
+            "source": {
+                "__nested_dot_path_to_list": "source",
+                "id": "id",
+                "type": "type",
+                "idType": "idType"
+            },
+            "source_type": "sourceType"
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-first-compromised": "dateFirstCompromised",
+            "date-last-compromised": "dateLastCompromised",
+            "date-first-seen": "dateFirstSeen",
+            "date-last-seen": "dateLastSeen"
+        }
+    },
+    "ioc/primary": {
+        "ioc_primary": {
+            "__": "*Primary IOC",
+            "id": "id",
+            "type": "type",
+            "risk_score": "riskScore",
+            "domain": "domain",
+            "url": "url",
+            "ip": "ip",
+            "hash": "hash",
+            "tags": "tags",
+            "malware_list": {
+                "__nested_dot_path_to_list": "malwareList",
+                "name": "name",
+                "aliases": "aliases"
+            },
+            "threat_list": {
+                "__nested_dot_path_to_list": "threatList",
+                "name": "name",
+                "title": "title"
+            }
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "tlp": "evaluation.TLP",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "reliability": "evaluation.reliability",
+            "credibility": "evaluation.credibility",
+            "ttl": "evaluation.TTL"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-first-seen": "dateFirstSeen",
+            "date-last-seen": "dateLastSeen"
+        }
+    },
+    "malware/cnc": {
+        "malware_cnc": {
+            "__": "*Malware CnC",
+            "id": "id",
+            "cnc": "cnc",
+            "domain": "domain",
+            "url": "url",
+            "platform": "platform",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Malware CnC - external reference",
+                    "static": "https://tap.group-ib.com/malware/cnc?id=",
+                    "dynamic": "id"
+                }
+            },
+            "malware_list": {
+                "__nested_dot_path_to_list": "malwareList",
+                "id": "id",
+                "name": "name"
+            },
+            "threat_actor_list": {
+                "__nested_dot_path_to_list": "threatActor",
+                "id": "id",
+                "name": "name",
+                "isAPT": "isAPT"
+            },
+            "ipv4_list": {
+                "__nested_dot_path_to_list": "ipv4",
+                "ip": "ip",
+                "asn": "asn",
+                "country_code": "countryCode",
+                "country_name": "countryName"
+            },
+            "ipv6_list": {
+                "__nested_dot_path_to_list": "ipv6",
+                "ip": "ip",
+                "asn": "asn",
+                "country_code": "countryCode",
+                "country_name": "countryName"
+            },
+            "file": {
+                "id": "file.id",
+                "name": "file.name",
+                "md5": "file.md5",
+                "sha1": "file.sha1",
+                "sha256": "file.sha256"
+            }
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-first-seen": "dateFirstSeen",
+            "date-last-seen": "dateLastSeen",
+            "date-detected": "dateDetected"
+        }
+    },
+    "compromised/masked_card": {
+        "masked_card": {
+            "__": "*Compromised masked card",
+            "id": "id",
+            "name": "cardInfo.number",
+            "baseName": "baseName",
+            "isMasked": "isMasked",
+            "isDump": "isDump",
+            "isExpired": "isExpired",
+            "cardInfo": {
+                "number": "cardInfo.number",
+                "type": "cardInfo.type",
+                "system": "cardInfo.system",
+                "issuer": "cardInfo.issuer.issuer",
+                "issuer_country_code": "cardInfo.issuer.countryCode",
+                "issuer_country_name": "cardInfo.issuer.countryName",
+                "validThru": "cardInfo.validThru",
+                "validThruDate": "cardInfo.validThruDate",
+                "bin": "cardInfo.bin",
+                "cvv": "cardInfo.cvv",
+                "pin": "cardInfo.pin",
+                "dump": "cardInfo.dump"
+            },
+            "client_ipv4_ip": "client.ipv4.ip",
+            "cnc": {
+                "cnc": "cnc.cnc",
+                "domain": "cnc.domain",
+                "url": "cnc.url",
+                "ip": "cnc.ipv4.ip",
+                "country_code": "cnc.ipv4.countryCode",
+                "country_name": "cnc.ipv4.countryName",
+                "ipv6": "cnc.ipv6.ip"
+            },
+            "malware": {
+                "id": "malware.id",
+                "name": "malware.name"
+            },
+            "owner": {
+                "name": "owner.name",
+                "phone": "owner.phone",
+                "country_code": "owner.countryCode",
+                "address": "owner.address",
+                "state": "owner.state",
+                "zip": "owner.zip"
+            },
+            "threat_actor": {
+                "id": "threatActor.id",
+                "name": "threatActor.name",
+                "isAPT": "threatActor.isAPT",
+                "country": "threatActor.country"
+            },
+            "threat_actor_list": {
+                "__nested_dot_path_to_list": "threatActor",
+                "id": "id",
+                "name": "name",
+                "isAPT": "isAPT",
+                "country": "country"
+            },
+            "price_value": "price.value",
+            "price_currency": "price.currency",
+            "source_type": "sourceType",
+            "source_link": "sourceLink",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Compromised Masked Card - external reference",
+                    "static": "https://tap.group-ib.com/cd/cards?scope=masked_card&id=",
+                    "dynamic": "id"
+                }
+            }
+        },
+        "evaluation": {
+            "__": "*Evaluation",
+            "admiraltyCode": "evaluation.admiraltyCode",
+            "credibility": "evaluation.credibility",
+            "reliability": "evaluation.reliability",
+            "severity": "evaluation.severity",
+            "tlp": "evaluation.tlp"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-detected": "dateDetected",
+            "date-compromised": "dateCompromised"
+        }
+    },
+    "compromised/discord": {
+        "chat_message": {
+            "__": "*Discord message",
+            "id": "id",
+            "platform": "discord",
+            "text": "text",
+            "translation": "translation",
+            "ts": "ts",
+            "deleted": "deleted",
+            "rules": "rules",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Discord Message - external reference",
+                    "static": "https://tap.group-ib.com/cd/messages?id=",
+                    "dynamic": "id"
+                }
+            }
+        },
+        "channel": {
+            "__": "*Discord channel",
+            "id": "channel.id",
+            "name": "channel.name",
+            "server": "channel.server",
+            "server_id": "channel.serverId",
+            "description": "channel.description",
+            "first_message_date": "channel.stat.firstMessageDate",
+            "last_message_date": "channel.stat.lastMessageDate",
+            "message_num": "channel.stat.messageNum",
+            "user_num": "channel.stat.userNum"
+        },
+        "author": {
+            "__": "*Discord author",
+            "id": "author.id",
+            "name": "author.name",
+            "discriminator": "author.discriminator",
+            "avatar": "author.avatar"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-created": "ts"
+        }
+    },
+    "compromised/messenger": {
+        "chat_message": {
+            "__": "*Telegram message",
+            "id": "id",
+            "platform": "telegram",
+            "text": "message",
+            "translation": "translatedMessage",
+            "ts": "messageTs",
+            "last_edit_ts": "lastEditTs",
+            "is_reply": "isReply",
+            "deleted": "deleted",
+            "message_id": "messageId",
+            "name": "name",
+            "rules": "rules",
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Telegram Message - external reference",
+                    "static": "https://tap.group-ib.com/cd/messages?id=",
+                    "dynamic": "id"
+                }
+            }
+        },
+        "channel": {
+            "__": "*Telegram chat",
+            "id": "chatStat.id",
+            "name": "chatStat.name",
+            "title": "chatStat.title",
+            "type": "chatStat.type",
+            "first_message_date": "chatStat.firstMessageDate",
+            "last_message_date": "chatStat.lastMessageDate",
+            "message_num": "chatStat.messageNum",
+            "user_num": "chatStat.userNum"
+        },
+        "author": {
+            "__": "*Telegram author",
+            "id": "author.id",
+            "username": "author.userName",
+            "type": "author.type",
+            "first_name": "author.firstName",
+            "last_name": "author.lastName"
+        },
+        "date": {
+            "__": "*Event date",
+            "date-created": "messageTs"
+        }
+    },
+    "darkweb/forums": {
+        "forum_post": {
+            "__": "*Darkweb forum post",
+            "id": "id",
+            "title": "topic",
+            "description": "message",
+            "categories": "categories",
+            "forum": "forum",
+            "nickname": "nickname",
+            "langs": "lang",
+            "message_len": "message_len",
+            "thread_id": "thread_id",
+            "sources": {
+                "__concatenate": {
+                    "__": "Original forum post URL",
+                    "parts": [
+                        "domain",
+                        "url"
+                    ]
+                }
+            },
+            "portal_link": {
+                "__concatenate": {
+                    "__": "TI Portal: Darkweb - external reference",
+                    "static": "https://tap.group-ib.com/ta/darkweb?id=",
+                    "dynamic": "id"
+                }
+            }
+        },
+        "date": {
+            "__": "*Event date",
+            "date-published": "uploadTime",
+            "date-created": "datetime",
+            "date-modified": "updateDatetimeAlert"
         }
     }
 }

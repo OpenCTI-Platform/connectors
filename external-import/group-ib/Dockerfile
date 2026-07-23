@@ -12,10 +12,12 @@ WORKDIR /opt/connector/src
 RUN pip3 install --no-cache-dir -r /opt/connector/src/requirements.txt
 RUN rm -rf /var/cache/apk/*
 
-# Support arbitrary user id
-RUN chown -R :root /opt/connector && chmod -R g+rwX /opt/connector
+RUN adduser -D -u 10001 -G root connector \
+    && chown -R :root /opt/connector \
+    && chmod -R g+rwX /opt/connector
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+HEALTHCHECK --interval=5m --timeout=10s --start-period=30s --retries=3 \
+    CMD pgrep -f "python3 main.py" > /dev/null || exit 1
+
+USER 10001
+ENTRYPOINT ["python3", "main.py"]
