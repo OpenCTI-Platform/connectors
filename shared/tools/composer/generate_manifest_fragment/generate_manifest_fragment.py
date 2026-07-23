@@ -200,8 +200,8 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
         "config_schema": config_schema,
     }
 
-    # Copy through any manifest key not explicitly handled above (e.g. 
-    # any future addition) so the fragment stays in sync with the manifest 
+    # Copy through any manifest key not explicitly handled above (e.g.
+    # any future addition) so the fragment stays in sync with the manifest
     # without code changes.
     for key, value in manifest.items():
         if key not in MANIFEST_KEYS_HANDLED_EXPLICITLY and key not in fragment:
