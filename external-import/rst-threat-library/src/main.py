@@ -16,8 +16,7 @@ if __name__ == "__main__":
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
         connector = RSTThreatLibrary(config=settings, helper=helper)
         connector.run()
-    except Exception as ex:
-        print(str(ex))
-        traceback.print_tb(ex.__traceback__)
+    except Exception:
+        traceback.print_exc()
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

@@ -17,7 +17,7 @@ The connector polls `GET /threat-objects/<type>` for each configured type and up
 
 ### Configuration variables
 
-Configuration is set either in `docker-compose.yml` (Docker) or in `config.yml` (manual deployment). See `config.yml.sample` for a full annotated example. Field descriptions and examples are also defined on the Pydantic models in `src/connector/settings.py` and mirrored in `__docs__/connector_config_schema.json`.
+Configuration is set either in `docker-compose.yml` (Docker) or in `config.yml` (manual deployment). See `config.yml.sample` for a full annotated example. Field descriptions and examples are also defined on the Pydantic models in `src/connector/settings.py` and mirrored in `__metadata__/connector_config_schema.json`.
 
 #### OpenCTI environment variables
 
