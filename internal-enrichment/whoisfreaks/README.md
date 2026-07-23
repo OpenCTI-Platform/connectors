@@ -9,7 +9,7 @@ This connector enables security analysts to enrich `Domain-Name`, `IPv4-Addr`, a
 ## Features
 
 - **WHOIS Registration Intelligence**: Fetches live WHOIS records and converts Registrars and Registrants into STIX 2.1 `Identity` SDOs linked via `registered-by` and `owned-by` relationships.
-- **DNS Record Mapping**: Parses live DNS responses (A, AAAA, MX, NS, CNAME, TXT) and maps resolutions into the OpenCTI graph using `resolves-to` and `related-to` relationships.
+- **DNS Record Mapping**: Parses live DNS responses (A, AAAA, MX, NS, CNAME) and maps resolutions into the OpenCTI graph using `resolves-to` and `related-to` relationships.
 - **Subdomain Discovery**: Maps parent-child domain hierarchies and populates subdomains as related `Domain-Name` observables.
 - **SSL/TLS Certificate Metadata**: Extracts X.509 certificate metadata and attaches `X509-Certificate` observables to target domains.
 - **IP Geolocation & Reverse DNS**: Translates IPv4/IPv6 observables into STIX `Location` SDOs (`located-at`) and maps reverse DNS domain associations.

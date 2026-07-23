@@ -217,6 +217,7 @@ class WhoisFreaksStixBuilder:
             )
         else:
             target_stix = stix2.DomainName(value=clean_target)
+        objects.append(target_stix)
         ssl_certificates = ssl_data.get("sslCertificates") or [ssl_data]
         for cert in ssl_certificates:
             cert_info = cert.get("certificate_info") or cert
@@ -266,7 +267,11 @@ class WhoisFreaksStixBuilder:
         city = loc_data.get("city")
 
         if country or city:
+            location_type = "City" if city else "Country"
+            location_name = city or country
             location_stix = stix2.Location(
+                id=pycti.Location.generate_id(location_name, location_type),
+                name=location_name,
                 country=country,
                 city=city,
                 latitude=(
@@ -275,6 +280,7 @@ class WhoisFreaksStixBuilder:
                 longitude=(
                     float(loc_data["longitude"]) if loc_data.get("longitude") else None
                 ),
+                custom_properties={"x_opencti_location_type": location_type},
                 created_by_ref=self.author.id,
             )
             objects.append(location_stix)
