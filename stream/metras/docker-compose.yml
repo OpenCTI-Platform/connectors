@@ -1,0 +1,31 @@
+services:
+  connector-metras-stream:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opencti/connector-metras-stream:1.0.0
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_METRAS_STREAM_ID}
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_NAME=Metras-Stream
+      - CONNECTOR_SCOPE=Metras
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LIVE_STREAM_ID=${CONNECTOR_METRAS_STREAM_LIVE_STREAM_ID}
+      - METRAS_API_BASE_URL=https://api.metras.sa/api
+      - METRAS_API_KEY=${METRAS_API_KEY}
+      - METRAS_VERIFY_SSL=true
+      - METRAS_BLOCKLIST_ACTION=ALERT
+      - METRAS_BLOCKLIST_PLATFORM=windows
+      - METRAS_BLOCKLIST_SEVERITY=Medium
+    restart: always
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+    pids_limit: 100

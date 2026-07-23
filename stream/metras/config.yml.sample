@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'STREAM'
+  id: 'ChangeMe'  # UUIDv4
+  name: 'Metras-Stream'
+  scope: 'Metras'
+  log_level: 'info'
+  live_stream_id: 'ChangeMe'  # UUID of an ACTIVATED live stream collection
+
+metras:
+  api_base_url: 'https://api.metras.sa/api'
+  api_key: 'ChangeMe'
+  verify_ssl: true
+  blocklist_action: 'ALERT'      # ALERT | BLOCK
+  blocklist_platform: 'windows'  # windows | linux | darwin
+  blocklist_severity: 'Medium'   # Informational | Low | Medium | High | Critical
