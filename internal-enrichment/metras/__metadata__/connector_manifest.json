@@ -1,0 +1,19 @@
+{
+  "title": "Metras Enrichment Connector",
+  "slug": "metras-enrichment",
+  "description": "Enriches IPv4 and file-hash observables by querying Metras for fleet presence (EDR alerts, endpoint inventory, binary inventory), returning context Notes and system-identity links ('have I seen this in my environment?').",
+  "short_description": "Enrichment connector for Metras fleet sightings",
+  "logo": null,
+  "use_cases": ["Enrichment & Analysis"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260529.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/metras",
+  "manager_supported": false,
+  "container_version": "1.0.0",
+  "container_image": "opencti/connector-metras-enrichment",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

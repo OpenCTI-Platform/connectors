@@ -1,0 +1,29 @@
+services:
+  connector-metras-enrichment:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opencti/connector-metras-enrichment:1.0.0
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_METRAS_ENRICHMENT_ID}
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=Metras-Enrichment
+      - CONNECTOR_SCOPE=IPv4-Addr,StixFile
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_AUTO=false
+      - METRAS_API_BASE_URL=https://api.metras.sa/api
+      - METRAS_API_KEY=${METRAS_API_KEY}
+      - METRAS_VERIFY_SSL=true
+      - METRAS_MAX_TLP=amber+strict
+    restart: always
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+    pids_limit: 100
