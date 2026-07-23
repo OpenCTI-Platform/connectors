@@ -30,6 +30,7 @@
       "type": "array"
     },
     "CONNECTOR_TYPE": {
+      "const": "STREAM",
       "default": "STREAM",
       "description": "Should always be set to STREAM for this connector.",
       "type": "string"
