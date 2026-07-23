@@ -99,6 +99,7 @@ If `GTI_REPORT_DOWNLOAD_PDF` is enabled, the connector additionally downloads th
 | `GTI_REPORT_ORIGINS`       | Filter by origin                      | `All` or `google threat intelligence`, `crowdsourced`. [See available values](https://gtidocs.virustotal.com/docs/threat-intelligence-objects-modifiers-values)                     |
 | `GTI_REPORT_EXTRA_FILTERS` | Additional GTI query filters          | `name:phishing`. [See available filters](https://gtidocs.virustotal.com/docs/reports-search-modifiers)                                                                              |
 | `GTI_REPORT_DOWNLOAD_PDF`  | Download and attach PDF to the report | `true` / `false`                                                                                                                                                                    |
+| `GTI_REPORT_SUBENTITIES`   | Comma-separated list of sub-entity types to fetch and link for each report. An empty value disables sub-entity fetching entirely, which can help reduce API quota usage. | `malware_families`, `threat_actors`, `attack_techniques`, `vulnerabilities`, `campaigns`, `domains`, `files`, `urls`, `ip_addresses`, `software_toolkits` |
 
 ### 2. Campaigns
 
@@ -131,6 +132,7 @@ All sub-entities are converted to STIX 2.1 objects and linked to the parent Camp
 |-------------------------------|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
 | `GTI_CAMPAIGN_ORIGINS`        | Filter by origin             | `google threat intelligence`. [See available values](https://gtidocs.virustotal.com/docs/threat-intelligence-objects-modifiers-values) |
 | `GTI_CAMPAIGN_EXTRA_FILTERS`  | Additional GTI query filters | [See available filters](https://gtidocs.virustotal.com/reference/list-collections#allowed-filters-by-object-collection_type)           |
+| `GTI_CAMPAIGN_SUBENTITIES`    | Comma-separated list of sub-entity types to fetch and link for each campaign. An empty value disables sub-entity fetching entirely, which can help reduce API quota usage. | `malware_families`, `attack_techniques`, `vulnerabilities`, `threat_actors`, `domains`, `files`, `urls`, `ip_addresses`, `software_toolkits`, `reports` |
 
 ### 3. Threat Actors
 
@@ -165,6 +167,7 @@ Additionally, `Location` and `Identity` (targeted countries, sectors) are extrac
 | `GTI_THREAT_ACTOR_ORIGINS`         | Filter by origin                                                                 | `["google threat intelligence"]`   | `All` or `google threat intelligence`, `partner`. [See available values](https://gtidocs.virustotal.com/docs/threat-intelligence-objects-modifiers-values) |
 | `GTI_THREAT_ACTOR_EXTRA_FILTERS`   | Optional list of additional filters to add to query when fetching threat actors  | `[]`                               | [See available filters](https://gtidocs.virustotal.com/reference/list-collections#allowed-filters-by-object-collection_type)                               |
 | `GTI_ENABLE_THREAT_ACTOR_ALIASES`  | Whether to enable importing threat actor aliases from GTI                        | `false`                            | `true` / `false`. [See details and recommendations in the "Important Data Limitations" section above](#important-data-limitations)                         |
+| `GTI_THREAT_ACTOR_SUBENTITIES`     | Comma-separated list of sub-entity types to fetch and link for each threat actor. An empty value disables sub-entity fetching entirely, which can help reduce API quota usage. | `["malware_families", "attack_techniques", "vulnerabilities", "software_toolkits"]` | `malware_families`, `attack_techniques`, `vulnerabilities`, `campaigns`, `reports`, `domains`, `files`, `urls`, `ip_addresses`, `software_toolkits` |
 
 ### 4. Malware Families
 
@@ -197,6 +200,7 @@ All sub-entities are converted to STIX 2.1 objects and linked to the parent Malw
 | `GTI_MALWARE_FAMILY_ORIGINS`       | Filter by origin                                                                   | `["google threat intelligence"]` | `All` or `google threat intelligence`, `partner`. [See available values](https://gtidocs.virustotal.com/docs/threat-intelligence-objects-modifiers-values) |
 | `GTI_MALWARE_FAMILY_EXTRA_FILTERS` | Optional list of additional filters to add to query when fetching malware families | `[]`                             | [See available filters](https://gtidocs.virustotal.com/reference/list-collections#allowed-filters-by-object-collection_type)                               |
 | `GTI_ENABLE_MALWARE_ALIASES`       | Whether to enable importing malware family aliases from GTI                        | `false`                          | `true` / `false`. [See details and recommendations in the "Important Data Limitations" section above](#important-data-limitations)                         |
+| `GTI_MALWARE_FAMILY_SUBENTITIES`   | Comma-separated list of sub-entity types to fetch and link for each malware family. An empty value disables sub-entity fetching entirely, which can help reduce API quota usage. | `["threat_actors", "attack_techniques", "vulnerabilities"]` | `threat_actors`, `attack_techniques`, `vulnerabilities`, `campaigns`, `reports`, `domains`, `files`, `urls`, `ip_addresses` |
 
 ### 5. Vulnerabilities
 
@@ -228,6 +232,7 @@ All sub-entities are converted to STIX 2.1 objects and linked to the parent Vuln
 |------------------------------------|------------------------------------------------------------------------------------|----------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | `GTI_VULNERABILITY_ORIGINS`        | Filter by origin                                                                   | `["google threat intelligence"]` | [See available values](https://gtidocs.virustotal.com/docs/threat-intelligence-objects-modifiers-values)                     |
 | `GTI_VULNERABILITY_EXTRA_FILTERS`  | Optional list of additional filters to add to query when fetching vulnerabilities  | `[]`                             | [See available filters](https://gtidocs.virustotal.com/reference/list-collections#allowed-filters-by-object-collection_type) |
+| `GTI_VULNERABILITY_SUBENTITIES`    | Comma-separated list of sub-entity types to fetch and link for each vulnerability. An empty value disables sub-entity fetching entirely, which can help reduce API quota usage. | `["malware_families", "attack_techniques", "threat_actors"]` | `malware_families`, `attack_techniques`, `threat_actors`, `campaigns`, `reports`, `domains`, `files`, `urls`, `ip_addresses` |
 
 ### 6. Software Toolkits
 
@@ -259,6 +264,7 @@ Additionally, `Location` and `Identity` (targeted countries, sectors) are extrac
 |-----------------------------------------|---------------------------------------------------------------------------------------|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `GTI_SOFTWARE_TOOLKIT_ORIGINS`          | Filter by origin                                                                      | `["google threat intelligence"]` | `All` or `google threat intelligence`, `partner`. [See available values](https://gtidocs.virustotal.com/docs/threat-intelligence-objects-modifiers-values) |
 | `GTI_SOFTWARE_TOOLKIT_EXTRA_FILTERS`    | Optional list of additional filters to add to query when fetching software toolkits   | `[]`                             | [See available filters](https://gtidocs.virustotal.com/reference/list-collections#allowed-filters-by-object-collection_type)                               |
+| `GTI_SOFTWARE_TOOLKIT_SUBENTITIES`      | Comma-separated list of sub-entity types to fetch and link for each software toolkit. An empty value disables sub-entity fetching entirely, which can help reduce API quota usage. | `["malware_families", "attack_techniques"]` | `malware_families`, `attack_techniques` |
 
 ### 7. Indicators / IOCs
 

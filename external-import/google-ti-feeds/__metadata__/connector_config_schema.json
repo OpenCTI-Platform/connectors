@@ -127,6 +127,21 @@
       },
       "type": "array"
     },
+    "GTI_SOFTWARE_TOOLKIT_SUBENTITIES": {
+      "default": [
+        "malware_families",
+        "attack_techniques"
+      ],
+      "description": "Comma-separated list of sub-entity types to fetch and link for each software toolkit. An empty list disables sub-entity fetching entirely for software toolkits, which can help reduce API quota usage. Allowed values: malware_families, attack_techniques",
+      "examples": [
+        "malware_families",
+        ""
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "GTI_IMPORT_INDICATORS": {
       "default": false,
       "description": "Whether to enable importing IOC indicator data from GTI via Steady-State IOC Deltas API",
@@ -196,6 +211,24 @@
       },
       "type": "array"
     },
+    "GTI_CAMPAIGN_SUBENTITIES": {
+      "default": [
+        "malware_families",
+        "attack_techniques",
+        "vulnerabilities",
+        "threat_actors",
+        "software_toolkits"
+      ],
+      "description": "Comma-separated list of sub-entity types to fetch and link for each campaign. An empty list disables sub-entity fetching entirely for campaigns, which can help reduce API quota usage. Allowed values: malware_families, attack_techniques, vulnerabilities, threat_actors, domains, files, urls, ip_addresses, software_toolkits, reports",
+      "examples": [
+        "malware_families,threat_actors",
+        ""
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "GTI_VULNERABILITY_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import vulnerabilities (e.g., P1D for 1 day, P7D for 7 days)",
@@ -233,6 +266,22 @@
       "description": "Optional List of additional filters to add to query when fetching vulnerabilities.",
       "examples": [
         "name:CVE-2024"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_VULNERABILITY_SUBENTITIES": {
+      "default": [
+        "malware_families",
+        "attack_techniques",
+        "threat_actors"
+      ],
+      "description": "Comma-separated list of sub-entity types to fetch and link for each vulnerability. An empty list disables sub-entity fetching entirely for vulnerabilities, which can help reduce API quota usage. Allowed values: malware_families, attack_techniques, threat_actors, campaigns, reports, domains, files, urls, ip_addresses",
+      "examples": [
+        "malware_families,threat_actors",
+        ""
       ],
       "items": {
         "type": "string"
@@ -282,6 +331,22 @@
       },
       "type": "array"
     },
+    "GTI_MALWARE_FAMILY_SUBENTITIES": {
+      "default": [
+        "threat_actors",
+        "attack_techniques",
+        "vulnerabilities"
+      ],
+      "description": "Comma-separated list of sub-entity types to fetch and link for each malware family. An empty list disables sub-entity fetching entirely for malware families, which can help reduce API quota usage. Allowed values: threat_actors, attack_techniques, vulnerabilities, campaigns, reports, domains, files, urls, ip_addresses",
+      "examples": [
+        "threat_actors,attack_techniques",
+        ""
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "GTI_THREAT_ACTOR_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import threat actors (e.g., P1D for 1 day, P7D for 7 days)",
@@ -319,6 +384,23 @@
       "description": "Optional List of additional filters to add to query when fetching threat actors.",
       "examples": [
         "name:APT28"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_THREAT_ACTOR_SUBENTITIES": {
+      "default": [
+        "malware_families",
+        "attack_techniques",
+        "vulnerabilities",
+        "software_toolkits"
+      ],
+      "description": "Comma-separated list of sub-entity types to fetch and link for each threat actor. An empty list disables sub-entity fetching entirely for threat actors, which can help reduce API quota usage. Allowed values: malware_families, attack_techniques, vulnerabilities, campaigns, reports, domains, files, urls, ip_addresses, software_toolkits",
+      "examples": [
+        "malware_families,attack_techniques",
+        ""
       ],
       "items": {
         "type": "string"
@@ -377,6 +459,29 @@
       "description": "Optional List of additional filters to add to query when fetching reports.",
       "examples": [
         "name:phishing"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_REPORT_SUBENTITIES": {
+      "default": [
+        "malware_families",
+        "threat_actors",
+        "attack_techniques",
+        "vulnerabilities",
+        "campaigns",
+        "domains",
+        "files",
+        "urls",
+        "ip_addresses",
+        "software_toolkits"
+      ],
+      "description": "Comma-separated list of sub-entity types to fetch and link for each report. An empty list disables sub-entity fetching entirely for reports, which can help reduce API quota usage. Allowed values: malware_families, threat_actors, attack_techniques, vulnerabilities, campaigns, domains, files, urls, ip_addresses, software_toolkits",
+      "examples": [
+        "malware_families,threat_actors",
+        ""
       ],
       "items": {
         "type": "string"
