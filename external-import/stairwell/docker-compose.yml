@@ -1,0 +1,25 @@
+services:
+  connector-stairwell-import:
+    image: opencti/connector-stairwell-import:rolling
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_STAIRWELL_IMPORT_ID}
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=Stairwell Import
+      - CONNECTOR_SCOPE=stairwell
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=P1D
+      - STAIRWELL_API_TOKEN=${STAIRWELL_API_TOKEN}
+      - STAIRWELL_API_BASE_URL=https://app.stairwell.com
+      - STAIRWELL_ORGANIZATION_ID=${STAIRWELL_ORGANIZATION_ID:-}
+      - STAIRWELL_USER_ID=${STAIRWELL_USER_ID:-}
+      - STAIRWELL_IMPORT_TLP=green
+      - STAIRWELL_IMPORT_FIRST_RUN_WINDOW=P1D
+      - STAIRWELL_IMPORT_MAX_INDICATORS=1000
+      - STAIRWELL_IMPORT_PAGE_SIZE=100
+      - STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS=90
+      - STAIRWELL_IMPORT_MIN_BUCKET=HIGH
+      - STAIRWELL_IMPORT_SCOPE=environment
+      - STAIRWELL_IMPORT_WRAPPER=grouping
+    restart: always

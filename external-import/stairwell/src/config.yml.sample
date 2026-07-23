@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Stairwell Import' # optional (default: 'Stairwell Import')
+  scope: 'stairwell'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'P1D' # optional, ISO-8601 interval between two runs (default: 'P1D')
+
+stairwell:
+  api_token: 'ChangeMe'
+  api_base_url: 'https://app.stairwell.com' # optional
+  organization_id: '' # optional, adds a rate-limit header
+  user_id: '' # optional, adds a rate-limit header
+  import_tlp: 'green' # optional, one of: clear, white, green, amber, amber+strict, red (default: 'green')
+  import_first_run_window: 'P1D' # optional, ISO-8601 backfill window on first run (default: 'P1D')
+  import_max_indicators: 1000 # optional (default: 1000)
+  import_page_size: 100 # optional (default: 100)
+  import_indicator_validity_days: 90 # optional (default: 90)
+  import_min_bucket: 'HIGH' # optional, one of: LOW, MEDIUM, HIGH, MALICIOUS (default: 'HIGH')
+  import_scope: 'environment' # optional, 'environment' or 'global' (default: 'environment')
+  import_wrapper: 'grouping' # optional, 'grouping' or 'report' (default: 'grouping')
