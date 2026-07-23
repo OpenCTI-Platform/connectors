@@ -61,14 +61,17 @@
       "type": "boolean"
     },
     "MICROSOFT_SENTINEL_INTEL_TENANT_ID": {
+      "default": null,
       "description": "Your Azure App Tenant ID, see the screenshot to help you find this information.",
       "type": "string"
     },
     "MICROSOFT_SENTINEL_INTEL_CLIENT_ID": {
+      "default": null,
       "description": "Your Azure App Client ID, see the screenshot to help you find this information.",
       "type": "string"
     },
     "MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET": {
+      "default": null,
       "description": "Your Azure App Client secret, See the screenshot to help you find this information.",
       "format": "password",
       "type": "string",
@@ -164,9 +167,6 @@
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
     "CONNECTOR_LIVE_STREAM_ID",
-    "MICROSOFT_SENTINEL_INTEL_TENANT_ID",
-    "MICROSOFT_SENTINEL_INTEL_CLIENT_ID",
-    "MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET",
     "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID",
     "MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME",
     "MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID"

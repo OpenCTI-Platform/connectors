@@ -9,9 +9,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
 | CONNECTOR_LIVE_STREAM_ID | `string` | ✅ | string |  | The ID of the live stream to connect to. |
-| MICROSOFT_SENTINEL_INTEL_TENANT_ID | `string` | ✅ | string |  | Your Azure App Tenant ID, see the screenshot to help you find this information. |
-| MICROSOFT_SENTINEL_INTEL_CLIENT_ID | `string` | ✅ | string |  | Your Azure App Client ID, see the screenshot to help you find this information. |
-| MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Your Azure App Client secret, See the screenshot to help you find this information. |
 | MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID | `string` | ✅ | string |  | Your Azure Workspace ID |
 | MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME | `string` | ✅ | string |  | The name of the log analytics workspace |
 | MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID | `string` | ✅ | string |  | The subscription id where the Log Analytics is |
@@ -21,6 +18,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` |  |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Whether to listen for delete events on the live stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `true` | Whether to ignore dependencies when processing events from the live stream. |
+| MICROSOFT_SENTINEL_INTEL_TENANT_ID | `string` |  | string | `null` | Your Azure App Tenant ID, see the screenshot to help you find this information. |
+| MICROSOFT_SENTINEL_INTEL_CLIENT_ID | `string` |  | string | `null` | Your Azure App Client ID, see the screenshot to help you find this information. |
+| MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | Your Azure App Client secret, See the screenshot to help you find this information. |
 | MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP | `string` |  | string | `"default"` | The name of the resource group where the log analytics is |
 | MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM | `string` |  | string | `"Opencti Stream Connector"` | The name of the source system displayed in Microsoft Sentinel |
 | MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS | `boolean` |  | boolean | `true` | Delete the extensions in the stix bundle sent to the SIEM |

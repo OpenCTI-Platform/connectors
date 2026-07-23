@@ -5,7 +5,7 @@ from azure.core import PipelineClient
 from azure.core.exceptions import HttpResponseError
 from azure.core.pipeline.policies import BearerTokenCredentialPolicy, RetryPolicy
 from azure.core.pipeline.transport._base import HttpRequest, HttpResponse
-from azure.identity import ClientSecretCredential
+from azure.identity import ClientSecretCredential, DefaultAzureCredential
 from microsoft_sentinel_intel.errors import ConnectorClientError
 from microsoft_sentinel_intel.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
@@ -22,15 +22,22 @@ class ConnectorClient:
             f"/providers/Microsoft.OperationalInsights/workspaces/{self.config.microsoft_sentinel_intel.workspace_name}"
             f"/providers/Microsoft.SecurityInsights/threatIntelligence/main"
         )
+        if (
+            config.microsoft_sentinel_intel.tenant_id is not None
+            and config.microsoft_sentinel_intel.client_id is not None
+            and config.microsoft_sentinel_intel.client_secret is not None
+        ):
+            credential = ClientSecretCredential(
+                tenant_id=config.microsoft_sentinel_intel.tenant_id,
+                client_id=config.microsoft_sentinel_intel.client_id,
+                client_secret=config.microsoft_sentinel_intel.client_secret.get_secret_value(),
+            )
+        else:
+            credential = DefaultAzureCredential()
 
         policies = [
             BearerTokenCredentialPolicy(
-                ClientSecretCredential(
-                    tenant_id=config.microsoft_sentinel_intel.tenant_id,
-                    client_id=config.microsoft_sentinel_intel.client_id,
-                    client_secret=config.microsoft_sentinel_intel.client_secret.get_secret_value(),
-                ),
-                "https://management.azure.com/.default",
+                credential, "https://management.azure.com/.default"
             ),
             RetryPolicy(),
         ]

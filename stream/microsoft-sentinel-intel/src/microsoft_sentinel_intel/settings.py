@@ -4,7 +4,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -31,13 +31,16 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `MicrosoftSentinelIntelConnector`.
     """
 
-    tenant_id: str = Field(
+    tenant_id: str | None = Field(
+        default=None,
         description="Your Azure App Tenant ID, see the screenshot to help you find this information.",
     )
-    client_id: str = Field(
+    client_id: str | None = Field(
+        default=None,
         description="Your Azure App Client ID, see the screenshot to help you find this information.",
     )
-    client_secret: SecretStr = Field(
+    client_secret: SecretStr | None = Field(
+        default=None,
         description="Your Azure App Client secret, See the screenshot to help you find this information.",
     )
     workspace_id: str = Field(
@@ -101,6 +104,34 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         description="Also push STIX Identity objects (e.g. an indicator's author) received from the stream to Microsoft Sentinel, in addition to Indicators, so their display name resolves correctly instead of only showing the identifier.",
         default=False,
     )
+
+    @model_validator(mode="after")
+    def check_auth_fields_consistency(self) -> "MicrosoftSentinelIntelConfig":
+        values = {
+            "tenant_id": self.tenant_id,
+            "client_id": self.client_id,
+            "client_secret": (
+                self.client_secret.get_secret_value()
+                if self.client_secret is not None
+                else None
+            ),
+        }
+        blank_fields = [
+            name
+            for name, value in values.items()
+            if value is not None and not value.strip()
+        ]
+        if blank_fields:
+            raise ValueError(
+                f"{', '.join(blank_fields)} must not be empty or whitespace-only."
+            )
+
+        provided = [value is not None for value in values.values()]
+        if any(provided) and not all(provided):
+            raise ValueError(
+                "If you provide any of tenant_id, client_id, or client_secret, you must provide all three."
+            )
+        return self
 
 
 class ConnectorSettings(BaseConnectorSettings):

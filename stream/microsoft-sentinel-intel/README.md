@@ -13,6 +13,8 @@ The Microsoft Sentinel Intel connector streams OpenCTI indicators to Microsoft S
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
+    - [Authentication](#authentication)
+    - [Azure AD Application Setup](#azure-ad-application-setup)
   - [Configuration variables](#configuration-variables)
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
@@ -44,15 +46,37 @@ Key features:
 - Azure subscription with Microsoft Sentinel
 - Azure AD Application or Managed Identity with appropriate permissions
 
+### Authentication
+
+The connector supports two authentication modes:
+
+- **App registration** (`tenant_id` / `client_id` / `client_secret`): explicit Azure AD
+  application credentials. If you set any one of these three variables, you must set all
+  three.
+- **Default Azure credential** (recommended): leave `tenant_id`, `client_id`, and
+  `client_secret` unset and the connector falls back to
+  [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential),
+  which authenticates using, in order, environment variables, a workload identity (e.g.
+  in AKS), a managed identity (system- or user-assigned, when running on Azure compute),
+  or the locally logged-in `az login` session.
+
+Whichever identity is used, it must be granted the **Microsoft Sentinel Contributor**
+role on the Log Analytics Workspace (see step 3 below). No Microsoft Graph API
+permission is required, the connector authenticates against Azure Resource Manager
+(`https://management.azure.com/.default`), and access is controlled entirely by that
+RBAC role assignment, per the
+[official upload API prerequisites](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-upload-api#prerequisites).
+
 ### Azure AD Application Setup
 
 1. Register an application in Azure AD (Entra portal)
 2. Note the `tenant_id`, `client_id`, and `client_secret`
-3. Configure API permissions: **ThreatIndicators.ReadWrite.OwnedBy**
-4. In the Log Analytics Workspace, add **Microsoft Sentinel Contributor** role to the application
+3. In the Log Analytics Workspace, add **Microsoft Sentinel Contributor** role to the application
+
+> Skip this section if you're using a managed identity, workload identity, or `az login`
+> instead — see [Authentication](#authentication) above.
 
 ![Sentinel Variables](./doc/sentinel_info_variables.png)
-![Sentinel Permissions](./doc/permission_mandatory.png)
 
 View indicators in: **Microsoft Sentinel > Threat Intelligence > Indicators**
 
@@ -95,9 +119,11 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe
-      - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe
-      - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe
+      # Optional: uncomment and fill in to use app-registration auth instead of DefaultAzureCredential
+      # (managed identity, workload identity, or `az login`).
+      # - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe
+      # - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe
+      # - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID=ChangeMe
@@ -202,7 +228,7 @@ CONNECTOR_LOG_LEVEL=debug
 ## Additional information
 
 - **Role Propagation**: Role assignments on Log Analytics Workspace can take time to propagate
-- **Authentication**: Managed identity is recommended over app registration
+- **Authentication**: Managed identity (via `DefaultAzureCredential`) is recommended over app registration — see [Authentication](#authentication)
 - **STIX Bundles**: Indicators are sent as STIX bundles to preserve threat intelligence context
 - **Extra Labels**: Add comma-separated labels to all indicators sent to Sentinel
 - **Delete Extensions**: Set to `true` to remove OpenCTI-specific extensions from bundles
