@@ -95,6 +95,7 @@ Register connector in the **main** OpenCTI `docker-compose.yml`:
       - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com/v1/iris-investigate/
       - DOMAINTOOLS_API_KEY=changeme
       - DOMAINTOOLS_IRIS_QL="# IrisQL-1.0\ndomain contains \"sso\"\nAND\nfirst_seen within \"the last 3 hour\"\nAND\nrisk_score greater_than_or_equal \"90\""
+      - DOMAINTOOLS_STORE_IRIS_DATA=true
       - DOMAINTOOLS_TLP_LEVEL=clear
     restart: always
 ```
