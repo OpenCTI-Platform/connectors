@@ -72,9 +72,10 @@ class ConverterToStix:
     def build_external_references(refs: List[Dict[str, Any]]) -> List[Any]:
         out: List[Any] = []
         for ref in refs or []:
-            kwargs: Dict[str, Any] = {}
-            if ref.get("source_name"):
-                kwargs["source_name"] = ref["source_name"]
+            source_name = ref.get("source_name")
+            if not source_name:
+                continue
+            kwargs: Dict[str, Any] = {"source_name": source_name}
             if ref.get("url"):
                 kwargs["url"] = ref["url"]
             if ref.get("external_id"):

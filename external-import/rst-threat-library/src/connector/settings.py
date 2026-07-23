@@ -77,16 +77,19 @@ class RstThreatLibraryConfig(BaseConfigModel):
     contimeout: int = Field(
         description="HTTP connect timeout in seconds.",
         default=30,
+        gt=0,
         examples=[30],
     )
     readtimeout: int = Field(
         description="HTTP read timeout in seconds.",
         default=120,
+        gt=0,
         examples=[120, 600],
     )
     retry: int = Field(
         description="Per-request HTTP retry count.",
         default=2,
+        ge=0,
         examples=[2, 10],
     )
     ssl_verify: bool = Field(
@@ -97,6 +100,7 @@ class RstThreatLibraryConfig(BaseConfigModel):
     page_size: int = Field(
         description="Page size (limit) for Threat Library list requests.",
         default=100,
+        gt=0,
         examples=[20, 100],
     )
     order_by: str = Field(
@@ -117,16 +121,19 @@ class RstThreatLibraryConfig(BaseConfigModel):
     max_retries: int = Field(
         description="Maximum retries when pushing bundles to OpenCTI.",
         default=3,
+        ge=0,
         examples=[3],
     )
     retry_delay: int = Field(
         description="Initial retry delay in seconds for OpenCTI push failures.",
         default=10,
+        ge=0,
         examples=[10],
     )
     retry_backoff_multiplier: float = Field(
         description="Exponential backoff multiplier for OpenCTI push retries.",
         default=2.0,
+        gt=0,
         examples=[2.0],
     )
     object_types: ListFromString = Field(

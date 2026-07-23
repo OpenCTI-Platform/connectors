@@ -138,3 +138,26 @@ def test_settings_should_raise_when_invalid_input(
         FakeConnectorSettings()
 
     assert "Error validating configuration" in str(err.value)
+
+
+def test_settings_rejects_negative_retry():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "intrusion-set",
+                    },
+                    "rst_threat_library": {
+                        "baseurl": "http://test.com",
+                        "apikey": "test-api-key",
+                        "retry": -1,
+                    },
+                }
+            )
+
+    with pytest.raises(ConfigValidationError):
+        FakeConnectorSettings()

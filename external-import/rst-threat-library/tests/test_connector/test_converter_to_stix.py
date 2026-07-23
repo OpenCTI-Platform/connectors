@@ -67,3 +67,22 @@ def test_build_identity_honors_upstream_identity_class(converter):
 
     payload = json.loads(identity.serialize())
     assert payload["identity_class"] == "individual"
+
+
+def test_build_external_references_skips_missing_source_name(converter):
+    refs = converter.build_external_references(
+        [
+            {"url": "https://example.com/no-source"},
+            {
+                "source_name": "RST Cloud",
+                "url": "https://example.com/ok",
+                "external_id": "abc",
+            },
+        ]
+    )
+
+    assert len(refs) == 1
+    payload = json.loads(refs[0].serialize())
+    assert payload["source_name"] == "RST Cloud"
+    assert payload["url"] == "https://example.com/ok"
+    assert payload["external_id"] == "abc"

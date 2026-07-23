@@ -4,7 +4,7 @@ import time
 import traceback
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -837,10 +837,11 @@ class RSTThreatLibrary:
         if not target_internal_id or not target_sid:
             return []
 
-        source_sids: List[str] = []
+        source_pairs: List[Tuple[str, str]] = []
         for src in source_entities:
             src_sid = src.get("standard_id")
-            if not src_sid or src_sid == target_sid:
+            src_internal_id = src.get("id")
+            if not src_sid or not src_internal_id or src_sid == target_sid:
                 continue
             if not self._should_allow_reconcile_delete(src):
                 self.helper.connector_logger.info(
@@ -856,27 +857,29 @@ class RSTThreatLibrary:
                     "Threat Library (analyst lock)"
                 )
                 continue
-            source_sids.append(src_sid)
+            source_pairs.append((src_internal_id, src_sid))
 
-        if not source_sids:
+        if not source_pairs:
             return []
 
         merged: List[str] = []
-        for offset in range(0, len(source_sids), _OPENCTI_MERGE_SOURCE_BATCH):
-            chunk = source_sids[offset : offset + _OPENCTI_MERGE_SOURCE_BATCH]
+        for offset in range(0, len(source_pairs), _OPENCTI_MERGE_SOURCE_BATCH):
+            batch = source_pairs[offset : offset + _OPENCTI_MERGE_SOURCE_BATCH]
+            chunk_internal = [pair[0] for pair in batch]
+            chunk_sids = [pair[1] for pair in batch]
             try:
                 self.helper.api.stix.merge(
                     id=target_internal_id,
-                    object_ids=chunk,
+                    object_ids=chunk_internal,
                 )
-                merged.extend(chunk)
+                merged.extend(chunk_sids)
                 self.helper.connector_logger.info(
-                    f"[{obj_type}] OpenCTI merge: fused {chunk} into "
+                    f"[{obj_type}] OpenCTI merge: fused {chunk_sids} into "
                     f"{target_sid} (name={target_entity.get('name')})"
                 )
             except Exception as ex:
                 self.helper.connector_logger.error(
-                    f"[{obj_type}] OpenCTI merge failed for sources {chunk} "
+                    f"[{obj_type}] OpenCTI merge failed for sources {chunk_sids} "
                     f"into {target_sid}: {ex}"
                 )
         return merged
