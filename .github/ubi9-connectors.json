@@ -2,6 +2,7 @@
   "external-import/alienvault",
   "external-import/cisa-known-exploited-vulnerabilities",
   "external-import/crowdstrike",
+  "external-import/crowdstrike-recon",
   "external-import/cpe",
   "external-import/cve",
   "external-import/group-ib",
