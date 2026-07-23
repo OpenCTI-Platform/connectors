@@ -66,6 +66,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |  | https://api.domaintools.com/v1/iris-investigate/       | Yes       | DomainTools API base URL                   |
 | API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |      | Yes       | DomainTools API key                        |
 | IrisQL Query            | domaintools.iris_ql         | `DOMAINTOOLS_IRIS_QL`         |             | Yes       | IrisQL query to execute                        |
+| STORE IRIS DATA | domaintools.store_iris_data | `DOMAINTOOLS_STORE_IRIS_DATA` | false |No| Store DomainTools Iris data as note object. |
 | TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`                  | clear   | No        | TLP marking for created STIX objects. |
 
 ## Deployment

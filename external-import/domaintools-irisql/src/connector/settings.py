@@ -33,6 +33,7 @@ class DomainToolsConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(description="API base URL.")
     api_key: str = Field(description="API key for authentication.")
     iris_ql: str = Field(description="The query search string.")
+    store_iris_data: bool | None = Field(description="Store DomainTools Iris data as note object.", default=False)
     tlp_level: Literal[
         "clear",
         "white",

@@ -15,5 +15,6 @@ services:
       - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com/v1/iris-investigate/
       - DOMAINTOOLS_API_KEY=ChangeMe
       - DOMAINTOOLS_IRIS_QL=ChangeMe
+      - DOMAINTOOLS_STORE_IRIS_DATA=true # optional
       - DOMAINTOOLS_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
     restart: always

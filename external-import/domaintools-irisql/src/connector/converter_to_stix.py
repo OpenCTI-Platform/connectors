@@ -138,6 +138,8 @@ class ConverterToStix:
         :param value: Value in string
         :return: A boolean
         """
+        # Override - assuming data from DT is valid
+        return True
         is_valid_domain = validators.domain(value)
 
         if is_valid_domain:
@@ -164,6 +166,7 @@ class ConverterToStix:
                 value=value,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
+                    "x_opencti_labels": labels,
                 },
             )
             return stix_ipv6_address
@@ -172,9 +175,18 @@ class ConverterToStix:
                 value=value,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
+                    "x_opencti_labels": labels,
                 },
             )
-            return stix_ipv4_address
+            return stix_ipv4_address        
+        elif self._is_email(value) is True:
+            stix_email = stix2.EmailAddress(
+                value=value,
+                custom_properties={
+                    "x_opencti_created_by_ref": self.author["id"],
+                },
+            )
+            return stix_email
         elif self._is_domain(value) is True:
             stix_domain_name = stix2.DomainName(
                 value=value,
@@ -185,14 +197,6 @@ class ConverterToStix:
                 },
             )
             return stix_domain_name
-        elif self._is_email(value) is True:
-            stix_email = stix2.EmailAddress(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_email
         else:
             self.helper.connector_logger.error(
                 "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",

@@ -54,6 +54,7 @@ class DomainToolsIrisQLConnector:
         self.config = config
         self.helper = helper
         self.iris_ql = self.config.domaintools.iris_ql
+        self.store_iris_data = self.config.domaintools.store_iris_data
         if (not self.iris_ql):
             self.helper.log_error("Missing IrisQL data.")
             raise ValueError("Missing IrisQL data.")
@@ -102,21 +103,23 @@ class DomainToolsIrisQLConnector:
             domain_obs = self.converter_to_stix.create_obs(domain, score, labels)
             stix_objects.append(domain_obs)
             
-            # note_obj = stix2.Note(
-            #     abstract="Analyst Review",
-            #     content="This domain was observed hosting a phishing landing page impersonating a bank.",
-            #     object_refs=[domain_obs.id]  # Links the note to the domain observable
-            # )                                                            
-            # _tmp = stix_objects.append(note_obj)            
+            ###### Note
+            if (self.store_iris_data):
+                note_obj = stix2.Note(
+                    abstract="DomainTools Iris Data",
+                    content=json.dumps(entity),
+                    object_refs=[domain_obs.id]  # Links the note to the domain observable
+                )                                                            
+                _tmp = stix_objects.append(note_obj)            
             
             ###### IP
             stix_objects.extend(self._process_IP(domain_obs, entity.get('ip', [])))                            
                         
             ###### MX
-            stix_objects.extend(self._process_MX_NS(domain_obs, entity.get('mx', [])))
+            stix_objects.extend(self._process_MX_NS(domain_obs, entity.get('mx', []), 'MX'))
             
             ###### NS
-            stix_objects.extend(self._process_MX_NS(domain_obs, entity.get('name_server', [])))                
+            stix_objects.extend(self._process_MX_NS(domain_obs, entity.get('name_server', []), 'NS'))                
                         
             ####### EMAIL
             # Get all EmailAddress
@@ -134,6 +137,8 @@ class DomainToolsIrisQLConnector:
             unique_emails = list({item['value']: item for item in all_emails}.values())
             for item in unique_emails:
                 email = item.get('value')
+                if (('https://' in email) or ('http://' in email)): continue
+                
                 email_obs = self.converter_to_stix.create_obs(email)
                 
                 if(not email_obs): continue
@@ -169,7 +174,7 @@ class DomainToolsIrisQLConnector:
         
         return all_ip_object
 
-    def _process_MX_NS (self, _source, data):
+    def _process_MX_NS (self, _source, data, data_type):
         all_ip_object = []
         for mx_entity in data:
             host = mx_entity.get('host').get('value')
@@ -177,7 +182,7 @@ class DomainToolsIrisQLConnector:
             ### Note: some value point to itself
             if (_source.value == host): continue
                 
-            host_obs = self.converter_to_stix.create_obs(host)
+            host_obs = self.converter_to_stix.create_obs(host, labels=[data_type])
             
             if (not host_obs): continue
             
@@ -189,7 +194,7 @@ class DomainToolsIrisQLConnector:
             ### IP
             for ip_entity in mx_entity.get('ip', []):
                 ip = ip_entity.get('value')
-                ip_obs = self.converter_to_stix.create_obs(ip)
+                ip_obs = self.converter_to_stix.create_obs(ip, labels=[f"{data_type} IP"])
                 if (not ip_obs): continue
                                 
                 all_ip_object.append(ip_obs)
