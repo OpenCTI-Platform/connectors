@@ -1,13 +1,17 @@
 {
   "title": "Hatching Triage Sandbox",
   "slug": "hatching-triage-sandbox",
-  "description": "Hatching Triage is a malware analysis sandbox that automatically analyzes malicious files and URLs, extracting configuration data, network indicators, and behavioral information.\n\nThis connector submits files (Artifacts) and URLs to Hatching Triage for dynamic analysis and enriches OpenCTI with the results including:\n\u2022 Malware family identification\n\u2022 C2 server addresses and URLs\n\u2022 Network indicators (domains, IPs)\n\u2022 Extracted credentials\n\u2022 MITRE ATT&CK TTPs\n\u2022 Dropped files and configurations\n\u2022 Botnet and campaign information",
+  "description": "Hatching Triage is a malware analysis sandbox that automatically analyzes malicious files and URLs, extracting configuration data, network indicators, and behavioral information.\n\nThis connector submits files (Artifacts) and URLs to Hatching Triage for dynamic analysis and enriches OpenCTI with the results including:\n\n- Malware family identification\n- C2 server addresses and URLs\n- Network indicators (domains, IPs)\n- Extracted credentials\n- MITRE ATT&CK TTPs\n- Dropped files and configurations\n- Botnet and campaign information",
   "short_description": "Hatching Triage connector detonates files and URLs in a malware sandbox, extracting malware families, C2 infrastructure, network indicators, and MITRE ATT&CK TTPs.",
-  "logo": null,
+  "logo": "internal-enrichment/hatching-triage-sandbox/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -15,7 +19,7 @@
   "support_version": ">=5.6.1",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/hatching-triage-sandbox",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-hatching-triage-sandbox",
   "container_type": "INTERNAL_ENRICHMENT"

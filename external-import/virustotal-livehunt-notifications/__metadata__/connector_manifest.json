@@ -1,12 +1,17 @@
 {
   "title": "VirusTotal Livehunt Notifications",
   "slug": "virustotal-livehunt-notifications",
-  "description": "VirusTotal Livehunt is a YARA-based real-time scanning service that alerts users when new files matching their rules are submitted to VirusTotal. This connector fetches Livehunt notifications and creates corresponding incidents, file objects, and YARA indicators in OpenCTI.\n\nKey features:\n\u2022 Real-time import of malware samples matching custom YARA rules\n\u2022 Incident/alert creation for each notification\n\u2022 File observable and artifact creation with hash metadata\n\u2022 YARA indicator generation from matching rules\n\u2022 Configurable filters: file extensions, size, age, and minimum AV detections",
+  "description": "VirusTotal Livehunt is a YARA-based real-time scanning service that alerts users when new files matching their rules are submitted to VirusTotal. This connector fetches Livehunt notifications and creates corresponding incidents, file objects, and YARA indicators in OpenCTI.\n\nKey features:\n\n- Real-time import of malware samples matching custom YARA rules\n- Incident/alert creation for each notification\n- File observable and artifact creation with hash metadata\n- YARA indicator generation from matching rules\n- Configurable filters: file extensions, size, age, and minimum AV detections",
   "short_description": "VirusTotal Livehunt connector imports malware samples matching custom YARA rules in real time, creating incidents, file observables, and YARA indicators in OpenCTI.",
   "logo": "external-import/virustotal-livehunt-notifications/__metadata__/logo.png",
   "use_cases": [
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

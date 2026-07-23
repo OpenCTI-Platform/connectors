@@ -1,4 +1,4 @@
-pycti==7.260706.0
+pycti==7.260722.0
 requests>=2.31.0,<=2.33.0
 edgegrid-python>=2.0.0
 pydantic>=2.8.2,<3

@@ -7,6 +7,12 @@
   "use_cases": [
     "Brand, Digital Risk & Underground Exposure"
   ],
+  "solution_categories": [
+    "Digital Risk Protection",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

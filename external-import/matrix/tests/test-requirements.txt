@@ -5,6 +5,6 @@
 # suite can run on CI runners that do not have ``libolm`` installed;
 # the only runtime imports are ``stix2`` and ``pycti``, which we pin
 # to the same versions used by the connector at runtime.
-pycti==7.260706.0
+pycti==7.260722.0
 stix2==3.0.1
 pytest

@@ -197,7 +197,9 @@ When `MISP_ATTRIBUTE_TIMESTAMP_FILTERING` is enabled (`true`), the connector onl
 
 1. The connector tracks the highest attribute `timestamp` seen across all processed events (`last_attribute_timestamp` in the connector state).
 2. On subsequent runs, only attributes with a `timestamp >= last_attribute_timestamp` are kept; older attributes are filtered out before conversion.
-3. If an event has no remaining attributes after filtering (and no recently modified objects), it is skipped entirely.
+3. Objects (MISP composite objects) whose attributes are all filtered out are removed entirely to avoid converter errors.
+4. If **all** attributes in an event are filtered out, the first original attribute is kept as a fallback so the converter can produce a valid report with a real `object_ref`. Since this attribute was already sent to OpenCTI in a previous run, the resulting upsert is a no-op.
+5. Event-level metadata (galaxies, tags, threat level, markings) is **always** re-extracted and sent, even when no attributes passed the filter. This ensures changes to galaxies or tags are propagated to OpenCTI without resending all observables.
 
 **Migration behavior:** If the connector was already running and this option is enabled for the first time (i.e. `last_attribute_timestamp` does not exist in state but `last_event_date` does), the connector uses `last_event_date` as the initial filter threshold to avoid reprocessing all attributes from returned events.
 

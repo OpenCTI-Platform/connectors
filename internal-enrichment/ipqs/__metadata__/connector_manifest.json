@@ -1,14 +1,18 @@
 {
   "title": "IPQS",
   "slug": "ipqs",
-  "description": "IPQualityScore (IPQS) provides enterprise-grade fraud prevention, risk analysis, and threat detection. This connector drives three IPQS API families with a single API key:\n\n\u2022 Fraud-and-risk-scoring endpoints (/ip, /url, /email, /phone) for IPv4-Addr, Email-Addr, Phone-Number, Domain-Name, and Url observables\n\u2022 Darkweb-Leak endpoints (/leaked/email, /leaked/username, /leaked/password) for User-Account observables\n\u2022 Malware-file-scanner endpoints (/malware/scan, /malware/lookup, /postback) for Artifact observables\n\nKey features:\n\u2022 IP address fraud scoring and proxy detection\n\u2022 Email address validation and risk assessment\n\u2022 Phone number verification and fraud detection\n\u2022 URL and domain reputation analysis\n\u2022 Artifact malware scanning with cache-first lookup\n\u2022 Malware and phishing detection\n\u2022 Darkweb-Leak lookup for User-Account observables",
+  "description": "IPQualityScore (IPQS) provides enterprise-grade fraud prevention, risk analysis, and threat detection. This connector drives three IPQS API families with a single API key:\n\n- Fraud-and-risk-scoring endpoints (/ip, /url, /email, /phone) for IPv4-Addr, Email-Addr, Phone-Number, Domain-Name, and Url observables\n- Darkweb-Leak endpoints (/leaked/email, /leaked/username, /leaked/password) for User-Account observables\n- Malware-file-scanner endpoints (/malware/scan, /malware/lookup, /postback) for Artifact observables\n\nKey features:\n\n- IP address fraud scoring and proxy detection\n- Email address validation and risk assessment\n- Phone number verification and fraud detection\n- URL and domain reputation analysis\n- Artifact malware scanning with cache-first lookup\n- Malware and phishing detection\n- Darkweb-Leak lookup for User-Account observables",
   "short_description": "IPQualityScore connector enriches IPs, emails, phones, URLs, domains, user accounts, and file artifacts with fraud scores, risk analysis, darkweb leak data, and malware detection.",
   "logo": "internal-enrichment/ipqs/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
     "Fraud, Financial Crime & Cryptocurrency Monitoring",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

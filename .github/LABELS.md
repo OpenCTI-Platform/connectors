@@ -77,10 +77,13 @@ type, e.g. a `fix:` that closes a vulnerability), not a title type.
 >   `typescript`, …) and the **`dependencies`** label, both applied automatically
 >   by GitHub/Renovate.
 >
-> Every other label — primary **type** labels, **area/scope** labels and
-> **workflow/triage** labels — is **issue-only** and must **never** be added to a
-> pull request; remove any that appear. The PR's `type:` title prefix and its
-> linked issue already convey the type and the affected area.
+ > Every other label — primary **type** labels, **area/scope** labels,
+ > and **workflow/triage** labels — is **issue-only** and must **never** be
+ > added to a pull request.
+ >
+ > Exception: **`do not merge`** and any uncategorized labels (not listed in
+ > `labels.yml`) may be applied manually to a pull request and must not be
+ > removed once applied.
 
 ## 3. Workflow & ownership labels
 

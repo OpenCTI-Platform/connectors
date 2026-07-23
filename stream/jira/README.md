@@ -14,9 +14,6 @@ The Jira connector streams OpenCTI entities to Atlassian Jira, automatically cre
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -46,39 +43,10 @@ Key features:
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter                      | config.yml                | Docker environment variable             | Default        | Mandatory | Description                                                                    |
-|--------------------------------|---------------------------|-----------------------------------------|----------------|-----------|--------------------------------------------------------------------------------|
-| Connector ID                   | id                        | `CONNECTOR_ID`                          |                | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
-| Connector Name                 | name                      | `CONNECTOR_NAME`                        | Atlassian JIRA | No        | Name of the connector.                                                         |
-| Connector Scope                | scope                     | `CONNECTOR_SCOPE`                       | jira           | Yes       | The scope of the connector.                                                    |
-| Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |                | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
-| Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | false          | Yes       | Listen to delete events (not currently implemented).                           |
-| Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| true           | Yes       | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.     |
-
-### Connector extra parameters environment variables
-
-| Parameter                  | config.yml                  | Docker environment variable    | Default | Mandatory | Description                                                |
-|----------------------------|-----------------------------|--------------------------------|---------|-----------|------------------------------------------------------------|
-| Jira URL                   | jira.url                    | `JIRA_URL`                     |         | Yes       | URL to Jira server (e.g., https://yourinstance.atlassian.net). |
-| Jira SSL Verify            | jira.ssl_verify             | `JIRA_SSL_VERIFY`              | true    | No        | Whether to verify SSL certificates.                        |
-| Jira Login Email           | jira.login_email            | `JIRA_LOGIN_EMAIL`             |         | Yes       | Email for Jira account with API access.                    |
-| Jira API Token             | jira.api_token              | `JIRA_API_TOKEN`               |         | Yes       | API token for Jira authentication.                         |
-| Jira Project Key           | jira.project_key            | `JIRA_PROJECT_KEY`             |         | Yes       | Jira project key (not name) for issue creation.            |
-| Jira Issue Type Name       | jira.issue_type_name        | `JIRA_ISSUE_TYPE_NAME`         | Task    | Yes       | Issue type to create (Epic, Task, etc.).                   |
-| Jira Custom Fields Keys    | jira.custom_fields_keys     | `JIRA_CUSTOM_FIELDS_KEYS`      |         | No        | Comma-separated custom field IDs (e.g., customfield_10039).|
-| Jira Custom Fields Values  | jira.custom_fields_values   | `JIRA_CUSTOM_FIELDS_VALUES`    |         | No        | Comma-separated values for custom fields (same order).     |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

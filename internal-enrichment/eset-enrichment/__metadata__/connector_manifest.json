@@ -5,8 +5,14 @@
   "short_description": "Enriches OpenCTI by automatically downloading and attaching detailed ESET threat reports to ESET report objects, giving analysts direct insight into APT groups, eCrime, infostealer activity, and malware intelligence.",
   "logo": "internal-enrichment/eset-enrichment/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": true,

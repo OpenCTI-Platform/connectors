@@ -24,6 +24,21 @@ on:
         required: false
         type: boolean
         default: true
+      dockerfile:
+        description: "Override Dockerfile path (e.g. 'Dockerfile_ubi9'). Defaults to per-connector Dockerfile when empty."
+        required: false
+        type: string
+        default: ""
+      variant:
+        description: "Build variant (e.g. 'ubi9'). Affects cache keys, OCI labels, and auto-generates build-args for shared Dockerfiles."
+        required: false
+        type: string
+        default: ""
+      sdk_ref:
+        description: "Git ref to pin connectors-sdk to. When empty, no pinning is performed (only release-connector sets this)."
+        required: false
+        type: string
+        default: ""
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -56,7 +71,8 @@ jobs:
             .github
             shared
             connectors-sdk
-          sparse-checkout-cone-mode: true
+            ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
+          sparse-checkout-cone-mode: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
@@ -81,13 +97,16 @@ jobs:
         with:
           connector_path: ${{ matrix.path }}
           connector_name: ${{ matrix.name }}
-          fips: ${{ matrix.fips }}
+          fips: ${{ matrix.fips || 'false' }}
           image_tags: ${{ inputs.image_tags }}
           build_mode: ${{ inputs.build_mode }}
           platforms: linux/amd64
           tag_suffix: "-amd64"
           push: ${{ inputs.push }}
           digests_dir: /tmp/digests
+          dockerfile: ${{ inputs.dockerfile }}
+          variant: ${{ inputs.variant }}
+          sdk_ref: ${{ inputs.sdk_ref }}
 
       - name: Upload digest
         if: inputs.push
@@ -97,6 +116,19 @@ jobs:
           path: /tmp/digests/
           if-no-files-found: error
           retention-days: 1
+
+      - name: Upload pinned dependency files
+        # Only when connectors-sdk was pinned (release-connector sets sdk_ref).
+        # Uploaded once from the amd64 job — content is identical across platforms.
+        if: inputs.sdk_ref != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pinned-deps-${{ matrix.name }}
+          path: |
+            ${{ matrix.path }}/**/requirements.txt
+            ${{ matrix.path }}/**/pyproject.toml
+          if-no-files-found: warn
+          retention-days: 90
 
   build-arm64:
     name: "Build ${{ inputs.type_name }}/${{ matrix.name }} (arm64)"
@@ -116,7 +148,8 @@ jobs:
             .github
             shared
             connectors-sdk
-          sparse-checkout-cone-mode: true
+            ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
+          sparse-checkout-cone-mode: false
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
@@ -141,13 +174,16 @@ jobs:
         with:
           connector_path: ${{ matrix.path }}
           connector_name: ${{ matrix.name }}
-          fips: ${{ matrix.fips }}
+          fips: ${{ matrix.fips || 'false' }}
           image_tags: ${{ inputs.image_tags }}
           build_mode: ${{ inputs.build_mode }}
           platforms: linux/arm64
           tag_suffix: "-arm64"
           push: ${{ inputs.push }}
           digests_dir: /tmp/digests
+          dockerfile: ${{ inputs.dockerfile }}
+          variant: ${{ inputs.variant }}
+          sdk_ref: ${{ inputs.sdk_ref }}
 
       - name: Upload digest
         if: inputs.push

@@ -1,14 +1,18 @@
 {
   "title": "Cofense ThreatHQ",
   "slug": "cofense-threathq",
-  "description": "Cofense is a leader in email security, providing phishing detection and response solutions powered by threat intelligence from over 35 million Cofense-trained employees who actively report suspected phishing threats in real-time.\n\nCofense ThreatHQ is a specialized phishing threat detection, analysis, and management platform that provides real-time monitoring of IOCs linked to phishing attacks. This connector retrieves intelligence reports from the ThreatHQ API and converts them into STIX 2.1 objects for import into OpenCTI.\n\nSupported indicator types:\n\u2022 URLs, Domain Names, IPv4 Addresses\n\u2022 Files (with MD5, SHA-1, SHA-256, SHA-512 hashes)\n\u2022 Email Messages (subjects)\n\u2022 Targeted sectors (NAICS codes)\n\u2022 PDF report attachments",
+  "description": "Cofense is a leader in email security, providing phishing detection and response solutions powered by threat intelligence from over 35 million Cofense-trained employees who actively report suspected phishing threats in real-time.\n\nCofense ThreatHQ is a specialized phishing threat detection, analysis, and management platform that provides real-time monitoring of IOCs linked to phishing attacks. This connector retrieves intelligence reports from the ThreatHQ API and converts them into STIX 2.1 objects for import into OpenCTI.\n\nSupported indicator types:\n\n- URLs, Domain Names, IPv4 Addresses\n- Files (with MD5, SHA-1, SHA-256, SHA-512 hashes)\n- Email Messages (subjects)\n- Targeted sectors (NAICS codes)\n- PDF report attachments",
   "short_description": "Cofense ThreatHQ connector imports phishing campaign reports, malware indicators, and associated observables from Cofense's phishing-focused threat intelligence platform.",
   "logo": "external-import/cofense-threathq/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
-    "Email Security",
     "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Email Security",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -16,7 +20,7 @@
   "support_version": ">=6.8.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cofense-threathq",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-cofense-threathq",
   "container_type": "EXTERNAL_IMPORT"

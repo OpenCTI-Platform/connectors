@@ -51,3 +51,7 @@ class _ConfigLoaderSekoia(ConfigBaseSettings):
         default=None,
         description="This will be the score assigned to the indicators. Defaults to null, maximum 100.",
     )
+    send_confidence: bool = Field(
+        default=True,
+        description="Whether to include Sekoia's native STIX confidence property on objects in the bundle sent.",
+    )

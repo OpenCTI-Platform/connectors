@@ -1,13 +1,17 @@
 {
   "title": "Zscaler",
   "slug": "zscaler",
-  "description": "The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filtering and blocking. It integrates OpenCTI threat intelligence into the Zscaler environment by managing domain indicators in Zscaler URL categories, automatically adding or removing domains from a configurable blacklist category.\n\nKey features:\n\u2022 Real-time domain indicator management\n\u2022 Automatic Zscaler configuration activation\n\u2022 Domain validation before submission\n\u2022 Classification lookup before blacklisting\n\u2022 Rate limit handling with automatic retries\n\u2022 Duplicate domain detection",
+  "description": "The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filtering and blocking. It integrates OpenCTI threat intelligence into the Zscaler environment by managing domain indicators in Zscaler URL categories, automatically adding or removing domains from a configurable blacklist category.\n\nKey features:\n\n- Real-time domain indicator management\n- Automatic Zscaler configuration activation\n- Domain validation before submission\n- Classification lookup before blacklisting\n- Rate limit handling with automatic retries\n- Duplicate domain detection",
   "short_description": "The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filtering and blocking.",
   "logo": "stream/zscaler/__metadata__/logo.png",
   "use_cases": [
-    "Network Security",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Network Security"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

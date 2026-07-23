@@ -1,4 +1,4 @@
-pycti==7.260706.0
+pycti==7.260722.0
 pika==1.3.2
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 pydantic>=2.10, <3

@@ -32,7 +32,7 @@ bus).
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260706.0
+- OpenCTI Platform >= 7.260722.0
 - A reachable ClickHouse server with its HTTP interface enabled (default port 8123)
 - A ClickHouse user allowed to create databases/tables and insert rows
 

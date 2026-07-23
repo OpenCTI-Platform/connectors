@@ -10,15 +10,22 @@ import json
 from pathlib import Path
 from typing import Any
 
-CONNECTOR_TYPE_DIRS = [
-    "external-import",
-    "internal-enrichment",
-    "internal-export-file",
-    "internal-import-file",
-    "stream",
-]
+import _matrix_common as common
+
+CONNECTOR_TYPE_DIRS = common.CONNECTOR_TYPE_DIRS
 
 FIELDS_TO_CHECK = ["slug", "container_image"]
+
+
+def normalize_slug(slug: str) -> str:
+    """Normalize a slug the same way the manifest fragment generator does.
+
+    Keep this in sync with
+    `shared/tools/composer/generate_manifest_fragment/generate_manifest_fragment.py`.
+    The fragment id/slug must match `^[a-z0-9]+(?:-[a-z0-9]+)*$`, so underscores
+    become hyphens and the value is lower-cased.
+    """
+    return slug.lower().replace("_", "-")
 
 
 def list_manifest_paths_from_fs() -> list[str]:
@@ -89,6 +96,32 @@ def collect_folder_name_duplicates(connector_dirs: list[Path]) -> dict[str, list
     return duplicates
 
 
+def collect_normalized_slug_duplicates(
+    manifests: list[tuple[str, dict[str, Any]]],
+) -> dict[str, list[str]]:
+    """Detect distinct slugs that collide once normalized for the manifest fragment.
+
+    Exact-duplicate slugs are already reported by `collect_duplicates`; this only
+    flags the *new* class of conflict introduced by normalization, i.e. two or
+    more different raw slugs (e.g. "intel471_v2" and "intel471-v2") collapsing to
+    the same normalized value.
+    """
+    seen: dict[str, list[tuple[str, str]]] = {}
+    for path, data in manifests:
+        raw_value = data.get("slug")
+        if not isinstance(raw_value, str) or not raw_value.strip():
+            continue  # non-empty check already enforced by collect_duplicates
+        raw_value = raw_value.strip()
+        seen.setdefault(normalize_slug(raw_value), []).append((raw_value, path))
+
+    duplicates: dict[str, list[str]] = {}
+    for normalized, entries in seen.items():
+        distinct_raw = {raw for raw, _ in entries}
+        if len(entries) > 1 and len(distinct_raw) > 1:
+            duplicates[normalized] = sorted(path for _, path in entries)
+    return duplicates
+
+
 def main() -> int:
     connector_dirs = list_connector_dirs_from_fs()
     manifests = [
@@ -96,9 +129,12 @@ def main() -> int:
     ]
     duplicates = collect_duplicates(manifests)
     folder_duplicates = collect_folder_name_duplicates(connector_dirs)
+    normalized_slug_duplicates = collect_normalized_slug_duplicates(manifests)
 
-    has_failure = any(duplicates[field] for field in FIELDS_TO_CHECK) or bool(
-        folder_duplicates
+    has_failure = (
+        any(duplicates[field] for field in FIELDS_TO_CHECK)
+        or bool(folder_duplicates)
+        or bool(normalized_slug_duplicates)
     )
     if not has_failure:
         print("No connector identity duplicates detected.")
@@ -116,10 +152,16 @@ def main() -> int:
             for path in paths:
                 print(f"  - {path}")
 
+    for normalized, paths in sorted(normalized_slug_duplicates.items()):
+        print(f"- [normalized_slug] {normalized}")
+        for path in paths:
+            print(f"  - {path}")
+
     print("\nFix by ensuring each connector has unique manifest values for:")
     print("- connector folder basename (used by CI to build Docker image names)")
     print("- slug")
     print("- container_image")
+    print("- normalized slug (used as the manifest fragment id/slug for XTM Hub)")
     return 1
 
 

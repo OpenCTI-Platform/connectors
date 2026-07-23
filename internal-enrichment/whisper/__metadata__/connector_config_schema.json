@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/whisper_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Whisper",
+      "description": "Connector display name.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Domain-Name",
+        "Autonomous-System"
+      ],
+      "description": "Observable types this connector enriches.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "WHISPER_API_URL": {
+      "description": "Base URL of the Whisper graph API, e.g. 'https://graph.whisper.security'. The connector POSTs Cypher to '<api_url>/api/query'.",
+      "examples": [
+        "https://graph.whisper.security"
+      ],
+      "type": "string"
+    },
+    "WHISPER_API_KEY": {
+      "description": "Whisper API key, sent in the X-API-Key header. Never logged.",
+      "examples": [
+        "whisper-0123456789abcdef0123456789abcdef"
+      ],
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "WHISPER_MAX_TLP": {
+      "default": "TLP:AMBER+STRICT",
+      "description": "Maximum TLP marking the connector will enrich. Observables marked above this level are skipped. Set 'TLP:RED' to disable the gate.",
+      "examples": [
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "WHISPER_API_URL",
+    "WHISPER_API_KEY"
+  ],
+  "additionalProperties": true
+}

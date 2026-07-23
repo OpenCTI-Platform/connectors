@@ -1,0 +1,27 @@
+{
+  "title": "CrowdStrike Falcon Recon",
+  "slug": "crowdstrike-recon",
+  "description": "CrowdStrike Falcon Recon provides real-time notifications about external threats targeting your organization, including typosquatting domains, leaked credentials, dark web posts, and exposed files.\n\nThe OpenCTI CrowdStrike Recon connector imports these alerts as Incidents into OpenCTI, with associated observables (domains, emails, URLs, user accounts, malware) and relationships. It supports filtering by topic, notification type, and priority, and includes detailed Markdown reports attached to each Incident.",
+  "short_description": "CrowdStrike Falcon Recon imports exposure monitoring alerts (typosquatting, leaked credentials, dark web posts) as OpenCTI Incidents with associated observables.",
+  "logo": "external-import/crowdstrike-recon/__metadata__/logo.png",
+  "use_cases": [
+    "Brand, Digital Risk & Underground Exposure"
+  ],
+  "solution_categories": [
+    "Digital Risk Protection",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.9.5",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crowdstrike-recon",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-crowdstrike-recon",
+  "container_type": "EXTERNAL_IMPORT"
+}

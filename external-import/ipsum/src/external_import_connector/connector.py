@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
+from .settings import ConnectorSettings
 
 
 class ConnectorIPSUM:
@@ -44,12 +44,12 @@ class ConnectorIPSUM:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = config
+        self.helper = helper
         self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
 
@@ -175,5 +175,5 @@ class ConnectorIPSUM:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )

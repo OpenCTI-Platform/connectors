@@ -9,9 +9,11 @@ description = "Connectors SDK for Octi Connectors."
 requires-python = ">=3.11, <3.13"
 
 dependencies = [
-    "pycti==7.260706.0",
+    "limits>=5.0,<6",
+    "pycti==7.260722.0",
     "pydantic>=2.8.2,<3", # ISO pycti https://github.com/OpenCTI-Platform/client-python/blob/master/requirements.txt#L8
     "pydantic_settings>= 2.9.1,<3", # Actual minimal version used in the connectors
+    "requests>=2.31.0,<3",
 ]
 
 [project.optional-dependencies]
@@ -139,8 +141,8 @@ exclude = [
 plugins = ['pydantic.mypy']
 
 [[tool.mypy.overrides]]
-module = ["pycti.*", "stix2.*"]
-ignore_missing_imports = true  # pycti and stix2 do not provide stubs
+module = ["pycti.*", "stix2.*", "requests.*", "limits.*"]
+ignore_missing_imports = true  # pycti, stix2, requests, and limits do not provide stubs
 
 [tool.sphinx]
 project = "Connectors SDK"

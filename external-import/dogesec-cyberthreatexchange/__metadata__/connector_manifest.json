@@ -5,10 +5,13 @@
   "short_description": "The Cyber Threat Exchange is an online marketplace for cyber threat intelligence that connects organizations with specialist researchers and curated intelligence feeds.",
   "logo": "external-import/dogesec-cyberthreatexchange/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
-    "Open Source Threat Intel",
     "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

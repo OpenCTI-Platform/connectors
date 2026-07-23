@@ -1,4 +1,4 @@
-pycti==7.260706.0
+pycti==7.260722.0
 urllib3==2.7.0
 pyyaml~=6.0.2
 requests~=2.33.0

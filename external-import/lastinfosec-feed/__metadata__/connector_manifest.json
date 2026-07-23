@@ -1,13 +1,17 @@
 {
   "title": "Gatewatcher LastInfosec Feed",
   "slug": "lastinfosec-feed",
-  "description": "OpenCTI LastInfoSec connectors.\nRequirement : if you want to use LastInfoSec's intelligence, you need an API key. You could contact LastInfoSec's team here https://info.gatewatcher.com/en/lp/opencti\nLastInfosec has been acquired by Gatewatcher => https://www.gatewatcher.com/en/our-solutions/lastinfosec/",
-  "short_description": "OpenCTI LastInfoSec connectors.\nRequirement : if you want to use LastInfoSec's intelligence, you need an API key. You could contact LastInfoSec's team here https://info.gatewatcher.com/en/lp/opencti\nLastInfosec has been acquired by Gatewatcher => https://www.gatewatcher.com/en/our-solutions/lastinfosec/",
+  "description": "The Gatewatcher LastInfoSec Feed connector imports threat intelligence IOC feeds from LastInfoSec (acquired by Gatewatcher) into OpenCTI. The feed provides structured IOC data including IPs, domains, and URLs associated with malware campaigns and threat actors. Requires a LastInfoSec API key.",
+  "short_description": "Imports IOC threat intelligence feeds from Gatewatcher LastInfoSec into OpenCTI. Requires an API key from LastInfoSec/Gatewatcher.",
   "logo": "external-import/lastinfosec-feed/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
     "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

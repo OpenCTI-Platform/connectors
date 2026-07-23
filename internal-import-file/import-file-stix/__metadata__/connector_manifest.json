@@ -1,12 +1,17 @@
 {
   "title": "Import File STIX",
   "slug": "import-file-stix",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The Import File STIX connector is an internal import connector that parses STIX (Structured Threat Information Expression) files and imports them into OpenCTI.\n\nIt supports:\n\n- STIX 2.1 JSON: native import of STIX 2.1 bundles\n- STIX 1.2 XML: automatic conversion to STIX 2.1 using the stix2-elevator library\n- Contextual import: import STIX content directly into containers (Reports, Cases, etc.)\n- Validation: optional bundle validation before import\n\nThis connector is essential for ingesting threat intelligence from external sources that provide STIX-formatted data.",
+  "short_description": "The Import File STIX connector parses STIX 2.1 JSON and STIX 1.2 XML files and imports them into OpenCTI, with optional bundle validation and contextual import into containers such as Reports and Cases.",
   "logo": "internal-import-file/import-file-stix/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

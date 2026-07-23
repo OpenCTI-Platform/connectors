@@ -1,13 +1,18 @@
 {
   "title": "ANY.RUN TI Lookup",
   "slug": "anyrun-lookup",
-  "description": "ANY.RUN's Threat Intelligence Lookup (TI Lookup) is a service that allows you to browse IOCs and related threat data to simplify and enrich cyberattack investigations.\n\nThis connector enables OpenCTI users to browse various types of IOCs, from IPs and domains to URLs and hashes, directly within OpenCTI. It returns related threat data to provide actionable insights for incident response, detection rule creation, and playbook updates.\n\nKey benefits:\n\u2022 Early Threat Detection: Correlate IOCs to identify incidents before they escalate\n\u2022 Proactive Defense Enrichment: Collect indicators from attacks on other companies to update detection systems\n\u2022 Reduced MTTR and Increased Detection Rate: Access rich threat context to enable fast, informed decisions",
+  "description": "ANY.RUN's Threat Intelligence Lookup (TI Lookup) is a service that allows you to browse IOCs and related threat data to simplify and enrich cyberattack investigations.\n\nThis connector enables OpenCTI users to browse various types of IOCs, from IPs and domains to URLs and hashes, directly within OpenCTI. It returns related threat data to provide actionable insights for incident response, detection rule creation, and playbook updates.\n\nKey benefits:\n\n- Early Threat Detection: Correlate IOCs to identify incidents before they escalate\n- Proactive Defense Enrichment: Collect indicators from attacks on other companies to update detection systems\n- Reduced MTTR and Increased Detection Rate: Access rich threat context to enable fast, informed decisions",
   "short_description": "ANY.RUN TI Lookup connector enriches IPs, domains, URLs, and hashes with related threat data, providing actionable context for incident response and proactive defense.",
   "logo": "internal-enrichment/anyrun-lookup/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Detection & Response Enablement"
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

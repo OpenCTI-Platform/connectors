@@ -1,16 +1,23 @@
 {
   "title": "CheckFirst",
   "slug": "checkfirst-import-connector",
-  "description": "CheckFirst is a platform tracking Foreign Information Manipulation and Interference (FIMI) campaigns. This connector ingests CheckFirst articles from the CheckFirst API into OpenCTI as STIX 2.1 bundles, tracking influence operations such as the Portal-Kombat / Pravda Network Russian information campaign.\n\nKey features:\n\u2022 Initial infrastructure bundle with known Pravda network domains, subdomains, and hosting IPs\n\u2022 Per-article ingestion mapped to STIX 2.1 objects (Intrusion Sets, Campaigns, Infrastructure, Channels, Media Content)\n\u2022 Deterministic STIX IDs ensuring no duplicates on reruns\n\u2022 Page-based progress tracking for resumable imports",
+  "description": "CheckFirst is a platform tracking Foreign Information Manipulation and Interference (FIMI) campaigns. This connector ingests CheckFirst articles from the CheckFirst API into OpenCTI as STIX 2.1 bundles, tracking influence operations such as the Portal-Kombat / Pravda Network Russian information campaign.\n\nKey features:\n\n- Initial infrastructure bundle with known Pravda network domains, subdomains, and hosting IPs\n- Per-article ingestion mapped to STIX 2.1 objects (Intrusion Sets, Campaigns, Infrastructure, Channels, Media Content)\n- Deterministic STIX IDs ensuring no duplicates on reruns\n- Page-based progress tracking for resumable imports",
   "short_description": "CheckFirst connector imports FIMI and disinformation campaign articles into OpenCTI, mapping influence operation infrastructure, channels, and media content as STIX 2.1 objects.",
   "logo": "external-import/checkfirst-import-connector/__metadata__/logo.png",
-  "use_cases": ["Foreign Information, Manipulation & Interference (FIMI) and Disinformation"],
+  "use_cases": [
+    "FIMI & Disinformation"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2026-03-20",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 6.3.0",
-  "subscription_link": "",
+  "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/checkfirst-import-connector",
   "manager_supported": true,
   "container_version": "rolling",

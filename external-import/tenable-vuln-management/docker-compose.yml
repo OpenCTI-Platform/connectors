@@ -23,14 +23,14 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - TIO_NUM_THREADS=2
-      - TIO_API_BASE_URL=ChangeMe
-      - TIO_API_ACCESS_KEY=ChangeMe
-      - TIO_API_SECRET_KEY=ChangeMe
-      - TIO_API_TIMEOUT=30
-      - TIO_API_BACKOFF=1
-      - TIO_API_RETRIES=5
-      - TIO_EXPORT_SINCE=ChangeMe # ISO8601 format in String
-      - TIO_MIN_SEVERITY=low # minimal severity level to export from Tenable.io, should be in (info, low, medium, high, critical)
-      - "TIO_MARKING_DEFINITION=TLP:CLEAR" # default TLP marking to apply to exported objects
+      - TENABLE_VULN_MANAGEMENT_NUM_THREADS=2
+      - TENABLE_VULN_MANAGEMENT_API_BASE_URL=ChangeMe
+      - TENABLE_VULN_MANAGEMENT_API_ACCESS_KEY=ChangeMe
+      - TENABLE_VULN_MANAGEMENT_API_SECRET_KEY=ChangeMe
+      - TENABLE_VULN_MANAGEMENT_API_TIMEOUT=30
+      - TENABLE_VULN_MANAGEMENT_API_BACKOFF=1
+      - TENABLE_VULN_MANAGEMENT_API_RETRIES=5
+      - TENABLE_VULN_MANAGEMENT_EXPORT_SINCE=ChangeMe # ISO8601 format in String
+      - TENABLE_VULN_MANAGEMENT_MIN_SEVERITY=low # minimal severity level to export from Tenable.io, should be in (info, low, medium, high, critical)
+      - "TENABLE_VULN_MANAGEMENT_MARKING_DEFINITION=TLP:CLEAR" # default TLP marking to apply to exported objects
     restart: always

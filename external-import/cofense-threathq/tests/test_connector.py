@@ -3,8 +3,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import stix2
 from pycti import OpenCTIApiClient, OpenCTIApiConnector, OpenCTIConnectorHelper
-from src.connector import CofenseThreatHQ
-from src.connector.services.config_loader import CofenseThreatHQConfig
+from src.connector import CofenseThreatHQ, ConnectorSettings
 
 
 @patch.dict(
@@ -45,12 +44,10 @@ from src.connector.services.config_loader import CofenseThreatHQConfig
     },
 )
 def test_should_promote_observables_to_indicators(_, __):
-    config = CofenseThreatHQConfig()
-    config_instance = config.load
-    config_dict = config_instance.model_dump(exclude_none=True)
-    helper = OpenCTIConnectorHelper(config=config_dict)
+    settings = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
     helper.api.bundle_send_to_queue = False
-    connector = CofenseThreatHQ(config_instance, helper)
+    connector = CofenseThreatHQ(config=settings, helper=helper)
 
     connector.helper.api.work.initiate_work = lambda x, y: {"id": "work_id_123"}
     connector.client.get_reports = AsyncMock(

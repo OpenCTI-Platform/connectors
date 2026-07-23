@@ -1,0 +1,21 @@
+services:
+  connector-ioc-extractor:
+    image: opencti/connector-ioc-extractor:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=IOC Extractor # optional (default: 'IOC Extractor')
+      - CONNECTOR_SCOPE=Report
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_AUTO=false # optional (default: false)
+      # Custom parameters for connector-ioc-extractor
+      - IOC_EXTRACTOR_EXTRACT_HASHES=true # optional (default: true)
+      - IOC_EXTRACTOR_EXTRACT_IPV4=true # optional (default: true)
+      - IOC_EXTRACTOR_EXTRACT_IPV6=true # optional (default: true)
+      - IOC_EXTRACTOR_EXTRACT_DOMAINS=true # optional (default: true)
+      - IOC_EXTRACTOR_EXTRACT_URLS=true # optional (default: true)
+      - IOC_EXTRACTOR_SKIP_PRIVATE_IPS=true # optional (default: true)
+    restart: always

@@ -19,7 +19,7 @@ class ConverterToStix:
         self.author = self.create_author()
         self.external_reference = self.create_external_reference()
         self.tlp_marking = ConverterToStix._create_tlp_marking(
-            level=self.config.tlp_level.lower()
+            level=self.config.connector_ipsum.tlp_level.lower()
         )
 
     @staticmethod
@@ -143,7 +143,7 @@ class ConverterToStix:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
-                    "x_opencti_score": self.config.x_opencti_score,
+                    "x_opencti_score": self.config.connector_ipsum.default_x_opencti_score,
                 },
             )
             return stix_ipv6_address
@@ -154,7 +154,7 @@ class ConverterToStix:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
-                    "x_opencti_score": self.config.x_opencti_score,
+                    "x_opencti_score": self.config.connector_ipsum.default_x_opencti_score,
                 },
             )
             return stix_ipv4_address
@@ -165,7 +165,7 @@ class ConverterToStix:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_external_references": self.external_reference,
-                    "x_opencti_score": self.config.x_opencti_score,
+                    "x_opencti_score": self.config.connector_ipsum.default_x_opencti_score,
                 },
             )
             return stix_domain_name
