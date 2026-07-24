@@ -1,7 +1,7 @@
-from connector.connector import DdosiaConnector
+from connector.connector import WithanameConnector
 from connector.settings import ConnectorSettings
 
 __all__ = [
     "ConnectorSettings",
-    "DdosiaConnector",
+    "WithanameConnector",
 ]

@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.utils import group_targets_by_host
-from withaname_client.api_client import WithanameClient
 from pycti import OpenCTIConnectorHelper
+from withaname_client.api_client import WithanameClient
 
 
 class WithanameConnector:
