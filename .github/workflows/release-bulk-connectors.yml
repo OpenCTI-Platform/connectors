@@ -49,9 +49,9 @@ on:
       # contain '/', unlike per-connector tags `{name}/{version}` matched by
       # release-connector.yml's own '*/*' filter (glob '*' does not match
       # '/', so the two patterns can never collide).
-      # NOTE: bulk_release.py currently only validates the plain
-      # MAJOR.YYMMDD.PATCH format; an `-lts.N`-suffixed platform tag would
-      # match this trigger but fail version validation in the resolve step.
+      # LTS platform tags (e.g. 7.260706.0-lts.1) also match this pattern and
+      # are supported: bulk_release.py validates both MAJOR.YYMMDD.PATCH and the
+      # `-lts.N` variant, so an LTS tag produces LTS per-connector releases.
       - '*.*.*'
   workflow_dispatch:
     inputs:
