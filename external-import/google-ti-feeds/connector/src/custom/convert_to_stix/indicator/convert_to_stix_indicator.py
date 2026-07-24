@@ -74,6 +74,41 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         return attrs.gti_assessment.threat_score.value < min_score
 
+    def _lacks_required_association(self, entry: IOCDeltaEntry) -> bool:
+        """Check whether an IOC entry lacks the required malware/threat actor associations.
+
+        The filter is disabled when both indicator_require_malware_family and
+        indicator_require_threat_actor are False (default). When one or both are
+        enabled, the indicator must have at least one matching association (OR
+        logic between the two). This filter is combined with the score filter
+        using AND logic.
+        """
+        require_malware = self.config.indicator_require_malware_family
+        require_threat_actor = self.config.indicator_require_threat_actor
+
+        if not require_malware and not require_threat_actor:
+            return False
+
+        rels = entry.relationships
+
+        has_malware = (
+            rels is not None
+            and rels.malware_families is not None
+            and len(rels.malware_families.data) > 0
+        )
+        has_threat_actor = (
+            rels is not None
+            and rels.threat_actors is not None
+            and len(rels.threat_actors.data) > 0
+        )
+
+        if require_malware and not require_threat_actor:
+            return not has_malware
+        if require_threat_actor and not require_malware:
+            return not has_threat_actor
+        # Both required: OR logic — at least one must be present
+        return not (has_malware or has_threat_actor)
+
     def convert(self, ioc_data: dict[str, Any]) -> list[Any]:
         """Convert a single IOC delta entry to STIX objects."""
         try:
@@ -93,6 +128,17 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
                     "type": entry.type,
                     "id": entry.id,
                     "min_score": self.config.indicator_min_score,
+                },
+            )
+            return []
+
+        if self._lacks_required_association(entry):
+            self.logger.debug(
+                "IOC entry lacks required malware/threat actor association, skipping",
+                {
+                    "prefix": LOG_PREFIX,
+                    "type": entry.type,
+                    "id": entry.id,
                 },
             )
             return []
