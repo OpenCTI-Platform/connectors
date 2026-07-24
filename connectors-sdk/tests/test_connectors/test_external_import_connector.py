@@ -1,5 +1,6 @@
 # pragma: no cover
 # type: ignore
+from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -10,6 +11,7 @@ from connectors_sdk.connectors.external_import.base_data_processor import (
 from connectors_sdk.connectors.external_import.external_import_connector import (
     ExternalImportConnector,
 )
+from connectors_sdk.logging.logger import Logger
 
 PATCH_HELPER = "connectors_sdk.connectors.external_import.external_import_connector.OpenCTIConnectorHelper"
 
@@ -56,7 +58,20 @@ def _make_state_mock() -> MagicMock:
     return state
 
 
+def _make_logger_mock() -> MagicMock:
+    logger = MagicMock()
+    logger.error.return_value = None
+    return logger
+
+
 class TestExternalImportConnector:
+    def test_init_subclass(self):
+        class MyConnector(ExternalImportConnector):
+            pass
+
+        assert isinstance(MyConnector.logger, Logger)
+        assert MyConnector.logger._logger.name.endswith(".MyConnector")
+
     def test_init(self, mock_settings: MagicMock):
         proc = DummyProcessor()
         connector = ExternalImportConnector(
@@ -130,7 +145,7 @@ class TestExternalImportConnector:
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
         state = _make_state_mock()
-        state.last_run = "2025-01-01T00:00:00+00:00"
+        state.last_run = datetime(2025, 1, 1, tzinfo=timezone.utc)
 
         proc = DummyProcessor()
         connector = ExternalImportConnector(
@@ -153,10 +168,12 @@ class TestExternalImportConnector:
         connector = ExternalImportConnector(
             settings=mock_settings, data_processors=[proc], state=state
         )
+        connector.logger = _make_logger_mock()
+
         connector._init_dependencies()
         connector.callback()
 
-        helper.connector_logger.error.assert_called()
+        connector.logger.error.assert_called()
 
     @patch(PATCH_HELPER)
     def test_callback_keyboard_interrupt(
