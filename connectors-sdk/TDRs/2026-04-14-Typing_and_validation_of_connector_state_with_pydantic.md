@@ -101,7 +101,7 @@ state.attach_opencti_connector_helper(helper) # establish the connection with Op
 state.load()
 
 if state.last_run:
-    self.helper.connector_logger.info("Last run:", {"last_run": state.last_run})
+    logger.info("Last run:", {"last_run": state.last_run})
 
 state.last_run = datetime.now(tz=timezone.utc)
 state.save()
@@ -203,3 +203,8 @@ The `states` module has no dependency on other SDK modules (`settings`, `models`
 - Related TDR: [Typing and validation of configurations with Pydantic Settings](https://github.com/OpenCTI-Platform/connectors/blob/master/connectors-sdk/TDRs/2025-10-01-Typing_and_validation_of_configurations_with_Pydantic_Settings.md)
 - [Pydantic BaseModel documentation](https://docs.pydantic.dev/latest/concepts/models/)
 - [Pydantic serialization (JSON mode)](https://docs.pydantic.dev/latest/concepts/serialization/#json-mode)
+
+
+## Update (2026-05-28)
+
+Update logging in code examples. No technical changes.
