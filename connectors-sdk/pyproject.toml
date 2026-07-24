@@ -13,6 +13,7 @@ dependencies = [
     "pycti==7.260722.0",
     "pydantic>=2.8.2,<3", # ISO pycti https://github.com/OpenCTI-Platform/client-python/blob/master/requirements.txt#L8
     "pydantic_settings>= 2.9.1,<3", # Actual minimal version used in the connectors
+    "python-dotenv>=1.2.2,<2",
     "requests>=2.31.0,<3",
 ]
 

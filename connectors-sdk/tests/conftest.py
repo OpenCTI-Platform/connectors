@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -17,6 +18,17 @@ from connectors_sdk.models import (
     TLPMarking,
     Reference,
 )
+
+
+@pytest.fixture
+def mock_main_path(monkeypatch):
+    """Mock the path of `__main__.__file__` for `_SettingsLoader._get_connector_main_path` and
+    `BaseLogger._get_connector_main_path` calls.
+    """
+
+    monkeypatch.setitem(
+        sys.modules, "__main__", SimpleNamespace(__file__="/app/src/main.py")
+    )
 
 
 @pytest.fixture

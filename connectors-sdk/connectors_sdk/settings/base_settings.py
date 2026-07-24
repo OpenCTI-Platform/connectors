@@ -6,11 +6,24 @@ to manage and validate configuration parameters using Pydantic.
 These models can be extended to create specific configurations for different types of connectors.
 """
 
+from __future__ import annotations
+
 from abc import ABC
 from datetime import timedelta
 from types import UnionType
-from typing import Any, ClassVar, Literal, Self, Union, get_args, get_origin
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    Self,
+    Union,
+    get_args,
+    get_origin,
+)
 
+from connectors_sdk.logging.logger import Logger
+from connectors_sdk.logging.sdk_logger import sdk_logger
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import (
@@ -36,6 +49,9 @@ from pydantic import (
     model_validator,
 )
 from pydantic.fields import FieldInfo
+
+if TYPE_CHECKING:
+    from connectors_sdk.logging._base_logger import BaseLogger
 
 
 class BaseConfigModel(BaseModel, ABC):
@@ -154,6 +170,84 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         return handler(value)  # type: ignore[no-any-return] # actually return `list[str]`
 
 
+class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
+    """Settings class for external import connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "EXTERNAL_IMPORT" for external import connectors.
+        duration_period (timedelta): The period of time to await between two runs of the connector.
+    """
+
+    type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector."
+    )
+
+
+class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
+    """Settings class for internal enrichment connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
+        auto (bool): Whether the connector should run automatically when an entity is created or updated.
+    """
+
+    type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
+    auto: bool = Field(
+        default=False,
+        description="Whether the connector should run automatically when an entity is created or updated.",
+    )
+
+
+class BaseStreamConnectorConfig(_BaseConnectorConfig):
+    """Settings class for stream connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "STREAM" for stream connectors
+        live_stream_id (str): The ID of the live stream to connect to.
+        live_stream_listen_delete (bool): Whether to listen for delete events on the live stream.
+        live_stream_no_dependencies (bool): Whether to ignore dependencies when processing events from the live stream.
+    """
+
+    type: Literal["STREAM"] = "STREAM"
+    live_stream_id: str = Field(
+        description="The ID of the live stream to connect to.",
+    )
+    live_stream_listen_delete: bool = Field(
+        default=True,
+        description="Whether to listen for delete events on the live stream.",
+    )
+    live_stream_no_dependencies: bool = Field(
+        default=True,
+        description="Whether to ignore dependencies when processing events from the live stream.",
+    )
+
+
+class BaseInternalExportFileConnectorConfig(_BaseConnectorConfig):
+    """Settings class for internal export file connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "INTERNAL_EXPORT_FILE" for internal export file connectors.
+    """
+
+    type: Literal["INTERNAL_EXPORT_FILE"] = "INTERNAL_EXPORT_FILE"
+
+
+class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
+    """Settings class for internal import file connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "INTERNAL_IMPORT_FILE" for internal import file connectors.
+        auto (bool): Whether the connector should run automatically when an entity is created or updated.
+    """
+
+    type: Literal["INTERNAL_IMPORT_FILE"] = "INTERNAL_IMPORT_FILE"
+    auto: bool = Field(
+        default=False,
+        description="Whether the connector should run automatically when an entity is created or updated.",
+    )
+
+
 class BaseConnectorSettings(BaseConfigModel, ABC):
     """Interface class for managing and loading the global configuration for connectors.
 
@@ -196,12 +290,26 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         description="Connector configurations.",
     )
 
+    logger: ClassVar[BaseLogger] = sdk_logger.get_child("BaseConnectorSettings")
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger child named after the concrete `BaseConnectorSettings` subclass."""
+        super().__init_subclass__(**kwargs)
+        package_name = cls.__module__.split(".")[0]
+        cls.logger = Logger(f"{package_name}.{cls.__name__}")
+
     def __init__(self) -> None:
         """Initialize the configuration model and handle validation errors."""
         try:
             super().__init__()
         except ValidationError as e:
             raise ConfigValidationError("Error validating configuration.") from e
+
+        self.logger.debug(
+            f"{self.__class__.__name__} instantiated successfully",
+            {"settings": self.model_dump(mode="json")},
+        )
 
     @classmethod
     def config_json_schema(
@@ -393,6 +501,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
 
         # Get config/env vars as dict to send for validation
         config_dict: dict[str, Any] = settings_loader().model_dump()
+
         return handler(config_dict)
 
     def to_helper_config(self) -> dict[str, Any]:
@@ -400,82 +509,8 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         return self.model_dump(
             mode="json",
             context={"mode": "pycti"},
+            # # Deprecated fields can be set to `None` despite their type (due to `Deprecate` annotation).
+            # # To avoid `PydanticSerializationError`, we exclude all fields set to `None` during serialization.
+            # # OpenCTIConnectorHelper handles missing fields with default values or internal logic.
+            # exclude_none=True,
         )
-
-
-class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
-    """Settings class for external import connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "EXTERNAL_IMPORT" for external import connectors.
-        duration_period (timedelta): The period of time to await between two runs of the connector.
-    """
-
-    type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
-    duration_period: timedelta = Field(
-        description="The period of time to await between two runs of the connector."
-    )
-
-
-class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
-    """Settings class for internal enrichment connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
-        auto (bool): Whether the connector should run automatically when an entity is created or updated.
-    """
-
-    type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
-    auto: bool = Field(
-        default=False,
-        description="Whether the connector should run automatically when an entity is created or updated.",
-    )
-
-
-class BaseStreamConnectorConfig(_BaseConnectorConfig):
-    """Settings class for stream connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "STREAM" for stream connectors
-        live_stream_id (str): The ID of the live stream to connect to.
-        live_stream_listen_delete (bool): Whether to listen for delete events on the live stream.
-        live_stream_no_dependencies (bool): Whether to ignore dependencies when processing events from the live stream.
-    """
-
-    type: Literal["STREAM"] = "STREAM"
-    live_stream_id: str = Field(
-        description="The ID of the live stream to connect to.",
-    )
-    live_stream_listen_delete: bool = Field(
-        default=True,
-        description="Whether to listen for delete events on the live stream.",
-    )
-    live_stream_no_dependencies: bool = Field(
-        default=True,
-        description="Whether to ignore dependencies when processing events from the live stream.",
-    )
-
-
-class BaseInternalExportFileConnectorConfig(_BaseConnectorConfig):
-    """Settings class for internal export file connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "INTERNAL_EXPORT_FILE" for internal export file connectors.
-    """
-
-    type: Literal["INTERNAL_EXPORT_FILE"] = "INTERNAL_EXPORT_FILE"
-
-
-class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
-    """Settings class for internal import file connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "INTERNAL_IMPORT_FILE" for internal import file connectors.
-        auto (bool): Whether the connector should run automatically when an entity is created or updated.
-    """
-
-    type: Literal["INTERNAL_IMPORT_FILE"] = "INTERNAL_IMPORT_FILE"
-    auto: bool = Field(
-        default=False,
-        description="Whether the connector should run automatically when an entity is created or updated.",
-    )
