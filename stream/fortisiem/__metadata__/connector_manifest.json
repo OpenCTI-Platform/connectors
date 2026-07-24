@@ -5,9 +5,13 @@
   "short_description": "Push IOCs from OpenCTI to a FortiSIEM Watch List in real time.",
   "logo": "stream/fortisiem/__metadata__/logo.png",
   "use_cases": [
-    "Detection & Response Enablement",
-    "SIEM and Analytics"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

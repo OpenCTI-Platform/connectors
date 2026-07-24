@@ -1,7 +1,9 @@
 #all the dependencies
-pycti==7.260710.0
+pycti==7.260722.0
 requests~=2.33.0
 python-dotenv==1.2.2
 pyyaml==6.0.3
 validators==0.35.0
 tenacity==9.1.2
+pydantic >=2.8.2, <3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

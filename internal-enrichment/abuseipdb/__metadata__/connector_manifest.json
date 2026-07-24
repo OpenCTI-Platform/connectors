@@ -5,8 +5,14 @@
   "short_description": "AbuseIPDB collects and shares data on malicious IP addresses to help identify and block abusive activities. Integration with OpenCTI imports this data for real-time threat context, enhancing IP blocking and monitoring efforts.",
   "logo": "internal-enrichment/abuseipdb/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Detection & Response Enablement",
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,

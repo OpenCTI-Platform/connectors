@@ -1,12 +1,17 @@
 {
   "title": "Abuse SSL (Deprecated)",
   "slug": "abuse-ssl",
-  "description": "The connector uses the an Abuse-ssl csv file that lists botnet ips detected based on certain ssl signatures\nAn SSL certificate can be associated with one or more servers (IP address:port combination). SSLBL collects IP addresses that are running with an SSL certificate blacklisted on SSLBL. These are usually botnet Command&Control servers (C&C). SSLBL hence publishes a blacklist containing these IPs which can be used to detect botnet C2 traffic from infected machines towards the internet, leaving your network. The CSV format is useful if you want to process the blacklisted IP addresses further, e.g. loading them into your SIEM or CTI (or both, don't be shy).",
-  "short_description": "The connector uses the an Abuse-ssl csv file that lists botnet ips detected based on certain ssl signatures\nAn SSL certificate can be associated with one or more servers (IP address:port combination). SSLBL collects IP addresses that are running with an SSL certificate blacklisted on SSLBL. These are usually botnet Command&Control servers (C&C). SSLBL hence publishes a blacklist containing these IPs which can be used to detect botnet C2 traffic from infected machines towards the internet, leaving your network. The CSV format is useful if you want to process the blacklisted IP addresses further, e.g. loading them into your SIEM or CTI (or both, don't be shy).",
+  "description": "The Abuse.ch SSLBL (SSL Blacklist) identifies and lists IP addresses associated with botnet Command & Control (C&C) servers based on SSL certificate fingerprints. SSLBL collects IP addresses running with blacklisted SSL certificates and publishes a CSV blacklist that can be used to detect botnet C2 traffic leaving your network.\n\n\u26a0\ufe0f This connector is deprecated \u2014 the source CSV feed has not been updated since 2025-01-03 and will no longer be maintained.",
+  "short_description": "Imports botnet C&C server IP addresses detected via SSL certificate fingerprints from the Abuse.ch SSLBL blacklist into OpenCTI as STIX 2.1 indicators. \u26a0\ufe0f Deprecated \u2014 source feed no longer updated since January 2025.",
   "logo": "external-import/abuse-ssl/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

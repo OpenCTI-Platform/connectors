@@ -7,10 +7,12 @@ from datetime import timedelta
 
 from connector.src.custom.configs.gti_config_common import (
     ALLOWED_ORIGINS,
+    ALLOWED_REPORT_SUBENTITIES,
     ALLOWED_REPORT_TYPES,
     GTIBaseConfig,
     validate_origins_list,
     validate_report_types_list,
+    validate_subentities_list,
 )
 from connectors_sdk import ListFromString
 from pydantic import Field, field_validator
@@ -54,6 +56,25 @@ class GTIReportConfig(GTIBaseConfig):
         examples=["name:phishing"],
     )
 
+    report_subentities: ListFromString = Field(
+        default=[
+            "malware_families",
+            "threat_actors",
+            "attack_techniques",
+            "vulnerabilities",
+            "campaigns",
+            "domains",
+            "files",
+            "urls",
+            "ip_addresses",
+            "software_toolkits",
+        ],
+        description="Comma-separated list of sub-entity types to fetch and link for each report. "
+        "An empty list disables sub-entity fetching entirely for reports, which can help reduce API quota usage. "
+        f"Allowed values: {', '.join(ALLOWED_REPORT_SUBENTITIES)}",
+        examples=["malware_families,threat_actors", ""],
+    )
+
     @field_validator("report_types", mode="after")
     @classmethod
     def validate_report_types(cls, v: list[str]) -> list[str]:
@@ -65,3 +86,11 @@ class GTIReportConfig(GTIBaseConfig):
     def validate_report_origins(cls, v: list[str]) -> list[str]:
         """Validate report origins against allowed values."""
         return validate_origins_list(v, "report origin", ALLOWED_ORIGINS)
+
+    @field_validator("report_subentities", mode="after")
+    @classmethod
+    def validate_report_subentities(cls, v: list[str]) -> list[str]:
+        """Validate report sub-entities against allowed values."""
+        return validate_subentities_list(
+            v, "report subentity", ALLOWED_REPORT_SUBENTITIES
+        )

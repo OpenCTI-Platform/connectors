@@ -5,9 +5,13 @@
   "short_description": "The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filtering and blocking.",
   "logo": "stream/zscaler/__metadata__/logo.png",
   "use_cases": [
-    "Network Security",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Network Security"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -15,7 +19,7 @@
   "support_version": ">=6.4.0",
   "subscription_link": "https://www.zscaler.com",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/zscaler",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-zscaler",
   "container_type": "STREAM"

@@ -5,8 +5,13 @@
   "short_description": "Stream OpenCTI STIX indicators to a Datadog HTTP endpoint.",
   "logo": "stream/datadog-intel/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -1,5 +1,22 @@
 name: "Release Connector"
 
+# Dynamic run name shown in the Actions run list, so it's obvious at a glance
+# which connector/version each run is for instead of a generic "Release
+# Connector #NNN". Context availability for `run-name` is limited to
+# `github`, `inputs`, `vars` (no job outputs), so on tag push we just reuse
+# the tag itself (already "{connector}/{version}"); on workflow_dispatch we
+# build the label from the raw inputs.
+run-name: >-
+  ${{
+    github.event_name == 'push'
+      && format('🚀 {0}', github.ref_name)
+      || format('🚀 {0}{1}{2}{3}',
+           inputs.connector_name,
+           inputs.version != '' && format('@{0}', inputs.version) || '',
+           inputs.dry_run && ' · dry-run' || '',
+           inputs.manifest_only && ' · manifest-only' || '')
+  }}
+
 # Production release pipeline for individual connectors.
 #
 # Triggers:
@@ -12,7 +29,15 @@ name: "Release Connector"
 #   2. Resolve connector directory (scan type dirs)
 #   3. Generate scoped release notes (git-cliff)
 #   4. Build & push Docker image (DockerHub + GHCR)
-#   5. Create GitHub Release with changelog + manifest asset
+#   5. Create GitHub Release with changelog + manifest/schema/fragment assets
+#   6. Update container_version in manifest and commit back to default branch
+#
+# Transition mode — `manifest_only` (workflow_dispatch only, never on tag push):
+# skips step 4 (Docker build/push) only — everything else (release notes, tag,
+# GitHub Release, manifest fragment, container_version commit-back) still runs
+# normally. Used while image builds are still handled by CircleCI (see
+# release-bulk-connectors.yml, which forces this mode when triggered by a
+# platform CalVer tag push).
 
 on:
   push:
@@ -41,9 +66,28 @@ on:
         required: false
         type: boolean
         default: false
+      manifest_only:
+        description: >
+          Manifest-only — skip Docker build/push only (still handled by
+          CircleCI during the transition). Release notes, tag, GitHub
+          Release, manifest fragment, and container_version commit-back are
+          still fully produced.
+        required: false
+        type: boolean
+        default: false
+      sdk_ref:
+        description: >
+          Optional git ref to pin connectors-sdk to in the built image.
+          If omitted, defaults to the release commit SHA (github.sha).
+        required: false
+        type: string
+        default: ""
 
 concurrency:
-  group: release-connector-${{ github.ref_name }}
+  # Per-connector group so bulk releases (which dispatch one run per connector,
+  # all on the same branch ref) run in parallel rather than serialize. On tag
+  # push there are no inputs, so github.ref_name (the tag) is already unique.
+  group: release-connector-${{ inputs.connector_name || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -54,7 +98,7 @@ jobs:
   # 1. Resolve connector directory and build configuration
   # ──────────────────────────────────────────────────────────
   resolve:
-    name: Resolve connector
+    name: Resolve connector ${{ inputs.connector_name}}
     runs-on: ubuntu-latest
     outputs:
       connector_name: ${{ steps.parse.outputs.connector_name }}
@@ -67,6 +111,7 @@ jobs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
       is_tag_push: ${{ steps.parse.outputs.is_tag_push }}
       dry_run: ${{ steps.parse.outputs.dry_run }}
+      manifest_only: ${{ steps.parse.outputs.manifest_only }}
       tag: ${{ steps.version.outputs.tag }}
       matrix_json: ${{ steps.matrix.outputs.matrix_json }}
     steps:
@@ -87,12 +132,14 @@ jobs:
             echo "connector_name=$CONNECTOR_NAME" >> "$GITHUB_OUTPUT"
             echo "is_tag_push=true" >> "$GITHUB_OUTPUT"
             echo "dry_run=false" >> "$GITHUB_OUTPUT"
+            echo "manifest_only=false" >> "$GITHUB_OUTPUT"
             echo "🏷️ Tag push: $TAG → connector=$CONNECTOR_NAME version=$VERSION"
           else
             # workflow_dispatch: use inputs directly
             echo "connector_name=${{ inputs.connector_name }}" >> "$GITHUB_OUTPUT"
             echo "is_tag_push=false" >> "$GITHUB_OUTPUT"
             echo "dry_run=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"
+            echo "manifest_only=${{ inputs.manifest_only }}" >> "$GITHUB_OUTPUT"
             echo "📋 Manual dispatch: connector=${{ inputs.connector_name }}"
           fi
 
@@ -163,8 +210,8 @@ jobs:
             VERSION="${{ github.ref_name }}"
             VERSION="${VERSION##*/}"
 
-            if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
-              echo "::error::Invalid version '${VERSION}' from tag '${{ github.ref_name }}'. Expected numeric version (e.g. 7.260630.0)"
+            if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]{6}\.[0-9]+$'; then
+              echo "::error::Invalid CalVer version '${VERSION}' from tag '${{ github.ref_name }}'. Expected format: MAJOR.YYMMDD.PATCH (e.g. 7.260630.0)"
               exit 1
             fi
 
@@ -343,6 +390,7 @@ jobs:
   # ──────────────────────────────────────────────────────────
   build:
     needs: resolve
+    if: needs.resolve.outputs.manifest_only != 'true'
     uses: ./.github/workflows/build-connector-type.yml
     permissions:
       contents: read
@@ -353,16 +401,33 @@ jobs:
       image_tags: ${{ needs.resolve.outputs.image_tag }}
       build_mode: release
       push: ${{ needs.resolve.outputs.dry_run != 'true' }}
+      # Resolve the SDK pin ref: user-provided input, else the release commit SHA.
+      # This is always non-empty so the shared build action performs the pin only
+      # for release-connector (build-all-connectors leaves it empty → no pin).
+      sdk_ref: ${{ inputs.sdk_ref != '' && inputs.sdk_ref || github.sha }}
     secrets: inherit
 
   # ──────────────────────────────────────────────────────────
-  # 4. Create GitHub Release
+  # 4. Create GitHub Release + update manifest version
   # ──────────────────────────────────────────────────────────
+  # `build` is skipped (not failed) when manifest_only is true. Per GitHub's
+  # docs on `jobs.<job_id>.needs`: "If a job fails or is skipped, all jobs
+  # that need it are skipped unless the jobs use a conditional expression
+  # that causes the job to continue" — a plain custom `if:` does NOT bypass
+  # this cascade, only `always()` does. So we must use `always()` here and
+  # explicitly re-check resolve/release-notes succeeded and build didn't
+  # fail/get cancelled (skipped is fine).
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [resolve, release-notes, build]
-    if: needs.resolve.outputs.dry_run != 'true'
+    if: |
+      always() &&
+      needs.resolve.result == 'success' &&
+      needs.release-notes.result == 'success' &&
+      needs.build.result != 'failure' &&
+      needs.build.result != 'cancelled' &&
+      needs.resolve.outputs.dry_run != 'true'
     permissions:
       contents: write
     steps:
@@ -393,10 +458,70 @@ jobs:
           git tag "$TAG"
           git push origin "$TAG"
 
+      - name: Patch manifest container_version
+        id: patch-manifest
+        run: |
+          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
+          VERSION="${{ needs.resolve.outputs.version }}"
+          MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "patched=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Manifest not found: $MANIFEST — skipping version patch"
+            exit 0
+          fi
+
+          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$RUNNER_TEMP/manifest.json" \
+            && mv "$RUNNER_TEMP/manifest.json" "$MANIFEST"
+
+          echo "patched=true" >> "$GITHUB_OUTPUT"
+          echo "✅ Patched container_version → $VERSION in $MANIFEST"
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Generate manifest fragment
+        id: fragment
+        # Non-blocking: the release must succeed even if the fragment can't be built
+        continue-on-error: true
+        run: |
+          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
+          CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
+          VERSION="${{ needs.resolve.outputs.version }}"
+          MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::warning::Manifest not found for ${CONNECTOR_DIR} — skipping fragment generation"
+            exit 0
+          fi
+
+          pip install --quiet -r shared/tools/composer/generate_manifest_fragment/requirements.txt
+
+          FRAGMENT_PATH="${RUNNER_TEMP}/${CONNECTOR_NAME}_manifest_fragment.json"
+          python shared/tools/composer/generate_manifest_fragment/generate_manifest_fragment.py \
+            --connector-dir "$CONNECTOR_DIR" \
+            --version "$VERSION" \
+            --output "$FRAGMENT_PATH"
+
+          echo "fragment_path=$FRAGMENT_PATH" >> "$GITHUB_OUTPUT"
+          echo "✅ Generated manifest fragment: $FRAGMENT_PATH"
+
+      - name: Download pinned dependency files
+        # Produced by the build job when connectors-sdk was pinned. Non-blocking:
+        # a missing artifact must not prevent the release from being created.
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: pinned-deps-${{ needs.resolve.outputs.connector_name }}
+          path: ${{ runner.temp }}/pinned-deps
+
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHANGELOG: ${{ needs.release-notes.outputs.changelog }}
+          MANIFEST_ONLY: ${{ needs.resolve.outputs.manifest_only }}
         run: |
           CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
           CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
@@ -406,31 +531,137 @@ jobs:
 
           echo "📋 Creating release: $TITLE"
 
+          NOTES="$CHANGELOG"
+          if [ "$MANIFEST_ONLY" = "true" ]; then
+            NOTICE="> 🧩 **Manifest-only release** — Docker build/push is still handled by CircleCI during the CircleCI→GitHub Actions transition; no image was built by this workflow run for this tag."
+            NOTES="${NOTICE}"$'\n\n'"${NOTES}"
+          fi
+
           gh release create "$TAG" \
             --title "$TITLE" \
-            --notes "$CHANGELOG" \
+            --notes "$NOTES" \
             --target "${{ github.sha }}"
 
-          # Attach connector manifest as release asset
+          # Attach connector manifest, config schema, and manifest fragment as release assets
           MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
+          CONFIG_SCHEMA="${CONNECTOR_DIR}/__metadata__/connector_config_schema.json"
+          FRAGMENT="${{ steps.fragment.outputs.fragment_path }}"
+
           if [ -f "$MANIFEST" ]; then
             gh release upload "$TAG" "$MANIFEST" --clobber
+            echo "📎 Attached manifest: $MANIFEST"
+          fi
+
+          if [ -f "$CONFIG_SCHEMA" ]; then
+            gh release upload "$TAG" "$CONFIG_SCHEMA" --clobber
+            echo "📎 Attached config schema: $CONFIG_SCHEMA"
+          fi
+
+          if [ -n "$FRAGMENT" ] && [ -f "$FRAGMENT" ]; then
+            gh release upload "$TAG" "$FRAGMENT" --clobber
+            echo "📎 Attached manifest fragment: $FRAGMENT"
+          else
+            echo "ℹ️ No manifest fragment to attach"
+          fi
+
+          # Attach the pinned dependency files (connectors-sdk pinned to the release ref)
+          # to help reproduce the image manually. Paths are flattened into the asset name
+          # (e.g. src/requirements.txt → mitre-src-requirements.txt) to avoid collisions.
+          PINNED_DIR="${{ runner.temp }}/pinned-deps"
+          if [ -d "$PINNED_DIR" ]; then
+            while IFS= read -r file; do
+              rel="${file#"$PINNED_DIR"/}"
+              asset="${CONNECTOR_NAME}-$(echo "$rel" | tr '/' '-')"
+              if [ -f "$file" ]; then
+                cp "$file" "${RUNNER_TEMP}/${asset}"
+                gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
+                echo "📎 Attached pinned dependency file: $asset"
+              fi
+            done < <(find "$PINNED_DIR" -type f \( -name requirements.txt -o -name pyproject.toml \))
+          else
+            echo "ℹ️ No pinned dependency files to attach"
           fi
 
           echo "✅ Release created: $TITLE"
 
   # ──────────────────────────────────────────────────────────
-  # 5. Summary
+  # 5. Commit manifest version back to default branch
+  # ──────────────────────────────────────────────────────────
+  update-manifest:
+    name: Update manifest version
+    runs-on: ubuntu-latest
+    needs: [resolve, release]
+    if: |
+      always() &&
+      needs.resolve.outputs.dry_run != 'true'
+    # Non-blocking: a failure here must not prevent the release from succeeding
+    continue-on-error: true
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Patch and commit container_version
+        run: |
+          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
+          CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
+          VERSION="${{ needs.resolve.outputs.version }}"
+          MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "⚠️ Manifest not found: $MANIFEST — skipping"
+            exit 0
+          fi
+
+          # Patch container_version
+          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$RUNNER_TEMP/manifest.json" \
+            && mv "$RUNNER_TEMP/manifest.json" "$MANIFEST"
+
+          # Validate the patched JSON
+          jq empty "$MANIFEST"
+
+          # Commit
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$MANIFEST"
+
+          if git diff --cached --quiet; then
+            echo "ℹ️ container_version already set to $VERSION — nothing to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(manifest): update ${CONNECTOR_NAME} container_version to ${VERSION} [skip ci]"
+
+          # Push with retry on non-fast-forward (concurrent releases for other connectors)
+          MAX_RETRIES=3
+          for attempt in $(seq 1 "$MAX_RETRIES"); do
+            if git push; then
+              echo "✅ Manifest update pushed (attempt $attempt)"
+              exit 0
+            fi
+            echo "⚠️ Push rejected (attempt $attempt/$MAX_RETRIES) — rebasing"
+            git pull --rebase origin "${{ github.event.repository.default_branch }}"
+          done
+
+          echo "::warning::Failed to push manifest update after $MAX_RETRIES attempts"
+          exit 1
+
+  # ──────────────────────────────────────────────────────────
+  # 6. Summary
   # ──────────────────────────────────────────────────────────
   summary:
     name: Release summary
     runs-on: ubuntu-latest
-    needs: [resolve, release-notes, build, release]
+    needs: [resolve, release-notes, build, release, update-manifest]
     if: always()
     steps:
       - name: Print summary
         run: |
           DRY_RUN="${{ needs.resolve.outputs.dry_run }}"
+          MANIFEST_ONLY="${{ needs.resolve.outputs.manifest_only }}"
           CONNECTOR="${{ needs.resolve.outputs.connector_name }}"
           VERSION="${{ needs.resolve.outputs.version }}"
           DIR="${{ needs.resolve.outputs.connector_dir }}"
@@ -442,7 +673,10 @@ jobs:
           {
             echo "## 🚀 Release Connector — Summary"
             echo ""
-            if [ "$DRY_RUN" = "true" ]; then
+            if [ "$MANIFEST_ONLY" = "true" ]; then
+              echo "> 🧩 **MANIFEST-ONLY** — Docker build/push was skipped (still handled by CircleCI during the transition); tag, GitHub Release, manifest fragment, and container_version commit-back were still produced normally."
+              echo ""
+            elif [ "$DRY_RUN" = "true" ]; then
               echo "> ⚠️ **DRY RUN** — no images were pushed and no release was created."
               echo ""
             fi
@@ -456,6 +690,7 @@ jobs:
             echo "| FIPS | ${FIPS} |"
             echo "| Trigger | $([ \"$IS_TAG_PUSH\" = \"true\" ] && echo \"tag push\" || echo \"manual dispatch\") |"
             echo "| Dry Run | ${DRY_RUN} |"
+            echo "| Manifest Only | ${MANIFEST_ONLY} |"
             echo ""
 
             echo "### Job Results"
@@ -466,4 +701,5 @@ jobs:
             echo "| Release Notes | ${{ needs.release-notes.result }} |"
             echo "| Build | ${{ needs.build.result }} |"
             echo "| Release | ${{ needs.release.result }} |"
+            echo "| Update Manifest | ${{ needs.update-manifest.result }} |"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -31,6 +31,7 @@ def make_fake_get_client_response() -> ClientResponse:
         traces=[],
         loop=Mock(),
         session=Mock(),
+        stream_writer=Mock(),
     )
 
 

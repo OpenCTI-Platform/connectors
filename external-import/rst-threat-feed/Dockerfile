@@ -10,7 +10,5 @@ RUN apk --no-cache add git build-base libmagic && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-threatfeed
+CMD ["python3", "main.py"]

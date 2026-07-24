@@ -4,19 +4,14 @@
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
-      "description": "The OpenCTI platform URL.",
+      "description": "The base URL of the OpenCTI instance.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
     "OPENCTI_TOKEN": {
-      "description": "The token of the user who represents the connector in the OpenCTI platform.",
-      "type": "string"
-    },
-    "CONNECTOR_TYPE": {
-      "default": "EXTERNAL_IMPORT",
-      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "description": "The API token to connect to OpenCTI.",
       "type": "string"
     },
     "CONNECTOR_NAME": {
@@ -25,23 +20,34 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "ServiceNow",
+      "default": [
+        "ServiceNow"
+      ],
       "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
-      "description": "Determines the verbosity of the logs.",
+      "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
         "info",
         "warn",
+        "warning",
         "error"
       ],
       "type": "string"
     },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT24H",
+      "default": "P1D",
       "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
       "format": "duration",
       "type": "string"
@@ -122,22 +128,9 @@
       "type": "string"
     },
     "SERVICENOW_IMPORT_START_DATE": {
-      "anyOf": [
-        {
-          "format": "date",
-          "type": "string"
-        },
-        {
-          "format": "date-time",
-          "type": "string"
-        },
-        {
-          "format": "duration",
-          "type": "string"
-        }
-      ],
-      "default": "P30D",
-      "description": "Start date of first import (ISO date format)."
+      "description": "Start date of first import (ISO date format) - Default to 30 days ago.",
+      "format": "date-time",
+      "type": "string"
     },
     "SERVICENOW_STATE_TO_EXCLUDE": {
       "default": null,
@@ -197,6 +190,11 @@
     "SERVICENOW_PROMOTE_OBSERVABLES_AS_INDICATORS": {
       "default": true,
       "description": "Boolean to promote observables into indicators.",
+      "type": "boolean"
+    },
+    "SERVICENOW_SYSPARM_DISPLAY_VALUE": {
+      "default": true,
+      "description": "Boolean controlling the ``sysparm_display_value`` query parameter sent to ServiceNow on every Table API call. Defaults to ``true`` (backwards-compatible \u2014 ServiceNow returns human-readable display strings). Set to ``false`` on instances that return non-ISO 8601 datetimes when ``sysparm_display_value=true`` is in effect, which the connector cannot parse.",
       "type": "boolean"
     }
   },

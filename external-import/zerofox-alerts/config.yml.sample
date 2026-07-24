@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+#connector:
+  #id: '6dc34623-7346-476b-b105-e7b5c2e8f9c8'
+  #name: 'ZeroFox Alerts'
+  #scope: 'zerofox-alerts'
+  #log_level: 'error'
+  #duration_period: 'PT15M'
+
+zerofox_alerts:
+  #api_base_url: 'https://api.zerofox.com'
+  api_token: 'ChangeMe'
+  #marking: 'amber'
+  #import_start_date: 'P30D'
+  #alert_statuses: 'open,escalated,investigation_completed'
+  #page_size: 100

@@ -3,7 +3,6 @@ from typing import Any
 import validators
 from pycti import OpenCTIConnectorHelper
 from shodan_internetdb.client import ShodanInternetDbClient
-from shodan_internetdb.config import ConfigConnector
 from shodan_internetdb.converter_to_stix import ConverterToStix
 from shodan_internetdb.exceptions import (
     ShodanInternetDbApiError,
@@ -13,6 +12,7 @@ from shodan_internetdb.exceptions import (
     ShodanInternetDbInvalidTlpLevelError,
     ShodanInternetDbNotFoundError,
 )
+from shodan_internetdb.settings import ConnectorSettings
 
 __all__ = [
     "ShodanInternetDBConnector",
@@ -22,15 +22,17 @@ __all__ = [
 class ShodanInternetDBConnector:
     """Shodan InternetDB connector"""
 
-    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigConnector) -> None:
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
+    ) -> None:
         """Constructor"""
         self.config = config
         self.helper = helper
-        self._client = ShodanInternetDbClient(verify=self.config.shodan_ssl_verify)
+        self._client = ShodanInternetDbClient(verify=self.config.shodan.ssl_verify)
         self.converter = ConverterToStix(self.helper)
 
     def extract_and_check_markings(self, observable: dict[str, Any]) -> None:
-        max_tlp_name = self.config.shodan_max_tlp
+        max_tlp_name = self.config.shodan.max_tlp
         for marking_definition in observable.get("objectMarking", []):
             if marking_definition["definition_type"] == "TLP" and not (
                 OpenCTIConnectorHelper.check_max_tlp(

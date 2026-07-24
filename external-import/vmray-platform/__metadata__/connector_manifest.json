@@ -1,12 +1,18 @@
 {
   "title": "VMRay Platform",
   "slug": "vmray-platform",
-  "description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time analysis. \n\nThis connector enables the ingestion and correlation of VMRay analysis data including IOCs, VTIs, and MITRE ATT&CK techniques for faster detection and response.",
-  "short_description": "VMRay provides advanced threat analysis and detection by integrating its unique agentless hypervisor-based sandbox with a real-time analysis.",
+  "description": "VMRay provides advanced threat analysis and detection using an agentless hypervisor-based sandbox with real-time analysis capabilities. This connector ingests and correlates VMRay analysis data into OpenCTI, including IOCs, VMRay Threat Identifiers (VTIs), and MITRE ATT&CK techniques extracted from sandbox analysis results, enabling faster detection and response workflows.",
+  "short_description": "Imports VMRay sandbox analysis results into OpenCTI, including IOCs, VTIs, and MITRE ATT&CK techniques for threat correlation and response.",
   "logo": "external-import/vmray-platform/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -1,12 +1,17 @@
 {
-  "title": "RiskIQ Passive Total",
+  "title": "RiskIQ Passive Total (Deprecated)",
   "slug": "riskiq-passive-total",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "This connector is deprecated. RiskIQ was acquired by Microsoft and the PassiveTotal service has been integrated into Microsoft Defender Threat Intelligence.\n\nRiskIQ PassiveTotal was a threat intelligence platform providing passive DNS data, WHOIS history, SSL certificate tracking, and infrastructure pivot capabilities. It allowed security teams to map attacker infrastructure by tracing connections between domains, IP addresses, and certificates over time.\n\nThis connector enriched IPv4 and Domain observables in OpenCTI by querying the PassiveTotal API, retrieving DNS resolution history and creating relationships between domains and their resolved IP addresses.",
+  "short_description": "[DEPRECATED] Enriches domain and IP observables in OpenCTI with RiskIQ PassiveTotal passive DNS history and infrastructure pivot data. RiskIQ has been acquired by Microsoft.",
   "logo": "internal-enrichment/riskiq-passive-total/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,

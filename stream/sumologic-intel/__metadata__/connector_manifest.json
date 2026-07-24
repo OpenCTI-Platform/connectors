@@ -5,9 +5,13 @@
   "short_description": "Sumo Logic SIEM is a cloud-native security information and event management system for modern enterprises. It manages security data by automating data ingestion, analysis, and visualization processes.",
   "logo": "stream/sumologic-intel/__metadata__/logo.png",
   "use_cases": [
-    "SIEM and Analytics",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
