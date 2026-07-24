@@ -1,4 +1,5 @@
-from typing import Annotated, Literal, Optional
+from datetime import timedelta
+from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
@@ -33,9 +34,9 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     id: str
     name: str
     scope: ListFromString
-    duration_period: Optional[str] = Field(
-        default="PT24H",
-        description="ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
+    duration_period: timedelta = Field(
+        default=timedelta(hours=24),
+        description="The period of time to await between two runs of the connector (in ISO 8601 format, e.g., 'PT24H' for 24 hours).",
     )
 
     type: Literal["EXTERNAL_IMPORT"] = Field(
