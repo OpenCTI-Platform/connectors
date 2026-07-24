@@ -158,7 +158,8 @@ jobs:
                 echo "Manifest changed. Committing changes..."
                 git add .
                 # Add custom flag to avoid triggering workflows
-                git commit -m "chore(manifest): build and update manifest [ci build-manifest]"
+                # https://circleci.com/docs/guides/orchestrate/skip-build/
+                git commit -m "chore(manifest): build and update manifest [skip ci]"
                 # Push quietly to prevent showing the token in log
                 if git push -q https://${GITHUB_TOKEN}@github.com/OpenCTI-Platform/connectors.git ${CIRCLE_BRANCH}; then
                   echo "Manifest changes pushed successfully."

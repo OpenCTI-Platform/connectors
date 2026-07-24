@@ -33,9 +33,9 @@
   "properties": {
     "id": {
       "type": "string",
-      "description": "Unique identifier for the connector, derived from the slug.",
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-      "examples": ["misp", "export-file-csv", "crowdstrike"]
+      "description": "Unique identifier for the connector, derived from the slug and version.",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*-[0-9]+\\.[0-9]{1,6}\\.?[0-9]*$",
+      "examples": ["misp-7.260601.0", "export-file-csv-7.260601.0", "crowdstrike-7.260601.0"]
     },
     "title": {
       "type": "string",

@@ -53,6 +53,14 @@ jobs:
       contents: read
     secrets: inherit
 
+  build-manifest:
+    needs: [resolve-build-mode, lint, tests]
+    uses: ./.github/workflows/build-manifest.yml
+    permissions:
+      contents: write
+      actions: read
+    secrets: inherit
+
   build-alpine:
     needs: [resolve-build-mode, lint, tests]
     uses: ./.github/workflows/build-alpine.yml
