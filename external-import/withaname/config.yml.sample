@@ -4,7 +4,7 @@ opencti:
 
 connector:
   id: YOUR_CONNECTOR_ID
-  name: DDoSIA Connector
+  name: WithaName Connector
   scope: withaname
   log_level: info
   duration_period: 1h
