@@ -58,7 +58,7 @@ class DomainToolsFeedsConnector:
             if (not k in ['session_id', 'domain', 'top']): continue
             
             if (v):
-                if (v == 'session_id'):
+                if (k == 'session_id'):
                     self.params['sessionID'] = v
                 else:
                     self.params[k] = v

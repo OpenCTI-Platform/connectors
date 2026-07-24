@@ -154,7 +154,7 @@ Set `CONNECTOR_LOG_LEVEL=debug` for verbose logging. Log output includes:
 
 ## Additional information
 
-- This connector strictly follows OpenCTI's standard STIX schema.
-- Custom properties like `x_opencti_brand`, `x_opencti_source` are preserved.
-- When queue_state is actioned/taken_down, Observables are converted to STIX 2.1 Indicators.
-- Supports safe reprocessing with unique `indicator_id` generation to avoid duplication.
+- Each Iris Investigate result becomes a STIX 2.1 Domain-Name observable, carrying the DomainTools risk score and per-component risk labels (proximity, malware, phishing, spam).
+- Related infrastructure is expanded into its own observables and linked with STIX relationships: resolving IP addresses (`resolves-to`), mail and name servers (`resolves-to`, with their IPs `related-to`), and registrant, SOA, SSL, and additional WHOIS email addresses (`related-to`).
+- When `DOMAINTOOLS_STORE_IRIS_DATA` is enabled, the raw Iris record for each domain is attached as a STIX Note.
+- Every object is attributed to a DomainTools author identity and tagged with the configured TLP marking.

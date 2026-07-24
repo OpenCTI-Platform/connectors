@@ -156,7 +156,6 @@ Set `CONNECTOR_LOG_LEVEL=debug` for verbose logging. Log output includes:
 
 ## Additional information
 
-- This connector strictly follows OpenCTI's standard STIX schema.
-- Custom properties like `x_opencti_brand`, `x_opencti_source` are preserved.
-- When queue_state is actioned/taken_down, Observables are converted to STIX 2.1 Indicators.
-- Supports safe reprocessing with unique `indicator_id` generation to avoid duplication.
+- For the risk feeds (`domainhotlist`, `domainrisk`), each entry becomes a STIX 2.1 Indicator with a domain-name pattern, a confidence derived from the overall risk score, and per-category risk labels (phishing, malware, spam, proximity).
+- For the observation feeds (`nod`, `nad`, `noh`, `domaindiscovery`), each entry becomes a STIX 2.1 Domain-Name observable labeled with its feed type.
+- Every object is attributed to a DomainTools author identity and tagged with the configured TLP marking.
