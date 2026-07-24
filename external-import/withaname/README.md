@@ -16,7 +16,7 @@ The DDoSIA connector automatically retrieves snapshots of DDoS targets. For each
 
 1. Build the Docker image:
    ```shell
-   docker build . -t opencti/connector-ddosia:latest
+   docker build . -t opencti/connector-withaname:latest
    ```
 
 2. Use the provided `docker-compose.yml` and configure the environment variables.

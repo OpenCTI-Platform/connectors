@@ -1,15 +1,15 @@
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from connector.connector import DdosiaConnector
+from connector.connector import WithanameConnector
 
 
-class TestDdosiaConnectorOrchestration:
+class TestWithanameConnectorOrchestration:
     @pytest.fixture
     def mock_helper(self):
         helper = MagicMock()
         helper.connect_name = "DDoSIA Connector"
-        helper.connect_id = "ddosia-id"
+        helper.connect_id = "withaname-id"
         helper.api = MagicMock()
         helper.connector_logger = MagicMock()
         return helper
@@ -17,19 +17,19 @@ class TestDdosiaConnectorOrchestration:
     @pytest.fixture
     def mock_config(self):
         config = MagicMock()
-        config.ddosia.api_base_url = "http://api.witha.name"
-        config.ddosia.tlp_level = "green"
-        config.ddosia.import_start_timestamp = None
-        config.ddosia.create_notes = True
+        config.withaname.api_base_url = "http://api.witha.name"
+        config.withaname.tlp_level = "green"
+        config.withaname.import_start_timestamp = None
+        config.withaname.create_notes = True
         config.connector.duration_period.total_seconds.return_value = 3600
         return config
 
     @pytest.fixture
     def connector(self, mock_config, mock_helper):
-        with patch("connector.connector.DdosiaClient"), patch(
+        with patch("connector.connector.WithanameClient"), patch(
             "connector.connector.ConverterToStix"
         ):
-            conn = DdosiaConnector(mock_config, mock_helper)
+            conn = WithanameConnector(mock_config, mock_helper)
             conn.client = MagicMock()
             conn.converter_to_stix = MagicMock()
             return conn
@@ -38,7 +38,7 @@ class TestDdosiaConnectorOrchestration:
 
     def test_process_message_pagination_full(self, connector, mock_helper):
         """Test that pagination continues until an empty page is reached."""
-        connector.config.ddosia.import_start_timestamp = 0
+        connector.config.withaname.import_start_timestamp = 0
         # Page 1: data, Page 2: data, Page 3: empty
         connector.client.get_configs.side_effect = [
             {"items": [{"id": "c1", "ts": "100"}]},
@@ -65,7 +65,7 @@ class TestDdosiaConnectorOrchestration:
 
     def test_process_message_pagination_optimization_start_ts(self, connector):
         """Test that pagination stops when last item is older than start_ts."""
-        connector.config.ddosia.import_start_timestamp = 500
+        connector.config.withaname.import_start_timestamp = 500
         # Page 1: last item is 400 (<<  500)
         connector.client.get_configs.return_value = {
             "items": [{"id": "c1", "ts": "600"}, {"id": "c2", "ts": "400"}]
@@ -79,7 +79,7 @@ class TestDdosiaConnectorOrchestration:
 
     def test_process_message_pagination_none_start_ts(self, connector):
         """Test that pagination stops after page 1 when start_ts is None."""
-        connector.config.ddosia.import_start_timestamp = None
+        connector.config.withaname.import_start_timestamp = None
         connector.client.get_configs.return_value = {
             "items": [{"id": "c1", "ts": "100"}]
         }
@@ -134,7 +134,7 @@ class TestDdosiaConnectorOrchestration:
 
     def test_process_snapshot_no_notes(self, connector):
         """Test that notes are not created when disabled in config."""
-        connector.config.ddosia.create_notes = False
+        connector.config.withaname.create_notes = False
         config_item = {"id": "cfg_1", "ts": "100"}
         connector.client.get_config.return_value = {
             "targets": [{"host": "h1", "ip": "1.1.1.1"}]

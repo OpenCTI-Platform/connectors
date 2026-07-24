@@ -5,7 +5,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
 
-class DdosiaClient:
+class WithanameClient:
     """
     API client for querying the DDoSIA targets and configurations from witha.name.
     """

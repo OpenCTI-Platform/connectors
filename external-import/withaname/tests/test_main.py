@@ -2,7 +2,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from connector import ConnectorSettings, DdosiaConnector
+from connector import ConnectorSettings, WithanameConnector
 from pycti import OpenCTIConnectorHelper
 
 
@@ -41,7 +41,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "ddosia": {
+                "withaname": {
                     "api_base_url": "http://test.com",
                     "tlp_level": "clear",
                 },
@@ -92,7 +92,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-    connector = DdosiaConnector(config=settings, helper=helper)
+    connector = WithanameConnector(config=settings, helper=helper)
 
     assert connector.config == settings
     assert connector.helper == helper

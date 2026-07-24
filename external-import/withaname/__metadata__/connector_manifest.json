@@ -1,6 +1,6 @@
 {
   "title": "Witha.name Connector",
-  "slug": "witha.name",
+  "slug": "withaname",
   "description": "Connector to import DDoS targets from the DDoSIA campaign sourced from witha.name into OpenCTI.",
   "short_description": "Import DDoSIA targets from witha.name",
   "logo": null,
@@ -11,9 +11,9 @@
   "max_confidence_level": 100,
   "support_version": ">=6.8.12",
   "subscription_link": null,
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ddosia",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/withaname",
   "manager_supported": false,
   "container_version": "rolling",
-  "container_image": "opencti/connector-ddosia",
+  "container_image": "opencti/connector-withaname",
   "container_type": "EXTERNAL_IMPORT"
 }

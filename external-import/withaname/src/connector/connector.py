@@ -6,11 +6,11 @@ from typing import Any, Dict, List, Optional
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.utils import group_targets_by_host
-from ddosia_client.api_client import DdosiaClient
+from withaname_client.api_client import WithanameClient
 from pycti import OpenCTIConnectorHelper
 
 
-class DdosiaConnector:
+class WithanameConnector:
     """
     Connector for importing DDoSIA targets from witha.name into OpenCTI.
     """
@@ -26,14 +26,14 @@ class DdosiaConnector:
         self.config = config
         self.helper = helper
 
-        self.client = DdosiaClient(
+        self.client = WithanameClient(
             helper=self.helper,
-            base_url=self.config.ddosia.api_base_url,
+            base_url=self.config.withaname.api_base_url,
         )
 
         self.converter_to_stix = ConverterToStix(
             helper=self.helper,
-            tlp_level=self.config.ddosia.tlp_level,
+            tlp_level=self.config.withaname.tlp_level,
         )
 
     def _select_configs_to_process(
@@ -70,7 +70,7 @@ class DdosiaConnector:
             return [item for item in sorted_configs if item["_ts_float"] > last_ts]
 
         # First run logic
-        start_ts = self.config.ddosia.import_start_timestamp
+        start_ts = self.config.withaname.import_start_timestamp
 
         if start_ts is None:
             # Default: only the most recent snapshot
@@ -139,7 +139,7 @@ class DdosiaConnector:
                 stix_objects.append(json.loads(rel_obj.to_stix2_object().serialize()))
 
             # Create Note with raw targets (if enabled in config)
-            if self.config.ddosia.create_notes:
+            if self.config.withaname.create_notes:
                 note_obj = self.converter_to_stix.create_note_for_host(
                     domain=domain_obj,
                     cfg_id=cfg_id,
@@ -167,7 +167,7 @@ class DdosiaConnector:
             # 2. Fetch available configurations with pagination
             all_configs = []
             page = 1
-            start_ts = self.config.ddosia.import_start_timestamp
+            start_ts = self.config.withaname.import_start_timestamp
 
             while True:
                 self.helper.connector_logger.info(

@@ -5,11 +5,11 @@ opencti:
 connector:
   id: YOUR_CONNECTOR_ID
   name: DDoSIA Connector
-  scope: ddosia
+  scope: withaname
   log_level: info
   duration_period: 1h
 
-ddosia:
+withaname:
   api_base_url: https://witha.name
   tlp_level: green
   import_start_timestamp: null # 0 for all history, null for latest only

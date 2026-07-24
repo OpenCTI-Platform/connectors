@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from connector.connector import DdosiaConnector
+from connector.connector import WithanameConnector
 
 
 class TestSelectConfigsToProcess:
@@ -12,21 +12,21 @@ class TestSelectConfigsToProcess:
     @pytest.fixture
     def mock_config(self):
         # We use a simple MagicMock without 'spec' to allow dynamic attribute assignment
-        # or we can create a mock that specifically has the 'ddosia' attribute.
+        # or we can create a mock that specifically has the 'withaname' attribute.
         config = MagicMock()
-        config.ddosia = MagicMock()
-        config.ddosia.api_base_url = "http://api.witha.name"
-        config.ddosia.tlp_level = "green"
-        config.ddosia.import_start_timestamp = None
+        config.withaname = MagicMock()
+        config.withaname.api_base_url = "http://api.witha.name"
+        config.withaname.tlp_level = "green"
+        config.withaname.import_start_timestamp = None
         return config
 
     @pytest.fixture
     def connector(self, mock_config, mock_helper):
-        # We need to mock DdosiaClient and ConverterToStix to avoid instantiation errors
+        # We need to mock WithanameClient and ConverterToStix to avoid instantiation errors
         with pytest.MonkeyPatch.context() as m:
-            m.setattr("connector.connector.DdosiaClient", MagicMock)
+            m.setattr("connector.connector.WithanameClient", MagicMock)
             m.setattr("connector.connector.ConverterToStix", MagicMock)
-            return DdosiaConnector(mock_config, mock_helper)
+            return WithanameConnector(mock_config, mock_helper)
 
     @pytest.fixture
     def sample_configs(self):
@@ -38,7 +38,7 @@ class TestSelectConfigsToProcess:
 
     def test_select_configs_first_run_no_timestamp(self, connector, sample_configs):
         """Default behavior: only the most recent snapshot if no state and no start_ts."""
-        connector.config.ddosia.import_start_timestamp = None
+        connector.config.withaname.import_start_timestamp = None
         state = None
 
         result = connector._select_configs_to_process(sample_configs, state)
@@ -48,7 +48,7 @@ class TestSelectConfigsToProcess:
 
     def test_select_configs_first_run_all_history(self, connector, sample_configs):
         """If import_start_timestamp is 0, import all available history."""
-        connector.config.ddosia.import_start_timestamp = 0
+        connector.config.withaname.import_start_timestamp = 0
         state = None
 
         result = connector._select_configs_to_process(sample_configs, state)
@@ -60,7 +60,7 @@ class TestSelectConfigsToProcess:
 
     def test_select_configs_first_run_with_timestamp(self, connector, sample_configs):
         """If import_start_timestamp > 0, import from that timestamp onwards."""
-        connector.config.ddosia.import_start_timestamp = 150.0
+        connector.config.withaname.import_start_timestamp = 150.0
         state = None
 
         result = connector._select_configs_to_process(sample_configs, state)
@@ -93,7 +93,7 @@ class TestSelectConfigsToProcess:
             {"id": "cfg_bad", "ts": "invalid"},  # Should be treated as 0.0
         ]
         state = None
-        connector.config.ddosia.import_start_timestamp = 0
+        connector.config.withaname.import_start_timestamp = 0
 
         result = connector._select_configs_to_process(configs, state)
 

@@ -1,10 +1,10 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from ddosia_client.api_client import DdosiaClient
+from withaname_client.api_client import WithanameClient
 
 
-class TestDdosiaClient:
+class TestWithanameClient:
     @pytest.fixture
     def mock_helper(self):
         # We use a simple MagicMock without 'spec' to allow dynamic attribute assignment
@@ -16,7 +16,7 @@ class TestDdosiaClient:
     @pytest.fixture
     def client(self, mock_helper):
         # Using a dummy URL for the client
-        return DdosiaClient(helper=mock_helper, base_url="http://api.witha.name")
+        return WithanameClient(helper=mock_helper, base_url="http://api.witha.name")
 
     def test_get_configs_pagination(self, client, mock_helper):
         """Test that get_configs correctly passes the page parameter."""

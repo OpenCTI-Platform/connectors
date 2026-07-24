@@ -25,9 +25,9 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
-class DdosiaConfig(BaseConfigModel):
+class WithanameConfig(BaseConfigModel):
     """
-    Define parameters and/or defaults for the configuration specific to the `DdosiaConnector`.
+    Define parameters and/or defaults for the configuration specific to the `WithanameConnector`.
     """
 
     api_base_url: HttpUrl = Field(description="API base URL.")
@@ -54,10 +54,10 @@ class DdosiaConfig(BaseConfigModel):
 
 class ConnectorSettings(BaseConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `DdosiaConfig`.
+    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `WithanameConfig`.
     """
 
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
     )
-    ddosia: DdosiaConfig = Field(default_factory=DdosiaConfig)
+    withaname: WithanameConfig = Field(default_factory=WithanameConfig)

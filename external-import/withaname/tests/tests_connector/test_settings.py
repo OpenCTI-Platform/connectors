@@ -21,7 +21,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "ddosia": {
+                "withaname": {
                     "api_base_url": "http://test.com",
                     "tlp_level": "clear",
                 },
@@ -38,7 +38,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "id": "connector-id",
                     "scope": "test, connector",
                 },
-                "ddosia": {
+                "withaname": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                 },
@@ -69,7 +69,7 @@ def test_settings_should_accept_valid_input(settings_dict):
 
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.ddosia, BaseConfigModel) is True
+    assert isinstance(settings.withaname, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
@@ -93,7 +93,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "ddosia": {
+                "withaname": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "tlp_level": "clear",
@@ -114,7 +114,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "ddosia": {
+                "withaname": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "tlp_level": "clear",

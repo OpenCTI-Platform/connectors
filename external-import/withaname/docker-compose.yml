@@ -1,16 +1,16 @@
 version: '3'
 
 services:
-  connector-ddosia:
-    image: opencti/connector-ddosia:latest
-    container_name: connector-ddosia
+  connector-withaname:
+    image: opencti/connector-withaname:latest
+    container_name: connector-withaname
     restart: always
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
       - CONNECTOR_ID=${CONNECTOR_ID}
       - CONNECTOR_NAME=${CONNECTOR_NAME}
-      - CONNECTOR_SCOPE=ddosia
+      - CONNECTOR_SCOPE=withaname
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=1h
       # Optional connector-specific config (commented out; set if needed)
