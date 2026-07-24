@@ -6,13 +6,12 @@ to manage and validate configuration parameters using Pydantic.
 These models can be extended to create specific configurations for different types of connectors.
 """
 
-import sys
 from abc import ABC
-from copy import deepcopy
 from datetime import timedelta
-from pathlib import Path
-from typing import Any, ClassVar, Literal, Self
+from types import UnionType
+from typing import Any, ClassVar, Literal, Self, Union, get_args, get_origin
 
+from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import (
     Deprecate,
@@ -27,20 +26,16 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    FieldSerializationInfo,
     HttpUrl,
     ModelWrapValidatorHandler,
+    SecretStr,
+    SerializerFunctionWrapHandler,
     ValidationError,
-    create_model,
+    field_serializer,
     model_validator,
 )
 from pydantic.fields import FieldInfo
-from pydantic_settings import (
-    BaseSettings,
-    DotEnvSettingsSource,
-    PydanticBaseSettingsSource,
-    SettingsConfigDict,
-    YamlConfigSettingsSource,
-)
 
 
 class BaseConfigModel(BaseModel, ABC):
@@ -48,7 +43,11 @@ class BaseConfigModel(BaseModel, ABC):
     To prevent attributes from being modified after initialization.
     """
 
-    model_config = ConfigDict(extra="allow", frozen=True, validate_default=True)
+    model_config = ConfigDict(
+        extra="allow",
+        frozen=True,
+        validate_default=True,
+    )
 
     _model_deprecated_fields: ClassVar[dict[str, FieldInfo]] = {}
 
@@ -62,12 +61,16 @@ class BaseConfigModel(BaseModel, ABC):
         for name, field in cls.model_fields.items():
             for meta in field.metadata:
                 if isinstance(meta, Deprecate):
-                    # Change validation behavior
-                    if not field.deprecated:
-                        field.deprecated = True
+                    # Make the field optional (accept `None`)
+                    if isinstance(field.annotation, type):
+                        field.annotation = field.annotation | None  # type: ignore[assignment]
                     field.default = None
                     field.default_factory = None
                     field.validate_default = False
+
+                    # Mark as deprecated (in case of missing/empty deprecation message)
+                    if not field.deprecated:
+                        field.deprecated = True
 
                     # Add deprecation info to JSON schema
                     if not field.json_schema_extra:
@@ -90,9 +93,24 @@ class _OpenCTIConfig(BaseConfigModel):
     url: HttpUrl = Field(
         description="The base URL of the OpenCTI instance.",
     )
-    token: str = Field(
+    token: SecretStr = Field(
         description="The API token to connect to OpenCTI.",
     )
+
+    @field_serializer("token", mode="wrap", when_used="json")
+    def _serialize_token(
+        self,
+        value: Any,
+        handler: SerializerFunctionWrapHandler,
+        info: FieldSerializationInfo,
+    ) -> str:
+        """Get token secret value when serializing for `pycti.OpenCTIConnectorHelper` only.
+        Otherwise, return the redacted value, i.e. `"********"`.
+        """
+        mode = info.context.get("mode") if info.context else None
+        if isinstance(value, SecretStr) and mode == "pycti":
+            return value.get_secret_value()
+        return handler(value)  # type: ignore[no-any-return] # actually return `str`
 
 
 class _BaseConnectorConfig(BaseConfigModel, ABC):
@@ -113,145 +131,27 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         description="The name of the connector.",
     )
     scope: ListFromString = Field(
-        description="The scope of the connector, e.g. 'flashpoint'."
+        description="The scope of the connector, e.g. 'indicator, vulnerability'.",
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display.",
         default="error",
     )
 
-
-class _SettingsLoader(BaseSettings):
-    model_config = SettingsConfigDict(
-        frozen=True,
-        extra="allow",
-        env_nested_delimiter="_",
-        env_nested_max_split=1,
-        enable_decoding=False,
-    )
-
-    @classmethod
-    def _get_connector_main_path(cls) -> Path:
-        """Locate the main module of the running connector.
-        This method is used to locate configuration files relative to connector's entrypoint.
-
-        Notes:
-            - This method assumes that the connector is launched using a file-backed entrypoint
-            (i.e., `python -m <module>` or `python <file>`).
-            - At module import time, `__main__.__file__` might not be available yet,
-            thus this method should be called at runtime only.
+    @field_serializer("scope", mode="wrap", when_used="json")
+    def _serialize_scope(
+        self,
+        value: Any,
+        handler: SerializerFunctionWrapHandler,
+        info: FieldSerializationInfo,
+    ) -> str | list[str]:
+        """Serialize scope as a comma-separated string when serializing for `pycti.OpenCTIConnectorHelper` only.
+        Otherwise, return the list of strings.
         """
-        main = sys.modules.get("__main__")
-        if main and getattr(main, "__file__", None):
-            return Path(main.__file__).resolve()  # type: ignore
-
-        raise RuntimeError(
-            "Cannot determine connector's location: __main__.__file__ is not available. "
-            "Ensure the connector is launched using `python -m <module>` or a file-backed entrypoint."
-        )
-
-    @classmethod
-    def _get_config_yml_file_path(cls) -> Path | None:
-        """Locate the `config.yml` file of the running connector."""
-        main_path = cls._get_connector_main_path()
-        config_yml_legacy_file_path = main_path.parent / "config.yml"
-        config_yml_file_path = main_path.parent.parent / "config.yml"
-
-        if config_yml_legacy_file_path.is_file():
-            return config_yml_legacy_file_path
-        elif config_yml_file_path.is_file():
-            return config_yml_file_path
-        return None
-
-    @classmethod
-    def _get_dot_env_file_path(cls) -> Path | None:
-        """Locate the `.env` file of the running connector."""
-        main_path = cls._get_connector_main_path()
-        dot_env_file_path = main_path.parent.parent / ".env"
-
-        return dot_env_file_path if dot_env_file_path.is_file() else None
-
-    @classmethod
-    def settings_customise_sources(
-        cls,
-        settings_cls: type[BaseSettings],
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource, ...]:
-        """Customise the sources of settings for the connector.
-
-        This method is called by the Pydantic BaseSettings class to determine the order of sources.
-        The configuration come in this order either from:
-            1. Environment variables
-            2. YAML file
-            3. .env file
-            4. Default values
-
-        The variables loading order will remain the same as in `pycti.get_config_variable()`:
-            1. If a config.yml file is found, the order will be: `ENV VAR` → config.yml → default value
-            2. If a .env file is found, the order will be: `ENV VAR` → .env → default value
-        """
-        config_yml_file_path = cls._get_config_yml_file_path()
-        if config_yml_file_path:
-            return (
-                env_settings,
-                YamlConfigSettingsSource(settings_cls, yaml_file=config_yml_file_path),
-            )
-
-        dot_env_file_path = cls._get_dot_env_file_path()
-        if dot_env_file_path:
-            return (
-                env_settings,
-                DotEnvSettingsSource(settings_cls, env_file=dot_env_file_path),
-            )
-
-        return (env_settings,)
-
-    @classmethod
-    def build_loader_from_model(
-        cls, connector_settings: type["BaseConnectorSettings"]
-    ) -> type["_SettingsLoader"]:
-        """Build an untyped `_SettingsLoader` subclass for a connector's settings.
-
-        This method dynamically creates a subclass of `_SettingsLoader` that mirrors the
-        structure of the provided `BaseConnectorSettings` implementation. It disables all
-        Pydantic decoding, type coercion and validation so fields accept raw, unprocessed values.
-
-        The resulting model:
-        * Preserves values as-is from configuration sources
-        * Keeps YAML values as native Python types
-        * Keeps environment variables as plain strings
-        * Allows any field type (`Any`) without validation
-
-        Args:
-            connector_settings (type[BaseConnectorSettings]): The typed connector settings class to mirror.
-
-        Returns:
-            type[_SettingsLoader]: A dynamically generated subclass of `_SettingsLoader`
-                where all fields accept raw, unvalidated input.
-        """
-
-        class SettingsLoader(_SettingsLoader): ...
-
-        model_fields = deepcopy(connector_settings.model_fields)
-        for field_info in model_fields.values():
-            annotation = field_info.annotation
-            if annotation and issubclass(annotation, BaseModel):
-                fields: dict[str, Any] = dict.fromkeys(
-                    annotation.model_fields.keys(), Any
-                )
-                untyped_model = create_model(
-                    f"{annotation.__name__}Untyped",
-                    __base__=annotation,
-                    **fields,
-                )
-                field_info.annotation = untyped_model
-                field_info.default_factory = untyped_model
-
-        SettingsLoader.model_fields = model_fields  # type: ignore
-        return SettingsLoader
+        mode = info.context.get("mode") if info.context else None
+        if isinstance(value, list) and mode == "pycti":
+            return ",".join(value)  # [ "e1", "e2", "e3" ] -> "e1,e2,e3"
+        return handler(value)  # type: ignore[no-any-return] # actually return `list[str]`
 
 
 class BaseConnectorSettings(BaseConfigModel, ABC):
@@ -329,6 +229,34 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         )
 
     @classmethod
+    def _extract_base_config_model_type(cls, annotation: Any) -> Any:
+        """Extract `BaseConfigModel` type from a field's annotation.
+
+        Args:
+            annotation: The field's annotation to extract from.
+
+        Returns:
+            The extracted `BaseConfigModel` type if present, otherwise `None`.
+        """
+        # Handle `field_name: BaseConfigModel` annotations
+        if isinstance(annotation, type) and issubclass(annotation, BaseConfigModel):
+            return annotation
+
+        # Handle `field_name: BaseConfigModel | None` / `Optional[BaseConfigModel]` annotations
+        annotation_origin = get_origin(annotation)
+        if annotation_origin in (Union, UnionType):
+            base_config_model_type = next(
+                (
+                    arg
+                    for arg in get_args(annotation)
+                    if isinstance(arg, type) and issubclass(arg, BaseConfigModel)
+                ),
+                None,
+            )
+            if base_config_model_type:
+                return base_config_model_type
+
+    @classmethod
     def _migrate_deprecated_namespaces(cls, data: dict[str, Any]) -> dict[str, Any]:
         """Migrate deprecated namespaces in the configuration data.
 
@@ -339,9 +267,8 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             Migrated configuration data.
         """
         for field_name, field in cls._model_deprecated_fields.items():
-            annotation = field.annotation
-            is_namespace = isinstance(annotation, type) and issubclass(
-                annotation, BaseConfigModel
+            is_namespace = (
+                cls._extract_base_config_model_type(field.annotation) is not None
             )
             deprecate_metadata = next(
                 m for m in field.metadata if isinstance(m, Deprecate)
@@ -382,38 +309,39 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             Migrated configuration data.
         """
         for field_name, field in cls.model_fields.items():
-            annotation = field.annotation
-            is_namespace = isinstance(annotation, type) and issubclass(
-                annotation, BaseConfigModel
+            base_config_model_type = cls._extract_base_config_model_type(
+                field.annotation
             )
-            if is_namespace:
-                for (
-                    sub_field_name,
-                    sub_field,
-                ) in annotation._model_deprecated_fields.items():  # type: ignore[union-attr]
-                    deprecate_metadata = next(
-                        m for m in sub_field.metadata if isinstance(m, Deprecate)
-                    )
-                    new_namespace = deprecate_metadata.new_namespace
-                    new_namespaced_var = deprecate_metadata.new_namespaced_var
-                    new_value_factory = deprecate_metadata.new_value_factory
-                    removal_date = deprecate_metadata.removal_date
+            if not base_config_model_type:
+                continue  # not a namespace, skip
 
-                    if new_namespaced_var:
-                        if not isinstance(new_namespaced_var, str):
-                            raise ValueError(
-                                f"`new_namespaced_var` for field {sub_field_name} must be a string."
-                            )
+            for (
+                sub_field_name,
+                sub_field,
+            ) in base_config_model_type._model_deprecated_fields.items():
+                deprecate_metadata = next(
+                    m for m in sub_field.metadata if isinstance(m, Deprecate)
+                )
+                new_namespace = deprecate_metadata.new_namespace
+                new_namespaced_var = deprecate_metadata.new_namespaced_var
+                new_value_factory = deprecate_metadata.new_value_factory
+                removal_date = deprecate_metadata.removal_date
 
-                        migrate_deprecated_variable(
-                            data,
-                            old_name=sub_field_name,
-                            new_name=new_namespaced_var,
-                            current_namespace=field_name,
-                            new_namespace=new_namespace,
-                            new_value_factory=new_value_factory,
-                            removal_date=removal_date,
+                if new_namespaced_var:
+                    if not isinstance(new_namespaced_var, str):
+                        raise ValueError(
+                            f"`new_namespaced_var` for field {sub_field_name} must be a string."
                         )
+
+                    migrate_deprecated_variable(
+                        data,
+                        old_name=sub_field_name,
+                        new_name=new_namespaced_var,
+                        current_namespace=field_name,
+                        new_namespace=new_namespace,
+                        new_value_factory=new_value_factory,
+                        removal_date=removal_date,
+                    )
 
         return data
 
@@ -472,10 +400,6 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         return self.model_dump(
             mode="json",
             context={"mode": "pycti"},
-            # Deprecated fields can be set to `None` despite their type (due to `Deprecate` annotation).
-            # To avoid `PydanticSerializationError`, we exclude all fields set to `None` during serialization.
-            # OpenCTIConnectorHelper handles missing fields with default values or internal logic.
-            exclude_none=True,
         )
 
 
