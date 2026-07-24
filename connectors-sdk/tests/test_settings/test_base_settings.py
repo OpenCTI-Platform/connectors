@@ -4,10 +4,10 @@ from typing import Annotated
 from unittest.mock import patch
 
 import pytest
+from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
-    _SettingsLoader,
 )
 from connectors_sdk.settings.deprecations import Deprecate, DeprecatedField
 from connectors_sdk.settings.exceptions import ConfigValidationError
