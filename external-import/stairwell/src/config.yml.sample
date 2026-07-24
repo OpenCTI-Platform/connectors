@@ -20,6 +20,6 @@ stairwell:
   import_max_indicators: 1000 # optional (default: 1000)
   import_page_size: 100 # optional (default: 100)
   import_indicator_validity_days: 90 # optional (default: 90)
-  import_min_bucket: 'HIGH' # optional, one of: LOW, MEDIUM, HIGH, MALICIOUS (default: 'HIGH')
-  import_scope: 'environment' # optional, 'environment' or 'global' (default: 'environment')
+  import_min_bucket: 'HIGH' # optional, one of: LOW, MEDIUM, HIGH, VERY_HIGH (default: 'HIGH')
+  import_scope: 'environment' # optional, reserved/not yet effective (default: 'environment')
   import_wrapper: 'grouping' # optional, 'grouping' or 'report' (default: 'grouping')

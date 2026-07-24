@@ -46,8 +46,8 @@ Environment variables override the file.
 | Max indicators | `stairwell.import_max_indicators` | `STAIRWELL_IMPORT_MAX_INDICATORS` | no | `1000` | Cap per run |
 | Page size | `stairwell.import_page_size` | `STAIRWELL_IMPORT_PAGE_SIZE` | no | `100` | API page size |
 | Indicator validity | `stairwell.import_indicator_validity_days` | `STAIRWELL_IMPORT_INDICATOR_VALIDITY_DAYS` | no | `90` | `valid_until` offset |
-| Min bucket | `stairwell.import_min_bucket` | `STAIRWELL_IMPORT_MIN_BUCKET` | no | `HIGH` | `LOW`, `MEDIUM`, `HIGH`, `MALICIOUS` |
-| Import scope | `stairwell.import_scope` | `STAIRWELL_IMPORT_SCOPE` | no | `environment` | `environment` (your tenant) or `global` |
+| Min bucket | `stairwell.import_min_bucket` | `STAIRWELL_IMPORT_MIN_BUCKET` | no | `HIGH` | `LOW`, `MEDIUM`, `HIGH`, `VERY_HIGH` |
+| Import scope | `stairwell.import_scope` | `STAIRWELL_IMPORT_SCOPE` | no | `environment` | Reserved for forward-compat — accepted but **not yet effective**; every run currently queries the full corpus |
 | Wrapper | `stairwell.import_wrapper` | `STAIRWELL_IMPORT_WRAPPER` | no | `grouping` | `grouping` or `report` |
 
 ## Behavior
@@ -56,12 +56,15 @@ Environment variables override the file.
   (`schedule_process`) on the `CONNECTOR_DURATION_PERIOD` interval; each run
   opens a work item so it appears in the OpenCTI work log. The first-run
   backfill window prevents re-importing the full history.
-- **CEL filtering.** Min-bucket and time cutoff are pushed to Stairwell as a
-  CEL expression so the API only returns relevant rows.
+- **Filtering.** A CEL expression pushes the malicious flag and the time cutoff
+  to Stairwell server-side. The minimum-bucket threshold is applied client-side
+  after each page is fetched, because the API rejects `in`-operator bucket
+  queries (returns HTTP 500).
 - **Per-run wrapper.** All ingested objects are grouped under a single
   Grouping (default) or Report SDO so reviewers can see exactly what landed in
   one batch.
-- **Indicator validity.** Each Indicator gets `valid_from` = ingest time,
+- **Indicator validity.** Each Indicator's `valid_from` is derived from the
+  Stairwell first-seen time (falling back to the run start time), and
   `valid_until` = `valid_from + import_indicator_validity_days`.
 
 ## Installation

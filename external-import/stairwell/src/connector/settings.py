@@ -68,11 +68,14 @@ class StairwellConfig(BaseConfigModel):
         default=90,
     )
     import_min_bucket: str = Field(
-        description="Minimum MalEval bucket: LOW | MEDIUM | HIGH | MALICIOUS.",
+        description="Minimum MalEval bucket: LOW | MEDIUM | HIGH | VERY_HIGH.",
         default="HIGH",
     )
     import_scope: str = Field(
-        description="Corpus scope: 'environment' (your tenant) or 'global'.",
+        description=(
+            "Reserved (forward-compat): accepted but not yet effective; every "
+            "run currently queries the full corpus regardless of this value."
+        ),
         default="environment",
     )
     import_wrapper: str = Field(

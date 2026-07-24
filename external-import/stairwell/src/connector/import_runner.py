@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterator
+from urllib.parse import quote
 
 from .import_filter import build_cel_filter, compute_cutoff, normalize_min_bucket
 from .stairwell import StairwellClient
@@ -72,7 +73,6 @@ class ImportRunner:
         )
 
         objects: list[dict[str, Any]] = [stairwell_identity()]
-        indicator_ids: list[str] = []
         sco_ids_seen: set[str] = set()
 
         total_emitted = 0
@@ -105,10 +105,8 @@ class ImportRunner:
                     continue
                 sco_ids_seen.add(obj_id)
                 objects.append(obj)
-            indicator_ids.append(new_indicator_id)
             total_emitted += 1
 
-        run_finished = datetime.now(tz=timezone.utc)
         date_label = run_started.strftime("%Y-%m-%d")
         description_lines = [
             f"Stairwell scheduled import run.",
@@ -195,10 +193,16 @@ class ImportRunner:
                 cel_filter=cel, page_size=self.page_size, page_token=page_token
             )
             if status >= 400 or not isinstance(data, dict):
-                self.helper.log_warning(
-                    f"Stairwell list_objects_metadata returned status {status} on page {page_num}; stopping."
+                # Fail the run rather than returning normally: a silent return
+                # makes run() treat a failed fetch as "no indicators" and still
+                # advance last_run, which would permanently skip data in the
+                # unfetched window. process_message catches this and leaves
+                # connector state untouched, so the next run retries the window.
+                raise RuntimeError(
+                    f"Stairwell list_objects_metadata returned status {status} "
+                    f"on page {page_num}; failing the run so connector state is "
+                    f"not advanced past unfetched data."
                 )
-                return
             entries = (
                 data.get("objectMetadatas")
                 or data.get("object_metadatas")
@@ -348,14 +352,17 @@ class ImportRunner:
         ext_refs = [
             make_external_reference(
                 "Stairwell",
-                f"{self.client._base_url}/search?search-query={value}",
+                f"{self.client._base_url}/search?search-query={quote(value, safe='')}",
                 f"Stairwell intel for {value}",
             )
         ]
         ind = make_indicator(
             pattern=f"[{obs_path} = '{value}']",
             name=f"Stairwell {kind}: {value}",
-            seed=f"stairwell-{kind}-indicator|{value.lower()}",
+            # Do not lower-case the seed: hostnames arrive pre-normalized and IPs
+            # are case-insensitive, but URL paths/queries are case-sensitive, so
+            # lower-casing would collide distinct URLs onto one deterministic id.
+            seed=f"stairwell-{kind}-indicator|{value}",
             valid_from=valid_from_iso,
             valid_until=valid_until_iso,
             description=f"Extracted from MalEval-true file {source_sha256}",
