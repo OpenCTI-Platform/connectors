@@ -11,5 +11,6 @@ services:
       #- CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
       - DOMAINTOOLS_API_USERNAME=ChangeMe
       - DOMAINTOOLS_API_KEY=ChangeMe
+      - DOMAINTOOLS_ENRICHMENT_METHOD=ChangeMe     # enrich or investigate
       #- DOMAINTOOLS_MAX_TLP=TLP:AMBER
     restart: always

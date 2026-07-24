@@ -29,7 +29,7 @@ The DomainTools connector enriches Domain-Name and IPv4-Addr observables with WH
 
 DomainTools is a leading provider of WHOIS and DNS profile data for threat intelligence enrichment. The DomainTools Iris Investigate API provides comprehensive domain intelligence including registration details, DNS records, risk scores, and related infrastructure.
 
-This connector integrates DomainTools Iris Investigate with OpenCTI to:
+This connector integrates DomainTools Iris Investigate or DomainTools Iris Enrich with OpenCTI to:
 - Enrich domains with DNS records (A, NS, MX)
 - Extract IP addresses and their ASN associations
 - Discover related domains (name servers, email domains, redirects)
@@ -74,6 +74,7 @@ There are a number of configuration options, which are set either in `docker-com
 |----------------|--------------------------|--------------------------------|------------|-----------|-----------------------------------------------------------------|
 | API Username   | domaintools.api_username | `DOMAINTOOLS_API_USERNAME`     |            | Yes       | DomainTools API username for authentication.                    |
 | API Key        | domaintools.api_key      | `DOMAINTOOLS_API_KEY`          |            | Yes       | DomainTools API key for authentication.                         |
+| Enrichment Method | enrichment_method | `DOMAINTOOLS_ENRICHMENT_METHOD` | 'investigate' | No | DomainTools Enrichment method to use.
 | Max TLP        | domaintools.max_tlp      | `DOMAINTOOLS_MAX_TLP`          | TLP:AMBER  | No        | Maximum TLP level for observables to be enriched.               |
 
 ## Deployment
@@ -101,6 +102,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_AUTO=false
       - DOMAINTOOLS_API_USERNAME=ChangeMe
       - DOMAINTOOLS_API_KEY=ChangeMe
+      - DOMAINTOOLS_ENRICHMENT_METHOD=ChangeMe     # enrich or investigate
       - DOMAINTOOLS_MAX_TLP=TLP:AMBER
     restart: always
 ```
