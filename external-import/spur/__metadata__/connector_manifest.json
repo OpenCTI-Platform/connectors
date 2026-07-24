@@ -6,10 +6,16 @@
   "short_description": "Bulk import of Spur anonymous and residential proxy feeds as IPv4/IPv6 STIX observables.",
   "logo": null,
   "use_cases": [
-    "Identify anonymous proxy and VPN exit nodes in your environment",
-    "Enrich existing IP observables with Spur threat intelligence via STIX upsert",
-    "Track tunnel operator and residential proxy infrastructure"
+    "Fraud, Financial Crime & Cryptocurrency Monitoring",
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed",
+    "Enrichment & Reputation",
+    "Network Security"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
