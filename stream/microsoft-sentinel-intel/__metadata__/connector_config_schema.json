@@ -153,6 +153,11 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "MICROSOFT_SENTINEL_INTEL_PUBLISH_IDENTITIES": {
+      "default": false,
+      "description": "Also push STIX Identity objects (e.g. an indicator's author) received from the stream to Microsoft Sentinel, in addition to Indicators, so their display name resolves correctly instead of only showing the identifier.",
+      "type": "boolean"
     }
   },
   "required": [

@@ -9,9 +9,9 @@ services:
       - CONNECTOR_NAME=Malcore
       - CONNECTOR_SCOPE=malcore
       - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT12H # ISO 8601 duration (12 hours)
       - MALCORE_API_URL=https://api.malcore.io
       - MALCORE_API_KEY=ChangeMe
       - MALCORE_SCORE=100
       - MALCORE_LIMIT=10000
-      - MALCORE_INTERVAL=12 #Hours
     restart: always

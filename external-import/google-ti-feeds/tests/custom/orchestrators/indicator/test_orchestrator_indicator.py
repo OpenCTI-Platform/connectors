@@ -74,6 +74,7 @@ class DummyConfig:
         tlp_level: str,
         indicator_types: list[str],
         indicator_import_start_date: timedelta,
+        indicator_min_score: int = 0,
     ):
         """Initialize the DummyConfig object."""
         self.api_key = api_key
@@ -87,6 +88,7 @@ class DummyConfig:
         self.import_indicators = True
         self.indicator_types = indicator_types
         self.indicator_import_start_date = indicator_import_start_date
+        self.indicator_min_score = indicator_min_score
         self.report_import_start_date = timedelta(days=1)
         self.threat_actor_import_start_date = timedelta(days=1)
         self.malware_family_import_start_date = timedelta(days=1)

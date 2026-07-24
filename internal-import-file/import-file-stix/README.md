@@ -43,26 +43,10 @@ This connector is essential for ingesting threat intelligence from external sour
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter                | config.yml            | Docker environment variable        | Default                     | Mandatory | Description                                                                  |
-|--------------------------|-----------------------|------------------------------------|-----------------------------|-----------|------------------------------------------------------------------------------|
-| Connector ID             | id                    | `CONNECTOR_ID`                     |                             | Yes       | A unique `UUIDv4` identifier for this connector instance.                    |
-| Connector Name           | name                  | `CONNECTOR_NAME`                   | ImportFileStix              | No        | Name of the connector.                                                       |
-| Connector Scope          | scope                 | `CONNECTOR_SCOPE`                  | application/json,text/xml   | Yes       | Supported MIME types (JSON for STIX 2.1, XML for STIX 1.2).                  |
-| Validate Before Import   | validate_before_import| `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false                       | No        | Validate STIX bundles before importing.                                      |
-| Auto Import              | auto                  | `CONNECTOR_AUTO`                   | false                       | No        | Enable automatic import of uploaded STIX files.                              |
-| Confidence Level         | confidence_level      | `CONNECTOR_CONFIDENCE_LEVEL`       | 15                          | No        | Default confidence level for imported entities.                              |
-| Log Level                | log_level             | `CONNECTOR_LOG_LEVEL`              | info                        | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.   |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

@@ -1,13 +1,17 @@
 {
   "title": "Fortinet Ti",
   "slug": "fortinet-ti",
-  "description": "This connector imports data from the Fortinet database.",
-  "short_description": "This connector imports data from the Fortinet database\n. The connector creates the following OpenCTI entities:\n\n- Indicator (URL, Domain Name, and IPv4),\n- Observable URL,\n- Observable Domain Name,\n- Observable IPv4,\n- The Fortinet Organization.\n.",
+  "description": "The Fortinet Threat Intelligence connector imports IOC data from the Fortinet Threat Intelligence database into OpenCTI. It creates Indicators (URL, Domain Name, IPv4) and their corresponding Observables, linked to a Fortinet organization identity.",
+  "short_description": "Imports URL, Domain, and IPv4 threat indicators and observables from the Fortinet Threat Intelligence database into OpenCTI.",
   "logo": "external-import/fortinet-ti/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
-    "Adversary & Campaign Insights"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

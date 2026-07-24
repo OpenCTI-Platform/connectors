@@ -1,0 +1,118 @@
+import json
+import sys
+from datetime import datetime
+
+import citalid_api
+from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
+
+
+class Citalid:
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
+
+        # Config vars (no get_config_variable calls; rely on validated settings models)
+        self.citalid_customer_sub_domain_url = str(
+            self.config.citalid.customer_sub_domain_url
+        )
+        self.citalid_user = self.config.citalid.user
+        self.citalid_password = self.config.citalid.password.get_secret_value()
+
+        # Instruction: replace CONNECTOR_UPDATE_EXISTING_DATA by False
+        self.update_existing_data = False
+
+        # Create source identity (once)
+        self.identity = self.helper.api.identity.create(
+            type="Organization",
+            name="Citalid",
+            description="Citalid offers a cyber risk quantification SaaS platform to manage security & cyber insurance investments. Citalid is built upon a strong expertise in strategic Cyber Threat Intelligence (CTI) which enriches risk assessment with dynamic state of the threats.",
+        )
+
+    @staticmethod
+    def get_not_loaded_version(last_version, versions_list):
+        return [
+            version
+            for version in versions_list
+            if datetime.strptime(last_version[:8], "%Y%m%d")
+            < datetime.strptime(version[:8], "%Y%m%d")
+        ]
+
+    def process_data(self):
+        try:
+            current_state = self.helper.get_state()
+            if current_state is None or not current_state.get("last_loaded_bundle_id"):
+                last_loaded_bundle_id = None
+            else:
+                last_loaded_bundle_id = current_state["last_loaded_bundle_id"]
+            now = datetime.now()
+            friendly_name = "Citalid run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
+            self.helper.log_info("Connecting to customer sub domain ...")
+            api_client = citalid_api.Client(self.citalid_customer_sub_domain_url)
+            api_client.login(self.citalid_user, self.citalid_password)
+            self.helper.log_info("Fetching bundle versions info ...")
+            versions_metadata = api_client.list_versions()
+            bundle_versions = sorted(
+                [record["id"] for record in versions_metadata],
+                key=lambda x: datetime.strptime(x[:8], "%Y%m%d"),
+            )
+            if last_loaded_bundle_id is None:
+                new_versions = bundle_versions
+            else:
+                new_versions = self.get_not_loaded_version(
+                    last_loaded_bundle_id, bundle_versions
+                )
+            if len(new_versions) == 0:
+                self.helper.log_info("Last version of Citalid dataset already loaded.")
+            else:
+                for version_id in new_versions:
+                    self.helper.log_info('Processing version "' + version_id + '"')
+                    bundle_dict = api_client.download_version(version_id=version_id)
+                    bundle = json.dumps(bundle_dict)
+                    sent_bundle = self.send_bundle(work_id, bundle)
+                    if sent_bundle is None:
+                        self.helper.log_error("Error while sending bundle")
+                    else:
+                        last_loaded_bundle_id = version_id
+                        message = (
+                            "Bundle successfully loaded, storing last_loaded_bundle_id as "
+                            + str(last_loaded_bundle_id)
+                        )
+                        self.helper.log_info(message)
+                    message = "Storing last_run as " + str(now)
+                    self.helper.log_info(message)
+                    state = {
+                        "last_loaded_bundle_id": last_loaded_bundle_id,
+                        "last_run": str(now),
+                    }
+                    self.helper.set_state(state)
+            message = "Connector successfully run"
+            self.helper.log_info(message)
+            self.helper.api.work.to_processed(work_id, message)
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.log_info("Connector stop")
+            sys.exit(0)
+        except Exception as e:
+            self.helper.log_error(str(e))
+
+    def send_bundle(self, work_id: str, serialized_bundle: str) -> list:
+        try:
+            sent_bundle = self.helper.send_stix2_bundle(
+                serialized_bundle,
+                update=self.update_existing_data,
+                work_id=work_id,
+            )
+            return sent_bundle
+        except Exception as e:
+            self.helper.log_error(f"Error while sending bundle: {e}")
+
+    def run(self):
+        """Run the connector using the pycti scheduler with ISO 8601 duration period."""
+        self.helper.log_info("Fetching Citalid datasets...")
+        self.helper.schedule_iso(
+            message_callback=self.process_data,
+            duration_period=self.config.connector.duration_period,
+        )

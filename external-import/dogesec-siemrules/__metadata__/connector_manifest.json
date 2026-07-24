@@ -1,12 +1,17 @@
 {
   "title": "SIEM Rules by dogesec",
   "slug": "dogesec-siemrules",
-  "description": "The OpenCTI SIEM Rules Connector syncs the detection rules held in SIEM Rules Detection Packs to OpenCTI.",
-  "short_description": "The OpenCTI SIEM Rules Connector enables organizations to operationalize threat intelligence by synchronizing detection rules derived from reports into OpenCTI. Powered by SIEM Rules, the connector imports detection content curated in SIEM Rules Detection Packs, where threat intelligence is transformed into actionable detection logic across multiple SIEM and security platforms.\n\nBy ingesting detection rules into OpenCTI, the connector allows analysts to correlate detection content with underlying threat actors, techniques, campaigns, and reports already present in OpenCTI. This creates a direct link between intelligence and detection engineering, helping teams track coverage, identify detection gaps, and maintain alignment between evolving threats and defensive controls through automated, scheduled updates.",
+  "description": "The OpenCTI SIEM Rules Connector enables organizations to operationalize threat intelligence by synchronizing detection rules derived from reports into OpenCTI. Powered by SIEM Rules, the connector imports detection content curated in SIEM Rules Detection Packs, where threat intelligence is transformed into actionable detection logic across multiple SIEM and security platforms.\n\nBy ingesting detection rules into OpenCTI, the connector allows analysts to correlate detection content with underlying threat actors, techniques, campaigns, and reports already present in OpenCTI. This creates a direct link between intelligence and detection engineering, helping teams track coverage, identify detection gaps, and maintain alignment between evolving threats and defensive controls through automated, scheduled updates.",
+  "short_description": "Syncs detection rules from SIEM Rules Detection Packs into OpenCTI, linking detection content to threat actors, techniques, and campaigns for integrated detection engineering workflows.",
   "logo": "external-import/dogesec-siemrules/__metadata__/logo.png",
   "use_cases": [
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

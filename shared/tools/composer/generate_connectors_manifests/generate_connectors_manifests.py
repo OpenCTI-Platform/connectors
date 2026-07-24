@@ -26,6 +26,7 @@ REPOSITORY_SUBDIRECTORIES_TO_INCLUDE = [
 class ConnectorManifest:
     """
     Define and validate fields of a connector's manifest.
+    Literal types are for documentation purposes only, they are not enforced at runtime.
     """
 
     title: str
@@ -33,7 +34,45 @@ class ConnectorManifest:
     description: str = "Information coming soon"
     short_description: str = "Information coming soon"
     logo: str | None = None
-    use_cases: list[str] = field(default_factory=lambda: [])
+    use_cases: list[
+        Literal[
+            "Adversary & Campaign Insights",
+            "Vulnerability & Exploit Awareness",
+            "Infrastructure & Attack Surface Visibility",
+            "Detection & Response Enablement",
+            "Fraud, Financial Crime & Cryptocurrency Monitoring",
+            "Brand, Digital Risk & Underground Exposure",
+            "Third-Party & Supply Chain Oversight",
+            "Cloud, SaaS & Platform Security",
+            "Geopolitical, Physical & Hybrid Risk Analysis",
+            "Market Vertical & Mission-Specific Intelligence",
+            "FIMI & Disinformation",
+            "Other",
+        ]
+    ] = field(default_factory=lambda: [])
+    solution_categories: list[
+        Literal[
+            "Threat Intelligence Feed",
+            "Endpoint Detection & Response",
+            "SIEM & Security Analytics",
+            "Malware Analysis & Sandbox",
+            "SOAR & Security Automation",
+            "Vulnerability & Exposure Management",
+            "Attack Surface Management",
+            "Network Security",
+            "Email Security",
+            "AI Security",
+            "Incident Response & Case Management",
+            "Digital Risk Protection",
+            "Governance, Risk & Compliance",
+            "Cloud Security",
+            "Enrichment & Reputation",
+            "Import, Export & Sharing",
+            "Other",
+        ]
+    ] = field(default_factory=lambda: [])
+    license_type: Literal["Free", "Commercial"] | None = None
+    contact: str | None = None
     verified: bool = False
     last_verified_date: date | None = None
     playbook_supported: bool = False
@@ -330,6 +369,7 @@ class ConnectorManifestBuilder:
         """
         manifest_data = self._get_current_manifest_data() or {}
 
+        # Replace missing/nullish values based on connector's directory and README
         manifest_data.update(
             title=manifest_data.get("title") or self.manifest_title,
             slug=manifest_data.get("slug") or self.manifest_slug,
@@ -362,6 +402,34 @@ class ConnectorManifestBuilder:
             ),
             container_type=(
                 manifest_data.get("container_type") or self.manifest_container_type
+            ),
+        )
+
+        # Normalize remaining fields if missing or incorrectly typed
+        manifest_data.update(
+            license_type=(
+                manifest_data.get("license_type")
+                if manifest_data.get("license_type") in {"Free", "Commercial"}
+                else None
+            ),
+            contact=manifest_data.get("contact") or None,
+            playbook_supported=(
+                manifest_data.get("playbook_supported")
+                if isinstance(manifest_data.get("playbook_supported"), bool)
+                and manifest_data.get("container_type") == "INTERNAL_ENRICHMENT"
+                else False
+            ),
+            max_confidence_level=(
+                manifest_data.get("max_confidence_level")
+                if isinstance(manifest_data.get("max_confidence_level"), int)
+                else 50
+            ),
+            support_version=manifest_data.get("support_version") or ">=6.8.0",
+            subscription_link=manifest_data.get("subscription_link") or None,
+            manager_supported=(
+                manifest_data.get("manager_supported")
+                if isinstance(manifest_data.get("manager_supported"), bool)
+                else False
             ),
         )
 

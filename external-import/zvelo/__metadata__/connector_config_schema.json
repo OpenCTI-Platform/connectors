@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/zvelo_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Zvelo",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "ipv4-addr",
+        "ipv6-addr",
+        "domain",
+        "url",
+        "indicator",
+        "malware"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "ZVELO_CLIENT_ID": {
+      "description": "Zvelo OAuth client ID.",
+      "type": "string"
+    },
+    "ZVELO_CLIENT_SECRET": {
+      "description": "Zvelo OAuth client secret.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ZVELO_COLLECTIONS": {
+      "default": [
+        "phish",
+        "malicious",
+        "threat"
+      ],
+      "description": "Zvelo collections to ingest. Possible values: phish, malicious, threat.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ZVELO_CLIENT_ID",
+    "ZVELO_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}

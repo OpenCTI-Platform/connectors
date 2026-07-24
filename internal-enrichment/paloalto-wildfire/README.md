@@ -46,7 +46,7 @@ turns it into OpenCTI knowledge.
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 7.260710.0
+- OpenCTI Platform >= 7.260722.0
 - A Palo Alto Networks WildFire API key
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version

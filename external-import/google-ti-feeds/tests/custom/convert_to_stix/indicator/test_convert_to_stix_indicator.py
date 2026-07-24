@@ -41,6 +41,7 @@ class DummyConfig:
         self.import_indicators = True
         self.indicator_types = ["file", "ip", "url", "domain"]
         self.indicator_import_start_date = timedelta(days=1)
+        self.indicator_min_score = 0
         self.report_import_start_date = timedelta(days=1)
         self.threat_actor_import_start_date = timedelta(days=1)
         self.malware_family_import_start_date = timedelta(days=1)
@@ -970,3 +971,80 @@ class TestRelationAttackTechniqueMissing:
         result = converter._create_relation_attack_technique(ioc_entry, technique_data)
         # Then
         _then_returns_empty(result)
+
+
+# =====================
+# 26. convert – indicator_min_score filtering
+# =====================
+
+
+def _given_converter_with_min_score(
+    logger: logging.Logger, min_score: int | None
+) -> ConvertToSTIXIndicator:
+    config = DummyConfig()
+    config.indicator_min_score = min_score
+    return ConvertToSTIXIndicator(
+        config=config,  # type: ignore[arg-type]
+        logger=logger,
+        tlp_level="white",
+    )
+
+
+class TestConvertMinScoreFilter:
+    """Test convert() filtering IOC entries by indicator_min_score."""
+
+    def test_score_below_min_returns_empty(self, logger: logging.Logger) -> None:
+        # Given – converter with a min score higher than the entry's score
+        converter = _given_converter_with_min_score(logger, min_score=50)
+        data = _given_file_entry(score=10, relationships=_given_minimal_relationships())
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        _then_returns_empty(result)
+
+    def test_score_equal_to_min_is_kept(self, logger: logging.Logger) -> None:
+        # Given – entry score exactly matches the configured threshold
+        converter = _given_converter_with_min_score(logger, min_score=50)
+        data = _given_file_entry(score=50, relationships=_given_minimal_relationships())
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        assert result  # noqa: S101
+
+    def test_score_above_min_is_kept(self, logger: logging.Logger) -> None:
+        # Given – entry score above the configured threshold
+        converter = _given_converter_with_min_score(logger, min_score=50)
+        data = _given_file_entry(score=90, relationships=_given_minimal_relationships())
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        assert result  # noqa: S101
+
+    def test_no_score_is_never_filtered(self, logger: logging.Logger) -> None:
+        # Given – entry without a GTI score, even with an active min score threshold
+        converter = _given_converter_with_min_score(logger, min_score=50)
+        data = _given_file_entry(
+            score=None, relationships=_given_minimal_relationships()
+        )
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        assert result  # noqa: S101
+
+    def test_min_score_100_disables_filter(self, logger: logging.Logger) -> None:
+        # Given – min score set to 100 disables filtering entirely
+        converter = _given_converter_with_min_score(logger, min_score=100)
+        data = _given_file_entry(score=1, relationships=_given_minimal_relationships())
+        # When
+        result = _when_convert(converter, data)
+        # Then – even a very low score entry is kept since the filter is disabled
+        assert result  # noqa: S101
+
+    def test_min_score_none_disables_filter(self, logger: logging.Logger) -> None:
+        # Given – min score set to None disables filtering entirely
+        converter = _given_converter_with_min_score(logger, min_score=None)
+        data = _given_file_entry(score=1, relationships=_given_minimal_relationships())
+        # When
+        result = _when_convert(converter, data)
+        # Then – even a very low score entry is kept since the filter is disabled
+        assert result  # noqa: S101

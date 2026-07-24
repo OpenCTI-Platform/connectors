@@ -5,8 +5,13 @@
   "short_description": "Recalculates an Indicator's x_opencti_score from the priorities of its linked entities (threats, malware, locations, sectors, TTPs, authors), driven by label-based per-category impact configuration.",
   "logo": null,
   "use_cases": [
-    "Enrichment & Analysis"
+    "Other"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": true,

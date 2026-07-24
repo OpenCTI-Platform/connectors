@@ -19,3 +19,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | IOC_EXTRACTOR_EXTRACT_DOMAINS | `boolean` |  | boolean | `true` | Extract domain names. |
 | IOC_EXTRACTOR_EXTRACT_URLS | `boolean` |  | boolean | `true` | Extract URLs. |
 | IOC_EXTRACTOR_SKIP_PRIVATE_IPS | `boolean` |  | boolean | `true` | Skip private/reserved IP addresses (RFC 1918, loopback, etc.). |
+| IOC_EXTRACTOR_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | The maximal TLP of the observable being enriched. |

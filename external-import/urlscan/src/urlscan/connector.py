@@ -4,18 +4,13 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
-from pathlib import Path
 from typing import Iterator, NamedTuple
 from urllib.parse import urlparse
 
 import stix2
 import validators
-import yaml
 from pycti import Indicator, StixCoreRelationship
-from pycti.connector.opencti_connector_helper import (
-    OpenCTIConnectorHelper,
-    get_config_variable,
-)
+from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2.v21 import _Observable as Observable  # noqa
 
 from .client import UrlscanClient
@@ -25,6 +20,7 @@ from .patterns import (
     create_indicator_pattern_domain_name,
     create_indicator_pattern_url,
 )
+from .settings import ConnectorSettings
 
 __all__ = [
     "UrlscanConnector",
@@ -38,86 +34,30 @@ class UrlscanConnector:
 
     def __init__(self):
         """Initialization."""
-        config_path = Path(__file__).parent.parent.joinpath("config.yml")
-        config = (
-            yaml.load(config_path.open(), Loader=yaml.SafeLoader)
-            if config_path.is_file()
-            else {}
-        )
+        self._config = ConnectorSettings()
 
-        self._helper = OpenCTIConnectorHelper(config)
-        interval = get_config_variable(
-            "CONNECTOR_INTERVAL",
-            ["connector", "interval"],
-            config,
-            default=86400,
-            isNumber=True,
-        )
-        lookback = get_config_variable(
-            "CONNECTOR_LOOKBACK",
-            ["connector", "lookback"],
-            config,
-            default=3,
-            isNumber=True,
-        )
+        self._helper = OpenCTIConnectorHelper(config=self._config.to_helper_config())
+        interval = self._config.connector.interval
+        lookback = self._config.connector.lookback
 
-        urlscan_url = get_config_variable(
-            "URLSCAN_URL",
-            ["urlscan", "url"],
-            config,
-        )
+        urlscan_url = str(self._config.urlscan.url)
 
-        urlscan_api_key = get_config_variable(
-            "URLSCAN_API_KEY",
-            ["urlscan", "api_key"],
-            config,
-        )
+        urlscan_api_key = self._config.urlscan.api_key.get_secret_value()
 
-        self._create_indicators = get_config_variable(
-            "URLSCAN_CREATE_INDICATORS",
-            ["urlscan", "create_indicators"],
-            config,
-            default=True,
+        self._create_indicators = self._config.urlscan.create_indicators  # type: bool
+
+        self._update_existing_data = (
+            self._config.urlscan.update_existing_data
         )  # type: bool
 
-        self._update_existing_data = get_config_variable(
-            "URLSCAN_UPDATE_EXISTING_DATA",
-            ["urlscan", "update_existing_data"],
-            config,
-            default=True,
-        )  # type: bool
-
-        default_tlp = get_config_variable(
-            "URLSCAN_DEFAULT_TLP",
-            ["urlscan", "default_tlp"],
-            config,
-            default="white",
-        )  # type: str
+        default_tlp = self._config.urlscan.default_tlp  # type: str
 
         # Default x_opencti_score
-        self._x_opencti_score = get_config_variable(
-            "URLSCAN_DEFAULT_X_OPENCTI_SCORE",
-            ["urlscan", "default_x_opencti_score"],
-            config,
-            default=50,
-            isNumber=True,
-        )
+        self._x_opencti_score = self._config.urlscan.default_x_opencti_score
         # Optional x_opencti_score for domain-name type
-        self._x_opencti_score_domain = get_config_variable(
-            "URLSCAN_X_OPENCTI_SCORE_DOMAIN",
-            ["urlscan", "x_opencti_score_domain"],
-            config,
-            default=None,
-            isNumber=True,
-        )
+        self._x_opencti_score_domain = self._config.urlscan.x_opencti_score_domain
         # Optional x_opencti_score for url type
-        self._x_opencti_score_url = get_config_variable(
-            "URLSCAN_X_OPENCTI_SCORE_URL",
-            ["urlscan", "x_opencti_score_url"],
-            config,
-            default=None,
-            isNumber=True,
-        )
+        self._x_opencti_score_url = self._config.urlscan.x_opencti_score_url
 
         self._default_tlp = getattr(stix2, f"TLP_{default_tlp}".upper(), None)
         if not isinstance(self._default_tlp, stix2.MarkingDefinition):

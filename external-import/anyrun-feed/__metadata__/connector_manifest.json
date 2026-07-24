@@ -5,9 +5,13 @@
   "short_description": "ANY.RUN Feed connector imports fresh network-based IOCs (IPs, domains, URLs) extracted from real-time sandbox analyses, with rich metadata and minimal false positives.",
   "logo": "external-import/anyrun-feed/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -208,9 +208,7 @@ class SekoiaConnector(object):
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
         self.helper.set_state({"last_cursor": cursor})
-        if len(items) < self.limit:
-            # We got the last results
-            return cursor
+        return cursor
 
     def _clean_external_references_fields(self, items: List[Dict]):
         """
@@ -463,7 +461,7 @@ class SekoiaConnector(object):
             self.helper.connector_logger.debug(
                 f"Sending request to: {url} with params {param_string}"
             )
-            res = requests.get(url, params=params, headers=headers)
+            res = requests.get(url, params=params, headers=headers, timeout=60)
             res.raise_for_status()
             if binary:
                 return res.content

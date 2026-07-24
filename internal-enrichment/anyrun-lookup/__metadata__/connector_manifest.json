@@ -5,9 +5,14 @@
   "short_description": "ANY.RUN TI Lookup connector enriches IPs, domains, URLs, and hashes with related threat data, providing actionable context for incident response and proactive defense.",
   "logo": "internal-enrichment/anyrun-lookup/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Detection & Response Enablement"
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

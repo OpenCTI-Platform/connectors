@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/urlscan_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Urlscan",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "urlscan"
+      ],
+      "description": "The scope of the connector, e.g. 'urlscan'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_INTERVAL": {
+      "default": 86400,
+      "description": "Interval between two runs of the connector, in seconds.",
+      "type": "integer"
+    },
+    "CONNECTOR_LOOKBACK": {
+      "default": 3,
+      "description": "How far to look back in days if the connector has never run or its last run is older than this value.",
+      "type": "integer"
+    },
+    "URLSCAN_URL": {
+      "default": "https://urlscan.io/api/v1/pro/phishfeed?format=json",
+      "description": "The Urlscan feed URL to query.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "URLSCAN_API_KEY": {
+      "description": "The Urlscan API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "URLSCAN_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Whether to create indicators for imported observables.",
+      "type": "boolean"
+    },
+    "URLSCAN_UPDATE_EXISTING_DATA": {
+      "default": true,
+      "description": "Whether to update data already ingested into the platform.",
+      "type": "boolean"
+    },
+    "URLSCAN_DEFAULT_TLP": {
+      "default": "white",
+      "description": "Default TLP marking applied to imported data.",
+      "type": "string"
+    },
+    "URLSCAN_DEFAULT_X_OPENCTI_SCORE": {
+      "default": 50,
+      "description": "Default x_opencti_score applied to imported data.",
+      "type": "integer"
+    },
+    "URLSCAN_X_OPENCTI_SCORE_DOMAIN": {
+      "default": null,
+      "description": "Optional x_opencti_score for domain-name observables.",
+      "type": "integer"
+    },
+    "URLSCAN_X_OPENCTI_SCORE_URL": {
+      "default": null,
+      "description": "Optional x_opencti_score for url observables.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "URLSCAN_API_KEY"
+  ],
+  "additionalProperties": true
+}

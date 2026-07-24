@@ -4,10 +4,14 @@
   "description": "Sublime Security Connector retrieves malicious email message groups from Sublime Security's API and ingests them as OpenCTI Incidents and Cases",
   "short_description": "Sublime Security Connector retrieves malicious email groups from Sublime Security's API as OpenCTI Incidents and Cases.",
   "logo": "external-import/sublime/__metadata__/logo.png",
-  "use_cases" : [
-    "Commercial Threat Intel",
+  "use_cases": [
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Email Security"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2026-04-30",
   "playbook_supported": false,

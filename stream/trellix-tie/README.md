@@ -43,7 +43,7 @@ the OpenDXL TIE client.
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 7.260710.0
+- OpenCTI Platform >= 7.260722.0
 - A DXL broker and an ePO-provisioned OpenDXL client configuration (`dxlclient.config`
   with the broker list and client certificate), authorized to publish to the
   `TIE Server Set Enterprise Reputation` topic
