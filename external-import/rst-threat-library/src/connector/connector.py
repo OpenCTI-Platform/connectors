@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+import requests
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 from connector.confidence import (
@@ -1136,6 +1137,7 @@ class RSTThreatLibrary:
                 cur = set(managed.get(obj_type, []))
                 cur.update(pushed_standard_ids)
                 managed[obj_type] = sorted(cur)
+                # Persist incrementally so a later crash/restart doesn't redo this type.
                 self.helper.set_state(state)
                 self.helper.connector_logger.info(
                     f"[{obj_type}] ingested {count} object(s), cursor now "
@@ -1158,6 +1160,34 @@ class RSTThreatLibrary:
             return self._batch_send_via_api(stix_objects, timestamp, obj_type)
         return self._batch_send_stix_bundle(stix_objects, timestamp, obj_type)
 
+    @staticmethod
+    def _is_retryable_upload_error(exc: BaseException) -> bool:
+        return isinstance(
+            exc,
+            (
+                ConnectionError,
+                OSError,
+                TimeoutError,
+                requests.exceptions.RequestException,
+            ),
+        )
+
+    def _mark_work_failed(
+        self, work_id: Optional[str], obj_type: str, exc: BaseException
+    ) -> None:
+        if not work_id:
+            return
+        try:
+            self.helper.api.work.to_processed(
+                work_id,
+                f"[{obj_type}] upload failed: {exc}",
+                in_error=True,
+            )
+        except Exception as close_ex:
+            self.helper.connector_logger.warning(
+                f"[{obj_type}] failed to mark work {work_id} in_error: {close_ex}"
+            )
+
     def _batch_send_stix_bundle(
         self, stix_objects: List[Any], timestamp: int, obj_type: str
     ) -> bool:
@@ -1174,6 +1204,7 @@ class RSTThreatLibrary:
         retry_delay = self._retry_delay
 
         for attempt in range(max_retries):
+            work_id: Optional[str] = None
             try:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
@@ -1193,30 +1224,32 @@ class RSTThreatLibrary:
                 )
                 return True
 
-            except (ConnectionError, OSError, TimeoutError) as ex:
-                self.helper.connector_logger.error(
-                    f"[{obj_type}] push attempt {attempt + 1}/{max_retries} "
-                    f"failed: {ex}"
-                )
-                if attempt < max_retries - 1:
-                    self.helper.connector_logger.info(
-                        f"Retrying in {retry_delay} seconds..."
+            except Exception as ex:
+                self._mark_work_failed(work_id, obj_type, ex)
+                if self._is_retryable_upload_error(ex):
+                    self.helper.connector_logger.error(
+                        f"[{obj_type}] push attempt {attempt + 1}/{max_retries} "
+                        f"failed: {ex}"
                     )
-                    time.sleep(retry_delay)
-                    retry_delay = (
-                        int(retry_delay * self._retry_backoff_multiplier) or retry_delay
-                    )
-                else:
+                    if attempt < max_retries - 1:
+                        self.helper.connector_logger.info(
+                            f"Retrying in {retry_delay} seconds..."
+                        )
+                        time.sleep(retry_delay)
+                        retry_delay = (
+                            int(retry_delay * self._retry_backoff_multiplier)
+                            or retry_delay
+                        )
+                        continue
                     self.helper.connector_logger.error(
                         f"[{obj_type}] failed to upload bundle after "
                         f"{max_retries} attempts."
                     )
                     return False
 
-            except Exception as ex:
                 error_message = f"[{obj_type}] unexpected error during upload: {ex}"
                 self.helper.connector_logger.error(error_message)
-                raise ConnectionError(error_message) from ex
+                raise
 
         return False
 
@@ -1255,6 +1288,7 @@ class RSTThreatLibrary:
         retry_delay = self._retry_delay
 
         for attempt in range(max_retries):
+            work_id: Optional[str] = None
             try:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
@@ -1273,28 +1307,32 @@ class RSTThreatLibrary:
                 )
                 return True
 
-            except (ConnectionError, OSError, TimeoutError) as ex:
-                self.helper.connector_logger.error(
-                    f"[{obj_type}] API push attempt {attempt + 1}/{max_retries} "
-                    f"failed: {ex}"
-                )
-                if attempt < max_retries - 1:
-                    self.helper.connector_logger.info(
-                        f"Retrying in {retry_delay} seconds..."
+            except Exception as ex:
+                self._mark_work_failed(work_id, obj_type, ex)
+                if self._is_retryable_upload_error(ex):
+                    self.helper.connector_logger.error(
+                        f"[{obj_type}] API push attempt {attempt + 1}/{max_retries} "
+                        f"failed: {ex}"
                     )
-                    time.sleep(retry_delay)
-                    retry_delay = (
-                        int(retry_delay * self._retry_backoff_multiplier) or retry_delay
-                    )
-                else:
+                    if attempt < max_retries - 1:
+                        self.helper.connector_logger.info(
+                            f"Retrying in {retry_delay} seconds..."
+                        )
+                        time.sleep(retry_delay)
+                        retry_delay = (
+                            int(retry_delay * self._retry_backoff_multiplier)
+                            or retry_delay
+                        )
+                        continue
                     self.helper.connector_logger.error(
                         f"[{obj_type}] failed API import after {max_retries} attempts."
                     )
                     return False
 
-            except Exception as ex:
-                error_message = f"[{obj_type}] unexpected error during API import: {ex}"
+                error_message = (
+                    f"[{obj_type}] unexpected error during API import: {ex}"
+                )
                 self.helper.connector_logger.error(error_message)
-                raise ConnectionError(error_message) from ex
+                raise
 
         return False

@@ -130,6 +130,46 @@ def test_batch_send_stix_bundle_returns_false_after_retry_budget(
 
     assert ok is False
     assert connector.helper.send_stix2_bundle.call_count == 2
+    assert connector.helper.api.work.to_processed.call_count == 2
+    for call in connector.helper.api.work.to_processed.call_args_list:
+        assert call.kwargs.get("in_error") is True
+
+
+def test_batch_send_stix_bundle_retries_requests_exceptions(connector, monkeypatch):
+    import requests
+
+    stix_object = MagicMock()
+    connector.helper.send_stix2_bundle.side_effect = [
+        requests.exceptions.Timeout("upstream timeout"),
+        ["bundle-sent"],
+    ]
+    monkeypatch.setattr("connector.connector.time.sleep", lambda _: None)
+
+    ok = connector._batch_send_stix_bundle(
+        [stix_object], timestamp=1_700_000_000, obj_type="malware"
+    )
+
+    assert ok is True
+    assert connector.helper.send_stix2_bundle.call_count == 2
+    assert connector.helper.api.work.to_processed.call_count == 2
+    first = connector.helper.api.work.to_processed.call_args_list[0]
+    second = connector.helper.api.work.to_processed.call_args_list[1]
+    assert first.kwargs.get("in_error") is True
+    assert second.kwargs.get("in_error") is not True
+
+
+def test_batch_send_stix_bundle_reraises_non_retryable_after_marking_work(connector):
+    stix_object = MagicMock()
+    connector.helper.send_stix2_bundle.side_effect = ValueError("bad payload")
+
+    with pytest.raises(ValueError, match="bad payload"):
+        connector._batch_send_stix_bundle(
+            [stix_object], timestamp=1_700_000_000, obj_type="malware"
+        )
+
+    connector.helper.api.work.to_processed.assert_called_once()
+    kwargs = connector.helper.api.work.to_processed.call_args.kwargs
+    assert kwargs.get("in_error") is True
 
 
 def test_normalize_api_item_overrides_intrusion_set_confidence():
