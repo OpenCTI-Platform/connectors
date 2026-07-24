@@ -6,7 +6,7 @@
   "logo": null,
   "use_cases" : ["Infrastructure & Attack Surface Visibility"],
   "verified": false,
-  "last_verified_date": null",
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 100,
   "support_version": ">=6.8.12",
