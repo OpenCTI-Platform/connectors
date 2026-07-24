@@ -37,8 +37,9 @@
       "type": "array"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT24H",
-      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector (in ISO 8601 format, e.g., 'PT24H' for 24 hours).",
+      "format": "duration",
       "type": "string"
     },
     "CONNECTOR_TYPE": {
