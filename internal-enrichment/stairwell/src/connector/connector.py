@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from pycti import OpenCTIConnectorHelper
-
 from connector.enricher import Dispatcher
 from connector.settings import ConnectorSettings
 from connector.stairwell import StairwellClient
+from pycti import OpenCTIConnectorHelper
 
 
 class StairwellConnector:

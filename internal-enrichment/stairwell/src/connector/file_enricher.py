@@ -17,7 +17,6 @@ from .stix_builder import (
     make_x509_certificate,
     network_observable_for,
     stairwell_identity,
-    stix_id,
     tlp_marking,
 )
 
