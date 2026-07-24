@@ -170,7 +170,7 @@
     "version": {
       "type": "string",
       "description": "Current version of the connector.",
-      "pattern": "^[0-9]+\\.[0-9]{1,6}\\.[0-9]+$",
+      "pattern": "^[0-9]+\\.[0-9]{1,6}\\.[0-9]+(-lts\\.[0-9]+)?$",
       "examples": ["6.5.1", "1.0.0"]
     },
     "image_name": {
