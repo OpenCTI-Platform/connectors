@@ -1,0 +1,39 @@
+opencti:
+  url: 'http://localhost:8080' # example: 'http://localhost:8080'
+  token: 'ChangeMe' # OpenCTI admin / API token
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe' # example UUID v4: 'b7f9a6b4-6b2a-4c3f-9f7b-8b5e5b6f2d1a'
+  name: 'RST Threat Library' # optional (default: 'RST Threat Library')
+  scope: 'intrusion-set,malware,tool,campaign' # STIX domain types emitted
+  log_level: 'error' # optional: 'debug', 'info', 'warn', 'error' (default: 'error')
+  duration_period: 'PT1H' # optional, ISO-8601 interval between runs (default: 'PT1H')
+  queue_threshold: 500 # optional (default: 500)
+  update_existing_data: true # optional (default: true)
+  auto_create_service_account: true # optional (default: false in settings; true in compose)
+  auto_create_service_account_confidence_level: 50 # optional (default: 50)
+
+rst_threat_library:
+  baseurl: 'https://api.rstcloud.net/v1' # optional (default: 'https://api.rstcloud.net/v1')
+  apikey: 'ChangeMe' # RST Cloud Threat Library API key
+  auth_header: 'x-api-key' # optional (default: 'x-api-key')
+  contimeout: 30 # optional, HTTP connect timeout seconds (default: 30)
+  readtimeout: 120 # optional, HTTP read timeout seconds (default: 120; try 600 for deep pages)
+  retry: 2 # optional, per-request HTTP retries (default: 2; try 10 for reliability)
+  ssl_verify: true # optional (default: true)
+  page_size: 100 # optional (default: 100; try 20 for reliability)
+  order_by: 'modified' # optional (default: 'modified')
+  order_mode: 'desc' # optional: 'asc' or 'desc' (default: 'desc')
+  proxy: '' # optional forward HTTP proxy URL, e.g. 'http://proxy.example.com:8080'
+  max_retries: 3 # optional, OpenCTI push retries (default: 3)
+  retry_delay: 10 # optional, OpenCTI push retry delay seconds (default: 10)
+  retry_backoff_multiplier: 2.0 # optional (default: 2.0)
+  object_types: 'intrusion-sets,malware,tools,campaigns' # optional
+  import_from_date: '' # optional initial backfill cutoff, e.g. '2024-01-01'
+  opencti_push_mode: 'bundle' # optional: 'bundle' or 'api' (default: 'bundle')
+  sync_labels: 'RST Threat Library' # optional; scopes merge/split
+  reconcile_exclude_labels: '' # optional, e.g. 'MITRE,manual'
+  reconcile_allow_created_by: '' # optional, comma-separated identity IDs
+  merge_split: false # optional (default: false)
+  respect_user_edits: false # optional (default: false)

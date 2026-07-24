@@ -1,0 +1,22 @@
+{
+  "title": "RST Threat Library",
+  "slug": "rst-threat-library",
+  "description": "Imports RST Cloud Threat Library intrusion sets, malware, tools and campaigns into OpenCTI.",
+  "short_description": "Imports RST Cloud Threat Library into OpenCTI.",
+  "logo": "external-import/rst-threat-library/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": null,
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-rst-threat-library",
+  "container_type": "EXTERNAL_IMPORT"
+}
+
