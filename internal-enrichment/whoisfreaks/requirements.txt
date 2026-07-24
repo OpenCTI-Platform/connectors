@@ -1,0 +1,4 @@
+pycti==6.0.5
+stix2>=3.0.1
+requests>=2.31.0
+pyyaml>=6.0.1

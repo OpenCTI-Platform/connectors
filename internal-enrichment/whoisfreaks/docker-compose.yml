@@ -1,0 +1,87 @@
+version: "3"
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    restart: always
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    restart: always
+
+  minio:
+    image: minio/minio:RELEASE.2024-02-17T01-15-57Z
+    command: server /data
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-opencti}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    restart: always
+
+  opencti:
+    image: opencti/platform:6.0.5
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=4096
+      - APP__ADMIN__EMAIL=${OPENCTI_ADMIN_EMAIL}
+      - APP__ADMIN__PASSWORD=${OPENCTI_ADMIN_PASSWORD}
+      - APP__ADMIN__TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - APP__BASE_URL=${OPENCTI_BASE_URL}
+      - REDIS__HOSTNAME=redis
+      - REDIS__PORT=6379
+      - ELASTICSEARCH__URL=http://elasticsearch:9200
+      - MINIO__ENDPOINT=minio
+      - MINIO__PORT=9000
+      - MINIO__USE_SSL=false
+      - MINIO__ACCESS_KEY=opencti
+      - MINIO__SECRET_KEY=opencti_minio_password
+      - RABBITMQ__HOSTNAME=rabbitmq
+      - RABBITMQ__PORT=5672
+      - RABBITMQ__PORT_MANAGEMENT=15672
+      - RABBITMQ__USER=guest
+      - RABBITMQ__PASSWORD=guest
+    ports:
+      - "8080:4000"
+    depends_on:
+      - redis
+      - elasticsearch
+      - minio
+      - rabbitmq
+    restart: always
+  
+  worker:
+    image: opencti/worker:6.0.5
+    environment:
+      - OPENCTI_URL=http://opencti:4000
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - WORKER_LOG_LEVEL=INFO
+    depends_on:
+      - opencti
+    restart: always
+
+  connector-whoisfreaks:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opencti-connector-whoisfreaks:latest
+    container_name: opencti-connector-whoisfreaks
+    environment:
+      - OPENCTI_URL=http://opencti:4000
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_KEY}
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=WhoisFreaks
+      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,IPv6-Addr
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_CONFIDENCE_LEVEL=100
+      - CONNECTOR_LOG_LEVEL=INFO
+      - WHOISFREAKS_API_KEY=${WHOISFREAKS_API_KEY}
+    depends_on:
+      - opencti
+    restart: always
