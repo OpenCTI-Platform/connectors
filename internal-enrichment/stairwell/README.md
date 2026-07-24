@@ -40,7 +40,7 @@ Environment variables override the file.
 | Connector name | `connector.name` | `CONNECTOR_NAME` | yes | `Stairwell` | Display name in OpenCTI |
 | Connector scope | `connector.scope` | `CONNECTOR_SCOPE` | yes | `StixFile,Domain-Name,IPv4-Addr,IPv6-Addr,Autonomous-System` | Observable types this connector handles |
 | Auto enrich | `connector.auto` | `CONNECTOR_AUTO` | no | `false` | Enrich every newly-created in-scope observable |
-| Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | no | `info` | `debug`, `info`, `warn`, `error` |
+| Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | no | `error` | `debug`, `info`, `warn`, `error` |
 
 ### Stairwell
 

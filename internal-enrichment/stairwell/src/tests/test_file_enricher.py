@@ -211,7 +211,7 @@ def test_variants_capped_sorted_and_family_label():
     # Source file + 2 variants (cap=2, self filtered)
     assert len(files) == 3
 
-    # Derived-from relationships from source to each variant
+    # Derived-from relationships from each variant to the primary file
     derived = [
         o
         for o in payload["objects"]

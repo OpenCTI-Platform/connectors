@@ -409,10 +409,14 @@ class FileEnricher:
                 md5=v.get("md5"),
             )
             out.append(sco)
+            # `derived-from`: source is derived from target. Variants are
+            # derivatives of the primary sample, so the variant is the source
+            # and the enriched primary is the target — matching the `child`
+            # direction in `_lineage_objects` (was reversed here).
             out.append(
                 make_relationship(
-                    source_id=source_entity_id,
-                    target_id=sco["id"],
+                    source_id=sco["id"],
+                    target_id=source_entity_id,
                     relationship_type="derived-from",
                     tlp=self.tlp,
                 )
