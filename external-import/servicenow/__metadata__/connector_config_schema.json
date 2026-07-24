@@ -128,7 +128,6 @@
       "type": "string"
     },
     "SERVICENOW_IMPORT_START_DATE": {
-      "default": null,
       "description": "Start date of first import (ISO date format) - Default to 30 days ago.",
       "format": "date-time",
       "type": "string"

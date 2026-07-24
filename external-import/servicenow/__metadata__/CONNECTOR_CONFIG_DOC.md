@@ -26,7 +26,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SERVICENOW_API_LEAKY_BUCKET_CAPACITY | `integer` |  | `0 < x ` | `10` | Maximum bucket capacity (in tokens). Defines the number of calls that can be made immediately in a burst. Once the bucket is empty, it refills at the rate defined by 'api_leaky_bucket_rate'. |
 | SERVICENOW_API_RETRY | `integer` |  | `0 < x ` | `5` | Maximum number of retry attempts in case of API failure. |
 | SERVICENOW_API_BACKOFF | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT30S"` | Exponential backoff duration between API retries (ISO 8601 duration format). |
-| SERVICENOW_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | Start date of first import (ISO date format) - Default to 30 days ago. |
+| SERVICENOW_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Start date of first import (ISO date format) - Default to 30 days ago. |
 | SERVICENOW_STATE_TO_EXCLUDE | `array` |  | string | `null` | List of security incident states to exclude from import. |
 | SERVICENOW_SEVERITY_TO_EXCLUDE | `array` |  | string | `null` | List of security incident severities to exclude from import. |
 | SERVICENOW_PRIORITY_TO_EXCLUDE | `array` |  | string | `null` | List of security incident priorities to exclude from import. |

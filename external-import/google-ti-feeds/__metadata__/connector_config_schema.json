@@ -278,7 +278,7 @@
         "attack_techniques",
         "threat_actors"
       ],
-      "description": "Comma-separated list of sub-entity types to fetch and link for each vulnerability. An empty list disables sub-entity fetching entirely for vulnerabilities, which can help reduce API quota usage. Allowed values: malware_families, attack_techniques, threat_actors, campaigns, reports, domains, files, urls, ip_addresses",
+      "description": "Comma-separated list of sub-entity types to fetch and link for each vulnerability. An empty list disables sub-entity fetching entirely for vulnerabilities, which can help reduce API quota usage. Allowed values: malware_families, attack_techniques, threat_actors",
       "examples": [
         "malware_families,threat_actors",
         ""
@@ -337,7 +337,7 @@
         "attack_techniques",
         "vulnerabilities"
       ],
-      "description": "Comma-separated list of sub-entity types to fetch and link for each malware family. An empty list disables sub-entity fetching entirely for malware families, which can help reduce API quota usage. Allowed values: threat_actors, attack_techniques, vulnerabilities, campaigns, reports, domains, files, urls, ip_addresses",
+      "description": "Comma-separated list of sub-entity types to fetch and link for each malware family. An empty list disables sub-entity fetching entirely for malware families, which can help reduce API quota usage. Allowed values: threat_actors, attack_techniques, vulnerabilities",
       "examples": [
         "threat_actors,attack_techniques",
         ""
@@ -397,7 +397,7 @@
         "vulnerabilities",
         "software_toolkits"
       ],
-      "description": "Comma-separated list of sub-entity types to fetch and link for each threat actor. An empty list disables sub-entity fetching entirely for threat actors, which can help reduce API quota usage. Allowed values: malware_families, attack_techniques, vulnerabilities, campaigns, reports, domains, files, urls, ip_addresses, software_toolkits",
+      "description": "Comma-separated list of sub-entity types to fetch and link for each threat actor. An empty list disables sub-entity fetching entirely for threat actors, which can help reduce API quota usage. Allowed values: malware_families, attack_techniques, vulnerabilities, software_toolkits",
       "examples": [
         "malware_families,attack_techniques",
         ""
