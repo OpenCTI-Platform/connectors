@@ -16,9 +16,27 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability,campaign",
+      "default": [
+        "report",
+        "location",
+        "identity",
+        "attack_pattern",
+        "domain",
+        "file",
+        "ipv4",
+        "ipv6",
+        "malware",
+        "sector",
+        "intrusion_set",
+        "url",
+        "vulnerability",
+        "campaign"
+      ],
       "description": "Comma-separated list of OpenCTI entity types that this connector can import",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",

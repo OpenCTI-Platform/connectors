@@ -41,6 +41,12 @@ def get_manifests_paths() -> list[str]:
     return manifests_paths
 
 
+def load_manifest(manifest_path: str) -> dict:
+    """Load a manifest from a file."""
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 @pytest.mark.parametrize("manifest_path", get_manifests_paths())
 def test_connectors_manifests_are_valid(manifest_path: str):
     """Assert that each connector manifest satisfies repository validity rules.
@@ -70,44 +76,41 @@ def test_connectors_manifests_are_valid(manifest_path: str):
     - container_type: correct type of connector (required)
     """
 
-    # Given a connectors' manifest path:
-    with open(manifest_path, "r", encoding="utf-8") as file:
-        # When reading the manifest
-        connector_manifest = json.load(file)
+    # Given a connector manifest
+    connector_manifest = load_manifest(manifest_path)
 
-        # Then the manifest is valid
-        assert is_valid_str(connector_manifest["title"])
-        assert is_valid_str(connector_manifest["slug"])
-        assert is_valid_str(connector_manifest["description"])
-        assert is_valid_str(connector_manifest["short_description"])
-        assert (
-            is_valid_str(connector_manifest["logo"])
-            or connector_manifest["logo"] is None
-        )
-        assert is_valid_use_cases(connector_manifest["use_cases"])
-        assert is_valid_solution_categories(connector_manifest["solution_categories"])
-        assert (
-            is_valid_str(connector_manifest["contact"])
-            or connector_manifest["contact"] is None
-        )
-        assert (
-            is_valid_license_type(connector_manifest["license_type"])
-            or connector_manifest["license_type"] is None
-        )
-        assert is_boolean(connector_manifest["verified"])
-        assert (
-            is_valid_date_str(connector_manifest["last_verified_date"])
-            or connector_manifest["last_verified_date"] is None
-        )
-        assert is_boolean(connector_manifest["playbook_supported"])
-        assert is_valid_max_confidence_level(connector_manifest["max_confidence_level"])
-        assert is_valid_str(connector_manifest["support_version"])
-        assert (
-            is_valid_str(connector_manifest["subscription_link"])
-            or connector_manifest["subscription_link"] is None
-        )
-        assert is_valid_source_code(connector_manifest["source_code"])
-        assert is_boolean(connector_manifest["manager_supported"])
-        assert is_valid_str(connector_manifest["container_version"])
-        assert is_valid_container_image(connector_manifest["container_image"])
-        assert is_valid_container_type(connector_manifest["container_type"])
+    # Then the manifest fields are valid
+    assert is_valid_str(connector_manifest["title"])
+    assert is_valid_str(connector_manifest["slug"])
+    assert is_valid_str(connector_manifest["description"])
+    assert is_valid_str(connector_manifest["short_description"])
+    assert (
+        is_valid_str(connector_manifest["logo"]) or connector_manifest["logo"] is None
+    )
+    assert is_valid_use_cases(connector_manifest["use_cases"])
+    assert is_valid_solution_categories(connector_manifest["solution_categories"])
+    assert (
+        is_valid_str(connector_manifest["contact"])
+        or connector_manifest["contact"] is None
+    )
+    assert (
+        is_valid_license_type(connector_manifest["license_type"])
+        or connector_manifest["license_type"] is None
+    )
+    assert is_boolean(connector_manifest["verified"])
+    assert (
+        is_valid_date_str(connector_manifest["last_verified_date"])
+        or connector_manifest["last_verified_date"] is None
+    )
+    assert is_boolean(connector_manifest["playbook_supported"])
+    assert is_valid_max_confidence_level(connector_manifest["max_confidence_level"])
+    assert is_valid_str(connector_manifest["support_version"])
+    assert (
+        is_valid_str(connector_manifest["subscription_link"])
+        or connector_manifest["subscription_link"] is None
+    )
+    assert is_valid_source_code(connector_manifest["source_code"])
+    assert is_boolean(connector_manifest["manager_supported"])
+    assert is_valid_str(connector_manifest["container_version"])
+    assert is_valid_container_image(connector_manifest["container_image"])
+    assert is_valid_container_type(connector_manifest["container_type"])

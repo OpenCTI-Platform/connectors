@@ -331,5 +331,5 @@
     "OPENCTI_URL",
     "OPENCTI_TOKEN"
   ],
-  "additionalProperties": false
+  "additionalProperties": true
 }

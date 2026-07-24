@@ -22,11 +22,17 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "splunk-soar-push",
+      "default": [
+        "splunk-soar-push"
+      ],
       "description": "The scope or type of data the connector is processing.",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_TYPE": {
+      "const": "STREAM",
       "default": "STREAM",
       "description": "Should always be set to STREAM for this connector.",
       "type": "string"
