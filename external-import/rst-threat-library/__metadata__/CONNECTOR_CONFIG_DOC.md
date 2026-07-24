@@ -28,7 +28,7 @@ connector.
 | RST_THREAT_LIBRARY_CONTIMEOUT | `integer` | | Positive integer | `30` | HTTP connection timeout in seconds. |
 | RST_THREAT_LIBRARY_READTIMEOUT | `integer` | | Positive integer | `120` | HTTP read timeout in seconds. |
 | RST_THREAT_LIBRARY_RETRY | `integer` | | Non-negative integer | `2` | Number of retries for each RST API request. |
-| RST_THREAT_LIBRARY_MAX_RETRIES | `integer` | | Non-negative integer | `3` | Maximum retries when sending data to OpenCTI. |
+| RST_THREAT_LIBRARY_MAX_RETRIES | `integer` | | Positive integer (≥ 1) | `3` | Maximum attempts when sending data to OpenCTI (at least one). |
 | RST_THREAT_LIBRARY_RETRY_DELAY | `integer` | | Non-negative integer | `10` | Initial delay in seconds before retrying an OpenCTI push. |
 | RST_THREAT_LIBRARY_RETRY_BACKOFF_MULTIPLIER | `number` | | Positive number | `2.0` | Exponential backoff multiplier for OpenCTI push retries. |
 | RST_THREAT_LIBRARY_OPENCTI_PUSH_MODE | `string` | | `bundle`, `api` | `"bundle"` | The OpenCTI write path: worker bundle or GraphQL API import. |

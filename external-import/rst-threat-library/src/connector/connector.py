@@ -1200,7 +1200,7 @@ class RSTThreatLibrary:
             f"(mode=bundle)"
         )
 
-        max_retries = self._max_retries
+        max_retries = max(1, int(self._max_retries))
         retry_delay = self._retry_delay
 
         for attempt in range(max_retries):
@@ -1284,7 +1284,7 @@ class RSTThreatLibrary:
             f"(update_existing={self.update_existing_data})"
         )
 
-        max_retries = self._max_retries
+        max_retries = max(1, int(self._max_retries))
         retry_delay = self._retry_delay
 
         for attempt in range(max_retries):

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://www.filigran.io/connectors/RST Threat Library_config.schema.json",
+  "$id": "https://www.filigran.io/connectors/rst-threat-library_config.schema.json",
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
@@ -12,6 +12,11 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_ID": {
+      "description": "A unique identifier for this connector instance (UUID v4).",
+      "format": "uuid",
       "type": "string"
     },
     "CONNECTOR_NAME": {
@@ -200,11 +205,11 @@
     },
     "RST_THREAT_LIBRARY_MAX_RETRIES": {
       "default": 3,
-      "description": "Maximum retries when pushing bundles to OpenCTI.",
+      "description": "Maximum attempts when pushing bundles to OpenCTI (at least one).",
       "examples": [
         3
       ],
-      "minimum": 0,
+      "minimum": 1,
       "type": "integer"
     },
     "RST_THREAT_LIBRARY_RETRY_DELAY": {
@@ -326,6 +331,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
+    "CONNECTOR_ID",
     "CONNECTOR_SCOPE",
     "RST_THREAT_LIBRARY_APIKEY"
   ],

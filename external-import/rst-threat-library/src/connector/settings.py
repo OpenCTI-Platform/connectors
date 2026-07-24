@@ -121,7 +121,7 @@ class RstThreatLibraryConfig(BaseConfigModel):
     max_retries: int = Field(
         description="Maximum retries when pushing bundles to OpenCTI.",
         default=3,
-        ge=0,
+        ge=1,
         examples=[3],
     )
     retry_delay: int = Field(

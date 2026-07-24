@@ -172,6 +172,18 @@ def test_batch_send_stix_bundle_reraises_non_retryable_after_marking_work(connec
     assert kwargs.get("in_error") is True
 
 
+def test_batch_send_stix_bundle_performs_one_attempt_when_max_retries_zero(connector):
+    connector._max_retries = 0
+    stix_object = MagicMock()
+
+    ok = connector._batch_send_stix_bundle(
+        [stix_object], timestamp=1_700_000_000, obj_type="malware"
+    )
+
+    assert ok is True
+    assert connector.helper.send_stix2_bundle.call_count == 1
+
+
 def test_normalize_api_item_overrides_intrusion_set_confidence():
     settings = StubConnectorSettingsWithConfidenceOverride()
     helper = MagicMock()
