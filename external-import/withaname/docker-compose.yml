@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+  connector-withaname:
+    image: opencti/connector-withaname:latest
+    container_name: connector-withaname
+    restart: always
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
+      - CONNECTOR_SCOPE=withaname
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=1h
+      # Optional connector-specific config (commented out; set if needed)
+      - DDOSIA_API_BASE_URL=https://witha.name
+      - DDOSIA_TLP_LEVEL=green
+      - DDOSIA_IMPORT_START_TIMESTAMP=null
+      - DDOSIA_CREATE_NOTES=true # whether to create STIX Note objects with raw targets data
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - opencti
+
+networks:
+  opencti:
+    external: true
