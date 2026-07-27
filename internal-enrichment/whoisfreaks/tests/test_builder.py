@@ -1,6 +1,6 @@
 import pytest
 import stix2
-from whoisfreaks.src.builder import WhoisFreaksStixBuilder
+from builder import WhoisFreaksStixBuilder
 
 
 @pytest.fixture

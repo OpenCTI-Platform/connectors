@@ -30,12 +30,14 @@ class WhoisFreaksClient:
         endpoint: str,
         params: Optional[dict] = None,
         body: Optional[dict] = None,
-        timeout: int = 30,
+        timeout: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         url = f"{self.BASE_URL}{endpoint}"
         if params is None:
             params = {}
         params["apiKey"] = self.api_key
+        if timeout is None:
+            timeout = self.timeout
 
         try:
             response = self.session.post(url, params=params, json=body, timeout=timeout)
@@ -54,12 +56,14 @@ class WhoisFreaksClient:
             return None
 
     def _get(
-        self, endpoint: str, params: Optional[dict] = None, timeout: int = 30
+        self, endpoint: str, params: Optional[dict] = None, timeout: Optional[int] = None
     ) -> Optional[Dict[str, Any]]:
         url = f"{self.BASE_URL}{endpoint}"
         if params is None:
             params = {}
         params["apiKey"] = self.api_key
+        if timeout is None:
+            timeout = self.timeout
 
         try:
             response = self.session.get(url, params=params, timeout=timeout)
