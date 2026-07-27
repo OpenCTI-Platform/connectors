@@ -223,7 +223,9 @@ class WhoisFreaksStixBuilder:
         else:
             target_stix = stix2.DomainName(value=clean_target)
         objects.append(target_stix)
-        ssl_certificates = ssl_data.get("sslCertificates") or [ssl_data]
+        ssl_certificates = ssl_data.get("sslCertificates")
+        if not ssl_certificates:
+            return None
         for cert in ssl_certificates:
             cert_info = cert.get("certificate_info") or cert
             issuer = cert_info.get("issuer_dn") or "Unknown Issuer"
