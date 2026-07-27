@@ -230,13 +230,11 @@ class WhoisFreaksStixBuilder:
             cert_info = cert.get("certificate_info") or cert
             issuer = cert_info.get("issuer_dn") or "Unknown Issuer"
             subject = cert_info.get("subject_dn") or clean_target
-            serial = str(cert_info.get("serial_number", ""))
-
-            cert_stix = stix2.X509Certificate(
-                issuer=str(issuer),
-                subject=str(subject),
-                serial_number=serial,
-            )
+            serial = cert_info.get("serial_number")
+            cert_kwargs = {"issuer": str(issuer), "subject": str(subject)}
+            if serial:
+                cert_kwargs["serial_number"] = str(serial)
+            cert_stix = stix2.X509Certificate(**cert_kwargs)
             objects.append(cert_stix)
             objects.append(
                 stix2.Relationship(
