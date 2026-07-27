@@ -182,7 +182,10 @@ def test_bulk_dns_lookup(client):
             "https://api.whoisfreaks.com/v2.0/dns/bulk/live?apiKey=test-api-key&format=json&type=all",
             json={"data": "bulk"},
         )
-        assert client.bulk_dns_lookup(domains=["example.com"], ip_addresses=["1.2.3.4"]) == {"data": "bulk"}
+        assert (
+            client.bulk_dns_lookup(domains=["example.com"], ip_addresses=["1.2.3.4"])
+            == {"data": "bulk"}
+        )
 
 
 def test_domain_availability_lookup(client):

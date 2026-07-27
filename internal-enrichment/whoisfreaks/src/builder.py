@@ -358,8 +358,9 @@ class WhoisFreaksStixBuilder:
         objects.append(ip_stix)
 
         sec_data = reputation_data.get("security") or reputation_data
-        threat_score = sec_data.get("threat_score") or sec_data.get("score")
-
+        threat_score = sec_data.get("threat_score")
+        if threat_score is None:
+            threat_score = sec_data.get("score")
         if threat_score is not None:
             note_stix = stix2.Note(
                 id=pycti.Note.generate_id(
