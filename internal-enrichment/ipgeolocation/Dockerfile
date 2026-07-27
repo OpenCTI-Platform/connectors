@@ -10,7 +10,7 @@ RUN useradd -ms /bin/bash connector
 
 # Install system dependency required by pycti (python-magic)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends libmagic1 && \
+    apt-get install -y --no-install-recommends libmagic1 git && \
     rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
