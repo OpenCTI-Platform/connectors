@@ -175,12 +175,12 @@
     },
     "GTI_INDICATOR_REQUIRE_MALWARE_FAMILY": {
       "default": false,
-      "description": "Only import indicators that have at least one association with a Malware Family. Combined with GTI_INDICATOR_REQUIRE_THREAT_ACTOR using OR logic, and with GTI_INDICATOR_MIN_SCORE using AND logic.",
+      "description": "Only import indicators that have at least one association with a Malware Family. Combined with indicator_require_threat_actor using OR logic, and with indicator_min_score using AND logic.",
       "type": "boolean"
     },
     "GTI_INDICATOR_REQUIRE_THREAT_ACTOR": {
       "default": false,
-      "description": "Only import indicators that have at least one association with a Threat Actor. Combined with GTI_INDICATOR_REQUIRE_MALWARE_FAMILY using OR logic, and with GTI_INDICATOR_MIN_SCORE using AND logic.",
+      "description": "Only import indicators that have at least one association with a Threat Actor. Combined with indicator_require_malware_family using OR logic, and with indicator_min_score using AND logic.",
       "type": "boolean"
     },
     "GTI_CAMPAIGN_IMPORT_START_DATE": {
