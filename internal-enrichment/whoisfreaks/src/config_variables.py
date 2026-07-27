@@ -61,7 +61,7 @@ class ConfigVariables:
         )
         # Force log level to uppercase string (e.g. 'INFO')
         raw_log_level = get_config_variable(
-            "CONNECTOR_LOG_LEVEL", ["connector", "log_level"], config, default="INFO"
+            "CONNECTOR_LOG_LEVEL", ["connector", "log_level"], config, default="info"
         )
         self.connector_log_level = (
             str(raw_log_level).upper() if raw_log_level else "INFO"

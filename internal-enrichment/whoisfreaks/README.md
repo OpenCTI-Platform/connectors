@@ -31,7 +31,7 @@ The connector is configured using environment variables (or `.env` / `config.yml
 | `CONNECTOR_SCOPE`            | No       | `Domain-Name,IPv4-Addr,IPv6-Addr` | Supported STIX 2.1 entity types.                                         |
 | `CONNECTOR_AUTO`             | No       | `false`                           | Enable automatic enrichment on observable creation (`true`/`false`).     |
 | `CONNECTOR_CONFIDENCE_LEVEL` | No       | `100`                             | Confidence score (0-100) assigned to created STIX objects.               |
-| `CONNECTOR_LOG_LEVEL`        | No       | `INFO`                            | Log verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`).                     |
+| `CONNECTOR_LOG_LEVEL`        | No       | `info`                            | Log verbosity (`debug`, `info`, `warning`, `error`).                     |
 | `WHOISFREAKS_API_KEY`        | Yes      | -                                 | Your active WhoisFreaks API key.                                         |
 
 ---
