@@ -1,10 +1,10 @@
-# DDoSIA Connector
+# WithaName Connector
 
 This connector imports DDoS targets from the DDoSIA campaign (provided by `witha.name`) into the OpenCTI platform.
 
 ## Introduction
 
-The DDoSIA connector automatically retrieves snapshots of DDoS targets. For each snapshot, it creates:
+The WithaName connector automatically retrieves snapshots of DDoS targets. For each snapshot, it creates:
 - **Domain-Name** entities for the targeted hosts.
 - **IPv4-Addr** entities for the associated IP addresses.
 - **Resolves-to** relationships between the domains and the IPs.
@@ -62,10 +62,10 @@ The DDoSIA connector automatically retrieves snapshots of DDoS targets. For each
 
 | Parameter | config.yml | Docker environment variable | Default | Mandatory | Description |
 | ---------- | ----------- | --------------------------- | --------- | --------- | ----------- |
-| API Base URL | api_base_url | `DDOSIA_API_BASE_URL` | / | Yes | The base URL of the witha.name API. |
-| TLP Level | tlp_level | `DDOSIA_TLP_LEVEL` | green | No | Default TLP level of the imported entities. |
-| Import Start Timestamp | import_start_timestamp | `DDOSIA_IMPORT_START_TIMESTAMP` | null | No | Timestamp to start the first import. <br> - `null`: Only the most recent snapshot. <br> - `0`: All available history. <br> - `value`: All snapshots since this timestamp. |
-| Create Notes | create_notes | `DDOSIA_CREATE_NOTES` | true | No | Whether to create STIX Note objects for each domain containing raw targets data. Set to `false` to disable note creation. |
+| API Base URL | api_base_url | `WITHANAME_API_BASE_URL` | / | Yes | The base URL of the witha.name API. |
+| TLP Level | tlp_level | `WITHANAME_TLP_LEVEL` | green | No | Default TLP level of the imported entities. |
+| Import Start Timestamp | import_start_timestamp | `WITHANAME_IMPORT_START_TIMESTAMP` | null | No | Timestamp to start the first import. <br> - `null`: Only the most recent snapshot. <br> - `0`: All available history. <br> - `value`: All snapshots since this timestamp. |
+| Create Notes | create_notes | `WITHANAME_CREATE_NOTES` | true | No | Whether to create STIX Note objects for each domain containing raw targets data. Set to `false` to disable note creation. |
 
 ## Behavior
 
