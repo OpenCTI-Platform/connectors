@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WhoisFreaks connector configuration schema",
+  "type": "object",
+  "properties": {
+    "whoisfreaks_api_key": {
+      "type": "string",
+      "description": "API key for accessing the WhoisFreaks service",
+      "minLength": 1
+    },
+    "whoisfreaks_url": {
+      "type": "string",
+      "description": "Optional base URL for the WhoisFreaks API",
+      "format": "uri"
+    }
+  },
+  "required": ["whoisfreaks_api_key"],
+  "additionalProperties": false
+}

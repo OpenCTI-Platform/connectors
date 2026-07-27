@@ -1,7 +1,8 @@
 import logging
-import stix2
 from typing import Any, Dict, List, Optional
+
 import pycti
+import stix2
 
 logger = logging.getLogger(__name__)
 

@@ -5,8 +5,13 @@
   "short_description": "Enrich domain, IP, and SSL observables with live WHOIS, DNS, Geolocation, and threat intelligence from WhoisFreaks.",
   "logo": "https://whoisfreaks.com/images/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "contact": null,
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": true,

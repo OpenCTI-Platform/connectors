@@ -1,11 +1,11 @@
-import sys
 import logging
+import sys
 from typing import Any, Dict, List, Optional, Tuple
-from pycti import OpenCTIConnectorHelper
 
-from configVariables import ConfigVariables
-from client import WhoisFreaksClient
 from builder import WhoisFreaksStixBuilder
+from client import WhoisFreaksClient
+from configVariables import ConfigVariables
+from pycti import OpenCTIConnectorHelper
 
 logging.basicConfig(
     level=logging.INFO,
