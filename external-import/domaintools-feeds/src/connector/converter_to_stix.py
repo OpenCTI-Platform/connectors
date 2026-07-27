@@ -5,6 +5,7 @@ import stix2
 import validators
 from pycti import (
     Identity,
+    Indicator,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -192,10 +193,14 @@ class ConverterToStix:
         :return: Stix object for IPV4, IPV6 or Domain
         """
         if self._is_domain(value) is True:
+            pattern = f"[domain-name:value = '{value}']"
+            indicator_id = Indicator.generate_id(pattern)
+
             stix_domain_name = stix2.Indicator(
                 name=f"Indicator for {value}",
+                id=indicator_id,
                 pattern_type="stix",
-                pattern=f"[domain-name:value = '{value}']",  # Pattern for a domain
+                pattern=pattern,
                 labels=labels,
                 valid_from=timestamp,
                 custom_properties={
