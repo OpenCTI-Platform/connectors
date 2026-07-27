@@ -1,2 +1,2 @@
 -r ../src/requirements.txt
-pytest==8.4.2
+pytest==9.0.3
