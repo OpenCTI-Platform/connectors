@@ -210,8 +210,8 @@ jobs:
             VERSION="${{ github.ref_name }}"
             VERSION="${VERSION##*/}"
 
-            if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]{6}\.[0-9]+$'; then
-              echo "::error::Invalid CalVer version '${VERSION}' from tag '${{ github.ref_name }}'. Expected format: MAJOR.YYMMDD.PATCH (e.g. 7.260630.0)"
+            if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]{6}\.[0-9]+(-lts\.[0-9]+)?$'; then
+              echo "::error::Invalid CalVer version '${VERSION}' from tag '${{ github.ref_name }}'. Expected format: MAJOR.YYMMDD.PATCH or MAJOR.YYMMDD.PATCH-lts.N (e.g. 7.260630.0 or 7.260630.0-lts.1)"
               exit 1
             fi
 
@@ -221,8 +221,8 @@ jobs:
             INPUT_VERSION="${{ inputs.version }}"
 
             if [ -n "$INPUT_VERSION" ]; then
-              if ! echo "$INPUT_VERSION" | grep -qE '^[0-9]+\.[0-9]{6}\.[0-9]+$'; then
-                echo "::error::Invalid CalVer version: '$INPUT_VERSION'. Expected format: MAJOR.YYMMDD.PATCH (e.g. 7.260603.0)"
+              if ! echo "$INPUT_VERSION" | grep -qE '^[0-9]+\.[0-9]{6}\.[0-9]+(-lts\.[0-9]+)?$'; then
+                echo "::error::Invalid CalVer version: '$INPUT_VERSION'. Expected format: MAJOR.YYMMDD.PATCH or MAJOR.YYMMDD.PATCH-lts.N (e.g. 7.260603.0 or 7.260603.0-lts.1)"
                 exit 1
               fi
               VERSION="$INPUT_VERSION"
@@ -478,7 +478,7 @@ jobs:
           echo "✅ Patched container_version → $VERSION in $MANIFEST"
 
       - name: Set up Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
 

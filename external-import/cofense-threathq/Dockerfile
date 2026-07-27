@@ -13,7 +13,6 @@ RUN cd /opt/opencti-connector-cofense-threathq && \
     apk del git build-base && \
     rm -rf /var/cache/apk/*
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-cofense-threathq
+
+CMD ["python3", "main.py"]

@@ -14,9 +14,6 @@ The Maltiverse connector imports threat intelligence data from the Maltiverse pl
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -35,40 +32,16 @@ This connector fetches STIX bundles from Maltiverse TAXII 2.1 collections and im
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260715.0
+- OpenCTI Platform >= 7.260722.0
 - Maltiverse account with feed access
 - TAXII 2.1 client library (`taxii2client`)
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter        | config.yml | Docker environment variable | Default    | Mandatory | Description                                                              |
-|------------------|------------|-----------------------------|------------|-----------|--------------------------------------------------------------------------|
-| Connector ID     | id         | `CONNECTOR_ID`              |            | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
-| Connector Name   | name       | `CONNECTOR_NAME`            | MALTIVERSE | Yes       | Name of the connector.                                                   |
-| Connector Scope  | scope      | `CONNECTOR_SCOPE`           |            | Yes       | The scope or type of data the connector is importing (see below).        |
-| Log Level        | log_level  | `CONNECTOR_LOG_LEVEL`       | info       | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
-
-**Recommended Scope**: `ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1`
-
-### Connector extra parameters environment variables
-
-| Parameter     | config.yml           | Docker environment variable   | Default | Mandatory | Description                                                    |
-|---------------|----------------------|-------------------------------|---------|-----------|----------------------------------------------------------------|
-| User          | maltiverse.user      | `MALTIVERSE_USER`             |         | Yes       | Maltiverse account username/email.                             |
-| Password      | maltiverse.passwd    | `MALTIVERSE_PASSWD`           |         | Yes       | Maltiverse account password.                                   |
-| Feeds         | maltiverse.feeds     | `MALTIVERSE_FEEDS`            |         | Yes       | Comma-separated list of feed/collection IDs to fetch.          |
-| Poll Interval | maltiverse.poll_interval | `MALTIVERSE_POLL_INTERVAL`|         | Yes       | Polling interval in hours between connector runs.              |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -95,7 +68,7 @@ Configure the connector in `docker-compose.yml`:
       - MALTIVERSE_USER=your@email.com
       - MALTIVERSE_PASSWD=ChangeMe
       - MALTIVERSE_FEEDS=VdhZV34B4jHUXfKt_gDi,another_feed_id
-      - MALTIVERSE_POLL_INTERVAL=4
+      - CONNECTOR_DURATION_PERIOD=PT4H
     restart: always
 ```
 
@@ -123,7 +96,7 @@ python3 main.py
 
 ## Usage
 
-The connector runs automatically at the interval defined by `MALTIVERSE_POLL_INTERVAL`. To force an immediate run:
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
 **Data Management → Ingestion → Connectors**
 

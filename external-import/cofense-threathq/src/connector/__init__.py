@@ -1,3 +1,7 @@
-from .connector import CofenseThreatHQ
+from connector.connector import CofenseThreatHQ
+from connector.settings import ConnectorSettings
 
-__all__ = ["CofenseThreatHQ"]
+__all__ = [
+    "CofenseThreatHQ",
+    "ConnectorSettings",
+]

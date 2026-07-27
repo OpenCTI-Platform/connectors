@@ -19,7 +19,7 @@
   "support_version": ">=5.12.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/rst-report-hub",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-rst-report-hub",
   "container_type": "EXTERNAL_IMPORT"

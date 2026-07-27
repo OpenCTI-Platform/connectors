@@ -1,3 +1,3 @@
-pycti==7.260715.0
+pycti==7.260722.0
 urllib3==2.7.0
 PyGithub==2.8.1
