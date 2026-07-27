@@ -110,7 +110,7 @@ class DomainToolsIrisQLConnector:
                     content=json.dumps(entity),
                     object_refs=[domain_obs.id]  # Links the note to the domain observable
                 )                                                            
-                _tmp = stix_objects.append(note_obj)            
+                stix_objects.append(note_obj)            
             
             ###### IP
             stix_objects.extend(self._process_IP(domain_obs, entity.get('ip', [])))                            
