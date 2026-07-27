@@ -32,13 +32,22 @@ class ConfigVariables:
             "CONNECTOR_ID", ["connector", "id"], config
         )
         self.connector_type = get_config_variable(
-            "CONNECTOR_TYPE", ["connector", "type"], config
+            "CONNECTOR_TYPE",
+            ["connector", "type"],
+            config,
+            default="INTERNAL_ENRICHMENT",
         )
         self.connector_name = get_config_variable(
-            "CONNECTOR_NAME", ["connector", "name"], config
+            "CONNECTOR_NAME",
+            ["connector", "name"],
+            config,
+            default="WhoisFreaks",
         )
         self.connector_scope = get_config_variable(
-            "CONNECTOR_SCOPE", ["connector", "scope"], config
+            "CONNECTOR_SCOPE",
+            ["connector", "scope"],
+            config,
+            default=["Domain-Name", "IPv4-Addr", "IPv6-Addr"],
         )
         self.connector_confidence_level = get_config_variable(
             "CONNECTOR_CONFIDENCE_LEVEL",
