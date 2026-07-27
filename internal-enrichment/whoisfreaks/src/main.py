@@ -112,8 +112,8 @@ class WhoisFreaksConnector:
         """Callback executed whenever an enrichment task is received from RabbitMQ."""
         entity_id = msg.get("entity_id")
         if not entity_id:
-             logger.error("[WhoisFreaks Connector] Missing entity_id in message")
-             return "Entity ID missing"
+            logger.error("[WhoisFreaks Connector] Missing entity_id in message")
+            return "Entity ID missing"
         observable_type, observable_value = self._get_entity_info(entity_id)
         if not observable_type or not observable_value:
             logger.error(
