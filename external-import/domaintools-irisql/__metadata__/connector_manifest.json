@@ -1,6 +1,6 @@
 {
   "title": "DomainTools IrisQL",
-  "slug": "template",
+  "slug": "domaintools",
   "description": "Import DomainTools IrisQL",
   "short_description": "Import DomainTools IrisQL",
   "logo": null,
@@ -11,7 +11,7 @@
   "max_confidence_level": 100,
   "support_version": ">=6.8.12",
   "subscription_link": null,
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/template",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/domaintools-irisql",
   "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-domaintools-irisql",
