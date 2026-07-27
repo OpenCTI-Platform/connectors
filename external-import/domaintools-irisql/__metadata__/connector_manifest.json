@@ -5,6 +5,7 @@
   "short_description": "Import DomainTools IrisQL",
   "logo": null,
   "use_cases" : ["Threat Intelligence"],
+  "solution_categories": ["Threat Intelligence"],
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
