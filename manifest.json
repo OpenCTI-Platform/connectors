@@ -16896,7 +16896,7 @@
             "type": "string"
           },
           "CONNECTOR_NAME": {
-            "default": "ANY.RUN sandbox",
+            "default": "ANY.RUN Sandbox",
             "description": "The name of the connector.",
             "type": "string"
           },
