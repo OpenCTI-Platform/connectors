@@ -164,12 +164,12 @@ class WhoisFreaksClient:
         )
 
     def bulk_dns_lookup(
-        self, domains: list[str], ipAddresses: list[str], format: Optional[str] = "json"
+        self, domains: list[str], ip_addresses: list[str], format: Optional[str] = "json"
     ) -> Optional[Dict[str, Any]]:
         return self._post(
             "/v2.0/dns/bulk/live",
             params={"format": format, "type": "all"},
-            body={"domainNames": domains, "ipAddresses": ipAddresses},
+            body={"domainNames": domains, "ipAddresses": ip_addresses},
         )
 
     def domain_availability_lookup(

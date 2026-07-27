@@ -1,19 +1,76 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "WhoisFreaks connector configuration schema",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/whoisfreaks_config.schema.json",
   "type": "object",
   "properties": {
-    "whoisfreaks_api_key": {
-      "type": "string",
-      "description": "API key for accessing the WhoisFreaks service",
-      "minLength": 1
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
     },
-    "whoisfreaks_url": {
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "WhoisFreaks",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Domain-Name",
+        "IPv4-Addr",
+        "IPv6-Addr"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 100,
+      "description": "Default confidence level (0-100) attached to STIX objects created by the connector.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "WHOISFREAKS_API_KEY": {
+      "description": "API key for accessing the WhoisFreaks service",
+      "format": "password",
       "type": "string",
-      "description": "Optional base URL for the WhoisFreaks API",
-      "format": "uri"
+      "writeOnly": true
     }
   },
-  "required": ["whoisfreaks_api_key"],
-  "additionalProperties": false
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "WHOISFREAKS_API_KEY"
+  ],
+  "additionalProperties": true
 }

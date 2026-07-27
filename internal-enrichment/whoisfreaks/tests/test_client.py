@@ -182,7 +182,7 @@ def test_bulk_dns_lookup(client):
             "https://api.whoisfreaks.com/v2.0/dns/bulk/live?apiKey=test-api-key&format=json&type=all",
             json={"data": "bulk"},
         )
-        assert client.bulk_dns_lookup(["example.com"], ["1.2.3.4"]) == {"data": "bulk"}
+        assert client.bulk_dns_lookup(domains=["example.com"], ip_addresses=["1.2.3.4"]) == {"data": "bulk"}
 
 
 def test_domain_availability_lookup(client):
@@ -207,12 +207,6 @@ def test_bulk_domain_availability_lookup(client):
 
 def test_typosquatting_lookup(client):
     with requests_mock.Mocker() as m:
-        m.get(
-            "https://api.whoisfreaks.com/v3.0/domain/tyops?apiKey=test-api-key&keyword=example",
-            json={"data": "typo"},
-        )
-        # Note: in client.py line 188: self._get("/v3.0/domain/typos", params={"keyword": keyword})
-        # Wait, the path is typos, let's fix URL mock:
         m.get(
             "https://api.whoisfreaks.com/v3.0/domain/typos?apiKey=test-api-key&keyword=example",
             json={"data": "typo"},

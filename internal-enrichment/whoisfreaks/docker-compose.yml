@@ -40,7 +40,7 @@ services:
       - MINIO__PORT=9000
       - MINIO__USE_SSL=false
       - MINIO__ACCESS_KEY=opencti
-      - MINIO__SECRET_KEY=opencti_minio_password
+      - MINIO__SECRET_KEY=${MINIO_ROOT_PASSWORD}
       - RABBITMQ__HOSTNAME=rabbitmq
       - RABBITMQ__PORT=5672
       - RABBITMQ__PORT_MANAGEMENT=15672

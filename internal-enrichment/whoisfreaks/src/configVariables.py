@@ -48,7 +48,7 @@ class ConfigVariables:
             default=100,
         )
         self.connector_auto = get_config_variable(
-            "CONNECTOR_AUTO", ["connector", "auto"], config
+            "CONNECTOR_AUTO", ["connector", "auto"], config, default=False
         )
         # Force log level to uppercase string (e.g. 'INFO')
         raw_log_level = get_config_variable(

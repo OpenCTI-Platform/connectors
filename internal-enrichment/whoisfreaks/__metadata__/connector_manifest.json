@@ -3,7 +3,7 @@
   "slug": "whoisfreaks",
   "description": "An official internal enrichment connector for OpenCTI powered by WhoisFreaks API. Enriches Domain-Name, IPv4-Addr, and IPv6-Addr observables with live WHOIS registration data, DNS records, SSL/TLS certificate metadata, IP geolocation, and threat context.",
   "short_description": "Enrich domain, IP, and SSL observables with live WHOIS, DNS, Geolocation, and threat intelligence from WhoisFreaks.",
-  "logo": "https://whoisfreaks.com/images/logo.png",
+  "logo": "internal-enrichment/whoisfreaks/__metadata__/logo.png",
   "use_cases": [
     "Infrastructure & Attack Surface Visibility"
   ],
