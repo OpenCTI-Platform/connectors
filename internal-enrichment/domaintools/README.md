@@ -74,7 +74,7 @@ There are a number of configuration options, which are set either in `docker-com
 |----------------|--------------------------|--------------------------------|------------|-----------|-----------------------------------------------------------------|
 | API Username   | domaintools.api_username | `DOMAINTOOLS_API_USERNAME`     |            | Yes       | DomainTools API username for authentication.                    |
 | API Key        | domaintools.api_key      | `DOMAINTOOLS_API_KEY`          |            | Yes       | DomainTools API key for authentication.                         |
-| Enrichment Method | enrichment_method | `DOMAINTOOLS_ENRICHMENT_METHOD` | 'investigate' | No | DomainTools Enrichment method to use.
+| Enrichment Method | enrichment_method | `DOMAINTOOLS_ENRICHMENT_METHOD` | 'investigate' | No | DomainTools Enrichment method to use. |
 | Max TLP        | domaintools.max_tlp      | `DOMAINTOOLS_MAX_TLP`          | TLP:AMBER  | No        | Maximum TLP level for observables to be enriched.               |
 
 ## Deployment
