@@ -154,8 +154,9 @@ class ConverterToStix:
         else:
             return False
 
-
-    def create_obs(self, value: str, score: int | None = None, labels: list [str] | None = None) -> dict:
+    def create_obs(
+        self, value: str, score: int | None = None, labels: list[str] | None = None
+    ) -> dict:
         """
         Create observable according to value given
         :param value: Value in string
@@ -193,7 +194,7 @@ class ConverterToStix:
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_score": score,
-                    "x_opencti_labels": labels
+                    "x_opencti_labels": labels,
                 },
             )
             return stix_domain_name
@@ -203,27 +204,30 @@ class ConverterToStix:
                 {"value": value},
             )
 
-def create_indicator(self, value: str, timestamp: str, confidence: int, labels: list[str]) -> dict:
-        """
-        Create observable according to value given
-        :param value: Value in string
-        :return: Stix object for IPV4, IPV6 or Domain
-        """
-        if self._is_domain(value) is True:
-            stix_domain_name = stix2.Indicator(
-                name=f"Indicator for {value}",
-                pattern_type="stix",
-                pattern=f"[domain-name:value = '{value}']",  # Pattern for a domain
-                labels=labels,
-                valid_from=timestamp,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_main_observable_type": "Domain-Name" # Required for OpenCTI
-                }
-            )
-            return stix_domain_name
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-                {"value": value},
-            )
+
+def create_indicator(
+    self, value: str, timestamp: str, confidence: int, labels: list[str]
+) -> dict:
+    """
+    Create observable according to value given
+    :param value: Value in string
+    :return: Stix object for IPV4, IPV6 or Domain
+    """
+    if self._is_domain(value) is True:
+        stix_domain_name = stix2.Indicator(
+            name=f"Indicator for {value}",
+            pattern_type="stix",
+            pattern=f"[domain-name:value = '{value}']",  # Pattern for a domain
+            labels=labels,
+            valid_from=timestamp,
+            custom_properties={
+                "x_opencti_created_by_ref": self.author["id"],
+                "x_opencti_main_observable_type": "Domain-Name",  # Required for OpenCTI
+            },
+        )
+        return stix_domain_name
+    else:
+        self.helper.connector_logger.error(
+            "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
+            {"value": value},
+        )

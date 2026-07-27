@@ -146,7 +146,7 @@ class ConverterToStix:
             return False
 
     # Feeds
-    def create_obs(self, value: str, labels: list [str]) -> dict:
+    def create_obs(self, value: str, labels: list[str]) -> dict:
         """
         Create observable according to value given
         :param value: Value in string
@@ -173,7 +173,7 @@ class ConverterToStix:
                 value=value,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_labels": labels
+                    "x_opencti_labels": labels,
                 },
             )
             return stix_domain_name
@@ -183,7 +183,9 @@ class ConverterToStix:
                 {"value": value},
             )
 
-    def create_indicator(self, value: str, timestamp: str, confidence: int, labels: list[str]) -> dict:
+    def create_indicator(
+        self, value: str, timestamp: str, confidence: int, labels: list[str]
+    ) -> dict:
         """
         Create observable according to value given
         :param value: Value in string
@@ -198,8 +200,8 @@ class ConverterToStix:
                 valid_from=timestamp,
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
-                    "x_opencti_main_observable_type": "Domain-Name" # Required for OpenCTI
-                }
+                    "x_opencti_main_observable_type": "Domain-Name",  # Required for OpenCTI
+                },
             )
             return stix_domain_name
         else:

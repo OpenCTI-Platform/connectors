@@ -55,7 +55,7 @@ class DomainToolsIrisQLConnector:
         self.helper = helper
         self.iris_ql = self.config.domaintools.iris_ql
         self.store_iris_data = self.config.domaintools.store_iris_data
-        if (not self.iris_ql):
+        if not self.iris_ql:
             self.helper.log_error("Missing IrisQL data.")
             raise ValueError("Missing IrisQL data.")
 
@@ -84,68 +84,90 @@ class DomainToolsIrisQLConnector:
 
         # Get entities from external sources
         entities = self.client.get_entities(self.iris_ql)
-        self.helper.connector_logger.info(f"Successfully downloaded {len(entities)} records.")
+        self.helper.connector_logger.info(
+            f"Successfully downloaded {len(entities)} records."
+        )
 
         for entity in entities:
-            domain = entity.get('domain')
-            score = entity.get('domain_risk', {}).get('risk_score')
+            domain = entity.get("domain")
+            score = entity.get("domain_risk", {}).get("risk_score")
 
-            labels = ['IrisQL']
-            for component in entity.get('domain_risk', {}).get('components'):
-                _name = component.get('name')
-                _score = component.get('risk_score')
-                if ('proximity' in _name): labels.append(f"proximity:{_score}")
-                elif ('malware' in _name): labels.append(f"malware:{_score}")
-                elif ('phishing' in _name): labels.append(f"phishing:{_score}")
-                elif ('spam' in _name): labels.append(f"spam:{_score}")
-                else: continue
+            labels = ["IrisQL"]
+            for component in entity.get("domain_risk", {}).get("components"):
+                _name = component.get("name")
+                _score = component.get("risk_score")
+                if "proximity" in _name:
+                    labels.append(f"proximity:{_score}")
+                elif "malware" in _name:
+                    labels.append(f"malware:{_score}")
+                elif "phishing" in _name:
+                    labels.append(f"phishing:{_score}")
+                elif "spam" in _name:
+                    labels.append(f"spam:{_score}")
+                else:
+                    continue
 
             domain_obs = self.converter_to_stix.create_obs(domain, score, labels)
             stix_objects.append(domain_obs)
 
             ###### Note
-            if (self.store_iris_data):
+            if self.store_iris_data:
                 note_obj = stix2.Note(
                     abstract="DomainTools Iris Data",
                     content=json.dumps(entity),
-                    object_refs=[domain_obs.id]  # Links the note to the domain observable
+                    object_refs=[
+                        domain_obs.id
+                    ],  # Links the note to the domain observable
                 )
                 stix_objects.append(note_obj)
 
             ###### IP
-            stix_objects.extend(self._process_IP(domain_obs, entity.get('ip', [])))
+            stix_objects.extend(self._process_IP(domain_obs, entity.get("ip", [])))
 
             ###### MX
-            stix_objects.extend(self._process_MX_NS(domain_obs, entity.get('mx', []), 'MX'))
+            stix_objects.extend(
+                self._process_MX_NS(domain_obs, entity.get("mx", []), "MX")
+            )
 
             ###### NS
-            stix_objects.extend(self._process_MX_NS(domain_obs, entity.get('name_server', []), 'NS'))
+            stix_objects.extend(
+                self._process_MX_NS(domain_obs, entity.get("name_server", []), "NS")
+            )
 
             ####### EMAIL
             # Get all EmailAddress
             all_emails = []
-            for contact in ['admin_contact','billing_contact','registrant_contact','technical_contact']:
-                all_emails.extend(entity.get(contact, {}).get('email', []))
+            for contact in [
+                "admin_contact",
+                "billing_contact",
+                "registrant_contact",
+                "technical_contact",
+            ]:
+                all_emails.extend(entity.get(contact, {}).get("email", []))
 
-            all_emails.extend(entity.get('soa_email', []))
-            all_emails.extend(entity.get('ssl_email', []))
-            all_emails.extend(entity.get('additional_whois_email', []))
-            for ssl in entity.get('ssl_info', []):
-                all_emails.extend(ssl.get('email', []))
+            all_emails.extend(entity.get("soa_email", []))
+            all_emails.extend(entity.get("ssl_email", []))
+            all_emails.extend(entity.get("additional_whois_email", []))
+            for ssl in entity.get("ssl_info", []):
+                all_emails.extend(ssl.get("email", []))
 
             # Create Object
-            unique_emails = list({item['value']: item for item in all_emails}.values())
+            unique_emails = list({item["value"]: item for item in all_emails}.values())
             for item in unique_emails:
-                email = item.get('value')
-                if (('https://' in email) or ('http://' in email)): continue
+                email = item.get("value")
+                if ("https://" in email) or ("http://" in email):
+                    continue
 
                 email_obs = self.converter_to_stix.create_obs(email)
 
-                if(not email_obs): continue
+                if not email_obs:
+                    continue
 
                 stix_objects.append(email_obs)
 
-                entity_relation = self.converter_to_stix.create_relationship(domain_obs.id, 'related-to', email_obs.id)
+                entity_relation = self.converter_to_stix.create_relationship(
+                    domain_obs.id, "related-to", email_obs.id
+                )
                 stix_objects.append(entity_relation)
 
         # ===========================
@@ -159,47 +181,59 @@ class DomainToolsIrisQLConnector:
 
         return stix_objects
 
-    def _process_IP (self, _source, data):
+    def _process_IP(self, _source, data):
         all_ip_object = []
         for ip_entity in data:
-            ip = ip_entity.get('address').get('value')
+            ip = ip_entity.get("address").get("value")
             ip_obs = self.converter_to_stix.create_obs(ip)
 
-            if (not ip_obs): continue
+            if not ip_obs:
+                continue
 
             all_ip_object.append(ip_obs)
 
-            entity_relation = self.converter_to_stix.create_relationship(_source.id, 'resolves-to', ip_obs.id)
+            entity_relation = self.converter_to_stix.create_relationship(
+                _source.id, "resolves-to", ip_obs.id
+            )
             all_ip_object.append(entity_relation)
 
         return all_ip_object
 
-    def _process_MX_NS (self, _source, data, data_type):
+    def _process_MX_NS(self, _source, data, data_type):
         all_ip_object = []
         for mx_entity in data:
-            host = mx_entity.get('host').get('value')
+            host = mx_entity.get("host").get("value")
 
             ### Note: some value point to itself
-            if (_source.value == host): continue
+            if _source.value == host:
+                continue
 
             host_obs = self.converter_to_stix.create_obs(host, labels=[data_type])
 
-            if (not host_obs): continue
+            if not host_obs:
+                continue
 
             all_ip_object.append(host_obs)
 
-            entity_relation = self.converter_to_stix.create_relationship(_source.id, 'resolves-to', host_obs.id)
+            entity_relation = self.converter_to_stix.create_relationship(
+                _source.id, "resolves-to", host_obs.id
+            )
             all_ip_object.append(entity_relation)
 
             ### IP
-            for ip_entity in mx_entity.get('ip', []):
-                ip = ip_entity.get('value')
-                ip_obs = self.converter_to_stix.create_obs(ip, labels=[f"{data_type} IP"])
-                if (not ip_obs): continue
+            for ip_entity in mx_entity.get("ip", []):
+                ip = ip_entity.get("value")
+                ip_obs = self.converter_to_stix.create_obs(
+                    ip, labels=[f"{data_type} IP"]
+                )
+                if not ip_obs:
+                    continue
 
                 all_ip_object.append(ip_obs)
 
-                entity_relation = self.converter_to_stix.create_relationship(host_obs.id, 'related-to', ip_obs.id)
+                entity_relation = self.converter_to_stix.create_relationship(
+                    host_obs.id, "related-to", ip_obs.id
+                )
                 all_ip_object.append(entity_relation)
 
         return all_ip_object
@@ -300,8 +334,6 @@ class DomainToolsIrisQLConnector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
-
-
 
     def run(self) -> None:
         """

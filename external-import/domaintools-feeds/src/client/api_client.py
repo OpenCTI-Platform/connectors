@@ -4,7 +4,13 @@ from pydantic import HttpUrl
 
 
 class DomainToolsClient:
-    def __init__(self, helper: OpenCTIConnectorHelper, base_url: HttpUrl, api_key: str, feed_type: str):
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        base_url: HttpUrl,
+        api_key: str,
+        feed_type: str,
+    ):
         """
         Initialize the client with necessary configuration.
         For log purpose, the connector's helper CAN be injected.

@@ -30,7 +30,9 @@ class DomainToolsClient:
         try:
 
             response = self.session.post(api_url, params=params, data=body)
-            self.helper.connector_logger.info("[API] HTTP Get Request to endpoint", {"url_path": api_url})
+            self.helper.connector_logger.info(
+                "[API] HTTP Get Request to endpoint", {"url_path": api_url}
+            )
 
             response.raise_for_status()
             return response
@@ -53,19 +55,20 @@ class DomainToolsClient:
             # === Add your code below ===
             # ===========================
             result_data = []
-            params = { }
+            params = {}
             while True:
                 response = self._request_data(self.base_url, params=params, body=body)
                 response.raise_for_status()
 
                 json_response = response.json()
-                current_results = json_response['response']['results']
+                current_results = json_response["response"]["results"]
                 result_data.extend(current_results)
 
-                if not json_response['response']['has_more_results']: break
+                if not json_response["response"]["has_more_results"]:
+                    break
 
                 # Update the 'position' field for pagination
-                params['position'] = json_response['response']['position']
+                params["position"] = json_response["response"]["position"]
 
             return result_data
 

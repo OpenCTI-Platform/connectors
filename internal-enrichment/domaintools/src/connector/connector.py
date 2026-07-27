@@ -58,21 +58,33 @@ class DomainToolsConnector:
         self.helper.log_info("Starting enrichment using DomainTools API.")
         self.helper.log_info(f"Type of the observable: {opencti_entity['entity_type']}")
         if opencti_entity["entity_type"] == "Domain-Name":
-            if (self.enrichment_method == 'investigate'):
-                results = (self.api.iris_investigate(opencti_entity["observable_value"]).response().get("results", ()))
-            elif (self.enrichment_method == 'enrich'): 
-                results = (self.api.iris_enrich(opencti_entity["observable_value"]).response().get("results", ()))
+            if self.enrichment_method == "investigate":
+                results = (
+                    self.api.iris_investigate(opencti_entity["observable_value"])
+                    .response()
+                    .get("results", ())
+                )
+            elif self.enrichment_method == "enrich":
+                results = (
+                    self.api.iris_enrich(opencti_entity["observable_value"])
+                    .response()
+                    .get("results", ())
+                )
             else:
                 _message = f"Wrong enrichment method: {self.enrichment_method}"
                 self.helper.log_error(_message)
                 raise ValueError(_message)
         elif opencti_entity["entity_type"] == "IPv4-Addr":
-            if (self.enrichment_method == 'investigate'):
-                results = (self.api.iris_investigate(ip=opencti_entity["observable_value"]).response().get("results", ()))
+            if self.enrichment_method == "investigate":
+                results = (
+                    self.api.iris_investigate(ip=opencti_entity["observable_value"])
+                    .response()
+                    .get("results", ())
+                )
             else:
                 _message = f"Wrong enrichment method: {self.enrichment_method} for {opencti_entity['entity_type']} entity"
                 self.helper.log_error(_message)
-                raise ValueError(_message) 
+                raise ValueError(_message)
         else:
             self.helper.log_error(
                 f"Entity type of the observable: {opencti_entity['entity_type']} not supported."
