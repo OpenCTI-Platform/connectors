@@ -15,10 +15,10 @@ COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Copy source code and entrypoint
+# Copy source code, config, and entrypoint
 COPY src ./src
+COPY config.yml ./config.yml
 COPY entrypoint.sh /entrypoint.sh
-
 # Ensure entrypoint is executable
 RUN chmod +x /entrypoint.sh
 
