@@ -50,7 +50,7 @@ STIX 2.1 objects within the OpenCTI data model.
 | `is_cloud_provider=true` | `cloud-provider`     | Security flag           |
 | `company.type`           | e.g. `hosting`, `isp`| Infrastructure type     |
 | `network.is_anycast`     | `anycast`            | Network flag            |
-| Risk assessment           | `risk:low/med/high/critical` | Computed      |
+| Risk assessment           | `risk:low/medium/high/critical` | Computed      |
 
 ## Score Mapping
 
