@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from builder import WhoisFreaksStixBuilder
 from client import WhoisFreaksClient
-from configVariables import ConfigVariables
+from config_variables import ConfigVariables
 from pycti import OpenCTIConnectorHelper
 
 logging.basicConfig(
