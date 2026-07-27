@@ -387,7 +387,7 @@ class STIXMapper:
             value=intel.hostname,
             allow_custom=True,
             custom_properties={
-                "created_by_ref": self._author.id,
+                "x_opencti_created_by_ref": self._author.id,
             },
         )
 
@@ -519,18 +519,22 @@ class STIXMapper:
         if not ip_val:
             return None
 
-        custom = {
+        custom: dict[str, Any] = {
             "x_opencti_score": risk.opencti_score,
             "x_opencti_description": risk.explanation,
+            "x_opencti_created_by_ref": self._author.id,
         }
+        if labels:
+            custom["x_opencti_labels"] = labels
+        if ext_refs:
+            custom["x_opencti_external_references"] = ext_refs
+
         kwargs: dict[str, Any] = {
             "id": observable_id,
             "value": ip_val,
             "allow_custom": True,
             "custom_properties": custom,
         }
-        if ext_refs:
-            kwargs["external_references"] = ext_refs
 
         if "IPv6" in observable_type:
             return stix2.IPv6Address(**kwargs)

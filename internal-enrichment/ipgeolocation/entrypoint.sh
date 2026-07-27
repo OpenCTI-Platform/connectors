@@ -2,4 +2,4 @@
 set -e
 
 cd /opt/opencti-connector
-python -m src.main
+exec python -m src.main
