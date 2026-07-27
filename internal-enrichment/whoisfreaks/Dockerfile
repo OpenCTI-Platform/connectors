@@ -17,10 +17,10 @@ RUN pip3 install --no-cache-dir -r requirements.txt && \
 
 # Copy source code and entrypoint
 COPY src ./src
-COPY entrypoint.sh .
+COPY entrypoint.sh /entrypoint.sh
 
 # Ensure entrypoint is executable
-RUN chmod +x entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Run startup script
 ENTRYPOINT ["/entrypoint.sh"]
