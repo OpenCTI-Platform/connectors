@@ -112,14 +112,23 @@ class DomainToolsIrisQLConnector:
 
             ###### Note
             if self.store_iris_data:
-                note_obj = stix2.Note(
-                    abstract="DomainTools Iris Data",
-                    content=json.dumps(entity),
-                    object_refs=[
-                        domain_obs.id
-                    ],  # Links the note to the domain observable
+                note_content = json.dumps(entity)
+                note_abstract = "DomainTools Iris Data"
+                created_time = datetime.now(tz=timezone.utc).isoformat()
+
+                note_obj_id = self.converter_to_stix.create_note_id(
+                    note_content, note_abstract, created_time
                 )
-                stix_objects.append(note_obj)
+
+                stix_objects.append(
+                    {
+                        "type": "note",
+                        "id": note_obj_id,
+                        "content": note_content,
+                        "abstract": note_abstract,
+                        "object_refs": [domain_obs.id],
+                    }
+                )
 
             ###### IP
             stix_objects.extend(self._process_IP(domain_obs, entity.get("ip", [])))

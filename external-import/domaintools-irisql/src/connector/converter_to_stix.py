@@ -6,6 +6,7 @@ import validators
 from pycti import (
     Identity,
     MarkingDefinition,
+    Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
@@ -203,6 +204,20 @@ class ConverterToStix:
                 "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
                 {"value": value},
             )
+
+    def create_note_id(self, content: str, abstract: str, created_time: str) -> dict:
+        stix_note = Note.generate_id(
+            created=created_time, content=content, abstract=abstract
+        )
+        # stix_note = stix2.Note(
+        #     id=Note.generate_id(name="DomainTools", ),
+        #     abstract="DomainTools Iris Data",
+        #     content=json.dumps(value, indent=2),
+        #     object_refs=[
+        #         ref_id
+        #     ],  # Links the note to the domain observable
+        # )
+        return stix_note
 
 
 def create_indicator(
