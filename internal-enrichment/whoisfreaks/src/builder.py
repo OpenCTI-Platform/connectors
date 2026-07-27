@@ -184,6 +184,10 @@ class WhoisFreaksStixBuilder:
             else:
                 continue
 
+            # Skip self-resolving records to avoid self-referential relationships
+            if target_stix.id == source_stix.id:
+                continue
+
             objects.append(target_stix)
             objects.append(
                 stix2.Relationship(

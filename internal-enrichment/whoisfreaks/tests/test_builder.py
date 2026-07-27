@@ -103,7 +103,7 @@ def test_build_dns_bundle_ipv4_source(builder):
 
     # Check source observable
     ipv4s = [obj for obj in bundle.objects if obj["type"] == "ipv4-addr"]
-    assert len(ipv4s) == 2  # The source "1.2.3.4" and the record "1.2.3.4"
+    assert len(ipv4s) == 1  # Only the source "1.2.3.4" (self-resolve records are skipped)
 
     ipv6s = [obj for obj in bundle.objects if obj["type"] == "ipv6-addr"]
     assert len(ipv6s) == 1

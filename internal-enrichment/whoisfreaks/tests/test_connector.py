@@ -125,7 +125,7 @@ def test_process_message_domain_enrichment(mock_dependencies):
     result = connector.process_message({"entity_id": "entity-123"})
 
     assert "Successfully enriched example.com with" in result
-    assert helper.send_stix2_bundle.call_count == 4
+    assert helper.send_stix2_bundle.call_count == 3
     helper.api.work.to_processed.assert_called_once()
 
 
