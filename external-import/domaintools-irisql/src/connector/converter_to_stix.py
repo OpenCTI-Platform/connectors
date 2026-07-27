@@ -209,40 +209,4 @@ class ConverterToStix:
         stix_note = Note.generate_id(
             created=created_time, content=content, abstract=abstract
         )
-        # stix_note = stix2.Note(
-        #     id=Note.generate_id(name="DomainTools", ),
-        #     abstract="DomainTools Iris Data",
-        #     content=json.dumps(value, indent=2),
-        #     object_refs=[
-        #         ref_id
-        #     ],  # Links the note to the domain observable
-        # )
         return stix_note
-
-
-def create_indicator(
-    self, value: str, timestamp: str, confidence: int, labels: list[str]
-) -> dict:
-    """
-    Create observable according to value given
-    :param value: Value in string
-    :return: Stix object for IPV4, IPV6 or Domain
-    """
-    if self._is_domain(value) is True:
-        stix_domain_name = stix2.Indicator(
-            name=f"Indicator for {value}",
-            pattern_type="stix",
-            pattern=f"[domain-name:value = '{value}']",  # Pattern for a domain
-            labels=labels,
-            valid_from=timestamp,
-            custom_properties={
-                "x_opencti_created_by_ref": self.author["id"],
-                "x_opencti_main_observable_type": "Domain-Name",  # Required for OpenCTI
-            },
-        )
-        return stix_domain_name
-    else:
-        self.helper.connector_logger.error(
-            "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-            {"value": value},
-        )
