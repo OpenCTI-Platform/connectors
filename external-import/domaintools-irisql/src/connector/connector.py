@@ -1,11 +1,12 @@
 import json
-import stix2
 import sys
 from datetime import datetime, timezone
+
+import stix2
+from client import DomainToolsClient
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
-from client import DomainToolsClient
 
 
 class DomainToolsIrisQLConnector:
