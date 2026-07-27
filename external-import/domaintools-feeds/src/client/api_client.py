@@ -56,8 +56,8 @@ class DomainToolsClient:
             # ===========================
             # === Add your code below ===
             # ===========================
-            
-            response = self._request_data(self.base_url, params=params)            
+
+            response = self._request_data(self.base_url, params=params)
             return response.text.splitlines()
 
             # return response.json()

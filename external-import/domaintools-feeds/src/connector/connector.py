@@ -52,11 +52,11 @@ class DomainToolsFeedsConnector:
         """
         self.config = config
         self.helper = helper
-        
+
         self.params = {}
         for k,v in self.config.domaintools:
             if (not k in ['session_id', 'domain', 'top']): continue
-            
+
             if (v):
                 if (k == 'session_id'):
                     self.params['sessionID'] = v
@@ -89,8 +89,8 @@ class DomainToolsFeedsConnector:
 
         # Get entities from external sources
         entities = self.client.get_entities(self.params)
-        self.helper.connector_logger.info(f"Successfully downloaded {len(entities)} records.")        
-        
+        self.helper.connector_logger.info(f"Successfully downloaded {len(entities)} records.")
+
         if self.config.domaintools.feed_type in ['domainhotlist', 'domainrisk']:
             for entity in entities:
                 _json = json.loads(entity)
@@ -99,21 +99,21 @@ class DomainToolsFeedsConnector:
                 confidence = _json.get('overall_risk', 50)
                 labels = [self.config.domaintools.feed_type]
                 for label in ['phishing_risk', 'malware_risk', 'spam_risk', 'proximity_risk']:
-                    score = _json.get(label)                    
+                    score = _json.get(label)
                     if (score):
                         _name = label.replace('_risk', '')
                         labels.append(f"{_name}={score}")
-                
-                entity_to_stix = self.converter_to_stix.create_indicator(domain, timestamp, confidence, labels)                 
+
+                entity_to_stix = self.converter_to_stix.create_indicator(domain, timestamp, confidence, labels)
                 if (entity_to_stix):
                     stix_objects.append(entity_to_stix)
-            
-        else:            
+
+        else:
             # Convert into STIX2 object and add it on a list
-            labels = [self.config.domaintools.feed_type]  
+            labels = [self.config.domaintools.feed_type]
             for entity in entities:
                 _json = json.loads(entity)
-                domain = _json.get('domain')                              
+                domain = _json.get('domain')
                 entity_to_stix = self.converter_to_stix.create_obs(domain, labels)
                 if (entity_to_stix):
                     stix_objects.append(entity_to_stix)

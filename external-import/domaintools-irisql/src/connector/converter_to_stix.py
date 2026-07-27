@@ -146,7 +146,7 @@ class ConverterToStix:
             return True
         else:
             return False
-    
+
     @staticmethod
     def _is_email(value: str) -> bool:
         if validators.email(value):
@@ -178,7 +178,7 @@ class ConverterToStix:
                     "x_opencti_labels": labels,
                 },
             )
-            return stix_ipv4_address        
+            return stix_ipv4_address
         elif self._is_email(value) is True:
             stix_email = stix2.EmailAddress(
                 value=value,
