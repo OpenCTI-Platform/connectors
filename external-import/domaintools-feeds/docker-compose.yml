@@ -15,8 +15,8 @@ services:
       - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com
       - DOMAINTOOLS_API_KEY=ChangeMe
       - DOMAINTOOLS_FEED_TYPE=ChangeMe  # domainhotlist, domainrisk, nod, nad, noh, domaindiscovery
-      - DOMAINTOOLS_SESSION_ID=ChangeMe     # 
+      - DOMAINTOOLS_SESSION_ID=ChangeMe     #
       # - DOMAINTOOLS_DOMAIN=*bank*              # optional
       # - DOMAINTOOLS_TOP=10                     # optional
-      - DOMAINTOOLS_TLP_LEVEL = clear
+      - DOMAINTOOLS_TLP_LEVEL=clear
     restart: always

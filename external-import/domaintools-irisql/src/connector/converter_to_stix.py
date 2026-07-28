@@ -139,8 +139,6 @@ class ConverterToStix:
         :param value: Value in string
         :return: A boolean
         """
-        # Override - assuming data from DT is valid
-        return True
         is_valid_domain = validators.domain(value)
 
         if is_valid_domain:
@@ -205,8 +203,7 @@ class ConverterToStix:
                 {"value": value},
             )
 
-    def create_note_id(self, content: str, abstract: str, created_time: str) -> dict:
-        stix_note = Note.generate_id(
-            created=created_time, content=content, abstract=abstract
-        )
-        return stix_note
+    def create_note_id(
+         self, content: str, abstract: str, created_time: str | None = None
+     ) -> str:
+         return Note.generate_id(created=None, content=content, abstract=abstract)

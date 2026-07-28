@@ -31,7 +31,7 @@ class DomainToolsClient:
 
             response = self.session.post(api_url, params=params, data=body)
             self.helper.connector_logger.info(
-                "[API] HTTP Get Request to endpoint", {"url_path": api_url}
+                "[API] HTTP POST Request to endpoint", {"url_path": api_url}
             )
 
             response.raise_for_status()
@@ -45,10 +45,11 @@ class DomainToolsClient:
             return None
 
     def get_entities(self, body=None) -> list:
-        """
-        If params is None, retrieve all CVEs in National Vulnerability Database
-        :param params: Optional Params to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
+        """Fetch IrisQL results from the DomainTools Iris Investigate API.
+         Args:
+             body: Optional IrisQL query body.
+         Returns:
+             A list of result objects from the API.
         """
         try:
             # ===========================

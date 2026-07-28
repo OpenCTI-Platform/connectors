@@ -53,10 +53,11 @@ class DomainToolsClient:
             return None
 
     def get_entities(self, params=None) -> list:
-        """
-        If params is None, retrieve all CVEs in National Vulnerability Database
-        :param params: Optional Params to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
+        """Fetch feed entries from the DomainTools Threat Feeds API.
+         Args:
+             params: Optional query parameters (e.g., sessionID, domain filter, top).
+         Returns:
+             A list of feed entries (one per line) as strings.
         """
         try:
             # ===========================

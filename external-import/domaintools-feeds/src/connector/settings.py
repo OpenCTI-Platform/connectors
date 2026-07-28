@@ -35,9 +35,10 @@ class DomainToolsConfig(BaseConfigModel):
     feed_type: Literal[
         "domainhotlist", "domainrisk", "nod", "nad", "noh", "domaindiscovery"
     ] = Field(description="Name of the feed.")
-    session_id: str = Field(
-        description="A unique identifier for the session, used for resuming data retrieval from the last point."
-    )
+    session_id: str | None = Field(
+         description="A unique identifier for the session, used for resuming data retrieval from the last point.",
+         default="OpenCTI-DomainTools-Feeds",
+     )
     domain: str | None = Field(
         description="Filter for an exact domain or a domain substring by prefixing or suffixing your string with *.",
         default=None,
