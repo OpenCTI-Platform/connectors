@@ -1,0 +1,15 @@
+[project]
+name = "group-ib"
+version = "2.0.0"
+requires-python = ">=3.12"
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
