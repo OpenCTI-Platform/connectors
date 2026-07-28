@@ -6,9 +6,14 @@ and parses it into a dict; it does not construct any STIX objects itself.
 """
 
 import json
+from importlib.metadata import version as _package_version
 from typing import Any
 
 from vulners import VulnersApi
+
+USER_AGENT = "Vulners OpenCTI Connector {} (Vulners Python API {})".format(
+    _package_version("pycti"), _package_version("vulners")
+)
 
 
 class VulnersClient:
@@ -22,6 +27,10 @@ class VulnersClient:
         :param base_url: Vulners server URL.
         """
         self._api = VulnersApi(api_key, server_url=base_url)
+        # The SDK has no public way to set the User-Agent; Vulners attributes
+        # integration traffic by this header, so override it on the
+        # underlying HTTP client.
+        self._api._client.headers["User-Agent"] = USER_AGENT
 
     def get_bundle(
         self, bulletin_id: str, opencti_id: str | None = None
