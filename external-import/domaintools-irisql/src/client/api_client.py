@@ -40,7 +40,7 @@ class DomainToolsClient:
         except requests.RequestException as err:
             error_msg = "[API] Error while fetching data: "
             self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
+                error_msg, {"url_path": api_url, "error": str(err)}
             )
             return None
 
@@ -60,6 +60,8 @@ class DomainToolsClient:
             while True:
                 response = self._request_data(self.base_url, params=params, body=body)
                 response.raise_for_status()
+                if response is None:
+                     raise RuntimeError("Failed to fetch IrisQL results from DomainTools API")
 
                 json_response = response.json()
                 current_results = json_response["response"]["results"]

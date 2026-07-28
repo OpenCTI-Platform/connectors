@@ -107,16 +107,17 @@ class DomainToolsIrisQLConnector:
                     continue
 
             domain_obs = self.converter_to_stix.create_obs(domain, score, labels)
+            if not domain_obs:
+                 continue
             stix_objects.append(domain_obs)
 
             ###### Note
             if self.store_iris_data:
                 note_content = json.dumps(entity)
                 note_abstract = "DomainTools Iris Data"
-                created_time = datetime.now(tz=timezone.utc).isoformat()
 
                 note_obj_id = self.converter_to_stix.create_note_id(
-                    note_content, note_abstract, created_time
+                    note_content, note_abstract
                 )
 
                 stix_objects.append(
@@ -192,7 +193,7 @@ class DomainToolsIrisQLConnector:
     def _process_IP(self, _source, data):
         all_ip_object = []
         for ip_entity in data:
-            ip = ip_entity.get("address").get("value")
+            ip = ip_entity.get("address", {}).get("value")
             ip_obs = self.converter_to_stix.create_obs(ip)
 
             if not ip_obs:
@@ -210,7 +211,7 @@ class DomainToolsIrisQLConnector:
     def _process_MX_NS(self, _source, data, data_type):
         all_ip_object = []
         for mx_entity in data:
-            host = mx_entity.get("host").get("value")
+            host = mx_entity.get("host", {}).get("value")
 
             ### Note: some value point to itself
             if _source.value == host:
@@ -275,7 +276,7 @@ class DomainToolsIrisQLConnector:
                 )
 
             # Friendly name will be displayed on OpenCTI platform
-            friendly_name = "Connector template feed"
+            friendly_name = "DomainTools IrisQL"
 
             # Initiate a new work
             work_id = self.helper.api.work.initiate_work(
@@ -304,7 +305,7 @@ class DomainToolsIrisQLConnector:
 
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": str(len(bundles_sent))},
                 )
             # ===========================
             # === Add your code above ===
