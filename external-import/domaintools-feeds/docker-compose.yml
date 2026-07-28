@@ -18,5 +18,5 @@ services:
       - DOMAINTOOLS_SESSION_ID=ChangeMe     # 
       # - DOMAINTOOLS_DOMAIN=*bank*              # optional
       # - DOMAINTOOLS_TOP=10                     # optional
-      - DOMAINTOOLS_TLP_LEVEL = clear
+      - DOMAINTOOLS_TLP_LEVEL=clear
     restart: always
