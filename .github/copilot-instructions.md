@@ -10,6 +10,25 @@ This is the **OpenCTI connectors** monorepo, containing 200+ Python-based connec
 - **Build System:** CircleCI with dynamic pipeline generation
 - **Testing:** pytest with isolated virtual environments per connector
 
+## Deep-Dive Documentation & Agent Instructions
+
+This file is a repo-wide quick reference. For connector-type-specific implementation
+details (scheduling, event handling, TLP/playbook rules, dedup strategy, etc.), read
+the canonical docs in [`docs/`](../docs) — start with
+[`docs/01-common-implementation.md`](../docs/01-common-implementation.md), then the
+spec for the type you're touching: [`02-external-import`](../docs/02-external-import-specifications.md),
+[`03-internal-enrichment`](../docs/03-internal-enrichment-specifications.md),
+[`04-stream`](../docs/04-stream-specifications.md), and
+[`05-code-quality-standards`](../docs/05-code-quality-standards.md) (applies to all
+types). There is no dedicated spec yet for `internal-import-file`/`internal-export-file`.
+
+There is also a repo-root [`AGENTS.md`](../AGENTS.md) plus one nested inside each
+connector-type directory (`external-import/AGENTS.md`, `internal-enrichment/AGENTS.md`,
+`stream/AGENTS.md`, `internal-import-file/AGENTS.md`, `internal-export-file/AGENTS.md`).
+These distill the docs above into actionable rules and are picked up automatically by
+Copilot and other AI agents based on which folder you're working in — keep them in
+sync with `docs/` if either changes.
+
 ## Critical Build & Validation Requirements
 
 ### Code Formatting (ALWAYS REQUIRED)
