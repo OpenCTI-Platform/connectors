@@ -98,7 +98,7 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         return relationship
 
@@ -164,6 +164,7 @@ class ConverterToStix:
         if self._is_ipv6(value) is True:
             stix_ipv6_address = stix2.IPv6Address(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_labels": labels,
@@ -173,6 +174,7 @@ class ConverterToStix:
         elif self._is_ipv4(value) is True:
             stix_ipv4_address = stix2.IPv4Address(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_labels": labels,
@@ -182,6 +184,7 @@ class ConverterToStix:
         elif self._is_email(value) is True:
             stix_email = stix2.EmailAddress(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                 },
@@ -190,6 +193,7 @@ class ConverterToStix:
         elif self._is_domain(value) is True:
             stix_domain_name = stix2.DomainName(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_score": score,
@@ -204,6 +208,7 @@ class ConverterToStix:
             )
 
     def create_note_id(
-         self, content: str, abstract: str, created_time: str | None = None
+        self, content: str, abstract: str, created_time: str | None = None
      ) -> str:
-         return Note.generate_id(created=None, content=content, abstract=abstract)
+        return Note.generate_id(created=None, content=content, abstract=abstract)
+

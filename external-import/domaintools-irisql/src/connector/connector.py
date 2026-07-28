@@ -92,8 +92,8 @@ class DomainToolsIrisQLConnector:
             score = entity.get("domain_risk", {}).get("risk_score")
 
             labels = ["IrisQL"]
-            for component in entity.get("domain_risk", {}).get("components"):
-                _name = component.get("name")
+            for component in entity.get("domain_risk", {}).get("components", []):
+                _name = component.get("name") or ""
                 _score = component.get("risk_score")
                 if "proximity" in _name:
                     labels.append(f"proximity:{_score}")

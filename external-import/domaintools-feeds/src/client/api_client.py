@@ -48,7 +48,7 @@ class DomainToolsClient:
         except requests.RequestException as err:
             error_msg = "[API] Error while fetching data: "
             self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
+                error_msg, {"url_path": api_url, "error": str(err)}
             )
             return None
 
@@ -65,6 +65,8 @@ class DomainToolsClient:
             # ===========================
 
             response = self._request_data(self.base_url, params=params)
+            if response is None:
+                 raise RuntimeError("Failed to fetch DomainTools feed entries")
             return response.text.splitlines()
 
             # return response.json()

@@ -156,6 +156,7 @@ class ConverterToStix:
         if self._is_ipv6(value) is True:
             stix_ipv6_address = stix2.IPv6Address(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                 },
@@ -164,6 +165,7 @@ class ConverterToStix:
         elif self._is_ipv4(value) is True:
             stix_ipv4_address = stix2.IPv4Address(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                 },
@@ -172,6 +174,7 @@ class ConverterToStix:
         elif self._is_domain(value) is True:
             stix_domain_name = stix2.DomainName(
                 value=value,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_labels": labels,
@@ -203,6 +206,7 @@ class ConverterToStix:
                 pattern=pattern,
                 labels=labels,
                 valid_from=timestamp,
+                object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],
                     "x_opencti_main_observable_type": "Domain-Name",  # Required for OpenCTI
