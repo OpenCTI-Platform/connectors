@@ -47,7 +47,7 @@ class ConfigVariables:
             "CONNECTOR_SCOPE",
             ["connector", "scope"],
             config,
-            default=["Domain-Name", "IPv4-Addr", "IPv6-Addr"],
+            default="Domain-Name,IPv4-Addr,IPv6-Addr",
         )
         self.connector_confidence_level = get_config_variable(
             "CONNECTOR_CONFIDENCE_LEVEL",

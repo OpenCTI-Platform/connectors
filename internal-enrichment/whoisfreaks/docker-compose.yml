@@ -80,7 +80,7 @@ services:
       - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,IPv6-Addr
       - CONNECTOR_AUTO=false
       - CONNECTOR_CONFIDENCE_LEVEL=100
-      - CONNECTOR_LOG_LEVEL=INFO
+      - CONNECTOR_LOG_LEVEL=info
       - WHOISFREAKS_API_KEY=${WHOISFREAKS_API_KEY}
     depends_on:
       - opencti

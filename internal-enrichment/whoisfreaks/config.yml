@@ -9,7 +9,7 @@ connector:
   scope: "Domain-Name,IPv4-Addr,IPv6-Addr"
   auto: false # Manual trigger recommended to manage API quota
   confidence_level: 100
-  log_level: "INFO"
+  log_level: "info"
 
 whoisfreaks:
   api_key: "ChangeMe"
