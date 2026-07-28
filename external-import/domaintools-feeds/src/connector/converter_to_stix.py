@@ -98,7 +98,7 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         return relationship
 
@@ -206,6 +206,7 @@ class ConverterToStix:
                 pattern=pattern,
                 labels=labels,
                 valid_from=timestamp,
+                confidence=confidence,
                 object_marking_refs=[self.tlp_marking],
                 custom_properties={
                     "x_opencti_created_by_ref": self.author["id"],

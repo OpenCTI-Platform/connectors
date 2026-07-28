@@ -74,7 +74,8 @@ class DomainToolsClient:
             # === Add your code above ===
             # ===========================
 
-            raise NotImplementedError
+            # raise NotImplementedError
 
         except Exception as err:
             self.helper.connector_logger.error(err)
+            return []

@@ -208,6 +208,6 @@ class ConverterToStix:
             )
 
     def create_note_id(
-        self, content: str, abstract: str, created_time: str | None = None
+        self, content: str, abstract: str
     ) -> str:
         return Note.generate_id(created=None, content=content, abstract=abstract)
