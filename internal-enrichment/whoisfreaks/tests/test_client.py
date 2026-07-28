@@ -16,7 +16,7 @@ def test_client_init(client):
     assert client.session.headers["Accept"] == "application/json"
 
 
-def test_client_get_success(client, requests_mock_fixture=None):
+def test_client_get_success(client):
     with requests_mock.Mocker() as m:
         m.get(
             "https://api.whoisfreaks.com/v2.0/whois/live?apiKey=test-api-key&format=json&domainName=example.com",
