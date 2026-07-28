@@ -21,19 +21,39 @@ from pycti import (
     AttackPattern,
     Identity,
     Incident,
+    MarkingDefinition,
     StixCoreRelationship,
 )
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
 
-_TLP_BY_NAME = {
-    "clear": stix2.TLP_WHITE,
+_STANDARD_TLP = {
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
     "red": stix2.TLP_RED,
 }
+
+
+def _tlp_marking(level: str) -> stix2.MarkingDefinition:
+    """Resolve a TLP level name to its STIX marking.
+
+    TLP:CLEAR is a distinct OpenCTI custom marking (its own id), NOT TLP:WHITE —
+    mirror the connectors-sdk TLPMarking mapping so operators who set
+    METRAS_TLP_LEVEL=clear get correctly-marked objects.
+    """
+    name = (level or "amber").lower()
+    if name == "clear":
+        return stix2.MarkingDefinition(
+            id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+            definition_type="statement",
+            definition={"statement": "custom"},
+            allow_custom=True,
+            x_opencti_definition_type="TLP",
+            x_opencti_definition="TLP:CLEAR",
+        )
+    return _STANDARD_TLP.get(name, stix2.TLP_AMBER)
 
 
 class ConverterToStix:
@@ -43,7 +63,7 @@ class ConverterToStix:
         self, helper: "OpenCTIConnectorHelper", tlp_level: str = "amber"
     ) -> None:
         self.helper = helper
-        self.tlp = _TLP_BY_NAME.get((tlp_level or "amber").lower(), stix2.TLP_AMBER)
+        self.tlp = _tlp_marking(tlp_level)
         self.author = self._create_author()
         self._confidence = getattr(helper, "connect_confidence_level", None) or 50
 
@@ -384,3 +404,9 @@ class ConverterToStix:
 
     def author_object(self) -> stix2.Identity:
         return self.author
+
+    def marking_object(self) -> stix2.MarkingDefinition:
+        """The connector-wide TLP marking. Included in every bundle so that
+        cleanup_inconsistent_bundle=True does not strip object_marking_refs that
+        point at a marking definition absent from the bundle."""
+        return self.tlp

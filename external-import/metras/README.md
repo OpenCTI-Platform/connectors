@@ -43,8 +43,8 @@ file binaries, and endpoint inventory.
 | `CONNECTOR_ID` | yes | — | UUIDv4 for this connector |
 | `CONNECTOR_NAME` | no | `Metras-Feed` | Connector name |
 | `CONNECTOR_SCOPE` | no | `Metras` | Import scope |
-| `CONNECTOR_LOG_LEVEL` | no | `info` | Log level |
-| `CONNECTOR_DURATION_PERIOD` | yes | `PT1H` | ISO-8601 poll interval |
+| `CONNECTOR_LOG_LEVEL` | no | `error` | Log level |
+| `CONNECTOR_DURATION_PERIOD` | no | `PT1H` | ISO-8601 poll interval |
 | `METRAS_API_BASE_URL` | no | `https://api.metras.sa/api` | Metras API base URL |
 | `METRAS_API_KEY` | yes | — | Metras API key |
 | `METRAS_VERIFY_SSL` | no | `true` | Verify TLS certificates |

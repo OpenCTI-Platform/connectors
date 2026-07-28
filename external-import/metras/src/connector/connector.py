@@ -63,13 +63,14 @@ class MetrasFeedConnector:
             )
         except MetrasAPIError as exc:
             self.helper.connector_logger.error(
-                "[CONNECTOR] Metras API ping failed at startup", {"error": str(exc)}
+                "[CONNECTOR] Metras API ping failed at startup",
+                meta={"error": str(exc)},
             )
             sys.exit(1)
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting Metras Feed import loop",
-            {"interval_seconds": self._interval},
+            meta={"interval_seconds": self._interval},
         )
         while True:
             try:
@@ -79,7 +80,7 @@ class MetrasFeedConnector:
                 break
             except Exception as exc:  # noqa: BLE001 - keep the loop alive
                 self.helper.connector_logger.error(
-                    "[CONNECTOR] Import cycle crashed", {"error": str(exc)}
+                    "[CONNECTOR] Import cycle crashed", meta={"error": str(exc)}
                 )
             time.sleep(self._interval)
 
@@ -93,11 +94,15 @@ class MetrasFeedConnector:
         friendly = f"Metras Feed import @ {now_iso}"
         work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly)
 
-        all_objects = [self.converter.author_object()]
+        all_objects = [
+            self.converter.author_object(),
+            self.converter.marking_object(),
+        ]
         new_alerts_max = alerts_cursor
         new_binaries_max = binaries_cursor
         counts = {"alerts": 0, "binaries": 0, "endpoints": 0}
         errors = []
+        failed: set[str] = set()
 
         # --- EDR alerts (client-side incremental) ---
         if self.cfg.import_alerts:
@@ -114,12 +119,14 @@ class MetrasFeedConnector:
                     if parsed and (new_alerts_max is None or parsed > new_alerts_max):
                         new_alerts_max = parsed
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Alerts processed", {"new_incidents": counts["alerts"]}
+                    "[CONNECTOR] Alerts processed",
+                    meta={"new_incidents": counts["alerts"]},
                 )
             except MetrasAPIError as exc:
                 errors.append(f"alerts: {exc}")
+                failed.add("alerts")
                 self.helper.connector_logger.error(
-                    "[CONNECTOR] Alert import failed", {"error": str(exc)}
+                    "[CONNECTOR] Alert import failed", meta={"error": str(exc)}
                 )
 
         # --- Binaries (server-side fromTime window) ---
@@ -140,12 +147,14 @@ class MetrasFeedConnector:
                     ):
                         new_binaries_max = last_seen
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Binaries processed", {"new_files": counts["binaries"]}
+                    "[CONNECTOR] Binaries processed",
+                    meta={"new_files": counts["binaries"]},
                 )
             except MetrasAPIError as exc:
                 errors.append(f"binaries: {exc}")
+                failed.add("binaries")
                 self.helper.connector_logger.error(
-                    "[CONNECTOR] Binary import failed", {"error": str(exc)}
+                    "[CONNECTOR] Binary import failed", meta={"error": str(exc)}
                 )
 
         # --- Endpoints (full inventory each run) ---
@@ -159,12 +168,13 @@ class MetrasFeedConnector:
                         counts["endpoints"] += 1
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Endpoints processed",
-                    {"endpoints": counts["endpoints"]},
+                    meta={"endpoints": counts["endpoints"]},
                 )
             except MetrasAPIError as exc:
                 errors.append(f"endpoints: {exc}")
+                failed.add("endpoints")
                 self.helper.connector_logger.error(
-                    "[CONNECTOR] Endpoint import failed", {"error": str(exc)}
+                    "[CONNECTOR] Endpoint import failed", meta={"error": str(exc)}
                 )
 
         total = counts["alerts"] + counts["binaries"] + counts["endpoints"]
@@ -174,11 +184,11 @@ class MetrasFeedConnector:
             msg = "Metras import failed: " + "; ".join(errors)
             self.helper.api.work.to_processed(work_id, msg, in_error=True)
             self.helper.connector_logger.error(
-                "[CONNECTOR] Import cycle failed", {"msg": msg}
+                "[CONNECTOR] Import cycle failed", meta={"msg": msg}
             )
             return
 
-        if len(all_objects) > 1:  # more than just the author
+        if len(all_objects) > 2:  # more than just the author + TLP marking
             bundle = self.helper.stix2_create_bundle(all_objects)
             self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, cleanup_inconsistent_bundle=True
@@ -194,14 +204,16 @@ class MetrasFeedConnector:
             msg += " | partial errors: " + "; ".join(errors)
         self.helper.api.work.to_processed(work_id, msg)
         self.helper.connector_logger.info(
-            "[CONNECTOR] Import cycle done", {"summary": msg}
+            "[CONNECTOR] Import cycle done", meta={"summary": msg}
         )
 
-        # Advance cursors only for categories that did not hard-fail.
+        # Advance cursors only for categories that did not hard-fail. Track failed
+        # categories explicitly (a set) rather than substring-matching the joined
+        # error text, which could be tripped by an exception message.
         new_state = dict(state)
-        if "alerts" not in "".join(errors) and new_alerts_max is not None:
+        if "alerts" not in failed and new_alerts_max is not None:
             new_state["alerts_last_occurrence"] = stix_timestamp(new_alerts_max)
-        if "binaries" not in "".join(errors) and new_binaries_max:
+        if "binaries" not in failed and new_binaries_max:
             new_state["binaries_last_seen"] = new_binaries_max
         new_state["last_run"] = now_iso
         self.helper.set_state(new_state)

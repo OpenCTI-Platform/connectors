@@ -94,7 +94,7 @@ class MetrasClient:
 
         self.helper.connector_logger.debug(
             "[API] Request",
-            {"method": method, "path": path, "status": resp.status_code},
+            meta={"method": method, "path": path, "status": resp.status_code},
         )
 
         if resp.status_code in (401, 403):

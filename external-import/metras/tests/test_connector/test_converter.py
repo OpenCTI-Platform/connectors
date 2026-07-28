@@ -105,3 +105,23 @@ def test_incident_id_stable_across_occurrence_time():
     assert _incident_id(base) == _incident_id(newer)
     # A different alert id yields a different Incident.
     assert _incident_id({**base, "id": "alert-99"}) != _incident_id(base)
+
+
+def test_tlp_clear_is_distinct_custom_marking():
+    # TLP:CLEAR must carry OpenCTI's custom-marking semantics (x_opencti_definition),
+    # not plain stix2.TLP_WHITE (name="TLP:WHITE"). OpenCTI resolves the marking by
+    # x_opencti_definition, so this is what makes objects land as TLP:CLEAR.
+    from connector.converter_to_stix import ConverterToStix
+
+    helper = MagicMock()
+    helper.connect_confidence_level = 50
+    clear = ConverterToStix(helper, tlp_level="clear").marking_object()
+    assert clear.get("x_opencti_definition") == "TLP:CLEAR"
+    assert clear.get("definition_type") == "statement"
+
+
+def test_marking_object_is_stable_for_standard_levels():
+    import stix2
+
+    conv = _converter()  # amber
+    assert conv.marking_object()["id"] == stix2.TLP_AMBER["id"]
