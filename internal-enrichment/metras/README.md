@@ -39,7 +39,7 @@ platform when you enrich an observable in OpenCTI. Adds a context **Note** (and
 | `CONNECTOR_NAME` | no | `Metras-Enrichment` | Connector name |
 | `CONNECTOR_SCOPE` | no | `IPv4-Addr,StixFile` | Observable types to enrich |
 | `CONNECTOR_AUTO` | no | `false` | Auto-enrich on observable creation |
-| `CONNECTOR_LOG_LEVEL` | no | `info` | Log level |
+| `CONNECTOR_LOG_LEVEL` | no | `error` | Log level |
 | `METRAS_API_BASE_URL` | no | `https://api.metras.sa/api` | Metras API base URL |
 | `METRAS_API_KEY` | yes | — | Metras API key |
 | `METRAS_VERIFY_SSL` | no | `true` | Verify TLS certificates |

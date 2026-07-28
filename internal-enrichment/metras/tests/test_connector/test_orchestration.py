@@ -121,3 +121,16 @@ def test_all_lookups_fail_raises():
         conn.process_message(
             {"stix_entity": {"type": "IPv4-Addr", "id": IPV4_ID, "value": "10.0.0.1"}}
         )
+
+
+def test_empty_ipv4_value_skips_lookup():
+    # An IPv4 observable with no value must NOT trigger a broad agent_ip="" query.
+    conn, _ = _enr()
+    conn.client.alerts_by_agent_ip = MagicMock()
+    conn.client.list_endpoints = MagicMock()
+    msg = conn.process_message(
+        {"stix_entity": {"type": "IPv4-Addr", "id": IPV4_ID, "value": ""}}
+    )
+    assert "No Metras fleet data" in msg
+    conn.client.alerts_by_agent_ip.assert_not_called()
+    conn.client.list_endpoints.assert_not_called()

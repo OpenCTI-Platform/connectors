@@ -61,7 +61,8 @@ class MetrasEnrichmentConnector:
             )
         except MetrasAPIError as exc:
             self.helper.connector_logger.error(
-                "[CONNECTOR] Metras API ping failed at startup", {"error": str(exc)}
+                "[CONNECTOR] Metras API ping failed at startup",
+                meta={"error": str(exc)},
             )
             # Listener still starts so the connector registers; per-message calls
             # will surface auth errors clearly to the analyst.
@@ -97,7 +98,7 @@ class MetrasEnrichmentConnector:
         except Exception as exc:  # noqa: BLE001
             self.helper.connector_logger.error(
                 f"[CONNECTOR] {getattr(func, '__name__', 'call')} failed",
-                {"error": str(exc)},
+                meta={"error": str(exc)},
             )
             self._errors.append(str(exc))
             return None
@@ -129,7 +130,7 @@ class MetrasEnrichmentConnector:
             if level and not self._tlp_allowed(level):
                 self.helper.connector_logger.warning(
                     "[CONNECTOR] Skipped: TLP exceeds max",
-                    {"tlp": level, "max": self._max_tlp.value},
+                    meta={"tlp": level, "max": self._max_tlp.value},
                 )
                 return f"[CONNECTOR] Skipped: TLP {level} exceeds max {self._max_tlp.value}"
 
@@ -163,12 +164,22 @@ class MetrasEnrichmentConnector:
                 return f"[CONNECTOR] Sent {len(sent)} bundle(s)"
             return "[CONNECTOR] No Metras fleet data found for this observable"
         except Exception as err:  # noqa: BLE001
-            self.helper.connector_logger.error("[CONNECTOR] Error", {"error": str(err)})
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Error", meta={"error": str(err)}
+            )
             raise
 
     # ------------------------------------------------------------------ #
     def _enrich_ipv4(self, stix_entity: dict, obs_id: str) -> list:
         ip = refang(stix_entity.get("value", ""))
+        # Guard against a missing/empty value: querying Metras with agent_ip=""
+        # would issue an unexpectedly broad lookup, so skip instead.
+        if not ip:
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Skipped IPv4 enrichment: empty observable value",
+                meta={"obs_id": obs_id},
+            )
+            return []
         objects = []
         hits = 0
         notes = []
