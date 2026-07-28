@@ -6,13 +6,23 @@ and parses it into a dict; it does not construct any STIX objects itself.
 """
 
 import json
+from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _package_version
 from typing import Any
 
 from vulners import VulnersApi
 
+
+def _distribution_version(name: str) -> str:
+    """Best-effort package version for the User-Agent; never raises."""
+    try:
+        return _package_version(name)
+    except PackageNotFoundError:
+        return "unknown"
+
+
 USER_AGENT = "Vulners OpenCTI Connector {} (Vulners Python API {})".format(
-    _package_version("pycti"), _package_version("vulners")
+    _distribution_version("pycti"), _distribution_version("vulners")
 )
 
 
