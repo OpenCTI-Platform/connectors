@@ -1,6 +1,6 @@
 import re
 
-from vulners_client.api_client import VulnersClient
+from vulners_client.api_client import VulnersClient, _distribution_version
 
 _USER_AGENT_RE = re.compile(
     r"^Vulners OpenCTI Connector \S+ \(Vulners Python API \S+\)$"
@@ -34,3 +34,10 @@ def test_client_sets_identifying_user_agent(monkeypatch):
 
     assert _USER_AGENT_RE.match(user_agent) is not None
     assert "Vulners" in user_agent
+
+
+def test_distribution_version_falls_back_to_unknown():
+    """A missing distribution must not break User-Agent construction."""
+    assert (
+        _distribution_version("definitely-not-an-installed-distribution") == "unknown"
+    )
