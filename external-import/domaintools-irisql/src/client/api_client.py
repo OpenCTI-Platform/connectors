@@ -46,10 +46,10 @@ class DomainToolsClient:
 
     def get_entities(self, body=None) -> list:
         """Fetch IrisQL results from the DomainTools Iris Investigate API.
-         Args:
-             body: Optional IrisQL query body.
-         Returns:
-             A list of result objects from the API.
+        Args:
+            body: Optional IrisQL query body.
+        Returns:
+            A list of result objects from the API.
         """
         try:
             # ===========================
@@ -61,7 +61,9 @@ class DomainToolsClient:
                 response = self._request_data(self.base_url, params=params, body=body)
                 response.raise_for_status()
                 if response is None:
-                     raise RuntimeError("Failed to fetch IrisQL results from DomainTools API")
+                    raise RuntimeError(
+                        "Failed to fetch IrisQL results from DomainTools API"
+                    )
 
                 json_response = response.json()
                 current_results = json_response["response"]["results"]

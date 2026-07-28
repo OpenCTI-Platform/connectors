@@ -54,10 +54,10 @@ class DomainToolsClient:
 
     def get_entities(self, params=None) -> list:
         """Fetch feed entries from the DomainTools Threat Feeds API.
-         Args:
-             params: Optional query parameters (e.g., sessionID, domain filter, top).
-         Returns:
-             A list of feed entries (one per line) as strings.
+        Args:
+            params: Optional query parameters (e.g., sessionID, domain filter, top).
+        Returns:
+            A list of feed entries (one per line) as strings.
         """
         try:
             # ===========================
@@ -66,7 +66,7 @@ class DomainToolsClient:
 
             response = self._request_data(self.base_url, params=params)
             if response is None:
-                 raise RuntimeError("Failed to fetch DomainTools feed entries")
+                raise RuntimeError("Failed to fetch DomainTools feed entries")
             return response.text.splitlines()
 
             # return response.json()

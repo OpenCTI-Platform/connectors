@@ -108,7 +108,7 @@ class DomainToolsIrisQLConnector:
 
             domain_obs = self.converter_to_stix.create_obs(domain, score, labels)
             if not domain_obs:
-                 continue
+                continue
             stix_objects.append(domain_obs)
 
             ###### Note
