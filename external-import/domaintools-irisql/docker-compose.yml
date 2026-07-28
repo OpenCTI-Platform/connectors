@@ -1,0 +1,20 @@
+version: '3'
+services:
+  opencti-connector-domaintools-irisql:
+    image: opencti/opencti-connector-domaintools-irisql:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CHANGEME # optional
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com/v1/iris-investigate/
+      - DOMAINTOOLS_API_KEY=ChangeMe
+      - DOMAINTOOLS_IRIS_QL=ChangeMe
+      - DOMAINTOOLS_STORE_IRIS_DATA=true # optional
+      - DOMAINTOOLS_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+    restart: always

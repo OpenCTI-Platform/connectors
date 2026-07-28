@@ -1,0 +1,22 @@
+version: '3'
+services:
+  opencti-connector-domaintools-feeds:
+    image: opencti/opencti-connector-domaintools-feeds:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CHANGEME # optional
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com
+      - DOMAINTOOLS_API_KEY=ChangeMe
+      - DOMAINTOOLS_FEED_TYPE=ChangeMe  # domainhotlist, domainrisk, nod, nad, noh, domaindiscovery
+      - DOMAINTOOLS_SESSION_ID=ChangeMe     # 
+      # - DOMAINTOOLS_DOMAIN=*bank*              # optional
+      # - DOMAINTOOLS_TOP=10                     # optional
+      - DOMAINTOOLS_TLP_LEVEL = clear
+    restart: always
