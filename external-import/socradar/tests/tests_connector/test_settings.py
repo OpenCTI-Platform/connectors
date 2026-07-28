@@ -169,3 +169,37 @@ def test_settings_should_migrate_deprecated_interval():
     assert settings.connector.duration_period == timedelta(seconds=7200)
     warning_messages = [str(warning.message) for warning in w]
     assert any("interval" in msg.lower() for msg in warning_messages)
+
+
+def test_settings_should_migrate_deprecated_collections_uuid():
+    """
+    Test that the deprecated `RADAR_COLLECTIONS_UUID` field is migrated to
+    `RADAR_FEED_LISTS` automatically via the SDK's deprecation mechanism.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "radar": {
+                        "base_feed_url": "https://x/",
+                        "socradar_key": "test-api-key",
+                        "collections_uuid": {
+                            "collection_1": {"id": ["ID_1"], "name": ["feed_a"]},
+                            "collection_2": {"id": ["ID_2"], "name": ["feed_b"]},
+                        },
+                    },
+                }
+            )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        settings = FakeConnectorSettings()
+
+    feed_lists = {feed.name: feed.id for feed in settings.radar.feed_lists}
+    assert feed_lists == {"feed_a": "ID_1", "feed_b": "ID_2"}
+    warning_messages = [str(warning.message) for warning in w]
+    assert any("feed_lists" in msg.lower() for msg in warning_messages)

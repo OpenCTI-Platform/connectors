@@ -93,6 +93,13 @@
       "deprecated": true,
       "type": "integer",
       "description": "Use CONNECTOR_DURATION_PERIOD instead."
+    },
+    "RADAR_COLLECTIONS_UUID": {
+      "additionalProperties": true,
+      "default": null,
+      "deprecated": true,
+      "type": "object",
+      "description": "Use RADAR_FEED_LISTS instead."
     }
   },
   "required": [

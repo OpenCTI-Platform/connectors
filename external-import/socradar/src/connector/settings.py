@@ -1,5 +1,4 @@
 import json
-import warnings
 from datetime import timedelta
 from typing import Any
 
@@ -10,7 +9,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -34,6 +33,24 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The period of time to await between two runs of the connector.",
         default=timedelta(minutes=10),
     )
+
+
+def collections_uuid_to_feed_lists(value: Any) -> dict[str, str]:
+    """
+    Convert a deprecated `collections_uuid` mapping into a `feed_lists` mapping.
+    Used to migrate `RADAR_COLLECTIONS_UUID` to `RADAR_FEED_LISTS`.
+    """
+    # If data comes from env vars, collections is serialized JSON
+    if isinstance(value, str):
+        value = json.loads(value)
+
+    feed_lists: dict[str, str] = {}
+    for collection_data in value.values():
+        name = collection_data.get("name")
+        id = collection_data.get("id")
+        if name and id:  # /!\ name and id are lists, not strings
+            feed_lists[name[0]] = id[0]
+    return feed_lists
 
 
 class FeedList(BaseConfigModel):
@@ -62,40 +79,12 @@ class RadarConfig(BaseConfigModel):
         new_namespaced_var="duration_period",
         new_value_factory=lambda x: timedelta(seconds=int(x)),
     )
-
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_deprecated_collections_uuid(cls, data: Any) -> Any:
-        """
-        Env var `RADAR_COLLECTIONS_UUID` is deprecated.
-        This is a workaround to keep the old config working while migrating to `RADAR_FEED_LISTS`.
-        """
-        if not isinstance(data, dict):
-            return data
-
-        # Legacy: key will differ whether data comes from env vars or from config.yml
-        collections: dict | str | None = data.pop("collections_uuid", None) or data.pop(
-            "radar_collections_uuid", None
-        )
-        if collections:
-            warnings.warn(
-                "Env var 'RADAR_COLLECTIONS_UUID' is deprecated. Use 'RADAR_FEED_LISTS' instead."
-            )
-
-            # If data comes from env vars, collections is serialized JSON
-            if isinstance(collections, str):
-                collections = json.loads(collections)
-
-            feed_lists = data.get("feed_lists") or {}
-            for collection_data in collections.values():
-                name = collection_data.get("name")
-                id = collection_data.get("id")
-                if name and id:  # /!\ name and id are lists, not strings
-                    feed_lists[name[0]] = id[0]
-
-            data["feed_lists"] = feed_lists
-
-        return data
+    collections_uuid: dict | None = DeprecatedField(
+        default=None,
+        deprecated="Use 'RADAR_FEED_LISTS' instead.",
+        new_namespaced_var="feed_lists",
+        new_value_factory=collections_uuid_to_feed_lists,
+    )
 
     @field_validator("feed_lists", mode="before")
     @classmethod
