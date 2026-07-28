@@ -98,7 +98,7 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            created_by_ref=self.author,
+            created_by_ref=self.author["id"],
         )
         return relationship
 
