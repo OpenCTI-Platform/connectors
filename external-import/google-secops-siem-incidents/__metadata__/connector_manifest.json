@@ -4,7 +4,14 @@
   "description": "Google SecOps SIEM offers a cloud-based security information and event management solution that helps organizations collect, analyze, and respond to security incidents across their networks.\n\nThe integration of Google SecOps SIEM Incidents with OpenCTI enables the automatic import of SIEM rule alerts as incidents enriched with related observables (IPs, hostnames, user accounts, files, URLs) and STIX relationships.",
   "short_description": "Google SecOps SIEM offers a cloud-based security information and event management solution that helps organizations collect, analyze, and respond to security incidents across their networks.",
   "logo": "external-import/google-secops-siem-incidents/__metadata__/logo.png",
-  "use_cases": ["Detection & Response Enablement"],
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-07-10",
   "playbook_supported": false,

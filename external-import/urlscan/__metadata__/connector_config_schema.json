@@ -46,10 +46,17 @@
       "default": "EXTERNAL_IMPORT",
       "type": "string"
     },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
     "CONNECTOR_INTERVAL": {
-      "default": 86400,
-      "description": "Interval between two runs of the connector, in seconds.",
-      "type": "integer"
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
     "CONNECTOR_LOOKBACK": {
       "default": 3,
@@ -99,6 +106,17 @@
       "default": null,
       "description": "Optional x_opencti_score for url observables.",
       "type": "integer"
+    },
+    "URLSCAN_LABELS": {
+      "default": [
+        "Phishing",
+        "phishfeed"
+      ],
+      "description": "list of labels to apply to each observable.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [

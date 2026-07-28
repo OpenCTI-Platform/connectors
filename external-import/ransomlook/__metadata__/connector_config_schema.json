@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/ransomlook_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "RansomLook",
+      "description": "Connector display name.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "artifact",
+        "attack-pattern",
+        "cryptocurrency-wallet",
+        "ipv4-addr",
+        "ipv6-addr",
+        "identity",
+        "indicator",
+        "infrastructure",
+        "intrusion-set",
+        "threat-actor",
+        "incident",
+        "malware",
+        "report",
+        "note",
+        "domain-name",
+        "url",
+        "relationship"
+      ],
+      "description": "STIX entity types imported by the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "Period between connector runs.",
+      "format": "duration",
+      "type": "string"
+    },
+    "RANSOMLOOK_API_BASE_URL": {
+      "default": "https://www.ransomlook.io/api",
+      "description": "RansomLook API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "RANSOMLOOK_API_KEY": {
+      "default": null,
+      "description": "Optional API key sent in the Authorization header.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "RANSOMLOOK_LABELS": {
+      "default": [
+        "ransomware",
+        "ransomlook"
+      ],
+      "description": "Labels applied to imported entities.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "RANSOMLOOK_MARKING_DEFINITION": {
+      "default": "TLP:CLEAR",
+      "description": "TLP marking for imported data.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "RANSOMLOOK_INITIAL_HISTORY_DAYS": {
+      "default": 7,
+      "description": "Lookback used on the first connector run.",
+      "maximum": 3650,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_RESPONSE_SIZE_MB": {
+      "default": 32,
+      "description": "Maximum accepted size of one RansomLook API response in MiB.",
+      "maximum": 256,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_RECORDS_PER_ENDPOINT": {
+      "default": 1000,
+      "description": "Maximum top-level records accepted from one endpoint or collection, and nested torrent context values retained per group.",
+      "maximum": 10000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_PAGES_PER_ENDPOINT": {
+      "default": 10,
+      "description": "Maximum pages requested from a paginated endpoint per run.",
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_REQUESTS_PER_RUN": {
+      "default": 2000,
+      "description": "Maximum physical RansomLook HTTP attempts in one run.",
+      "maximum": 100000,
+      "minimum": 10,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_RUN_DURATION_SECONDS": {
+      "default": 2700,
+      "description": "Wall-clock deadline shared by all RansomLook requests in a run.",
+      "maximum": 86400,
+      "minimum": 60,
+      "type": "integer"
+    },
+    "RANSOMLOOK_WORK_RECONCILIATION_TIMEOUT_SECONDS": {
+      "default": 900,
+      "description": "Maximum time to wait for OpenCTI workers to complete one logical delivery before retaining its cursor for replay.",
+      "maximum": 7200,
+      "minimum": 10,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_OBJECTS_PER_BUNDLE": {
+      "default": 500,
+      "description": "Maximum STIX objects in one dependency-complete input bundle.",
+      "maximum": 5000,
+      "minimum": 32,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_OBJECTS_PER_RUN": {
+      "default": 20000,
+      "description": "Maximum STIX objects accumulated during one connector run before undelivered claims are retained for retry.",
+      "maximum": 200000,
+      "minimum": 100,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_BUNDLE_SIZE_MB": {
+      "default": 64,
+      "description": "Maximum serialized size of one dependency-complete input bundle in MiB before queue transport; must cover configured post evidence.",
+      "maximum": 256,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_REPLAY_WINDOW_DAYS": {
+      "default": 1,
+      "description": "Days replayed before the claims cursor to collect late posts.",
+      "maximum": 6,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_ARTIFACT_SIZE_MB": {
+      "default": 5,
+      "description": "Maximum decoded size of one screenshot or source Artifact in MiB.",
+      "maximum": 32,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_ARTIFACTS_PER_CLAIM": {
+      "default": 2,
+      "description": "Maximum evidence Artifacts decoded for one victim claim.",
+      "maximum": 20,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_ARTIFACTS_PER_LOCATION": {
+      "default": 2,
+      "description": "Maximum evidence Artifacts decoded for one actor location.",
+      "maximum": 20,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_ARTIFACTS_PER_RUN": {
+      "default": 300,
+      "description": "Maximum evidence Artifacts decoded during one connector run.",
+      "maximum": 10000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_ARTIFACT_BYTES_PER_RUN_MB": {
+      "default": 200,
+      "description": "Maximum total decoded evidence bytes per run, in MiB.",
+      "maximum": 4096,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_EVIDENCE_SERIALIZED_BYTES_PER_RUN_MB": {
+      "default": 800,
+      "description": "Maximum aggregate base64 evidence bytes retained across Artifacts and Report files during one run, in MiB.",
+      "maximum": 16384,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_PENDING_CLAIMS": {
+      "default": 5000,
+      "description": "Maximum incomplete claim records retained for bounded retry.",
+      "maximum": 100000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_CLAIM_RETRIES": {
+      "default": 5,
+      "description": "Maximum retry attempts for incomplete claim detail or evidence.",
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_PENDING_GROUPS": {
+      "default": 1000,
+      "description": "Maximum actor-profile groups retained for bounded retry.",
+      "maximum": 10000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_MAX_ENRICHMENT_RETRIES": {
+      "default": 5,
+      "description": "Maximum retry attempts for transient actor-profile enrichment.",
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_RETRY_MAX_AGE_DAYS": {
+      "default": 30,
+      "description": "Maximum age of claim and enrichment retry work.",
+      "maximum": 365,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RANSOMLOOK_ENRICH_ACTOR_PROFILES": {
+      "default": true,
+      "description": "Enrich profiles for groups encountered in the claims window.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_INFRASTRUCTURE": {
+      "default": true,
+      "description": "Import typed actor infrastructure for encountered groups.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_SENSITIVE_INFRASTRUCTURE": {
+      "default": false,
+      "description": "Import private, chat, admin, and file-server location values.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_POST_EVIDENCE": {
+      "default": true,
+      "description": "Import bounded screenshot and HTML evidence attached to claims.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_LOCATION_EVIDENCE": {
+      "default": false,
+      "description": "Import bounded captures attached to actor infrastructure.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_NOTES": {
+      "default": true,
+      "description": "Import ransom notes associated with encountered groups.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_WALLETS": {
+      "default": true,
+      "description": "Import cryptocurrency wallets associated with encountered groups.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_TORRENTS": {
+      "default": true,
+      "description": "Import bounded torrent and magnet intelligence.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_TORRENT_PEERS": {
+      "default": false,
+      "description": "Import torrent peer telemetry as context; never as Indicators.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_LEAKS": {
+      "default": true,
+      "description": "Import deterministically related leak evidence.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_ANALYSES": {
+      "default": true,
+      "description": "Import explicit technical analyses, malware, and TTP mappings.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_IMPORT_VICTIM_WEBSITES": {
+      "default": true,
+      "description": "Import victim website observables as non-malicious context.",
+      "type": "boolean"
+    },
+    "RANSOMLOOK_CREATE_INDICATORS": {
+      "default": false,
+      "description": "Create Indicators only for explicit upstream malicious assertions.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": false
+}

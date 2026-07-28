@@ -2,12 +2,16 @@
   "title": "ThreatMatch",
   "slug": "threatmatch",
   "description": "The ThreatMatch Connector imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. It authenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configured relative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.",
-  "short_description": "The ThreatMatch Connector imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. It authenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configured relative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.",
+  "short_description": "Imports ThreatMatch intelligence (alerts, threat profiles, IOCs, and reports) from SecAlliance's ThreatMatch platform into OpenCTI as STIX 2.1 objects.",
   "logo": "external-import/threatmatch/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
     "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-08-18",
   "playbook_supported": false,

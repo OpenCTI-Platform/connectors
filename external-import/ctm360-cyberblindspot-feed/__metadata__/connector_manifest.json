@@ -2,12 +2,18 @@
   "title": "CTM360 CyberBlindSpot Connector",
   "slug": "ctm360-cyberblindspot",
   "description": "External import connector for CTM360 CyberBlindSpot Digital Risk Protection platform. Imports incidents, malware logs, breached credentials, card leaks, and domain protection findings.",
-  "short_description": "Import CTM360 CyberBlindSpot digital risk protection data",
+  "short_description": "Imports CTM360 CyberBlindSpot digital risk protection data into OpenCTI, including incidents, malware logs, breached credentials, card leaks, and domain protection findings.",
   "logo": "external-import/ctm360-cyberblindspot-feed/__metadata__/logo.png",
   "use_cases": [
     "Brand, Digital Risk & Underground Exposure",
     "Fraud, Financial Crime & Cryptocurrency Monitoring"
   ],
+  "solution_categories": [
+    "Digital Risk Protection",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

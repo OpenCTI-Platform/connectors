@@ -11,9 +11,5 @@ RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-de
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base gfortran musl-dev g++ openblas-dev
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh && chmod -R 0777 /opt/opencti-connector-import-file-stix
 WORKDIR /opt/opencti-connector-import-file-stix
-ENV HOME=/opt/opencti-connector-import-file-stix
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python3", "main.py"]

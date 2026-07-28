@@ -1,10 +1,18 @@
 {
   "title": "OpenCSAM",
   "slug": "opencsam",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The OpenCSAM connector imports asset and vulnerability data from the OpenCSAM Cyber Security Asset Management platform into OpenCTI. It creates Incidents and associated observables representing exposed assets and findings, enabling organizations to track their attack surface within their threat intelligence workflows.",
+  "short_description": "Imports asset and vulnerability findings from OpenCSAM into OpenCTI as Incidents and observables for attack surface tracking.",
   "logo": null,
-  "use_cases": [],
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility"
+  ],
+  "solution_categories": [
+    "Attack Surface Management",
+    "Vulnerability & Exposure Management"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

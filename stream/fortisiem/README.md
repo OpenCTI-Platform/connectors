@@ -30,7 +30,7 @@ using the FortiSIEM REST API (`/phoenix/rest/watchlist/addTo`).
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260715.0
+- OpenCTI Platform >= 7.260722.0
 - A reachable FortiSIEM Supervisor with the REST API enabled
 - A FortiSIEM REST API user
 - The numeric ID of the target Watch List

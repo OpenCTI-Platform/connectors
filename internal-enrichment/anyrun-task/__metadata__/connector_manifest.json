@@ -1,13 +1,17 @@
 {
-  "title": "ANY.RUN Task",
+  "title": "ANY.RUN Sandbox",
   "slug": "anyrun-task",
-  "description": "ANY.RUN's Interactive Sandbox is a cloud-based service that provides SOC teams with a simple way to analyze cyber threats, enabling rapid threat intelligence and deep analysis in a secure environment.\n\nThis connector enables OpenCTI users to submit files and URLs for real-time analysis in the cloud sandbox. It returns detailed reports including network activity, dropped files, and MITRE ATT&CK technique mappings, enriching observables directly within OpenCTI.\n\nKey benefits:\n\n- Streamlined Triage and Detection: Automate threat analysis to receive actionable verdicts and prioritize incidents effectively\n- Shorter MTTD and MTTR: Gain a full understanding of threat behavior in seconds\n- Higher Detection Rates: Deep visibility into complex threats through advanced detection mechanisms\n- Minimized Workload: Reduce analyst workload by automating repetitive analysis tasks\n- Stronger Security: Use sandbox reports to refine rules, update playbooks, and train detection models",
-  "short_description": "ANY.RUN Interactive Sandbox connector permits to detonate files and URLs in a cloud sandbox, returning detailed behavioral reports with network activity, dropped files, and MITRE ATT&CK mappings.",
+  "description": "[ANY.RUN Sandbox](https://any.run/features/?utm_source=opencti-marketplace&utm_medium=product-page&utm_campaign=sb-integration-opencti&utm_term=250626&utm_content=linktosandboxlanding) is an interactive malware & phishing analysis solution that provides safe, cloud-based virtual environments for executing and observing suspicious artifacts. It provides your team with the ability to detonate artifacts in cloud-based virtual environments (Windows, Linux, Android, and macOS), get a conclusive verdict on the threat, and safely see exactly how malware or phishing behaves in real time.\n\n**Key Capabilities**:\n\n- **Launch Automated Analysis Directly from OpenCTI:** Instead of manually moving files, you can trigger a deep analysis of suspicious artifacts right from your dashboard, which saves time and keeps your team focused on critical tasks.\n- **Uncover Hidden Threats by Automating Clicks and Tasks:** The connector handles time-consuming manual actions, like solving CAPTCHAs or opening email attachments, to ensure you see the final stage of an attack that might otherwise stay hidden.\n- **Turn Technical Logs into Actionable Clarity:** It automatically pulls details like malicious network traffic and registry changes into your OpenCTI records, giving you instant visibility into threat behavior without any manual data entry.\n- **Accelerate Response with Faster Triage:** By receiving detailed, automated reports immediately, your analysts can move from detecting a threat to isolating it much faster, significantly shortening your overall time to respond.",
+  "short_description": "The ANY.RUN Sandbox connector lets SOC teams detonate and analyze suspicious files or URLs in a safe virtual environment directly from OpenCTI to uncover real-time malware & phishing behavior.",
   "logo": "internal-enrichment/anyrun-task/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
