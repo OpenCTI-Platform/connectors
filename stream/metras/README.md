@@ -40,7 +40,7 @@ volatile STIX ID, so updates/deletes resolve to the same entry across re-imports
 | `CONNECTOR_NAME` | no | `Metras-Stream` | Connector name |
 | `CONNECTOR_SCOPE` | no | `Metras` | Scope |
 | `CONNECTOR_LIVE_STREAM_ID` | yes | — | UUID of an **activated** live stream collection |
-| `CONNECTOR_LOG_LEVEL` | no | `info` | Log level |
+| `CONNECTOR_LOG_LEVEL` | no | `error` | Log level |
 | `METRAS_API_BASE_URL` | no | `https://api.metras.sa/api` | Metras API base URL |
 | `METRAS_API_KEY` | yes | — | Metras API key |
 | `METRAS_VERIFY_SSL` | no | `true` | Verify TLS certificates |

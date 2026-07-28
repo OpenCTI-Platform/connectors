@@ -42,7 +42,8 @@ class MetrasStreamConnector:
             )
         except MetrasAPIError as exc:
             self.helper.connector_logger.error(
-                "[CONNECTOR] Metras API ping failed at startup", {"error": str(exc)}
+                "[CONNECTOR] Metras API ping failed at startup",
+                meta={"error": str(exc)},
             )
             # Continue: the stream still registers; pushes will log errors.
 
@@ -69,7 +70,7 @@ class MetrasStreamConnector:
             parsed = json.loads(msg.data)
         except (ValueError, TypeError) as exc:
             self.helper.connector_logger.error(
-                "[CONNECTOR] Could not parse stream event", {"error": str(exc)}
+                "[CONNECTOR] Could not parse stream event", meta={"error": str(exc)}
             )
             return
 
@@ -81,7 +82,7 @@ class MetrasStreamConnector:
         indicator_id = stix_data.get("id", "unknown")
         self.helper.connector_logger.info(
             "[CONNECTOR] Indicator event",
-            {"event": event_type, "id": indicator_id},
+            meta={"event": event_type, "id": indicator_id},
         )
 
         try:
@@ -92,12 +93,12 @@ class MetrasStreamConnector:
         except MetrasAPIError as exc:
             self.helper.connector_logger.error(
                 "[CONNECTOR] Metras push failed (continuing)",
-                {"id": indicator_id, "error": str(exc)},
+                meta={"id": indicator_id, "error": str(exc)},
             )
         except Exception as exc:  # noqa: BLE001 — never crash the stream
             self.helper.connector_logger.error(
                 "[CONNECTOR] Unexpected error (continuing)",
-                {"id": indicator_id, "error": str(exc)},
+                meta={"id": indicator_id, "error": str(exc)},
             )
 
     # ------------------------------------------------------------------ #
@@ -106,7 +107,7 @@ class MetrasStreamConnector:
         if item is None:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Indicator has no file name/path; not pushable to Metras blocklist",
-                {"id": stix_data.get("id")},
+                meta={"id": stix_data.get("id")},
             )
             return
 
@@ -124,13 +125,13 @@ class MetrasStreamConnector:
             )
             self.helper.connector_logger.info(
                 "[CONNECTOR] Updated Metras blocklist",
-                {"name": name, "paths": len(item["file_paths"])},
+                meta={"name": name, "paths": len(item["file_paths"])},
             )
         else:
             self.client.create_blocklist([item])
             self.helper.connector_logger.info(
                 "[CONNECTOR] Created Metras blocklist",
-                {"name": name, "paths": len(item["file_paths"])},
+                meta={"name": name, "paths": len(item["file_paths"])},
             )
 
     def _handle_delete(self, stix_data: dict) -> None:
@@ -139,11 +140,12 @@ class MetrasStreamConnector:
         if existing_id:
             self.client.delete_blocklist(existing_id)
             self.helper.connector_logger.info(
-                "[CONNECTOR] Deleted Metras blocklist", {"name": name}
+                "[CONNECTOR] Deleted Metras blocklist", meta={"name": name}
             )
         else:
             self.helper.connector_logger.info(
-                "[CONNECTOR] No matching Metras blocklist to delete", {"name": name}
+                "[CONNECTOR] No matching Metras blocklist to delete",
+                meta={"name": name},
             )
 
     def _resolve_blocklist_id(self, name: str) -> str | None:
