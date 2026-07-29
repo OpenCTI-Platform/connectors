@@ -508,6 +508,66 @@ jobs:
           echo "fragment_path=$FRAGMENT_PATH" >> "$GITHUB_OUTPUT"
           echo "✅ Generated manifest fragment: $FRAGMENT_PATH"
 
+      - name: Publish manifest fragment to XTM Hub
+        id: publish-fragment
+        if: steps.fragment.outputs.fragment_path != ''
+        # Non-blocking: publishing to XTM Hub must never fail the release itself.
+        continue-on-error: true
+        env:
+          XTM_HUB_TOKEN: ${{ secrets.XTM_HUB_TOKEN }}
+          XTM_HUB_URL: ${{ secrets.XTM_HUB_URL }}
+        run: |
+          FRAGMENT_PATH="${{ steps.fragment.outputs.fragment_path }}"
+
+          if [ -z "$XTM_HUB_TOKEN" ]; then
+            echo "::warning::XTM_HUB_TOKEN secret not set -- skipping XTM Hub publish"
+            exit 0
+          fi
+
+          QUERY='mutation IngestManifestFragments($manifestFragments: [ManifestFragmentInput!]!) {
+            ingestManifestFragments(manifestFragments: $manifestFragments) {
+              success
+            }
+          }'
+
+          # --slurpfile wraps the single fragment object read from disk into a
+          # one-element array, matching the `[ManifestFragmentInput!]!` shape.
+          PAYLOAD=$(jq -n \
+            --arg query "$QUERY" \
+            --slurpfile fragment "$FRAGMENT_PATH" \
+            '{query: $query, variables: {manifestFragments: $fragment}}')
+
+          echo "Publishing manifest fragment to ${XTM_HUB_URL}"
+
+          HTTP_STATUS=$(curl --silent --show-error \
+            --request POST \
+            --url "${XTM_HUB_URL}/graphql-api" \
+            --header "Content-Type: application/json" \
+            --header "x-xtm-hub-token: ${XTM_HUB_TOKEN}" \
+            --data "$PAYLOAD" \
+            --output "$RUNNER_TEMP/xtm_hub_response.json" \
+            --write-out "%{http_code}")
+
+          RESPONSE=$(cat "$RUNNER_TEMP/xtm_hub_response.json")
+          echo "$RESPONSE" | jq . 2>/dev/null || echo "$RESPONSE"
+
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "::warning::XTM Hub publish failed with HTTP $HTTP_STATUS"
+            exit 0
+          fi
+
+          if echo "$RESPONSE" | jq -e '.errors' >/dev/null 2>&1; then
+            echo "::warning::XTM Hub returned errors: $(echo "$RESPONSE" | jq -c '.errors')"
+            exit 0
+          fi
+
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.data.ingestManifestFragments.success // false')
+          if [ "$SUCCESS" = "true" ]; then
+            echo "✅ Manifest fragment published to XTM Hub"
+          else
+            echo "::warning::XTM Hub did not report success for manifest fragment publish"
+          fi
+
       - name: Download pinned dependency files
         # Produced by the build job when connectors-sdk was pinned. Non-blocking:
         # a missing artifact must not prevent the release from being created.
