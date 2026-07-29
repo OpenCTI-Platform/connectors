@@ -3,11 +3,10 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'  # UUIDv4
   name: 'Metras-Enrichment'
   scope: 'IPv4-Addr,StixFile'
-  log_level: 'info'
+  log_level: 'error'
   auto: false
 
 metras:

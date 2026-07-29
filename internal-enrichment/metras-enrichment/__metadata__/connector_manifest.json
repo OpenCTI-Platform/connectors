@@ -12,11 +12,11 @@
   "last_verified_date": null,
   "playbook_supported": true,
   "max_confidence_level": 50,
-  "support_version": ">=7.260529.0",
+  "support_version": ">=7.260722.0",
   "subscription_link": null,
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/metras",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/metras-enrichment",
   "manager_supported": false,
-  "container_version": "1.0.0",
+  "container_version": "rolling",
   "container_image": "opencti/connector-metras-enrichment",
   "container_type": "INTERNAL_ENRICHMENT"
 }

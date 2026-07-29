@@ -11,8 +11,14 @@ from pydantic import Field, HttpUrl, SecretStr
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
+    id: str = Field(
+        default="f9d92e7f-3ee4-4a2a-a8e6-8b07766c66ab",
+        description="The unique identifier of the connector.",
+        examples=["f9d92e7f-3ee4-4a2a-a8e6-8b07766c66ab"],
+    )
     name: str = Field(
         default="Metras-Enrichment",
+        description="The name of the connector.",
         examples=["Metras-Enrichment"],
     )
     scope: ListFromString = Field(
@@ -20,7 +26,11 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="Entity types this connector enriches.",
         examples=[["IPv4-Addr", "StixFile"]],
     )
-    auto: bool = Field(default=False, examples=[False])
+    auto: bool = Field(
+        default=False,
+        description="Automatically enrich entities when they are created.",
+        examples=[False],
+    )
 
 
 class MetrasConfig(BaseConfigModel):

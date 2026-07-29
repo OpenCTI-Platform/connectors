@@ -5,12 +5,8 @@ identity (matched fleet endpoint, an internal asset — not an IOC) and a relate
 Relationship linking them. No Sightings or Infrastructure objects are emitted.
 """
 
-import uuid
-
 import stix2
-from pycti import Identity, OpenCTIConnectorHelper, StixCoreRelationship
-
-_NOTE_NAMESPACE = uuid.UUID("9b3c7d15-ca92-4d5e-8a4d-2e2c1b4e7a9b")
+from pycti import Identity, Note, OpenCTIConnectorHelper, StixCoreRelationship
 
 
 class ConverterToStix:
@@ -39,10 +35,8 @@ class ConverterToStix:
         content: str,
         labels: list | None = None,
     ) -> stix2.Note:
-        note_seed = f"metras-note-{observable_id}-{abstract}"
-        note_id = f"note--{uuid.uuid5(_NOTE_NAMESPACE, note_seed)}"
         return stix2.Note(
-            id=note_id,
+            id=Note.generate_id(created=None, content=content, abstract=abstract),
             abstract=abstract,
             content=content,
             object_refs=[observable_id],
