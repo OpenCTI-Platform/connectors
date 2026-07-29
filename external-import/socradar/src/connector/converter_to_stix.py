@@ -5,7 +5,7 @@ from functools import lru_cache
 import pycti
 import stix2
 import stix2.exceptions
-from lib.api_client import RadarFeedItem
+from connector.api_client import RadarFeedItem
 
 REGEX_PATTERNS = {
     "md5": r"^[a-fA-F\d]{32}$",
