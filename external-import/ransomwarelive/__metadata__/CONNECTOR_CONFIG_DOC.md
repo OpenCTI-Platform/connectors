@@ -10,7 +10,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
 | CONNECTOR_NAME | `string` |  | string | `"Ransomware Connector"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["identity", "attack-pattern", "course-of-action", "intrusion-set", "malware", "tool", "report"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT10M"` | Duration between two scheduled runs of the connector (ISO 8601 format). |
 | CONNECTOR_PULL_HISTORY | `boolean` |  | boolean | `false` | Whether to pull historic data. It is not recommended to set it to ``true`` as there will be a large influx of data. |

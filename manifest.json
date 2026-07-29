@@ -982,6 +982,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -2397,122 +2398,7 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-ctm360-cyberblindspot",
-      "container_type": "EXTERNAL_IMPORT",
-      "config_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://www.filigran.io/connectors/ctm360-cyberblindspot-feed_config.schema.json",
-        "type": "object",
-        "properties": {
-          "OPENCTI_URL": {
-            "description": "The base URL of the OpenCTI instance.",
-            "format": "uri",
-            "maxLength": 2083,
-            "minLength": 1,
-            "type": "string"
-          },
-          "OPENCTI_TOKEN": {
-            "description": "The API token to connect to OpenCTI.",
-            "type": "string"
-          },
-          "CONNECTOR_NAME": {
-            "default": "CTM360-CyberBlindSpot",
-            "type": "string"
-          },
-          "CONNECTOR_SCOPE": {
-            "description": "The scope of the connector, e.g. 'flashpoint'.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "CONNECTOR_LOG_LEVEL": {
-            "default": "error",
-            "description": "The minimum level of logs to display.",
-            "enum": [
-              "debug",
-              "info",
-              "warn",
-              "warning",
-              "error"
-            ],
-            "type": "string"
-          },
-          "CONNECTOR_TYPE": {
-            "const": "EXTERNAL_IMPORT",
-            "default": "EXTERNAL_IMPORT",
-            "type": "string"
-          },
-          "CONNECTOR_DURATION_PERIOD": {
-            "description": "The period of time to await between two runs of the connector.",
-            "format": "duration",
-            "type": "string"
-          },
-          "CTM360_CBS_API_BASE_URL": {
-            "default": "https://cbs.ctm360.com",
-            "description": "CyberBlindSpot API base URL.",
-            "format": "uri",
-            "maxLength": 2083,
-            "minLength": 1,
-            "type": "string"
-          },
-          "CTM360_CBS_API_KEY": {
-            "description": "API key for CyberBlindSpot authentication.",
-            "format": "password",
-            "type": "string",
-            "writeOnly": true
-          },
-          "CTM360_CBS_IMPORT_INTERVAL": {
-            "default": 86400,
-            "description": "Interval in seconds between imports (default: 24h).",
-            "exclusiveMinimum": 0,
-            "type": "integer"
-          },
-          "CTM360_CBS_IMPORT_INCIDENTS": {
-            "default": true,
-            "description": "Enable importing incidents.",
-            "type": "boolean"
-          },
-          "CTM360_CBS_IMPORT_MALWARE_LOGS": {
-            "default": true,
-            "description": "Enable importing malware logs.",
-            "type": "boolean"
-          },
-          "CTM360_CBS_IMPORT_BREACHED_CREDENTIALS": {
-            "default": true,
-            "description": "Enable importing breached credentials.",
-            "type": "boolean"
-          },
-          "CTM360_CBS_IMPORT_CARD_LEAKS": {
-            "default": true,
-            "description": "Enable importing card leaks.",
-            "type": "boolean"
-          },
-          "CTM360_CBS_IMPORT_DOMAIN_PROTECTION": {
-            "default": true,
-            "description": "Enable importing domain protection findings.",
-            "type": "boolean"
-          },
-          "CTM360_CBS_STATUS_POLL_INTERVAL": {
-            "default": 3600,
-            "description": "Interval in seconds between status polling cycles (default: 1h).",
-            "exclusiveMinimum": 0,
-            "type": "integer"
-          },
-          "CTM360_CBS_ENABLE_STATUS_TRACKING": {
-            "default": true,
-            "description": "Enable background polling for incident status changes.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "OPENCTI_URL",
-          "OPENCTI_TOKEN",
-          "CONNECTOR_SCOPE",
-          "CONNECTOR_DURATION_PERIOD",
-          "CTM360_CBS_API_KEY"
-        ],
-        "additionalProperties": true
-      }
+      "container_type": "EXTERNAL_IMPORT"
     },
     {
       "title": "CTM360 CYNA Connector",
@@ -2538,98 +2424,7 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-ctm360-cyna",
-      "container_type": "EXTERNAL_IMPORT",
-      "config_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://www.filigran.io/connectors/ctm360-cyna-feed_config.schema.json",
-        "type": "object",
-        "properties": {
-          "OPENCTI_URL": {
-            "description": "The base URL of the OpenCTI instance.",
-            "format": "uri",
-            "maxLength": 2083,
-            "minLength": 1,
-            "type": "string"
-          },
-          "OPENCTI_TOKEN": {
-            "description": "The API token to connect to OpenCTI.",
-            "type": "string"
-          },
-          "CONNECTOR_NAME": {
-            "default": "CTM360-CYNA",
-            "type": "string"
-          },
-          "CONNECTOR_SCOPE": {
-            "description": "The scope of the connector, e.g. 'flashpoint'.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "CONNECTOR_LOG_LEVEL": {
-            "default": "error",
-            "description": "The minimum level of logs to display.",
-            "enum": [
-              "debug",
-              "info",
-              "warn",
-              "warning",
-              "error"
-            ],
-            "type": "string"
-          },
-          "CONNECTOR_TYPE": {
-            "const": "EXTERNAL_IMPORT",
-            "default": "EXTERNAL_IMPORT",
-            "type": "string"
-          },
-          "CONNECTOR_DURATION_PERIOD": {
-            "description": "The period of time to await between two runs of the connector.",
-            "format": "duration",
-            "type": "string"
-          },
-          "CTM360_CYNA_API_BASE_URL": {
-            "default": "https://cyna.ctm360.com",
-            "description": "CYNA API base URL.",
-            "format": "uri",
-            "maxLength": 2083,
-            "minLength": 1,
-            "type": "string"
-          },
-          "CTM360_CYNA_API_KEY": {
-            "description": "API key for CYNA authentication.",
-            "format": "password",
-            "type": "string",
-            "writeOnly": true
-          },
-          "CTM360_CYNA_IMPORT_INTERVAL": {
-            "default": 86400,
-            "description": "Interval in seconds between imports (default: 24h).",
-            "exclusiveMinimum": 0,
-            "type": "integer"
-          },
-          "CTM360_CYNA_PAGE_SIZE": {
-            "default": 25,
-            "description": "Number of news items per API page (default: 25).",
-            "exclusiveMinimum": 0,
-            "type": "integer"
-          },
-          "CTM360_CYNA_MAX_PAGES": {
-            "default": 100,
-            "description": "Maximum pages to fetch per import cycle (safety limit).",
-            "exclusiveMinimum": 0,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "OPENCTI_URL",
-          "OPENCTI_TOKEN",
-          "CONNECTOR_SCOPE",
-          "CONNECTOR_DURATION_PERIOD",
-          "CTM360_CYNA_API_KEY"
-        ],
-        "additionalProperties": true
-      }
+      "container_type": "EXTERNAL_IMPORT"
     },
     {
       "title": "CTM360 HackerView Connector",
@@ -3019,6 +2814,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -4288,9 +4084,9 @@
             "enum": [
               "debug",
               "info",
+              "warn",
               "warning",
-              "error",
-              "critical"
+              "error"
             ],
             "type": "string",
             "default": "error",
@@ -4435,9 +4231,9 @@
             "enum": [
               "debug",
               "info",
+              "warn",
               "warning",
-              "error",
-              "critical"
+              "error"
             ],
             "type": "string",
             "default": "error"
@@ -4584,6 +4380,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -5202,6 +4999,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -5671,9 +5469,27 @@
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
-            "default": "report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability,campaign",
+            "default": [
+              "report",
+              "location",
+              "identity",
+              "attack_pattern",
+              "domain",
+              "file",
+              "ipv4",
+              "ipv6",
+              "malware",
+              "sector",
+              "intrusion_set",
+              "url",
+              "vulnerability",
+              "campaign"
+            ],
             "description": "Comma-separated list of OpenCTI entity types that this connector can import",
-            "type": "string"
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "CONNECTOR_LOG_LEVEL": {
             "default": "error",
@@ -8042,6 +7858,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -9401,6 +9218,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -10994,7 +10812,7 @@
           "OPENCTI_URL",
           "OPENCTI_TOKEN"
         ],
-        "additionalProperties": false
+        "additionalProperties": true
       }
     },
     {
@@ -11060,6 +10878,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -11405,11 +11224,13 @@
             "type": "array"
           },
           "CONNECTOR_DURATION_PERIOD": {
-            "default": "PT24H",
-            "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
+            "default": "P1D",
+            "description": "The period of time to await between two runs of the connector (in ISO 8601 format, e.g., 'PT24H' for 24 hours).",
+            "format": "duration",
             "type": "string"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -12239,6 +12060,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -13397,6 +13219,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -13460,124 +13283,7 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-spur",
-      "container_type": "EXTERNAL_IMPORT",
-      "config_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://www.filigran.io/connectors/spur_config.schema.json",
-        "type": "object",
-        "properties": {
-          "OPENCTI_URL": {
-            "description": "The base URL of the OpenCTI instance.",
-            "format": "uri",
-            "maxLength": 2083,
-            "minLength": 1,
-            "type": "string"
-          },
-          "OPENCTI_TOKEN": {
-            "description": "The API token to connect to OpenCTI.",
-            "type": "string"
-          },
-          "CONNECTOR_NAME": {
-            "default": "Spur",
-            "type": "string"
-          },
-          "CONNECTOR_SCOPE": {
-            "description": "The scope of the connector, e.g. 'flashpoint'.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "CONNECTOR_LOG_LEVEL": {
-            "default": "error",
-            "description": "The minimum level of logs to display.",
-            "enum": [
-              "debug",
-              "info",
-              "warn",
-              "warning",
-              "error"
-            ],
-            "type": "string"
-          },
-          "CONNECTOR_TYPE": {
-            "const": "EXTERNAL_IMPORT",
-            "default": "EXTERNAL_IMPORT",
-            "type": "string"
-          },
-          "CONNECTOR_DURATION_PERIOD": {
-            "default": "P1D",
-            "description": "Interval between feed runs (ISO-8601).",
-            "format": "duration",
-            "type": "string"
-          },
-          "SPUR_API_KEY": {
-            "description": "Spur API token.",
-            "format": "password",
-            "type": "string",
-            "writeOnly": true
-          },
-          "SPUR_FEED_URLS": {
-            "default": [
-              "https://feeds.spur.us/v2/anonymous/feed.json.gz",
-              "https://feeds.spur.us/v2/residential/feed.json.gz"
-            ],
-            "description": "Comma-separated list of Spur feed URLs to download.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "SPUR_TLP_LEVEL": {
-            "default": "amber",
-            "description": "TLP marking applied to all imported objects.",
-            "enum": [
-              "clear",
-              "white",
-              "green",
-              "amber",
-              "amber+strict",
-              "red"
-            ],
-            "type": "string"
-          },
-          "SPUR_CREATE_INDICATORS": {
-            "default": true,
-            "description": "Create STIX Indicators for flagged IPs.",
-            "type": "boolean"
-          },
-          "SPUR_CREATE_ASNS": {
-            "default": true,
-            "description": "Create AutonomousSystem objects and belongs-to relationships.",
-            "type": "boolean"
-          },
-          "SPUR_CREATE_LOCATIONS": {
-            "default": true,
-            "description": "Create Location objects and located-at relationships.",
-            "type": "boolean"
-          },
-          "SPUR_DEFAULT_SCORE": {
-            "default": 70,
-            "description": "Base OpenCTI score for Spur observables (0-100).",
-            "maximum": 100,
-            "minimum": 0,
-            "type": "integer"
-          },
-          "SPUR_BATCH_SIZE": {
-            "default": 5000,
-            "description": "Number of IP records per STIX bundle sent to OpenCTI.",
-            "minimum": 100,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "OPENCTI_URL",
-          "OPENCTI_TOKEN",
-          "CONNECTOR_SCOPE",
-          "SPUR_API_KEY"
-        ],
-        "additionalProperties": true
-      }
+      "container_type": "EXTERNAL_IMPORT"
     },
     {
       "title": "Spycloud",
@@ -14034,144 +13740,7 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-usta",
-      "container_type": "EXTERNAL_IMPORT",
-      "config_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://www.filigran.io/connectors/usta_config.schema.json",
-        "type": "object",
-        "properties": {
-          "OPENCTI_URL": {
-            "description": "The base URL of the OpenCTI instance.",
-            "format": "uri",
-            "maxLength": 2083,
-            "minLength": 1,
-            "type": "string"
-          },
-          "OPENCTI_TOKEN": {
-            "description": "The API token to connect to OpenCTI.",
-            "type": "string"
-          },
-          "CONNECTOR_NAME": {
-            "default": "USTA",
-            "description": "The name of the connector.",
-            "type": "string"
-          },
-          "CONNECTOR_SCOPE": {
-            "default": "indicator,observable,malware,identity,incident,user-account,report,threat-actor",
-            "description": "The scope of the connector.",
-            "type": "string"
-          },
-          "CONNECTOR_LOG_LEVEL": {
-            "default": "error",
-            "description": "The minimum level of logs to display.",
-            "enum": [
-              "debug",
-              "info",
-              "warn",
-              "warning",
-              "error"
-            ],
-            "type": "string"
-          },
-          "CONNECTOR_TYPE": {
-            "const": "EXTERNAL_IMPORT",
-            "default": "EXTERNAL_IMPORT",
-            "type": "string"
-          },
-          "CONNECTOR_DURATION_PERIOD": {
-            "default": "PT30M",
-            "description": "The period of time to await between two runs.",
-            "format": "duration",
-            "type": "string"
-          },
-          "USTA_API_BASE_URL": {
-            "default": "https://usta.prodaft.com",
-            "description": "USTA API base URL.",
-            "format": "uri",
-            "maxLength": 2083,
-            "minLength": 1,
-            "type": "string"
-          },
-          "USTA_API_KEY": {
-            "description": "USTA API bearer token for authentication.",
-            "format": "password",
-            "type": "string"
-          },
-          "USTA_IMPORT_START_DATE": {
-            "default": "P90D",
-            "description": "ISO 8601 duration string specifying how far back to import data (e.g., P90D for 90 days, P30D for 30 days). Only used on the very first run when no state exists.",
-            "format": "duration",
-            "type": "string"
-          },
-          "USTA_PAGE_SIZE": {
-            "default": 100,
-            "description": "Number of records to fetch per API page.",
-            "maximum": 500,
-            "minimum": 1,
-            "type": "integer"
-          },
-          "USTA_IMPORT_MALICIOUS_URLS": {
-            "default": true,
-            "description": "Enable import of malicious URL indicators.",
-            "type": "boolean"
-          },
-          "USTA_IMPORT_PHISHING_SITES": {
-            "default": true,
-            "description": "Enable import of phishing site indicators.",
-            "type": "boolean"
-          },
-          "USTA_IMPORT_MALWARE_HASHES": {
-            "default": true,
-            "description": "Enable import of malware hash indicators.",
-            "type": "boolean"
-          },
-          "USTA_IMPORT_COMPROMISED_CREDENTIALS": {
-            "default": true,
-            "description": "Enable import of compromised credentials tickets (Account Takeover Prevention).",
-            "type": "boolean"
-          },
-          "USTA_IMPORT_CREDIT_CARDS": {
-            "default": true,
-            "description": "Enable import of compromised credit card tickets (Fraud Intelligence).",
-            "type": "boolean"
-          },
-          "USTA_IMPORT_DEEP_SIGHT_TICKETS": {
-            "default": true,
-            "description": "Enable import of Deep Sight intelligence tickets (threat reports, leaks, APT activity).",
-            "type": "boolean"
-          },
-          "USTA_STORE_CREDENTIAL_PASSWORD": {
-            "default": false,
-            "description": "When enabled, the raw password from Account Takeover Prevention records is stored in the STIX User-Account credential field. Disabled by default for security reasons.",
-            "type": "boolean"
-          },
-          "USTA_TLP_LEVEL": {
-            "default": "red",
-            "description": "TLP marking level to apply to imported data.",
-            "enum": [
-              "clear",
-              "white",
-              "green",
-              "amber",
-              "red"
-            ],
-            "type": "string"
-          },
-          "USTA_CONFIDENCE_LEVEL": {
-            "default": 99,
-            "description": "Confidence level for created STIX objects (0-100).",
-            "maximum": 100,
-            "minimum": 0,
-            "type": "integer"
-          }
-        },
-        "required": [
-          "OPENCTI_URL",
-          "OPENCTI_TOKEN",
-          "USTA_API_KEY"
-        ],
-        "additionalProperties": true
-      }
+      "container_type": "EXTERNAL_IMPORT"
     },
     {
       "title": "TeamT5",
@@ -14808,6 +14377,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
             "default": "EXTERNAL_IMPORT",
             "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
             "type": "string"
@@ -15057,98 +14627,7 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-trukno",
-      "container_type": "EXTERNAL_IMPORT",
-      "config_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://www.filigran.io/connectors/trukno_config.schema.json",
-        "type": "object",
-        "properties": {
-          "OPENCTI_URL": {
-            "description": "The OpenCTI platform URL.",
-            "format": "uri",
-            "type": "string"
-          },
-          "OPENCTI_TOKEN": {
-            "description": "The token used by the connector to authenticate to OpenCTI.",
-            "type": "string"
-          },
-          "CONNECTOR_ID": {
-            "description": "A stable UUID for this connector instance.",
-            "type": "string"
-          },
-          "CONNECTOR_NAME": {
-            "default": "TruKno",
-            "description": "Name of the connector shown in OpenCTI.",
-            "type": "string"
-          },
-          "CONNECTOR_SCOPE": {
-            "default": [
-              "report",
-              "attack-pattern",
-              "malware"
-            ],
-            "description": "STIX object scope currently imported by the connector.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "CONNECTOR_TYPE": {
-            "default": "EXTERNAL_IMPORT",
-            "description": "Connector type for OpenCTI.",
-            "enum": [
-              "EXTERNAL_IMPORT"
-            ],
-            "type": "string"
-          },
-          "CONNECTOR_LOG_LEVEL": {
-            "default": "info",
-            "description": "Determines the verbosity of runtime logs.",
-            "enum": [
-              "debug",
-              "info",
-              "warn",
-              "warning",
-              "error"
-            ],
-            "type": "string"
-          },
-          "TRUKNO_API_BASE_URL": {
-            "default": "https://api.trukno.com/v2",
-            "description": "Base URL of the TruKno API.",
-            "format": "uri",
-            "type": "string"
-          },
-          "TRUKNO_API_KEY": {
-            "description": "API key used to authenticate to TruKno.",
-            "format": "password",
-            "type": "string",
-            "writeOnly": true
-          },
-          "TRUKNO_INTERVAL_MINUTES": {
-            "default": 60,
-            "description": "Polling interval in minutes between connector cycles.",
-            "exclusiveMinimum": 0,
-            "type": "integer"
-          },
-          "TRUKNO_INITIAL_LOOKBACK_DAYS": {
-            "default": 30,
-            "description": "Number of days to backfill on the first run before a checkpoint exists.",
-            "exclusiveMinimum": 0,
-            "type": "integer"
-          },
-          "TRUKNO_CONNECTOR_CONFIG": {
-            "description": "Optional explicit path to a config.yml file used for manual or packaged runs.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "OPENCTI_URL",
-          "OPENCTI_TOKEN",
-          "TRUKNO_API_KEY"
-        ],
-        "additionalProperties": true
-      }
+      "container_type": "EXTERNAL_IMPORT"
     },
     {
       "title": "TweetFeed",
@@ -16279,7 +15758,9 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The API token to connect to OpenCTI.",
-            "type": "string"
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
           },
           "CONNECTOR_NAME": {
             "default": "Vulnerability Lookup",
@@ -16287,9 +15768,14 @@
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
-            "default": "vulnerability",
+            "default": [
+              "vulnerability"
+            ],
             "description": "Scope of the connector.",
-            "type": "string"
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "CONNECTOR_LOG_LEVEL": {
             "default": "error",
@@ -17014,6 +16500,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
             "default": "INTERNAL_ENRICHMENT",
             "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
             "type": "string"
@@ -18592,6 +18079,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
             "default": "INTERNAL_ENRICHMENT",
             "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
             "type": "string"
@@ -19307,6 +18795,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
             "default": "INTERNAL_ENRICHMENT",
             "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
             "type": "string"
@@ -19612,6 +19101,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
             "default": "INTERNAL_ENRICHMENT",
             "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
             "type": "string"
@@ -20465,102 +19955,7 @@
       "manager_supported": false,
       "container_version": "rolling",
       "container_image": "opencti/connector-osint-industries",
-      "container_type": "INTERNAL_ENRICHMENT",
-      "config_schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$id": "https://www.filigran.io/connectors/osint_industries_config.schema.json",
-        "type": "object",
-        "properties": {
-          "OPENCTI_URL": {
-            "description": "The OpenCTI platform URL.",
-            "format": "uri",
-            "maxLength": 2083,
-            "minLength": 1,
-            "type": "string"
-          },
-          "OPENCTI_TOKEN": {
-            "description": "The token of the user who represents the connector in the OpenCTI platform.",
-            "type": "string"
-          },
-          "CONNECTOR_NAME": {
-            "default": "OSINT Industries",
-            "description": "Name of the connector.",
-            "type": "string"
-          },
-          "CONNECTOR_SCOPE": {
-            "default": [
-              "Email-Addr",
-              "Phone-Number",
-              "User-Account",
-              "Cryptocurrency-Wallet"
-            ],
-            "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "CONNECTOR_TYPE": {
-            "default": "INTERNAL_ENRICHMENT",
-            "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
-            "type": "string"
-          },
-          "CONNECTOR_LOG_LEVEL": {
-            "default": "error",
-            "description": "Determines the verbosity of the logs.",
-            "enum": [
-              "debug",
-              "info",
-              "warn",
-              "warning",
-              "error"
-            ],
-            "type": "string"
-          },
-          "CONNECTOR_AUTO": {
-            "default": false,
-            "description": "Enables or disables automatic enrichment of observables for OpenCTI. Keep disabled for this quota-based paid source to avoid depleting API credits.",
-            "type": "boolean"
-          },
-          "OSINT_INDUSTRIES_API_KEY": {
-            "description": "API key used to authenticate requests to the OSINT Industries service.",
-            "format": "password",
-            "type": "string",
-            "writeOnly": true
-          },
-          "OSINT_INDUSTRIES_BASE_URL": {
-            "default": "https://api.osint.industries",
-            "description": "Base URL of the OSINT Industries API.",
-            "format": "uri",
-            "maxLength": 2083,
-            "minLength": 1,
-            "type": "string"
-          },
-          "OSINT_INDUSTRIES_TLP_LEVEL": {
-            "default": "amber+strict",
-            "description": "Traffic Light Protocol (TLP) level applied to the objects imported into OpenCTI. Results contain personal data; a restrictive TLP is recommended.",
-            "enum": [
-              "clear",
-              "green",
-              "amber",
-              "amber+strict",
-              "red"
-            ],
-            "type": "string"
-          },
-          "OSINT_INDUSTRIES_PREMIUM": {
-            "default": false,
-            "description": "If enabled, queries additional premium modules. This consumes more API credits.",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "OPENCTI_URL",
-          "OPENCTI_TOKEN",
-          "OSINT_INDUSTRIES_API_KEY"
-        ],
-        "additionalProperties": true
-      }
+      "container_type": "INTERNAL_ENRICHMENT"
     },
     {
       "title": "Palo Alto Networks WildFire",
@@ -23115,6 +22510,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
             "default": "INTERNAL_ENRICHMENT",
             "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
             "type": "string"
@@ -23215,6 +22611,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
             "default": "INTERNAL_ENRICHMENT",
             "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
             "type": "string"
@@ -26053,6 +25450,7 @@
             "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "STREAM",
             "default": "STREAM",
             "description": "Should always be set to STREAM for this connector.",
             "type": "string"
@@ -26581,11 +25979,17 @@
             "type": "string"
           },
           "CONNECTOR_SCOPE": {
-            "default": "splunk-soar-push",
+            "default": [
+              "splunk-soar-push"
+            ],
             "description": "The scope or type of data the connector is processing.",
-            "type": "string"
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "CONNECTOR_TYPE": {
+            "const": "STREAM",
             "default": "STREAM",
             "description": "Should always be set to STREAM for this connector.",
             "type": "string"
