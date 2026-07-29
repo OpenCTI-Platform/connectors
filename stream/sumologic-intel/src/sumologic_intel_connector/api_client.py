@@ -8,16 +8,19 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout
 from requests.models import Response
 from urllib3.util.retry import Retry
 
-from .config_loader import ConfigConnector
+from .settings import ConnectorSettings
 
 
 class SumologicClient:
 
-    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigConnector):
+    def __init__(self, helper: OpenCTIConnectorHelper, config: ConnectorSettings):
         self.helper = helper
         self.config = config
         self.session = requests.Session()
-        self.session.auth = (self.config.access_id, self.config.access_key)
+        self.session.auth = (
+            self.config.sumologic_intel.access_id,
+            self.config.sumologic_intel.access_key.get_secret_value(),
+        )
 
     def upload_stix_indicator(self, source_name: str, stix_indicator: dict):
         """
@@ -35,7 +38,10 @@ class SumologicClient:
             f"Uploading STIX Indicator name: {stix_indicator.get('name')}"
         )
 
-        url = self.config.api_base_url + "/api/v1/threatIntel/datastore/indicators/stix"
+        url = (
+            self.config.sumologic_intel.api_base_url.rstrip("/")
+            + "/api/v1/threatIntel/datastore/indicators/stix"
+        )
 
         try:
             response = self._send_request(
@@ -90,7 +96,10 @@ class SumologicClient:
             f"Deleting STIX Indicator name: {stix_indicator.get('name')}"
         )
 
-        url = self.config.api_base_url + "/api/v1/threatIntel/datastore/indicators"
+        url = (
+            self.config.sumologic_intel.api_base_url.rstrip("/")
+            + "/api/v1/threatIntel/datastore/indicators"
+        )
 
         try:
             response = self._send_request(
