@@ -6,7 +6,7 @@ blocklists accept file paths only); IP/domain/hash indicators are skipped + logg
 """
 
 import json
-import time
+import sys
 
 from connector.converter_to_external import ConverterToExternal
 from connector.settings import ConnectorSettings
@@ -55,14 +55,8 @@ class MetrasStreamConnector:
             )
 
         self.helper.connector_logger.info("[CONNECTOR] Starting Metras stream listener")
-        # listen_stream() spawns a daemon thread and returns — keep the main
-        # thread alive so the process does not exit.
+        # listen_stream() keeps the process alive; no manual keep-alive loop needed.
         self.helper.listen_stream(message_callback=self._process_event)
-        try:
-            while True:
-                time.sleep(60)
-        except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info("[CONNECTOR] Stopping")
 
     # ------------------------------------------------------------------ #
     def _process_event(self, msg) -> None:
@@ -95,9 +89,14 @@ class MetrasStreamConnector:
                 "[CONNECTOR] Metras push failed (continuing)",
                 meta={"id": indicator_id, "error": str(exc)},
             )
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector stopped by user or system."
+            )
+            sys.exit(0)
         except Exception as exc:  # noqa: BLE001 — never crash the stream
             self.helper.connector_logger.error(
-                "[CONNECTOR] Unexpected error (continuing)",
+                "[CONNECTOR] An unexpected error occurred, see connector logs for details (continuing)",
                 meta={"id": indicator_id, "error": str(exc)},
             )
 
