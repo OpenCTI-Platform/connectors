@@ -6,13 +6,12 @@ from typing import Any
 import freezegun
 import pytest
 from pydantic import HttpUrl
-from pydantic_settings import SettingsConfigDict
 from threatmatch.config import ConfigRetrievalError, ConnectorSettings
 
 
 @pytest.mark.usefixtures("mock_config")
 def test_config() -> None:
-    config = ConnectorSettings().model_dump()
+    config = ConnectorSettings().model_dump(exclude_none=True)
 
     assert config["opencti"]["url"] == HttpUrl("http://test-opencti-url/")
     assert config["opencti"]["token"] == "test-opencti-token"
@@ -38,14 +37,19 @@ def test_config() -> None:
     assert config["threatmatch"]["threat_actor_as_intrusion_set"] is True
 
 
-def test_yaml_config(config_dict: dict[str, dict[str, Any]]) -> None:
-    class YamlConfig(ConnectorSettings):
-        model_config = SettingsConfigDict(
-            yaml_file=f"{Path(__file__).parent}/config.test.yml"
-        )
+def test_yaml_config(
+    config_dict: dict[str, dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def get_config_yml_file_path() -> Path:
+        return Path(__file__).parent / "config.test.yml"
 
-    config = YamlConfig()
-    yaml_dict = config.model_dump_pycti()
+    monkeypatch.setattr(
+        "connectors_sdk.settings.base_settings._SettingsLoader._get_config_yml_file_path",
+        get_config_yml_file_path,
+    )
+
+    config = ConnectorSettings()
+    yaml_dict = config.to_helper_config()
     assert (
         yaml_dict["threatmatch"].pop("import_from_date") == "2025-01-01T00:00:00+00:00"
     )
@@ -56,7 +60,7 @@ def test_yaml_config(config_dict: dict[str, dict[str, Any]]) -> None:
 @pytest.mark.usefixtures("mock_config")
 def test_env_config(config_dict: dict[str, dict[str, Any]]) -> None:
     config = ConnectorSettings()
-    env_dict = config.model_dump_pycti()
+    env_dict = config.to_helper_config()
     assert (
         env_dict["threatmatch"].pop("import_from_date") == "2025-01-01T00:00:00+00:00"
     )
@@ -96,6 +100,6 @@ def test_timedelta_config() -> None:
         tz=datetime.UTC
     ) - datetime.timedelta(days=30)
     assert (
-        config.model_dump_pycti()["threatmatch"]["import_from_date"]
+        config.to_helper_config()["threatmatch"]["import_from_date"]
         == "2024-12-02T00:00:00+00:00"
     )
