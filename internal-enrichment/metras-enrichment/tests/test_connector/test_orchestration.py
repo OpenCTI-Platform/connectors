@@ -3,7 +3,6 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
 from connector.connector import MetrasEnrichmentConnector
 from connectors_sdk.models.enums import TLPLevel
 from pydantic import SecretStr
@@ -45,10 +44,28 @@ def test_file_alias_is_in_scope():
     assert conn.entity_in_scope("file") is True  # file -> stixfile alias
 
 
-def test_missing_stix_id_aborts():
+def test_missing_stix_id_returns_original_bundle():
+    # Playbook-compatible: a missing STIX id is a no-enrichment path, not a crash.
     conn, _ = _enr()
-    with pytest.raises(ValueError):
-        conn.process_message({"stix_entity": {"type": "IPv4-Addr", "value": "1.2.3.4"}})
+    msg = conn.process_message(
+        {"stix_entity": {"type": "IPv4-Addr", "value": "1.2.3.4"}}
+    )
+    assert "original bundle returned" in msg
+
+
+def test_out_of_scope_forwards_original_bundle():
+    # The original bundle must be passed through unchanged when out of scope.
+    conn, helper = _enr()
+    original = [{"type": "domain-name", "id": "domain-name--x", "value": "e.com"}]
+    msg = conn.process_message(
+        {
+            "stix_objects": original,
+            "stix_entity": {"type": "Domain-Name", "id": "domain-name--x"},
+        }
+    )
+    assert "not in scope" in msg and "original bundle returned" in msg
+    helper.stix2_create_bundle.assert_called_once()
+    assert helper.stix2_create_bundle.call_args[0][0] == original
 
 
 def test_tlp_gate_blocks_above_max():
@@ -112,15 +129,17 @@ def test_file_hit_builds_note_and_system_and_sends_bundle():
     assert "note" in types and "identity" in types and "relationship" in types
 
 
-def test_all_lookups_fail_raises():
+def test_all_lookups_fail_returns_original_bundle():
+    # When every external lookup fails, the connector logs the error but still
+    # passes the original bundle through (playbook-safe) instead of raising.
     conn, _ = _enr()
     boom = MagicMock(side_effect=Exception("x"))
     conn.client.alerts_by_agent_ip = boom
     conn.client.list_endpoints = boom
-    with pytest.raises(ValueError):
-        conn.process_message(
-            {"stix_entity": {"type": "IPv4-Addr", "id": IPV4_ID, "value": "10.0.0.1"}}
-        )
+    msg = conn.process_message(
+        {"stix_entity": {"type": "IPv4-Addr", "id": IPV4_ID, "value": "10.0.0.1"}}
+    )
+    assert "All Metras lookups failed" in msg
 
 
 def test_empty_ipv4_value_skips_lookup():

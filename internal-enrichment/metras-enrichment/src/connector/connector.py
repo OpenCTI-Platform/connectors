@@ -114,28 +114,42 @@ class MetrasEnrichmentConnector:
         enrichment_entity = data.get("enrichment_entity") or {}
         return enrichment_entity.get("standard_id") or stix_entity.get("id")
 
-    def process_message(self, data: dict) -> str | None:
+    def _send_bundle(self, stix_objects: list) -> list:
+        """Serialize and send a STIX bundle. Empty input is a no-op."""
+        if not stix_objects:
+            return []
+        bundle = self.helper.stix2_create_bundle(stix_objects)
+        return self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)
+
+    def process_message(self, data: dict) -> str:
+        # Playbook-compatible (playbook_compatible=True): the original bundle is
+        # returned on every no-enrichment / failure path so a playbook can continue
+        # to its next step instead of breaking.
+        stix_objects = data.get("stix_objects") or []
+        stix_entity = data.get("stix_entity") or {}
+        obs_type = (stix_entity.get("type") or "").lower()
+        obs_id = self._resolve_stix_id(data, stix_entity)
+
         try:
-            stix_entity = data.get("stix_entity") or {}
-            stix_objects = data.get("stix_objects", [])
-            obs_type = (stix_entity.get("type") or "").lower()
-            obs_id = self._resolve_stix_id(data, stix_entity)
             if not obs_id:
-                raise ValueError(
-                    "[CONNECTOR] Could not resolve a STIX id for the entity "
-                    "(no standard_id or stix_entity id); aborting."
-                )
+                self._send_bundle(stix_objects)
+                return "[CONNECTOR] No STIX id resolved; original bundle returned"
 
             level = self._get_tlp_level(stix_entity)
             if level and not self._tlp_allowed(level):
-                self.helper.connector_logger.warning(
+                self.helper.connector_logger.info(
                     "[CONNECTOR] Skipped: TLP exceeds max",
                     meta={"tlp": level, "max": self._max_tlp.value},
                 )
-                return f"[CONNECTOR] Skipped: TLP {level} exceeds max {self._max_tlp.value}"
+                self._send_bundle(stix_objects)
+                return (
+                    f"[CONNECTOR] Skipped: TLP {level} exceeds max "
+                    f"{self._max_tlp.value}; original bundle returned"
+                )
 
             if not self.entity_in_scope(obs_type):
-                return f"[CONNECTOR] {obs_type} not in scope"
+                self._send_bundle(stix_objects)
+                return f"[CONNECTOR] {obs_type} not in scope; original bundle returned"
 
             self._errors, self._successes = [], 0
             handlers = {
@@ -145,29 +159,38 @@ class MetrasEnrichmentConnector:
             }
             handler = handlers.get(obs_type)
             if not handler:
-                return f"[CONNECTOR] Unsupported type {obs_type}"
+                self._send_bundle(stix_objects)
+                return (
+                    f"[CONNECTOR] Unsupported type {obs_type}; original bundle returned"
+                )
 
             new_objects = handler(stix_entity, obs_id)
 
             if self._successes == 0 and self._errors:
-                first = self._errors[0]
-                raise ValueError(f"[CONNECTOR] All Metras lookups failed: {first}")
+                # Every external lookup failed — surface it in the logs but still
+                # pass the original bundle through so the playbook is not broken.
+                self.helper.connector_logger.error(
+                    "[CONNECTOR] All Metras lookups failed",
+                    meta={"error": self._errors[0]},
+                )
+                self._send_bundle(stix_objects)
+                return "[CONNECTOR] All Metras lookups failed; original bundle returned"
 
             if new_objects:
-                bundle_objects = (
-                    stix_objects + [self.converter.author_object()] + new_objects
-                )
-                bundle = self.helper.stix2_create_bundle(bundle_objects)
-                sent = self.helper.send_stix2_bundle(
-                    bundle, cleanup_inconsistent_bundle=True
-                )
+                enriched = stix_objects + [self.converter.author_object()] + new_objects
+                sent = self._send_bundle(enriched)
                 return f"[CONNECTOR] Sent {len(sent)} bundle(s)"
-            return "[CONNECTOR] No Metras fleet data found for this observable"
+
+            self._send_bundle(stix_objects)
+            return "[CONNECTOR] No Metras fleet data found; original bundle returned"
         except Exception as err:  # noqa: BLE001
             self.helper.connector_logger.error(
                 "[CONNECTOR] Error", meta={"error": str(err)}
             )
-            raise
+            self._send_bundle(stix_objects)
+            return (
+                f"[CONNECTOR] Error during enrichment ({err}); original bundle returned"
+            )
 
     # ------------------------------------------------------------------ #
     def _enrich_ipv4(self, stix_entity: dict, obs_id: str) -> list:
