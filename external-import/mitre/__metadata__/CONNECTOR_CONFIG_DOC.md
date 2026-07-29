@@ -10,7 +10,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
 | CONNECTOR_NAME | `string` |  | string | `"MITRE ATT&CK"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["tool", "report", "malware", "identity", "campaign", "intrusion-set", "attack-pattern", "course-of-action", "x-mitre-data-source", "x-mitre-data-component", "x-mitre-matrix", "x-mitre-tactic", "x-mitre-collection"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | MITRE_REMOVE_STATEMENT_MARKING | `boolean` |  | boolean | `false` | Whether to remove statement markings from the ingested MITRE data. Useful when marking metadata is unnecessary or interferes with processing. |
 | MITRE_INTERVAL | `integer` |  | `0 < x ` | `7` | Polling interval in days for fetching and refreshing MITRE data. Determines how often the system checks for updates to ATT&CK datasets. |
