@@ -1,6 +1,6 @@
 import pytest
 from microsoft_sentinel_intel.settings import ConnectorSettings
-from pydantic import HttpUrl
+from pydantic import HttpUrl, SecretStr
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
@@ -8,7 +8,7 @@ def test_config() -> None:
     config = ConnectorSettings().model_dump()
 
     assert config["opencti"]["url"] == HttpUrl("http://test-opencti-url/")
-    assert config["opencti"]["token"] == "test-opencti-token"
+    assert config["opencti"]["token"] == SecretStr("test-opencti-token")
 
     assert config["connector"]["id"] == "test-connector-id"
     assert config["connector"]["name"] == "External Import Connector Template"

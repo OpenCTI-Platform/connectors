@@ -22,7 +22,7 @@ def mock_environment(monkeypatch):
     monkeypatch.setenv("OPENCTI_TOKEN", "changeme")
     monkeypatch.setenv("CONNECTOR_ID", "connector-poc--uid")
     monkeypatch.setenv("CONNECTOR_NAME", "Test Connector")
-    monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+    monkeypatch.setenv("CONNECTOR_SCOPE", "scope1,scope2")
     monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
     monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "error")
 
@@ -35,7 +35,7 @@ def mock_config_yml_file_presence(monkeypatch):
         return Path(__file__).parent / "data" / "config.test.yml"
 
     monkeypatch.setattr(
-        "connectors_sdk.settings.base_settings._SettingsLoader._get_config_yml_file_path",
+        "connectors_sdk.settings._settings_loader._SettingsLoader._get_config_yml_file_path",
         get_config_yml_file_path,
     )
 
@@ -48,6 +48,6 @@ def mock_dot_env_file_presence(monkeypatch):
         return Path(__file__).parent / "data" / ".env.test"
 
     monkeypatch.setattr(
-        "connectors_sdk.settings.base_settings._SettingsLoader._get_dot_env_file_path",
+        "connectors_sdk.settings._settings_loader._SettingsLoader._get_dot_env_file_path",
         get_dot_env_file_path,
     )

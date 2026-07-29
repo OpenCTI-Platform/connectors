@@ -3,7 +3,7 @@ from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
 from models.configs import ConfigBaseSettings
-from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt, field_validator
+from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt
 
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "warning", "error"],
@@ -33,7 +33,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: ListFromString
 
-    type: str = Field(
+    type: Literal["EXTERNAL_IMPORT"] = Field(
         default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )
@@ -121,7 +121,3 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default=False,
         description="Whether to include the leak post URL as an external reference on victim reports",
     )
-
-    @field_validator("type")
-    def force_value_for_type_to_be_external_import(cls, value):
-        return "EXTERNAL_IMPORT"
