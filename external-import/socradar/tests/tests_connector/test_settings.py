@@ -18,7 +18,7 @@ FULL_VALID_SETTINGS_DICT = {
     "radar": {
         "base_feed_url": "https://platform.socradar.com/api/threat/intelligence/feed_list/",
         "socradar_key": "test-api-key",
-        "feed_lists": {"feed_list_1": "ID_1", "feed_list_2": "ID_2"},
+        "feed_lists": '{"feed_list_1": "ID_1", "feed_list_2": "ID_2"}',
     },
 }
 
@@ -28,7 +28,7 @@ MINIMAL_VALID_SETTINGS_DICT = {
     "radar": {
         "base_feed_url": "https://platform.socradar.com/api/threat/intelligence/feed_list/",
         "socradar_key": "test-api-key",
-        "feed_lists": {"feed_list_1": "ID_1"},
+        "feed_lists": '{"feed_list_1": "ID_1"}',
     },
 }
 
@@ -83,7 +83,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "radar": {
                     "base_feed_url": "https://x/",
                     "socradar_key": "test-api-key",
-                    "feed_lists": {"feed_list_1": "ID_1"},
+                    "feed_lists": '{"feed_list_1": "ID_1"}',
                 },
             },
             "opencti.token",
@@ -102,7 +102,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "radar": {
                     "base_feed_url": "https://x/",
                     "socradar_key": "test-api-key",
-                    "feed_lists": {"feed_list_1": "ID_1"},
+                    "feed_lists": '{"feed_list_1": "ID_1"}',
                 },
             },
             "connector.id",
@@ -156,7 +156,7 @@ def test_settings_should_migrate_deprecated_interval():
                     "radar": {
                         "base_feed_url": "https://x/",
                         "socradar_key": "test-api-key",
-                        "feed_lists": {"feed_list_1": "ID_1"},
+                        "feed_lists": '{"feed_list_1": "ID_1"}',
                         "run_interval": 7200,
                     },
                 }
@@ -199,7 +199,6 @@ def test_settings_should_migrate_deprecated_collections_uuid():
         warnings.simplefilter("always")
         settings = FakeConnectorSettings()
 
-    feed_lists = {feed.name: feed.id for feed in settings.radar.feed_lists}
-    assert feed_lists == {"feed_a": "ID_1", "feed_b": "ID_2"}
+    assert settings.radar.feed_lists == {"feed_a": "ID_1", "feed_b": "ID_2"}
     warning_messages = [str(warning.message) for warning in w]
     assert any("feed_lists" in msg.lower() for msg in warning_messages)

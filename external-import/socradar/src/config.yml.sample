@@ -12,6 +12,5 @@ connector:
 radar:
   base_feed_url: "https://platform.socradar.com/api/threat/intelligence/feed_list/" # Required
   socradar_key: "SOCRADAR_KEY"
-  feed_lists:
-    feed_list_1: 'COLLECTION_ID'
-    feed_list_2: 'COLLECTION_ID'
+  # feed_lists is a JSON object (as a string) mapping each feed list name to its ID
+  feed_lists: '{"feed_list_1": "COLLECTION_ID", "feed_list_2": "COLLECTION_ID"}'

@@ -9,7 +9,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, Json, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -35,10 +35,11 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
-def collections_uuid_to_feed_lists(value: Any) -> dict[str, str]:
+def collections_uuid_to_feed_lists(value: Any) -> str:
     """
     Convert a deprecated `collections_uuid` mapping into a `feed_lists` mapping.
     Used to migrate `RADAR_COLLECTIONS_UUID` to `RADAR_FEED_LISTS`.
+    Returns a JSON string, as `feed_lists` is typed as `Json[dict[str, str]]`.
     """
     # If data comes from env vars, collections is serialized JSON
     if isinstance(value, str):
@@ -50,14 +51,7 @@ def collections_uuid_to_feed_lists(value: Any) -> dict[str, str]:
         id = collection_data.get("id")
         if name and id:  # /!\ name and id are lists, not strings
             feed_lists[name[0]] = id[0]
-    return feed_lists
-
-
-class FeedList(BaseConfigModel):
-    """Represent a single SOCRadar feed list to fetch."""
-
-    name: str = Field(description="The name of SOCRadar feed list to fetch.")
-    id: str = Field(description="The ID of SOCRadar feed list to fetch.")
+    return json.dumps(feed_lists)
 
 
 class RadarConfig(BaseConfigModel):
@@ -69,8 +63,9 @@ class RadarConfig(BaseConfigModel):
     socradar_key: SecretStr = Field(
         description="The API key to connect to SOCRadar.",
     )
-    feed_lists: list[FeedList] = Field(
-        description="The SOCRadar feed lists to fetch.",
+    feed_lists: Json[dict[str, str]] = Field(
+        description="The SOCRadar feed lists to fetch, as a JSON object mapping "
+        'each feed list name to its ID. Example: \'{"feed_list_1": "ID_1", "feed_list_2": "ID_2"}\'',
     )
     run_interval: int | None = DeprecatedField(
         default=None,
@@ -85,19 +80,6 @@ class RadarConfig(BaseConfigModel):
         new_namespaced_var="feed_lists",
         new_value_factory=collections_uuid_to_feed_lists,
     )
-
-    @field_validator("feed_lists", mode="before")
-    @classmethod
-    def convert_feed_lists(cls, value: Any) -> Any:
-        """
-        Config/env vars must be as flat as possible.
-        This is a util method to format feed lists, making them easier to use in the rest of the codebase.
-        """
-        if isinstance(value, str):
-            value = json.loads(value)
-        if isinstance(value, dict):
-            return [{"name": name, "id": id} for (name, id) in value.items()]
-        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):

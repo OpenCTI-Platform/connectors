@@ -44,7 +44,7 @@ class StubConnectorSettings(ConnectorSettings):
                 "radar": {
                     "base_feed_url": "https://platform.socradar.com/api/threat/intelligence/feed_list/",
                     "socradar_key": "test-api-key",
-                    "feed_lists": {"feed_list_1": "ID_1", "feed_list_2": "ID_2"},
+                    "feed_lists": '{"feed_list_1": "ID_1", "feed_list_2": "ID_2"}',
                 },
             }
         )

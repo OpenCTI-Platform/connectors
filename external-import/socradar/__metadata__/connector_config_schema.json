@@ -63,30 +63,15 @@
       "writeOnly": true
     },
     "RADAR_FEED_LISTS": {
-      "description": "The SOCRadar feed lists to fetch.",
-      "items": {
-        "additionalProperties": true,
-        "description": "Represent a single SOCRadar feed list to fetch.",
-        "properties": {
-          "name": {
-            "description": "The name of SOCRadar feed list to fetch.",
-            "title": "Name",
-            "type": "string"
-          },
-          "id": {
-            "description": "The ID of SOCRadar feed list to fetch.",
-            "title": "Id",
-            "type": "string"
-          }
+      "contentMediaType": "application/json",
+      "contentSchema": {
+        "additionalProperties": {
+          "type": "string"
         },
-        "required": [
-          "name",
-          "id"
-        ],
-        "title": "FeedList",
         "type": "object"
       },
-      "type": "array"
+      "description": "The SOCRadar feed lists to fetch, as a JSON object mapping each feed list name to its ID. Example: '{\"feed_list_1\": \"ID_1\", \"feed_list_2\": \"ID_2\"}'",
+      "type": "string"
     },
     "RADAR_RUN_INTERVAL": {
       "default": null,

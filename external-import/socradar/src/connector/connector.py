@@ -5,7 +5,7 @@ from typing import Generator
 import stix2
 from connector.api_client import RadarAPIClient, RadarAPIError, RadarFeedItem
 from connector.converter_to_stix import ConverterError, ConverterToStix
-from connector.settings import ConnectorSettings, FeedList
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 BATCH_MAX_SIZE = 1_000
@@ -79,23 +79,26 @@ class RadarConnector:
             {"work_id": self.work_id, "bundles_count": len(sent_bundles)},
         )
 
-    def _collect_feed_items(self, feed_list: FeedList) -> list[RadarFeedItem]:
+    def _collect_feed_items(
+        self, feed_list_name: str, feed_list_id: str
+    ) -> list[RadarFeedItem]:
         """
-        Collection feed items on SOCRadar API.
-        :param feed_list: Collection to get items from.
+        Collect feed items on SOCRadar API.
+        :param feed_list_name: Name of the feed list to get items from.
+        :param feed_list_id: ID of the feed list to get items from.
         """
         self.helper.connector_logger.info(
-            f"Collecting items for '{feed_list.name}' feed list",
-            {"feed_list_id": feed_list.id, "feed_list_name": feed_list.name},
+            f"Collecting items for '{feed_list_name}' feed list",
+            {"feed_list_id": feed_list_id, "feed_list_name": feed_list_name},
         )
 
-        feed_items = self.api_client.get_feed(feed_list.id)
+        feed_items = self.api_client.get_feed(feed_list_id)
 
         self.helper.connector_logger.info(
-            f"{len(feed_items)} items found for '{feed_list.name}' feed list:",
+            f"{len(feed_items)} items found for '{feed_list_name}' feed list:",
             {
-                "feed_list_id": feed_list.id,
-                "feed_list_name": feed_list.name,
+                "feed_list_id": feed_list_id,
+                "feed_list_name": feed_list_name,
                 "items_count": len(feed_items),
             },
         )
@@ -135,12 +138,12 @@ class RadarConnector:
                 {"connector_name": self.helper.connect_name},
             )
 
-            for feed_list in self.config.radar.feed_lists:
+            for feed_list_name, feed_list_id in self.config.radar.feed_lists.items():
                 try:
-                    feed_items = self._collect_feed_items(feed_list)
+                    feed_items = self._collect_feed_items(feed_list_name, feed_list_id)
                 except RadarAPIError as err:
                     self.helper.connector_logger.error(
-                        f"Skipping '{feed_list.name}' feed list due to API client error",
+                        f"Skipping '{feed_list_name}' feed list due to API client error",
                         {"error": err},
                     )
                     continue
@@ -163,7 +166,7 @@ class RadarConnector:
                     stix_objects_count += len(stix_batch)
 
                 self.helper.connector_logger.info(
-                    f"Bundles for '{feed_list.name}' feed list successfully sent",
+                    f"Bundles for '{feed_list_name}' feed list successfully sent",
                     {"work_id": self.work_id, "stix_objects_count": stix_objects_count},
                 )
 
