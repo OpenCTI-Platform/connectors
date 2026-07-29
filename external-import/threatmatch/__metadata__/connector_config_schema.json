@@ -109,8 +109,7 @@
     "THREATMATCH_INTERVAL": {
       "default": null,
       "deprecated": true,
-      "format": "duration",
-      "type": "string",
+      "type": "integer",
       "description": "Use CONNECTOR_DURATION_PERIOD instead. (removal scheduled for 2027-01-01)"
     }
   },

@@ -22,4 +22,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | THREATMATCH_IMPORT_IOCS | `boolean` |  | boolean |  | `true` | Import the ThreatMatch IOCs dataset. |
 | THREATMATCH_TLP_LEVEL | `string` |  | `white` `clear` `green` `amber` `amber+strict` `red` |  | `"amber"` | Default TLP marking applied when missing on source objects. |
 | THREATMATCH_THREAT_ACTOR_AS_INTRUSION_SET | `boolean` |  | boolean |  | `true` | Map ThreatMatch threat-actor objects to STIX intrusion-set. |
-| THREATMATCH_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. (removal scheduled for 2027-01-01) |
+| THREATMATCH_INTERVAL | `integer` |  | integer | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. (removal scheduled for 2027-01-01) |
