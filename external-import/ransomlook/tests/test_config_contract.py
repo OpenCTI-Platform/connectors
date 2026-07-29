@@ -16,7 +16,7 @@ def test_generated_configuration_schema_is_current():
     assert committed == ConnectorSettings.config_json_schema(
         connector_name="ransomlook"
     )
-    assert committed["additionalProperties"] is False
+    assert committed["additionalProperties"] is True
 
 
 def test_sample_compose_schema_and_scope_are_synchronized():

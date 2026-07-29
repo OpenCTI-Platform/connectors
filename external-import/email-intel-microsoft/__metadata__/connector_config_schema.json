@@ -39,9 +39,9 @@
       "enum": [
         "debug",
         "info",
+        "warn",
         "warning",
-        "error",
-        "critical"
+        "error"
       ],
       "type": "string",
       "default": "error"
