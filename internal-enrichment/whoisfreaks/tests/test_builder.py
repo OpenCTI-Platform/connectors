@@ -248,3 +248,27 @@ def test_build_domain_reputation_bundle_success(builder):
     assert len(notes) == 1
     assert "Score: 45" in notes[0].abstract
     assert "Score: 45" in notes[0].content
+
+def test_build_dns_bundle_unsupported_record_type(builder):
+    """Triggers line 173 in builder.py by passing an unhandled DNS record type (e.g., TXT)."""
+    dns_data = {
+        "dns_records": [
+            {"type": "TXT", "value": "v=spf1 include:_spf.google.com ~all"}
+        ]
+    }
+    bundle = builder.build_dns_bundle("example.com", dns_data)
+    assert bundle is not None
+    # Only Identity and Domain-Name objects are present; the TXT record was safely skipped
+    assert len(bundle.objects) == 2
+
+
+def test_build_ssl_bundle_empty_certs(builder):
+    """Triggers line 218 in builder.py by passing an empty sslCertificates list."""
+    bundle = builder.build_ssl_bundle("example.com", {"sslCertificates": []})
+    assert bundle is None
+
+
+def test_is_ip_address_invalid_string(builder):
+    """Triggers line 363 in builder.py by passing a non-IP string to is_ip_address."""
+    assert builder.is_ip_address("example.com") is False
+    assert builder.is_ip_address("not-an-ip-address") is False

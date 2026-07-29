@@ -173,7 +173,7 @@ class WhoisFreaksConnector:
         self.helper.listen(self.process_message)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     try:
         connector = WhoisFreaksConnector()
         connector.start()
