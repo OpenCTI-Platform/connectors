@@ -6,8 +6,7 @@ OpenCTI as STIX. Incremental: alerts filter client-side on last_occurrence_time
 """
 
 import sys
-import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from connector.converter_to_stix import ConverterToStix
@@ -34,28 +33,17 @@ class MetrasFeedConnector:
         )
         self.converter = ConverterToStix(helper, tlp_level=cfg.tlp_level)
         self.cfg = cfg
-        self._interval = self._duration_seconds(config.connector.duration_period)
-
-    @staticmethod
-    def _duration_seconds(duration: timedelta | str) -> int:
-        """Resolve CONNECTOR_DURATION_PERIOD (timedelta or ISO8601 string) to seconds."""
-        if hasattr(duration, "total_seconds"):
-            return max(60, int(duration.total_seconds()))
-        # Minimal ISO8601 duration parse (PT#H#M#S / P#D) as a fallback.
-        import re
-
-        text = str(duration or "PT1H").upper()
-        match = re.fullmatch(
-            r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?", text
-        )
-        if not match:
-            return 3600
-        days, hours, minutes, seconds = (int(g or 0) for g in match.groups())
-        total = days * 86400 + hours * 3600 + minutes * 60 + seconds
-        return max(60, total or 3600)
 
     # ------------------------------------------------------------------ #
     def run(self) -> None:
+        """Start the connector and schedule its runs via the pycti scheduler."""
+        self.helper.schedule_iso(
+            message_callback=self.process,
+            duration_period=self.config.connector.duration_period,  # type: ignore[arg-type]
+        )
+
+    def process(self) -> None:
+        """Run a single import cycle (invoked by the scheduler each period)."""
         try:
             self.client.ping()
             self.helper.connector_logger.info(
@@ -69,20 +57,20 @@ class MetrasFeedConnector:
             sys.exit(1)
 
         self.helper.connector_logger.info(
-            "[CONNECTOR] Starting Metras Feed import loop",
-            meta={"interval_seconds": self._interval},
+            "[CONNECTOR] Starting Metras Feed import cycle"
         )
-        while True:
-            try:
-                self._import_data()
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.connector_logger.info("[CONNECTOR] Stopping")
-                break
-            except Exception as exc:  # noqa: BLE001 - keep the loop alive
-                self.helper.connector_logger.error(
-                    "[CONNECTOR] Import cycle crashed", meta={"error": str(exc)}
-                )
-            time.sleep(self._interval)
+        try:
+            self._import_data()
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector stopped by user or system"
+            )
+            sys.exit(0)
+        except Exception as exc:  # noqa: BLE001
+            self.helper.connector_logger.error(
+                "[CONNECTOR] An unexpected error occurred during the import cycle",
+                meta={"error": str(exc)},
+            )
 
     # ------------------------------------------------------------------ #
     def _import_data(self) -> None:

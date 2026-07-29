@@ -17,50 +17,38 @@ from connector.utils import (
     severity_to_score,
     stix_timestamp,
 )
+from connectors_sdk.models.enums import TLPLevel
+from connectors_sdk.models.tlp_marking import TLPMarking
 from pycti import (
     AttackPattern,
     Identity,
     Incident,
-    MarkingDefinition,
     StixCoreRelationship,
 )
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
 
-_STANDARD_TLP = {
-    "white": stix2.TLP_WHITE,
-    "green": stix2.TLP_GREEN,
-    "amber": stix2.TLP_AMBER,
-    "red": stix2.TLP_RED,
-}
 
+def _tlp_marking(level: "TLPLevel | str") -> stix2.MarkingDefinition:
+    """Resolve a TLP level to its STIX marking using the connectors-sdk model.
 
-def _tlp_marking(level: str) -> stix2.MarkingDefinition:
-    """Resolve a TLP level name to its STIX marking.
-
-    TLP:CLEAR is a distinct OpenCTI custom marking (its own id), NOT TLP:WHITE —
-    mirror the connectors-sdk TLPMarking mapping so operators who set
-    METRAS_TLP_LEVEL=clear get correctly-marked objects.
+    Using ``TLPMarking`` (rather than raw ``stix2`` objects) ensures TLP:CLEAR and
+    TLP:AMBER+STRICT resolve to OpenCTI's custom markings instead of being
+    mis-mapped to the standard stix2 markings.
     """
-    name = (level or "amber").lower()
-    if name == "clear":
-        return stix2.MarkingDefinition(
-            id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
-            definition_type="statement",
-            definition={"statement": "custom"},
-            allow_custom=True,
-            x_opencti_definition_type="TLP",
-            x_opencti_definition="TLP:CLEAR",
-        )
-    return _STANDARD_TLP.get(name, stix2.TLP_AMBER)
+    if not isinstance(level, TLPLevel):
+        level = TLPLevel(str(level).lower())
+    return TLPMarking(level=level).to_stix2_object()
 
 
 class ConverterToStix:
     """Factory for all STIX objects produced by the Feed connector."""
 
     def __init__(
-        self, helper: "OpenCTIConnectorHelper", tlp_level: str = "amber"
+        self,
+        helper: "OpenCTIConnectorHelper",
+        tlp_level: "TLPLevel | str" = TLPLevel.AMBER,
     ) -> None:
         self.helper = helper
         self.tlp = _tlp_marking(tlp_level)

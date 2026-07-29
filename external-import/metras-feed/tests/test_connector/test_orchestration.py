@@ -95,7 +95,19 @@ def test_import_skips_old_alerts_via_cursor():
     assert not helper.send_stix2_bundle.called
 
 
-def test_duration_seconds_parses_iso_and_timedelta():
-    assert MetrasFeedConnector._duration_seconds(timedelta(minutes=10)) == 600
-    assert MetrasFeedConnector._duration_seconds("PT2H") == 7200
-    assert MetrasFeedConnector._duration_seconds("P1D") == 86400
+def test_run_schedules_via_pycti_scheduler():
+    conn, helper = _feed()
+    conn.run()
+    helper.schedule_iso.assert_called_once()
+    _, kwargs = helper.schedule_iso.call_args
+    assert kwargs["message_callback"] == conn.process
+    assert kwargs["duration_period"] == timedelta(hours=1)
+
+
+def test_process_runs_one_import_cycle():
+    conn, helper = _feed()
+    conn.client.iter_edr_alerts.return_value = iter([])
+    conn.client.iter_binaries.return_value = iter([])
+    conn.client.list_endpoints.return_value = {"endpoints": []}
+    conn.process()  # ping ok (client mocked) + one import cycle, must not raise
+    assert helper.api.work.initiate_work.called
