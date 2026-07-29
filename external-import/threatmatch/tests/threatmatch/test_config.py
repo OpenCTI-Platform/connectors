@@ -14,7 +14,7 @@ def test_config() -> None:
     config = ConnectorSettings().model_dump(exclude_none=True)
 
     assert config["opencti"]["url"] == HttpUrl("http://test-opencti-url/")
-    assert config["opencti"]["token"] == "test-opencti-token"
+    assert config["opencti"]["token"].get_secret_value() == "test-opencti-token"
 
     assert config["connector"]["id"] == "threatmatch-connector-id"
     assert config["connector"]["type"] == "EXTERNAL_IMPORT"
