@@ -3,12 +3,13 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'STREAM'
   id: 'ChangeMe'  # UUIDv4
   name: 'Metras-Stream'
   scope: 'Metras'
-  log_level: 'info'
+  log_level: 'error'
   live_stream_id: 'ChangeMe'  # UUID of an ACTIVATED live stream collection
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
 
 metras:
   api_base_url: 'https://api.metras.sa/api'

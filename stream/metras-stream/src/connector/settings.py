@@ -6,13 +6,27 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
-    name: str = Field(default="Metras-Stream", examples=["Metras-Stream"])
-    scope: str = Field(default="Metras", examples=["Metras"])
+    id: str = Field(
+        default="17d35cd2-2a01-44c4-b69b-e556d31d7c0b",
+        description="The unique identifier of the connector.",
+        examples=["17d35cd2-2a01-44c4-b69b-e556d31d7c0b"],
+    )
+    name: str = Field(
+        default="Metras-Stream",
+        description="The name of the connector.",
+        examples=["Metras-Stream"],
+    )
+    scope: ListFromString = Field(
+        default=["Metras"],
+        description="The scope of the connector.",
+        examples=["Metras"],
+    )
     live_stream_id: str = Field(
         description="UUID of the OpenCTI live stream collection to consume "
         "(must be created and activated in Data > Data sharing > Live streams).",
@@ -22,7 +36,7 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
 
 class MetrasConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(
-        default="https://api.metras.sa/api",
+        default=HttpUrl("https://api.metras.sa/api"),
         description="Base URL of the Metras API.",
         examples=["https://api.metras.sa/api"],
     )

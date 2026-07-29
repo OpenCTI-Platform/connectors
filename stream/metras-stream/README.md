@@ -27,7 +27,7 @@ volatile STIX ID, so updates/deletes resolve to the same entry across re-imports
 - Parses `msg.data` as a JSON string (`json.loads(msg.data)["data"]`).
 
 ## Requirements
-- OpenCTI **7.260529.0** (`pycti==7.260529.0`).
+- OpenCTI **7.260722.0** (`pycti==7.260722.0`).
 - A Metras API key.
 - A **live stream collection** in OpenCTI (Data → Data sharing → Live streams), **activated**,
   whose UUID goes in `CONNECTOR_LIVE_STREAM_ID`.
@@ -51,7 +51,7 @@ volatile STIX ID, so updates/deletes resolve to the same entry across re-imports
 ## Usage
 ```bash
 cp config.yml.sample src/config.yml   # or use env vars / docker-compose
-docker compose up -d --build
+docker compose up -d
 ```
 Before starting, create a **live stream collection** in OpenCTI
 (Data → Data sharing → Live streams), **activate** it, and set its UUID as
