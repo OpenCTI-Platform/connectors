@@ -10673,7 +10673,9 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The API token to connect to OpenCTI.",
-            "type": "string"
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
           },
           "CONNECTOR_NAME": {
             "default": "RansomLook",
@@ -14919,7 +14921,9 @@
           },
           "OPENCTI_TOKEN": {
             "description": "The API token to connect to OpenCTI.",
-            "type": "string"
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
           },
           "CONNECTOR_NAME": {
             "default": "ThreatMatch",
