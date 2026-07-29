@@ -27,7 +27,7 @@ volatile STIX ID, so updates/deletes resolve to the same entry across re-imports
 - Parses `msg.data` as a JSON string (`json.loads(msg.data)["data"]`).
 
 ## Requirements
-- OpenCTI **7.260722.0** (`pycti==7.260722.0`).
+- OpenCTI **7.260728.0** (`pycti==7.260728.0`).
 - A Metras API key.
 - A **live stream collection** in OpenCTI (Data → Data sharing → Live streams), **activated**,
   whose UUID goes in `CONNECTOR_LIVE_STREAM_ID`.
