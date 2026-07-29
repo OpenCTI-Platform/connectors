@@ -31,7 +31,7 @@ file binaries, and endpoint inventory.
 - A category that errors does not advance its cursor (no data loss; safe retry next cycle).
 
 ## Requirements
-- OpenCTI **7.260722.0** (pinned; `pycti==7.260722.0`).
+- OpenCTI **7.260728.0** (pinned; `pycti==7.260728.0`).
 - A Metras API key (`X-API-KEY`).
 
 ## Configuration
@@ -66,5 +66,5 @@ docker compose up -d
 |---|---|
 | `Metras API ping failed at startup` then exit | Bad `METRAS_API_KEY` or unreachable base URL |
 | `Imported 0 incidents` after first run | Normal — alerts already imported; cursor advanced |
-| `Cannot query field "s3"` | pycti/platform mismatch — keep `pycti==7.260722.0` |
+| `Cannot query field "s3"` | pycti/platform mismatch — keep `pycti==7.260728.0` |
 | No Works in OpenCTI UI | Check `OPENCTI_TOKEN` permissions (Work API) |
