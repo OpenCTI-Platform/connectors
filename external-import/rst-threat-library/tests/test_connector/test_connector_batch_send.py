@@ -324,7 +324,7 @@ def test_prepare_upsert_item_respects_confidence_override_for_analyst_lock():
     assert prep.api_item["confidence"] == 80
 
 
-def test_analyst_lock_uses_confidence_override_from_stored_state():
+def test_analyst_lock_prefers_intrusion_set_default_confidence_over_stored_state():
     settings = StubConnectorSettingsWithConfidenceLock()
     helper = MagicMock()
     helper.connector_logger = MagicMock()

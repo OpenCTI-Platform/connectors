@@ -119,7 +119,7 @@ class RstThreatLibraryConfig(BaseConfigModel):
         examples=["", "http://proxy.example.com:8080"],
     )
     max_retries: int = Field(
-        description="Maximum retries when pushing bundles to OpenCTI.",
+        description="Maximum attempts when pushing bundles to OpenCTI.",
         default=3,
         ge=1,
         examples=[3],
