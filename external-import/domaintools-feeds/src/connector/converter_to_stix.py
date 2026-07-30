@@ -139,7 +139,11 @@ class ConverterToStix:
         :param value: Value in string
         :return: A boolean
         """
-        is_valid_domain = validators.domain(value)
+        # Temporarily swap underscores out so validators accepts the format
+        # Since some domains do have "_"
+        sanitized_domain = value.replace("_", "-")
+
+        is_valid_domain = validators.domain(sanitized_domain)
 
         if is_valid_domain:
             return True
@@ -200,7 +204,7 @@ class ConverterToStix:
             indicator_id = Indicator.generate_id(pattern)
 
             stix_domain_name = stix2.Indicator(
-                name=f"Indicator for {value}",
+                name=value,
                 id=indicator_id,
                 pattern_type="stix",
                 pattern=pattern,
