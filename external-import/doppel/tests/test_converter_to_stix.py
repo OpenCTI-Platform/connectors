@@ -216,6 +216,30 @@ def _domains_alert(alert_id="alert_x", queue_state="actioned", **extra):
 
 
 @pytest.mark.parametrize(
+    ("observable_type", "value", "expected_stix_type"),
+    [
+        ("domain", "malicious.example", "domain-name"),
+        ("email", "attacker@example.com", "email-addr"),
+        ("ipv4", "192.0.2.10", "ipv4-addr"),
+        ("url", "http://social.example/profile/fake", "url"),
+    ],
+)
+def test_standard_observables_use_opencti_custom_metadata(
+    converter, observable_type, value, expected_stix_type
+):
+    alert = _domains_alert(alert_id=f"alert_{observable_type}")
+
+    observable = converter._create_observable(observable_type, value, alert)
+
+    assert observable["type"] == expected_stix_type
+    assert "labels" not in observable
+    assert "external_references" not in observable
+    assert "queue_state:actioned" in observable["x_opencti_labels"]
+    assert "priority:P2" in observable["x_opencti_labels"]
+    assert observable["x_opencti_external_references"][0]["external_id"] == alert["id"]
+
+
+@pytest.mark.parametrize(
     "product",
     [
         "social_media",

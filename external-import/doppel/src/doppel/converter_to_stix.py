@@ -423,26 +423,13 @@ class ConverterToStix:
 
         # Common properties
         custom_properties = build_custom_properties(alert, self.author.id)
+        custom_properties["x_opencti_labels"].append(f"priority:{priority}")
         params = {
             "value": observable_value,
             "object_marking_refs": [self.tlp_marking.id],
             "custom_properties": custom_properties,
         }
 
-        # PhoneNumber is an OpenCTI custom observable and does not accept the
-        # same STIX properties as the standard SCO classes.
-        if obs_type != "phone":
-            labels_flat = build_labels(alert)
-            labels_flat.append(f"priority:{priority}")
-            external_references = build_external_references(alert)
-
-            params.update(
-                {
-                    "labels": labels_flat or None,
-                    "external_references": external_references or None,
-                    "allow_custom": True,
-                }
-            )
         obj = observable_class(**params)
 
         return json.loads(obj.serialize())
@@ -500,7 +487,7 @@ class ConverterToStix:
         stix_objects = [self.author, self.tlp_marking]
 
         for alert in alerts:
-            #######- --------- observables ------------#######
+            # Observables
             observables = self._handle_observable_creation(alert, stix_objects)
             if not observables:
                 self.helper.connector_logger.warning(
