@@ -27,6 +27,9 @@ class DomainToolsClient:
         Internal method to handle API requests
         :return: Response in JSON format
         """
+        params["app_name"] = "OpenCTI"
+        params["app_partner"] = "IrisQL"
+        params["app_version"] = "1.0"
         try:
 
             response = self.session.post(api_url, params=params, data=body)
