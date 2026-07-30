@@ -101,9 +101,9 @@ def test_connector_config_schema_octi_ui_compatibility_rules(property_schema: di
     assert "anyOf" not in property_schema
     assert "oneOf" not in property_schema
 
-    # TODO: remove theses assertions once OpenCTI UI is fixed
-    # OpenCTI UI does not support dicts currently
-    assert property_schema.get("type") != "dict"
+    # TODO: remove these assertions once OpenCTI UI is fixed
+    # OpenCTI UI does not support objects currently
+    assert property_schema.get("type") != "object"
     # OpenCTI UI does not support arrays without a default currently
     if property_schema.get("type") == "array":
         assert "default" in property_schema
