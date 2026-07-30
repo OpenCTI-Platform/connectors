@@ -103,12 +103,13 @@ connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY
 git fetch --unshallow || git fetch --depth=100
 git fetch origin "+refs/heads/*:refs/remotes/origin/*"
 
-# Detect whether connectors-sdk changed
+# Detect whether connectors-sdk changed (avoid storing full diff output)
+connectors_sdk_has_changed=""
 if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-master}" ]; then
-  connectors_sdk_has_changed=$(git diff HEAD~1 HEAD -- connectors-sdk)
+  git diff --quiet HEAD~1 HEAD -- connectors-sdk || connectors_sdk_has_changed="1"
 else
   merge_base=$(git merge-base origin/"${RELEASE_REF:-master}" HEAD)
-  connectors_sdk_has_changed=$(git diff "$merge_base" HEAD -- connectors-sdk)
+  git diff --quiet "$merge_base" HEAD -- connectors-sdk || connectors_sdk_has_changed="1"
 fi
 
 # Loop in each connector directory with infos and regenerate JSON schema if changed
