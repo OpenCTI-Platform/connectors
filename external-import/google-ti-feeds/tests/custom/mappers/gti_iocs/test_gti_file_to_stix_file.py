@@ -484,7 +484,7 @@ def test_gti_file_to_stix_with_all_data(
     _then_stix_file_has_correct_properties(
         file_observable, file_with_all_data, mock_organization, mock_tlp_marking
     )
-    _then_stix_objects_have_score(file_observable, indicator, 90)
+    _then_stix_objects_have_score(file_observable, indicator, 85)
     _then_stix_indicator_has_type(indicator, IndicatorTypeOV("MALICIOUS"))
     _then_stix_indicator_has_correct_timestamps(indicator, file_with_all_data)
     _then_stix_file_has_hashes(file_observable, file_with_all_data)
@@ -946,14 +946,21 @@ def _then_stix_file_has_correct_properties(
     _then_stix_file_has_correct_ctime(file_observable, gti_file)
 
 
+def _get_opencti_score(obj: Any) -> int | None:
+    """Extract x_opencti_score from a raw pydantic model or a converted STIX2 object."""
+    score = getattr(obj, "x_opencti_score", None)
+    if score is not None:
+        return score
+    custom_properties = getattr(obj, "custom_properties", None) or {}
+    return custom_properties.get("x_opencti_score")
+
+
 def _then_stix_objects_have_score(
     file_observable: Any, indicator: Any, expected_score: int
 ) -> None:
     """Assert that STIX objects have score."""
-    if hasattr(file_observable, "score"):
-        assert file_observable.score == expected_score  # noqa: S101
-    if hasattr(indicator, "score"):
-        assert indicator.score == expected_score  # noqa: S101
+    assert _get_opencti_score(file_observable) == expected_score  # noqa: S101
+    assert _get_opencti_score(indicator) == expected_score  # noqa: S101
 
 
 def _then_stix_indicator_has_type(

@@ -417,7 +417,7 @@ def test_gti_domain_to_stix_with_all_data(
     _then_stix_domain_has_correct_properties(
         domain_observable, domain_with_all_data, mock_organization, mock_tlp_marking
     )
-    _then_stix_objects_have_score(domain_observable, indicator, 95)
+    _then_stix_objects_have_score(domain_observable, indicator, 85)
     _then_stix_indicator_has_type(indicator, IndicatorTypeOV("MALICIOUS"))
     _then_stix_indicator_has_correct_timestamps(indicator, domain_with_all_data)
 
@@ -742,14 +742,21 @@ def _then_stix_domain_has_correct_properties(
     assert tlp_marking.id in domain_observable.object_marking_refs  # noqa: S101
 
 
+def _get_opencti_score(obj: Any) -> int | None:
+    """Extract x_opencti_score from a raw pydantic model or a converted STIX2 object."""
+    score = getattr(obj, "x_opencti_score", None)
+    if score is not None:
+        return score
+    custom_properties = getattr(obj, "custom_properties", None) or {}
+    return custom_properties.get("x_opencti_score")
+
+
 def _then_stix_objects_have_score(
     domain_observable: Any, indicator: Any, expected_score: int
 ) -> None:
     """Assert that STIX objects have score."""
-    if hasattr(domain_observable, "score"):
-        assert domain_observable.score == expected_score  # noqa: S101
-    if hasattr(indicator, "score"):
-        assert indicator.score == expected_score  # noqa: S101
+    assert _get_opencti_score(domain_observable) == expected_score  # noqa: S101
+    assert _get_opencti_score(indicator) == expected_score  # noqa: S101
 
 
 def _then_stix_indicator_has_type(
