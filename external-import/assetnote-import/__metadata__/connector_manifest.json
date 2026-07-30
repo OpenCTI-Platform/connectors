@@ -1,15 +1,24 @@
 {
-  "title": "Template Connector",
+  "title": "Assetnote External Import Connector",
   "slug": "assetnote-import",
-  "description": "Template description of the connector",
-  "short_description": "Template short description (summary) of the connector",
+  "description": "A connector allowing for the ingestion of AssetNote Assets and Exposures into the OpenCTI Platform",
+  "short_description": "Imports discovered assets and exposures from the AssetNote Attack Surface Management platform into OpenCTI.",
   "logo": null,
-  "use_cases" : [],
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Vulnerability & Exploit Awareness"
+  ],
+  "solution_categories": [
+    "Attack Surface Management",
+    "Vulnerability & Exposure Management"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">=6.8.12",
+  "support_version": ">=7.260722.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/assetnote-import",
   "manager_supported": false,

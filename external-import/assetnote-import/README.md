@@ -1,8 +1,8 @@
-# OpenCTI External Ingestion Template Connector
+# OpenCTI AssetNote External Import Connector
 
-This connector ingests both Assets and Exposures from the AssteNote platform into OpenCTI. 
+This connector ingests both Assets and Exposures from the Assetnote platform into OpenCTI.
 
-On each run, the connector will utilise AssetNotes GraphQL API to retrieve any Assets and Exposures updated since its last run. Objects are converted as follows
+On each run, the connector will utilise Assetnote's GraphQL API to retrieve any Assets and Exposures updated since its last run. Objects are converted as follows
 - **Assets:** `Infrastructure` Object
 - **Exposures:** `Incident Response` Object encompassing a: `Vulnerability`, `Course of Action`, `Note(s)` (for each Interaction), `Infrastructure` (for the affected Asset) and, optionally, a `Software` object. 
 
@@ -10,7 +10,7 @@ On each run, the connector will utilise AssetNotes GraphQL API to retrieve any A
 
 Table of Contents
 
-- [OpenCTI External Ingestion Template Connector](#opencti-external-ingestion-connector-assetnote-import)
+- [OpenCTI AssetNote External Import Connector](#opencti-assetnote-external-import-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -153,7 +153,7 @@ Describe how the connector functions:
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
+The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
 
