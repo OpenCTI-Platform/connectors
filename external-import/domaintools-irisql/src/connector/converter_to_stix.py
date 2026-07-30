@@ -140,7 +140,7 @@ class ConverterToStix:
         :return: A boolean
         """
         # Temporarily swap underscores out so validators accepts the format
-        # Since some domain do have "_"
+        # Since some domains do have "_"
         sanitized_domain = value.replace("_", "-")
 
         is_valid_domain = validators.domain(sanitized_domain)

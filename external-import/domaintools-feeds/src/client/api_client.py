@@ -35,6 +35,7 @@ class DomainToolsClient:
         Internal method to handle API requests
         :return: Response in JSON format
         """
+        params = params or {}
         params["app_partner"] = "OpenCTI"
         params["app_name"] = "Feeds"
         params["app_version"] = "1.0"
