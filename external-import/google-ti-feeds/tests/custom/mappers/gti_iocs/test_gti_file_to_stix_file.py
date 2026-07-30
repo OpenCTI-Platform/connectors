@@ -168,6 +168,26 @@ def file_with_threat_score() -> GTIFileData:
 
 
 @pytest.fixture
+def file_with_zero_score() -> GTIFileData:
+    """GTI file data with a genuine zero threat score (fully benign, e.g. a signed system binary)."""
+    return GTIFileDataFactory.build(
+        id="1111111111111111111111111111111111111111111111111111111111111111",
+        attributes=FileModelFactory.build(
+            sha256="1111111111111111111111111111111111111111111111111111111111111111",
+            sha1="1111111111111111111111111111111111111111",
+            md5="11111111111111111111111111111111",
+            gti_assessment=GTIAssessmentFactory.build(
+                threat_score=ThreatScoreFactory.build(value=0),
+                contributing_factors=ContributingFactorsFactory.build(
+                    mandiant_confidence_score=None
+                ),
+                verdict=None,
+            ),
+        ),
+    )
+
+
+@pytest.fixture
 def file_with_malicious_verdict() -> GTIFileData:
     """GTI file data with malicious verdict."""
     return GTIFileDataFactory.build(
@@ -396,6 +416,33 @@ def test_gti_file_to_stix_with_threat_score(
     _then_stix_objects_have_score(file_observable, indicator, 75)
 
 
+# Scenario: Convert GTI file with a genuine zero threat score to STIX objects
+@pytest.mark.order(1)
+def test_gti_file_to_stix_with_zero_score(
+    file_with_zero_score: GTIFileData,
+    mock_organization: Identity,
+    mock_tlp_marking: MarkingDefinition,
+) -> None:
+    """Test conversion of GTI file with a genuine zero threat score to STIX objects.
+
+    Regression test: `if score:` previously treated a real score of 0 as falsy,
+    dropping x_opencti_score entirely and letting OpenCTI fall back to its own
+    default score of 50 instead of the real value.
+    """
+    # Given a GTI file with a genuine zero threat score
+    mapper = _given_gti_file_mapper(
+        file_with_zero_score, mock_organization, mock_tlp_marking
+    )
+
+    # When converting to STIX
+    stix_objects = _when_convert_to_stix(mapper)
+
+    # Then the STIX objects should have a score of 0, not a missing score
+    _then_stix_objects_created_successfully(stix_objects)
+    file_observable, indicator, relationship = stix_objects
+    _then_stix_objects_have_score(file_observable, indicator, 0)
+
+
 # Scenario: Convert GTI file with malicious verdict to STIX objects
 @pytest.mark.order(1)
 def test_gti_file_to_stix_with_malicious_verdict(
@@ -608,6 +655,32 @@ def test_get_score_with_threat_score(
 
     # Then threat score should be returned
     assert score == 70  # noqa: S101
+
+
+# Scenario: Extract score with a genuine zero threat score
+@pytest.mark.order(1)
+def test_get_score_with_zero_threat_score(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test _get_score method returns 0, not None, for a genuine zero threat score."""
+    # Given a file with a real threat score of 0 and no mandiant score
+    file_data = GTIFileDataFactory.build(
+        attributes=FileModelFactory.build(
+            gti_assessment=GTIAssessmentFactory.build(
+                contributing_factors=ContributingFactorsFactory.build(
+                    mandiant_confidence_score=None
+                ),
+                threat_score=ThreatScoreFactory.build(value=0),
+            )
+        )
+    )
+    mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
+
+    # When getting score
+    score = mapper._get_score()
+
+    # Then the real zero score should be returned, not None
+    assert score == 0  # noqa: S101
 
 
 # Scenario: Extract score with mandiant confidence score available fallback
