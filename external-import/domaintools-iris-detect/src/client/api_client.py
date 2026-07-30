@@ -85,7 +85,7 @@ class DomainToolsClient:
                     str(self.base_url) + "domains/new/", params=dt_parameters
                 )
                 if response.status_code != 200 or response is None:
-                    self.helper.connector_logger.error(results.text)
+                    self.helper.connector_logger.error(response.text)
                     break
 
                 # response.raise_for_status()
