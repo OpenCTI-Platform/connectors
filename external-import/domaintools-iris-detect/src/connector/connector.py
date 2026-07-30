@@ -155,7 +155,9 @@ class DomainToolsIrisDetectConnector:
                         "content": note_content,
                         "abstract": note_abstract,
                         "created_by_ref": self.converter_to_stix.author["id"],
-                        "object_marking_refs": [self.converter_to_stix.tlp_marking["id"]],
+                        "object_marking_refs": [
+                            self.converter_to_stix.tlp_marking["id"]
+                        ],
                         "object_refs": [domain_obs.id],
                     }
                 )
