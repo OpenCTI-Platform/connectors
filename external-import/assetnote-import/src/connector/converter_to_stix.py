@@ -66,7 +66,6 @@ class ConverterToStix:
         infrastructure_object = self.convert_asset(asset)[0]
         vulnerability_object = self._map_vulnerability(exposure)
         course_of_action_object = self._map_course_of_action(exposure)
-        note_objects = self._map_notes(exposure)
         relationships = [
             self._map_relationship("has", infrastructure_object, vulnerability_object),
             self._map_relationship("mitigates", course_of_action_object, vulnerability_object),
@@ -82,7 +81,7 @@ class ConverterToStix:
         #convert all SDK created objects into their stix2 form and append their ids for referencing
         stix_objects = [infrastructure_object, course_of_action_object]
         object_refs = [infrastructure_object.id, course_of_action_object.id]
-        wrapped_entities = [vulnerability_object, *note_objects, *relationships]
+        wrapped_entities = [vulnerability_object, *relationships]
         if software_object:
             wrapped_entities.append(software_object)
         for entity in wrapped_entities:
@@ -92,6 +91,11 @@ class ConverterToStix:
         #Create the incident response, parsing references to all objects
         incident_response_object = self._map_incident_response(exposure, object_refs)
         stix_objects.append(incident_response_object)
+
+        #Notes are created last so they can be attached directly to the Incident Response
+        for note_object in self._map_notes(exposure, incident_response_object):
+            stix_objects.append(note_object.to_stix2_object())
+
         return stix_objects
 
     def _map_vulnerability(self, exposure: dict[str, Any]) -> Vulnerability:
@@ -131,7 +135,7 @@ class ConverterToStix:
             markings=[self.tlp_marking],
         )
 
-    def _map_notes(self, exposure: dict[str, Any]) -> list[Note]:
+    def _map_notes(self, exposure: dict[str, Any], incident_response_object: CustomObjectCaseIncident) -> list[Note]:
         exposure_data = exposure.get("exposureData") or {}
         interactions = exposure_data.get("edges", [])
         notes = []
@@ -157,6 +161,7 @@ class ConverterToStix:
                     created=exposure["created"],
                     author=self.author,
                     markings=[self.tlp_marking],
+                    objects=[incident_response_object],
                 )
             )
         return notes
