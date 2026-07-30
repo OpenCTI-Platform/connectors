@@ -2,7 +2,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from connector import ConnectorSettings, AssetnoteImportConnector
+from connector import AssetnoteImportConnector, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 

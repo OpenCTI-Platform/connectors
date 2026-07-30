@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 
 import stix2
+from connector.settings import AssetnoteImportConfig
 from connectors_sdk.models import (
     ExternalReference,
     Note,
@@ -13,24 +14,31 @@ from connectors_sdk.models import (
     TLPMarking,
     Vulnerability,
 )
-from connector.settings import AssetnoteImportConfig
 from pycti import (
     CaseIncident,
     CourseOfAction,
     CustomObjectCaseIncident,
-    Infrastructure as PyctiInfrastructure,
+)
+from pycti import Infrastructure as PyctiInfrastructure
+from pycti import (
     OpenCTIConnectorHelper,
 )
 
+
 class ConverterToStix:
-    def __init__(self, helper: OpenCTIConnectorHelper, config: AssetnoteImportConfig, status_mapping: dict[str, str]):
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        config: AssetnoteImportConfig,
+        status_mapping: dict[str, str],
+    ):
         self.helper = helper
         self.author = OrganizationAuthor(name="Assetnote")
         self.tlp_marking = TLPMarking(level=config.tlp_level.lower())
         self.api_base_url = str(config.api_base_url).rstrip("/")
         self.status_mapping = status_mapping
 
-    def base_stix_objects(self) -> list: 
+    def base_stix_objects(self) -> list:
         return [self.author.to_stix2_object(), self.tlp_marking.to_stix2_object()]
 
     def convert_asset(self, asset: dict[str, Any]) -> list:
@@ -53,32 +61,39 @@ class ConverterToStix:
             ],
             created=created,
             first_seen=created,
-            last_seen=datetime.fromisoformat(last_seen_value) if last_seen_value else None,
+            last_seen=(
+                datetime.fromisoformat(last_seen_value) if last_seen_value else None
+            ),
         )
         return [infrastructure]
 
     def convert_exposure(self, exposure: dict[str, Any]) -> list:
-        #Create an Infrastructure object for the affected Asset
+        # Create an Infrastructure object for the affected Asset
         asset = dict(exposure["asset"])
         asset["created"] = exposure["created"]
 
-        #Create the core objects encompassing the components fo the Exposure
+        # Create the core objects encompassing the components fo the Exposure
         infrastructure_object = self.convert_asset(asset)[0]
         vulnerability_object = self._map_vulnerability(exposure)
         course_of_action_object = self._map_course_of_action(exposure)
         relationships = [
             self._map_relationship("has", infrastructure_object, vulnerability_object),
-            self._map_relationship("mitigates", course_of_action_object, vulnerability_object),
+            self._map_relationship(
+                "mitigates", course_of_action_object, vulnerability_object
+            ),
         ]
 
-        #Optionally, create a Software object when the Exposure cites a software exploitation
+        # Optionally, create a Software object when the Exposure cites a software exploitation
         software_object = self._map_software(exposure)
         if software_object:
-            relationships.append(self._map_relationship("hosts", infrastructure_object, software_object))
-            relationships.append(self._map_relationship("has", software_object, vulnerability_object))
+            relationships.append(
+                self._map_relationship("hosts", infrastructure_object, software_object)
+            )
+            relationships.append(
+                self._map_relationship("has", software_object, vulnerability_object)
+            )
 
-
-        #convert all SDK created objects into their stix2 form and append their ids for referencing
+        # convert all SDK created objects into their stix2 form and append their ids for referencing
         stix_objects = [infrastructure_object, course_of_action_object]
         object_refs = [infrastructure_object.id, course_of_action_object.id]
         wrapped_entities = [vulnerability_object, *relationships]
@@ -88,11 +103,11 @@ class ConverterToStix:
             stix_objects.append(entity.to_stix2_object())
             object_refs.append(entity.id)
 
-        #Create the incident response, parsing references to all objects
+        # Create the incident response, parsing references to all objects
         incident_response_object = self._map_incident_response(exposure, object_refs)
         stix_objects.append(incident_response_object)
 
-        #Notes are created last so they can be attached directly to the Incident Response
+        # Notes are created last so they can be attached directly to the Incident Response
         for note_object in self._map_notes(exposure, incident_response_object):
             stix_objects.append(note_object.to_stix2_object())
 
@@ -101,8 +116,8 @@ class ConverterToStix:
     def _map_vulnerability(self, exposure: dict[str, Any]) -> Vulnerability:
         signature = exposure["signature"]
         return Vulnerability(
-            #If the CVE field is populated it gives a valid CVE name, else the signature name is used for
-            #Exposures that don't reflect a CVE 
+            # If the CVE field is populated it gives a valid CVE name, else the signature name is used for
+            # Exposures that don't reflect a CVE
             name=signature.get("cve") or signature["name"],
             description=signature["description"],
             labels=[f"assetnote:{exposure['exposureType'].lower()}"],
@@ -125,9 +140,10 @@ class ConverterToStix:
             labels=[f"assetnote:{exposure['exposureType'].lower()}"],
         )
 
-
-    def _map_relationship(self, relationship_type: str, source: Any, target: Any) -> Relationship:
-        return Relationship( 
+    def _map_relationship(
+        self, relationship_type: str, source: Any, target: Any
+    ) -> Relationship:
+        return Relationship(
             type=relationship_type,
             source=source,
             target=target,
@@ -135,7 +151,11 @@ class ConverterToStix:
             markings=[self.tlp_marking],
         )
 
-    def _map_notes(self, exposure: dict[str, Any], incident_response_object: CustomObjectCaseIncident) -> list[Note]:
+    def _map_notes(
+        self,
+        exposure: dict[str, Any],
+        incident_response_object: CustomObjectCaseIncident,
+    ) -> list[Note]:
         exposure_data = exposure.get("exposureData") or {}
         interactions = exposure_data.get("edges", [])
         notes = []
@@ -145,10 +165,10 @@ class ConverterToStix:
             for field, value in interaction.items():
                 if field != "created" and value:
                     lines.append(f"{field}:\n{value}")
-            #Compile the content from the interaction into a single string
+            # Compile the content from the interaction into a single string
             content = "\n\n".join(lines)
 
-            #Where present append the timestamp of the interaction
+            # Where present append the timestamp of the interaction
             abstract = f"Interaction {index}"
             if interaction.get("created"):
                 created_at = datetime.fromisoformat(interaction["created"])
@@ -169,7 +189,7 @@ class ConverterToStix:
     def _map_course_of_action(self, exposure: dict[str, Any]) -> stix2.CourseOfAction:
         signature = exposure["signature"]
         name = signature["name"]
-        #NB: connectors-sdk appears to have no Course of Action object
+        # NB: connectors-sdk appears to have no Course of Action object
         return stix2.CourseOfAction(
             id=CourseOfAction.generate_id(name=name),
             name=name,
@@ -180,20 +200,24 @@ class ConverterToStix:
             allow_custom=True,
         )
 
-    def _map_incident_response(self, exposure: dict[str, Any], object_refs: list[str]) -> CustomObjectCaseIncident:
+    def _map_incident_response(
+        self, exposure: dict[str, Any], object_refs: list[str]
+    ) -> CustomObjectCaseIncident:
         signature = exposure["signature"]
         incident_name = signature["name"]
         exposure_id = str(exposure["id"])
         workflow_id = self.status_mapping.get(exposure.get("triageState"))
 
-        #NB: connectors-sdk appears to have no Incident Response / Case Incident object
+        # NB: connectors-sdk appears to have no Incident Response / Case Incident object
         return CustomObjectCaseIncident(
-            id=CaseIncident.generate_id(f"{incident_name} [{exposure_id}]", exposure["created"]),
+            id=CaseIncident.generate_id(
+                f"{incident_name} [{exposure_id}]", exposure["created"]
+            ),
             name=f"{incident_name}: {exposure['asset']['host']}",
             description=signature["description"],
             severity=self._map_severity(exposure["severityString"]),
             labels=[f"assetnote:{exposure['exposureType'].lower()}"],
-            #Append an External Reference back to the Exposure in the AssetNote platform
+            # Append an External Reference back to the Exposure in the AssetNote platform
             external_references=[
                 ExternalReference(
                     source_name="Assetnote",
@@ -205,7 +229,7 @@ class ConverterToStix:
             created=datetime.fromisoformat(exposure["created"]),
             created_by_ref=self.author.id,
             object_marking_refs=[self.tlp_marking.id],
-            #Assign the appropriate status template
+            # Assign the appropriate status template
             x_opencti_workflow_id=workflow_id,
         )
 
@@ -221,4 +245,3 @@ class ConverterToStix:
             "critical": "critical",
         }
         return SEVERITY_MAPPINGS[severity_string.lower()]
-
