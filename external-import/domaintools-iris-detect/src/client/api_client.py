@@ -64,7 +64,7 @@ class DomainToolsClient:
         )
 
         if response is None:
-             return monitor_id_term, []
+            return monitor_id_term, []
 
         data = response.json()
         for t in data.get("monitors", []):
@@ -88,7 +88,7 @@ class DomainToolsClient:
                 )
 
                 if response is None:
-                     break
+                    break
 
                 # response.raise_for_status()
                 # if response is None:
@@ -102,7 +102,7 @@ class DomainToolsClient:
 
                 if dt_parameters.get("preview"):
                     break  # if preview is true, only pull the first page of data since it is just for testing purposes.
-                #if offset > results_total:
+                # if offset > results_total:
                 if offset + limit >= results_total:
                     break
 
