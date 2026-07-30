@@ -124,12 +124,12 @@ if (-not $RELEASE_REF) {
 $connectors_sdk_has_changed = $false
 $merge_base = $null
 if ($CIRCLE_BRANCH -eq $RELEASE_REF) {
-    $connectors_sdk_diff = & git diff HEAD~1 HEAD -- connectors-sdk
-    $connectors_sdk_has_changed = -not [string]::IsNullOrEmpty($connectors_sdk_diff)
+    & git diff --quiet HEAD~1 HEAD -- connectors-sdk
+    $connectors_sdk_has_changed = ($LASTEXITCODE -ne 0)
 } else {
     $merge_base = (& git merge-base "origin/$RELEASE_REF" HEAD).Trim()
-    $connectors_sdk_diff = & git diff $merge_base HEAD -- connectors-sdk
-    $connectors_sdk_has_changed = -not [string]::IsNullOrEmpty($connectors_sdk_diff)
+    & git diff --quiet $merge_base HEAD -- connectors-sdk
+    $connectors_sdk_has_changed = ($LASTEXITCODE -ne 0)
 }
 
 foreach ($connector_directory in $connector_directories) {
