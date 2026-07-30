@@ -7,8 +7,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import requests
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
 from connector.confidence import (
     confidence_value,
     make_sync_record,
@@ -25,6 +23,7 @@ from connector.merge_split import (
 )
 from connector.settings import ConnectorSettings
 from connector.utils import ThreatObjectType
+from pycti import OpenCTIConnectorHelper, get_config_variable
 from rst_threat_library_client import ThreatLibraryClient
 
 _OPENCTI_MERGE_SOURCE_BATCH = 3
@@ -104,6 +103,9 @@ class RSTThreatLibrary:
         try:
             datetime.strptime(s, "%Y-%m-%d")
         except ValueError:
+            self.helper.connector_logger.warning(
+                f"Invalid import_from_date '{s}' (expected YYYY-MM-DD); ignoring."
+            )
             return ""
         return f"{s}T00:00:00.000Z"
 

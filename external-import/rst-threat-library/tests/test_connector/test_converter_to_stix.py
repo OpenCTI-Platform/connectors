@@ -2,7 +2,6 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
-
 from connector.converter_to_stix import ConverterToStix
 
 

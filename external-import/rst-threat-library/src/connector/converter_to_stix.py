@@ -10,9 +10,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 import stix2
-from pycti import OpenCTIConnectorHelper
-
 from connector.utils import ENTITY_TYPE_TO_STIX, PATH_TO_STIX_TYPE
+from pycti import OpenCTIConnectorHelper
 
 
 class ConverterToStix:
@@ -143,7 +142,8 @@ class ConverterToStix:
             kwargs["goals"] = list(item["goals"])
         if item.get("secondary_motivations"):
             kwargs["secondary_motivations"] = list(item["secondary_motivations"])
-        return stix2.v21.IntrusionSet(**kwargs)
+        stix_id = kwargs.pop("id")
+        return stix2.v21.IntrusionSet(id=stix_id, **kwargs)
 
     def build_malware(self, item: Dict[str, Any]) -> Any:
         kwargs = self._base_sdo_kwargs(item)
@@ -159,7 +159,8 @@ class ConverterToStix:
             kwargs["aliases"] = list(item["aliases"])
         if item.get("is_family") is not None:
             kwargs["is_family"] = bool(item["is_family"])
-        return stix2.v21.Malware(**kwargs)
+        stix_id = kwargs.pop("id")
+        return stix2.v21.Malware(id=stix_id, **kwargs)
 
     def build_tool(self, item: Dict[str, Any]) -> Any:
         kwargs = self._base_sdo_kwargs(item)
@@ -167,11 +168,13 @@ class ConverterToStix:
             kwargs["tool_types"] = list(item["tool_types"])
         if item.get("tool_version"):
             kwargs["tool_version"] = item["tool_version"]
-        return stix2.v21.Tool(**kwargs)
+        stix_id = kwargs.pop("id")
+        return stix2.v21.Tool(id=stix_id, **kwargs)
 
     def build_campaign(self, item: Dict[str, Any]) -> Any:
         kwargs = self._base_sdo_kwargs(item)
         for field in ("first_seen", "last_seen", "objective"):
             if item.get(field) not in (None, ""):
                 kwargs[field] = item[field]
-        return stix2.v21.Campaign(**kwargs)
+        stix_id = kwargs.pop("id")
+        return stix2.v21.Campaign(id=stix_id, **kwargs)

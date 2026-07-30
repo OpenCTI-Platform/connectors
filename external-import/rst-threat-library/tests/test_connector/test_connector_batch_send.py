@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-
 from connector.connector import RSTThreatLibrary
 from connector.settings import ConnectorSettings
 
@@ -151,6 +150,7 @@ def test_batch_send_stix_bundle_retries_requests_exceptions(connector, monkeypat
 
     assert ok is True
     assert connector.helper.send_stix2_bundle.call_count == 2
+    # First attempt marked in_error; second attempt marked success (no in_error).
     assert connector.helper.api.work.to_processed.call_count == 2
     first = connector.helper.api.work.to_processed.call_args_list[0]
     second = connector.helper.api.work.to_processed.call_args_list[1]
@@ -182,6 +182,98 @@ def test_batch_send_stix_bundle_performs_one_attempt_when_max_retries_zero(conne
 
     assert ok is True
     assert connector.helper.send_stix2_bundle.call_count == 1
+
+
+def test_batch_send_via_api_imports_objects_and_marks_work_processed(connector):
+    identity = MagicMock()
+    identity.serialize.return_value = (
+        '{"type":"identity","id":"identity--1","name":"Author"}'
+    )
+    malware = MagicMock()
+    malware.serialize.return_value = '{"type":"malware","id":"malware--1","name":"x"}'
+
+    ok = connector._batch_send_via_api(
+        [malware, identity], timestamp=1_700_000_000, obj_type="malware"
+    )
+
+    assert ok is True
+    assert connector.helper.api.stix2.import_object.call_count == 2
+    # Identities are imported before other SDOs.
+    first_payload = connector.helper.api.stix2.import_object.call_args_list[0].args[0]
+    assert first_payload["type"] == "identity"
+    connector.helper.api.work.to_processed.assert_called_once()
+    assert connector.helper.api.work.to_processed.call_args.kwargs.get("in_error") is not True
+
+
+def test_batch_send_via_api_retries_requests_exceptions(connector, monkeypatch):
+    import requests
+
+    stix_object = MagicMock()
+    stix_object.serialize.return_value = '{"type":"malware","id":"malware--1"}'
+    connector.helper.api.stix2.import_object.side_effect = [
+        requests.exceptions.ConnectionError("temporary"),
+        None,
+    ]
+    monkeypatch.setattr("connector.connector.time.sleep", lambda _: None)
+
+    ok = connector._batch_send_via_api(
+        [stix_object], timestamp=1_700_000_000, obj_type="malware"
+    )
+
+    assert ok is True
+    assert connector.helper.api.stix2.import_object.call_count == 2
+    assert connector.helper.api.work.to_processed.call_count == 2
+    first = connector.helper.api.work.to_processed.call_args_list[0]
+    second = connector.helper.api.work.to_processed.call_args_list[1]
+    assert first.kwargs.get("in_error") is True
+    assert second.kwargs.get("in_error") is not True
+
+
+def test_batch_send_via_api_returns_false_after_retry_budget(connector, monkeypatch):
+    stix_object = MagicMock()
+    stix_object.serialize.return_value = '{"type":"malware","id":"malware--1"}'
+    connector._max_retries = 2
+    connector.helper.api.stix2.import_object.side_effect = ConnectionError("temporary")
+    monkeypatch.setattr("connector.connector.time.sleep", lambda _: None)
+
+    ok = connector._batch_send_via_api(
+        [stix_object], timestamp=1_700_000_000, obj_type="malware"
+    )
+
+    assert ok is False
+    assert connector.helper.api.stix2.import_object.call_count == 2
+    for call in connector.helper.api.work.to_processed.call_args_list:
+        assert call.kwargs.get("in_error") is True
+
+
+def test_batch_send_via_api_reraises_non_retryable_after_marking_work(connector):
+    stix_object = MagicMock()
+    stix_object.serialize.return_value = '{"type":"malware","id":"malware--1"}'
+    connector.helper.api.stix2.import_object.side_effect = ValueError("bad payload")
+
+    with pytest.raises(ValueError, match="bad payload"):
+        connector._batch_send_via_api(
+            [stix_object], timestamp=1_700_000_000, obj_type="malware"
+        )
+
+    connector.helper.api.work.to_processed.assert_called_once()
+    assert connector.helper.api.work.to_processed.call_args.kwargs.get("in_error") is True
+
+
+def test_seed_cursor_warns_and_ignores_invalid_import_from_date(connector):
+    connector.import_from_date = "not-a-date"
+
+    assert connector._seed_cursor() == ""
+    connector.helper.connector_logger.warning.assert_called()
+    warning = connector.helper.connector_logger.warning.call_args.args[0]
+    assert "Invalid import_from_date" in warning
+    assert "not-a-date" in warning
+
+
+def test_seed_cursor_formats_valid_import_from_date(connector):
+    connector.import_from_date = "2024-01-01"
+
+    assert connector._seed_cursor() == "2024-01-01T00:00:00.000Z"
 
 
 def test_normalize_api_item_overrides_intrusion_set_confidence():

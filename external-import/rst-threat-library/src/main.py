@@ -2,10 +2,9 @@ import sys
 import time
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from connector.connector import RSTThreatLibrary
 from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 __all__ = ["RSTThreatLibrary"]
 
