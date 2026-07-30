@@ -5,6 +5,7 @@ $ErrorActionPreference = "Stop"
 
 $CONNECTOR_METADATA_DIRECTORY = "__metadata__"
 $VENV_NAME = ".temp_venv"
+$PYTHON_VERSION = "3.12"
 
 function Find-RequirementsTxt {
     param(
@@ -49,7 +50,7 @@ function Activate-Venv {
     
     # Create isolated virtual environment in connector path
     $venvPath = Join-Path $ConnectorPath $VENV_NAME
-    & python -m venv $venvPath
+    & uv venv --python $PYTHON_VERSION $venvPath
     
     # Activate virtual environment (Windows)
     $activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
@@ -115,20 +116,35 @@ if (-not $CIRCLE_BRANCH) {
     Write-Host "Note: Not running in CI environment. Will process all connectors with changes." -ForegroundColor Yellow
 }
 
+$RELEASE_REF = $env:RELEASE_REF
+if (-not $RELEASE_REF) {
+    $RELEASE_REF = "master"
+}
+
+$connectors_sdk_has_changed = $false
+$merge_base = $null
+if ($CIRCLE_BRANCH -eq $RELEASE_REF) {
+    $connectors_sdk_diff = & git diff HEAD~1 HEAD -- connectors-sdk
+    $connectors_sdk_has_changed = -not [string]::IsNullOrEmpty($connectors_sdk_diff)
+} else {
+    $merge_base = (& git merge-base "origin/$RELEASE_REF" HEAD).Trim()
+    $connectors_sdk_diff = & git diff $merge_base HEAD -- connectors-sdk
+    $connectors_sdk_has_changed = -not [string]::IsNullOrEmpty($connectors_sdk_diff)
+}
+
 foreach ($connector_directory in $connector_directories) {
     $connector_path = $connector_directory.FullName
     
     if (Test-Path $connector_path) {
-        # Check if directory has changed (simplified for local development)
-        $hasChanges = $true  # Default to true for local development
-        if ($CIRCLE_BRANCH) {
-            # CI environment logic
-            if ($CIRCLE_BRANCH -eq "master") {
-                $gitDiff = & git diff HEAD~1 HEAD -- $connector_path
-            } else {
-                $mergeBase = & git merge-base master HEAD
-                $gitDiff = & git diff $mergeBase HEAD $connector_path
-            }
+        # Check if directory has changed
+        $hasChanges = $false
+        if ($connectors_sdk_has_changed) {
+            $hasChanges = $true
+        } elseif ($CIRCLE_BRANCH -eq $RELEASE_REF) {
+            $gitDiff = & git diff HEAD~1 HEAD -- $connector_path
+            $hasChanges = -not [string]::IsNullOrEmpty($gitDiff)
+        } else {
+            $gitDiff = & git diff $merge_base HEAD -- $connector_path
             $hasChanges = -not [string]::IsNullOrEmpty($gitDiff)
         }
         

@@ -4,6 +4,8 @@ set -eo pipefail  # exit on error
 
 CONNECTOR_METADATA_DIRECTORY="__metadata__"
 VENV_NAME=".temp_venv"
+PYTHON_VERSION="3.12"
+CIRCLE_BRANCH=${CIRCLE_BRANCH:-""}
 
 find_requirements_txt() {
   # Method to find the highest requirements.txt in connector's tree
@@ -39,7 +41,8 @@ activate_venv() {
     # Method to activate isolate venv
 
     # Create isolated virtual environment in connector path
-    uv venv "$1/$VENV_NAME"
+    # Use Python 3.12, as some connectors require it (but none require 3.11 strictly)
+    uv venv --python "$PYTHON_VERSION" "$1/$VENV_NAME"
 
     # Activate virtual environment according to OS
     if [ -f "$1/$VENV_NAME/bin/activate" ]; then
@@ -100,16 +103,27 @@ connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY
 git fetch --unshallow || git fetch --depth=100
 git fetch origin "+refs/heads/*:refs/remotes/origin/*"
 
+# Detect whether connectors-sdk changed
+if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-master}" ]; then
+  connectors_sdk_has_changed=$(git diff HEAD~1 HEAD -- connectors-sdk)
+else
+  merge_base=$(git merge-base origin/"${RELEASE_REF:-master}" HEAD)
+  connectors_sdk_has_changed=$(git diff "$merge_base" HEAD -- connectors-sdk)
+fi
+
 # Loop in each connector directory with infos and regenerate JSON schema if changed
 for connector_directory_path in $connector_directories_path
 do
   if [ -d "$connector_directory_path" ]; then
-    # Only generate schema for directory that changed
-    CIRCLE_BRANCH=${CIRCLE_BRANCH:-""}
-    if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-master}" ]; then
-      directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
+    if [ -n "$connectors_sdk_has_changed" ]; then
+      directory_has_changed=true
     else
-      directory_has_changed=$(git diff $(git merge-base origin/"${RELEASE_REF:-master}" HEAD) HEAD "$connector_directory_path")
+      # Only generate schema for directory that changed
+      if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-master}" ]; then
+        directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
+      else
+        directory_has_changed=$(git diff "$merge_base" HEAD -- "$connector_directory_path")
+      fi
     fi
 
     if [ -z "$directory_has_changed" ] ; then
