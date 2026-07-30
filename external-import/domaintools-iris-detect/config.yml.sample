@@ -14,6 +14,6 @@ domaintools:
   api_base_url: 'https://api.domaintools.com/v1/iris-detect/'
   api_key: 'ChangeMe'
   monitor_id: 'ChangeMe'      # optional
-  store_iris_data: 'ChangeMe' # optional
-  preview: 'ChangeMe'     # optional
+  store_iris_data: false
+  preview: false
   tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')

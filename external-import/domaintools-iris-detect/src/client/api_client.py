@@ -48,22 +48,24 @@ class DomainToolsClient:
             )
             return None
 
-    def get_entities(self, dt_parameters=None) -> list:
+    def get_entities(self, dt_parameters: dict | None = None) -> tuple[dict, list]:
         """Fetch Iris Detect results from the DomainTools Iris Detect API.
         Args:
-            body: Optional IrisQL query body.
+            dt_parameters: Optional query parameters.
         Returns:
-            A list of result objects from the API.
+            A tuple of (monitor_id_to_term, results) from the API.
         """
+        dt_parameters = dt_parameters or {}
 
         # DomainTools Iris Detect - Get Monitor IDs and Terms
-        monitor_id_term = {}
+        monitor_id_term: dict = {}
         response = self._request_data(
             str(self.base_url) + "monitors/", params=dt_parameters
         )
-        if response.status_code != 200 or response is None:
-            # self.helper.connector_logger.error(response.text)
-            return [], []
+
+        if response is None:
+             return monitor_id_term, []
+
         data = response.json()
         for t in data.get("monitors", []):
             monitor_id_term[t["id"]] = t["term"]
@@ -84,9 +86,9 @@ class DomainToolsClient:
                 response = self._request_data(
                     str(self.base_url) + "domains/new/", params=dt_parameters
                 )
-                if response.status_code != 200 or response is None:
-                    self.helper.connector_logger.error(response.text)
-                    break
+
+                if response is None:
+                     break
 
                 # response.raise_for_status()
                 # if response is None:
@@ -95,12 +97,13 @@ class DomainToolsClient:
                 #     )
 
                 json_response = response.json()
-                results_total = json_response["total_count"]
-                result_data.extend(json_response["watchlist_domains"])
+                results_total = json_response.get("total_count", 0)
+                result_data.extend(json_response.get("watchlist_domains", []))
 
-                if dt_parameters.get("preview", "") == True:
+                if dt_parameters.get("preview"):
                     break  # if preview is true, only pull the first page of data since it is just for testing purposes.
-                if offset > results_total:
+                #if offset > results_total:
+                if offset + limit >= results_total:
                     break
 
                 offset += limit

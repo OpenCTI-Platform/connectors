@@ -14,8 +14,8 @@ services:
       - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
       - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com/v1/iris-detect/
       - DOMAINTOOLS_API_KEY=ChangeMe
-      - DOMAINTOOLS_monitor_id=ChangeMe # optional
+      - DOMAINTOOLS_MONITOR_ID=ChangeMe # optional
       - DOMAINTOOLS_STORE_IRIS_DATA=ChangeMe  #optional
-      - DOMAINTOOLS_preview=ChangeMe    # optional, available values: true or false
+      - DOMAINTOOLS_PREVIEW=ChangeMe    # optional, available values: true or false
       - DOMAINTOOLS_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
     restart: always

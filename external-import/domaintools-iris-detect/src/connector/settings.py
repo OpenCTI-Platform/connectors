@@ -35,12 +35,12 @@ class DomainToolsConfig(BaseConfigModel):
 
     monitor_id: str | None = Field(
         description="Monitor ID from the monitors response – only used when requesting domains for specific monitors.",
-        default="",
+        default=None,
     )
-    store_iris_data: bool | None = Field(
+    store_iris_data: bool = Field(
         description="Store DomainTools Iris data as note object.", default=False
     )
-    preview: bool | None = Field(
+    preview: bool = Field(
         description="Use during API implementation and testing. Including with value = 1 will limit results to 2 but not be limited by hourly restrictions.",
         default=False,
     )
