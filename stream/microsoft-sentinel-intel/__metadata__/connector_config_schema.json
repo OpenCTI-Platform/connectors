@@ -60,6 +60,15 @@
       "description": "Whether to ignore dependencies when processing events from the live stream.",
       "type": "boolean"
     },
+    "MICROSOFT_SENTINEL_INTEL_AUTH_TYPE": {
+      "default": "app_registration",
+      "description": "Authentication method used to call Azure APIs. 'app_registration' (default) requires tenant_id, client_id and client_secret. 'azure_credential' uses DefaultAzureCredential (managed identity, workload identity, or a local `az login` session) and ignores tenant_id/client_id/client_secret.",
+      "enum": [
+        "app_registration",
+        "azure_credential"
+      ],
+      "type": "string"
+    },
     "MICROSOFT_SENTINEL_INTEL_TENANT_ID": {
       "default": null,
       "description": "Your Azure App Tenant ID, see the screenshot to help you find this information.",

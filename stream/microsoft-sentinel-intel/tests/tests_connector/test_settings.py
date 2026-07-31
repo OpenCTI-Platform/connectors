@@ -67,12 +67,13 @@ from microsoft_sentinel_intel import ConnectorSettings
                     "live_stream_id": "live",
                 },
                 "microsoft_sentinel_intel": {
+                    "auth_type": "azure_credential",
                     "workspace_id": "ChangeMe",
                     "workspace_name": "ChangeMe",
                     "subscription_id": "ChangeMe",
                 },
             },
-            id="no_auth_fields_uses_default_credential",
+            id="azure_credential_mode_no_auth_fields",
         ),
     ],
 )
@@ -157,6 +158,24 @@ def test_settings_should_accept_valid_input(settings_dict):
             },
             "connector.id",
             id="missing_connector_id",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "live_stream_id": "live",
+                },
+                "microsoft_sentinel_intel": {
+                    "workspace_id": "ChangeMe",
+                    "workspace_name": "ChangeMe",
+                    "subscription_id": "ChangeMe",
+                },
+            },
+            "microsoft_sentinel_intel",
+            id="app_registration_default_mode_missing_all_auth_fields",
         ),
         pytest.param(
             {

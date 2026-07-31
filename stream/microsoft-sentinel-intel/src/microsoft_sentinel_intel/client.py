@@ -22,11 +22,7 @@ class ConnectorClient:
             f"/providers/Microsoft.OperationalInsights/workspaces/{self.config.microsoft_sentinel_intel.workspace_name}"
             f"/providers/Microsoft.SecurityInsights/threatIntelligence/main"
         )
-        if (
-            config.microsoft_sentinel_intel.tenant_id is not None
-            and config.microsoft_sentinel_intel.client_id is not None
-            and config.microsoft_sentinel_intel.client_secret is not None
-        ):
+        if config.microsoft_sentinel_intel.auth_type == "app_registration":
             credential = ClientSecretCredential(
                 tenant_id=config.microsoft_sentinel_intel.tenant_id,
                 client_id=config.microsoft_sentinel_intel.client_id,

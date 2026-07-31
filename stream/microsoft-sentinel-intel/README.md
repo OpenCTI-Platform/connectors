@@ -48,23 +48,21 @@ Key features:
 
 ### Authentication
 
-The connector supports two authentication modes:
+The connector supports two authentication modes, selected via `auth_type`:
 
-- **App registration** (`tenant_id` / `client_id` / `client_secret`): explicit Azure AD
-  application credentials. If you set any one of these three variables, you must set all
-  three.
-- **Default Azure credential** (recommended): leave `tenant_id`, `client_id`, and
-  `client_secret` unset and the connector falls back to
-  [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential),
-  which authenticates using, in order, environment variables, a workload identity (e.g.
-  in AKS), a managed identity (system- or user-assigned, when running on Azure compute),
-  or the locally logged-in `az login` session.
+- **`app_registration`** (default): requires `tenant_id`, `client_id`, and
+  `client_secret`. Missing any of the three fails the connector at startup with a
+  clear configuration error.
+- **`azure_credential`**: leave `tenant_id`, `client_id`, and `client_secret` unset
+  (ignored in this mode) and the connector falls back to
+  [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential):
+  environment variables, workload identity (e.g. in AKS), managed identity, or a local
+  `az login` session, in that order.
 
-Whichever identity is used, it must be granted the **Microsoft Sentinel Contributor**
-role on the Log Analytics Workspace (see step 3 below). No Microsoft Graph API
-permission is required, the connector authenticates against Azure Resource Manager
-(`https://management.azure.com/.default`), and access is controlled entirely by that
-RBAC role assignment, per the
+Either way, the identity needs **Microsoft Sentinel Contributor** on the Log Analytics
+Workspace (step 3 below) — no Microsoft Graph permission is needed, since the connector
+authenticates against Azure Resource Manager (`https://management.azure.com/.default`),
+per the
 [official upload API prerequisites](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-upload-api#prerequisites).
 
 ### Azure AD Application Setup
@@ -73,8 +71,8 @@ RBAC role assignment, per the
 2. Note the `tenant_id`, `client_id`, and `client_secret`
 3. In the Log Analytics Workspace, add **Microsoft Sentinel Contributor** role to the application
 
-> Skip this section if you're using a managed identity, workload identity, or `az login`
-> instead — see [Authentication](#authentication) above.
+> Skip this section if you're using `auth_type: azure_credential` (managed identity,
+> workload identity, or `az login`) instead — see [Authentication](#authentication) above.
 
 ![Sentinel Variables](./doc/sentinel_info_variables.png)
 
@@ -119,11 +117,10 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      # Optional: uncomment and fill in to use app-registration auth instead of DefaultAzureCredential
-      # (managed identity, workload identity, or `az login`).
-      # - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe
-      # - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe
-      # - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe
+      - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe
+      - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe
+      - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe
+      # - MICROSOFT_SENTINEL_INTEL_AUTH_TYPE=azure_credential # use instead of the 3 vars above for managed identity, workload identity, or az login
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID=ChangeMe
@@ -228,7 +225,7 @@ CONNECTOR_LOG_LEVEL=debug
 ## Additional information
 
 - **Role Propagation**: Role assignments on Log Analytics Workspace can take time to propagate
-- **Authentication**: Managed identity (via `DefaultAzureCredential`) is recommended over app registration — see [Authentication](#authentication)
+- **Authentication**: `auth_type: azure_credential` (managed identity via `DefaultAzureCredential`) is recommended over `app_registration` — see [Authentication](#authentication)
 - **STIX Bundles**: Indicators are sent as STIX bundles to preserve threat intelligence context
 - **Extra Labels**: Add comma-separated labels to all indicators sent to Sentinel
 - **Delete Extensions**: Set to `true` to remove OpenCTI-specific extensions from bundles

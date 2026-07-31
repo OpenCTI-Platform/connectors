@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -31,6 +33,15 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `MicrosoftSentinelIntelConnector`.
     """
 
+    auth_type: Literal["app_registration", "azure_credential"] = Field(
+        default="app_registration",
+        description=(
+            "Authentication method used to call Azure APIs. 'app_registration' (default) "
+            "requires tenant_id, client_id and client_secret. 'azure_credential' uses "
+            "DefaultAzureCredential (managed identity, workload identity, or a local "
+            "`az login` session) and ignores tenant_id/client_id/client_secret."
+        ),
+    )
     tenant_id: str | None = Field(
         default=None,
         description="Your Azure App Tenant ID, see the screenshot to help you find this information.",
@@ -126,11 +137,14 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
                 f"{', '.join(blank_fields)} must not be empty or whitespace-only."
             )
 
-        provided = [value is not None for value in values.values()]
-        if any(provided) and not all(provided):
-            raise ValueError(
-                "If you provide any of tenant_id, client_id, or client_secret, you must provide all three."
-            )
+        if self.auth_type == "app_registration":
+            missing_fields = [name for name, value in values.items() if value is None]
+            if missing_fields:
+                raise ValueError(
+                    f"auth_type is 'app_registration' but {', '.join(missing_fields)} "
+                    "is not set. Provide tenant_id, client_id and client_secret, or set "
+                    "auth_type to 'azure_credential' to use DefaultAzureCredential instead."
+                )
         return self
 
 

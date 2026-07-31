@@ -18,6 +18,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` |  |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Whether to listen for delete events on the live stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `true` | Whether to ignore dependencies when processing events from the live stream. |
+| MICROSOFT_SENTINEL_INTEL_AUTH_TYPE | `string` |  | `app_registration` `azure_credential` | `"app_registration"` | Authentication method used to call Azure APIs. 'app_registration' (default) requires tenant_id, client_id and client_secret. 'azure_credential' uses DefaultAzureCredential (managed identity, workload identity, or a local `az login` session) and ignores tenant_id/client_id/client_secret. |
 | MICROSOFT_SENTINEL_INTEL_TENANT_ID | `string` |  | string | `null` | Your Azure App Tenant ID, see the screenshot to help you find this information. |
 | MICROSOFT_SENTINEL_INTEL_CLIENT_ID | `string` |  | string | `null` | Your Azure App Client ID, see the screenshot to help you find this information. |
 | MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | Your Azure App Client secret, See the screenshot to help you find this information. |
