@@ -1,8 +1,7 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from sumologic_intel_connector import SumologicIntelConnector
-from sumologic_intel_connector.config_loader import ConfigConnector
+from sumologic_intel_connector import ConnectorSettings, SumologicIntelConnector
 
 if __name__ == "__main__":
     """
@@ -15,10 +14,10 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConfigConnector()
-        helper = OpenCTIConnectorHelper(config=config.load)
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-        connector = SumologicIntelConnector(config=config, helper=helper)
+        connector = SumologicIntelConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
