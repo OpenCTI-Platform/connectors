@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Sumo Logic Intel",
@@ -62,6 +64,9 @@
     },
     "SUMOLOGIC_INTEL_API_BASE_URL": {
       "description": "The base URL of the Sumo Logic API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "SUMOLOGIC_INTEL_ACCESS_ID": {
