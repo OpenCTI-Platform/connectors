@@ -65,7 +65,7 @@ Below are the parameters you'll need to set for running the connector properly:
 |-------------------------|--------------------------------|----------------------------------|---------|-----------|---------------------------------------|
 | API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |  | https://api.domaintools.com/v1/iris-detect/       | Yes       | DomainTools API base URL                   |
 | API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |      | Yes       | DomainTools API key                        |
-| Monitor ID            | domaintools.monitor_id         | `DOMAINTOOLS_MONITOR_ID`         |             | No       | A unique alphanumeric identifier assigned to a specific keyword or brand monitor.                        |
+| Monitor ID             | domaintools.monitor_id         | `DOMAINTOOLS_MONITOR_ID`         |             | No       | A unique alphanumeric identifier assigned to a specific keyword or brand monitor.                        |
 | Store Iris Data | domaintools.store_iris_data | `DOMAINTOOLS_STORE_IRIS_DATA` | false |Yes| Store DomainTools Iris data as note object. |
 | TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`                  | clear   | No        | TLP marking for created STIX objects. |
 | Preview | domaintools.preview | `DOMAINTOOLS_PREVIEW` | false | Yes | Use during API implementation and testing. Including with value = 1 will limit results to 2 but not be limited by hourly restrictions.  |
@@ -83,8 +83,8 @@ Example:
 Register connector in the **main** OpenCTI `docker-compose.yml`:
 
 ```yaml
-  connector-domaintools:
-    image: opencti/connector-domaintools:latest
+  connector-domaintools-iris-detect:
+    image: opencti/connector-domaintools-iris-detect:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=changeme

@@ -1,7 +1,7 @@
 version: '3'
 services:
-  opencti-connector-domaintools-iris-detect:
-    image: opencti/opencti-connector-domaintools-iris-detect:latest
+  connector-domaintools-iris-detect:
+    image: opencti/connector-domaintools-iris-detect:latest
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
@@ -15,7 +15,7 @@ services:
       - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com/v1/iris-detect/
       - DOMAINTOOLS_API_KEY=ChangeMe
       - DOMAINTOOLS_MONITOR_ID=ChangeMe # optional
-      - DOMAINTOOLS_STORE_IRIS_DATA=ChangeMe  #optional
-      - DOMAINTOOLS_PREVIEW=ChangeMe    # optional, available values: true or false
+      - DOMAINTOOLS_STORE_IRIS_DATA=true
+      - DOMAINTOOLS_PREVIEW=false
       - DOMAINTOOLS_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
     restart: always

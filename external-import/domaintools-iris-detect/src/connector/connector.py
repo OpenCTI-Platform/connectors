@@ -118,9 +118,11 @@ class DomainToolsIrisDetectConnector:
 
             labels = ["Iris Detect"]
 
-            for id in entity.get("monitor_ids", []):
-                labels.append(f"monitor_id:{id}")
-                labels.append(f"monitor_term:{monitor_id_term.get(id, 'unknown')}")
+            for monitor_id in entity.get("monitor_ids", []):
+                labels.append(f"monitor_id:{monitor_id}")
+                labels.append(
+                    f"monitor_term:{monitor_id_term.get(monitor_id, 'unknown')}"
+                )
 
             risk_score_components = entity.get("risk_score_components", {})
             if "proximity" in risk_score_components:

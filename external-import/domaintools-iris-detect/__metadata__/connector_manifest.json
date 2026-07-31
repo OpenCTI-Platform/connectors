@@ -3,7 +3,7 @@
   "slug": "domaintools-iris-detect",
   "description": "Import DomainTools Iris Detect",
   "short_description": "Import DomainTools Iris Detect",
-  "logo": null,
+  "logo": "__metadata__/logo.png",
   "use_cases": ["Infrastructure & Attack Surface Visibility", "Adversary & Campaign Insights"],
   "solution_categories": ["Enrichment & Reputation"],
   "contact": null,

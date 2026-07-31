@@ -33,7 +33,7 @@ class DomainToolsClient:
         params["app_version"] = "1.0"
         try:
 
-            response = self.session.get(api_url, params=params)
+            response = self.session.get(api_url, params=params, timeout=60)
             self.helper.connector_logger.info(
                 "[API] HTTP GET Request to endpoint", {"url_path": api_url}
             )
@@ -60,7 +60,7 @@ class DomainToolsClient:
         # DomainTools Iris Detect - Get Monitor IDs and Terms
         monitor_id_term: dict = {}
         response = self._request_data(
-            str(self.base_url) + "monitors/", params=dt_parameters
+            str(self.base_url) + "/monitors/", params=dt_parameters
         )
 
         if response is None:
@@ -84,7 +84,7 @@ class DomainToolsClient:
                 dt_parameters["limit"] = limit
 
                 response = self._request_data(
-                    str(self.base_url) + "domains/new/", params=dt_parameters
+                    str(self.base_url) + "/domains/new/", params=dt_parameters
                 )
 
                 if response is None:
