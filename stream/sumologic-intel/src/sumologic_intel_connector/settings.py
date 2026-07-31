@@ -4,7 +4,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -35,7 +35,7 @@ class SumologicIntelConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `SumologicIntelConnector`.
     """
 
-    api_base_url: str = Field(
+    api_base_url: HttpUrl = Field(
         description="The base URL of the Sumo Logic API.",
     )
     access_id: str = Field(

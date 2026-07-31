@@ -16,6 +16,7 @@ class SumologicClient:
     def __init__(self, helper: OpenCTIConnectorHelper, config: ConnectorSettings):
         self.helper = helper
         self.config = config
+        self.base_url = str(self.config.sumologic_intel.api_base_url).rstrip("/")
         self.session = requests.Session()
         self.session.auth = (
             self.config.sumologic_intel.access_id,
@@ -38,10 +39,7 @@ class SumologicClient:
             f"Uploading STIX Indicator name: {stix_indicator.get('name')}"
         )
 
-        url = (
-            self.config.sumologic_intel.api_base_url.rstrip("/")
-            + "/api/v1/threatIntel/datastore/indicators/stix"
-        )
+        url = self.base_url + "/api/v1/threatIntel/datastore/indicators/stix"
 
         try:
             response = self._send_request(
@@ -96,10 +94,7 @@ class SumologicClient:
             f"Deleting STIX Indicator name: {stix_indicator.get('name')}"
         )
 
-        url = (
-            self.config.sumologic_intel.api_base_url.rstrip("/")
-            + "/api/v1/threatIntel/datastore/indicators"
-        )
+        url = self.base_url + "/api/v1/threatIntel/datastore/indicators"
 
         try:
             response = self._send_request(
