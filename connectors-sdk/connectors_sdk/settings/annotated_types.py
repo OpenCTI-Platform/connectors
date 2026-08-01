@@ -41,8 +41,8 @@ ListFromString = Annotated[
     BeforeValidator(parse_comma_separated_list),
     """Annotated list[str] that:
 - Validates: Accepts a comma-separated string (e.g., "a,b,c") or a list[str].
-  If a string is provided, it is split on commas and whitespace is trimmed for
-  each item.
+  If a string is provided, it is split on commas, whitespace is trimmed for
+  each item, and empty items are discarded.
 
 Components
 - BeforeValidator(parse_comma_separated_list): Converts input strings to list[str]
