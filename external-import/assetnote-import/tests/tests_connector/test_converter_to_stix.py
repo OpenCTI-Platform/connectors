@@ -10,6 +10,19 @@ def _make_converter(status_mapping=None):
     return ConverterToStix(helper, config, status_mapping or {})
 
 
+def test_base_stix_objects_returns_author_and_marking():
+    """
+    Ensure the base stix objects contain both the Identity and TLP
+    as stix objects
+    """
+    converter = _make_converter()
+
+    objects = converter.base_stix_objects()
+
+    assert [o["type"] for o in objects] == ["identity", "marking-definition"]
+    assert objects[0]["name"] == "Assetnote"
+
+
 def _make_exposure(**overrides):
     # Mimicking the structure of a true exposure
     exposure = {
