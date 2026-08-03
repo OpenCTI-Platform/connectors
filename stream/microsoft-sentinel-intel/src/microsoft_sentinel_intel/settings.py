@@ -118,26 +118,26 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
 
     @model_validator(mode="after")
     def check_auth_fields_consistency(self) -> "MicrosoftSentinelIntelConfig":
-        values = {
-            "tenant_id": self.tenant_id,
-            "client_id": self.client_id,
-            "client_secret": (
-                self.client_secret.get_secret_value()
-                if self.client_secret is not None
-                else None
-            ),
-        }
-        blank_fields = [
-            name
-            for name, value in values.items()
-            if value is not None and not value.strip()
-        ]
-        if blank_fields:
-            raise ValueError(
-                f"{', '.join(blank_fields)} must not be empty or whitespace-only."
-            )
-
         if self.auth_type == "app_registration":
+            values = {
+                "tenant_id": self.tenant_id,
+                "client_id": self.client_id,
+                "client_secret": (
+                    self.client_secret.get_secret_value()
+                    if self.client_secret is not None
+                    else None
+                ),
+            }
+            blank_fields = [
+                name
+                for name, value in values.items()
+                if value is not None and not value.strip()
+            ]
+            if blank_fields:
+                raise ValueError(
+                    f"{', '.join(blank_fields)} must not be empty or whitespace-only."
+                )
+
             missing_fields = [name for name, value in values.items() if value is None]
             if missing_fields:
                 raise ValueError(
