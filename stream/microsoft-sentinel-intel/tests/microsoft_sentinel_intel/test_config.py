@@ -16,7 +16,8 @@ def test_config() -> None:
     assert config["connector"]["live_stream_id"] == "live-stream-id"
 
     microsoft_sentinel_intel = config["microsoft_sentinel_intel"]
-    assert len(microsoft_sentinel_intel) == 18
+    assert len(microsoft_sentinel_intel) == 19
+    assert microsoft_sentinel_intel["auth_type"] == "app_registration"
     assert not microsoft_sentinel_intel["batch_mode"]
     assert microsoft_sentinel_intel["batch_size"] == 100
     assert microsoft_sentinel_intel["batch_timeout"] == 30
