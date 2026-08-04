@@ -42,9 +42,14 @@ class RansomwareAPIProClient(BaseClientApi):
         }
 
     @staticmethod
-    def _ensure_feed_list(data: dict, path: str) -> list[dict]:
+    def _ensure_feed_list(data: dict | None, path: str) -> list[dict]:
         if data is None:
             return []
+        if not isinstance(data, dict):
+            raise RansomwareAPIError(
+                "Unexpected Ransomware API response type",
+                {"url": f"GET {path}", "response_type": type(data).__name__},
+            )
 
         results_key = path.split("/")[1]  # e.g., "groups" or "victims"
         results = data.get(results_key) or []
@@ -71,7 +76,7 @@ class RansomwareAPIProClient(BaseClientApi):
             )
             error_metadata = {"url": f"GET {path}", "status_code": err.status_code}
 
-            self._logger.error(error_message, error_metadata)
+            self._logger.error(error_message, meta=error_metadata)
             raise RansomwareAPIError(error_message, error_metadata) from err
         except (ApiClientError, ApiServerError) as err:
             error_message = "Error while fetching Ransomware API"
@@ -81,7 +86,7 @@ class RansomwareAPIProClient(BaseClientApi):
                 "response_body": err.response_body,
             }
 
-            self._logger.error(error_message, error_metadata)
+            self._logger.error(error_message, meta=error_metadata)
             raise RansomwareAPIError(error_message, error_metadata) from err
 
     def get_groups(self) -> list[dict]:
