@@ -15,6 +15,10 @@ def mock_helper():
     helper.api.stix_domain_object = MagicMock()
     helper.api.indicator = MagicMock()
     helper.api.case_rft = MagicMock()
+    helper.api.external_reference = MagicMock()
+    helper.api.external_reference.create.return_value = {
+        "id": "external-reference--11111111-1111-4111-8111-111111111111"
+    }
 
     # Simple bundle creation bypass
     helper.stix2_create_bundle.side_effect = lambda objects: objects
@@ -157,11 +161,9 @@ def test_convert_alerts_to_stix_existing_indicator_reversion(converter):
     # When
     converter.convert_alerts_to_stix([alert])
 
-    # Then verify that the update_field API was called to revoke the indicator
-    converter.helper.api.indicator.update_field.assert_called_with(
-        id="e5a6f272-3595-4673-9097-f5be0df2a926",
-        input={"key": "revoked", "value": True},
-    )
+    # Then verify that the source-owned fields include the revoked state.
+    field_patch = converter.helper.api.indicator.update_field.call_args.kwargs["input"]
+    assert {"key": "revoked", "value": True} in field_patch
 
 
 def test_convert_alerts_to_stix_with_optional_cases_enabled(converter):
@@ -382,10 +384,8 @@ def test_indicator_found_via_name_search_fallback(converter):
     converter.convert_alerts_to_stix([alert])
 
     # Existing indicator path updates revoked=False (actioned state).
-    converter.helper.api.indicator.update_field.assert_called_with(
-        id="indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
-        input={"key": "revoked", "value": False},
-    )
+    field_patch = converter.helper.api.indicator.update_field.call_args.kwargs["input"]
+    assert {"key": "revoked", "value": False} in field_patch
 
 
 def test_rft_case_new_creation(converter):
@@ -431,10 +431,10 @@ def test_rft_case_existing_revoked_on_reversion(converter):
 
     converter.convert_alerts_to_stix([alert])
 
-    converter.helper.api.stix_domain_object.update_field.assert_called_with(
-        id="case-rft--11111111-1111-4111-8111-111111111111",
-        input={"key": "revoked", "value": True},
-    )
+    field_patch = converter.helper.api.stix_domain_object.update_field.call_args.kwargs[
+        "input"
+    ]
+    assert {"key": "revoked", "value": True} in field_patch
 
 
 def test_rft_case_found_via_name_search_fallback(converter):
@@ -455,10 +455,10 @@ def test_rft_case_found_via_name_search_fallback(converter):
     converter.convert_alerts_to_stix([alert])
 
     # Existing (actioned) -> revoked=False.
-    converter.helper.api.stix_domain_object.update_field.assert_called_with(
-        id="case-rft--22222222-2222-4222-8222-222222222222",
-        input={"key": "revoked", "value": False},
-    )
+    field_patch = converter.helper.api.stix_domain_object.update_field.call_args.kwargs[
+        "input"
+    ]
+    assert {"key": "revoked", "value": False} in field_patch
 
 
 def test_grouping_case_existing_updates_labels(converter):
@@ -574,6 +574,25 @@ def test_reverted_indicator_gains_revoked_false_positive_label(converter):
     )
 
 
+def test_reverted_indicator_does_not_churn_existing_false_positive_label(converter):
+    alert = _domains_alert(alert_id="alert_rfp_keep", queue_state="resolved")
+    existing_indicator = {
+        "id": "e5a6f272-3595-4673-9097-f5be0df2a926",
+        "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "objectLabel": [{"value": "revoked-false-positive"}],
+    }
+    converter.helper.api.indicator.list.return_value = [existing_indicator]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+
+    converter.convert_alerts_to_stix([alert])
+
+    remove_calls = converter.helper.api.stix_domain_object.remove_label.call_args_list
+    assert not any(
+        call.kwargs.get("label_name") == "revoked-false-positive"
+        for call in remove_calls
+    )
+
+
 def test_takedown_indicator_removes_revoked_false_positive_label(converter):
     """An actioned/taken-down indicator must REMOVE the revoked-false-positive label."""
     alert = _domains_alert(alert_id="alert_rfp_rm", queue_state="actioned")
@@ -589,6 +608,26 @@ def test_takedown_indicator_removes_revoked_false_positive_label(converter):
 
     remove_calls = converter.helper.api.stix_domain_object.remove_label.call_args_list
     assert any(
+        call.kwargs.get("label_name") == "revoked-false-positive"
+        for call in remove_calls
+    )
+
+
+def test_takedown_indicator_does_not_remove_absent_false_positive_label(converter):
+    """Avoid a noisy API error when the false-positive label is already absent."""
+    alert = _domains_alert(alert_id="alert_rfp_absent", queue_state="actioned")
+    existing_indicator = {
+        "id": "e5a6f272-3595-4673-9097-f5be0df2a926",
+        "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "objectLabel": [{"value": "queue_state:taken_down"}],
+    }
+    converter.helper.api.indicator.list.return_value = [existing_indicator]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+
+    converter.convert_alerts_to_stix([alert])
+
+    remove_calls = converter.helper.api.stix_domain_object.remove_label.call_args_list
+    assert not any(
         call.kwargs.get("label_name") == "revoked-false-positive"
         for call in remove_calls
     )
@@ -722,3 +761,103 @@ def test_create_case_rft_id_is_deterministic_without_created_at(converter):
     first = _case_id(converter.convert_alerts_to_stix([alert]))
     second = _case_id(converter.convert_alerts_to_stix([alert]))
     assert first == second
+
+
+def test_existing_indicator_refreshes_source_owned_fields_and_reference(converter):
+    alert = _domains_alert(
+        alert_id="alert_indicator_refresh",
+        queue_state="actioned",
+        score=0.42,
+        notes="Updated analyst context",
+        source="Doppel",
+        doppel_link="https://app.doppel.com/alerts/alert_indicator_refresh",
+        last_activity_timestamp="2026-08-03T10:15:00Z",
+        audit_logs=[
+            {
+                "timestamp": "2026-08-03T10:15:00Z",
+                "type": "queue_state",
+                "value": "actioned",
+                "changed_by": "analyst@example.com",
+            }
+        ],
+    )
+    existing_indicator = {
+        "id": "internal-indicator-id",
+        "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "objectLabel": [],
+    }
+    converter.helper.api.indicator.list.return_value = [existing_indicator]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+
+    converter.convert_alerts_to_stix([alert])
+
+    field_patch = converter.helper.api.indicator.update_field.call_args.kwargs["input"]
+    assert {"key": "revoked", "value": False} in field_patch
+    description_update = next(
+        update for update in field_patch if update["key"] == "description"
+    )
+    assert "**Product**: domains" in description_update["value"]
+    assert "**Notes**: Updated analyst context" in description_update["value"]
+    assert {"key": "x_opencti_score", "value": 42} in field_patch
+    assert not any(update["key"] == "modified" for update in field_patch)
+
+    converter.helper.api.external_reference.create.assert_called_with(
+        source_name="Doppel",
+        url="https://app.doppel.com/alerts/alert_indicator_refresh",
+        external_id="alert_indicator_refresh",
+        description=(
+            "2026-08-03T10:15:00Z: queue_state - actioned " "(by analyst@example.com)"
+        ),
+        update=True,
+    )
+    converter.helper.api.stix_domain_object.add_external_reference.assert_called_with(
+        id="internal-indicator-id",
+        external_reference_id=(
+            "external-reference--11111111-1111-4111-8111-111111111111"
+        ),
+    )
+
+
+def test_existing_rft_case_refreshes_source_owned_fields_and_reference(converter):
+    converter.enable_rft_case = True
+    alert = _domains_alert(
+        alert_id="alert_rft_refresh",
+        queue_state="taken_down",
+        score=0.91,
+        severity="high",
+        notes="Takedown completed",
+        source="Doppel",
+        doppel_link="https://app.doppel.com/alerts/alert_rft_refresh",
+        last_activity_timestamp="2026-08-03T11:30:00Z",
+    )
+    existing_case = {
+        "id": "internal-rft-id",
+        "standard_id": "case-rft--11111111-1111-4111-8111-111111111111",
+        "objectLabel": [],
+    }
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+    converter.helper.api.case_rft.list.return_value = [existing_case]
+
+    converter.convert_alerts_to_stix([alert])
+
+    field_patch = converter.helper.api.stix_domain_object.update_field.call_args.kwargs[
+        "input"
+    ]
+    assert {"key": "revoked", "value": False} in field_patch
+    description_update = next(
+        update for update in field_patch if update["key"] == "description"
+    )
+    assert "**Product**: domains" in description_update["value"]
+    assert "**Notes**: Takedown completed" in description_update["value"]
+    assert {"key": "priority", "value": "P1"} in field_patch
+    assert {"key": "severity", "value": "high"} in field_patch
+    assert not any(update["key"] == "x_opencti_score" for update in field_patch)
+    assert not any(update["key"] == "modified" for update in field_patch)
+
+    converter.helper.api.stix_domain_object.add_external_reference.assert_called_with(
+        id="internal-rft-id",
+        external_reference_id=(
+            "external-reference--11111111-1111-4111-8111-111111111111"
+        ),
+    )
