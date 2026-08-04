@@ -3,15 +3,19 @@ from datetime import datetime, timedelta, timezone
 
 import pycti
 import stix2
-from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
-from ransomwarelive.api_client import RansomwareAPIClient, RansomwareAPIError
 from ransomwarelive.converter_to_stix import ConverterToStix
+from ransomwarelive.settings import ConnectorSettings
 from ransomwarelive.utils import (
     domain_extractor,
     get_group_entry,
     is_domain,
     safe_datetime,
+)
+from ransomwarelive_client import (
+    RansomwareAPIClientProtocol,
+    RansomwareAPIError,
+    RansomwareAPIV2Client,
 )
 
 ONE_DAY_IN_SECONDS = 86400
@@ -25,30 +29,35 @@ class RansomwareAPIConnector:
     will be complemented per each connector type.
     """
 
-    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigLoader) -> None:
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
+    ) -> None:
         self.helper = helper
         self.config = config
-        self.work_id = None
-        # ``ConfigLoader`` is a Pydantic settings object, not a dict — the
-        # marking lives on the validated ``connector.marking_value`` field
-        # added in ``models/configs/connector_configs.py``. Going through
-        # the pydantic attribute keeps the value type-checked and the
-        # supported TLP enumeration enforced.
+
+        self.api_client: RansomwareAPIClientProtocol = self._build_api_client()
         self.converter_to_stix = ConverterToStix(
-            self.config.connector.marking_value,
-            self.config.connector.create_leak_site_domains,
+            self.config.ransomwarelive.marking_value,
+            self.config.ransomwarelive.create_leak_site_domains,
         )
+        self.author = self.converter_to_stix.author
         self.marking = self.converter_to_stix.marking
+
+        self.work_id = None
         self.last_run = None
         self.last_run_datetime_with_ingested_data = None
-        self.author = self.converter_to_stix.author
-        self.api_client = RansomwareAPIClient(helper=self.helper)
         # Track groups already enriched this run to avoid re-fetching/re-emitting
         # the same leak-site domains and TTP relationships for every victim.
         # Reset at the start of each collection sweep (see
         # ``collect_intelligence`` / ``collect_historic_intelligence``) because
         # ``schedule_iso`` reuses this instance across scheduled runs.
         self.processed_groups: set[str] = set()
+
+    def _build_api_client(self) -> RansomwareAPIClientProtocol:
+        return RansomwareAPIV2Client(
+            helper=self.helper,
+            base_url=self.config.ransomwarelive.api_base_url,
+        )
 
     def location_fetcher(self, country: str):
         """
@@ -234,7 +243,7 @@ class RansomwareAPIConnector:
             return []
         self.processed_groups.add(group_name)
         objects = []
-        if self.config.connector.create_leak_site_domains:
+        if self.config.ransomwarelive.create_leak_site_domains:
             objects.extend(
                 self.converter_to_stix.process_group_leak_sites(
                     group_entry=group_entry,
@@ -281,13 +290,13 @@ class RansomwareAPIConnector:
         # missed its screenshot / website / post URL references.
         external_references = self.converter_to_stix.process_external_references(
             item,
-            create_leak_post_refs=self.config.connector.create_leak_post_refs,
+            create_leak_post_refs=self.config.ransomwarelive.create_leak_post_refs,
         )
 
         # 2. Creating Threat Actor object
         threat_actor = None
         relation_threat_actor_victim = None
-        if self.config.connector.create_threat_actor:
+        if self.config.ransomwarelive.create_threat_actor:
             (
                 threat_actor,
                 relation_threat_actor_victim,
@@ -307,7 +316,7 @@ class RansomwareAPIConnector:
         # ``targets`` relationship in the bundle on every cycle).
         campaign = None
         relation_campaign_victim = None
-        if self.config.connector.create_campaign:
+        if self.config.ransomwarelive.create_campaign:
             (
                 campaign,
                 relation_campaign_victim,
@@ -337,7 +346,7 @@ class RansomwareAPIConnector:
         relation_victim_intrusion = None
         relation_intrusion_threat_actor = None
 
-        if self.config.connector.create_intrusion_set:
+        if self.config.ransomwarelive.create_intrusion_set:
             intrusion_set_name = item.get("group")
             intrusion_set, relation_victim_intrusion = (
                 self.converter_to_stix.process_intrusion_set(
@@ -364,8 +373,8 @@ class RansomwareAPIConnector:
 
             # Link Intrusion Set <-> Threat Actor
             if (
-                self.config.connector.create_threat_actor
-                and self.config.connector.create_intrusion_set
+                self.config.ransomwarelive.create_threat_actor
+                and self.config.ransomwarelive.create_intrusion_set
             ):
                 relation_intrusion_threat_actor = (
                     self.converter_to_stix.create_relationship(
@@ -376,8 +385,8 @@ class RansomwareAPIConnector:
 
             # Link Campaign -> Intrusion Set
             if (
-                self.config.connector.create_campaign
-                and self.config.connector.create_intrusion_set
+                self.config.ransomwarelive.create_campaign
+                and self.config.ransomwarelive.create_intrusion_set
             ):
                 relation_campaign_intrusion = (
                     self.converter_to_stix.create_relationship(
@@ -398,15 +407,15 @@ class RansomwareAPIConnector:
         # mutated in-place. Build the canonical list here and create
         # the Report once at the end of this method instead.
         object_refs = []
-        if self.config.connector.create_report:
+        if self.config.ransomwarelive.create_report:
             object_refs.append(victim.get("id"))
 
-            if self.config.connector.create_intrusion_set:
+            if self.config.ransomwarelive.create_intrusion_set:
                 object_refs.append(intrusion_set.id)
                 if relation_victim_intrusion:
                     object_refs.append(relation_victim_intrusion.id)
             if (
-                self.config.connector.create_threat_actor
+                self.config.ransomwarelive.create_threat_actor
                 and relation_threat_actor_victim
                 and threat_actor
             ):
@@ -419,18 +428,18 @@ class RansomwareAPIConnector:
                 object_refs.append(threat_actor.id)
                 object_refs.append(relation_threat_actor_victim.get("id"))
             if (
-                self.config.connector.create_threat_actor
-                and self.config.connector.create_intrusion_set
+                self.config.ransomwarelive.create_threat_actor
+                and self.config.ransomwarelive.create_intrusion_set
                 and relation_intrusion_threat_actor
             ):
                 object_refs.append(relation_intrusion_threat_actor.get("id"))
-            if self.config.connector.create_campaign and campaign:
+            if self.config.ransomwarelive.create_campaign and campaign:
                 object_refs.append(campaign.get("id"))
                 if relation_campaign_victim:
                     object_refs.append(relation_campaign_victim.get("id"))
             if (
-                self.config.connector.create_campaign
-                and self.config.connector.create_intrusion_set
+                self.config.ransomwarelive.create_campaign
+                and self.config.ransomwarelive.create_intrusion_set
                 and relation_campaign_intrusion
             ):
                 object_refs.append(relation_campaign_intrusion.get("id"))
@@ -454,9 +463,9 @@ class RansomwareAPIConnector:
                 ) = self.converter_to_stix.process_sector(
                     sector=sector,
                     victim=victim,
-                    create_threat_actor=self.config.connector.create_threat_actor,
-                    create_intrusion_set=self.config.connector.create_intrusion_set,
-                    create_campaign=self.config.connector.create_campaign,
+                    create_threat_actor=self.config.ransomwarelive.create_threat_actor,
+                    create_intrusion_set=self.config.ransomwarelive.create_intrusion_set,
+                    create_campaign=self.config.ransomwarelive.create_campaign,
                     intrusion_set=intrusion_set,
                     threat_actor=threat_actor,
                     campaign=campaign,
@@ -468,19 +477,22 @@ class RansomwareAPIConnector:
                 bundle_objects.append(relation_sector_victim)
 
                 if (
-                    self.config.connector.create_threat_actor
+                    self.config.ransomwarelive.create_threat_actor
                     and relation_sector_threat_actor
                 ):
                     bundle_objects.append(relation_sector_threat_actor)
                 if (
-                    self.config.connector.create_intrusion_set
+                    self.config.ransomwarelive.create_intrusion_set
                     and relation_intrusion_sector
                 ):
                     bundle_objects.append(relation_intrusion_sector)
-                if self.config.connector.create_campaign and relation_campaign_sector:
+                if (
+                    self.config.ransomwarelive.create_campaign
+                    and relation_campaign_sector
+                ):
                     bundle_objects.append(relation_campaign_sector)
 
-                if self.config.connector.create_report:
+                if self.config.ransomwarelive.create_report:
                     object_refs.append(sector.get("id"))
                     object_refs.append(relation_sector_victim.get("id"))
                     if relation_sector_threat_actor:
@@ -517,7 +529,7 @@ class RansomwareAPIConnector:
             bundle_objects.append(domain)
             bundle_objects.append(relation_victim_domain)
 
-            if self.config.connector.create_report:
+            if self.config.ransomwarelive.create_report:
                 object_refs.append(domain.get("id"))
                 object_refs.append(relation_victim_domain.get("id"))
 
@@ -539,8 +551,8 @@ class RansomwareAPIConnector:
                     location=location,
                     victim=victim,
                     intrusion_set=intrusion_set,
-                    create_threat_actor=self.config.connector.create_threat_actor,
-                    create_intrusion_set=self.config.connector.create_intrusion_set,
+                    create_threat_actor=self.config.ransomwarelive.create_threat_actor,
+                    create_intrusion_set=self.config.ransomwarelive.create_intrusion_set,
                     threat_actor=threat_actor,
                     attack_date_iso=attack_date_iso,
                     discovered_iso=discovered_iso,
@@ -553,12 +565,12 @@ class RansomwareAPIConnector:
                     bundle_objects.append(relation_intrusion_location)
 
                 if (
-                    self.config.connector.create_threat_actor
+                    self.config.ransomwarelive.create_threat_actor
                     and relation_threat_actor_location
                 ):
                     bundle_objects.append(relation_threat_actor_location)
 
-                if self.config.connector.create_report:
+                if self.config.ransomwarelive.create_report:
                     if relation_threat_actor_location:
                         object_refs.append(relation_threat_actor_location.get("id"))
                     object_refs.append(location.get("id"))
@@ -577,7 +589,7 @@ class RansomwareAPIConnector:
         # makes the data flow much harder to follow. Building the full
         # ``object_refs`` list first and constructing the Report once
         # is the canonical stix2 idiom.
-        if self.config.connector.create_report:
+        if self.config.ransomwarelive.create_report:
             report = self.converter_to_stix.process_report(
                 report_name=item.get("group"),
                 victim_name=victim_name,
@@ -612,14 +624,14 @@ class RansomwareAPIConnector:
         # process restarts.
         self.processed_groups = set()
         # fetching group information
-        group_data = self.api_client.get_feed("groups")
+        group_data = self.api_client.get_groups()
         if not group_data:
             self.helper.connector_logger.info(
                 "No group data retrieved from ransomware.live API"
             )
             return
 
-        history_start_year = str(self.config.connector.history_start_year).strip()
+        history_start_year = str(self.config.ransomwarelive.history_start_year).strip()
 
         start_year_historic = 2020
         start_month_historic = 1
@@ -679,15 +691,12 @@ class RansomwareAPIConnector:
         for year in range(
             start_year_historic, current_year + 1
         ):  # Looping through the years
-            year_url = "victims/" + str(year)
-
             first_month = start_month_historic if year == start_year_historic else 1
             last_month = current_month if year == current_year else 12
 
             for month in range(first_month, last_month + 1):
                 bundles = []
-                path = year_url + "/" + str(month)
-                response_json = self.api_client.get_feed(path)
+                response_json = self.api_client.get_victims(year, month)
                 if not response_json:
                     self.helper.connector_logger.info(
                         f"No data retrieved from ransomware.live API for {year}/{month}"
@@ -763,7 +772,7 @@ class RansomwareAPIConnector:
         # across scheduled runs, so without this a group enriched on a previous
         # run would be skipped forever and never pick up new leak sites / TTPs.
         self.processed_groups = set()
-        group_data = self.api_client.get_feed("groups")
+        group_data = self.api_client.get_groups()
         if not group_data:
             self.helper.connector_logger.info(
                 "No group data retrieved from ransomware.live API"
@@ -771,7 +780,7 @@ class RansomwareAPIConnector:
             return
 
         # fetching recent requests
-        response_json = self.api_client.get_feed("recentvictims")
+        response_json = self.api_client.get_recent_victims()
         if not response_json:
             self.helper.connector_logger.info(
                 "No recent victim data retrieved from ransomware.live API"
@@ -923,7 +932,7 @@ class RansomwareAPIConnector:
             )
 
             try:
-                if not self.last_run and self.config.connector.pull_history:
+                if not self.last_run and self.config.ransomwarelive.pull_history:
                     self.collect_historic_intelligence()
                 else:
                     self.collect_intelligence()
@@ -999,5 +1008,5 @@ class RansomwareAPIConnector:
     def run(self):
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period,
+            duration_period=self.config.connector.duration_period,  # type: ignore[arg-type]
         )
