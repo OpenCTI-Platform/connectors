@@ -9,6 +9,7 @@ from doppel.stix_helpers import (
     build_description,
     build_external_references,
     build_labels,
+    calculate_opencti_score,
     calculate_priority,
     in_takedown_state,
 )
@@ -646,11 +647,10 @@ class ConverterToStix:
             {"key": "description", "value": build_description(alert)},
         ]
         if include_score:
-            custom_properties = build_custom_properties(alert, self.author.id)
             updates.append(
                 {
                     "key": "x_opencti_score",
-                    "value": custom_properties["x_opencti_score"],
+                    "value": calculate_opencti_score(alert.get("score")),
                 }
             )
 
