@@ -1,10 +1,10 @@
 version: '3'
 services:
   connector_ransomwarelive:
-    image: opencti/connector-ransomwarelive:rolling
+    image: opencti/connector-ransomwarelive:latest
     container_name: connector_ransomwarelive
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=Ransomware Connector"
