@@ -215,5 +215,5 @@ class ConnectorSettings(BaseConnectorSettings):
     @model_validator(mode="after")
     def validate_duration_period(self):
         if self.connector.duration_period < timedelta(minutes=1):
-            raise ValueError("CONNECTOR_DURATION_PERIOD must at least 1 minute")
+            raise ValueError("CONNECTOR_DURATION_PERIOD must be at least 1 minute")
         return self
