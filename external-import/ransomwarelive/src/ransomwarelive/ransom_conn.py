@@ -15,6 +15,7 @@ from ransomwarelive.utils import (
 from ransomwarelive_client import (
     RansomwareAPIClientProtocol,
     RansomwareAPIError,
+    RansomwareAPIProClient,
     RansomwareAPIV2Client,
 )
 
@@ -54,6 +55,16 @@ class RansomwareAPIConnector:
         self.processed_groups: set[str] = set()
 
     def _build_api_client(self) -> RansomwareAPIClientProtocol:
+        if self.config.ransomwarelive.api_base_url == "https://api-pro.ransomware.live":
+            return RansomwareAPIProClient(
+                helper=self.helper,
+                base_url=self.config.ransomwarelive.api_base_url,
+                api_key=(
+                    # api_key is always present if api_base_url is API Pro (see ConnectorSettings validation)
+                    self.config.ransomwarelive.api_key.get_secret_value()  # type: ignore[call-arg]
+                ),
+            )
+
         return RansomwareAPIV2Client(
             helper=self.helper,
             base_url=self.config.ransomwarelive.api_base_url,
