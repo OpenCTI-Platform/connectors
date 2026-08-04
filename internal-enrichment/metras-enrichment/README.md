@@ -29,7 +29,7 @@ platform when you enrich an observable in OpenCTI. Adds a context **Note** (and
 - Playbook-compatible (`playbook_compatible=True`, `entity_in_scope()` guard).
 
 ## Requirements
-- OpenCTI **7.260728.0** (`pycti==7.260728.0`). A Metras API key.
+- OpenCTI **7.260803.0** (`pycti==7.260803.0`). A Metras API key.
 
 ## Configuration
 
@@ -48,7 +48,7 @@ platform when you enrich an observable in OpenCTI. Adds a context **Note** (and
 ## Usage
 Right-click an IPv4 or file-hash observable → **Enrich** → *Metras-Enrichment*, or set
 `CONNECTOR_AUTO=true` to enrich automatically. Triggering via API uses
-`stixCoreObjectEdit.askEnrichment(connectorId)` on OpenCTI 7.260728.0+.
+`stixCoreObjectEdit.askEnrichment(connectorId)` on OpenCTI 7.260803.0+.
 
 ## Troubleshooting
 | Symptom | Cause / fix |
