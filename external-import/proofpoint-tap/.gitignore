@@ -6,3 +6,4 @@
 **/build
 **/*.egg-info
 **/config.yml
+uv.lock

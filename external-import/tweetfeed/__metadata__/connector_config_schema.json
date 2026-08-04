@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/tweetfeed_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "TweetFeed",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "TWEETFEED_CONFIDENCE_LEVEL": {
+      "default": 25,
+      "description": "Score applied to imported data, from 0 (Unknown) to 100 (Fully trusted).",
+      "type": "integer"
+    },
+    "TWEETFEED_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Whether to create indicators from the imported IOCs.",
+      "type": "boolean"
+    },
+    "TWEETFEED_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Whether to create observables from the imported IOCs.",
+      "type": "boolean"
+    },
+    "TWEETFEED_INTERVAL": {
+      "default": 1,
+      "description": "Interval, in days, between two runs of the connector.",
+      "type": "integer"
+    },
+    "TWEETFEED_UPDATE_EXISTING_DATA": {
+      "default": true,
+      "description": "Whether to update data already present in OpenCTI.",
+      "type": "boolean"
+    },
+    "TWEETFEED_ORG_NAME": {
+      "default": "Tweetfeed",
+      "description": "Name of the author organization created in OpenCTI.",
+      "type": "string"
+    },
+    "TWEETFEED_ORG_DESCRIPTION": {
+      "default": "Tweetfeed, a connector to import IOC from Twitter.",
+      "description": "Description of the author organization created in OpenCTI.",
+      "type": "string"
+    },
+    "TWEETFEED_DAYS_BACK_IN_TIME": {
+      "default": 30,
+      "description": "Number of days to retrieve data back in time.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

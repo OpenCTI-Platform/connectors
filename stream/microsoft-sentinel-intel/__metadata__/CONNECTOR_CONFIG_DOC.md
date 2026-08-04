@@ -9,9 +9,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
 | CONNECTOR_LIVE_STREAM_ID | `string` | ✅ | string |  | The ID of the live stream to connect to. |
-| MICROSOFT_SENTINEL_INTEL_TENANT_ID | `string` | ✅ | string |  | Your Azure App Tenant ID, see the screenshot to help you find this information. |
-| MICROSOFT_SENTINEL_INTEL_CLIENT_ID | `string` | ✅ | string |  | Your Azure App Client ID, see the screenshot to help you find this information. |
-| MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Your Azure App Client secret, See the screenshot to help you find this information. |
 | MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID | `string` | ✅ | string |  | Your Azure Workspace ID |
 | MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME | `string` | ✅ | string |  | The name of the log analytics workspace |
 | MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID | `string` | ✅ | string |  | The subscription id where the Log Analytics is |
@@ -21,6 +18,10 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` |  |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Whether to listen for delete events on the live stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `true` | Whether to ignore dependencies when processing events from the live stream. |
+| MICROSOFT_SENTINEL_INTEL_AUTH_TYPE | `string` |  | `app_registration` `azure_credential` | `"app_registration"` | Authentication method used to call Azure APIs. 'app_registration' (default) requires tenant_id, client_id and client_secret. 'azure_credential' uses DefaultAzureCredential (managed identity, workload identity, or a local `az login` session) and ignores tenant_id/client_id/client_secret. |
+| MICROSOFT_SENTINEL_INTEL_TENANT_ID | `string` |  | string | `null` | Your Azure App Tenant ID, see the screenshot to help you find this information. |
+| MICROSOFT_SENTINEL_INTEL_CLIENT_ID | `string` |  | string | `null` | Your Azure App Client ID, see the screenshot to help you find this information. |
+| MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | Your Azure App Client secret, See the screenshot to help you find this information. |
 | MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP | `string` |  | string | `"default"` | The name of the resource group where the log analytics is |
 | MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM | `string` |  | string | `"Opencti Stream Connector"` | The name of the source system displayed in Microsoft Sentinel |
 | MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS | `boolean` |  | boolean | `true` | Delete the extensions in the stix bundle sent to the SIEM |
@@ -32,3 +33,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MICROSOFT_SENTINEL_INTEL_BATCH_SIZE | `integer` |  | `1 <= x <= 100` | `100` | Maximum number of unique STIX objects to accumulate before flushing a batch. Only used when batch_mode is enabled. Maxed at 100 because the Sentinel Upload Indicators API rejects requests containing more than 100 STIX objects. |
 | MICROSOFT_SENTINEL_INTEL_BATCH_TIMEOUT | `integer` |  | `1 <= x ` | `30` | Maximum time in seconds to wait before flushing a partial batch. Only used when batch_mode is enabled. |
 | MICROSOFT_SENTINEL_INTEL_EVENT_TYPES | `array` |  | string | `["create", "update", "delete"]` | Comma-separated list of event types to process (create, update, delete). Defaults to all three; a single instance handles every event type. Restrict this only if you want to split the workload across dedicated instances. |
+| MICROSOFT_SENTINEL_INTEL_PUBLISH_IDENTITIES | `boolean` |  | boolean | `false` | Also push STIX Identity objects (e.g. an indicator's author) received from the stream to Microsoft Sentinel, in addition to Indicators, so their display name resolves correctly instead of only showing the identifier. |

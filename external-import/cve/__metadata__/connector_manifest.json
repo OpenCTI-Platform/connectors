@@ -1,13 +1,17 @@
 {
   "title": "NIST NVD CVE",
   "slug": "nist-nvd-cve",
-  "description": "The NVD facilitates automated vulnerability management, security measurement, and compliance processes by providing comprehensive databases that include:\n\u2022 Vulnerability catalogs\n\u2022 Software vulnerability details\n\u2022 Product identifiers\n\u2022 Severity scoring metrics\nCommon Vulnerabilities and Exposures (CVE) provides a standardized dictionary of publicly disclosed cybersecurity vulnerabilities and exposures, serving as a universal reference system for the security community.\nThis connector seamlessly integrates with the NVD to retrieve CVE data, transform it into STIX2 format, and automatically import it into OpenCTI on a scheduled basis, ensuring your threat intelligence platform remains current with the latest vulnerability information.\u201d",
-  "short_description": "The NVD facilitates automated vulnerability management, security measurement, and compliance processes by providing comprehensive databases that include:\n\u2022 Vulnerability catalogs\n\u2022 Software vulnerability details\n\u2022 Product identifiers\n\u2022 Severity scoring metrics\n",
+  "description": "The NVD facilitates automated vulnerability management, security measurement, and compliance processes by providing comprehensive databases that include:\n\n- Vulnerability catalogs\n- Software vulnerability details\n- Product identifiers\n- Severity scoring metrics\n\nCommon Vulnerabilities and Exposures (CVE) provides a standardized dictionary of publicly disclosed cybersecurity vulnerabilities and exposures, serving as a universal reference system for the security community.\n\nThis connector seamlessly integrates with the NVD to retrieve CVE data, transform it into STIX2 format, and automatically import it into OpenCTI on a scheduled basis, ensuring your threat intelligence platform remains current with the latest vulnerability information.",
+  "short_description": "This connector integrates with the NVD to retrieve CVE data, transform it into STIX2 format, and automatically import it into OpenCTI on a scheduled basis, keeping your threat intelligence platform current with the latest vulnerability information.",
   "logo": "external-import/cve/__metadata__/logo.png",
   "use_cases": [
-    "Vulnerability & Exploit Awareness",
-    "Open Source Threat Intel"
+    "Vulnerability & Exploit Awareness"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2023-12-15",
   "playbook_supported": false,

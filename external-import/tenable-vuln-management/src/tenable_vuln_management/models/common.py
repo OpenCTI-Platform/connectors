@@ -11,13 +11,7 @@ from pydantic import BaseModel, ConfigDict
 class FieldWarning(Warning):
     """Base class for field warnings;"""
 
-    def __init__(
-        self,
-        type_: str,
-        loc: tuple[str],
-        msg: str,
-        input_: Any,
-    ) -> None:
+    def __init__(self, type_: str, loc: tuple[str], msg: str, input_: Any) -> None:
         self.type = type_
         self.loc = loc
         self.msg = msg
@@ -44,11 +38,8 @@ class ValidationWarning(Warning):
         return len(self.warnings)
 
     def __str__(self) -> str:
-        warnings_repr = "\n".join(str(warning) for warning in self.warnings)
-        return (
-            f"{self.warnings_count} validation warning{'s' if self.warnings_count>1 else ''} for {self.model.__name__}\n"
-            f"{warnings_repr}"
-        )
+        warnings_repr = "\n".join((str(warning) for warning in self.warnings))
+        return f"{self.warnings_count} validation warning{('s' if self.warnings_count > 1 else '')} for {self.model.__name__}\n{warnings_repr}"
 
 
 class BaseModelExtraWarning(BaseModel):
@@ -92,7 +83,6 @@ class HashableBaseModel(BaseModel):
         """Implement comparison between similar object."""
         if not isinstance(other, self.__class__):
             raise NotImplementedError("Cannot compare objects from different type.")
-        # Compare the attributes by converting them to a dictionary
         return self.model_dump_json() == other.model_dump_json()
 
 
@@ -101,10 +91,7 @@ class FrozenBaseModelWithoutExtra(HashableBaseModel):
     Represent a Pydantic BaseModel where non explicitly define fields are forbidden.
     """
 
-    model_config = ConfigDict(
-        extra="forbid",
-        frozen=True,
-    )
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
 
 class FrozenBaseModelWithWarnedExtra(HashableBaseModel, BaseModelExtraWarning):
@@ -112,10 +99,7 @@ class FrozenBaseModelWithWarnedExtra(HashableBaseModel, BaseModelExtraWarning):
     Represent a Pydantic BaseModel where non explicitly define fields are allowed with a warning.
     """
 
-    model_config = ConfigDict(
-        extra="allow",
-        frozen=True,
-    )
+    model_config = ConfigDict(extra="allow", frozen=True)
 
 
 def make_validator(field_name: str, validator: Callable[..., bool] | dict[str, Any]):
@@ -157,24 +141,24 @@ def make_validator(field_name: str, validator: Callable[..., bool] | dict[str, A
     ) -> bool:
         """Recursively evaluate validators based on boolean logic in the dictionary format."""
         if isinstance(evaluated_validator, dict):
-            # Handling "or" and "and" logical operators
             if "or" in evaluated_validator:
-                # Any one of the validators in the list should pass
                 return any(
-                    evaluate_validator(sub_validator, value)
-                    for sub_validator in evaluated_validator["or"]
+                    (
+                        evaluate_validator(sub_validator, value)
+                        for sub_validator in evaluated_validator["or"]
+                    )
                 )
             if "and" in evaluated_validator:
-                # All validators in the list should pass
                 return all(
-                    evaluate_validator(sub_validator, value)
-                    for sub_validator in evaluated_validator["and"]
+                    (
+                        evaluate_validator(sub_validator, value)
+                        for sub_validator in evaluated_validator["and"]
+                    )
                 )
             raise ValueError(
                 f"Unsupported logical operation in validator: {evaluated_validator}"
             )
         else:
-            # Regular callable validator
             return evaluated_validator(value)
 
     def field_validator(value: Any) -> Any:

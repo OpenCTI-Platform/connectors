@@ -852,7 +852,10 @@ class MyConnector:
   "description": "Full description of what the connector does",
   "short_description": "Brief one-line summary",
   "logo": "external-import/my-connector/__metadata__/logo.png",
-  "use_cases": ["Open Source Threat Intel", "Commercial Threat Feed"],
+  "use_cases": ["Adversary & Campaign Insights"],
+  "solution_categories": ["Threat Intelligence Feed"],
+    "license_type": "Free",
+  "contact": "support@example.com",
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -877,6 +880,9 @@ class MyConnector:
 | `short_description`    | Brief summary                            | Yes      |
 | `logo`                 | Path to logo (or null)                   | No       |
 | `use_cases`            | List of use cases                        | No       |
+| `solution_categories`  | List of solution categories              | No       |
+| `license_type`         | Licensing model                          | No       |
+| `contact`              | Contact of the main contributor          | No       |
 | `verified`             | Verification status (set by maintainers) | No       |
 | `playbook_supported`   | Playbook compatibility (enrichment only) | No       |
 | `max_confidence_level` | Maximum confidence score (0-100)         | No       |
@@ -885,6 +891,43 @@ class MyConnector:
 | `source_code`          | GitHub source URL                        | No       |
 | `container_image`      | Docker image name                        | Yes      |
 | `container_type`       | Connector type                           | Yes      |
+
+### Accepted Values
+
+- `use_cases` (choose 1 to 3 values):
+    - Adversary & Campaign Insights
+    - Vulnerability & Exploit Awareness
+    - Infrastructure & Attack Surface Visibility
+    - Detection & Response Enablement
+    - Fraud, Financial Crime & Cryptocurrency Monitoring
+    - Brand, Digital Risk & Underground Exposure
+    - Third-Party & Supply Chain Oversight
+    - Cloud, SaaS & Platform Security
+    - Geopolitical, Physical & Hybrid Risk Analysis
+    - Market Vertical & Mission-Specific Intelligence
+    - FIMI & Disinformation
+    - Other
+- `solution_categories` (choose 1 to 3 values):
+    - Threat Intelligence Feed
+    - Endpoint Detection & Response
+    - SIEM & Security Analytics
+    - Malware Analysis & Sandbox
+    - SOAR & Security Automation
+    - Vulnerability & Exposure Management
+    - Attack Surface Management
+    - Network Security
+    - Email Security
+    - AI Security
+    - Incident Response & Case Management
+    - Digital Risk Protection
+    - Governance, Risk & Compliance
+    - Cloud Security
+    - Enrichment & Reputation
+    - Import, Export & Sharing
+    - Other
+- `license_type`:
+    - Free
+    - Commercial
 
 ### Logo Requirements
 

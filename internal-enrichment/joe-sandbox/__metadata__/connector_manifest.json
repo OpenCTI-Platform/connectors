@@ -1,13 +1,17 @@
 {
   "title": "Joe Sandbox",
   "slug": "joe-sandbox",
-  "description": "Joe Sandbox is a deep malware analysis platform that performs dynamic and static analysis of malicious files and URLs. This connector submits artifacts and URLs to Joe Sandbox for analysis and enriches OpenCTI with the results.\n\nKey features:\n\u2022 Multi-platform analysis (Windows, Linux, macOS, Android)\n\u2022 MITRE ATT&CK mapping\n\u2022 Network indicator extraction\n\u2022 Malware configuration extraction\n\u2022 Yara rule matching\n\u2022 Comprehensive report generation",
+  "description": "Joe Sandbox is a deep malware analysis platform that performs dynamic and static analysis of malicious files and URLs. This connector submits artifacts and URLs to Joe Sandbox for analysis and enriches OpenCTI with the results.\n\nKey features:\n\n- Multi-platform analysis (Windows, Linux, macOS, Android)\n- MITRE ATT&CK mapping\n- Network indicator extraction\n- Malware configuration extraction\n- Yara rule matching\n- Comprehensive report generation",
   "short_description": "Joe Sandbox connector submits artifacts and URLs for deep malware analysis, returning multi-platform behavioral reports with MITRE ATT&CK mappings and network indicators.",
   "logo": "internal-enrichment/joe-sandbox/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

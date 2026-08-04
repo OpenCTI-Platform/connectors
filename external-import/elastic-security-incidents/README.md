@@ -9,8 +9,7 @@
 - [Introduction](#introduction)
 - [Installation](#installation)
   - [Requirements](#requirements)
-- [Configuration](#configuration)
-  - [Configuration Variables](#configuration-variables)
+- [Configuration variables](#configuration-variables)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -54,39 +53,12 @@ This connector imports security alerts and cases from Elastic Security into Open
 
 ---
 
-## Configuration
+## Configuration variables
 
-### Configuration Variables
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-#### OpenCTI Parameters
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The OpenCTI API token |
-
-#### Base Connector Parameters
-
-| Parameter | Docker envvar | Mandatory | Default | Description |
-|-----------|---------------|-----------|---------|-------------|
-| Connector ID | `CONNECTOR_ID` | Yes | - | A unique `UUIDv4` for this connector |
-| Connector Name | `CONNECTOR_NAME` | No | `Elastic Security Incidents` | Name displayed in OpenCTI |
-| Duration Period | `CONNECTOR_DURATION_PERIOD` | No | `PT30M` | Polling interval (ISO-8601 format) |
-
-#### Connector Extra Parameters
-
-| Parameter | Docker envvar | Mandatory | Default | Description |
-|-----------|---------------|-----------|---------|-------------|
-| Elastic URL | `ELASTIC_SECURITY_URL` | Yes | - | Elasticsearch cluster URL |
-| API Key | `ELASTIC_SECURITY_API_KEY` | Yes | - | API key for Elasticsearch |
-| Verify SSL | `ELASTIC_SECURITY_VERIFY_SSL` | No | `true` | Verify SSL certificates |
-| CA Certificate | `ELASTIC_SECURITY_CA_CERT` | No | - | Path to CA certificate file |
-| Import Start Date | `ELASTIC_SECURITY_IMPORT_START_DATE` | No | 7 days ago | Initial import start date |
-| Import Alerts | `ELASTIC_SECURITY_IMPORT_ALERTS` | No | `true` | Import security alerts |
-| Import Cases | `ELASTIC_SECURITY_IMPORT_CASES` | No | `true` | Import security cases |
-| Alert Statuses | `ELASTIC_SECURITY_ALERT_STATUSES` | No | (all) | Comma-separated alert statuses to import |
-| Alert Rule Tags | `ELASTIC_SECURITY_ALERT_RULE_TAGS` | No | (all) | Filter alerts by rule tags |
-| Case Statuses | `ELASTIC_SECURITY_CASE_STATUSES` | No | (all) | Comma-separated case statuses to import |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ---
 

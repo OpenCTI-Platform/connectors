@@ -15,51 +15,23 @@ Filtering rules (mirrors run_test.sh):
 Batching rules:
   - Below 256 jobs → one job per connector (maximum granularity)
   - At or above 256 jobs → batch by connector type to stay under the limit
+
+Shared git/output/batching helpers live in _matrix_common.py.
 """
 
 import json
-import math
 import os
 import subprocess
 from pathlib import Path
-from typing import Any
 
-GITHUB_ACTIONS_JOB_LIMIT = 256
+import _matrix_common as common
 
-CONNECTOR_DIRS = [
-    "connectors-sdk",
-    "external-import",
-    "internal-enrichment",
-    "internal-export-file",
-    "internal-import-file",
-    "stream",
-]
+CONNECTOR_DIRS = ["connectors-sdk"] + common.CONNECTOR_TYPE_DIRS
 
 
 # ---------------------------------------------------------------------------
 # Git helpers
 # ---------------------------------------------------------------------------
-
-
-def git(*args: str) -> str:
-    return subprocess.run(
-        ["git"] + list(args), capture_output=True, text=True
-    ).stdout.strip()
-
-
-def get_base_commit() -> str | None:
-    release_ref = os.environ.get("RELEASE_REF", "master")
-    commit = git("merge-base", f"origin/{release_ref}", "HEAD")
-    return commit or None
-
-
-def has_changes(base_commit: str, *pathspecs: str) -> bool:
-    result = subprocess.run(
-        ["git", "diff", "--name-only", base_commit, "HEAD", "--"] + list(pathspecs),
-        capture_output=True,
-        text=True,
-    )
-    return bool(result.stdout.strip())
 
 
 def has_sdk_dependency(connector_dir: Path) -> bool:
@@ -118,7 +90,7 @@ def should_run(
         return True  # no git history, run everything
 
     cdir = connector_dir(req_path)
-    if has_changes(base_commit, str(cdir)):
+    if common.has_changes(base_commit, str(cdir)):
         return True
     if sdk_changed and has_sdk_dependency(cdir):
         return True
@@ -134,18 +106,15 @@ def is_verified(req_path: str) -> bool:
     """Check if the connector has "verified": true in its manifest.
 
     connectors-sdk is always considered verified (it has no manifest).
+
+    Note: unlike _matrix_common.is_verified(), this intentionally does not
+    require last_verified_date — kept as-is to preserve this script's
+    original (currently unused downstream) "verified" output semantics.
     """
     if connector_type(req_path) == "connectors-sdk":
         return True
-    cdir = connector_dir(req_path)
-    manifest_path = cdir / "__metadata__" / "connector_manifest.json"
-    if not manifest_path.exists():
-        return False
-    try:
-        data: dict[str, Any] = json.loads(manifest_path.read_text())
-        return data.get("verified", False) is True
-    except (json.JSONDecodeError, OSError):
-        return False
+    manifest = common.load_manifest(connector_dir(req_path))
+    return manifest.get("verified", False) is True
 
 
 # ---------------------------------------------------------------------------
@@ -167,52 +136,24 @@ def make_entry(req_paths: list[str]) -> dict:
     }
 
 
-def build_matrix(paths: list[str]) -> list[dict]:
-    if len(paths) <= GITHUB_ACTIONS_JOB_LIMIT:
-        return [make_entry([p]) for p in paths]
-
-    # Batch by connector type to stay under the job limit
-    groups: dict[str, list[str]] = {}
-    for p in paths:
-        groups.setdefault(connector_type(p), []).append(p)
-
-    batch_size = math.ceil(len(paths) / GITHUB_ACTIONS_JOB_LIMIT)
-    entries = []
-    for _, cpaths in sorted(groups.items()):
-        for i in range(0, len(cpaths), batch_size):
-            entries.append(make_entry(cpaths[i : i + batch_size]))
-    return entries
-
-
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
 
-def write_output(key: str, value: str) -> None:
-    """Write a key=value pair to $GITHUB_OUTPUT (or stdout if not set)."""
-    output_file = os.environ.get("GITHUB_OUTPUT")
-    line = f"{key}={value}\n"
-    if output_file:
-        with Path(output_file).open("a") as f:
-            f.write(line)
-    else:
-        print(line, end="")
-
-
 def main() -> None:
     release_ref = os.environ.get("RELEASE_REF", "master")
     is_master = os.environ.get("GITHUB_REF_NAME") == release_ref
-    base_commit = get_base_commit()
+    base_commit = common.get_base_commit()
 
     changes_outside_scope = False
     sdk_changed = False
     if base_commit and not is_master:
-        changes_outside_scope = has_changes(
+        changes_outside_scope = common.has_changes(
             base_commit,
             *[f":!{d}/**" for d in CONNECTOR_DIRS],
         )
-        sdk_changed = has_changes(base_commit, "connectors-sdk")
+        sdk_changed = common.has_changes(base_commit, "connectors-sdk")
 
     all_paths = [
         str(Path(p))
@@ -236,14 +177,18 @@ def main() -> None:
 
     if not filtered:
         print("No connectors to test, skipping.")
-        write_output("has_tests", "false")
-        write_output("matrix", json.dumps({"include": []}, separators=(",", ":")))
+        common.write_output("has_tests", "false")
+        common.write_output(
+            "matrix", json.dumps({"include": []}, separators=(",", ":"))
+        )
         return
 
-    entries = build_matrix(filtered)
+    entries = common.build_batched_matrix(filtered, make_entry, type_of=connector_type)
     print(f"Matrix jobs: {len(entries)}")
-    write_output("has_tests", "true")
-    write_output("matrix", json.dumps({"include": entries}, separators=(",", ":")))
+    common.write_output("has_tests", "true")
+    common.write_output(
+        "matrix", json.dumps({"include": entries}, separators=(",", ":"))
+    )
 
 
 if __name__ == "__main__":

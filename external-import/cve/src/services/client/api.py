@@ -35,6 +35,7 @@ class CVEClient:
             self._session = aiohttp.ClientSession(
                 headers=self._headers,
                 timeout=timeout,
+                trust_env=True,
             )
         return self._session
 

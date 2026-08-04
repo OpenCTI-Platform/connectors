@@ -1,5 +1,5 @@
 name: Build Connector Image
-description: Build and push a single connector's Docker image (Alpine + optional FIPS)
+description: Build and push a single connector's Docker image (Alpine, UBI9, optional FIPS)
 
 inputs:
   connector_path:
@@ -10,7 +10,8 @@ inputs:
     required: true
   fips:
     description: "Whether to also build a FIPS image ('true' or 'false')"
-    required: true
+    required: false
+    default: "false"
   image_tags:
     description: "Comma-separated image tags (e.g. 'rolling' or '7.260529.0,latest')"
     required: true
@@ -33,6 +34,18 @@ inputs:
     description: "Directory to write image digests for manifest merge (one file per image)"
     required: false
     default: "/tmp/digests"
+  dockerfile:
+    description: "Override Dockerfile path. Defaults to {connector_path}/Dockerfile when empty."
+    required: false
+    default: ""
+  variant:
+    description: "Build variant (e.g. 'ubi9'). Affects cache keys, OCI labels, and auto-generates build-args for shared Dockerfiles."
+    required: false
+    default: ""
+  sdk_ref:
+    description: "Git ref to pin connectors-sdk to. When empty, no pinning is performed (only release-connector sets this)."
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -102,6 +115,79 @@ runs:
           grep -E 'pycti|connectors-sdk' src/requirements.txt || echo "(no matches)"
         fi
 
+    - name: Pin connectors-sdk for release
+      # Only pins when a ref is explicitly provided by the caller (release-connector).
+      # Other release-mode builds (e.g. build-all-connectors) leave sdk_ref empty
+      # and are intentionally not pinned.
+      if: inputs.sdk_ref != ''
+      shell: bash
+      run: |
+        set -euo pipefail
+        CONNECTOR_DIR="${{ inputs.connector_path }}"
+        SDK_REF="${{ inputs.sdk_ref }}"
+
+        SDK_GIT="connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@${SDK_REF}#subdirectory=connectors-sdk"
+
+        cd "$CONNECTOR_DIR"
+        echo "🔒 Pinning connectors-sdk → ${SDK_REF} (release build)"
+
+        find . \( -name requirements.txt -o -name pyproject.toml \) -exec \
+          sed -i -E "s|connectors-sdk @ git\+https://github\.com/OpenCTI-Platform/connectors\.git@[^#]+#subdirectory=connectors-sdk|${SDK_GIT}|g" {} +
+
+        echo "✅ connectors-sdk pinned"
+        if [ -f src/requirements.txt ]; then
+          echo "--- src/requirements.txt ---"
+          grep -E 'connectors-sdk' src/requirements.txt || echo "(no connectors-sdk ref)"
+        fi
+
+    - name: Resolve Dockerfile and build args
+      id: resolve
+      shell: bash
+      run: |
+        CONNECTOR_PATH="${{ inputs.connector_path }}"
+        VARIANT="${{ inputs.variant }}"
+        DOCKERFILE="${{ inputs.dockerfile }}"
+
+        # Dockerfile: use override or default to connector's own Dockerfile
+        if [ -z "$DOCKERFILE" ]; then
+          DOCKERFILE="${CONNECTOR_PATH}/Dockerfile"
+        fi
+        echo "dockerfile=$DOCKERFILE" >> "$GITHUB_OUTPUT"
+
+        # Cache suffix: append variant to avoid key collisions
+        CACHE_SUFFIX=""
+        if [ -n "$VARIANT" ]; then
+          CACHE_SUFFIX="-${VARIANT}"
+        fi
+        echo "cache_suffix=$CACHE_SUFFIX" >> "$GITHUB_OUTPUT"
+
+        # Build args: auto-generate for shared Dockerfiles (e.g. UBI9)
+        BUILD_ARGS=""
+        if [ -n "$VARIANT" ]; then
+          TOP_DIR=$(echo "$CONNECTOR_PATH" | cut -d/ -f1)
+          CONNECTOR_TYPE=$(echo "$TOP_DIR" | tr '[:lower:]-' '[:upper:]_')
+          BUILD_ARGS="CONNECTOR_TYPE=${CONNECTOR_TYPE}"
+
+          # Read per-connector .build.env overrides
+          ENV_FILE="${CONNECTOR_PATH}/.build.env"
+          if [ -f "$ENV_FILE" ]; then
+            while IFS='=' read -r key val || [ -n "$key" ]; do
+              [[ -z "$key" || "$key" == \#* ]] && continue
+              val="${val#\"}"
+              val="${val%\"}"
+              BUILD_ARGS="$(printf '%s\n%s=%s' "$BUILD_ARGS" "$key" "$val")"
+            done < "$ENV_FILE"
+          fi
+        fi
+
+        {
+          echo "build_args<<EOF"
+          echo "$BUILD_ARGS"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+        echo "📦 Dockerfile: $DOCKERFILE | variant: ${VARIANT:-alpine} | cache_suffix: ${CACHE_SUFFIX:-(none)}"
+
     - name: Compute Docker tags
       id: docker-tags
       shell: bash
@@ -128,19 +214,36 @@ runs:
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
 
+    - name: Compute OCI labels
+      id: oci-labels
+      uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
+      with:
+        images: |
+          opencti/connector-${{ inputs.connector_name }}
+          ghcr.io/opencti-platform/opencti/connector-${{ inputs.connector_name }}
+        labels: |
+          org.opencontainers.image.vendor=Filigran
+          io.opencti.connector.path=${{ inputs.connector_path }}
+          io.opencti.build.mode=${{ inputs.build_mode }}
+          io.opencti.build.variant=${{ inputs.variant || 'default' }}
+          io.opencti.build.run_id=${{ github.run_id }}
+          io.opencti.build.run_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
     - name: Build and push
       id: build
       continue-on-error: true
       uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
       with:
         context: ${{ inputs.connector_path }}
-        file: ${{ inputs.connector_path }}/Dockerfile
+        file: ${{ steps.resolve.outputs.dockerfile }}
+        build-args: ${{ steps.resolve.outputs.build_args }}
         pull: true
         push: ${{ inputs.push == 'true' }}
         platforms: ${{ inputs.platforms }}
         tags: ${{ steps.docker-tags.outputs.tags }}
-        cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache
-        cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache,mode=max', inputs.connector_name) || '' }}
+        labels: ${{ steps.oci-labels.outputs.labels }}
+        cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache${{ steps.resolve.outputs.cache_suffix }}
+        cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache{1},mode=max', inputs.connector_name, steps.resolve.outputs.cache_suffix) || '' }}
 
     - name: Retry build and push
       id: build-retry
@@ -148,13 +251,15 @@ runs:
       uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
       with:
         context: ${{ inputs.connector_path }}
-        file: ${{ inputs.connector_path }}/Dockerfile
+        file: ${{ steps.resolve.outputs.dockerfile }}
+        build-args: ${{ steps.resolve.outputs.build_args }}
         pull: true
         push: ${{ inputs.push == 'true' }}
         platforms: ${{ inputs.platforms }}
         tags: ${{ steps.docker-tags.outputs.tags }}
-        cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache
-        cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache,mode=max', inputs.connector_name) || '' }}
+        labels: ${{ steps.oci-labels.outputs.labels }}
+        cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache${{ steps.resolve.outputs.cache_suffix }}
+        cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache{1},mode=max', inputs.connector_name, steps.resolve.outputs.cache_suffix) || '' }}
 
     - name: Export digest
       if: inputs.push == 'true'
@@ -191,6 +296,22 @@ runs:
           echo "EOF"
         } >> "$GITHUB_OUTPUT"
 
+    - name: Compute FIPS OCI labels
+      if: inputs.fips == 'true' && inputs.platforms == 'linux/amd64'
+      id: fips-oci-labels
+      uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
+      with:
+        images: |
+          opencti/connector-${{ inputs.connector_name }}
+          ghcr.io/opencti-platform/opencti/connector-${{ inputs.connector_name }}
+        labels: |
+          org.opencontainers.image.vendor=Filigran
+          io.opencti.connector.path=${{ inputs.connector_path }}
+          io.opencti.build.mode=${{ inputs.build_mode }}
+          io.opencti.build.variant=fips
+          io.opencti.build.run_id=${{ github.run_id }}
+          io.opencti.build.run_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
     - name: Build and push FIPS image
       if: inputs.fips == 'true' && inputs.platforms == 'linux/amd64'
       id: build-fips
@@ -203,6 +324,7 @@ runs:
         push: ${{ inputs.push == 'true' }}
         platforms: linux/amd64
         tags: ${{ steps.fips-tags.outputs.tags }}
+        labels: ${{ steps.fips-oci-labels.outputs.labels }}
         cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache-fips
         cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache-fips,mode=max', inputs.connector_name) || '' }}
 
@@ -217,5 +339,6 @@ runs:
         push: ${{ inputs.push == 'true' }}
         platforms: linux/amd64
         tags: ${{ steps.fips-tags.outputs.tags }}
+        labels: ${{ steps.fips-oci-labels.outputs.labels }}
         cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache-fips
         cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache-fips,mode=max', inputs.connector_name) || '' }}

@@ -1,12 +1,17 @@
 {
   "title": "Import File MISP",
   "slug": "import-file-misp",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The Import File MISP connector is an internal import connector that parses MISP (Malware Information Sharing Platform) JSON export files and converts them to STIX 2.1 entities for import into OpenCTI.\n\nThe connector supports:\n\n- Converting MISP events to OpenCTI Reports\n- Creating Indicators and Observables from MISP attributes\n- Mapping MISP objects to STIX observables\n- Preserving MISP tags as labels\n- Threat guessing from MISP tags (when enabled)\n- Galaxy cluster mapping to STIX entities\n\nThis connector enables organizations to import threat intelligence from MISP instances without requiring a direct connection.",
+  "short_description": "The Import File MISP connector parses MISP JSON export files and converts events, attributes, and objects to STIX 2.1 entities in OpenCTI, mapping tags to labels and galaxy clusters to STIX entities.",
   "logo": "internal-import-file/import-file-misp/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

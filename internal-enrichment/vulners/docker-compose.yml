@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-vulners:
+    image: opencti/connector-vulners:latest
+    environment:
+      # OpenCTI (required)
+      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_TOKEN=ChangeMe
+      # Connector
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=Vulners
+      - CONNECTOR_SCOPE=Vulnerability
+      - CONNECTOR_AUTO=true # Enable/disable auto-enrichment of entities
+      - CONNECTOR_LOG_LEVEL=error
+      # Vulners
+      - VULNERS_API_KEY=ChangeMe
+      - VULNERS_API_BASE_URL=https://vulners.com
+      - VULNERS_MAX_TLP_LEVEL=TLP:AMBER # TLP:CLEAR | TLP:WHITE | TLP:GREEN | TLP:AMBER | TLP:AMBER+STRICT | TLP:RED
+    deploy:
+      mode: replicated
+      replicas: 1
+    restart: always

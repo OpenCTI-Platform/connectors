@@ -31,6 +31,27 @@ class GTIIndicatorConfig(GTIBaseConfig):
         "indicators on first run (e.g. P1D for 1 day, P7D for 7 days). "
         "Must be greater than 1 hour (the IOC delta package granularity).",
     )
+    indicator_min_score: int | None = Field(
+        default=50,
+        ge=0,
+        le=100,
+        description="Minimum GTI score (0-100) an indicator must have to be "
+        "imported via the Steady-State IOC Deltas API. Indicators with a lower "
+        "score are discarded. Indicators without a score are always imported. "
+        "Set to 100 or leave unset (None) to disable the filter entirely.",
+    )
+    indicator_require_malware_family: bool = Field(
+        default=False,
+        description="Only import indicators that have at least one association "
+        "with a Malware Family. Combined with indicator_require_threat_actor "
+        "using OR logic, and with indicator_min_score using AND logic.",
+    )
+    indicator_require_threat_actor: bool = Field(
+        default=False,
+        description="Only import indicators that have at least one association "
+        "with a Threat Actor. Combined with indicator_require_malware_family "
+        "using OR logic, and with indicator_min_score using AND logic.",
+    )
 
     @field_validator("indicator_import_start_date", mode="after")
     @classmethod

@@ -63,6 +63,15 @@ def is_stix_indicator(data: dict) -> bool:
     )
 
 
+def is_stix_identity(data: dict) -> bool:
+    """
+    Check if data represents a STIX Identity.
+    :param data: Data to check
+    :return: True if data represents a STIX Identity, False otherwise
+    """
+    return data.get("type") == "identity"
+
+
 def is_observable(data: dict) -> bool:
     """
     Check if data represents a STIX Observable.

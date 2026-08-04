@@ -1,0 +1,15 @@
+services:
+  connector-whisper:
+    image: opencti/connector-whisper:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_LOG_LEVEL=info
+      #- CONNECTOR_NAME=Whisper
+      #- CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Autonomous-System
+      #- CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables
+      - WHISPER_API_URL=ChangeMe
+      - WHISPER_API_KEY=ChangeMe
+      #- WHISPER_MAX_TLP=TLP:AMBER
+    restart: always

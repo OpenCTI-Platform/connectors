@@ -34,7 +34,6 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       image_tags: ${{ steps.meta.outputs.image_tags }}
-      is_latest: ${{ steps.meta.outputs.is_latest }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -58,7 +57,6 @@ jobs:
         id: meta
         run: |
           BUILD_MODE="${{ inputs.build_mode }}"
-          IS_LATEST="false"
 
           case "$BUILD_MODE" in
             rolling)
@@ -74,7 +72,6 @@ jobs:
               IMAGE_TAGS="${TAG_NAME}-ubi9"
               if [ "$TAG_NAME" = "$LATEST_TAG" ]; then
                 IMAGE_TAGS="${IMAGE_TAGS},latest-ubi9"
-                IS_LATEST="true"
               fi
               ;;
             *)
@@ -84,250 +81,20 @@ jobs:
           esac
 
           echo "image_tags=${IMAGE_TAGS}" >> "$GITHUB_OUTPUT"
-          echo "is_latest=$IS_LATEST" >> "$GITHUB_OUTPUT"
-          echo "🏷️ UBI9 image tags: $IMAGE_TAGS (is_latest: $IS_LATEST)"
+          echo "🏷️ UBI9 image tags: $IMAGE_TAGS"
 
-  build-amd64:
-    name: Build ${{ matrix.name }}-ubi9 (amd64)
+  build:
     needs: build-matrix
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/build-connector-type.yml
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
-
-      - name: Login to DockerHub
-        if: ${{ inputs.push }}
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-      - name: Login to GitHub Container Registry
-        if: ${{ inputs.push }}
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-      - name: Parse build configuration
-        id: config
-        shell: bash
-        run: |
-          CONNECTOR_PATH="${{ matrix.path }}"
-          TOP_DIR=$(echo "$CONNECTOR_PATH" | cut -d/ -f1)
-          CONNECTOR_TYPE=$(echo "$TOP_DIR" | tr '[:lower:]-' '[:upper:]_')
-          BUILD_ARGS="CONNECTOR_TYPE=${CONNECTOR_TYPE}"
-
-          ENV_FILE="${CONNECTOR_PATH}/.build.env"
-          if [ -f "$ENV_FILE" ]; then
-            while IFS='=' read -r key val || [ -n "$key" ]; do
-              [[ -z "$key" || "$key" == \#* ]] && continue
-              val="${val#\"}"
-              val="${val%\"}"
-              BUILD_ARGS="$(printf '%s\n%s=%s' "$BUILD_ARGS" "$key" "$val")"
-            done < "$ENV_FILE"
-          fi
-
-          {
-            echo "build_args<<EOF"
-            echo "$BUILD_ARGS"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Compute Docker tags
-        id: docker-tags
-        shell: bash
-        run: |
-          IMAGE_TAGS="${{ needs.build-matrix.outputs.image_tags }}"
-          CONNECTOR_NAME="${{ matrix.name }}"
-          REPO="opencti"
-          TAG_SUFFIX="-amd64"
-
-          TAGS=""
-          IFS=',' read -ra TAG_ARRAY <<< "$IMAGE_TAGS"
-          for tag in "${TAG_ARRAY[@]}"; do
-            tag=$(echo "$tag" | xargs)
-            if [ -n "$TAGS" ]; then
-              TAGS="${TAGS}"$'\n'
-            fi
-            TAGS="${TAGS}${REPO}/connector-${CONNECTOR_NAME}:${tag}${TAG_SUFFIX}"$'\n'
-            TAGS="${TAGS}ghcr.io/opencti-platform/${REPO}/connector-${CONNECTOR_NAME}:${tag}${TAG_SUFFIX}"
-          done
-
-          {
-            echo "tags<<EOF"
-            echo "$TAGS"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Build and push
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-        with:
-          context: ${{ matrix.path }}
-          file: ./Dockerfile_ubi9
-          pull: true
-          push: ${{ inputs.push }}
-          platforms: linux/amd64
-          build-args: ${{ steps.config.outputs.build_args }}
-          tags: ${{ steps.docker-tags.outputs.tags }}
-          cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ matrix.name }}:buildcache-ubi9
-          cache-to: ${{ inputs.push && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache-ubi9,mode=max', matrix.name) || '' }}
-
-  build-arm64:
-    name: Build ${{ matrix.name }}-ubi9 (arm64)
-    needs: build-matrix
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
-
-      - name: Login to DockerHub
-        if: ${{ inputs.push }}
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-      - name: Login to GitHub Container Registry
-        if: ${{ inputs.push }}
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-      - name: Parse build configuration
-        id: config
-        shell: bash
-        run: |
-          CONNECTOR_PATH="${{ matrix.path }}"
-          TOP_DIR=$(echo "$CONNECTOR_PATH" | cut -d/ -f1)
-          CONNECTOR_TYPE=$(echo "$TOP_DIR" | tr '[:lower:]-' '[:upper:]_')
-          BUILD_ARGS="CONNECTOR_TYPE=${CONNECTOR_TYPE}"
-
-          ENV_FILE="${CONNECTOR_PATH}/.build.env"
-          if [ -f "$ENV_FILE" ]; then
-            while IFS='=' read -r key val || [ -n "$key" ]; do
-              [[ -z "$key" || "$key" == \#* ]] && continue
-              val="${val#\"}"
-              val="${val%\"}"
-              BUILD_ARGS="$(printf '%s\n%s=%s' "$BUILD_ARGS" "$key" "$val")"
-            done < "$ENV_FILE"
-          fi
-
-          {
-            echo "build_args<<EOF"
-            echo "$BUILD_ARGS"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Compute Docker tags
-        id: docker-tags
-        shell: bash
-        run: |
-          IMAGE_TAGS="${{ needs.build-matrix.outputs.image_tags }}"
-          CONNECTOR_NAME="${{ matrix.name }}"
-          REPO="opencti"
-          TAG_SUFFIX="-arm64"
-
-          TAGS=""
-          IFS=',' read -ra TAG_ARRAY <<< "$IMAGE_TAGS"
-          for tag in "${TAG_ARRAY[@]}"; do
-            tag=$(echo "$tag" | xargs)
-            if [ -n "$TAGS" ]; then
-              TAGS="${TAGS}"$'\n'
-            fi
-            TAGS="${TAGS}${REPO}/connector-${CONNECTOR_NAME}:${tag}${TAG_SUFFIX}"$'\n'
-            TAGS="${TAGS}ghcr.io/opencti-platform/${REPO}/connector-${CONNECTOR_NAME}:${tag}${TAG_SUFFIX}"
-          done
-
-          {
-            echo "tags<<EOF"
-            echo "$TAGS"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Build and push
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-        with:
-          context: ${{ matrix.path }}
-          file: ./Dockerfile_ubi9
-          pull: true
-          push: ${{ inputs.push }}
-          platforms: linux/arm64
-          build-args: ${{ steps.config.outputs.build_args }}
-          tags: ${{ steps.docker-tags.outputs.tags }}
-          cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ matrix.name }}:buildcache-ubi9-arm64
-          cache-to: ${{ inputs.push && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache-ubi9-arm64,mode=max', matrix.name) || '' }}
-
-  merge:
-    name: Merge ${{ matrix.name }}-ubi9
-    needs: [build-matrix, build-amd64, build-arm64]
-    if: inputs.push
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
-    steps:
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
-
-      - name: Login to DockerHub
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
-
-      - name: Create multi-arch manifests
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMAGE_TAGS="${{ needs.build-matrix.outputs.image_tags }}"
-          CONNECTOR_NAME="${{ matrix.name }}"
-          REPO="opencti"
-
-          IFS=',' read -ra TAG_ARRAY <<< "$IMAGE_TAGS"
-          for tag in "${TAG_ARRAY[@]}"; do
-            tag=$(echo "$tag" | xargs)
-
-            DH_IMAGE="${REPO}/connector-${CONNECTOR_NAME}:${tag}"
-            echo "🔗 Creating manifest: ${DH_IMAGE}"
-            docker buildx imagetools create -t "${DH_IMAGE}" \
-              "${DH_IMAGE}-amd64" \
-              "${DH_IMAGE}-arm64"
-
-            GHCR_IMAGE="ghcr.io/opencti-platform/${REPO}/connector-${CONNECTOR_NAME}:${tag}"
-            echo "🔗 Creating manifest: ${GHCR_IMAGE}"
-            docker buildx imagetools create -t "${GHCR_IMAGE}" \
-              "${GHCR_IMAGE}-amd64" \
-              "${GHCR_IMAGE}-arm64"
-          done
+    with:
+      type_name: ubi9
+      matrix_json: ${{ needs.build-matrix.outputs.matrix }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+      dockerfile: Dockerfile_ubi9
+      variant: ubi9
+    secrets: inherit

@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/datadog-intel_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "DatadogIntelConnector",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "indicator"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "DATADOG_INTEL_INTEGRATION_API_URL": {
+      "description": "Datadog's API URL as provided by the integration. If your Datadog site is `https://app.datadoghq.com`, use `https://api.datadoghq.com/api/v2/security/threat-intel-feed`",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "DATADOG_INTEL_INDICATOR_TYPE": {
+      "default": [
+        "ip_address"
+      ],
+      "description": "Types of indicators to send to the API. Accepted values: 'ip_address', 'domain', 'sha256'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "DATADOG_INTEL_DD_API_KEY": {
+      "description": "Datadog's API key. Sent on every request as the `dd-api-key` header to authenticate against `integration_api_url`",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DATADOG_INTEL_DD_APPLICATION_KEY": {
+      "description": "Datadog's application key. Sent on every request as the `dd-application-key` header to authenticate against `integration_api_url`",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "DATADOG_INTEL_INTEGRATION_API_URL",
+    "DATADOG_INTEL_DD_API_KEY",
+    "DATADOG_INTEL_DD_APPLICATION_KEY"
+  ],
+  "additionalProperties": true
+}

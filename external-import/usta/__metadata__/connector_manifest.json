@@ -5,9 +5,13 @@
   "short_description": "Import malicious URLs, phishing sites, malware hashes, compromised credentials, credit card fraud alerts and Deep Sight tickets from USTA",
   "logo": "external-import/usta/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
     "Fraud, Financial Crime & Cryptocurrency Monitoring"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -18,7 +22,5 @@
   "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-usta",
-  "container_type": "EXTERNAL_IMPORT",
-  "config_schema": "external-import/usta/__metadata__/connector_config_schema.json",
-  "config_documentation": "external-import/usta/__metadata__/CONNECTOR_CONFIG_DOC.md"
+  "container_type": "EXTERNAL_IMPORT"
 }

@@ -1,0 +1,11 @@
+# Test-runtime deps. Matches the upstream OpenCTI-Platform/connectors
+# template convention — `tests/test-requirements.txt` is a self-contained
+# spec for what running `pytest` against this connector needs, separate
+# from the lint toolchain in `requirements-dev.txt`.
+#
+# CI's Tests job: `pip install -r tests/test-requirements.txt`.
+# Local: `pip install -r src/requirements.txt -r tests/test-requirements.txt`.
+
+-r ../src/requirements.txt
+pytest==9.0.3
+responses==0.25.7

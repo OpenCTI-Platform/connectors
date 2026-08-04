@@ -1,0 +1,10 @@
+{
+  "group": "example-operation",
+  "aliases": [],
+  "total": 1,
+  "by_chain": {
+    "bitcoin": [
+      {"blockchain": "bitcoin", "address": "bc1qsynthetic", "tx_count": 0, "source": "fixture"}
+    ]
+  }
+}

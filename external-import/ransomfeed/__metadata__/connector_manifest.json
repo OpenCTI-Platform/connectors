@@ -5,9 +5,13 @@
   "short_description": "Imports ransomware claims from the RansomFeed API as STIX 2.1 Reports.",
   "logo": null,
   "use_cases": [
-    "Threat Intelligence",
-    "Open Source Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

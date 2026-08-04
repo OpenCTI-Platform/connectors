@@ -9,8 +9,8 @@ services:
       - CONNECTOR_NAME=MALTIVERSE
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1 # MIME type or Stix Object
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT4H # ISO 8601 duration (4 hours)
       - MALTIVERSE_USER=change@me.com # Username from Maltiverse
       - MALTIVERSE_PASSWD=ChAnGeMe! # PAssword for the user provided
       - MALTIVERSE_FEEDS=VdhZV34B4jHUXfKt_gDi # Your feeds selection between commas
-      - MALTIVERSE_POLL_INTERVAL=4 # in hours!
     restart: always

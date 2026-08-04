@@ -7,13 +7,12 @@ import logging
 import os
 import traceback
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from queue import Queue
 
 import requests
-import yaml
 from prometheus_client import Counter, Gauge, start_http_server
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 from stix_shifter.stix_translation import stix_translation
 
 
@@ -324,17 +323,6 @@ def fix_loggers() -> None:
     ).setLevel(logging.CRITICAL)
 
 
-def load_config_file() -> dict:
-    config_file = Path(__file__).parent / "config.yml"
-
-    if not config_file.is_file():
-        return {}
-
-    config_content = config_file.read_text()
-    config = yaml.safe_load(config_content)
-    return config
-
-
 def check_helper(helper: OpenCTIConnectorHelper) -> None:
     if (
         helper.connect_live_stream_id is None
@@ -350,49 +338,29 @@ if __name__ == "__main__":
         fix_loggers()
 
         # load and check config
-        config = load_config_file()
+        config = ConnectorSettings()
         # create opencti helper
-        helper = OpenCTIConnectorHelper(config)
+        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
         helper.log_info("connector helper initialized")
         check_helper(helper)
 
         # read config
-        ignore_types = get_config_variable(
-            "SPLUNK_IGNORE_TYPES", ["splunk", "ignore_types"], config
-        ).split(",")
-        splunk_url = get_config_variable("SPLUNK_URL", ["splunk", "url"], config)
-        splunk_token = get_config_variable("SPLUNK_TOKEN", ["splunk", "token"], config)
-        splunk_auth_type: str = get_config_variable(
-            "SPLUNK_AUTH_TYPE", ["splunk", "auth_type"], config, default="Bearer"
-        )
-        splunk_owner = get_config_variable("SPLUNK_OWNER", ["splunk", "owner"], config)
-        splunk_ssl_verify = get_config_variable(
-            "SPLUNK_SSL_VERIFY", ["splunk", "ssl_verify"], config, False, True
-        )
-        splunk_app = get_config_variable("SPLUNK_APP", ["splunk", "app"], config)
-        splunk_kv_store_name = get_config_variable(
-            "SPLUNK_KV_STORE_NAME", ["splunk", "kv_store_name"], config
-        )
+        ignore_types = config.splunk.ignore_types
+        splunk_url = config.splunk.url
+        splunk_token = config.splunk.token.get_secret_value()
+        splunk_auth_type: str = config.splunk.auth_type
+        splunk_owner = config.splunk.owner
+        splunk_ssl_verify = config.splunk.ssl_verify
+        splunk_app = config.splunk.app
+        splunk_kv_store_name = config.splunk.kv_store_name
 
         # additional connector conf
-        consumer_count: int = get_config_variable(
-            "CONNECTOR_CONSUMER_COUNT",
-            ["connector", "consumer_count"],
-            config,
-            isNumber=True,
-            default=10,
-        )
+        consumer_count: int = config.connector.consumer_count
 
         # metrics conf
-        enable_prom_metrics: bool = get_config_variable(
-            "METRICS_ENABLE", ["metrics", "enable"], config, default=False
-        )
-        metrics_port: int = get_config_variable(
-            "METRICS_PORT", ["metrics", "port"], config, isNumber=True, default=9113
-        )
-        metrics_addr: str = get_config_variable(
-            "METRICS_ADDR", ["metrics", "addr"], config, default="0.0.0.0"
-        )
+        enable_prom_metrics: bool = config.metrics.enable
+        metrics_port: int = config.metrics.port
+        metrics_addr: str = config.metrics.addr
 
         # create kvstore instance
         kvstore = KVStore(

@@ -36,6 +36,7 @@
       "type": "array"
     },
     "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
       "default": "EXTERNAL_IMPORT",
       "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
       "type": "string"
