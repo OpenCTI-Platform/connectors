@@ -144,15 +144,18 @@ class StreamImporterConnector(ExternalImportConnector):
             self.helper.connector_config["connection"]["user"],
             self.helper.connector_config["connection"]["pass"],
         )
+        mq_host = os.environ.get(
+            "MQ_HOST_OVERRIDE", self.helper.connector_config["connection"]["host"]
+        )
         pika_parameters = pika.ConnectionParameters(
-            host=self.helper.connector_config["connection"]["host"],
+            host=mq_host,
             port=self.helper.connector_config["connection"]["port"],
             virtual_host=self.helper.connector_config["connection"]["vhost"],
             credentials=pika_credentials,
             ssl_options=(
                 pika.SSLOptions(
                     create_mq_ssl_context(self.helper.config),
-                    self.helper.connector_config["connection"]["host"],
+                    mq_host,
                 )
                 if self.helper.connector_config["connection"]["use_ssl"]
                 else None
