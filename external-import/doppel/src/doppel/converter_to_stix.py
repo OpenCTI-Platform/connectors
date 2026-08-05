@@ -233,7 +233,6 @@ class ConverterToStix:
             description=build_description(alert),
             created=created_at,
             modified=modified_at,
-            confidence=calculate_opencti_score(alert.get("score")),
             created_by_ref=self.author.id,
             object_marking_refs=[self.tlp_marking.id],
             labels=labels or None,
@@ -775,10 +774,6 @@ class ConverterToStix:
                 "value": self._incident_name(alert),
             },
             {"key": "description", "value": build_description(alert)},
-            {
-                "key": "confidence",
-                "value": calculate_opencti_score(alert.get("score")),
-            },
             {
                 "key": "incident_type",
                 "value": f"doppel_{alert.get('product') or 'alert'}",
