@@ -162,8 +162,8 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
     full URL value.
 - When `DOPPEL_ENABLE_INCIDENTS=true`, creates one deterministic Incident per
   processed alert in **Events → Incidents**, regardless of queue state. The
-  Incident includes Doppel severity, product-specific incident type, score
-  mapped to STIX confidence, source, first-seen timestamp, lifecycle labels,
+  Incident includes Doppel severity, product-specific incident type, source,
+  first-seen timestamp, lifecycle and score-derived priority labels,
   description, and external reference. It is related to all alert Observables;
   actionable Indicators remain connected through their `based-on` Observable
   relationships. Incident creation is independent from the optional Grouping
@@ -173,9 +173,8 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 - Reprocessing an alert refreshes Doppel-owned mutable data on existing
   Indicators (description, score, external reference, revoked state) and RFT
   cases (description, priority, severity, external reference, revoked state),
-  plus Incident names, descriptions, confidence, severity, incident type,
-  lifecycle labels, and external references. External references added by
-  users are preserved.
+  plus Incident names, descriptions, severity, incident type, lifecycle labels,
+  and external references. External references added by users are preserved.
 - On first run, fetches up to `HISTORICAL_POLLING_DAYS`; subsequent runs are delta-based
 
 ## Debugging

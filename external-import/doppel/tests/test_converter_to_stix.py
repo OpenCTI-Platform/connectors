@@ -910,7 +910,7 @@ def test_incident_creation_maps_alert_and_observable_relationship(converter):
     assert incident["name"] == (
         "Doppel Alert - example-domain.com (alert_incident_new)"
     )
-    assert incident["confidence"] == 42
+    assert "confidence" not in incident
     assert incident["severity"] == "high"
     assert incident["incident_type"] == "doppel_domains"
     assert incident["source"] == "Doppel"
@@ -984,7 +984,7 @@ def test_existing_incident_refreshes_fields_labels_and_reference(converter):
         "key": "name",
         "value": ("Doppel Alert - example-domain.com (alert_incident_refresh)"),
     } in field_patch
-    assert {"key": "confidence", "value": 42} in field_patch
+    assert not any(update["key"] == "confidence" for update in field_patch)
     assert {"key": "severity", "value": "medium"} in field_patch
     assert {"key": "incident_type", "value": "doppel_domains"} in field_patch
     description_update = next(
