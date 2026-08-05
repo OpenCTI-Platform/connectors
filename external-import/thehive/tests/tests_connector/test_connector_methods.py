@@ -596,6 +596,26 @@ def test_process_items_empty_list(connector):
     bundle_func.assert_not_called()
 
 
+def test_process_items_empty_list_creates_no_work(connector):
+    # An idle sweep must not open/close a Work: that would clutter the Works
+    # history with a no-op entry on every scheduled run that finds nothing.
+    bundle_func = MagicMock()
+    connector.current_state = {}
+
+    connector.process_items("case", [], bundle_func, "last_case_date")
+
+    connector.helper.api.work.initiate_work.assert_not_called()
+    connector.helper.api.work.to_processed.assert_not_called()
+
+
+def test_process_items_empty_list_returns_unchanged_watermark(connector):
+    connector.current_state = {"last_case_date": 12345}
+
+    result = connector.process_items("case", [], MagicMock(), "last_case_date")
+
+    assert result == 12345
+
+
 # ---------------------------------------------------------------------------
 # generate_alert_bundle
 # ---------------------------------------------------------------------------

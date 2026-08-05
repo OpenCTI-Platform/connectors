@@ -357,13 +357,21 @@ class TheHive:
         For each item allowed by the TLP filter, ``process_func(item, work_id)``
         must return a STIX bundle, which is then sent under ``work_id``. The
         watermark advances for every fetched item, including TLP-skipped ones.
+
+        No Work is created when ``items`` is empty, to avoid cluttering the
+        Works history with no-op entries on every idle scheduled run. pycti's
+        scheduler (``schedule_iso``) updates Last Run/Next Run independently
+        of Work creation, so this has no effect on connector run visibility.
         """
-        friendly_name = f"TheHive processing ({type}) @ {datetime.now().isoformat()}"
         self.helper.connector_logger.info(
             f"Processing type ({type}) and ({len(items)}) item(s)."
         )
         last_date = self.current_state.get(last_date_key, self.thehive_import_from_date)
+        if not items:
+            return last_date
+
         updated_last_date = last_date
+        friendly_name = f"TheHive processing ({type}) @ {datetime.now().isoformat()}"
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
