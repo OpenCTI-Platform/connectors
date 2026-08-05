@@ -44,6 +44,7 @@ def converter(mock_helper):
         conv = ConverterToStix(
             helper=mock_helper,
             tlp_level="clear",
+            enable_incidents=False,
             enable_grouping_case=False,
             enable_rft_case=False,
         )
@@ -864,4 +865,154 @@ def test_existing_rft_case_refreshes_source_owned_fields_and_reference(converter
         external_reference_id=(
             "external-reference--11111111-1111-4111-8111-111111111111"
         ),
+    )
+
+
+def test_incidents_are_disabled_by_default(converter):
+    alert = _domains_alert(alert_id="alert_incident_disabled", queue_state="monitoring")
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    assert not any(
+        isinstance(obj, dict) and obj.get("type") == "incident" for obj in result
+    )
+
+
+def test_incident_creation_maps_alert_and_observable_relationship(converter):
+    converter.enable_incidents = True
+    alert = _domains_alert(
+        alert_id="alert_incident_new",
+        queue_state="monitoring",
+        entity="http://example-domain.com/login?target=user",
+        score=0.42,
+        severity="high",
+        notes="Needs analyst qualification",
+        source="Doppel",
+        doppel_link="https://app.doppel.com/alerts/alert_incident_new",
+        last_activity_timestamp="2026-08-04T12:30:00Z",
+    )
+    converter.helper.api.stix_domain_object.read.return_value = None
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    incident = next(
+        obj for obj in result if isinstance(obj, dict) and obj.get("type") == "incident"
+    )
+    observable = next(
+        obj
+        for obj in result
+        if isinstance(obj, dict) and obj.get("type") == "domain-name"
+    )
+    assert incident["name"] == (
+        "Doppel Alert - example-domain.com (alert_incident_new)"
+    )
+    assert incident["confidence"] == 42
+    assert incident["severity"] == "high"
+    assert incident["incident_type"] == "doppel_domains"
+    assert incident["source"] == "Doppel"
+    assert incident["first_seen"] == "2026-06-11T09:00:00Z"
+    assert incident["created"] == "2026-06-11T09:00:00.000Z"
+    assert incident["modified"] == "2026-08-04T12:30:00.000Z"
+    assert "queue_state:monitoring" in incident["labels"]
+    assert "priority:P3" in incident["labels"]
+    assert incident["external_references"][0]["external_id"] == "alert_incident_new"
+    assert not any(
+        isinstance(obj, dict) and obj.get("type") == "indicator" for obj in result
+    )
+    assert any(
+        isinstance(obj, dict)
+        and obj.get("type") == "relationship"
+        and obj.get("relationship_type") == "related-to"
+        and obj.get("source_ref") == incident["id"]
+        and obj.get("target_ref") == observable["id"]
+        for obj in result
+    )
+
+
+def test_incident_id_is_stable_when_displayed_entity_changes(converter):
+    original = _domains_alert(alert_id="alert_incident_stable")
+    renamed = {**original, "entity": "updated.example"}
+
+    first = converter._create_incident(original)
+    second = converter._create_incident(renamed)
+
+    assert first["id"] == second["id"]
+    assert first["name"] != second["name"]
+
+
+def test_existing_incident_refreshes_fields_labels_and_reference(converter):
+    converter.enable_incidents = True
+    alert = _domains_alert(
+        alert_id="alert_incident_refresh",
+        queue_state="monitoring",
+        score=0.42,
+        severity="medium",
+        notes="Updated incident context",
+        source="Doppel",
+        doppel_link="https://app.doppel.com/alerts/alert_incident_refresh",
+        last_activity_timestamp="2026-08-04T13:15:00Z",
+    )
+    incident_standard_id = converter._create_incident(alert)["id"]
+    existing_incident = {
+        "id": "internal-incident-id",
+        "standard_id": incident_standard_id,
+        "objectLabel": [
+            {"value": "queue_state:actioned"},
+            {"value": "severity:high"},
+            {"value": "priority:P1"},
+            {"value": "customer-label"},
+        ],
+    }
+    converter.helper.api.stix_domain_object.read.return_value = existing_incident
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    replayed_incidents = [
+        obj for obj in result if isinstance(obj, dict) and obj.get("type") == "incident"
+    ]
+    assert [incident["id"] for incident in replayed_incidents] == [incident_standard_id]
+    field_patch = converter.helper.api.stix_domain_object.update_field.call_args.kwargs[
+        "input"
+    ]
+    assert {
+        "key": "name",
+        "value": ("Doppel Alert - example-domain.com (alert_incident_refresh)"),
+    } in field_patch
+    assert {"key": "confidence", "value": 42} in field_patch
+    assert {"key": "severity", "value": "medium"} in field_patch
+    assert {"key": "incident_type", "value": "doppel_domains"} in field_patch
+    description_update = next(
+        update for update in field_patch if update["key"] == "description"
+    )
+    assert "**Notes**: Updated incident context" in description_update["value"]
+
+    removed = {
+        call.kwargs.get("label_name")
+        for call in converter.helper.api.stix_domain_object.remove_label.call_args_list
+    }
+    assert {"queue_state:actioned", "severity:high", "priority:P1"} <= removed
+    assert "customer-label" not in removed
+    added = {
+        call.kwargs.get("label_name")
+        for call in converter.helper.api.stix_domain_object.add_label.call_args_list
+    }
+    assert {"queue_state:monitoring", "severity:medium", "priority:P3"} <= added
+
+    converter.helper.api.stix_domain_object.add_external_reference.assert_called_with(
+        id="internal-incident-id",
+        external_reference_id=(
+            "external-reference--11111111-1111-4111-8111-111111111111"
+        ),
+    )
+    assert any(
+        isinstance(obj, dict)
+        and obj.get("type") == "relationship"
+        and obj.get("source_ref") == incident_standard_id
+        for obj in result
     )
