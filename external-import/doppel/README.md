@@ -75,6 +75,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Retry delay (seconds)   | doppel.retry_delay             | `DOPPEL_RETRY_DELAY`             |     Rate Management: Controls the frequency of requests during error recovery.     | 30      | No        | Delay between retry attempts          |
 | TLP Level               | doppel.tlp_level               | `DOPPEL_TLP_LEVEL`               |     Data Governance: Assigns sensitivity markings for downstream sharing.     | clear   | No        | TLP marking for created STIX objects. |
 | Page size               | doppel.page_size               | `DOPPEL_PAGE_SIZE`               |    Performance: Optimizes request volume and memory usage per fetch.      | 100                       | No        | Number of alerts to fetch per request |
+| Enable Incidents        | doppel.enable_incidents        | `DOPPEL_ENABLE_INCIDENTS`        |    Feature Control: Creates an Incident for each processed Doppel alert. | false                     | No        | Enable Incident processing            |
 | Enable Grouping Case    | doppel.enable_grouping_case    | `DOPPEL_ENABLE_GROUPING_CASE`    |    Feature Control: Enables grouping case creation.     | false                     | No        | Enable grouping case processing      |
 | Enable RFT Case         | doppel.enable_rft_case         | `DOPPEL_ENABLE_RFT_CASE`         |    Feature Control: Enables RFT case creation.     | false                     | No        | Enable RFT case processing           |
 
@@ -107,6 +108,7 @@ Register the connector in the **main** OpenCTI `docker-compose.yml`:
       - DOPPEL_RETRY_DELAY=30
       - DOPPEL_PAGE_SIZE=100
       - DOPPEL_TLP_LEVEL=clear
+      - DOPPEL_ENABLE_INCIDENTS=false
       - DOPPEL_ENABLE_GROUPING_CASE=false
       - DOPPEL_ENABLE_RFT_CASE=false
     restart: always
@@ -161,11 +163,21 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
   - Email-address entities become `Email-Addr` observables.
   - Other supported alert products become `Url` observables, preserving their
     full URL value.
+- When `DOPPEL_ENABLE_INCIDENTS=true`, creates one deterministic Incident per
+  processed alert in **Events → Incidents**, regardless of queue state. The
+  Incident includes Doppel severity, product-specific incident type, score
+  mapped to STIX confidence, source, first-seen timestamp, lifecycle labels,
+  description, and external reference. It is related to all alert Observables;
+  actionable Indicators remain connected through their `based-on` Observable
+  relationships. Incident creation is independent from the optional Grouping
+  and RFT case features and does not create an Incident Response case.
 - Bundles and sends the STIX objects to OpenCTI
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
 - Reprocessing an alert refreshes Doppel-owned mutable data on existing
   Indicators (description, score, external reference) and RFT cases
-  (description, priority, severity, external reference). Queue transitions are
+  (description, priority, severity, external reference), plus Incident names,
+  descriptions, confidence, severity, incident type, lifecycle labels, and
+  external references. Queue transitions are
   represented by labels and do not revoke these objects; obsolete
   `revoked-false-positive` labels from earlier connector versions are removed.
   External references added by users are preserved.
