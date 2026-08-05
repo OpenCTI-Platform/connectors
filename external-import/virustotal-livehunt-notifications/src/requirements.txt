@@ -4,3 +4,5 @@ python-magic~=0.4.27; sys_platform == 'linux' or sys_platform == 'darwin'
 python-magic-bin~=0.4.14; sys_platform == 'win32'
 vt-py==0.21.0
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+# Security floor for transitive dependency aiohttp (pulled in by vt-py) - CVE remediation
+aiohttp>=3.14.3  # CVE-2025-69223/69227/69228, CVE-2026-34513/34515/34516/34993/47265/50269/54273-54280

@@ -4,3 +4,5 @@ html2text==2025.4.15
 pdfminer.six==20251107
 playwright==1.58.0
 cachetools
+# Security floors for transitive dependencies (CVE remediation)
+cryptography>=46.0.7  # CVE-2026-39892

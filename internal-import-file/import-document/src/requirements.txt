@@ -9,3 +9,6 @@ dateparser==1.4.0
 pyhumps==3.8.0
 chardet==5.2.0
 python-docx==1.1.2
+# Security floors for transitive dependencies (CVE remediation)
+cryptography>=46.0.7  # CVE-2026-39892
+lxml>=6.1.0  # CVE-2026-41066

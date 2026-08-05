@@ -4,3 +4,5 @@ stix2-elevator==4.1.7
 typing-extensions==4.15.0
 pydantic~=2.11.3
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+# Security floors for transitive dependencies (CVE remediation)
+lxml>=6.1.0  # CVE-2026-41066
