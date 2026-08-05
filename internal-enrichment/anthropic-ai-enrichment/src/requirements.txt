@@ -1,2 +1,2 @@
-pycti>=6.2.0
-anthropic>=0.40.0
+pycti==7.260626.0
+anthropic==0.120.2

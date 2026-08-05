@@ -1,11 +1,17 @@
-FROM python:3.12-slim
+FROM python:3.12-alpine
+ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
-ENV PYTHONUNBUFFERED=1
-WORKDIR /opt/opencti-connector-anthropic-ai-enrichment
+# Copy the worker
+COPY src /opt/opencti-connector-anthropic-ai-enrichment
 
-COPY src/requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk --no-cache add git build-base libmagic libffi-dev && \
+    cd /opt/opencti-connector-anthropic-ai-enrichment && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base
 
-COPY src .
-
-CMD ["python", "main.py"]
+# Expose and entrypoint
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
