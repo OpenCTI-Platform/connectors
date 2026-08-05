@@ -84,6 +84,31 @@ def test_connector_config_schema_is_valid_json_schema(schema_path: str):
     assert schema.get("additionalProperties") is True
 
 
+def schemas_env_vars_definitions():
+    """Yield all top-level properties from all connector config schemas (i.e., env vars definitions)."""
+    for schema_path in get_config_schema_paths():
+        schema = load_schema(schema_path)
+        for property_name, property_schema in schema.get("properties", {}).items():
+            yield pytest.param(property_schema, id=f"{schema_path}::{property_name}")
+
+
+@pytest.mark.parametrize("property_schema", list(schemas_env_vars_definitions()))
+def test_connector_config_schema_octi_ui_compatibility_rules(property_schema: dict):
+    """Assert OCTI-specific compatibility rules on top-level properties only."""
+    # Given a config schema top-level property (i.e., an env var definition)
+    # Then property complies with OCTI expectations
+    assert "type" in property_schema
+    assert "anyOf" not in property_schema
+    assert "oneOf" not in property_schema
+
+    # TODO: remove these assertions once OpenCTI UI is fixed
+    # OpenCTI UI does not support objects currently
+    assert property_schema.get("type") != "object"
+    # OpenCTI UI does not support arrays without a default currently
+    if property_schema.get("type") == "array":
+        assert "default" in property_schema
+
+
 @pytest.mark.parametrize("schema_path", get_config_schema_paths())
 def test_connector_config_schema_common_properties(schema_path: str):
     """Assert that common connector properties satisfy validity rules.

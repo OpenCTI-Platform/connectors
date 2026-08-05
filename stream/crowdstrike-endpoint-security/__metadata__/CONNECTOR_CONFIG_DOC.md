@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | CONNECTOR_LIVE_STREAM_ID | `string` | ✅ | string |  | The ID of the live stream to connect to. |
 | CROWDSTRIKE_CLIENT_ID | `string` | ✅ | string |  | Crowdstrike client ID used to connect to the API. |
 | CROWDSTRIKE_CLIENT_SECRET | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Crowdstrike client secret used to connect to the API. |
@@ -24,5 +24,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CROWDSTRIKE_ACTION_ON_DOMAIN | `string` |  | `no_action` `detect` | `"detect"` | Action to apply on domain indicators pushed to CrowdStrike. |
 | CROWDSTRIKE_ACTION_ON_HASH | `string` |  | `no_action` `allow` `detect` `prevent` | `"detect"` | Action to apply on hash indicators pushed to CrowdStrike. |
 | METRICS_ENABLE | `boolean` |  | boolean | `false` | Whether or not Prometheus metrics should be enabled. |
-| METRICS_PORT | `integer` or `string` |  | integer and/or string | `9113` | Port to use for metrics endpoint. |
+| METRICS_PORT | `integer` |  | integer | `9113` | Port to use for metrics endpoint. |
 | METRICS_ADDR | `string` |  | string | `"0.0.0.0"` | Bind IP address to use for metrics endpoint. |

@@ -17,4 +17,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT10M"` | The period of time to await between two runs of the connector. |
 | RADAR_RUN_INTERVAL | `integer` |  | integer | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |
-| RADAR_COLLECTIONS_UUID | `object` |  | object | ⛔️ | `null` | Use RADAR_FEED_LISTS instead. |
+| RADAR_COLLECTIONS_UUID | `string` |  | string | ⛔️ | `null` | Use RADAR_FEED_LISTS instead. |
