@@ -82,10 +82,22 @@
       "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
     "RADAR_COLLECTIONS_UUID": {
-      "additionalProperties": true,
+      "contentMediaType": "application/json",
+      "contentSchema": {
+        "additionalProperties": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "object"
+        },
+        "type": "object"
+      },
       "default": null,
       "deprecated": true,
-      "type": "object",
+      "type": "string",
       "description": "Use RADAR_FEED_LISTS instead."
     }
   },

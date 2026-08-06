@@ -74,7 +74,7 @@ class RadarConfig(BaseConfigModel):
         new_namespaced_var="duration_period",
         new_value_factory=lambda x: timedelta(seconds=int(x)),
     )
-    collections_uuid: dict | None = DeprecatedField(
+    collections_uuid: Json[dict[str, dict[str, list[str]]]] | None = DeprecatedField(
         default=None,
         deprecated="Use 'RADAR_FEED_LISTS' instead.",
         new_namespaced_var="feed_lists",

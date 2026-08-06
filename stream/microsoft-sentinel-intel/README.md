@@ -13,6 +13,8 @@ The Microsoft Sentinel Intel connector streams OpenCTI indicators to Microsoft S
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
+    - [Authentication](#authentication)
+    - [Azure AD Application Setup](#azure-ad-application-setup)
   - [Configuration variables](#configuration-variables)
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
@@ -40,19 +42,39 @@ Key features:
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260728.0
+- OpenCTI Platform >= 7.260803.0
 - Azure subscription with Microsoft Sentinel
 - Azure AD Application or Managed Identity with appropriate permissions
+
+### Authentication
+
+The connector supports two authentication modes, selected via `auth_type`:
+
+- **`app_registration`** (default): requires `tenant_id`, `client_id`, and
+  `client_secret`. Missing any of the three fails the connector at startup with a
+  clear configuration error.
+- **`azure_credential`**: leave `tenant_id`, `client_id`, and `client_secret` unset
+  (ignored in this mode) and the connector falls back to
+  [`DefaultAzureCredential`](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.defaultazurecredential):
+  environment variables, workload identity (e.g. in AKS), managed identity, or a local
+  `az login` session, in that order.
+
+Either way, the identity needs **Microsoft Sentinel Contributor** on the Log Analytics
+Workspace (step 3 below) — no Microsoft Graph permission is needed, since the connector
+authenticates against Azure Resource Manager (`https://management.azure.com/.default`),
+per the
+[official upload API prerequisites](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-upload-api#prerequisites).
 
 ### Azure AD Application Setup
 
 1. Register an application in Azure AD (Entra portal)
 2. Note the `tenant_id`, `client_id`, and `client_secret`
-3. Configure API permissions: **ThreatIndicators.ReadWrite.OwnedBy**
-4. In the Log Analytics Workspace, add **Microsoft Sentinel Contributor** role to the application
+3. In the Log Analytics Workspace, add **Microsoft Sentinel Contributor** role to the application
+
+> Skip this section if you're using `auth_type: azure_credential` (managed identity,
+> workload identity, or `az login`) instead — see [Authentication](#authentication) above.
 
 ![Sentinel Variables](./doc/sentinel_info_variables.png)
-![Sentinel Permissions](./doc/permission_mandatory.png)
 
 View indicators in: **Microsoft Sentinel > Threat Intelligence > Indicators**
 
@@ -98,6 +120,7 @@ Configure the connector in `docker-compose.yml`:
       - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe
+      # - MICROSOFT_SENTINEL_INTEL_AUTH_TYPE=azure_credential # use instead of the 3 vars above for managed identity, workload identity, or az login
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID=ChangeMe
@@ -202,7 +225,7 @@ CONNECTOR_LOG_LEVEL=debug
 ## Additional information
 
 - **Role Propagation**: Role assignments on Log Analytics Workspace can take time to propagate
-- **Authentication**: Managed identity is recommended over app registration
+- **Authentication**: `auth_type: azure_credential` (managed identity via `DefaultAzureCredential`) is recommended over `app_registration` — see [Authentication](#authentication)
 - **STIX Bundles**: Indicators are sent as STIX bundles to preserve threat intelligence context
 - **Extra Labels**: Add comma-separated labels to all indicators sent to Sentinel
 - **Delete Extensions**: Set to `true` to remove OpenCTI-specific extensions from bundles
