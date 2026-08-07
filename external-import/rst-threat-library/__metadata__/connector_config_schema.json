@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/rst-threat-library_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_ID": {
+      "description": "A unique identifier for this connector instance (UUID v4).",
+      "format": "uuid",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "RST Threat Library",
+      "description": "The name of the connector.",
+      "examples": [
+        "RST Threat Library"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "examples": [
+        "PT1H",
+        "PT30M"
+      ],
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_QUEUE_THRESHOLD": {
+      "default": 500.0,
+      "description": "Server capacity: max RabbitMQ queue size (in MB) before the connector pauses ingestion. Surfaced in the OpenCTI UI.",
+      "examples": [
+        500.0
+      ],
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "CONNECTOR_UPDATE_EXISTING_DATA": {
+      "default": true,
+      "description": "Whether to update existing STIX objects in OpenCTI.",
+      "examples": [
+        true,
+        false
+      ],
+      "type": "boolean"
+    },
+    "CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT": {
+      "default": false,
+      "description": "Create a dedicated Connectors-group service account for this connector on first start and run subsequent API calls as that user.",
+      "examples": [
+        true,
+        false
+      ],
+      "type": "boolean"
+    },
+    "CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL": {
+      "default": 50,
+      "description": "Max confidence level for the auto-created connector service account.",
+      "examples": [
+        50,
+        80
+      ],
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RST_THREAT_LIBRARY_BASEURL": {
+      "default": "https://api.rstcloud.net/v1",
+      "description": "RST Cloud API base URL.",
+      "examples": [
+        "https://api.rstcloud.net/v1"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "RST_THREAT_LIBRARY_APIKEY": {
+      "description": "RST Cloud Threat Library API key.",
+      "examples": [
+        "ChangeMe"
+      ],
+      "type": "string"
+    },
+    "RST_THREAT_LIBRARY_AUTH_HEADER": {
+      "default": "x-api-key",
+      "description": "HTTP header name used to send the API key.",
+      "examples": [
+        "x-api-key"
+      ],
+      "type": "string"
+    },
+    "RST_THREAT_LIBRARY_CONTIMEOUT": {
+      "default": 30,
+      "description": "HTTP connect timeout in seconds.",
+      "examples": [
+        30
+      ],
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "RST_THREAT_LIBRARY_READTIMEOUT": {
+      "default": 120,
+      "description": "HTTP read timeout in seconds.",
+      "examples": [
+        120,
+        600
+      ],
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "RST_THREAT_LIBRARY_RETRY": {
+      "default": 2,
+      "description": "Per-request HTTP retry count.",
+      "examples": [
+        2,
+        10
+      ],
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RST_THREAT_LIBRARY_SSL_VERIFY": {
+      "default": true,
+      "description": "Verify TLS certificates for API requests.",
+      "examples": [
+        true,
+        false
+      ],
+      "type": "boolean"
+    },
+    "RST_THREAT_LIBRARY_PAGE_SIZE": {
+      "default": 100,
+      "description": "Page size (limit) for Threat Library list requests.",
+      "examples": [
+        20,
+        100
+      ],
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "RST_THREAT_LIBRARY_ORDER_BY": {
+      "default": "modified",
+      "description": "Sort field for incremental polling.",
+      "examples": [
+        "modified"
+      ],
+      "type": "string"
+    },
+    "RST_THREAT_LIBRARY_ORDER_MODE": {
+      "default": "desc",
+      "description": "Sort direction for incremental polling.",
+      "enum": [
+        "asc",
+        "desc"
+      ],
+      "examples": [
+        "desc",
+        "asc"
+      ],
+      "type": "string"
+    },
+    "RST_THREAT_LIBRARY_PROXY": {
+      "default": "",
+      "description": "Optional forward HTTP proxy URL. Empty means direct egress.",
+      "examples": [
+        "",
+        "http://proxy.example.com:8080"
+      ],
+      "type": "string"
+    },
+    "RST_THREAT_LIBRARY_MAX_RETRIES": {
+      "default": 3,
+      "description": "Maximum attempts when pushing bundles to OpenCTI (at least one).",
+      "examples": [
+        3
+      ],
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RST_THREAT_LIBRARY_RETRY_DELAY": {
+      "default": 10,
+      "description": "Initial retry delay in seconds for OpenCTI push failures.",
+      "examples": [
+        10
+      ],
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RST_THREAT_LIBRARY_RETRY_BACKOFF_MULTIPLIER": {
+      "default": 2.0,
+      "description": "Exponential backoff multiplier for OpenCTI push retries.",
+      "examples": [
+        2.0
+      ],
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "RST_THREAT_LIBRARY_OBJECT_TYPES": {
+      "default": "intrusion-sets,malware,tools,campaigns",
+      "description": "Comma-separated threat-object paths to poll.",
+      "examples": [
+        "intrusion-sets,malware,tools,campaigns"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "RST_THREAT_LIBRARY_IMPORT_FROM_DATE": {
+      "default": "",
+      "description": "Optional initial backfill cutoff (YYYY-MM-DD).",
+      "examples": [
+        "",
+        "2024-01-01"
+      ],
+      "type": "string"
+    },
+    "RST_THREAT_LIBRARY_OPENCTI_PUSH_MODE": {
+      "default": "bundle",
+      "description": "OpenCTI write path: bundle (worker) or api (GraphQL import).",
+      "enum": [
+        "bundle",
+        "api"
+      ],
+      "examples": [
+        "bundle",
+        "api"
+      ],
+      "type": "string"
+    },
+    "RST_THREAT_LIBRARY_SYNC_LABELS": {
+      "default": "RST Threat Library",
+      "description": "Labels merged on import; scopes merge/split.",
+      "examples": [
+        "RST Threat Library"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "RST_THREAT_LIBRARY_RECONCILE_EXCLUDE_LABELS": {
+      "default": "",
+      "description": "Entities with these labels are excluded from merge/split fusion.",
+      "examples": [
+        "",
+        "MITRE,manual"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "RST_THREAT_LIBRARY_RECONCILE_ALLOW_CREATED_BY": {
+      "default": "",
+      "description": "If set, merge/split fuses only entities with these createdBy IDs.",
+      "examples": [
+        "",
+        "identity--11111111-1111-1111-1111-111111111111"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "RST_THREAT_LIBRARY_MERGE_SPLIT": {
+      "default": false,
+      "description": "Enable intrusion-set merge/split against the full catalogue.",
+      "examples": [
+        false,
+        true
+      ],
+      "type": "boolean"
+    },
+    "RST_THREAT_LIBRARY_RESPECT_USER_EDITS": {
+      "default": false,
+      "description": "Preserve OpenCTI content when its confidence exceeds upstream.",
+      "examples": [
+        false,
+        true
+      ],
+      "type": "boolean"
+    },
+    "RST_THREAT_LIBRARY_INTRUSION_SET_DEFAULT_CONFIDENCE": {
+      "default": null,
+      "description": "When set, replaces Threat Library confidence on imported intrusion sets (STIX confidence / OpenCTI source confidence).",
+      "examples": [
+        null,
+        80
+      ],
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_ID",
+    "CONNECTOR_SCOPE",
+    "RST_THREAT_LIBRARY_APIKEY"
+  ],
+  "additionalProperties": true
+}
