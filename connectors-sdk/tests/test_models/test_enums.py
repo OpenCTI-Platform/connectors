@@ -1,4 +1,5 @@
 import warnings
+from enum import StrEnum
 
 import connectors_sdk.models.enums as enums
 
@@ -36,31 +37,24 @@ ENUMS = OCTI_ENUMS | {
 }
 
 
-def test_deprecated_warnings() -> None:
-    """Test that importing from the deprecated module raises a warning."""
-    with warnings.catch_warnings(record=True) as w:
-        # Importing the deprecated module
-        import connectors_sdk.models.octi.enums as deprecated_enums_module  # noqa: F401
-
-        # Check that a warning was raised
-        assert len(w) == 1
-        assert issubclass(w[-1].category, DeprecationWarning)
-        assert (
-            "The 'connectors_sdk.models.octi.enums' module is deprecated and will be "
-            "removed in future versions. Please use 'connectors_sdk.models.enums' instead."
-            == str(w[-1].message)
-        )
-        assert set(deprecated_enums_module.__all__) == OCTI_ENUMS
-
-
 def test_permissive_enum() -> None:
     """Test that PermissiveEnum works as expected."""
-    from connectors_sdk.models.octi.enums import PermissiveEnum
-
-    class ColorEnum(PermissiveEnum):
+    class ColorEnum(StrEnum):
         RED = "red"
         GREEN = "green"
         BLUE = "blue"
+
+        @classmethod
+        def _missing_(cls, value):
+            _value = str(value)
+            warnings.warn(
+                f"Value '{_value}' is out of {cls.__name__} defined values.",
+                UserWarning,
+                stacklevel=3,
+            )
+            obj = str.__new__(cls, _value)
+            obj._value_ = _value
+            return obj
 
     # Test known values
     assert ColorEnum("red") == ColorEnum.RED

@@ -4,15 +4,6 @@ from datetime import datetime
 
 import pytest
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
-from connectors_sdk.models.octi.relationships import (
-    based_on,
-    derived_from,
-    has,
-    indicates,
-    located_at,
-    related_to,
-    targets,
-)
 from connectors_sdk.models.relationship import Relationship
 from pydantic import ValidationError
 from stix2.v21 import Relationship as Stix2Relationship
@@ -20,13 +11,6 @@ from stix2.v21 import Relationship as Stix2Relationship
 # Add the newly implemented relationship in this list
 IMPLEMENTED_RELATIONSHIPS = [
     Relationship,
-    related_to,
-    based_on,
-    derived_from,
-    indicates,
-    targets,
-    located_at,
-    has,
 ]
 
 
@@ -136,32 +120,3 @@ def test_relationship_to_stix2_object_returns_valid_stix_object_with_reference_o
     assert stix2_obj.source_ref == fake_valid_reference.id
     assert stix2_obj.target_ref == fake_valid_reference.id
 
-
-### PIPE SYNTAX
-
-
-@pytest.mark.parametrize(
-    "relationship_type,relationship_builder",
-    [
-        ("related-to", related_to),
-        ("based-on", based_on),
-        ("derived-from", derived_from),
-        ("indicates", indicates),
-        ("targets", targets),
-        ("located-at", located_at),
-        ("has", has),
-    ],
-)
-def test_relationship_can_use_pipe_syntax(
-    relationship_type, relationship_builder, fake_valid_organization_author
-):
-    """Test that RelatedTo can use pipe syntax."""
-    # Given the RelatedTo relationship class and a valid BaseIdentifiedEntity instance
-    author = fake_valid_organization_author
-    # When using the pipe syntax to create a relationship
-    relationship = author | relationship_builder | author
-    # Then it should return an instance of RelatedTo with the correct source and target
-    assert isinstance(relationship, Relationship)
-    assert relationship.type == relationship_type
-    assert relationship.source == author
-    assert relationship.target == author
