@@ -1,0 +1,26 @@
+{
+  "title": "MITRE Fight Fraud (F3)",
+  "slug": "mitre-fraud",
+  "description": "The MITRE Fight Fraud Framework (F3) is a curated knowledge base of tactics and techniques used by financial fraud actors, derived from real-world observations of cyber fraud incidents. The framework includes behaviors that characterize known fraud TTPs and references existing MITRE ATT&CK cyber techniques as applicable to financial fraud. F3 provides a common structure and taxonomy to consistently describe and enumerate the material events of a cyber fraud incident, enabling stronger collaboration on fraud prevention, detection, and response across organizational teams. This connector imports the F3 STIX bundle into OpenCTI, including attack patterns, tactics, and relationships.",
+  "short_description": "The MITRE Fight Fraud Framework (F3) is a curated knowledge base of tactics and techniques used by financial fraud actors, derived from real-world observations of cyber fraud incidents.",
+  "logo": null,
+  "use_cases": [
+    "Fraud, Financial Crime & Cryptocurrency Monitoring"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "verified": true,
+  "last_verified_date": "",
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://ctid.mitre.org/fraud/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mitre-fraud",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-mitre-fraud",
+  "container_type": "EXTERNAL_IMPORT"
+}
+

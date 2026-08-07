@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-mitre-fraud:
+    image: opencti/connector-mitre-fraud:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      - "CONNECTOR_NAME=MITRE Fight Fraud (F3)"
+      - CONNECTOR_SCOPE=attack-pattern,identity,marking-definition,relationship,x-mitre-matrix,x-mitre-tactic,x-mitre-collection
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      # Custom parameters for connector-mitre-fraud
+      - MITRE_FRAUD_REMOVE_STATEMENT_MARKING=false # optional (default: false)
+    restart: always
+

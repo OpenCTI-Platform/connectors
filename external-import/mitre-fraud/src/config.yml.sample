@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'MITRE Fight Fraud (F3)' # optional (default: 'MITRE Fight Fraud (F3)')
+  scope: 'attack-pattern,identity,marking-definition,relationship,x-mitre-matrix,x-mitre-tactic,x-mitre-collection'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+mitre_fraud:
+  remove_statement_marking: false # optional (default: false)
+
