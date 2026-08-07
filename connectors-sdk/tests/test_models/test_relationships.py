@@ -119,4 +119,3 @@ def test_relationship_to_stix2_object_returns_valid_stix_object_with_reference_o
     assert isinstance(stix2_obj, Stix2Relationship)
     assert stix2_obj.source_ref == fake_valid_reference.id
     assert stix2_obj.target_ref == fake_valid_reference.id
-
