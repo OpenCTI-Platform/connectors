@@ -1,0 +1,22 @@
+{
+  "title": "DomainTools Iris Detect",
+  "slug": "domaintools-iris-detect",
+  "description": "Import DomainTools Iris Detect",
+  "short_description": "Import DomainTools Iris Detect",
+  "logo": "__metadata__/logo.png",
+  "use_cases": ["Infrastructure & Attack Surface Visibility", "Adversary & Campaign Insights"],
+  "solution_categories": ["Enrichment & Reputation"],
+  "contact": null,
+  "license_type": null,
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/domaintools-iris-detect",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-domaintools-iris-detect",
+  "container_type": "EXTERNAL_IMPORT"
+}
