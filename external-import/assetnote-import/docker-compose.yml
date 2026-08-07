@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-assetnote-import:
+    image: opencti/connector-assetnote-import:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=AssetNote External Import Connector
+      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+
+      - ASSETNOTE_IMPORT_API_BASE_URL=CHANGEME
+      - ASSETNOTE_IMPORT_API_KEY=CHANGEME
+      - ASSETNOTE_IMPORT_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+      - ASSETNOTE_IMPORT_UNRESOLVED_STATUS_NAME=
+      - ASSETNOTE_IMPORT_TRIAGED_STATUS_NAME=
+      - ASSETNOTE_IMPORT_RESOLVED_STATUS_NAME=
+      - ASSETNOTE_IMPORT_IGNORED_STATUS_NAME=
+      #Leave commented out entirely to use the default (epoch)
+      # - ASSETNOTE_IMPORT_FIRST_RUN_RETRIEVAL_DATETIME=CHANGEME
+    restart: always
