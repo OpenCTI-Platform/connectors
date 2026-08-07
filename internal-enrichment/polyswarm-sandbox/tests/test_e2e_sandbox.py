@@ -159,7 +159,8 @@ def get_artifact_by_id(artifact_id: str) -> dict | None:
 
 
 def get_notes_for_observable(observable_id: str) -> list[dict]:
-    query = """
+    query = (
+        """
         {
             notes(
                 filters: {
@@ -177,7 +178,9 @@ def get_notes_for_observable(observable_id: str) -> list[dict]:
                 }
             }
         }
-    """ % observable_id
+    """
+        % observable_id
+    )
     result = graphql(query)
     return [e["node"] for e in result["notes"]["edges"]]
 

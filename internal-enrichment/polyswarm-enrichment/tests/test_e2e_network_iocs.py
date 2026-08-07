@@ -132,7 +132,8 @@ def create_observable_via_pycti(sha256: str, description: str = "") -> dict:
 # ---------------------------------------------------------------------------
 def get_observable_by_hash(sha256: str) -> dict | None:
     """Look up a StixFile observable by SHA-256 hash."""
-    query = """
+    query = (
+        """
         {
             stixCyberObservables(
                 filters: {
@@ -153,7 +154,9 @@ def get_observable_by_hash(sha256: str) -> dict | None:
                 }
             }
         }
-    """ % sha256
+    """
+        % sha256
+    )
     result = graphql(query)
     edges = result["stixCyberObservables"]["edges"]
     return edges[0]["node"] if edges else None
@@ -161,7 +164,8 @@ def get_observable_by_hash(sha256: str) -> dict | None:
 
 def get_notes_for_observable(observable_id: str) -> list[dict]:
     """Get Notes linked to an observable."""
-    query = """
+    query = (
+        """
         {
             notes(
                 filters: {
@@ -173,7 +177,9 @@ def get_notes_for_observable(observable_id: str) -> list[dict]:
                 edges { node { id attribute_abstract content } }
             }
         }
-    """ % observable_id
+    """
+        % observable_id
+    )
     result = graphql(query)
     return [e["node"] for e in result["notes"]["edges"]]
 
