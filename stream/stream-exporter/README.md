@@ -64,7 +64,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector Scope                | scope                     | `CONNECTOR_SCOPE`                       | stream-exporter | Yes       | The scope of the connector.                                                    |
 | Live Stream Start Timestamp    | live_stream_start_timestamp| `CONNECTOR_LIVE_STREAM_START_TIMESTAMP`|                 | No        | Start timestamp on first start (default: all data).                            |
 | Consumer Count                 | consumer_count            | `CONNECTOR_CONSUMER_COUNT`              | 10              | No        | Number of consumer/worker threads.                                             |
-| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            |                 | Yes       | Default confidence level (1-4).                                                |
 | Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info            | No        | Determines the verbosity of the logs.                                          |
 
 ### Connector extra parameters environment variables
@@ -103,7 +102,6 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_NAME=Stream Exporter
       - CONNECTOR_SCOPE=stream-exporter
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_CONFIDENCE_LEVEL=80
       - MINIO_ENDPOINT=minio.example.com
       - MINIO_PORT=9000
       - MINIO_BUCKET=opencti-export
