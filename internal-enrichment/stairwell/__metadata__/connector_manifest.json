@@ -1,0 +1,28 @@
+{
+  "title": "Stairwell",
+  "slug": "stairwell",
+  "description": "The Stairwell internal-enrichment connector enriches OpenCTI observables with intelligence from Stairwell's global file corpus and network telemetry. For file observables it adds MalEval verdicts, Stairwell AI File Triage write-ups, file metadata (magic, imphash, TLSH, entropy, YARA matches), variant discovery with 'derived-from' links, and per-asset sightings from the customer's environment. For domain, IP, and autonomous-system observables it adds DNS resolution history, IP intelligence, and WHOIS. Scores are raised monotonically from MalEval verdicts, and enrichment output is written as STIX Notes, relationships, and custom properties.",
+  "short_description": "Enriches file, domain, IP, and ASN observables with Stairwell intelligence: MalEval verdicts, AI file triage, YARA matches, variant discovery, sightings, DNS history, and WHOIS.",
+  "logo": "internal-enrichment/stairwell/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": "support@stairwell.com",
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 80,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://stairwell.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/stairwell",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-stairwell",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
