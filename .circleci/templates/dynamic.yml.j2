@@ -16,26 +16,6 @@ jobs:
           command: |
             echo "Processing {{top_dir}}/{{sub_dir}}"
             set -x
-            build_with_retry() {
-              max_attempts=5
-              attempt=1
-              delay=15
-              while true; do
-                if "$@"; then
-                  return 0
-                fi
-                if [ "$attempt" -ge "$max_attempts" ]; then
-                  echo "build/push failed after $attempt attempts"
-                  return 1
-                fi
-                jitter=$((RANDOM % 5))
-                sleep_for=$((delay + jitter))
-                echo "build/push attempt $attempt failed, retrying in ${sleep_for}s..."
-                sleep "$sleep_for"
-                attempt=$((attempt + 1))
-                delay=$((delay * 2))
-              done
-            }
             cd {{top_dir}}/{{sub_dir}}
             docker run --privileged --rm tonistiigi/binfmt --install linux/amd64,linux/arm64
             CIRCLE_TAG=${CIRCLE_TAG:-latest}
@@ -74,7 +54,7 @@ jobs:
             find . -name pyproject.toml -exec sed "s|connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@$RELEASE_REF#subdirectory=connectors-sdk\",|" -i {} \;
                 {% endif %}
             {% endif -%}
-            build_with_retry docker buildx build --pull . \
+            docker buildx build --pull . \
              {% for tag in tags -%}
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}} \
              --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}} \
@@ -83,7 +63,7 @@ jobs:
              --push
 
             {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
-            build_with_retry docker buildx build --pull -f Dockerfile_fips . \
+            docker buildx build --pull -f Dockerfile_fips . \
              {% for tag in tags -%}
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
              --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}}-fips \

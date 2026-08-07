@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 # Build (and optionally push) a connector image with docker buildx, retrying
-# transient failures (e.g. registry 5xx/timeouts) with exponential backoff.
-#
-# Mirrors the retry behaviour of the CircleCI pipeline
-# (.circleci/templates/dynamic.yml.j2) so both CIs are equally resilient.
+# transient failures (e.g. registry 5xx/timeouts, rate limiting) with
+# exponential backoff.
 #
 # Required environment variables:
 #   CONTEXT      - Build context directory
