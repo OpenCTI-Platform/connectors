@@ -1,9 +1,12 @@
+import uuid
+
 import pytest
 from src.connector.hygiene import HygieneConnector
 
 
 def _generate_mock_stix_domain_entity(domain_name: str) -> dict:
     entity = {
+        "id": f"domain-name--{uuid.uuid4()}",
         "type": "domain-name",
         "value": domain_name,
         "labels": [],
