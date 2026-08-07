@@ -1,5 +1,4 @@
 import warnings
-from enum import StrEnum
 
 import connectors_sdk.models.enums as enums
 
@@ -42,32 +41,22 @@ ENUMS = OCTI_ENUMS | {
 
 def test_permissive_enum() -> None:
     """Test that PermissiveEnum works as expected."""
-    class ColorEnum(StrEnum):
-        RED = "red"
-        GREEN = "green"
-        BLUE = "blue"
-
-        @classmethod
-        def _missing_(cls, value):
-            _value = str(value)
-            warnings.warn(
-                f"Value '{_value}' is out of {cls.__name__} defined values.",
-                UserWarning,
-                stacklevel=3,
-            )
-            obj = str.__new__(cls, _value)
-            obj._value_ = _value
-            return obj
-
     # Test known values
-    assert ColorEnum("red") == ColorEnum.RED
-    assert ColorEnum("green") == ColorEnum.GREEN
-    assert ColorEnum("blue") == ColorEnum.BLUE
+    assert enums.AttackMotivation("revenge") == enums.AttackMotivation.REVENGE
 
-    # Test unknown value
-    unknown_color = ColorEnum("yellow")
-    assert unknown_color.value == "yellow"
-    assert str(unknown_color) == "yellow"
+    # Test unknown value on SDK permissive enum implementation
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        unknown_motivation = enums.AttackMotivation("not-a-real-motivation")
+
+    assert unknown_motivation.value == "not-a-real-motivation"
+    assert str(unknown_motivation) == "not-a-real-motivation"
+    assert len(caught) == 1
+    assert issubclass(caught[0].category, UserWarning)
+    assert (
+        "Value 'not-a-real-motivation' is out of AttackMotivation defined values."
+        == str(caught[0].message)
+    )
 
 
 def test_public_enums_are_present() -> None:
