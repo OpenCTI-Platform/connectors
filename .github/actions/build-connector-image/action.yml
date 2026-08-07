@@ -229,44 +229,30 @@ runs:
           io.opencti.build.run_id=${{ github.run_id }}
           io.opencti.build.run_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-    - name: Build and push
+    - name: Build and push (with retry)
       id: build
-      continue-on-error: true
-      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-      with:
-        context: ${{ inputs.connector_path }}
-        file: ${{ steps.resolve.outputs.dockerfile }}
-        build-args: ${{ steps.resolve.outputs.build_args }}
-        pull: true
-        push: ${{ inputs.push == 'true' }}
-        platforms: ${{ inputs.platforms }}
-        tags: ${{ steps.docker-tags.outputs.tags }}
-        labels: ${{ steps.oci-labels.outputs.labels }}
-        cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache${{ steps.resolve.outputs.cache_suffix }}
-        cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache{1},mode=max', inputs.connector_name, steps.resolve.outputs.cache_suffix) || '' }}
-
-    - name: Retry build and push
-      id: build-retry
-      if: steps.build.outcome == 'failure'
-      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-      with:
-        context: ${{ inputs.connector_path }}
-        file: ${{ steps.resolve.outputs.dockerfile }}
-        build-args: ${{ steps.resolve.outputs.build_args }}
-        pull: true
-        push: ${{ inputs.push == 'true' }}
-        platforms: ${{ inputs.platforms }}
-        tags: ${{ steps.docker-tags.outputs.tags }}
-        labels: ${{ steps.oci-labels.outputs.labels }}
-        cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache${{ steps.resolve.outputs.cache_suffix }}
-        cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache{1},mode=max', inputs.connector_name, steps.resolve.outputs.cache_suffix) || '' }}
+      shell: bash
+      env:
+        CONTEXT: ${{ inputs.connector_path }}
+        DOCKERFILE: ${{ steps.resolve.outputs.dockerfile }}
+        BUILD_ARGS: ${{ steps.resolve.outputs.build_args }}
+        PLATFORMS: ${{ inputs.platforms }}
+        PUSH: ${{ inputs.push }}
+        PULL: "true"
+        TAGS: ${{ steps.docker-tags.outputs.tags }}
+        LABELS: ${{ steps.oci-labels.outputs.labels }}
+        CACHE_FROM: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache${{ steps.resolve.outputs.cache_suffix }}
+        CACHE_TO: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache{1},mode=max', inputs.connector_name, steps.resolve.outputs.cache_suffix) || '' }}
+        DIGEST_OUT: ${{ runner.temp }}/digest-${{ inputs.connector_name }}
+      run: |
+        bash "${{ github.action_path }}/../../scripts/buildx_with_retry.sh"
 
     - name: Export digest
       if: inputs.push == 'true'
       shell: bash
       run: |
         mkdir -p "${{ inputs.digests_dir }}"
-        DIGEST="${{ steps.build-retry.outputs.digest || steps.build.outputs.digest }}"
+        DIGEST="$(cat "${{ runner.temp }}/digest-${{ inputs.connector_name }}")"
         echo "$DIGEST" > "${{ inputs.digests_dir }}/${{ inputs.connector_name }}"
         echo "📋 Digest: $DIGEST"
 
@@ -312,33 +298,19 @@ runs:
           io.opencti.build.run_id=${{ github.run_id }}
           io.opencti.build.run_url=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-    - name: Build and push FIPS image
+    - name: Build and push FIPS image (with retry)
       if: inputs.fips == 'true' && inputs.platforms == 'linux/amd64'
       id: build-fips
-      continue-on-error: true
-      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-      with:
-        context: ${{ inputs.connector_path }}
-        file: ${{ inputs.connector_path }}/Dockerfile_fips
-        pull: true
-        push: ${{ inputs.push == 'true' }}
-        platforms: linux/amd64
-        tags: ${{ steps.fips-tags.outputs.tags }}
-        labels: ${{ steps.fips-oci-labels.outputs.labels }}
-        cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache-fips
-        cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache-fips,mode=max', inputs.connector_name) || '' }}
-
-    - name: Retry FIPS build and push
-      if: inputs.fips == 'true' && inputs.platforms == 'linux/amd64' && steps.build-fips.outcome == 'failure'
-      id: build-fips-retry
-      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
-      with:
-        context: ${{ inputs.connector_path }}
-        file: ${{ inputs.connector_path }}/Dockerfile_fips
-        pull: true
-        push: ${{ inputs.push == 'true' }}
-        platforms: linux/amd64
-        tags: ${{ steps.fips-tags.outputs.tags }}
-        labels: ${{ steps.fips-oci-labels.outputs.labels }}
-        cache-from: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache-fips
-        cache-to: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache-fips,mode=max', inputs.connector_name) || '' }}
+      shell: bash
+      env:
+        CONTEXT: ${{ inputs.connector_path }}
+        DOCKERFILE: ${{ inputs.connector_path }}/Dockerfile_fips
+        PLATFORMS: linux/amd64
+        PUSH: ${{ inputs.push }}
+        PULL: "true"
+        TAGS: ${{ steps.fips-tags.outputs.tags }}
+        LABELS: ${{ steps.fips-oci-labels.outputs.labels }}
+        CACHE_FROM: type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-${{ inputs.connector_name }}:buildcache-fips
+        CACHE_TO: ${{ inputs.push == 'true' && format('type=registry,ref=ghcr.io/opencti-platform/opencti/cache/connector-{0}:buildcache-fips,mode=max', inputs.connector_name) || '' }}
+      run: |
+        bash "${{ github.action_path }}/../../scripts/buildx_with_retry.sh"
