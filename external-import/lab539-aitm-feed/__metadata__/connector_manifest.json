@@ -1,0 +1,23 @@
+{
+  "title": "Lab539 AiTM Feed",
+  "slug": "lab539-aitm-feed",
+  "description": "Imports Adversary-in-the-Middle (AiTM) infrastructure from the Lab539 AiTM Feed as STIX 2.1 indicators and observables. Lab539 proactively hunts for AiTM infrastructure used in credential theft and session hijacking attacks, providing real-time intelligence on both frontend and backend adversary infrastructure. Each detection event is imported as an indicator with linked IP address and domain name observables, marked TLP:AMBER. Requires a Lab539 AiTM Feed API key.",
+  "short_description": "Proactive AiTM infrastructure intelligence from Lab539, imported as STIX 2.1 indicators and observables.",
+  "logo": "external-import/lab539-aitm-feed/__metadata__/logo.jpg",
+  "use_cases": [
+    "Commercial Threat Intel",
+    "AiTM Infrastructure",
+    "Phishing Infrastructure"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 90,
+  "support_version": ">=6.8.0",
+  "subscription_link": "https://www.aitmfeed.com/subscribe",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/lab539-aitm-feed",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-lab539-aitm-feed",
+  "container_type": "EXTERNAL_IMPORT"
+}
