@@ -1,4 +1,5 @@
 import io
+import ipaddress
 import logging
 import os
 from typing import IO, Dict, Iterable, List, Pattern, Tuple
@@ -73,6 +74,17 @@ class ReportParser(object):
         self, ind_match: str, observable: Observable, match_range: Tuple
     ) -> Dict:
         self.helper.log_debug(f"Observable match: {ind_match}")
+
+        if observable.stix_target == "Phone-Number.value":
+            try:
+                ipaddress.ip_address(ind_match)
+            except ValueError:
+                pass
+            else:
+                self.helper.log_debug(
+                    f"Discarding phone number match for IP address '{ind_match}'"
+                )
+                return {}
 
         if self._is_whitelisted(observable.filter_regex, ind_match):
             return {}
