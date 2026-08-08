@@ -46,7 +46,7 @@ def test_build_custom_properties():
 
 @pytest.mark.parametrize(
     ("score", "expected"),
-    [(0.42, 42), ("0.91", 91), (None, 0), ("invalid", 0)],
+    [(0.29, 29), (0.42, 42), ("0.91", 91), (None, 0), ("invalid", 0)],
 )
 def test_calculate_opencti_score(score, expected):
     assert calculate_opencti_score(score) == expected

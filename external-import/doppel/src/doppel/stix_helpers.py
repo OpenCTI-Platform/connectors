@@ -19,7 +19,7 @@ def calculate_priority(score) -> str:
 def calculate_opencti_score(score) -> int:
     """Scale a Doppel score to OpenCTI's integer score representation."""
     try:
-        return int(float(score) * 100) if score is not None else 0
+        return round(float(score) * 100) if score is not None else 0
     except (ValueError, TypeError):
         return 0
 

@@ -162,7 +162,9 @@ def test_convert_alerts_to_stix_existing_indicator_reversion(converter):
     converter.convert_alerts_to_stix([alert])
 
     # Then verify that the source-owned fields include the revoked state.
-    field_patch = converter.helper.api.indicator.update_field.call_args.kwargs["input"]
+    update_call = converter.helper.api.indicator.update_field.call_args
+    assert update_call.kwargs["id"] == mock_indicator["id"]
+    field_patch = update_call.kwargs["input"]
     assert {"key": "revoked", "value": True} in field_patch
 
 
@@ -384,7 +386,9 @@ def test_indicator_found_via_name_search_fallback(converter):
     converter.convert_alerts_to_stix([alert])
 
     # Existing indicator path updates revoked=False (actioned state).
-    field_patch = converter.helper.api.indicator.update_field.call_args.kwargs["input"]
+    update_call = converter.helper.api.indicator.update_field.call_args
+    assert update_call.kwargs["id"] == matching_indicator["id"]
+    field_patch = update_call.kwargs["input"]
     assert {"key": "revoked", "value": False} in field_patch
 
 
@@ -431,9 +435,9 @@ def test_rft_case_existing_revoked_on_reversion(converter):
 
     converter.convert_alerts_to_stix([alert])
 
-    field_patch = converter.helper.api.stix_domain_object.update_field.call_args.kwargs[
-        "input"
-    ]
+    update_call = converter.helper.api.stix_domain_object.update_field.call_args
+    assert update_call.kwargs["id"] == existing_case["id"]
+    field_patch = update_call.kwargs["input"]
     assert {"key": "revoked", "value": True} in field_patch
 
 
@@ -455,9 +459,9 @@ def test_rft_case_found_via_name_search_fallback(converter):
     converter.convert_alerts_to_stix([alert])
 
     # Existing (actioned) -> revoked=False.
-    field_patch = converter.helper.api.stix_domain_object.update_field.call_args.kwargs[
-        "input"
-    ]
+    update_call = converter.helper.api.stix_domain_object.update_field.call_args
+    assert update_call.kwargs["id"] == matching_case["id"]
+    field_patch = update_call.kwargs["input"]
     assert {"key": "revoked", "value": False} in field_patch
 
 
