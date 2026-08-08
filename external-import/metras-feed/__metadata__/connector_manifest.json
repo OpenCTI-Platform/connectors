@@ -3,7 +3,7 @@
   "slug": "metras-feed",
   "description": "Imports Metras EDR alerts (with MITRE ATT&CK mapping), file binaries, and endpoint inventory into OpenCTI as STIX incidents, observables and system identities.",
   "short_description": "External import connector for Metras EDR telemetry",
-  "logo": null,
+  "logo": "external-import/metras-feed/logo.png",
   "use_cases": ["Detection & Response Enablement"],
   "solution_categories": ["Endpoint Detection & Response"],
   "contact": null,
