@@ -157,9 +157,7 @@ class ConverterToStix:
                 parts.append(f"{bps}bps")
         return ", ".join(parts) if parts else "unknown volume"
 
-    def create_incident_observable(
-        self, incident: dict
-    ) -> list[stix2.base._STIXBase]:
+    def create_incident_observable(self, incident: dict) -> list[stix2.base._STIXBase]:
         """
         Convert a Flowtriq incident into STIX objects:
         - An IPv4Address or IPv6Address observable for the target IP

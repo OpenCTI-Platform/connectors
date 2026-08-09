@@ -96,9 +96,7 @@ class FlowtriqClient:
         page_size = min(max_total, 100)
 
         while offset < max_total:
-            data = self.get_incidents(
-                limit=page_size, offset=offset, severity=severity
-            )
+            data = self.get_incidents(limit=page_size, offset=offset, severity=severity)
             if not data or "incidents" not in data:
                 break
 

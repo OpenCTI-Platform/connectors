@@ -5,8 +5,13 @@
   "short_description": "Imports DDoS attack incidents from Flowtriq as STIX threat intelligence, including target IPs, attack types, severity, and source IPs.",
   "logo": "external-import/flowtriq/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Network Security"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
