@@ -2,8 +2,9 @@
 
 These cover the defects raised in review: an unsafe/unclamped confidence
 cast, unvalidated AI list output being iterated directly, the
-threat-actor-group entity lookup using the wrong API endpoint, and a retry
-loop that gave up instead of retrying on JSON/API errors.
+threat-actor-group entity lookup using the wrong API endpoint, a retry
+loop that gave up instead of retrying on JSON/API errors, and a parsed
+JSON value that isn't a dict.
 """
 
 from unittest.mock import MagicMock
@@ -16,12 +17,6 @@ from main import (
     normalize_attack_ids,
     normalize_string_list,
 )
-
-REQUIRED_ENV = {
-    "OPENCTI_TOKEN": "test-token",
-    "CONNECTOR_ID": "test-connector-id",
-    "ANTHROPIC_API_KEY": "test-api-key",
-}
 
 
 class _NonRetryableAPIError(anthropic.APIError):
@@ -39,18 +34,20 @@ class _NonRetryableAPIError(anthropic.APIError):
 
 @pytest.fixture
 def connector(monkeypatch):
-    """A connector instance with OpenCTIConnectorHelper and the Anthropic
-    client replaced by mocks, so no real network or OpenCTI connection is
-    made."""
-    for key, value in REQUIRED_ENV.items():
-        monkeypatch.setenv(key, value)
-    monkeypatch.setattr(connector_module, "OpenCTIConnectorHelper", MagicMock())
+    """A connector instance built from a fake ConnectorSettings and a mocked
+    OpenCTIConnectorHelper, with the Anthropic client itself also mocked so
+    no real network call is made."""
     monkeypatch.setattr(connector_module.anthropic, "Anthropic", MagicMock())
     monkeypatch.setattr(connector_module.time, "sleep", MagicMock())
 
-    instance = AnthropicAIEnrichmentConnector()
-    instance.helper.connect_confidence_level = 100
-    return instance
+    config = MagicMock()
+    config.anthropic.api_key = "test-api-key"
+    config.anthropic.model = "claude-3-5-haiku-latest"
+
+    helper = MagicMock()
+    helper.connect_confidence_level = 100
+
+    return AnthropicAIEnrichmentConnector(config=config, helper=helper)
 
 
 class TestNormalizeStringList:
@@ -190,3 +187,16 @@ class TestCallAnthropicRetries:
 
         assert result is None
         assert connector.client.messages.create.call_count == 1
+
+    def test_retries_when_the_model_returns_a_json_list_instead_of_an_object(
+        self, connector
+    ):
+        connector.client.messages.create.side_effect = [
+            self._message("[1, 2, 3]"),
+            self._message('{"confidence": 80}'),
+        ]
+
+        result = connector._call_anthropic("{content}", "some content")
+
+        assert result == {"confidence": 80}
+        assert connector.client.messages.create.call_count == 2

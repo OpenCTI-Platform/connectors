@@ -1,10 +1,10 @@
 import json
-import os
 import re
 import time
 
 import anthropic
 from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 SYSTEM_PROMPT = """You are a senior cyber threat intelligence analyst.
 Analyze threat intelligence content and return structured JSON only.
@@ -76,27 +76,11 @@ def normalize_attack_ids(value) -> list[str]:
 
 
 class AnthropicAIEnrichmentConnector:
-    def __init__(self):
-        config = {
-            "opencti": {
-                "url": os.environ.get("OPENCTI_URL", "http://opencti:8080"),
-                "token": os.environ["OPENCTI_TOKEN"],
-            },
-            "connector": {
-                "id": os.environ["CONNECTOR_ID"],
-                "type": "INTERNAL_ENRICHMENT",
-                "name": os.environ.get("CONNECTOR_NAME", "Anthropic AI Enrichment"),
-                "scope": os.environ.get(
-                    "CONNECTOR_SCOPE",
-                    "Report,Intrusion-Set,Threat-Actor-Group,Malware",
-                ),
-                "log_level": os.environ.get("CONNECTOR_LOG_LEVEL", "info"),
-                "auto": False,
-            },
-        }
-        self.helper = OpenCTIConnectorHelper(config)
-        self.client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-        self.model = os.environ.get("AI_MODEL", "claude-3-5-haiku-latest")
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
+        self.client = anthropic.Anthropic(api_key=config.anthropic.api_key)
+        self.model = config.anthropic.model
 
     def _call_anthropic(self, prompt_template: str, content: str) -> dict | None:
         prompt = prompt_template.format(content=content[:8000])
@@ -109,7 +93,19 @@ class AnthropicAIEnrichmentConnector:
                     system=SYSTEM_PROMPT,
                     messages=[{"role": "user", "content": prompt}],
                 )
-                return json.loads(msg.content[0].text)
+                text = msg.content[0].text
+                parsed = json.loads(text)
+                if not isinstance(parsed, dict):
+                    # Valid JSON but not an object (e.g. a bare list or
+                    # number) - every caller does result.get(...), so treat
+                    # this the same as a parse failure rather than letting
+                    # it raise AttributeError deeper in the enrichment code.
+                    raise json.JSONDecodeError(
+                        f"Expected a JSON object, got {type(parsed).__name__}",
+                        text,
+                        0,
+                    )
+                return parsed
             except anthropic.RateLimitError as exc:
                 last_error = exc
                 wait_seconds = 60 * (attempt + 1)
@@ -303,4 +299,6 @@ class AnthropicAIEnrichmentConnector:
 
 
 if __name__ == "__main__":
-    AnthropicAIEnrichmentConnector().start()
+    settings = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    AnthropicAIEnrichmentConnector(config=settings, helper=helper).start()

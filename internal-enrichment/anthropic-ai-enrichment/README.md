@@ -29,7 +29,7 @@ AI output is an enrichment aid, not authoritative intelligence. Operators should
 | `CONNECTOR_SCOPE` | OpenCTI entity scope. | No |
 | `CONNECTOR_LOG_LEVEL` | Connector log level. | No |
 | `ANTHROPIC_API_KEY` | Anthropic API key. | Yes |
-| `AI_MODEL` | Anthropic model name. | No |
+| `ANTHROPIC_MODEL` | Anthropic model name. | No |
 
 ## Deployment
 
