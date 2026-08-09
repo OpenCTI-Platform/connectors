@@ -189,8 +189,8 @@ class ConnectorFlowtriq:
             {"connector_name": self.helper.connect_name},
         )
         try:
-            now = datetime.now()
-            current_timestamp = int(datetime.timestamp(now))
+            now = datetime.now(timezone.utc)
+            current_timestamp = int(now.timestamp())
             current_state = self.helper.get_state()
 
             if current_state is not None and "last_run" in current_state:
