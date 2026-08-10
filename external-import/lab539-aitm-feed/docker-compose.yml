@@ -1,0 +1,23 @@
+services:
+  connector-lab539-aitm-feed:
+    image: lab539/opencti-aitm-feed-connector:latest
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_NAME=Lab539 AiTM Feed
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,domain-name
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT15M
+      - CONNECTOR_QUEUE_THRESHOLD=500
+      - AITM_FEED_API_KEY=${AITM_FEED_API_KEY}
+      - AITM_FEED_API_BASE_URL=https://aitm.lab539.io/v1.0
+      - AITM_FEED_TLP_LEVEL=amber
+      - AITM_FEED_FIRST_RUN_LOOKBACK_DAYS=7
+    restart: unless-stopped
+    networks:
+      - xtm_default
+
+networks:
+  xtm_default:
+    external: true
