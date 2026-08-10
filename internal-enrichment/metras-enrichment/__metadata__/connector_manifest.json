@@ -3,7 +3,7 @@
   "slug": "metras-enrichment",
   "description": "Enriches IPv4 and file-hash observables by querying Metras for fleet presence (EDR alerts, endpoint inventory, binary inventory), returning context Notes and system-identity links ('have I seen this in my environment?').",
   "short_description": "Enrichment connector for Metras fleet presence lookups",
-  "logo": "internal-enrichment/metras-enrichment/logo.png",
+  "logo": "internal-enrichment/metras-enrichment/__metadata__/logo.png",
   "use_cases": ["Detection & Response Enablement"],
   "solution_categories": ["Endpoint Detection & Response"],
   "contact": null,
