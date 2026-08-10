@@ -183,8 +183,7 @@ def test_query_notifications_stops_gracefully_on_pagination_limit_exceeded():
                 {
                     "code": 400,
                     "message": (
-                        "The provided limit and offset exceed the "
-                        "pagination limit"
+                        "The provided limit and offset exceed the " "pagination limit"
                     ),
                     "message_key": "PAGINATION_LIMIT_EXCEEDED",
                 }
