@@ -207,7 +207,9 @@ class ConverterToStix:
         created_at = parse_iso_datetime(alert.get("created_at"))
         modified_at = parse_iso_datetime(alert.get("last_activity_timestamp"))
         fallback_timestamp = datetime(1970, 1, 1, tzinfo=timezone.utc)
-        created_at = created_at or modified_at or fallback_timestamp
+        # Never derive the identity-bearing creation timestamp from mutable
+        # activity data. A fixed fallback keeps the Incident ID stable on replay.
+        created_at = created_at or fallback_timestamp
         modified_at = modified_at or created_at
 
         labels = build_labels(alert)
