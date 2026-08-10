@@ -3,7 +3,7 @@
   "slug": "domaintools-feeds",
   "description": "Import DomainTools Feeds",
   "short_description": "Import DomainTools Feeds",
-  "logo": "__metadata__/logo.png",
+  "logo": "external-import/domaintools-feeds/__metadata__/logo.png",
   "use_cases": ["Infrastructure & Attack Surface Visibility", "Detection & Response Enablement"],
   "solution_categories": ["Threat Intelligence Feed"],
   "contact": null,

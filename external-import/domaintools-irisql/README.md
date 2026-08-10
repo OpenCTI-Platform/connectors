@@ -94,7 +94,7 @@ Register connector in the **main** OpenCTI `docker-compose.yml`:
       - CONNECTOR_DURATION_PERIOD=PT5M
       - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com/v1/iris-investigate/
       - DOMAINTOOLS_API_KEY=changeme
-      - |
+      - |-
         DOMAINTOOLS_IRIS_QL=# IrisQL-1.0
         domain contains "sso"
         AND

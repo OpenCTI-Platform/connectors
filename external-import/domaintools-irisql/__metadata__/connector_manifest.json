@@ -3,7 +3,7 @@
   "slug": "domaintools-irisql",
   "description": "Import DomainTools IrisQL",
   "short_description": "Import DomainTools IrisQL",
-  "logo": "__metadata__/logo.png",
+  "logo": "external-import/domaintools-irisql/__metadata__/logo.png",
   "use_cases": ["Infrastructure & Attack Surface Visibility", "Adversary & Campaign Insights"],
   "solution_categories": ["Enrichment & Reputation"],
   "contact": null,
