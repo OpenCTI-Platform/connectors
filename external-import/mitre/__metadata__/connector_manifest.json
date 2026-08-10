@@ -29,6 +29,7 @@
     "MITRE_CAPEC_FILE_URL"
   ],
   "limits": {
-    "fetch_max_mb": 64
+    "fetch_max_mb": 64,
+    "memory_mb": 2048
   }
 }
