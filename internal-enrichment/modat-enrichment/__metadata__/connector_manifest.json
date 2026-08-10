@@ -3,7 +3,7 @@
   "slug": "modat-enrichment",
   "description": "Internal enrichment connector querying the Modat Magnify host-details API for IPv4 observables.",
   "short_description": "Enriches IPv4 observables with Modat host intelligence.",
-  "logo": "internal-enrichment/modat-enrichment/logo.png",
+  "logo": "internal-enrichment/modat-enrichment/__metadata__/logo.png",
   "use_cases": [
     "Infrastructure & Attack Surface Visibility"
   ],
