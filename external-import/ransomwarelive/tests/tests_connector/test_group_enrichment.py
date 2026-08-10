@@ -1,6 +1,6 @@
 """Unit tests for group-level enrichment: leak sites, aliases, ext refs, and TTPs."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import stix2
@@ -362,16 +362,15 @@ class TestAttackPatternFetcher:
 
         mock_helper = MagicMock()
         mock_config = MagicMock()
-        mock_config.connector.create_threat_actor = False
+        mock_config.ransomwarelive.create_threat_actor = False
         mock_config.connector.duration_period = "PT5M"
 
-        with patch("ransomwarelive.ransom_conn.RansomwareAPIClient"):
-            connector = RansomwareAPIConnector.__new__(RansomwareAPIConnector)
-            connector.helper = mock_helper
-            connector.config = mock_config
-            connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
-            connector.author = connector.converter_to_stix.author
-            connector.processed_groups = set()
+        connector = RansomwareAPIConnector.__new__(RansomwareAPIConnector)
+        connector.helper = mock_helper
+        connector.config = mock_config
+        connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
+        connector.author = connector.converter_to_stix.author
+        connector.processed_groups = set()
         return connector
 
     def test_returns_stix_id_when_found(self):
@@ -413,7 +412,7 @@ class TestProcessGroupTtps:
 
         mock_helper = MagicMock()
         mock_config = MagicMock()
-        mock_config.connector.create_threat_actor = False
+        mock_config.ransomwarelive.create_threat_actor = False
 
         connector = RansomwareAPIConnector.__new__(RansomwareAPIConnector)
         connector.helper = mock_helper
@@ -565,7 +564,7 @@ class TestCollectGroupEnrichmentObjects:
 
     def test_leak_site_domains_skipped_when_disabled(self):
         connector = self._make_connector()
-        connector.config.connector.create_leak_site_domains = False
+        connector.config.ransomwarelive.create_leak_site_domains = False
         intrusion_set = self._make_intrusion_set(connector)
 
         connector._collect_group_enrichment_objects(
@@ -578,7 +577,7 @@ class TestCollectGroupEnrichmentObjects:
 
     def test_leak_site_domains_called_when_enabled(self):
         connector = self._make_connector()
-        connector.config.connector.create_leak_site_domains = True
+        connector.config.ransomwarelive.create_leak_site_domains = True
         intrusion_set = self._make_intrusion_set(connector)
 
         connector._collect_group_enrichment_objects(
@@ -654,7 +653,7 @@ class TestProcessedGroupsResetPerRun:
         connector.api_client = MagicMock()
         # Empty /groups payload makes both collectors return early right after
         # the reset, isolating the dedup-guard reset from the rest of the run.
-        connector.api_client.get_feed.return_value = []
+        connector.api_client.get_groups.return_value = []
         connector.last_run = None
         # Simulate a group enriched on a previous run still being tracked.
         connector.processed_groups = {"acme-ransomware"}

@@ -1,38 +1,29 @@
 import requests
 from pycti import OpenCTIConnectorHelper
+from ransomwarelive_client.exceptions import RansomwareAPIError
+from ransomwarelive_client.protocol import (
+    MAX_RETRIES,
+    REQUEST_TIMEOUT_SECONDS,
+    RETRY_BACKOFF_FACTOR,
+    RETRY_BACKOFF_JITTER,
+)
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 
-class RansomwareAPIError(Exception):
-    """Custom wrapper for exceptions raised in RansomwareAPIClient"""
-
-
-_MAX_RETRIES = 5
-_RETRY_BACKOFF_FACTOR = 60  # seconds — matches the API's "1 per 1 minute" rate limit
-_RETRY_BACKOFF_JITTER = (
-    30  # seconds of random jitter to spread retries across instances
-)
-_REQUEST_TIMEOUT_SECONDS = 30
-
-API_BASE_URL = "https://api.ransomware.live/v2/"
-
-
-class RansomwareAPIClient:
-    def __init__(self, helper: OpenCTIConnectorHelper):
-        """
-        Initialize the client with necessary configurations
-        """
+class RansomwareAPIV2Client:
+    def __init__(self, helper: OpenCTIConnectorHelper, base_url: str):
         self.helper = helper
+        self.base_url = base_url.rstrip("/")
         self._session = self._build_session()
 
     @staticmethod
     def _build_session() -> requests.Session:
         retry = Retry(
-            total=_MAX_RETRIES,
+            total=MAX_RETRIES,
             status_forcelist=[429],
-            backoff_factor=_RETRY_BACKOFF_FACTOR,
-            backoff_jitter=_RETRY_BACKOFF_JITTER,
+            backoff_factor=RETRY_BACKOFF_FACTOR,
+            backoff_jitter=RETRY_BACKOFF_JITTER,
         )
         adapter = HTTPAdapter(max_retries=retry)
         session = requests.Session()
@@ -41,17 +32,11 @@ class RansomwareAPIClient:
         return session
 
     def _send_request(self, url: str):
-        """
-        Send a request to Ransomware API.
-        Retries up to _MAX_RETRIES times on HTTP 429 with exponential backoff and jitter.
-        :param url: request URL in string
-        :return: response data returned by the API
-        """
         try:
             response = self._session.get(
                 url,
                 headers={"accept": "application/json", "User-Agent": "OpenCTI"},
-                timeout=_REQUEST_TIMEOUT_SECONDS,
+                timeout=REQUEST_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
 
@@ -62,10 +47,10 @@ class RansomwareAPIClient:
         except requests.exceptions.RetryError as err:
             self.helper.connector_logger.error(
                 "Exceeded maximum retries for Ransomware API due to rate limiting",
-                {"url": f"GET {url}", "status_code": 429, "retries": _MAX_RETRIES},
+                {"url": f"GET {url}", "status_code": 429, "retries": MAX_RETRIES},
             )
             raise RansomwareAPIError(
-                f"Error while fetching Ransomware API: HTTP 429 after {_MAX_RETRIES} retries",
+                f"Error while fetching Ransomware API: HTTP 429 after {MAX_RETRIES} retries",
                 {"url": f"GET {url}", "status_code": 429},
             ) from err
 
@@ -95,13 +80,8 @@ class RansomwareAPIClient:
                 {"url": f"GET {url}", "error": err},
             ) from err
 
-    def get_feed(self, path: str) -> list[dict]:
-        """
-        Get feed for given path.
-        :param path: path to get feed from.
-        :return: data's feed items
-        """
-        url = f"{API_BASE_URL}{path}"
+    def _get_feed(self, path: str) -> list[dict]:
+        url = f"{self.base_url}/{path.lstrip('/')}"
         data = self._send_request(url)
 
         if data is None:
@@ -119,3 +99,12 @@ class RansomwareAPIClient:
             )
 
         return data
+
+    def get_groups(self) -> list[dict]:
+        return self._get_feed("groups")
+
+    def get_recent_victims(self) -> list[dict]:
+        return self._get_feed("recentvictims")
+
+    def get_victims(self, year: int, month: int) -> list[dict]:
+        return self._get_feed(f"victims/{year}/{month}")
