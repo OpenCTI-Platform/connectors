@@ -83,7 +83,7 @@ Register connector in the **main** OpenCTI `docker-compose.yml`:
 
 ```yaml
   connector-domaintools:
-    image: opencti/connector-domaintools:latest
+    image: opencti/connector-domaintools-irisql:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=changeme
@@ -94,7 +94,13 @@ Register connector in the **main** OpenCTI `docker-compose.yml`:
       - CONNECTOR_DURATION_PERIOD=PT5M
       - DOMAINTOOLS_API_BASE_URL=https://api.domaintools.com/v1/iris-investigate/
       - DOMAINTOOLS_API_KEY=changeme
-      - DOMAINTOOLS_IRIS_QL="# IrisQL-1.0\ndomain contains \"sso\"\nAND\nfirst_seen within \"the last 3 hour\"\nAND\nrisk_score greater_than_or_equal \"90\""
+      - |
+        DOMAINTOOLS_IRIS_QL=# IrisQL-1.0
+        domain contains "sso"
+        AND
+        first_seen within "the last 3 hour"
+        AND
+        risk_score greater_than_or_equal "90"
       - DOMAINTOOLS_STORE_IRIS_DATA=true
       - DOMAINTOOLS_TLP_LEVEL=clear
     restart: always
