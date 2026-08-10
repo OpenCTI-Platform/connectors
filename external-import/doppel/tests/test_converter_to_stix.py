@@ -944,6 +944,22 @@ def test_incident_id_is_stable_when_displayed_entity_changes(converter):
     assert first["name"] != second["name"]
 
 
+def test_incident_id_is_stable_without_created_at(converter):
+    alert = _domains_alert(alert_id="alert_incident_missing_created")
+    alert.pop("created_at")
+
+    first = converter._create_incident(
+        {**alert, "last_activity_timestamp": "2026-08-04T12:30:00Z"}
+    )
+    second = converter._create_incident(
+        {**alert, "last_activity_timestamp": "2026-08-05T13:45:00Z"}
+    )
+
+    assert first["id"] == second["id"]
+    assert first["created"] == second["created"] == "1970-01-01T00:00:00.000Z"
+    assert first["modified"] != second["modified"]
+
+
 def test_existing_incident_refreshes_fields_labels_and_reference(converter):
     converter.enable_incidents = True
     alert = _domains_alert(
