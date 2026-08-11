@@ -56,6 +56,7 @@ class TestConnectorSettings:  # pylint: disable=redefined-outer-name,unused-argu
         assert settings.flare.lookback_days == 30
         assert settings.flare.tlp_level == "white"
         assert settings.flare.tenant_id is None
+        assert settings.flare.identifier_group_id is None
 
     def test_opencti_url_override(
         self, required_env: None, monkeypatch: MonkeyPatch
@@ -98,6 +99,13 @@ class TestConnectorSettings:  # pylint: disable=redefined-outer-name,unused-argu
         monkeypatch.setenv("FLARE_TENANT_ID", "42")
         settings = ConnectorSettings()
         assert settings.flare.tenant_id == 42
+
+    def test_flare_identifier_group_id_override(
+        self, required_env: None, monkeypatch: MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("FLARE_IDENTIFIER_GROUP_ID", "1337")
+        settings = ConnectorSettings()
+        assert settings.flare.identifier_group_id == 1337
 
     def test_flare_lookback_days_override(
         self, required_env: None, monkeypatch: MonkeyPatch

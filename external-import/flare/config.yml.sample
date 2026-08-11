@@ -13,6 +13,7 @@ flare:
   api_key: 'ChangeMe'
   #api_domain: 'api.flare.io' # optional (default: 'api.flare.io')
   #tenant_id: # optional, Flare tenant ID (default: none)
+  #identifier_group_id: # optional, fetch events from this identifier group's feed instead of the tenant feed (default: none)
   #event_types: 'stealer_log,domain,ransomleak,leak' # optional (default: 'stealer_log,domain,ransomleak,leak')
   #event_actions: '' # optional, filter by event actions: 'ignored', 'remediated' (default: none)
   #severities: '' # optional, filter by severities: 'info', 'low', 'medium', 'high', 'critical' (default: none, all severities)

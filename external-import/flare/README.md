@@ -15,6 +15,8 @@ The Flare connector integrates OpenCTI with the Flare platform by ingesting even
 ## Introduction
 This connector fetches events from the Flare API and imports them into OpenCTI as Incidents with related observables and metadata such as severity, incident type and relevant dates.
 
+By default events come from the tenant feed. Set `FLARE_IDENTIFIER_GROUP_ID` to fetch only the events matching the identifiers of a single identifier group instead.
+
 ## Installation
 ### Requirements
 - Flare API Key
@@ -48,6 +50,7 @@ docker build -t opencti/connector-flare:rolling .
       - FLARE_API_DOMAIN=api.flare.io
       - FLARE_API_KEY=fw_xxxxxx
       - FLARE_TENANT_ID=changeme
+      - FLARE_IDENTIFIER_GROUP_ID=changeme
       - FLARE_EVENT_TYPES=changeme
       - FLARE_EVENT_ACTIONS=changeme
       - FLARE_SEVERITIES=changeme

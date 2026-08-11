@@ -74,6 +74,11 @@
       "description": "Flare tenant ID.",
       "type": "integer"
     },
+    "FLARE_IDENTIFIER_GROUP_ID": {
+      "default": null,
+      "description": "Flare identifier group ID. If set, events are fetched from this group's feed instead of the tenant feed.",
+      "type": "integer"
+    },
     "FLARE_EVENT_TYPES": {
       "default": [
         "stealer_log",

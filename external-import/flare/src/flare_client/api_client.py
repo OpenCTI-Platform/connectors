@@ -15,12 +15,18 @@ class FlareClient:  # pylint: disable=too-few-public-methods
         api_key: SecretStr,
         api_domain: str,
         tenant_id: int | None,
+        identifier_group_id: int | None = None,
     ) -> None:
         self.helper = helper
         self._api = FlareApiClient(
             api_key=api_key.get_secret_value(),
             api_domain=api_domain,
             tenant_id=tenant_id,
+        )
+        self._search_url = (
+            f"/firework/v4/events/identifier_groups/{identifier_group_id}/_search"
+            if identifier_group_id is not None
+            else "/firework/v4/events/tenant/_search"
         )
 
     def get_events(
@@ -45,7 +51,7 @@ class FlareClient:  # pylint: disable=too-few-public-methods
 
         for response in self._api.scroll(
             method="POST",
-            url="/firework/v4/events/tenant/_search",
+            url=self._search_url,
             json={"from": last_from, "filters": filters if filters else None},
         ):
             time.sleep(0.25)

@@ -51,6 +51,10 @@ class FlareConfig(BaseConfigModel):
         description="Flare tenant ID.",
         default=None,
     )
+    identifier_group_id: int | None = Field(
+        description="Flare identifier group ID. If set, events are fetched from this group's feed instead of the tenant feed.",
+        default=None,
+    )
     event_types: ListFromString = Field(
         description="Comma-separated list of Flare event types to import.",
         default=["stealer_log", "domain", "ransomleak", "leak"],

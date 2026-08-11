@@ -16,6 +16,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT1H"` | The period of time to await between two runs. |
 | FLARE_API_DOMAIN | `string` |  | string |  | `"api.flare.io"` | API domain name. |
 | FLARE_TENANT_ID | `integer` |  | integer |  | `null` | Flare tenant ID. |
+| FLARE_IDENTIFIER_GROUP_ID | `integer` |  | integer |  | `null` | Flare identifier group ID. If set, events are fetched from this group's feed instead of the tenant feed. |
 | FLARE_EVENT_TYPES | `array` |  | string |  | `["stealer_log", "domain", "ransomleak", "leak"]` | Comma-separated list of Flare event types to import. |
 | FLARE_EVENT_ACTIONS | `array` |  | string |  | `[]` | Comma-separated list of event actions to filter by. If not set, all actions are imported. |
 | FLARE_SEVERITIES | `array` |  | string |  | `[]` | Comma-separated list of severities to filter by: 'info', 'low', 'medium', 'high', 'critical'. If not set, all severities are imported. |

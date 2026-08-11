@@ -15,6 +15,7 @@ services:
       - FLARE_API_KEY=ChangeMe
       #- FLARE_API_DOMAIN=api.flare.io # optional (default: 'api.flare.io')
       #- FLARE_TENANT_ID= # optional, Flare tenant ID (default: none)
+      #- FLARE_IDENTIFIER_GROUP_ID= # optional, fetch events from this identifier group's feed instead of the tenant feed (default: none)
       #- FLARE_EVENT_TYPES=stealer_log,domain,ransomleak,leak # optional (default: 'stealer_log,domain,ransomleak,leak')
       #- FLARE_EVENT_ACTIONS= # optional, filter by event actions: 'ignored', 'remediated' (default: none)
       #- FLARE_SEVERITIES= # optional, filter by severities: 'info', 'low', 'medium', 'high', 'critical' (default: none, all severities)
