@@ -21,6 +21,11 @@ class CVEClient:
         self._rate_limiter = rate_limiter
         self._headers = {"apiKey": api_key, "User-Agent": header}
         self._session: aiohttp.ClientSession | None = None
+        # Last error message from a failed request, so a caller that only
+        # sees `get_complete_collection` return None (instead of an
+        # exception) can still raise/log the real reason exactly once,
+        # instead of a second, generic, information-losing message.
+        self._last_error: str | None = None
 
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
@@ -57,7 +62,14 @@ class CVEClient:
 
     @staticmethod
     async def _extract_error_message(response: aiohttp.ClientResponse) -> str | None:
-        """Extract a meaningful API error message from JSON or text body."""
+        """Extract a meaningful API error message from JSON body, text body,
+        or response headers.
+
+        The NVD API sometimes returns an empty body (e.g. Content-Length: 0)
+        with the real explanation carried in a non-standard `message` response
+        header instead (observed for invalid/expired API keys, which NVD
+        reports as a 404 with header `message: Invalid apiKey.`).
+        """
         try:
             body = await response.json(content_type=None)
             if isinstance(body, dict):
@@ -81,6 +93,11 @@ class CVEClient:
                 return body_text.strip()
         except UnicodeDecodeError:
             return None
+
+        for key in ("message", "error", "X-Error-Message"):
+            value = response.headers.get(key)
+            if value and value.strip():
+                return value.strip()
 
         return None
 
@@ -114,7 +131,10 @@ class CVEClient:
                     if response.status == 404:
                         message = await self._extract_error_message(response)
                         if message:
-                            raise Exception(f"[API] Error: {message}")
+                            raise Exception(
+                                f"[API] Request to {api_url} failed with status "
+                                f"404: {message}"
+                            )
                         raise Exception(
                             f"[API] Request to {api_url} failed with status 404"
                         )
@@ -166,14 +186,25 @@ class CVEClient:
         )
 
     async def get_complete_collection(self, api_url: str, params: dict | None = None):
-        """Fetch a JSON collection from the given NVD API endpoint."""
+        """Fetch a JSON collection from the given NVD API endpoint.
+
+        On failure, returns None instead of raising, so tolerant callers
+        (e.g. per-CVE CPE resolution) can skip and continue. The error is
+        kept on `self._last_error` and only logged at debug level here:
+        callers that treat a None result as fatal (e.g. CVE ingestion) are
+        expected to raise using `self._last_error`, so the real explanation
+        is logged exactly once, by the top-level handler, instead of once
+        here and again as a generic message further up the call stack.
+        """
         try:
             info_msg = f"[API] HTTP Get Request to endpoint for path ({api_url})"
             self.helper.connector_logger.debug(info_msg)
 
             data = await self.request(api_url, params)
+            self._last_error = None
             return data
 
         except Exception as err:
-            self.helper.connector_logger.error(str(err), meta={"error": str(err)})
+            self._last_error = str(err)
+            self.helper.connector_logger.debug(str(err), meta={"error": str(err)})
             return None
