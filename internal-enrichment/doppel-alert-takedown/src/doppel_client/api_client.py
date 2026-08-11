@@ -1,7 +1,31 @@
+import re
+
 import requests
 from doppel_client.constants import DOPPEL_ATTRIBUTION_HEADERS
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
+
+VALID_QUEUE_STATES = {
+    "doppel_review",
+    "needs_confirmation",
+    "actioned",
+    "taken_down",
+    "monitoring",
+    "archived",
+}
+VALID_ENTITY_STATES = {
+    "active",
+    "down",
+    "parked",
+    "suspicious",
+    "unclassified",
+    "unrelated",
+    "related",
+    "unknown",
+}
+VALID_TAG_ACTIONS = {"add", "remove"}
+VALID_FILE_ACTIONS = {"upload", "delete"}
+MAX_FILES_PER_REQUEST = 10
 
 
 class DoppelClientError(Exception):
@@ -70,30 +94,180 @@ class DoppelClient:
                 f"Failed to create Doppel alert for '{entity}': {err}"
             ) from err
 
-    def request_takedown(self, entity: str, comment: str) -> dict:
-        """
-        Request a takedown for an existing alert by setting its queue state to "actioned".
+    @staticmethod
+    def _alert_selector(
+        alert_id: str | None, entity: str | None
+    ) -> tuple[dict[str, str], str]:
+        """Validate and build a single-alert API selector."""
+        if bool(alert_id) == bool(entity):
+            raise ValueError("Exactly one of alert_id or entity must be provided")
+        if alert_id and not re.fullmatch(r"[A-Za-z0-9]{1,3}-\d+", alert_id):
+            raise ValueError(f"Invalid Doppel alert ID: {alert_id}")
+        if entity is not None and not entity.strip():
+            raise ValueError("entity must not be blank")
+        return (
+            ({"id": alert_id}, alert_id) if alert_id else ({"entity": entity}, entity)
+        )
 
-        :param entity: The observable value used to identify the alert.
-        :param comment: Comment attached to the takedown request.
-        :return: The updated alert as a dict.
-        """
+    def get_alert(
+        self,
+        *,
+        alert_id: str | None = None,
+        entity: str | None = None,
+    ) -> dict:
+        """Retrieve the current state of one Doppel alert."""
+        params, identifier = self._alert_selector(alert_id, entity)
         url = f"{self.base_url}/v1/alert"
-        payload = {
-            "queue_state": "actioned",
-            "comment": comment,
-        }
         self.helper.connector_logger.info(
-            "[API] Requesting Doppel takedown",
-            {"url_path": url, "entity": entity},
+            "[API] Getting Doppel alert",
+            {"url_path": url, "alert_identifier": identifier},
         )
         try:
-            response = self.session.put(
-                url, params={"entity": entity}, json=payload, timeout=30
-            )
+            response = self.session.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            alert = response.json()
+            if not isinstance(alert, dict):
+                raise DoppelClientError(
+                    f"Invalid response for Doppel alert '{identifier}'"
+                )
+            if alert_id and alert.get("id") != alert_id:
+                raise DoppelClientError(
+                    f"Doppel returned the wrong alert for '{identifier}'"
+                )
+            return alert
+        except (requests.RequestException, requests.HTTPError) as err:
+            raise DoppelClientError(
+                f"Failed to get Doppel alert '{identifier}': {err}"
+            ) from err
+
+    def update_alert(
+        self,
+        *,
+        alert_id: str | None = None,
+        entity: str | None = None,
+        queue_state: str | None = None,
+        entity_state: str | None = None,
+        comment: str | None = None,
+        tag_action: str | None = None,
+        tag_name: str | None = None,
+        file_action: str | None = None,
+        files: list[dict] | None = None,
+    ) -> dict:
+        """
+        Update an existing Doppel alert.
+
+        Exactly one alert selector must be supplied. Paired tag and file fields are
+        validated locally so malformed requests fail before reaching Doppel.
+
+        :param alert_id: Doppel alert ID (preferred).
+        :param entity: Alert entity fallback when an ID is unavailable.
+        :param queue_state: New Doppel queue state.
+        :param entity_state: New Doppel entity state.
+        :param comment: Comment to append to the alert.
+        :param tag_action: Tag operation ("add" or "remove").
+        :param tag_name: Existing Doppel tag name.
+        :param file_action: File operation ("upload" or "delete").
+        :param files: File payloads accepted by the Update Alert API.
+        :return: The updated alert as a dict.
+        """
+        params, identifier = self._alert_selector(alert_id, entity)
+        if (tag_action is None) != (tag_name is None):
+            raise ValueError("tag_action and tag_name must be provided together")
+        if (file_action is None) != (files is None) or files == []:
+            raise ValueError("file_action and files must be provided together")
+        if queue_state is not None and queue_state not in VALID_QUEUE_STATES:
+            raise ValueError(f"Invalid queue_state: {queue_state}")
+        if entity_state is not None and entity_state not in VALID_ENTITY_STATES:
+            raise ValueError(f"Invalid entity_state: {entity_state}")
+        if comment is not None and not comment.strip():
+            raise ValueError("comment must not be blank")
+        if tag_action is not None and tag_action not in VALID_TAG_ACTIONS:
+            raise ValueError(f"Invalid tag_action: {tag_action}")
+        if tag_name is not None and not tag_name.strip():
+            raise ValueError("tag_name must not be blank")
+        if file_action is not None and file_action not in VALID_FILE_ACTIONS:
+            raise ValueError(f"Invalid file_action: {file_action}")
+        if files is not None:
+            if not isinstance(files, list) or len(files) > MAX_FILES_PER_REQUEST:
+                raise ValueError(
+                    f"files must contain between 1 and {MAX_FILES_PER_REQUEST} items"
+                )
+            file_names = [
+                str(file.get("file_name") or "")
+                for file in files
+                if isinstance(file, dict)
+            ]
+            if len(file_names) != len(set(file_names)):
+                raise ValueError("Duplicate file names are not allowed")
+            for file in files:
+                file_name = (
+                    str(file.get("file_name") or "") if isinstance(file, dict) else ""
+                )
+                if not file_name.strip():
+                    raise ValueError("Each file must include a non-empty file_name")
+                if (
+                    file_name.startswith(".")
+                    or ".." in file_name
+                    or "\0" in file_name
+                    or "/" in file_name
+                    or "\\" in file_name
+                ):
+                    raise ValueError(f"Invalid file_name: {file_name}")
+                if file_action == "upload" and not file.get("file_to_upload"):
+                    raise ValueError("Each uploaded file must include file_to_upload")
+
+        payload = {
+            key: value
+            for key, value in {
+                "queue_state": queue_state,
+                "entity_state": entity_state,
+                "comment": comment,
+                "tag_action": tag_action,
+                "tag_name": tag_name,
+                "file_action": file_action,
+                "files": files,
+            }.items()
+            if value is not None
+        }
+        if not payload:
+            raise ValueError("At least one alert field must be provided")
+
+        url = f"{self.base_url}/v1/alert"
+        self.helper.connector_logger.info(
+            "[API] Updating Doppel alert",
+            {
+                "url_path": url,
+                "alert_identifier": identifier,
+                "updated_fields": list(payload),
+            },
+        )
+        try:
+            response = self.session.put(url, params=params, json=payload, timeout=30)
             response.raise_for_status()
             return response.json() if response.content else {}
         except (requests.RequestException, requests.HTTPError) as err:
             raise DoppelClientError(
-                f"Failed to request Doppel takedown for '{entity}': {err}"
+                f"Failed to update Doppel alert '{identifier}': {err}"
             ) from err
+
+    def request_takedown(
+        self,
+        *,
+        comment: str,
+        alert_id: str | None = None,
+        entity: str | None = None,
+    ) -> dict:
+        """
+        Request a takedown for an existing alert by setting its queue state to "actioned".
+
+        :param alert_id: Doppel alert ID (preferred).
+        :param entity: Alert entity fallback when an ID is unavailable.
+        :param comment: Comment attached to the takedown request.
+        :return: The updated alert as a dict.
+        """
+        return self.update_alert(
+            alert_id=alert_id,
+            entity=entity,
+            queue_state="actioned",
+            comment=comment,
+        )
