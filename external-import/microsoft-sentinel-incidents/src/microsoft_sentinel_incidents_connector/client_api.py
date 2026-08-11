@@ -1,4 +1,3 @@
-import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -36,24 +35,40 @@ class ConnectorClient:
         self.session = requests.Session()
 
     def set_oauth_token(self):
+        url = f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
+        oauth_data = {
+            "client_id": self.client_id,
+            "client_secret": self.client_secret.get_secret_value(),
+            "grant_type": "client_credentials",
+            "scope": "https://api.loganalytics.io/.default",
+        }
         try:
-            url = (
-                f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
-            )
-            oauth_data = {
-                "client_id": self.client_id,
-                "client_secret": self.client_secret.get_secret_value(),
-                "grant_type": "client_credentials",
-                "scope": "https://api.loganalytics.io/.default",
-            }
             response = requests.post(url, data=oauth_data)
-            response_json = json.loads(response.text)
-
-            oauth_token = response_json["access_token"]
-
-            self.session.headers.update({"Authorization": "Bearer " + oauth_token})
         except Exception as e:
-            raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
+            raise ValueError(f"[ERROR] Failed requesting oauth token: {e}")
+
+        # Check the HTTP status first. On an auth failure Azure AD replies with
+        # a 400/401 whose JSON body carries the actionable message
+        # (``error`` / ``error_description`` with an ``AADSTS...`` code), e.g.
+        # "AADSTS7000215: Invalid client secret provided". Surface that instead
+        # of later crashing on a missing ``access_token`` key.
+        if not response.ok:
+            try:
+                error_body = response.json()
+            except ValueError:
+                error_body = {}
+            error = error_body.get("error", "unknown_error")
+            description = error_body.get(
+                "error_description", response.text or "no response body"
+            )
+            raise ValueError(
+                "[ERROR] Failed generating oauth token "
+                f"(HTTP {response.status_code}): {error} - {description}"
+            )
+
+        # 2xx from the token endpoint always contains the access token.
+        oauth_token = response.json()["access_token"]
+        self.session.headers.update({"Authorization": "Bearer " + oauth_token})
 
     def retries_builder(self) -> None:
         """
