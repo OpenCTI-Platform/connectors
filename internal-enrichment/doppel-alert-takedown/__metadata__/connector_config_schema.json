@@ -24,7 +24,7 @@
         "Url",
         "Domain-Name"
       ],
-      "description": "The scope of the connector (types of observables to enrich).",
+      "description": "The OpenCTI entity types supported by the connector. Add Incident to request takedown for existing Doppel alerts.",
       "items": {
         "type": "string"
       },
@@ -49,7 +49,12 @@
     },
     "CONNECTOR_AUTO": {
       "default": false,
-      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "description": "Whether the connector should run automatically when an entity is created or updated. Must be false when CONNECTOR_SCOPE includes Incident.",
+      "type": "boolean"
+    },
+    "CONNECTOR_AUTO_UPDATE": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is updated. Must be false when CONNECTOR_SCOPE includes Incident.",
       "type": "boolean"
     },
     "DOPPEL_ALERT_TAKEDOWN_API_BASE_URL": {

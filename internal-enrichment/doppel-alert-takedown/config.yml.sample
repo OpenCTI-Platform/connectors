@@ -5,9 +5,10 @@ opencti:
 connector:
   id: 'ChangeMe'
   name: 'Doppel Alert and Takedown' # optional (default: 'Doppel Alert and Takedown')
-  scope: 'Url,Domain-Name' # optional (default: 'Url,Domain-Name')
+  scope: 'Url,Domain-Name' # add ',Incident' to enable existing-alert takedown actions
   log_level: 'error' # optional (default: 'error')
-  auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+  auto: false # must remain false when scope includes Incident
+  auto_update: false # must remain false when scope includes Incident
 
 doppel_alert_takedown:
   api_key: 'ChangeMe'
