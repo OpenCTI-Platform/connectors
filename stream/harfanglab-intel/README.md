@@ -41,7 +41,7 @@ Key features:
 
 ### Requirements
 
-- Python 3.11.x (not compatible with 3.12 and above)
+- Python 3.12.x
 - OpenCTI Platform >= 6.4.x
 - HarfangLab Threat Response >= 2.x.x
 - pycti >= 6.4.x
