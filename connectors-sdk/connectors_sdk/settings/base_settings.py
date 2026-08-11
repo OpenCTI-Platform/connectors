@@ -142,6 +142,21 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         default="error",
     )
 
+    @field_serializer("scope", mode="wrap", when_used="json")
+    def _serialize_scope(
+        self,
+        value: Any,
+        handler: SerializerFunctionWrapHandler,
+        info: FieldSerializationInfo,
+    ) -> str | list[str]:
+        """Serialize scope as a comma-separated string when serializing for `pycti.OpenCTIConnectorHelper` only.
+        Otherwise, return the list of strings.
+        """
+        mode = info.context.get("mode") if info.context else None
+        if isinstance(value, list) and mode == "pycti":
+            return ",".join(value)  # [ "e1", "e2", "e3" ] -> "e1,e2,e3"
+        return handler(value)  # type: ignore[no-any-return] # actually return `list[str]`
+
 
 class BaseConnectorSettings(BaseConfigModel, ABC):
     """Interface class for managing and loading the global configuration for connectors.
