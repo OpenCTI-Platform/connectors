@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | TRELLIX_TIE_DXL_CONFIG_PATH | `string` | ✅ | string |  | Path to the ePO-provisioned OpenDXL configuration file (dxlclient.config) describing the DXL brokers and client certificate. |
 | CONNECTOR_NAME | `string` |  | string | `"Trellix TIE"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["trellix-tie"]` | The scope of the connector. |

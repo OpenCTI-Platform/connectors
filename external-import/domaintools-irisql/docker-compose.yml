@@ -1,7 +1,7 @@
 version: '3'
 services:
   opencti-connector-domaintools-irisql:
-    image: opencti/opencti-connector-domaintools-irisql:latest
+    image: opencti/connector-domaintools-irisql:latest
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost

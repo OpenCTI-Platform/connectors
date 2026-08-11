@@ -4,21 +4,33 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 
 ### Type: `object`
 
-| Property | Type | Required | Possible values | Default | Description |
-| -------- | ---- | -------- | --------------- | ------- | ----------- |
-| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
-| CONNECTOR_NAME | `string` |  | string | `"Ransomware Connector"` | Name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["identity", "attack-pattern", "course-of-action", "intrusion-set", "malware", "tool", "report"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
-| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT10M"` | Duration between two scheduled runs of the connector (ISO 8601 format). |
-| CONNECTOR_PULL_HISTORY | `boolean` |  | boolean | `false` | Whether to pull historic data. It is not recommended to set it to ``true`` as there will be a large influx of data. |
-| CONNECTOR_HISTORY_START_YEAR | `integer` |  | `0 < x ` | `2023` | Year (or ``YYYYMM``) to start the historical backfill from. Accepts the four-digit year shape (``2023``) — backfill begins on January 1st of that year — or the six-digit year-month shape (``202306``) — backfill begins on the first of that month. The ransomware.live feed only goes back to 2020; values older than 2020 are clamped to ``2020-01`` at runtime. |
-| CONNECTOR_CREATE_THREAT_ACTOR | `boolean` |  | boolean | `false` | Whether to create a Threat Actor object. |
-| CONNECTOR_CREATE_INTRUSION_SET | `boolean` |  | boolean | `true` | Whether to create an Intrusion Set object. |
-| CONNECTOR_CREATE_CAMPAIGN | `boolean` |  | boolean | `false` | Whether to create a Campaign object. |
-| CONNECTOR_CREATE_REPORT | `boolean` |  | boolean | `true` | Whether to create a Report object. |
-| CONNECTOR_MARKING_VALUE | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:CLEAR"` | TLP marking attached to every emitted STIX object. ``TLP:CLEAR`` (default) is the OpenCTI-specific modern label; ``TLP:WHITE`` is the legacy STIX 2.1 equivalent. |
-| CONNECTOR_CREATE_LEAK_SITE_DOMAINS | `boolean` |  | boolean | `false` | Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet |
-| CONNECTOR_CREATE_LEAK_POST_REFS | `boolean` |  | boolean | `false` | Whether to include the leak post URL as an external reference on victim reports |
+| Property | Type | Required | Possible values | Deprecated | Default | Description |
+| -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
+| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
+| CONNECTOR_NAME | `string` |  | string |  | `"Ransomware Connector"` | The connector name displayed in OpenCTI. |
+| CONNECTOR_SCOPE | `array` |  | string |  | `["identity", "attack-pattern", "course-of-action", "intrusion-set", "malware", "tool", "report"]` | Comma-separated STIX entity scope for this connector. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
+| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT10M"` | Duration between two scheduled runs of the connector. |
+| RANSOMWARELIVE_API_BASE_URL | `string` |  | `https://api.ransomware.live/v2` `https://api-pro.ransomware.live` |  | `"https://api.ransomware.live/v2"` | Ransomware.live API base URL. |
+| RANSOMWARELIVE_API_KEY | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `null` | API key sent in `X-API-KEY` header (required for Ransomware.live API PRO use only). |
+| RANSOMWARELIVE_PULL_HISTORY | `boolean` |  | boolean |  | `false` | Whether to pull historic data. It is not recommended to set it to `true` as there will be a large influx of data. |
+| RANSOMWARELIVE_HISTORY_START_YEAR | `integer` |  | `0 < x ` |  | `2023` | Year (or YYYYMM) to start historical backfill from. Values older than `2020` are clamped to `2020-01` at runtime. |
+| RANSOMWARELIVE_CREATE_THREAT_ACTOR | `boolean` |  | boolean |  | `false` | Whether to create a Threat Actor object. |
+| RANSOMWARELIVE_CREATE_INTRUSION_SET | `boolean` |  | boolean |  | `true` | Whether to create an Intrusion Set object. |
+| RANSOMWARELIVE_CREATE_CAMPAIGN | `boolean` |  | boolean |  | `false` | Whether to create a Campaign object. |
+| RANSOMWARELIVE_CREATE_REPORT | `boolean` |  | boolean |  | `true` | Whether to create a Report object. |
+| RANSOMWARELIVE_CREATE_LEAK_SITE_DOMAINS | `boolean` |  | boolean |  | `false` | Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet. |
+| RANSOMWARELIVE_CREATE_LEAK_POST_REFS | `boolean` |  | boolean |  | `false` | Whether to include the leak post URL as a report external reference. |
+| RANSOMWARELIVE_MARKING_VALUE | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` |  | `"TLP:CLEAR"` | TLP marking attached to every emitted STIX object. |
+| CONNECTOR_RUN_EVERY | `string` |  | string | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |
+| CONNECTOR_PULL_HISTORY | `boolean` |  | boolean | ⛔️ | `null` | Use RANSOMWARELIVE_PULL_HISTORY instead. |
+| CONNECTOR_HISTORY_START_YEAR | `integer` |  | `0 < x ` | ⛔️ | `null` | Use RANSOMWARELIVE_HISTORY_START_YEAR instead. |
+| CONNECTOR_CREATE_THREAT_ACTOR | `boolean` |  | boolean | ⛔️ | `null` | Use RANSOMWARELIVE_CREATE_THREAT_ACTOR instead. |
+| CONNECTOR_CREATE_INTRUSION_SET | `boolean` |  | boolean | ⛔️ | `null` | Use RANSOMWARELIVE_CREATE_INTRUSION_SET instead. |
+| CONNECTOR_CREATE_CAMPAIGN | `boolean` |  | boolean | ⛔️ | `null` | Use RANSOMWARELIVE_CREATE_CAMPAIGN instead. |
+| CONNECTOR_CREATE_REPORT | `boolean` |  | boolean | ⛔️ | `null` | Use RANSOMWARELIVE_CREATE_REPORT instead. |
+| CONNECTOR_CREATE_LEAK_SITE_DOMAINS | `boolean` |  | boolean | ⛔️ | `null` | Use RANSOMWARELIVE_CREATE_LEAK_SITE_DOMAINS instead. |
+| CONNECTOR_CREATE_LEAK_POST_REFS | `boolean` |  | boolean | ⛔️ | `null` | Use RANSOMWARELIVE_CREATE_LEAK_POST_REFS instead. |
+| CONNECTOR_MARKING_VALUE | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | ⛔️ | `null` | Use RANSOMWARELIVE_MARKING_VALUE instead. |

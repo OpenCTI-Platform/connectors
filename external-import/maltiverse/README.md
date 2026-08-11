@@ -32,7 +32,7 @@ This connector fetches STIX bundles from Maltiverse TAXII 2.1 collections and im
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260803.0
+- OpenCTI Platform >= 7.260811.0
 - Maltiverse account with feed access
 - TAXII 2.1 client library (`taxii2client`)
 
