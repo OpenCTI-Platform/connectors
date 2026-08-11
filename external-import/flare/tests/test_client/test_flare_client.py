@@ -22,7 +22,13 @@ def _make_client() -> tuple[FlareClient, MagicMock, MagicMock]:
 
 def _make_scroll_page(uids: list[str], next_cursor: str | None = None) -> MagicMock:
     response = MagicMock()
-    items = [{"metadata": {"uid": uid}, "tenant_metadata": {"tid": 1}} for uid in uids]
+    items = [
+        {
+            "metadata": {"uid": uid, "severity": "high", "matched_at": "2025-01-02"},
+            "tenant_metadata": {"tid": 1},
+        }
+        for uid in uids
+    ]
     response.json.return_value = {"items": items, "next": next_cursor}
     return response
 
@@ -69,6 +75,19 @@ class TestFlareClientGetEvents:
         assert len(events) == 1
         assert events[0]["uid"] == "uid-1"
         assert events[0]["tenant_metadata"] == {"tid": 1}
+
+    def test_yields_event_with_search_item_metadata(self) -> None:
+        client, _, mock_api = _make_client()
+        mock_api.scroll.return_value = [_make_scroll_page(["uid-1"])]
+        mock_api.get.return_value = _make_detail_response("uid-1")
+
+        events = list(
+            client.get_events(FROM_DATE, event_types=EVENT_TYPES, event_actions=None)
+        )
+
+        # Severity and matched_at exist only on the search item, not the activity detail.
+        assert events[0]["metadata"]["severity"] == "high"
+        assert events[0]["metadata"]["matched_at"] == "2025-01-02"
 
     def test_no_action_filter_yields_all(self) -> None:
         client, _, mock_api = _make_client()
@@ -145,6 +164,35 @@ class TestFlareClientGetEvents:
 
         assert len(events) == 1
         helper.connector_logger.info.assert_called()
+
+    def test_severities_sent_as_list_in_search_filters(self) -> None:
+        client, _, mock_api = _make_client()
+        mock_api.scroll.return_value = [_make_scroll_page([])]
+
+        list(
+            client.get_events(
+                FROM_DATE,
+                event_types=EVENT_TYPES,
+                event_actions=None,
+                severities=["high"],
+            )
+        )
+
+        filters = mock_api.scroll.call_args.kwargs["json"]["filters"]
+        # A bare string would make the API match "high or higher" instead of exactly "high".
+        assert filters["severity"] == ["high"]
+
+    def test_no_severity_filter_when_unset(self) -> None:
+        client, _, mock_api = _make_client()
+        mock_api.scroll.return_value = [_make_scroll_page([])]
+
+        list(
+            client.get_events(
+                FROM_DATE, event_types=EVENT_TYPES, event_actions=None, severities=[]
+            )
+        )
+
+        assert "severity" not in mock_api.scroll.call_args.kwargs["json"]["filters"]
 
     def test_detail_fetch_retries_on_failure_then_succeeds(self) -> None:
         client, helper, mock_api = _make_client()

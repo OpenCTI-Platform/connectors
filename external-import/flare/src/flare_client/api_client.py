@@ -28,6 +28,7 @@ class FlareClient:  # pylint: disable=too-few-public-methods
         from_date: datetime,
         event_types: list[str],
         event_actions: list[str] | None,
+        severities: list[str] | None = None,
     ) -> Iterator[dict[str, Any]]:
         last_from = None
         page_count = 0
@@ -35,6 +36,10 @@ class FlareClient:  # pylint: disable=too-few-public-methods
         filters: dict[str, Any] = {}
         if event_types:
             filters["type"] = event_types
+
+        # Must be a list: the API matches a single string as "that severity or higher".
+        if severities:
+            filters["severity"] = list(severities)
 
         filters["imported_after"] = from_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
@@ -76,7 +81,12 @@ class FlareClient:  # pylint: disable=too-few-public-methods
 
                         event_json = event_response.json()
                         event_data = event_json.get("activity")
-                        event_data["tenant_metadata"] = item.get("tenant_metadata")
+                        # Severity and matched_at only exist on the search item,
+                        # not on the activity detail payload.
+                        event_data["metadata"] = item.get("metadata") or {}
+                        event_data["tenant_metadata"] = (
+                            item.get("tenant_metadata") or {}
+                        )
 
                         header = event_data.get("header", {})
                         is_remediated = header.get("remediated_at") is not None

@@ -14,10 +14,23 @@ class BaseEvent:
     notes: str
 
 
+def severity_from_event(event: dict[str, Any]) -> str:
+    """Read the severity label, preferring a tenant's override over the original.
+
+    The tenant feed returns `tenant_metadata.severity` as
+    `{"original": ..., "override": ...}`, and falls back to the event's own
+    `metadata.severity` when the tenant has no severity set.
+    """
+    severity = (event.get("tenant_metadata") or {}).get("severity")
+    if isinstance(severity, dict):
+        severity = severity.get("override") or severity.get("original")
+    return severity or (event.get("metadata") or {}).get("severity") or ""
+
+
 def base_event_from_event(event: dict[str, Any]) -> BaseEvent:
     data = event.get("data", {})
-    metadata = event.get("metadata", {})
-    tenant_metadata = event.get("tenant_metadata", {})
+    metadata = event.get("metadata") or {}
+    tenant_metadata = event.get("tenant_metadata") or {}
     data_metadata = data.get("metadata", {})
     return BaseEvent(
         uid=data.get("uid", ""),
@@ -25,7 +38,7 @@ def base_event_from_event(event: dict[str, Any]) -> BaseEvent:
         flare_url=data_metadata.get("flare_url", ""),
         created_at=data_metadata.get("estimated_created_at", ""),
         matched_at=metadata.get("matched_at", ""),
-        severity=tenant_metadata.get("severity", ""),
+        severity=severity_from_event(event),
         notes=tenant_metadata.get("notes", ""),
     )
 

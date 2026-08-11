@@ -45,11 +45,12 @@ docker build -t opencti/connector-flare:rolling .
       - CONNECTOR_SCOPE=Incident,Observable,Indicator
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
-      - FLARE_API_BASE_URL=api.flare.io
+      - FLARE_API_DOMAIN=api.flare.io
       - FLARE_API_KEY=fw_xxxxxx
       - FLARE_TENANT_ID=changeme
       - FLARE_EVENT_TYPES=changeme
       - FLARE_EVENT_ACTIONS=changeme
+      - FLARE_SEVERITIES=changeme
       - FLARE_LOOKBACK_DAYS=30
       - FLARE_TLP_LEVEL=white
     restart: always

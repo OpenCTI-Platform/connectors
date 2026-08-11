@@ -95,6 +95,14 @@
       },
       "type": "array"
     },
+    "FLARE_SEVERITIES": {
+      "default": [],
+      "description": "Comma-separated list of severities to filter by: 'info', 'low', 'medium', 'high', 'critical'. If not set, all severities are imported.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "FLARE_LOOKBACK_DAYS": {
       "default": 30,
       "description": "Number of days to look back on the first run.",

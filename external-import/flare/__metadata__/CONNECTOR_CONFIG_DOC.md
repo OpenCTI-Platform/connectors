@@ -18,6 +18,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | FLARE_TENANT_ID | `integer` |  | integer |  | `null` | Flare tenant ID. |
 | FLARE_EVENT_TYPES | `array` |  | string |  | `["stealer_log", "domain", "ransomleak", "leak"]` | Comma-separated list of Flare event types to import. |
 | FLARE_EVENT_ACTIONS | `array` |  | string |  | `[]` | Comma-separated list of event actions to filter by. If not set, all actions are imported. |
+| FLARE_SEVERITIES | `array` |  | string |  | `[]` | Comma-separated list of severities to filter by: 'info', 'low', 'medium', 'high', 'critical'. If not set, all severities are imported. |
 | FLARE_LOOKBACK_DAYS | `integer` |  | integer |  | `30` | Number of days to look back on the first run. |
 | FLARE_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"white"` | Default TLP level of the imported entities. |
 | FLARE_API_BASE_URL | `string` |  | string | ⛔️ | `null` | Use FLARE_API_DOMAIN instead. (removal scheduled for 2027-06-30) |

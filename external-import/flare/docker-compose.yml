@@ -17,6 +17,7 @@ services:
       #- FLARE_TENANT_ID= # optional, Flare tenant ID (default: none)
       #- FLARE_EVENT_TYPES=stealer_log,domain,ransomleak,leak # optional (default: 'stealer_log,domain,ransomleak,leak')
       #- FLARE_EVENT_ACTIONS= # optional, filter by event actions: 'ignored', 'remediated' (default: none)
+      #- FLARE_SEVERITIES= # optional, filter by severities: 'info', 'low', 'medium', 'high', 'critical' (default: none, all severities)
       #- FLARE_LOOKBACK_DAYS=30 # optional, number of days to look back on first run (default: 30)
       #- FLARE_TLP_LEVEL=white # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'white')
     restart: always

@@ -58,6 +58,7 @@ class FlareConnector:
                 from_date,
                 event_types=self.config.flare.event_types,
                 event_actions=self.config.flare.event_actions,
+                severities=self.config.flare.severities,
             )
 
             imported_count = self.process_events(events)

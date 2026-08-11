@@ -8,7 +8,9 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
+
+SEVERITIES = ("info", "low", "medium", "high", "critical")
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -57,6 +59,10 @@ class FlareConfig(BaseConfigModel):
         description="Comma-separated list of event actions to filter by. If not set, all actions are imported.",
         default=[],
     )
+    severities: ListFromString = Field(
+        description="Comma-separated list of severities to filter by: 'info', 'low', 'medium', 'high', 'critical'. If not set, all severities are imported.",
+        default=[],
+    )
     lookback_days: int = Field(
         description="Number of days to look back on the first run.",
         default=30,
@@ -72,6 +78,16 @@ class FlareConfig(BaseConfigModel):
         description="Default TLP level of the imported entities.",
         default="white",
     )
+
+    @field_validator("severities")
+    @classmethod
+    def validate_severities(cls, value: list[str]) -> list[str]:
+        unknown = [severity for severity in value if severity not in SEVERITIES]
+        if unknown:
+            raise ValueError(
+                f"Unknown severities {unknown}. Available values: {', '.join(SEVERITIES)}."
+            )
+        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):
