@@ -110,9 +110,7 @@ class RSTThreatLibrary:
         return f"{s}T00:00:00.000Z"
 
     def _publish_connector_info(self, *, mark_last_run: bool) -> None:
-        """Populate OpenCTI connector status fields and push them to the UI.
-
-        """
+        """Populate OpenCTI connector status fields and push them to the UI."""
         helper = self.helper
         try:
             duration_period_s = self.config.connector.duration_period.total_seconds()
@@ -542,9 +540,7 @@ class RSTThreatLibrary:
         state: Dict[str, Any],
         api_items: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
-        """Intrusion sets to compare with the API catalogue for merge/split.
-
-        """
+        """Intrusion sets to compare with the API catalogue for merge/split."""
         managed = set((state.get("managed_ids") or {}).get(obj_type_path, []))
         api_idents: Set[str] = set()
         if api_items:
@@ -742,9 +738,7 @@ class RSTThreatLibrary:
                 split,
                 obj_type,
                 state,
-                reason=(
-                    "OpenCTI confidence exceeds Threat Library (analyst lock)"
-                ),
+                reason=("OpenCTI confidence exceeds Threat Library (analyst lock)"),
             )
             return
 
@@ -901,9 +895,7 @@ class RSTThreatLibrary:
         item = merge.target_api_item
         target_sid = item.get("standard_id")
 
-        score_candidates: List[Dict[str, Any]] = list(
-            merge.opencti_entities_to_merge
-        )
+        score_candidates: List[Dict[str, Any]] = list(merge.opencti_entities_to_merge)
         if target_sid:
             existing_api_entity = self._read_opencti_entity(obj_type, target_sid)
             if existing_api_entity:
@@ -1139,7 +1131,6 @@ class RSTThreatLibrary:
                 cur = set(managed.get(obj_type, []))
                 cur.update(pushed_standard_ids)
                 managed[obj_type] = sorted(cur)
-                # Persist incrementally so a later crash/restart doesn't redo this type.
                 self.helper.set_state(state)
                 self.helper.connector_logger.info(
                     f"[{obj_type}] ingested {count} object(s), cursor now "
@@ -1331,9 +1322,7 @@ class RSTThreatLibrary:
                     )
                     return False
 
-                error_message = (
-                    f"[{obj_type}] unexpected error during API import: {ex}"
-                )
+                error_message = f"[{obj_type}] unexpected error during API import: {ex}"
                 self.helper.connector_logger.error(error_message)
                 raise
 

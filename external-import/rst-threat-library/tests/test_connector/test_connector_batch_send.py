@@ -150,7 +150,6 @@ def test_batch_send_stix_bundle_retries_requests_exceptions(connector, monkeypat
 
     assert ok is True
     assert connector.helper.send_stix2_bundle.call_count == 2
-    # First attempt marked in_error; second attempt marked success (no in_error).
     assert connector.helper.api.work.to_processed.call_count == 2
     first = connector.helper.api.work.to_processed.call_args_list[0]
     second = connector.helper.api.work.to_processed.call_args_list[1]
@@ -198,11 +197,13 @@ def test_batch_send_via_api_imports_objects_and_marks_work_processed(connector):
 
     assert ok is True
     assert connector.helper.api.stix2.import_object.call_count == 2
-    # Identities are imported before other SDOs.
     first_payload = connector.helper.api.stix2.import_object.call_args_list[0].args[0]
     assert first_payload["type"] == "identity"
     connector.helper.api.work.to_processed.assert_called_once()
-    assert connector.helper.api.work.to_processed.call_args.kwargs.get("in_error") is not True
+    assert (
+        connector.helper.api.work.to_processed.call_args.kwargs.get("in_error")
+        is not True
+    )
 
 
 def test_batch_send_via_api_retries_requests_exceptions(connector, monkeypatch):
@@ -257,7 +258,9 @@ def test_batch_send_via_api_reraises_non_retryable_after_marking_work(connector)
         )
 
     connector.helper.api.work.to_processed.assert_called_once()
-    assert connector.helper.api.work.to_processed.call_args.kwargs.get("in_error") is True
+    assert (
+        connector.helper.api.work.to_processed.call_args.kwargs.get("in_error") is True
+    )
 
 
 def test_seed_cursor_warns_and_ignores_invalid_import_from_date(connector):

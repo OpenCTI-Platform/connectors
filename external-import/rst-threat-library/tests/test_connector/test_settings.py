@@ -79,8 +79,7 @@ def test_settings_passes_auto_create_service_account_to_helper_config():
 
     assert helper_config["connector"]["auto_create_service_account"] is True
     assert (
-        helper_config["connector"]["auto_create_service_account_confidence_level"]
-        == 80
+        helper_config["connector"]["auto_create_service_account_confidence_level"] == 80
     )
 
 
