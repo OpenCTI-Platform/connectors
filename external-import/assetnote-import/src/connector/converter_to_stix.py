@@ -215,7 +215,7 @@ class ConverterToStix:
             description=signature["description"],
             severity=self._map_severity(exposure["severityString"]),
             labels=[self._incident_label(exposure)],
-            #Append an External Reference back to the Exposure in the AssetNote platform
+            # Append an External Reference back to the Exposure in the AssetNote platform
             external_references=[
                 ExternalReference(
                     source_name="Assetnote",
@@ -235,19 +235,21 @@ class ConverterToStix:
     def _incident_label(exposure: dict[str, Any]) -> str:
         """Return the Assetnote category label for a Case-Incident."""
 
-        #if exposureType is INDICATOR, this is an indicator
+        # if exposureType is INDICATOR, this is an indicator
         exposure_type = exposure["exposureType"].upper()
         if exposure_type == "INDICATOR":
             return "assetnote:indicator"
 
-        #if signature class exists, it is one of these three types but falls under vulnerability
-        signature_class = (exposure.get("signature") or {}).get("signatureClass", "").upper()
+        # if signature class exists, it is one of these three types but falls under vulnerability
+        signature_class = (
+            (exposure.get("signature") or {}).get("signatureClass", "").upper()
+        )
         signature_class_labels = {
             "TPPE": "assetnote:third-party-platform",
             "IOC": "assetnote:indicator-of-compromise",
             "HYGIENE": "assetnote:security-hygiene",
         }
-        #else it is a vulnerability 
+        # else it is a vulnerability
         return signature_class_labels.get(signature_class, "assetnote:vulnerability")
 
     @staticmethod
