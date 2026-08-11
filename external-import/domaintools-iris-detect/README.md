@@ -22,17 +22,19 @@
   - [Behavior](#behavior)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
+  - [Related resources](#related-resources)
 
 ## Introduction
 
-This connector fetch data from DomainTools Iris Detect and import it into OpenCTI. It maps each query result to a STIX 2.1 Observable, enriching it with context like IP addresses, name servers, and mail servers. To ensure secure data handling, all created objects are assigned a Traffic Light Protocol (TLP) marking for downstream sharing.
+This connector fetches domain data from DomainTools Iris Detect, a DomainTools product for monitoring newly registered domains, and imports it into OpenCTI. It is intended for threat intelligence teams who want to track brand-proximity or malicious domains inside their OpenCTI instance. The connector maps each result to a Structured Threat Information Expression (STIX) 2.1 Observable, enriching it with context like IP addresses, name servers, and mail servers. The connector assigns a Traffic Light Protocol (TLP) marking to all created objects for downstream sharing.
 
 ## Installation
 
 ### Requirements
 
 - OpenCTI Platform version >= 6.x
-- DomainTools API credential
+- Python 3.x (for manual deployment)
+- DomainTools API key (available from your DomainTools account)
 
 ## Configuration variables
 
@@ -55,26 +57,26 @@ Below are the parameters you'll need to set for running the connector properly:
 |-----------------|------------------------|-----------------------------|---------|-----------|------------------------------------------------------------------------------------------|
 | Connector ID    | `id`                   | `CONNECTOR_ID`              | /       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Name  | `name`                 | `CONNECTOR_NAME`            | /       | Yes       | Name of the connector.                                                                   |
-| Connector Scope | `scope`                | `CONNECTOR_SCOPE`           | stix2  | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Connector Scope | `scope`                | `CONNECTOR_SCOPE`           | stix2  | Yes       | The scope or type of data the connector is importing, either a MIME type or STIX object. |
 | Log Level       | `log_level`            | `CONNECTOR_LOG_LEVEL`       | error   | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 | Duration Period | `duration_period`      | `CONNECTOR_DURATION_PERIOD` | PT1H    | Yes       | The period of time between two connector runs (ISO 8601 duration format).                |
 
 ### DomainTools extra parameters environment variables
 
-| Parameter               | config.yml                     | Docker environment variable       | Default | Mandatory | Description                           |
-|-------------------------|--------------------------------|----------------------------------|---------|-----------|---------------------------------------|
-| API base URL            | domaintools.api_base_url            | `DOMAINTOOLS_API_BASE_URL`            |  | https://api.domaintools.com/v1/iris-detect/       | Yes       | DomainTools API base URL                   |
-| API key                 | domaintools.api_key                 | `DOMAINTOOLS_API_KEY`                 |      | Yes       | DomainTools API key                        |
-| Monitor ID             | domaintools.monitor_id         | `DOMAINTOOLS_MONITOR_ID`         |             | No       | A unique alphanumeric identifier assigned to a specific keyword or brand monitor.                        |
-| Store Iris Data | domaintools.store_iris_data | `DOMAINTOOLS_STORE_IRIS_DATA` | false |Yes| Store DomainTools Iris data as note object. |
-| TLP Level               | domaintools.tlp_level               | `DOMAINTOOLS_TLP_LEVEL`                  | clear   | No        | TLP marking for created STIX objects. |
-| Preview | domaintools.preview | `DOMAINTOOLS_PREVIEW` | false | Yes | Use during API implementation and testing. Including with value = 1 will limit results to 2 but not be limited by hourly restrictions.  |
+| Parameter        | config.yml                    | Docker environment variable       | Default                                      | Mandatory | Description                                                                                                   |
+|------------------|-------------------------------|----------------------------------|----------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------|
+| API base URL     | `domaintools.api_base_url`    | `DOMAINTOOLS_API_BASE_URL`       | `https://api.domaintools.com/v1/iris-detect/` | Yes       | DomainTools API base URL.                                                                                     |
+| API key          | `domaintools.api_key`         | `DOMAINTOOLS_API_KEY`            | /                                            | Yes       | Your DomainTools API key.                                                                                     |
+| Monitor ID       | `domaintools.monitor_id`      | `DOMAINTOOLS_MONITOR_ID`         | /                                            | No        | Alphanumeric identifier for a specific keyword or brand monitor. Visible in the Iris Detect dashboard under **Monitors**. |
+| Store Iris Data  | `domaintools.store_iris_data` | `DOMAINTOOLS_STORE_IRIS_DATA`    | `false`                                      | Yes       | When `true`, attaches the raw Iris Detect record for each domain as a STIX Note.                              |
+| TLP Level        | `domaintools.tlp_level`       | `DOMAINTOOLS_TLP_LEVEL`          | `clear`                                      | No        | TLP marking applied to all created STIX objects.                                                              |
+| Preview          | `domaintools.preview`         | `DOMAINTOOLS_PREVIEW`            | `false`                                      | Yes       | When `true`, limits results to 2 per run without consuming hourly quota. Use for testing only.                |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==6.5.1`. If you don't, it will take the latest version, but sometimes the OpenCTI SDK fails to initialize.
+Before building the Docker container, set the version of `pycti` (the OpenCTI Python SDK) in `requirements.txt` to match your OpenCTI version — for example, `pycti==6.5.1`. If you omit the version, the latest `pycti` is installed, which can fail to initialize against older OpenCTI releases.
 
 Build a Docker Image using the provided `Dockerfile`.
 
@@ -139,8 +141,12 @@ Find the "DomainTools Iris Detect" connector, and click on the refresh button to
 
 ## Behavior
 
-- Converts each query result into a STIX 2.1 Observable object
+- Fetches new domain results from the Iris Detect API on each run interval
+- Converts each result into a STIX 2.1 Domain-Name observable, carrying the DomainTools risk score and per-component risk labels (proximity, malware, phishing, spam)
+- Expands related infrastructure into its own observables and links them with STIX relationships: resolving IP addresses (`resolves-to`), mail and name servers (`resolves-to`, with their IPs `related-to`)
 - Bundles and sends the STIX objects to OpenCTI
+
+After the first successful run, Domain-Name observables appear under **Observations** in the OpenCTI platform, each linked to its infrastructure and tagged with the configured TLP marking.
 
 ## Debugging
 
@@ -156,7 +162,12 @@ Set `CONNECTOR_LOG_LEVEL=debug` for verbose logging. Log output includes:
 
 ## Additional information
 
-- Each Iris Detect result becomes a STIX 2.1 Domain-Name observable, carrying the DomainTools risk score and per-component risk labels (proximity, malware, phishing, spam).
-- Related infrastructure is expanded into its own observables and linked with STIX relationships: resolving IP addresses (`resolves-to`), mail and name servers (`resolves-to`, with their IPs `related-to`).
-- When `DOMAINTOOLS_STORE_IRIS_DATA` is enabled, the raw Iris record for each domain is attached as a STIX Note.
-- Every object is attributed to a DomainTools author identity and tagged with the configured TLP marking.
+- When `DOMAINTOOLS_STORE_IRIS_DATA` is `true`, the connector attaches the raw Iris Detect record for each domain as a STIX Note.
+- The connector attributes every created object to a DomainTools author identity and tags it with the configured TLP marking.
+
+## Related resources
+
+- [DomainTools Iris Detect product page](https://www.domaintools.com/products/iris-detect/)
+- [DomainTools API documentation](https://api.domaintools.com/)
+- [DomainTools Feeds OpenCTI connector](https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/domaintools-feeds)
+- [DomainTools IrisQL OpenCTI connector](https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/domaintools-irisql)

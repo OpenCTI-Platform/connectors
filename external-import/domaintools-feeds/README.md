@@ -84,7 +84,7 @@ Register connector in the **main** OpenCTI `docker-compose.yml`:
 
 ```yaml
   connector-domaintools:
-    image: opencti/connector-domaintools:latest
+    image: opencti/connector-domaintools-feeds:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=changeme
