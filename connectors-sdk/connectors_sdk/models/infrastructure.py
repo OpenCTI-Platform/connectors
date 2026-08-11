@@ -19,6 +19,10 @@ class Infrastructure(BaseIdentifiedEntity):
         default=None,
         description="A description that provides more details and context about the Infrastructure.",
     )
+    labels: list[str] | None = Field(
+        default=None,
+        description="Labels of the Infrastructure.",
+    )
     aliases: list[str] | None = Field(
         default=None,
         description="Alternative names used to identify this Infrastructure.",
@@ -46,6 +50,7 @@ class Infrastructure(BaseIdentifiedEntity):
             id=PyctiInfrastructure.generate_id(name=self.name),
             name=self.name,
             description=self.description,
+            labels=self.labels,
             aliases=self.aliases,
             infrastructure_types=self.infrastructure_types,
             first_seen=self.first_seen,

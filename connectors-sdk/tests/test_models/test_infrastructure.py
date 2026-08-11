@@ -31,6 +31,7 @@ def test_infrastructure_to_stix2_object_returns_valid_stix_object(
     infrastructure = Infrastructure(
         name="Test infrastructure",
         description="Test description",
+        labels=["Test label"],
         aliases=["Test alias"],
         infrastructure_types=["command-and-control"],
         first_seen="2023-01-01T00:00:00Z",
@@ -51,6 +52,7 @@ def test_infrastructure_to_stix2_object_returns_valid_stix_object(
         id=PyctiInfrastructure.generate_id(name="Test infrastructure"),
         name="Test infrastructure",
         description="Test description",
+        labels=["Test label"],
         aliases=["Test alias"],
         infrastructure_types=["command-and-control"],
         first_seen="2023-01-01T00:00:00Z",
