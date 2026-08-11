@@ -13,6 +13,7 @@ from connectors_sdk.models.campaign import Campaign
 from connectors_sdk.models.channel import Channel
 from connectors_sdk.models.city import City
 from connectors_sdk.models.country import Country
+from connectors_sdk.models.course_of_action import CourseOfAction
 from connectors_sdk.models.domain_name import DomainName
 from connectors_sdk.models.email_address import EmailAddress
 from connectors_sdk.models.external_reference import ExternalReference
@@ -65,6 +66,7 @@ __all__ = [
     "Channel",
     "City",
     "Country",
+    "CourseOfAction",
     "DomainName",
     "EmailAddress",
     "ExternalReference",

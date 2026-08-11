@@ -73,6 +73,7 @@ def test_public_models_are_present():
         "Channel",
         "City",
         "Country",
+        "CourseOfAction",
         "DomainName",
         "EmailAddress",
         "ExternalReference",
