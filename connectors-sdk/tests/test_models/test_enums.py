@@ -27,6 +27,9 @@ OCTI_ENUMS = {
 
 ENUMS = OCTI_ENUMS | {
     "AccountType",
+    "CasePriority",
+    "CaseSeverity",
+    "CaseIncidentResponseType",
     "ChannelType",
     "IncidentSeverity",
     "IncidentType",

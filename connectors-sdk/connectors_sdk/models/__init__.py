@@ -10,6 +10,7 @@ from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from connectors_sdk.models.campaign import Campaign
+from connectors_sdk.models.case_incident import CaseIncident
 from connectors_sdk.models.channel import Channel
 from connectors_sdk.models.city import City
 from connectors_sdk.models.country import Country
@@ -63,6 +64,7 @@ __all__ = [
     "AttackPattern",
     "AutonomousSystem",
     "Campaign",
+    "CaseIncident",
     "Channel",
     "City",
     "Country",
