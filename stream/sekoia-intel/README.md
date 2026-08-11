@@ -39,7 +39,7 @@ Key features:
 
 ### Requirements
 
-- Python 3.11.x (not compatible with 3.12 and above)
+- Python 3.12.x
 - OpenCTI Platform >= 6.8.x
 - pycti >= 6.8.x
 - stix-shifter >= 7.1.x
