@@ -3,4 +3,4 @@ pycti==7.260811.0
 python-magic~=0.4.27; sys_platform == 'linux' or sys_platform == 'darwin'
 python-magic-bin~=0.4.14; sys_platform == 'win32'
 vt-py==0.21.0
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260811.0#subdirectory=connectors-sdk

@@ -1,5 +1,5 @@
 pycti==7.260811.0
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260811.0#subdirectory=connectors-sdk
 requests>=2.32.0
 py7zr>=0.22.0
 pikepdf>=9.0.0
