@@ -1,5 +1,5 @@
 plyara~=2.2.1
-pycti==7.260807.0
+pycti==7.260811.0
 python-magic~=0.4.27; sys_platform == 'linux' or sys_platform == 'darwin'
 python-magic-bin~=0.4.14; sys_platform == 'win32'
 vt-py==0.21.0
