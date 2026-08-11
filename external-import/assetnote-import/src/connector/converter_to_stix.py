@@ -120,7 +120,6 @@ class ConverterToStix:
             # Exposures that don't reflect a CVE
             name=signature.get("cve") or signature["name"],
             description=signature["description"],
-            labels=[f"assetnote:{exposure['exposureType'].lower()}"],
             author=self.author,
             markings=[self.tlp_marking],
             created=exposure["created"],
@@ -137,7 +136,6 @@ class ConverterToStix:
             vendor=known_exploitation.get("vendorProject"),
             author=self.author,
             markings=[self.tlp_marking],
-            labels=[f"assetnote:{exposure['exposureType'].lower()}"],
         )
 
     def _map_relationship(
@@ -216,8 +214,8 @@ class ConverterToStix:
             name=f"{incident_name}: {exposure['asset']['host']}",
             description=signature["description"],
             severity=self._map_severity(exposure["severityString"]),
-            labels=[f"assetnote:{exposure['exposureType'].lower()}"],
-            # Append an External Reference back to the Exposure in the AssetNote platform
+            labels=[self._incident_label(exposure)],
+            #Append an External Reference back to the Exposure in the AssetNote platform
             external_references=[
                 ExternalReference(
                     source_name="Assetnote",
@@ -232,6 +230,25 @@ class ConverterToStix:
             # Assign the appropriate status template
             x_opencti_workflow_id=workflow_id,
         )
+
+    @staticmethod
+    def _incident_label(exposure: dict[str, Any]) -> str:
+        """Return the Assetnote category label for a Case-Incident."""
+
+        #if exposureType is INDICATOR, this is an indicator
+        exposure_type = exposure["exposureType"].upper()
+        if exposure_type == "INDICATOR":
+            return "assetnote:indicator"
+
+        #if signature class exists, it is one of these three types but falls under vulnerability
+        signature_class = (exposure.get("signature") or {}).get("signatureClass", "").upper()
+        signature_class_labels = {
+            "TPPE": "assetnote:third-party-platform",
+            "IOC": "assetnote:indicator-of-compromise",
+            "HYGIENE": "assetnote:security-hygiene",
+        }
+        #else it is a vulnerability 
+        return signature_class_labels.get(signature_class, "assetnote:vulnerability")
 
     @staticmethod
     def _map_severity(severity_string: str) -> str:

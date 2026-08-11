@@ -76,6 +76,7 @@ class AssetnoteImportClient:
                     ... on BaseExposureSignature {{
                         name
                         cve
+                        signatureClass
                         description
                         recommendations
                     }}
