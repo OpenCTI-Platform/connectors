@@ -38,10 +38,6 @@ class Incident(BaseIdentifiedEntity):
         default=None,
         description="The time that this Incident was last seen.",
     )
-    labels: list[str] | None = Field(
-        default=None,
-        description="Labels of the Incident.",
-    )
     objective: str | None = Field(
         default=None,
         description="The objective of this Incident.",
@@ -56,7 +52,6 @@ class Incident(BaseIdentifiedEntity):
             ),
             name=self.name,
             description=self.description,
-            labels=self.labels,
             allow_custom=True,
             source=self.source,
             severity=self.severity,
