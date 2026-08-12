@@ -56,22 +56,6 @@ class _ConnectorConfig(BaseExternalImportConnectorConfig):
         default=None,
         description="Connector run-and-terminate flag.",
     )
-    send_to_queue: Optional[bool] = Field(
-        default=None,
-        description="Connector send-to-queue flag.",
-    )
-    send_to_directory: Optional[bool] = Field(
-        default=None,
-        description="Connector send-to-directory flag.",
-    )
-    send_to_directory_path: Optional[str] = Field(
-        default=None,
-        description="Connector send-to-directory path.",
-    )
-    send_to_directory_retention: Optional[PositiveInt] = Field(
-        default=None,
-        description="Connector send-to-directory retention in days.",
-    )
 
 
 class _ServiceNowConfig(BaseConfigModel):
