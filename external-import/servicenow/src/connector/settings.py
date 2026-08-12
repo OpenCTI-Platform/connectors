@@ -48,8 +48,8 @@ class _ConnectorConfig(BaseExternalImportConnectorConfig):
         default=timedelta(hours=24),
         description="Duration between two scheduled runs of the connector (ISO 8601 format).",
     )
-    queue_threshold: Optional[PositiveInt] = Field(
-        default=None,
+    queue_threshold: PositiveInt = Field(
+        default=500,
         description="Connector queue max size in Mbytes. Default to 500.",
     )
     run_and_terminate: Optional[bool] = Field(
