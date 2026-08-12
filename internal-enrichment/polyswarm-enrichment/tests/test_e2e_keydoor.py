@@ -120,8 +120,7 @@ def delete_observable(sha256: str):
 # Query helpers
 # ---------------------------------------------------------------------------
 def get_observable_by_hash(sha256: str) -> dict | None:
-    query = (
-        """
+    query = """
         {
             stixCyberObservables(
                 filters: {
@@ -142,17 +141,14 @@ def get_observable_by_hash(sha256: str) -> dict | None:
                 }
             }
         }
-    """
-        % sha256
-    )
+    """ % sha256
     result = graphql(query)
     edges = result["stixCyberObservables"]["edges"]
     return edges[0]["node"] if edges else None
 
 
 def get_notes_for_observable(observable_id: str) -> list[dict]:
-    query = (
-        """
+    query = """
         {
             notes(
                 filters: {
@@ -164,9 +160,7 @@ def get_notes_for_observable(observable_id: str) -> list[dict]:
                 edges { node { id attribute_abstract content } }
             }
         }
-    """
-        % observable_id
-    )
+    """ % observable_id
     result = graphql(query)
     return [e["node"] for e in result["notes"]["edges"]]
 

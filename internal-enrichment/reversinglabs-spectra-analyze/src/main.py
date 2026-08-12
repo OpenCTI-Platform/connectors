@@ -678,8 +678,7 @@ class ReversingLabsSpectraAnalyzeConnector:
         dl_files_statistics = resp_json.get("downloaded_files_statistics", {})
         abstract = "ReversingLabs Spectra Analyze IP address report"
 
-        content = textwrap.dedent(
-            f"""
+        content = textwrap.dedent(f"""
         ## ReversingLabs Spectra Analyze IP address report for {self.ip_sample}
         Third party statistics
         | Status        |  Amount         |
@@ -698,8 +697,7 @@ class ReversingLabsSpectraAnalyzeConnector:
         | SUSPICIOUS    | {dl_files_statistics.get("suspicious")} |
         | UNKNOWN       | {dl_files_statistics.get("unknown")} |
         | TOTAL         | {dl_files_statistics.get("total")} |
-        """
-        )
+        """)
 
         note = stix2.Note(
             id=Note.generate_id(None, content),
@@ -844,13 +842,11 @@ class ReversingLabsSpectraAnalyzeConnector:
         if selected_domains:
             abstract = "ReversingLabs Spectra Analyze domain statistics"
 
-            accumulated_content = textwrap.dedent(
-                """
+            accumulated_content = textwrap.dedent("""
             ## ReversingLabs Spectra Analyze domain statistics
             | Domain        |  Third party statistics Malicious/Total | Downloaded files statistics Malicious/Total |
             | ------------- | --------------- | --------------- |
-            """
-            )
+            """)
 
             for one_domain in selected_domains:
                 domain_name = one_domain.get("requested_domain")
@@ -985,13 +981,11 @@ class ReversingLabsSpectraAnalyzeConnector:
         if selected_urls:
             abstract = "ReversingLabs Spectra Analyze URL statistics"
 
-            accumulated_content = textwrap.dedent(
-                """
+            accumulated_content = textwrap.dedent("""
             ## ReversingLabs Spectra Analyze URL statistics
             | URL        |  Third party statistics Malicious/Total | Analysis statistics Malicious/Total |
             | ------------- | --------------- | --------------- |
-            """
-            )
+            """)
 
             for one_url in selected_urls:
                 url_name = one_url.get("requested_url")
@@ -1113,8 +1107,7 @@ class ReversingLabsSpectraAnalyzeConnector:
         )
         dl_files_statistics = resp_json.get("downloaded_files_statistics", {})
 
-        content = textwrap.dedent(
-            f"""
+        content = textwrap.dedent(f"""
         ## ReversingLabs Spectra Analyze domain report for `{self.domain_sample}`
         Third party statistics
         | Status        |  Amount         |
@@ -1133,8 +1126,7 @@ class ReversingLabsSpectraAnalyzeConnector:
         | SUSPICIOUS    | {dl_files_statistics.get("suspicious")} |
         | UNKNOWN       | {dl_files_statistics.get("unknown")} |
         | TOTAL         | {dl_files_statistics.get("total")} |
-        """
-        )
+        """)
 
         note = stix2.Note(
             id=Note.generate_id(None, content),
@@ -1234,8 +1226,7 @@ class ReversingLabsSpectraAnalyzeConnector:
         analysis_stats = resp_json.get("analysis", {}).get("statistics", {})
         tp_stats = resp_json.get("third_party_reputations", {}).get("statistics", {})
 
-        content = textwrap.dedent(
-            f"""
+        content = textwrap.dedent(f"""
         ## ReversingLabs Spectra Analyze URL report for `{self.url_sample}`
 
         Third party statistics
@@ -1255,8 +1246,7 @@ class ReversingLabsSpectraAnalyzeConnector:
         | SUSPICIOUS    | {analysis_stats.get("suspicious")} |
         | UNKNOWN       | {analysis_stats.get("unknown")} |
         | TOTAL         | {analysis_stats.get("total")} |
-        """
-        )
+        """)
 
         note = stix2.Note(
             id=Note.generate_id(None, content),

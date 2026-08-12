@@ -243,8 +243,6 @@ def _response_error(message, response):
     else:
         error_message = json.loads(response.text)
 
-    raise Exception(
-        f"""Message:{message}.
+    raise Exception(f"""Message:{message}.
             Response code returned:{response.status_code}.
-            Error message returned:{error_message}."""
-    )
+            Error message returned:{error_message}.""")

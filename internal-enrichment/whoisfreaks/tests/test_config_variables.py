@@ -54,6 +54,7 @@ def test_config_variables_empty_values(valid_env, monkeypatch):
     with pytest.raises(SystemExit):
         ConfigVariables()
 
+
 def test_config_variables_missing_connector_id(valid_env, monkeypatch):
     """Executes validation failure lines when CONNECTOR_ID is set to ChangeMe."""
     monkeypatch.setenv("CONNECTOR_ID", "ChangeMe")

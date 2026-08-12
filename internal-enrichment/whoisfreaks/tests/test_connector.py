@@ -196,6 +196,7 @@ def test_connector_start(mock_dependencies):
     connector.start()
     helper.listen.assert_called_once_with(connector.process_message)
 
+
 def test_process_message_unsupported_observable_type(mock_dependencies, monkeypatch):
     """Executes lines 115-116 in main.py by processing an unsupported observable type with a valid work_id."""
     from main import WhoisFreaksConnector
@@ -204,5 +205,7 @@ def test_process_message_unsupported_observable_type(mock_dependencies, monkeypa
     monkeypatch.setattr(
         connector, "_get_entity_info", lambda entity_id: ("StixFile", "sample.exe")
     )
-    result = connector.process_message({"entity_id": "file--1234", "work_id": "work-1234"})
+    result = connector.process_message(
+        {"entity_id": "file--1234", "work_id": "work-1234"}
+    )
     assert result == "Unsupported observable type"

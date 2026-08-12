@@ -93,8 +93,7 @@ def test_find_constructor_calls_should_detect_constructor_call(example_code):
 
 def test_find_constructor_calls_should_detect_multiple_constructor_calls():
     # Given a Python script several calls to a STIX2 Domain Object constructors
-    module = parse(
-        """
+    module = parse("""
         import stix2
         loc = stix2.Location(
             id=generate_id("name"),
@@ -103,8 +102,7 @@ def test_find_constructor_calls_should_detect_multiple_constructor_calls():
         author = stix2.Identity(
             name="author"
         )
-        """
-    )
+        """)
     # When find_constructor_calls is called
     calls = list(find_constructor_calls(module, ["Location", "Identity"], "stix2"))
 
@@ -152,12 +150,10 @@ class TestStixIdGeneratorChecker(pylint.testutils.CheckerTestCase):
         self,
     ):
         # Given: A STIX2 domain object constructor call without an 'id' argument
-        call_node = extract_node(
-            """
+        call_node = extract_node("""
             from stix2 import Location
             loc = Location(name="example") #@
-        """
-        )
+        """)
 
         # When: the checker visits the constructor call node
         with self.assertAddsMessages(
@@ -176,14 +172,12 @@ class TestStixIdGeneratorChecker(pylint.testutils.CheckerTestCase):
         self,
     ):
         # Given: A Python script with no STIX2 domain object constructor call
-        call_node = extract_node(
-            """
+        call_node = extract_node("""
             class Location:
                 def __init__(self):
                     pass 
             loc = Location() #@
-        """
-        )
+        """)
 
         # When: the checker visits the method without constructor calls
         with self.assertNoMessages():
@@ -193,12 +187,10 @@ class TestStixIdGeneratorChecker(pylint.testutils.CheckerTestCase):
         self,
     ):
         # Given: A STIX2 domain object constructor call with an 'id' argument
-        call_node = extract_node(
-            """
+        call_node = extract_node("""
             from stix2 import Location
             loc = Location(id=generate_id("example"), name="example") #@
-        """
-        )
+        """)
 
         # When: the checker visits the constructor call node with an id argument
         # Then: No message is added

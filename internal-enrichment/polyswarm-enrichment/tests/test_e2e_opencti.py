@@ -118,8 +118,7 @@ def delete_observable(internal_id: str):
 # ---------------------------------------------------------------------------
 def get_observable_by_hash(sha256: str) -> dict | None:
     """Look up a StixFile observable by SHA-256 hash."""
-    query = (
-        """
+    query = """
         {
             stixCyberObservables(
                 filters: {
@@ -144,9 +143,7 @@ def get_observable_by_hash(sha256: str) -> dict | None:
                 }
             }
         }
-    """
-        % sha256
-    )
+    """ % sha256
     result = graphql(query)
     edges = result["stixCyberObservables"]["edges"]
     return edges[0]["node"] if edges else None
@@ -154,8 +151,7 @@ def get_observable_by_hash(sha256: str) -> dict | None:
 
 def get_notes_for_observable(observable_id: str) -> list[dict]:
     """Get Notes linked to an observable."""
-    query = (
-        """
+    query = """
         {
             notes(
                 filters: {
@@ -173,9 +169,7 @@ def get_notes_for_observable(observable_id: str) -> list[dict]:
                 }
             }
         }
-    """
-        % observable_id
-    )
+    """ % observable_id
     result = graphql(query)
     return [e["node"] for e in result["notes"]["edges"]]
 
@@ -376,13 +370,11 @@ def feeder_enriched():
     """Wait for any feeder-created observable to be enriched."""
     deadline = time.time() + ENRICHMENT_TIMEOUT
     while time.time() < deadline:
-        result = graphql(
-            """
+        result = graphql("""
             { stixCyberObservables(first: 20, orderBy: created_at, orderMode: desc) {
                 edges { node { id observable_value x_opencti_score } }
             } }
-        """
-        )
+        """)
         for edge in result["stixCyberObservables"]["edges"]:
             node = edge["node"]
             if node["x_opencti_score"] and node["x_opencti_score"] > 50:

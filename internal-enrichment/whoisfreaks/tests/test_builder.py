@@ -103,7 +103,9 @@ def test_build_dns_bundle_ipv4_source(builder):
 
     # Check source observable
     ipv4s = [obj for obj in bundle.objects if obj["type"] == "ipv4-addr"]
-    assert len(ipv4s) == 1  # Only the source "1.2.3.4" (self-resolve records are skipped)
+    assert (
+        len(ipv4s) == 1
+    )  # Only the source "1.2.3.4" (self-resolve records are skipped)
 
     ipv6s = [obj for obj in bundle.objects if obj["type"] == "ipv6-addr"]
     assert len(ipv6s) == 1
@@ -249,12 +251,11 @@ def test_build_domain_reputation_bundle_success(builder):
     assert "Score: 45" in notes[0].abstract
     assert "Score: 45" in notes[0].content
 
+
 def test_build_dns_bundle_unsupported_record_type(builder):
     """Triggers line 173 in builder.py by passing an unhandled DNS record type (e.g., TXT)."""
     dns_data = {
-        "dns_records": [
-            {"type": "TXT", "value": "v=spf1 include:_spf.google.com ~all"}
-        ]
+        "dns_records": [{"type": "TXT", "value": "v=spf1 include:_spf.google.com ~all"}]
     }
     bundle = builder.build_dns_bundle("example.com", dns_data)
     assert bundle is not None

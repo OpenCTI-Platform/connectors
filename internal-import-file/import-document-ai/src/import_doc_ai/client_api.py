@@ -17,20 +17,13 @@ class ImportDocumentAIClient:
         self.helper = helper
         self.config = config
 
-        self._opencti_instance_id = (
-            self.helper.api.query(
-                """
+        self._opencti_instance_id = self.helper.api.query("""
                 query SettingsQuery {
                     settings {
                         id
                         }
                     }
-            """
-            )
-            .get("data", {})
-            .get("settings", {})
-            .get("id", "")
-        )
+            """).get("data", {}).get("settings", {}).get("id", "")
 
         # Define headers in session for legacy direct mode
         headers = {}
