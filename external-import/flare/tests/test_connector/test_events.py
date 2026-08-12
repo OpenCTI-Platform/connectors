@@ -9,6 +9,7 @@ from connector.events import (
     LookalikeDomainEvent,
     RansomleakEvent,
     StealerLogEvent,
+    UnsupportedEventTypeError,
     get_event_from_event_json,
     get_event_title_from_event_type,
     get_incident_type_from_event_type,
@@ -436,5 +437,15 @@ class TestGetEventFromEventJSON:
         assert isinstance(get_event_from_event_json(event), expected_type)
 
     def test_raises_value_error_on_unknown_event_type(self) -> None:
-        with pytest.raises(ValueError, match="Unsupported event type"):
+        with pytest.raises(UnsupportedEventTypeError, match="Unsupported event type"):
             get_event_from_event_json(_make_event("not_a_real_type"))
+
+    @pytest.mark.parametrize(
+        "event_type",
+        ["whois", "host", "cookie", "not_a_real_type"],
+    )
+    def test_unsupported_types_raise_unsupported_event_type_error(
+        self, event_type: str
+    ) -> None:
+        with pytest.raises(UnsupportedEventTypeError):
+            get_event_from_event_json(_make_event(event_type))
