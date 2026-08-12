@@ -433,32 +433,42 @@ class EventConverter:
             # Extract relationships from event's objects references
             for object in event.Event.Object or []:
                 for object_reference in object.ObjectReference or []:
-                    ref_src = object_reference.source_uuid
-                    ref_target = object_reference.referenced_uuid
-                    if ref_src and ref_target:
-                        # ! Seems to always return None as MISP uuids are different from generated STIX ids
-                        src_result = find_type_by_uuid(ref_src, stix_objects)
-                        target_result = find_type_by_uuid(ref_target, stix_objects)
-                        if src_result and target_result:
-                            stix_objects.append(
-                                stix2.Relationship(
-                                    id=pycti.StixCoreRelationship.generate_id(
+                    try:
+                        ref_src = object_reference.source_uuid
+                        ref_target = object_reference.referenced_uuid
+                        if ref_src and ref_target:
+                            # ! Seems to always return None as MISP uuids are different from generated STIX ids
+                            src_result = find_type_by_uuid(ref_src, stix_objects)
+                            target_result = find_type_by_uuid(ref_target, stix_objects)
+                            if src_result and target_result:
+                                stix_objects.append(
+                                    stix2.Relationship(
+                                        id=pycti.StixCoreRelationship.generate_id(
+                                            relationship_type="related-to",
+                                            source_ref=src_result["entity"]["id"],
+                                            target_ref=target_result["entity"]["id"],
+                                        ),
                                         relationship_type="related-to",
+                                        created_by_ref=event_author["id"],
+                                        description=(
+                                            f"Original Relationship: {object_reference.relationship_type}\n"
+                                            f"Comment: {object_reference.comment}"
+                                        ),
                                         source_ref=src_result["entity"]["id"],
                                         target_ref=target_result["entity"]["id"],
-                                    ),
-                                    relationship_type="related-to",
-                                    created_by_ref=event_author["id"],
-                                    description=(
-                                        f"Original Relationship: {object_reference['relationship_type']}\n"
-                                        f"Comment: {object_reference['comment']}"
-                                    ),
-                                    source_ref=src_result["entity"]["id"],
-                                    target_ref=target_result["entity"]["id"],
-                                    object_marking_refs=event_markings,
-                                    allow_custom=True,
+                                        object_marking_refs=event_markings,
+                                        allow_custom=True,
+                                    )
                                 )
-                            )
+                    except Exception as e:
+                        self.logger.warning(
+                            "Failed to process object reference, skipping it",
+                            {
+                                "prefix": LOG_PREFIX,
+                                "object_reference": str(object_reference),
+                                "error": str(e),
+                            },
+                        )
 
         # Prepare the bundle
         bundle_objects = []
