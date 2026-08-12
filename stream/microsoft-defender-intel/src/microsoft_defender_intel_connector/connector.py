@@ -323,9 +323,7 @@ class MicrosoftDefenderIntelConnector:
             self.helper.connector_logger.error(
                 "Failed processing data {" + str(err) + "}"
             )
-            self.helper.connector_logger.error(
-                "Message data {" + str(msg) + "}"
-            )
+            self.helper.connector_logger.error("Message data {" + str(msg) + "}")
         finally:
             return None
 
