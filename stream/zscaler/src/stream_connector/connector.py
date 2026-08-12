@@ -20,10 +20,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 class ZscalerConnector:
     def __init__(
         self,
-        config_path,
         helper: OpenCTIConnectorHelper,
-        opencti_url,
-        opencti_token,
         ssl_verify,
         zscaler_username,
         zscaler_password,
@@ -33,7 +30,6 @@ class ZscalerConnector:
         self.helper = helper
         self.helper.connector_logger.info("Initializing Zscaler connector...")
 
-        self.opencti_url = opencti_url
         self.ssl_verify = ssl_verify
         self.zscaler_username = zscaler_username
         self.zscaler_password = zscaler_password
