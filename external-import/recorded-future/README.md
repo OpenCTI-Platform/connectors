@@ -312,7 +312,7 @@ For example, if you want to perform an investigation on an indicator:
 
 Risk Lists and Analyst Notes can be retrieved simultaneously by the connector.
 
-Give a value for the `risk_list_interval` (config.yml for local deployment) or `RECORDED_FUTURE_RISK_LIST_INTERVAL` (docker-compose.yml file for deployment with Docker containers) allows you to pull Risk Lists at regular intervals. NB: Risk Lists are updated every 12 hours by Recorded Future, so there is no benefit in fetching them more frequently than that.
+Setting `risk_list_interval` (config.yml for local deployment) or `RECORDED_FUTURE_RISK_LIST_INTERVAL` (docker-compose.yml for deployment with Docker containers) allows you to pull Risk Lists at regular intervals. NB: Risk Lists are updated every 12 hours by Recorded Future, so there is no benefit in fetching them more frequently than that.
 
 #### Verification
 
