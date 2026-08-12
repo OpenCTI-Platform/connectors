@@ -338,7 +338,7 @@ Give a value for the `threat_maps_interval` (config.yml for local deployment) or
 
 The connector will import all Malware and Threat Actors with their context.
 
-Threat Actors will be registered as `Intrusion Set`.
+Threat Actors will be registered as `Intrusion Set` entities.
 
 Example of result for an Intrusion Set:
 
