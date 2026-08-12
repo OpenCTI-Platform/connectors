@@ -34,17 +34,12 @@ class ZscalerConnector:
         self.helper.connector_logger.info("Initializing Zscaler connector...")
 
         self.opencti_url = opencti_url
-        self.opencti_token = opencti_token
         self.ssl_verify = ssl_verify
         self.zscaler_username = zscaler_username
         self.zscaler_password = zscaler_password
         self.api_key = zscaler_api_key
         self.zscaler_blacklist_name = (
             zscaler_blacklist_name  # Parameter for the blacklist
-        )
-
-        self.api = OpenCTIApiClient(
-            self.opencti_url, self.opencti_token, ssl_verify=self.ssl_verify
         )
 
         self.zscaler_base_url = "https://zsapi.zscalertwo.net/api/v1"
