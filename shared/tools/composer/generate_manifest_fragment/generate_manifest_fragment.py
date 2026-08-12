@@ -91,7 +91,7 @@ MANIFEST_KEYS_HANDLED_EXPLICITLY = frozenset(
 )
 
 # Maximum length allowed by the schema for `short_description`.
-SHORT_DESCRIPTION_MAX_LENGTH = 200
+SHORT_DESCRIPTION_MAX_LENGTH = 250
 
 # Default logo used when a connector does not ship its own.
 DEFAULT_LOGO_PATH = (
