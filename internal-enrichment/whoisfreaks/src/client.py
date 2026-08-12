@@ -56,7 +56,10 @@ class WhoisFreaksClient:
             return None
 
     def _get(
-        self, endpoint: str, params: Optional[dict] = None, timeout: Optional[int] = None
+        self,
+        endpoint: str,
+        params: Optional[dict] = None,
+        timeout: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         url = f"{self.BASE_URL}{endpoint}"
         if params is None:
@@ -164,7 +167,10 @@ class WhoisFreaksClient:
         )
 
     def bulk_dns_lookup(
-        self, domains: list[str], ip_addresses: list[str], format: Optional[str] = "json"
+        self,
+        domains: list[str],
+        ip_addresses: list[str],
+        format: Optional[str] = "json",
     ) -> Optional[Dict[str, Any]]:
         return self._post(
             "/v2.0/dns/bulk/live",
