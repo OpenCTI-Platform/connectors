@@ -178,6 +178,6 @@ def test_process_object_reference_error_is_caught_and_logged(monkeypatch):
 
     # When processing the event
     # Then no exception propagates and the error is logged as a warning
-    author, markings, stix_objects = converter.process(event)
+    converter.process(event)
 
     assert logger.warning.called
