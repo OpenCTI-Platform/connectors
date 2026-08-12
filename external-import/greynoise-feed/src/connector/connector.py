@@ -190,9 +190,8 @@ class GreyNoiseFeedConnector:
                 first_seen = parse(
                     ip["internet_scanner_intelligence"]["last_seen_timestamp"]
                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
-                last_seen = datetime.strptime(
-                    ip["internet_scanner_intelligence"]["last_seen_timestamp"],
-                    "%Y-%m-%dT%H:%M:%SZ",
+                last_seen = datetime.fromisoformat(
+                    ip["internet_scanner_intelligence"]["last_seen_timestamp"]
                 ) + timedelta(hours=23)
                 last_seen = last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
             # Generate ExternalReference
@@ -332,11 +331,12 @@ class GreyNoiseFeedConnector:
                         last_seen_str = ip.get("internet_scanner_intelligence", {}).get(
                             "last_seen_timestamp", ""
                         )
-                        # Parse the timestamp string (format: "2026-01-26 19:59:37") to a timezone-aware datetime
+                        # Parse the timestamp string (e.g. "2026-01-26 19:59:37" or
+                        # "2026-01-26T19:59:37Z") to a timezone-aware datetime
                         try:
-                            last_seen_dt = datetime.strptime(
-                                last_seen_str, "%Y-%m-%d %H:%M:%S"
-                            ).replace(tzinfo=pytz.UTC)
+                            last_seen_dt = datetime.fromisoformat(last_seen_str)
+                            if last_seen_dt.tzinfo is None:
+                                last_seen_dt = last_seen_dt.replace(tzinfo=pytz.UTC)
                         except ValueError:
                             # Skip entries with an unparsable timestamp
                             skip_count += 1
@@ -378,10 +378,16 @@ class GreyNoiseFeedConnector:
                             last_seen_str = ip.get(
                                 "internet_scanner_intelligence", {}
                             ).get("last_seen_timestamp", "")
-                            # Parse the timestamp string (format: "2026-01-26 19:59:37") to a timezone-aware datetime
-                            last_seen_dt = datetime.strptime(
-                                last_seen_str, "%Y-%m-%d %H:%M:%S"
-                            ).replace(tzinfo=pytz.UTC)
+                            # Parse the timestamp string (e.g. "2026-01-26 19:59:37" or
+                            # "2026-01-26T19:59:37Z") to a timezone-aware datetime
+                            try:
+                                last_seen_dt = datetime.fromisoformat(last_seen_str)
+                                if last_seen_dt.tzinfo is None:
+                                    last_seen_dt = last_seen_dt.replace(tzinfo=pytz.UTC)
+                            except ValueError:
+                                # Skip entries with an unparsable timestamp
+                                skip_count += 1
+                                continue
                             if last_seen_dt > most_recent_last_seen:
                                 ips_list.append(ip)
                                 added_count += 1
