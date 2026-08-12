@@ -478,8 +478,9 @@ class EventConverter:
                                 )
                     except Exception as e:
                         self.logger.warning(
-                            f"{LOG_PREFIX} Failed to process object reference, skipping it",
+                            "Failed to process object reference, skipping it",
                             {
+                                "prefix": LOG_PREFIX,
                                 "object_reference": str(object_reference),
                                 "error": str(e),
                             },
