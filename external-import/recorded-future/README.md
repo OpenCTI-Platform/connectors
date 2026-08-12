@@ -249,7 +249,7 @@ For Note entities, the following Recorded Future Entity types are supported:
 > As a result, a Report created in OpenCTI may contain fewer entities than the same note shows
 > in the Recorded Future portal — this is expected behavior, not a bug.
 
-The context has been added following the relationships below:
+The connector creates the following relationships between imported entities:
 
 ![mapping relationships](./__docs__/media/mapping-relationships.png)
 
