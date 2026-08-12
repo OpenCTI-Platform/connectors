@@ -295,7 +295,7 @@ class MicrosoftDefenderIntelConnector:
             return parsed_msg
         except json.JSONDecodeError:
             self.helper.connector_logger.error(
-                "[ERROR] Data cannot be parsed to JSON", {"msg_data": msg.data}
+                "Data cannot be parsed to JSON", {"msg_data": msg.data}
             )
             raise JSONDecodeError("Data cannot be parsed to JSON", msg.data, 0)
 
@@ -321,10 +321,10 @@ class MicrosoftDefenderIntelConnector:
             self.helper.connector_logger.error(err.msg, err.metadata)
         except Exception as err:
             self.helper.connector_logger.error(
-                "[ERROR] Failed processing data {" + str(err) + "}"
+                "Failed processing data {" + str(err) + "}"
             )
             self.helper.connector_logger.error(
-                "[ERROR] Message data {" + str(msg) + "}"
+                "Message data {" + str(msg) + "}"
             )
         finally:
             return None
