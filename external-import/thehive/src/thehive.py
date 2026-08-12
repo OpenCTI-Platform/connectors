@@ -399,11 +399,26 @@ class TheHive:
         raise Exception({"message": api_error_msg})
 
     def process_items(self, type, items, process_func, last_date_key):
-        """Process items, execute process_func, and send_stix2_bundle."""
-        friendly_name = f"TheHive processing ({type}) @ {datetime.now().isoformat()}"
-        self.helper.log_info(f"Processing type ({type}) and ({len(items)}) item(s).")
+        """Convert and send items under a single work, updating the watermark.
+
+        For each item allowed by the TLP filter, ``process_func(item, work_id)``
+        must return a STIX bundle, which is then sent under ``work_id``. The
+        watermark advances for every fetched item, including TLP-skipped ones.
+
+        No Work is created when ``items`` is empty, to avoid cluttering the
+        Works history with no-op entries on every idle scheduled run. pycti's
+        scheduler (``schedule_iso``) updates Last Run/Next Run independently
+        of Work creation, so this has no effect on connector run visibility.
+        """
+        self.helper.connector_logger.info(
+            f"Processing type ({type}) and ({len(items)}) item(s)."
+        )
         last_date = self.current_state.get(last_date_key, self.thehive_import_from_date)
+        if not items:
+            return last_date
+
         updated_last_date = last_date
+        friendly_name = f"TheHive processing ({type}) @ {datetime.now().isoformat()}"
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
@@ -441,6 +456,8 @@ class TheHive:
                 sortby=Asc("_updatedAt"),
                 paginate=Paginate(start=0, end=100),
             )
+            # An empty list is a normal result (no new items since last run);
+            # not_found_items only handles non-list error payloads.
             if not isinstance(items, list):
                 self.not_found_items(items, type)
         elif type == "alert":
@@ -625,12 +642,26 @@ class TheHive:
 
     def process_comments(self, case, stix_case):
         """Function to process all comments within a case."""
-        case_comments = self.thehive_api.case.find_comments(
-            case_id=case.get("_id"),
-            sortby=Asc("_createdAt"),
-            paginate=Paginate(start=0, end=10),
-        )
-        self.helper.log_info(
+        try:
+            case_comments = self.thehive_api.case.find_comments(
+                case_id=case.get("_id"),
+                sortby=Asc("_createdAt"),
+                paginate=Paginate(start=0, end=10),
+            )
+        except Exception as e:
+            # TheHive 4 has no case comments (its query API rejects the
+            # "comments" query name); a failed comment fetch must not abort
+            # the whole case import.
+            self.helper.connector_logger.warning(
+                "Could not fetch comments for case; importing it without comments",
+                meta={
+                    "case_id": case.get("_id"),
+                    "case_title": case.get("title"),
+                    "error": str(e),
+                },
+            )
+            return []
+        self.helper.connector_logger.info(
             f"Processing {len(case_comments)} comments for case: {case.get('title')}"
         )
         processed_comments = []
@@ -661,8 +692,19 @@ class TheHive:
         Downloading attachments and creating STIX Artifacts objects + OpenCTI files.
         """
         case_id = case.get("_id")
-        attachments = self.thehive_api.case.find_attachments(case_id=case_id)
-        self.helper.log_info(
+        try:
+            attachments = self.thehive_api.case.find_attachments(case_id=case_id)
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "Could not fetch attachments for case; importing it without attachments",
+                meta={
+                    "case_id": case_id,
+                    "case_title": case.get("title"),
+                    "error": str(e),
+                },
+            )
+            return [], []
+        self.helper.connector_logger.info(
             f"Processing {len(attachments)} attachments for case: {case.get('title')}"
         )
 
