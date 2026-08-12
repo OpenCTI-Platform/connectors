@@ -3,6 +3,8 @@ from pathlib import Path
 
 import yaml
 from pycti import get_config_variable
+import logging
+logger = logging.getLogger(__name__)
 
 
 class ConfigVariables:
@@ -85,8 +87,10 @@ class ConfigVariables:
             missing.append("WHOISFREAKS_API_KEY / whoisfreaks.api_key")
 
         if missing:
-            print(
+            logger.error(
                 f"[ERROR] Missing or default configuration values for: {', '.join(missing)}"
             )
-            print("[ERROR] Please update config.yml or pass environment variables.")
+            logger.error(
+                "[ERROR] Please update config.yml or pass environment variables."
+            )
             sys.exit(1)
