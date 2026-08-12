@@ -6,7 +6,6 @@ from pycti import OpenCTIConnectorHelper
 from stream_connector import ZscalerConnector
 from stream_connector.settings import ConnectorSettings
 
-
 if __name__ == "__main__":
     try:
         # Load and validate configuration via Pydantic settings
