@@ -5,7 +5,7 @@ import time
 import requests
 import urllib3
 import validators
-from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper
 from stream_connector.utils import obfuscate_api_key, sanitize_payload
 from tenacity import (
     retry,
