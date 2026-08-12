@@ -29,3 +29,4 @@ external-import/loaderinsightagency
 
 .mise/config.local.toml
 .mise/tasks/local/**
+*.pyc
