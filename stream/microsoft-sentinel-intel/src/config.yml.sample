@@ -13,6 +13,7 @@ connector:
   #live_stream_no_dependencies: true
 
 microsoft_sentinel_intel:
+  #auth_type: 'azure_credential' # Use managed identity, workload identity, or az login instead of app registration
   tenant_id: 'ChangeMe'
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'

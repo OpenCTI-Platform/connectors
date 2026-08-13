@@ -5,10 +5,13 @@
   "short_description": "The OpenCTI SentinelOne Intelligence connector facilitates real-time synchronisation of threat intelligence. By leveraging OpenCTI's live stream capabilities, this connector ensures that Indicators of Compromise (IOCs) are promptly shared with SentinelOne, enhancing the organisation's ability to detect and respond to threats effectively.",
   "logo": "stream/sentinelone-intel/__metadata__/logo.png",
   "use_cases": [
-    "SIEM and Analytics",
-    "Endpoint Detection and Response",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-12-04",
   "playbook_supported": false,

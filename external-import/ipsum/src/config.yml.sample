@@ -2,25 +2,15 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
-connector:
-  type: 'EXTERNAL_IMPORT'
-  id: 'ChangeMe'
-  name: 'IPsum'
-  scope: 'ipsum'
-  log_level: 'info'
-  duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
-  #============================================#
-  # Optional connector's definition parameters #
-  #============================================#
-  #queue_threshold: 500
-  #run_and_terminate: 'False'
-  #send_to_queue: 'True'
-  #send_to_directory: 'False'
-  #send_to_directory_path: 'ChangeMe'
-  #send_to_directory_retention: 7
+# connector:
+#   id: '9b7c2e14-3f5a-4d8b-9c1e-6a2f4b8d0e37'
+#   name: 'IPsum'
+#   scope: 'ipsum'
+#   log_level: 'error'
+#   duration_period: 'PT6H' # ISO 8601 duration (6 hours)
 
-connector_ipsum:
-  api_base_url: 'https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt'
-  api_key: ''
-  default_x_opencti_score: 60
-  tlp_level: 'white'
+# connector_ipsum:
+#   api_base_url: 'https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt'
+#   api_key: '' # Optional: GitHub API key to avoid rate limiting
+#   default_x_opencti_score: 60
+#   tlp_level: 'white'

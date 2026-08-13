@@ -1,12 +1,17 @@
 {
   "title": "Export File Text",
   "slug": "export-file-txt",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The Export File TXT connector is an internal export connector that generates plain text files containing entity names or observable values, one per line.\n\nThis format is ideal for:\n\n- Creating blocklists for firewalls and security tools\n- Feeding IOC values to SIEM systems\n- Generating simple reports of entity names\n- Integration with tools that accept newline-separated input\n\nThe connector supports list exports (selection or query-based) but does not support single entity exports.",
+  "short_description": "The Export File TXT connector generates plain text files with entity names or observable values, one per line, ideal for blocklists, SIEM IOC feeds, and tools that accept newline-separated input.",
   "logo": "internal-export-file/export-file-txt/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

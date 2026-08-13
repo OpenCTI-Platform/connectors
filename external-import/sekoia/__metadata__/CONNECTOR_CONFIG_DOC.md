@@ -11,7 +11,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SEKOIA_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | API key used to authenticate requests to the Sekoia service. |
 | CONNECTOR_NAME | `string` |  | string | `"SEKOIA.IO"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["identity", "attack-pattern", "course-of-action", "intrusion-set", "malware", "tool", "report", "location", "vulnerability", "indicator", "campaign", "infrastructure", "relationship"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT60S"` | Duration between two scheduled runs of the connector (ISO 8601 format). |
 | SEKOIA_BASE_URL | `string` |  | string | `"https://api.sekoia.io"` | Base URL for accessing the Sekoia API. |
@@ -22,3 +22,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SEKOIA_IMPORT_SOURCE_LIST | `boolean` |  | boolean | `false` | Create the list of sources observed by Sekoia as label. |
 | SEKOIA_IMPORT_IOC_RELATIONSHIPS | `boolean` |  | boolean | `true` | Import IOCs relationships and related objects. |
 | SEKOIA_CONFIDENCE_SCORE | `integer` |  | integer | `null` | This will be the score assigned to the indicators. Defaults to null, maximum 100. |
+| SEKOIA_SEND_CONFIDENCE | `boolean` |  | boolean | `true` | Whether to include Sekoia's native STIX confidence property on objects in the bundle sent. |

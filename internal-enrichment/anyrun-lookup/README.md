@@ -6,7 +6,7 @@
 
 ______________________________________________________________________
 
-# OpenCTI ANY.RUN TI Lookup Connector
+# OpenCTI ANY.RUN Threat Intelligence Lookup Connector
 
 | Status           | Date | Comment |
 |------------------|------|---------|
@@ -16,7 +16,7 @@ The ANY.RUN TI Lookup connector analyzes StixFile, Artifact, Domain-Name, Hostna
 
 ## Table of Contents
 
-- [OpenCTI ANY.RUN TI Lookup Connector](#opencti-anyrun-ti-lookup-connector)
+- [OpenCTI ANY.RUN Threat Intelligence Lookup Connector](#opencti-anyrun-ti-lookup-connector)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)

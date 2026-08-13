@@ -145,12 +145,19 @@ class TheHive:
             },
         )
 
-    def generate_alert_bundle(self, alert):
-        """Generate a STIX bundle from a given alert."""
+    def generate_alert_bundle(self, alert, work_id=None):
+        """Generate and return a STIX bundle from a given alert.
+
+        The returned bundle is sent by ``process_items`` under ``work_id``.
+        ``work_id`` is accepted only for a signature consistent with
+        ``generate_case_bundle`` and is unused here (alerts have no background
+        artifact sends).
+        """
         self.helper.connector_logger.info(
             f"Starting import for alert '{alert.get('title')}'"
         )
         bundle_objects = [self.identity]
+        markings = []
         try:
             markings = self.process_markings(alert)
             bundle_objects.extend(markings)
@@ -172,7 +179,10 @@ class TheHive:
             )
             if stix_observable:
                 bundle_objects.append(stix_observable)
-                bundle_objects.append(stix_relation)
+                # The relation can be None (e.g. relationship construction failed);
+                # a None element in the bundle aborts the whole send downstream.
+                if stix_relation:
+                    bundle_objects.append(stix_relation)
         try:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.connector_logger.info(
@@ -185,12 +195,19 @@ class TheHive:
             )
             return {}
 
-    def generate_case_bundle(self, case):
-        """Generates a STIX bundle from a TheHive case, with attachments."""
+    def generate_case_bundle(self, case, work_id=None):
+        """Generate and return a STIX bundle from a TheHive case.
+
+        The main case bundle is returned for ``process_items`` to send under
+        ``work_id`` (so the TLP filter applies and the case is not sent twice).
+        ``work_id`` is used here to attach the separate background attachments
+        bundle to the same work.
+        """
         self.helper.connector_logger.info(
             f"Starting generation of STIX bundle for case: {case.get('title')}"
         )
         bundle_objects = [self.identity]
+        markings = []
 
         try:
             markings = self.process_markings(case)
@@ -245,7 +262,8 @@ class TheHive:
             self.helper.connector_logger.info(
                 f"Completed generation of STIX bundle for case: {case.get('title')}"
             )
-            self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)
+            # The main bundle is sent by process_items() with the work_id, after the
+            # TLP filter has been applied. Sending it here would bypass that filter.
 
         except Exception as e:
             self.helper.connector_logger.error(
@@ -253,13 +271,15 @@ class TheHive:
             )
             return {}
 
+        # Send STIX Artifacts (attachments) under the same work as the case.
         if attachments:
             try:
                 self.helper.connector_logger.info(
                     "Sending STIX artifacts bundle (attachments)..."
                 )
                 self.helper.send_stix2_bundle(
-                    self.helper.stix2_create_bundle(attachments),
+                    self.helper.stix2_create_bundle([self.identity] + attachments),
+                    work_id=work_id,
                     cleanup_inconsistent_bundle=True,
                 )
 
@@ -333,7 +353,12 @@ class TheHive:
         raise Exception({"message": api_error_msg})
 
     def process_items(self, type, items, process_func, last_date_key):
-        """Process items, execute process_func, and send_stix2_bundle."""
+        """Convert and send items under a single work, updating the watermark.
+
+        For each item allowed by the TLP filter, ``process_func(item, work_id)``
+        must return a STIX bundle, which is then sent under ``work_id``. The
+        watermark advances for every fetched item, including TLP-skipped ones.
+        """
         friendly_name = f"TheHive processing ({type}) @ {datetime.now().isoformat()}"
         self.helper.connector_logger.info(
             f"Processing type ({type}) and ({len(items)}) item(s)."
@@ -344,20 +369,22 @@ class TheHive:
             self.helper.connect_id, friendly_name
         )
         for item in items:
-            self.helper.connector_logger.debug(f"item: {items}")
+            self.helper.connector_logger.debug(f"item: {item}")
             if str(item.get("tlp")) in self.thehive_import_only_tlp:
-                stix_bundle = process_func(item)
+                stix_bundle = process_func(item, work_id=work_id)
                 self.helper.send_stix2_bundle(
                     stix_bundle,
                     work_id=work_id,
                     cleanup_inconsistent_bundle=True,
                 )
-
-                updated_last_date = self.get_updated_date(item, updated_last_date)
             else:
                 self.helper.connector_logger.warning(
                     f"Ignoring {item.get('title')} due to TLP too high."
                 )
+            # Advance the watermark for every fetched item, including those skipped
+            # by the TLP filter, so skipped items are not refetched on every run
+            # (and an all-skipped batch does not stall state forever).
+            updated_last_date = self.get_updated_date(item, updated_last_date)
         message = f"Processing complete, last update: {updated_last_date}"
         self.helper.api.work.to_processed(work_id, message)
         return updated_last_date
@@ -365,7 +392,7 @@ class TheHive:
     def process_logic(self, type, last_date_key, bundle_func):
         """Process case or alert based on returned query. Update state once complete."""
         self.helper.connector_logger.info(
-            f"here the current state of the connector : {self.current_state}..."
+            f"Current state of the connector: {self.current_state}"
         )
         last_date = self.get_last_date(last_date_key, self.thehive_import_from_date)
         self.helper.connector_logger.info(f"Last Date: {last_date}(s)...")
@@ -454,11 +481,7 @@ class TheHive:
         """Process all observables from a case."""
         try:
             case_id = case.get("_id")
-
-            self.helper.connector_logger.info(
-                f"!!! here the value of case_id : {case_id}"
-            )
-            response = self.thehive_api.case.find_observables(case_id=case.get("_id"))
+            response = self.thehive_api.case.find_observables(case_id=case_id)
             if response and len(response) > 0:
                 observables = response
                 self.helper.connector_logger.info(
@@ -466,10 +489,7 @@ class TheHive:
                 )
                 processed_observables = []
                 object_refs = []
-                i = 1
                 for observable in observables:
-                    self.helper.connector_logger.info(f"!!! !!! observable n° {i}")
-                    i += 1
                     stix_observable = self.convert_observable(observable, markings)
                     if stix_observable:
                         if hasattr(stix_observable, "id"):
@@ -482,8 +502,8 @@ class TheHive:
                                 processed_observables.append(sighting)
                 return processed_observables, object_refs
             else:
-                self.helper.connector_logger.error(
-                    f"Failed to get observables for case: {case.get('title')}"
+                self.helper.connector_logger.info(
+                    f"No observables found for case: {case.get('title')}"
                 )
                 return [], []
         except Exception as e:
@@ -494,6 +514,8 @@ class TheHive:
 
     def process_observables_and_relations(self, observable, markings, stix_incident):
         """Function to process observables and create related STIX relations."""
+        stix_observable = None
+        stix_observable_relation = None
         try:
             stix_observable = self.convert_observable(observable, markings)
             if not stix_observable:
@@ -579,7 +601,7 @@ class TheHive:
             created_at = comment.get("_createdAt")
             if created_at is None:
                 self.helper.connector_logger.warning(
-                    f"Comment {comment.get('_id')} without '_createdAt'. Use the case creation date."
+                    f"Comment {comment.get('_id')} without '_createdAt'. Using the case creation date."
                 )
                 created_at = case.get("_createdAt")
                 if created_at is None:
@@ -617,7 +639,7 @@ class TheHive:
                     try:
                         url = f"{self.thehive_url}/api/v1/attachment/{file_id}/download"
                         self.helper.connector_logger.info(
-                            f"Download attachment {file_name} from {url}"
+                            f"Downloading attachment {file_name} from {url}"
                         )
 
                         response = requests.get(

@@ -3,20 +3,20 @@ services:
   connector-reversinglabs-spectra-intel-submission:
     image: opencti/connector-reversinglabs-spectra-intel-submission:latest
     environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=ReversingLabs Spectra Intelligence Submission
       - CONNECTOR_SCOPE=Artifact,Url,StixFile,File
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=Changeme
-      - CONNECTOR_ID=Changeme
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted).
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_AUTO=false
-      - REVERSINGLABS_SPECTRA_INTELLIGENCE_URL=data.reversinglabs.com
-      - REVERSINGLABS_SPECTRA_INTELLIGENCE_USERNAME=Changeme
-      - REVERSINGLABS_SPECTRA_INTELLIGENCE_PASSWORD=Changeme
-      - REVERSINGLABS_MAX_TLP=TLP:AMBER
-      - REVERSINGLABS_SANDBOX_OS=windows10
-      - REVERSINGLABS_SANDBOX_INTERNET_SIM=false
-      - REVERSINGLABS_CREATE_INDICATORS=true
-      - REVERSINGLABS_POLL_INTERVAL=250
+      - REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_URL=data.reversinglabs.com
+      - REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_USERNAME=ChangeMe
+      - REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_PASSWORD=ChangeMe
+      # - REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_MAX_TLP=TLP:AMBER
+      # - REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_SANDBOX_OS=windows10
+      # - REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_SANDBOX_INTERNET_SIM=false
+      # - REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_CREATE_INDICATORS=true
+      # - REVERSINGLABS_SPECTRA_INTEL_SUBMISSION_POLL_INTERVAL=250
     restart: always

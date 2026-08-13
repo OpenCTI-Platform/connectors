@@ -1,7 +1,19 @@
 import json
-from datetime import date
 
 import pytest
+
+from tests._manifest_validators import (
+    is_boolean,
+    is_valid_container_image,
+    is_valid_container_type,
+    is_valid_date_str,
+    is_valid_license_type,
+    is_valid_max_confidence_level,
+    is_valid_solution_categories,
+    is_valid_source_code,
+    is_valid_str,
+    is_valid_use_cases,
+)
 
 
 def get_manifest() -> dict:
@@ -9,12 +21,12 @@ def get_manifest() -> dict:
         return json.load(file)
 
 
-def test_manifest_should_be_valid():
-    # Given a manifest
+def test_manifest_is_valid():
+    # Given a global manifest
     manifest = get_manifest()
 
-    # When checking fields
-    # Then manifest should be valid
+    # When checking root fields
+    # Then values should be valid
     assert isinstance(manifest["id"], str)
     assert isinstance(manifest["name"], str)
     assert isinstance(manifest["description"], str)
@@ -25,73 +37,77 @@ def test_manifest_should_be_valid():
 
 
 @pytest.mark.parametrize("contract", get_manifest()["contracts"])
-def test_manifest_contracts_should_be_valid(contract: dict):
+def test_manifest_contracts_are_valid(contract: dict):
+    """Assert each contract in the global manifest satisfies validity rules.
+
+    Important: All fields are required in each contract object, except `config_schema`
+    (not implemented in every connector yet). Some fields are nullable, which means
+    the key is still required but the value may be `None`.
+
+    Field validation rules:
+    - title: string (required)
+    - slug: string (required)
+    - description: string (required)
+    - short_description: string (required)
+    - logo: string (base64-encoded image) (required)
+    - use_cases: 1-3 items from allowed use cases (required)
+    - solution_categories: 1-3 items from allowed solution categories (required)
+    - contact: string or None (required key, nullable value)
+    - license_type: one of allowed license types (required key, nullable value)
+    - verified: bool (required)
+    - last_verified_date: ISO-8601 string or None (required key, nullable value)
+    - playbook_supported: bool (required)
+    - max_confidence_level: integer between 0 and 100 (required)
+    - subscription_link: string or None (required key, nullable value)
+    - source_code: Github URL (required)
+    - manager_supported: bool (required)
+    - container_version: string (required)
+    - container_image: string with correct prefix (required)
+    - container_type: correct type of connector (required)
+    - config_schema: optional key; if present, value must be a dict
+    """
+
     # Given a manifest's contract
     # When checking the contract
     # Then it should be valid
 
-    # Title is a str
-    assert isinstance(contract["title"], str)
-    # Slug is a str
-    assert isinstance(contract["slug"], str)
-    # Description is a str
-    assert isinstance(contract["description"], str)
-    # Short Description is a str
-    assert isinstance(contract["short_description"], str)
-    # Logo is a str (base64 encoded image)
-    assert isinstance(contract["logo"], str) and contract["logo"].startswith(
-        "data:image/"
-    )
-    # Use Cases is a list of str
-    assert isinstance(contract["use_cases"], list) and all(
-        isinstance(use_case, str) for use_case in contract["use_cases"]
-    )
-    # Verified is a bool
-    assert isinstance(contract["verified"], bool)
-    # Last Verified Date is an optional ISO date string
+    # Validate contract fields coming from connector_manifest.json files
+    assert is_valid_str(contract["title"])
+    assert is_valid_str(contract["slug"])
+    assert is_valid_str(contract["description"])
+    assert is_valid_str(contract["short_description"])
+    assert is_valid_str(contract["logo"]) and contract["logo"].startswith("data:image/")
+    assert is_valid_use_cases(contract["use_cases"])
+    assert is_valid_solution_categories(contract["solution_categories"])
+    assert is_valid_str(contract["contact"]) or contract["contact"] is None
     assert (
-        isinstance(contract["last_verified_date"], str)
-        and date.fromisoformat(contract["last_verified_date"])
-    ) or contract["last_verified_date"] is None
-    # Playbook Supported is a bool
-    assert isinstance(contract["playbook_supported"], bool)
-    # Max Confidence Level is between 0 and 100
-    assert isinstance(contract["max_confidence_level"], int) and (
-        contract["max_confidence_level"] >= 0
-        and contract["max_confidence_level"] <= 100
+        is_valid_license_type(contract["license_type"])
+        or contract["license_type"] is None
     )
-    # Support Version is a str
-    assert isinstance(contract["support_version"], str)
-    # Subscription Link is an optional str
+    assert is_boolean(contract["verified"])
     assert (
-        isinstance(contract["subscription_link"], str)
+        is_valid_date_str(contract["last_verified_date"])
+        or contract["last_verified_date"] is None
+    )
+    assert is_boolean(contract["playbook_supported"])
+    assert is_valid_max_confidence_level(contract["max_confidence_level"])
+    assert is_valid_str(contract["support_version"])
+    assert (
+        is_valid_str(contract["subscription_link"])
         or contract["subscription_link"] is None
     )
-    # Source Code is a str
-    assert isinstance(contract["source_code"], str) and (
-        contract["source_code"].startswith(
-            "https://github.com/OpenCTI-Platform/connectors/"
+    assert is_valid_source_code(contract["source_code"])
+    assert is_boolean(contract["manager_supported"])
+    assert is_valid_str(contract["container_version"])
+    assert is_valid_container_image(contract["container_image"])
+    assert is_valid_container_type(contract["container_type"])
+
+    # Validate contract fields coming from connector_config_schema.json files
+    if contract["manager_supported"]:
+        # MUST be present for deployment in XTM Composer
+        assert isinstance(contract["config_schema"], dict)
+    else:
+        # MAY be present (if using BaseConnectorSettings from connectors-sdk)
+        assert "config_schema" not in contract or isinstance(
+            contract["config_schema"], dict
         )
-    )
-    # Manager Supported is a bool
-    assert isinstance(contract["manager_supported"], bool)
-    # Container Version is a str
-    assert isinstance(contract["container_version"], str)
-    # Container Image is a str
-    assert isinstance(contract["container_image"], str) and contract[
-        "container_image"
-    ].startswith("opencti/connector-")
-    # Container Type is a literal
-    assert contract["container_type"] in [
-        "EXTERNAL_IMPORT",
-        "INTERNAL_ENRICHMENT",
-        "INTERNAL_EXPORT_FILE",
-        "INTERNAL_IMPORT_FILE",
-        "STREAM",
-    ]
-    # Config schema is a dict
-    assert (
-        "config_schema" in contract
-        and isinstance(contract["config_schema"], dict)
-        or "config_schema" not in contract
-    )

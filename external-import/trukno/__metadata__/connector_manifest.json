@@ -3,11 +3,15 @@
   "slug": "trukno",
   "description": "TruKno provides breach intelligence through its API. This initial OpenCTI external-import connector polls updated TruKno breaches and imports them into OpenCTI as reports with linked attack patterns and malware.",
   "short_description": "Import TruKno breach reports with linked attack patterns and malware.",
-  "logo": "external-import/trukno/__metadata__/logo.svg",
+  "logo": "external-import/trukno/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
     "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

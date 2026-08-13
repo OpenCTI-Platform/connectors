@@ -40,23 +40,40 @@ class FeedlyRunner:
         run_name = f"{stream_id} @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
         try:
             self.helper.log_info(f"Fetching stream {stream_id}")
+            self.helper.log_debug(
+                "Reading connector state", meta={"stream_id": stream_id}
+            )
             state = self._get_state()
             stream_state = state["streams"].get(stream_id, {})
 
+            self.helper.log_debug(
+                "Initiating work on OpenCTI", meta={"stream_id": stream_id}
+            )
             self.helper.work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, f"Start {run_name}"
             )
 
+            newer_than = self._get_newer_than(stream_id, stream_state)
+            self.helper.log_debug(
+                "Fetching and publishing stream",
+                meta={"stream_id": stream_id, "newer_than": newer_than.isoformat()},
+            )
             last_article_publish_date = self.connector.fetch_and_publish(
                 stream_id,
-                self._get_newer_than(stream_id, stream_state),
+                newer_than,
             )
 
             success_message = f"Finished {run_name}"
             self.helper.log_info(success_message)
+            self.helper.log_debug(
+                "Marking work as processed", meta={"stream_id": stream_id}
+            )
             self.helper.api.work.to_processed(self.helper.work_id, success_message)
 
             self._update_state(state, stream_id, last_article_publish_date, now)
+            self.helper.log_debug(
+                "Connector state updated", meta={"stream_id": stream_id}
+            )
         except Exception as e:
             error_message = f"Failed {run_name} ({e})"
             self.helper.log_error(error_message)

@@ -44,17 +44,21 @@ def get_client(
     proxy_url: Union[str, None] = None,
 ) -> ClientWrapper:
     config_kwargs = {"username": api_username, "password": api_key}
+    proxy_kwargs = {}
     if proxy_url:
         proxy_url_str = str(proxy_url)
-        config_kwargs["proxy"] = proxy_url_str
+        proxy_kwargs["proxy"] = proxy_url_str
         if proxy_auth := parse_url(proxy_url_str).auth:
-            config_kwargs["proxy_headers"] = make_headers(proxy_basic_auth=proxy_auth)
+            proxy_kwargs["proxy_headers"] = make_headers(proxy_basic_auth=proxy_auth)
 
     if backend_name == BackendName.TITAN:
+        titan_config = titan_client.Configuration(**config_kwargs)
+        titan_config.proxy = proxy_kwargs.get("proxy")
+        titan_config.proxy_headers = proxy_kwargs.get("proxy_headers")
         return ClientWrapper(
             backend_name,
             titan_client,
-            titan_client.Configuration(**config_kwargs),
+            titan_config,
             titan_stix.STIXMapperSettings,
             titan_stix.exceptions.EmptyBundle,
             (
@@ -71,7 +75,7 @@ def get_client(
         return ClientWrapper(
             backend_name,
             verity471,
-            verity471.Configuration(**config_kwargs),
+            verity471.Configuration(**config_kwargs, **proxy_kwargs),
             verity_stix.STIXMapperSettings,
             EmptyBundle,
             (

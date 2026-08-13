@@ -13,11 +13,8 @@ name: Build Manifest
     #   - lts/**
 
 on:
-  push:
-    branches:
-      - master
-      - 'release/*'
-      - 'lts/*'
+  workflow_call:
+
 
 concurrency:
   group: build-manifest-${{ github.event.pull_request.head.ref || github.ref }}
@@ -53,62 +50,19 @@ jobs:
         with:
           python-version: "3.12"
 
-#       - id: gate
-#         name: Verify upstream workflows succeeded for this commit
-#         shell: bash
-#         run: |
-#           set -euo pipefail
-
-#           SHA="${{ github.event.workflow_run.head_sha }}"
-#           API_URL="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${SHA}&per_page=100"
-#           RESPONSE="$(curl --silent --show-error --fail \
-#             -H "Accept: application/vnd.github+json" \
-#             -H "Authorization: Bearer ${PUSH_TOKEN}" \
-#             "${API_URL}")"
-
-#           STATUS="$(printf '%s' "${RESPONSE}" | python3 -c '
-# import json
-# import sys
-
-# required = {"Lint & Format", "Tests Connectors"}
-# data = json.load(sys.stdin)
-# ok = set()
-
-# for run in data.get("workflow_runs", []):
-#     name = run.get("name")
-#     if name in required and run.get("status") == "completed" and run.get("conclusion") == "success":
-#         ok.add(name)
-
-# missing = sorted(required - ok)
-# print("ok" if not missing else "missing:" + ",".join(missing))
-# ')"
-
-#           if [ "${STATUS}" != "ok" ]; then
-#             echo "Skipping: required workflows not all successful for this SHA (${STATUS})."
-#             echo "should_run=false" >> "${GITHUB_OUTPUT}"
-#             exit 0
-#           fi
-
-#           echo "TARGET_BRANCH=${{ github.event.workflow_run.head_branch }}" >> "${GITHUB_ENV}"
-#           echo "RELEASE_REF=${{ github.event.workflow_run.head_branch }}" >> "${GITHUB_ENV}"
-#           echo "should_run=true" >> "${GITHUB_OUTPUT}"
-
       - name: Build connectors schemas
-        # if: ${{ steps.gate.outputs.should_run == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
           bash ./shared/tools/composer/generate_connectors_config_schemas/generate_connectors_config_json_schemas.sh
 
       - name: Build global manifest
-        # if: ${{ steps.gate.outputs.should_run == 'true' }}
         shell: bash
         run: |
           set -euo pipefail
           bash ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh
 
     #   - name: Commit manifest if changed
-    #     if: ${{ steps.gate.outputs.should_run == 'true' }}
     #     shell: bash
     #     run: |
     #       set -euo pipefail
@@ -121,11 +75,6 @@ jobs:
     #       if [ -z "${GITHUB_GPG_SECRET_KEY:-}" ] || [ -z "${GITHUB_GPG_SIGNING_KEY:-}" ]; then
     #         echo "Missing GPG secrets; cannot create signed commit."
     #         exit 1
-    #       fi
-
-    #       if git log -1 --pretty=%B | grep -q '\[ci build-manifest\]'; then
-    #         echo "Skipping due to [ci build-manifest] flag."
-    #         exit 0
     #       fi
 
     #       if git diff --quiet -- manifest.json; then
@@ -143,7 +92,7 @@ jobs:
     #       git config commit.gpgsign true
 
     #       git add .
-    #       git commit -m "chore(manifest): build and update manifest [ci build-manifest]"
+    #       git commit -m "chore(manifest): build and update manifest [skip ci]"
 
     #       git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
     #       if git push -q origin "${TARGET_BRANCH}"; then

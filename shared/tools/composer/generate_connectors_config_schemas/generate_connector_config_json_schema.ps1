@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 
 $CONNECTOR_METADATA_DIRECTORY = "__metadata__"
 $VENV_NAME = ".temp_venv"
+$PYTHON_VERSION = "3.12"
 
 function Find-ConnectorDirectories {
     param(
@@ -116,7 +117,7 @@ function Activate-Venv {
     
     # Create isolated virtual environment in connector path
     $venvPath = Join-Path $ConnectorPath $VENV_NAME
-    & python -m venv $venvPath
+    & uv venv --python $PYTHON_VERSION $venvPath
     
     # Activate virtual environment (Windows)
     $activateScript = Join-Path $venvPath "Scripts\Activate.ps1"

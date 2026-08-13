@@ -1,3 +1,3 @@
-from models.configs.config_loader import ConfigLoader
+from ransomwarelive import ConnectorSettings
 
-__all__ = ["ConfigLoader"]
+__all__ = ["ConnectorSettings"]

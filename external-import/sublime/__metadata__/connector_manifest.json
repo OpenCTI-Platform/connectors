@@ -1,13 +1,17 @@
 {
   "title": "Sublime Security",
   "slug": "sublime",
-  "description": "Sublime Security Connector retrieves malicious email message groups from Sublime Security's API and ingests them as OpenCTI Incidents and Cases",
-  "short_description": "Sublime Security Connector retrieves malicious email groups from Sublime Security's API as OpenCTI Incidents and Cases.",
+  "description": "Sublime is an email security platform that detects and prevents phishing, malware delivery, BEC, and more. Each threat report imported by the connector is enriched with the URLs, domains, IP addresses, email addresses, file hashes, and more from the malicious message group.\nThe Sublime Security Connector brings email-based threat intelligence into OpenCTI by continuously importing threat reports from the Sublime platform, along with the network indicators and file observables associated with each detected attack.",
+  "short_description": "The Sublime Security Connector brings email-based threat intelligence into OpenCTI by continuously importing threat reports from the Sublime platform, along with the network indicators and file observables associated with each detected attack.",
   "logo": "external-import/sublime/__metadata__/logo.png",
-  "use_cases" : [
-    "Commercial Threat Intel",
+  "use_cases": [
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Email Security"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2026-04-30",
   "playbook_supported": false,

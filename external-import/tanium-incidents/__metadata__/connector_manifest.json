@@ -7,6 +7,11 @@
   "use_cases": [
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

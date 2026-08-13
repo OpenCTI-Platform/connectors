@@ -1,0 +1,8 @@
+{
+  "id": "example-note",
+  "title": "Example note",
+  "content": "tiny synthetic text",
+  "format": "txt",
+  "updated_at": "2026-01-01T00:00:00Z",
+  "groups": ["example-operation"]
+}

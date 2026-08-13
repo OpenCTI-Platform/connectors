@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-crowdstrike-recon:
+    image: opencti/connector-crowdstrike-recon:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=ChangeMe
+      - CONNECTOR_SCOPE=ChangeMe
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_DURATION_PERIOD=ChangeMe # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      # Custom parameters for connector
+      - CROWDSTRIKE_RECON_API_BASE_URL=ChangeMe
+      - CROWDSTRIKE_RECON_CLIENT_ID=ChangeMe
+      - CROWDSTRIKE_RECON_CLIENT_SECRET=ChangeMe
+      - CROWDSTRIKE_RECON_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+      - CROWDSTRIKE_RECON_IMPORT_START_DATE=P10D # optional, ISO 8601 duration string specifying how far back to import data (e.g., P1D for 1 day, P7D for 7 days). Default: 'P10D'
+      #- CROWDSTRIKE_RECON_FILTER_TOPIC=SA_BRAND,SA_THIRD_PARTY_V2 # optional, comma-separated topic name(s) to filter notifications (default: '' = no filtering)
+      #- CROWDSTRIKE_RECON_FILTER_TYPE=typosquatting_domain,exposed_data # optional, comma-separated notification type(s) to filter (default: '' = no filtering)
+      #- CROWDSTRIKE_RECON_FILTER_PRIORITY=high,medium # optional, comma-separated priority(ies) to filter notifications (default: '' = no filtering)
+    restart: always

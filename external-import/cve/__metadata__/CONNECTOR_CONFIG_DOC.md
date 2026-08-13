@@ -11,7 +11,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CVE_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | API Key for the CVE API. |
 | CONNECTOR_NAME | `string` |  | string | `"NIST NVD CVE"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["cve"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | CVE_BASE_URL | `string` |  | string | `"https://services.nvd.nist.gov/rest/json/cves"` | URL for the CVE API. |
 | CVE_INTERVAL | `integer` |  | `0 < x ` | `6` | Interval in hours to check and import new CVEs. Must be strictly greater than 1, advice from NIST minimum 2 hours. |

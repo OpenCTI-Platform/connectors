@@ -261,7 +261,7 @@ class FindingPydanticModel(_BaseModelWithoutExtra):
     host_uniqueness: list[str] = Field(...)
     host_uuid: Optional[str] = Field(None)
     acr_score: Optional[float] = Field(None)
-    asset_exposure_score: float = Field(...)
+    asset_exposure_score: Optional[float] = Field(None)
     vuln_uniqueness: list[str] = Field(...)
     vuln_uuid: Optional[str] = Field(None)
     uniqueness: list[str] = Field(...)

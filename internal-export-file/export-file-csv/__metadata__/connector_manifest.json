@@ -1,12 +1,17 @@
 {
   "title": "Export File Csv",
   "slug": "export-file-csv",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The Export File CSV connector is an internal export connector that generates CSV (Comma-Separated Values) files from OpenCTI data.\n\nIt supports exporting:\n\n- Single entities with their contained objects (for containers like Reports, Cases)\n- Selected entities from a list view\n- Query-based exports with filters\n\nThe exported CSV files can be used for reporting, data analysis in spreadsheet applications, or integration with other security tools that accept CSV input.",
+  "short_description": "The Export File CSV connector generates CSV files from OpenCTI data, supporting single entities, selected entities, and query-based exports for reporting, spreadsheet analysis, and integration with external tools.",
   "logo": "internal-export-file/export-file-csv/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

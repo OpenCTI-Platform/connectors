@@ -13,6 +13,5 @@ RUN apk update && apk upgrade && \
     rm -rf /var/cache/apk/*
 
 # Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-infoblox
+ENTRYPOINT ["python3", "main.py"]

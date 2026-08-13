@@ -11,7 +11,7 @@ services:
       - CONNECTOR_NAME=ChangeMe
       - CONNECTOR_SCOPE=ChangeMe
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=ChangeMe # ISO8601 format in String, start with 'P...' for Period
+      - CONNECTOR_DURATION_PERIOD=PT5M # ISO8601 format in String, start with 'P...' for Period
 
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
@@ -22,9 +22,10 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - CONNECTOR_IBM_XTI_TAXII_SERVER_URL=ChangeMe
-      - CONNECTOR_IBM_XTI_TAXII_USER=ChangeMe
-      - CONNECTOR_IBM_XTI_TAXII_PASS=ChangeMe
-      # - CONNECTOR_IBM_XTI_TAXII_COLLECTIONS="ChangeMe, ChangeMe"
-      # - CONNECTOR_IBM_XTI_CREATE_OBSERVABLES=True
+      - IBM_XTI_TAXII_SERVER_URL=ChangeMe
+      - IBM_XTI_TAXII_USER=ChangeMe
+      - IBM_XTI_TAXII_PASS=ChangeMe
+      # - IBM_XTI_TAXII_COLLECTIONS=ChangeMe, ChangeMe # Optional: comma-separated collection IDs to ingest
+      # - IBM_XTI_CREATE_OBSERVABLES=false # Optional: defaults to false
+      # - IBM_XTI_DEBUG=false # Optional: developers only, defaults to false
     restart: always

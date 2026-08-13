@@ -1,13 +1,18 @@
 {
   "title": "ReversingLabs Spectra Analyze",
   "slug": "reversinglabs-spectra-analyze",
-  "description": "ReversingLabs Spectra Analyze is a deep file and URL analysis platform that provides malware detection, classification, and network threat intelligence. This connector enables file and URL submission to Spectra Analyze appliances and retrieves network threat intelligence reports for URLs, domains, and IP addresses.\n\nKey features:\n\u2022 File submission for sandbox analysis (Windows, macOS, Linux)\n\u2022 URL submission for analysis\n\u2022 Network threat intelligence for IPs and domains\n\u2022 Automatic indicator creation with labels\n\u2022 Malware entity creation with relationships\n\u2022 Score calculation based on analysis results",
+  "description": "ReversingLabs Spectra Analyze is a deep file and URL analysis platform that provides malware detection, classification, and network threat intelligence. This connector enables file and URL submission to Spectra Analyze appliances and retrieves network threat intelligence reports for URLs, domains, and IP addresses.\n\nKey features:\n\n- File submission for sandbox analysis (Windows, macOS, Linux)\n- URL submission for analysis\n- Network threat intelligence for IPs and domains\n- Automatic indicator creation with labels\n- Malware entity creation with relationships\n- Score calculation based on analysis results",
   "short_description": "ReversingLabs Spectra Analyze connector submits files and URLs for deep analysis, enriching observables with malware classifications, threat scores, and network intelligence.",
   "logo": "internal-enrichment/reversinglabs-spectra-analyze/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox",
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-11-30",
   "playbook_supported": true,

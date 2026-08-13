@@ -1,12 +1,18 @@
 {
   "title": "Comlaude",
   "slug": "comlaude",
-  "description": "Comlaude is a domain management platform that provides comprehensive domain portfolio intelligence. This connector integrates with the Comlaude API Domain Search Endpoint to retrieve all domains within a specified group along with detailed information for each domain.\n\nUse cases:\n\u2022 Allowlisting: Import known-good domains to prevent false positives in threat detection\n\u2022 Brand Protection: Track your organization's domains for security monitoring\n\u2022 Asset Inventory: Maintain an up-to-date inventory of domains within your organization",
+  "description": "Comlaude is a domain management platform that provides comprehensive domain portfolio intelligence. This connector integrates with the Comlaude API Domain Search Endpoint to retrieve all domains within a specified group along with detailed information for each domain.\n\nUse cases:\n\n- Allowlisting: Import known-good domains to prevent false positives in threat detection\n- Brand Protection: Track your organization's domains for security monitoring\n- Asset Inventory: Maintain an up-to-date inventory of domains within your organization",
   "short_description": "Comlaude connector imports domain portfolio information from the Comlaude API into OpenCTI, supporting CTI allowlist management and domain intelligence.",
   "logo": "external-import/comlaude/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Brand, Digital Risk & Underground Exposure",
+    "Third-Party & Supply Chain Oversight"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-04-17",
   "playbook_supported": false,

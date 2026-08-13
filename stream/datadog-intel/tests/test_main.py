@@ -39,12 +39,13 @@ class StubConnectorSettings(ConnectorSettings):
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
-                    "live_stream_id": "live",
+                    "live_stream_id": "test-live-stream-id",
                     "live_stream_listen_delete": True,
                     "live_stream_no_dependencies": True,
                 },
                 "datadog_intel": {
-                    "integration_api_url": "http://test.com",
+                    "integration_api_url": "https://api.datadoghq.com/api/v2/security/threat-intel-feed",
+                    "indicator_type": ["ip_address"],
                     "dd_api_key": "test-api-key",
                     "dd_application_key": "test-app-key",
                 },
@@ -81,7 +82,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_name == "Test Connector"
     assert helper.connect_scope == "test,connector"
     assert helper.log_level == "ERROR"
-    assert helper.connect_live_stream_id == "live"
+    assert helper.connect_live_stream_id == "test-live-stream-id"
     assert helper.connect_live_stream_listen_delete == True
     assert helper.connect_live_stream_no_dependencies == True
 

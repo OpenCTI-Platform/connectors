@@ -2,9 +2,16 @@
   "title": "Taxii POST",
   "slug": "taxii-post",
   "description": "This connector allows to consume an OpenCTI Stream and POST STIX knowledge / events to a TAXII Server.",
-  "short_description": "This connector allows to consume an OpenCTI Stream and POST STIX knowledge / events to a TAXII Server.",
+  "short_description": "Consumes the OpenCTI live stream and pushes STIX knowledge to a remote TAXII server in real time, enabling standards-based threat intelligence sharing.",
   "logo": "stream/taxii-post/__metadata__/logo.png",
-  "use_cases": [],
+  "use_cases": [
+    "Other"
+  ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
