@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, HttpUrl, SecretStr
@@ -18,6 +19,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     name: str = Field(
         description="The name of the connector.",
         default="AssetnoteImportConnector",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["Assetnote"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",

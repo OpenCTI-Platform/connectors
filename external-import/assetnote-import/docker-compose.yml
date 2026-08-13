@@ -7,7 +7,7 @@ services:
       - OPENCTI_TOKEN=CHANGEME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=AssetNote External Import Connector
-      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_SCOPE=Assetnote # optional (default: 'Assetnote')
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 

@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   name: 'Assetnote External Import Connector'
-  scope: 'ChangeMe'
+  scope: 'Assetnote' # optional (default: 'Assetnote')
   log_level: 'error'
   duration_period: 'PT1H'
 

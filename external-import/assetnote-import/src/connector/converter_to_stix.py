@@ -59,7 +59,7 @@ class ConverterToStix:
                 )
             ],
         )
-        return [infrastructure]
+        return [infrastructure.to_stix2_object()]
 
     def convert_exposure(self, exposure: dict[str, Any]) -> list:
         # Create an Infrastructure object for the affected Asset
@@ -181,7 +181,6 @@ class ConverterToStix:
     def _map_course_of_action(self, exposure: dict[str, Any]) -> stix2.CourseOfAction:
         signature = exposure["signature"]
         name = signature["name"]
-        # NB: connectors-sdk appears to have no Course of Action object
         return CourseOfAction(
             name=name,
             description=signature["recommendations"],
@@ -189,7 +188,7 @@ class ConverterToStix:
             author=self.author,
             markings=[self.tlp_marking],
             allow_custom=True,
-        )
+        ).to_stix2_object()
 
     def _map_incident_response(
         self, exposure: dict[str, Any], object_refs: list[str]
