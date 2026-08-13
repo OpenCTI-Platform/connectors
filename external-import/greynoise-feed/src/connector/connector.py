@@ -183,17 +183,10 @@ class GreyNoiseFeedConnector:
                 first_seen = parse(
                     ip["internet_scanner_intelligence"]["first_seen"]
                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
-                last_seen = parse(
-                    ip["internet_scanner_intelligence"]["last_seen_timestamp"]
-                ).strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
                 first_seen = parse(
                     ip["internet_scanner_intelligence"]["last_seen_timestamp"]
                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
-                last_seen = datetime.fromisoformat(
-                    ip["internet_scanner_intelligence"]["last_seen_timestamp"]
-                ) + timedelta(hours=23)
-                last_seen = last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
             # Generate ExternalReference
             external_reference = stix2.ExternalReference(
                 source_name="GreyNoise Feed",
