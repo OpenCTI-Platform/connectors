@@ -6,7 +6,9 @@ from typing import Any
 import stix2
 from connector.settings import AssetnoteImportConfig
 from connectors_sdk.models import (
+    CourseOfAction,
     ExternalReference,
+    Infrastructure,
     Note,
     OrganizationAuthor,
     Relationship,
@@ -14,15 +16,7 @@ from connectors_sdk.models import (
     TLPMarking,
     Vulnerability,
 )
-from pycti import (
-    CaseIncident,
-    CourseOfAction,
-    CustomObjectCaseIncident,
-)
-from pycti import Infrastructure as PyctiInfrastructure
-from pycti import (
-    OpenCTIConnectorHelper,
-)
+from pycti import CaseIncident, CustomObjectCaseIncident, OpenCTIConnectorHelper
 
 
 class ConverterToStix:
@@ -45,25 +39,25 @@ class ConverterToStix:
         asset_type = asset["assetType"].upper()
         created = datetime.fromisoformat(asset["created"])
         last_seen_value = asset.get("onlineLastUpdated")
-        infrastructure = stix2.Infrastructure(
-            id=PyctiInfrastructure.generate_id(name=asset["host"]),
+
+        infrastructure = Infrastructure(
             name=asset["host"],
             description=f"Assetnote asset of type {asset_type}",
             labels=[f"assetnote:{asset_type.lower()}"],
-            created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp_marking.id],
-            external_references=[
-                ExternalReference(
-                    source_name=f"Assetnote Asset: {asset['host']}",
-                    external_id=asset["id"],
-                    url=asset.get("platformUrl"),
-                ).to_stix2_object()
-            ],
+            author=self.author,
+            markings=[self.tlp_marking],
             created=created,
             first_seen=created,
             last_seen=(
                 datetime.fromisoformat(last_seen_value) if last_seen_value else None
             ),
+            external_references=[
+                ExternalReference(
+                    source_name=f"Assetnote Asset: {asset['host']}",
+                    external_id=asset["id"],
+                    url=asset.get("platformUrl"),
+                )
+            ],
         )
         return [infrastructure]
 
@@ -188,13 +182,12 @@ class ConverterToStix:
         signature = exposure["signature"]
         name = signature["name"]
         # NB: connectors-sdk appears to have no Course of Action object
-        return stix2.CourseOfAction(
-            id=CourseOfAction.generate_id(name=name),
+        return CourseOfAction(
             name=name,
             description=signature["recommendations"],
             created=datetime.fromisoformat(exposure["created"]),
-            created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp_marking.id],
+            author=self.author,
+            markings=[self.tlp_marking],
             allow_custom=True,
         )
 

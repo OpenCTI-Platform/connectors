@@ -3,7 +3,6 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Assetnote External Import Connector'
   scope: 'ChangeMe'

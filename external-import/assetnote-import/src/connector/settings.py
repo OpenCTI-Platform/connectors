@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta, timezone
-from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, HttpUrl, SecretStr
 
 
@@ -32,17 +32,12 @@ class AssetnoteImportConfig(BaseConfigModel):
 
     api_base_url: HttpUrl = Field(description="API base URL.")
     api_key: SecretStr = Field(description="API key for authentication.")
-    tlp_level: Literal[
-        "clear",
-        "white",
-        "green",
-        "amber",
-        "amber+strict",
-        "red",
-    ] = Field(
+
+    tlp_level: TLPLevel = Field(
         description="Default TLP level of the imported entities.",
-        default="clear",
+        default=TLPLevel.CLEAR,
     )
+
     unresolved_status_name: str | None = Field(
         description="Name of the OpenCTI Case-Incident workflow status template mapped to Assetnote UNRESOLVED exposures.",
         default=None,
