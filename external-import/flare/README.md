@@ -30,35 +30,34 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 
 ## Deployment
 ### Docker Deployment
-1. Ensure `pycti` version in `requirements.txt` matches your OpenCTI version (e.g., `pycti==6.8.10`).
-2. Build Docker image:
+1. Build Docker image:
 ```bash
 docker build -t opencti/connector-flare:rolling .
 ```
-3. Register connector in the **main** OpenCTI `docker-compose.yml`:
+2. Register connector in the **main** OpenCTI `docker-compose.yml`:
 ```yaml
   connector-flare:
-  image: opencti/connector-flare:rolling
+    image: opencti/connector-flare:rolling
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
       - CONNECTOR_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
       - CONNECTOR_NAME=Flare
-      - CONNECTOR_SCOPE=Incident,Observable,Indicator
+      - CONNECTOR_SCOPE=Flare
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
       - FLARE_API_DOMAIN=api.flare.io
       - FLARE_API_KEY=fw_xxxxxx
-      - FLARE_TENANT_ID=changeme
-      - FLARE_IDENTIFIER_GROUP_ID=changeme
-      - FLARE_EVENT_TYPES=changeme
-      - FLARE_EVENT_ACTIONS=changeme
-      - FLARE_SEVERITIES=changeme
+      #- FLARE_TENANT_ID= # optional, Flare tenant ID
+      #- FLARE_IDENTIFIER_GROUP_ID= # optional, fetch events from this identifier group's feed instead of the tenant feed
+      #- FLARE_EVENT_TYPES=stealer_log,domain,ransomleak,leak # optional (default: 'stealer_log,domain,ransomleak,leak')
+      #- FLARE_EVENT_ACTIONS= # optional, filter by event actions: 'ignored', 'remediated' (default: none)
+      #- FLARE_SEVERITIES= # optional, filter by severities: 'info', 'low', 'medium', 'high', 'critical' (default: none, all severities)
       - FLARE_LOOKBACK_DAYS=30
       - FLARE_TLP_LEVEL=white
     restart: always
 ```
-4. Start the connector:
+3. Start the connector:
 ```bash
 docker compose up -d
 ```
@@ -72,7 +71,7 @@ pip3 install -r src/requirements.txt
 ```
 3. Start the connector:
 ```bash
-python3 src/connector.py
+python3 src/main.py
 ```
 
 ## Usage
