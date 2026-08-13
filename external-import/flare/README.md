@@ -43,7 +43,7 @@ docker build -t opencti/connector-flare:rolling .
       - OPENCTI_TOKEN=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
       - CONNECTOR_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
       - CONNECTOR_NAME=Flare
-      - CONNECTOR_SCOPE=Flare
+      - CONNECTOR_SCOPE=incident,observable,indicator
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
       - FLARE_API_DOMAIN=api.flare.io

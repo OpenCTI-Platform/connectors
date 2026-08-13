@@ -8,7 +8,7 @@ services:
       # Common parameters for connectors of type EXTERNAL_IMPORT
       - CONNECTOR_ID=ChangeMe
       #- CONNECTOR_NAME='Flare' # optional (default: 'Flare')
-      #- CONNECTOR_SCOPE='Flare' # optional (default: 'Flare')
+      #- CONNECTOR_SCOPE=indicator,observable,incident # optional (default: indicator,observable,incident)
       #- CONNECTOR_LOG_LEVEL='error' # optional (default: 'error')
       #- CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs (default: 'PT1H')
       # Custom parameters for connector-flare

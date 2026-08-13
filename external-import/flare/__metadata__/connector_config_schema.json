@@ -23,7 +23,9 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "Flare"
+        "indicator",
+        "observable",
+        "incident"
       ],
       "description": "The scope of the connector.",
       "items": {
