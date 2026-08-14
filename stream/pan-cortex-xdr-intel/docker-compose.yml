@@ -1,0 +1,13 @@
+services:
+  connector-pan-cortex-xdr-intel:
+    image: opencti/connector-pan-cortex-xdr-intel:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      #- CONNECTOR_ID=ChangeMe # Optional (default: random uuid)
+      #- CONNECTOR_NAME=Pan Cortex XDR Intel # Optional
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
+      #- CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
+      # Cortex XDR specific configuration keys are not final yet:
+      # they will be introduced with the `settings.py` implementation (#7183).
+    restart: always
