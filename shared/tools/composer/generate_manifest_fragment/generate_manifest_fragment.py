@@ -183,7 +183,7 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
         "license_type": manifest.get("license_type") or "",
         "contact": manifest.get("contact") or "",
         "verified": manifest.get("verified", False),
-        "last_verified_date": manifest.get("last_verified_date") or "",
+        "last_verified_date": manifest.get("last_verified_date") or None,
         "subscription_link": manifest.get("subscription_link") or "",
         "source_code": manifest["source_code"],
         "manager_supported": manifest["manager_supported"],
