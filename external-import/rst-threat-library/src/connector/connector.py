@@ -1199,13 +1199,13 @@ class RSTThreatLibrary:
             return self._batch_send_one(stix_objects, timestamp, obj_type)
 
         identities, rest = self._partition_identities(stix_objects)
-        if not rest:
-            return self._batch_send_one(identities, timestamp, obj_type)
+        ordered = identities + rest
+        if len(ordered) <= batch_size:
+            return self._batch_send_one(ordered, timestamp, obj_type)
 
-        total_chunks = (len(rest) + batch_size - 1) // batch_size
-        for chunk_idx, offset in enumerate(range(0, len(rest), batch_size)):
-            chunk_rest = rest[offset : offset + batch_size]
-            chunk = identities + chunk_rest if chunk_idx == 0 else chunk_rest
+        total_chunks = (len(ordered) + batch_size - 1) // batch_size
+        for chunk_idx, offset in enumerate(range(0, len(ordered), batch_size)):
+            chunk = ordered[offset : offset + batch_size]
             self.helper.connector_logger.info(
                 f"[{obj_type}] OpenCTI push chunk "
                 f"{chunk_idx + 1}/{total_chunks} "

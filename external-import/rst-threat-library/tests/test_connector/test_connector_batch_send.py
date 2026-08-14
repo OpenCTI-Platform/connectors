@@ -536,9 +536,41 @@ def test_batch_send_puts_identities_in_first_chunk_only(connector):
     first_chunk = connector.helper.stix2_create_bundle.call_args_list[0].args[0]
     second_chunk = connector.helper.stix2_create_bundle.call_args_list[1].args[0]
     assert first_chunk[0] is identity
-    assert len(first_chunk) == 3  # identity + 2 malware
+    assert len(first_chunk) == 2
     assert identity not in second_chunk
-    assert len(second_chunk) == 1
+    assert len(second_chunk) == 2
+    assert all(
+        len(call.args[0]) <= connector._opencti_batch_size
+        for call in connector.helper.stix2_create_bundle.call_args_list
+    )
+
+
+def test_batch_send_chunks_identities_that_exceed_batch_size(connector):
+    connector._opencti_batch_size = 2
+    identities = []
+    for i in range(3):
+        identity = MagicMock()
+        identity.serialize.return_value = (
+            f'{{"type":"identity","id":"identity--{i}","name":"Author {i}"}}'
+        )
+        identities.append(identity)
+    malware = MagicMock()
+    malware.serialize.return_value = (
+        '{"type":"malware","id":"malware--1","name":"m1"}'
+    )
+    objects = identities + [malware]
+
+    ok = connector._batch_send(objects, timestamp=1_700_000_000, obj_type="malware")
+
+    assert ok is True
+    chunks = [
+        call.args[0] for call in connector.helper.stix2_create_bundle.call_args_list
+    ]
+    assert len(chunks) == 2
+    assert chunks[0] == identities[:2]
+    assert chunks[1][0] is identities[2]
+    assert chunks[1][1] is malware
+    assert all(len(chunk) <= 2 for chunk in chunks)
 
 
 def test_cycle_type_flushes_in_batches_and_advances_cursor(connector):
@@ -612,6 +644,7 @@ def test_cycle_type_does_not_advance_cursor_when_flush_fails(connector):
 
     assert connector._batch_send.call_count == 2
     assert state["cursor_malware"] == "2023-01-01T00:00:00.000Z"
+    # First chunk's managed ids are still recorded (idempotent retry next cycle).
     assert set(state["managed_ids"]["malware"]) == {"malware--0", "malware--1"}
 
 
