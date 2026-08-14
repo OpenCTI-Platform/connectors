@@ -111,3 +111,54 @@ def test_get_json_retries_429(monkeypatch):
 
     assert payload["data"][0]["standard_id"] == "malware--1"
     assert client._session.get.call_count == 2
+
+
+def _client(*, order_mode: str = "desc") -> ThreatLibraryClient:
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+    return ThreatLibraryClient(
+        helper,
+        base_url="http://test.com/v1",
+        api_key="secret",
+        order_mode=order_mode,
+    )
+
+
+def test_iter_new_items_desc_includes_objects_with_cursor_timestamp():
+    client = _client(order_mode="desc")
+    client._iter_pages = MagicMock(
+        return_value=iter(
+            [
+                {"standard_id": "malware--new", "modified": "2024-02-01T00:00:00.000Z"},
+                {"standard_id": "malware--same", "modified": "2024-01-01T00:00:00.000Z"},
+                {"standard_id": "malware--old", "modified": "2023-12-01T00:00:00.000Z"},
+            ]
+        )
+    )
+
+    got = list(client.iter_new_items("malware", "2024-01-01T00:00:00.000Z"))
+
+    assert [item["standard_id"] for item in got] == [
+        "malware--new",
+        "malware--same",
+    ]
+
+
+def test_iter_new_items_asc_includes_objects_with_cursor_timestamp():
+    client = _client(order_mode="asc")
+    client._iter_pages = MagicMock(
+        return_value=iter(
+            [
+                {"standard_id": "malware--old", "modified": "2023-12-01T00:00:00.000Z"},
+                {"standard_id": "malware--same", "modified": "2024-01-01T00:00:00.000Z"},
+                {"standard_id": "malware--new", "modified": "2024-02-01T00:00:00.000Z"},
+            ]
+        )
+    )
+
+    got = list(client.iter_new_items("malware", "2024-01-01T00:00:00.000Z"))
+
+    assert [item["standard_id"] for item in got] == [
+        "malware--same",
+        "malware--new",
+    ]

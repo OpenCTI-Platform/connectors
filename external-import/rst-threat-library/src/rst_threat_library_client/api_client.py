@@ -56,12 +56,12 @@ class ThreatLibraryClient:
     def iter_new_items(self, obj_type: str, cursor: str) -> Iterator[Dict[str, Any]]:
         for item in self._iter_pages(obj_type, log_label="fetched page"):
             modified = item.get("modified") or ""
-            if self.order_mode == "desc" and cursor and modified and modified <= cursor:
+            if self.order_mode == "desc" and cursor and modified and modified < cursor:
                 self.helper.connector_logger.info(
                     f"[{obj_type}] cursor reached at modified={modified}; stopping"
                 )
                 return
-            if self.order_mode == "asc" and cursor and modified and modified <= cursor:
+            if self.order_mode == "asc" and cursor and modified and modified < cursor:
                 continue
             yield item
 

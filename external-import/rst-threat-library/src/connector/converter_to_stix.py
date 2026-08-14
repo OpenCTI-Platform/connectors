@@ -13,6 +13,17 @@ import stix2
 from connector.utils import ENTITY_TYPE_TO_STIX, PATH_TO_STIX_TYPE
 from pycti import OpenCTIConnectorHelper
 
+_STIX_IDENTITY_CLASSES = frozenset(
+    {
+        "individual",
+        "group",
+        "system",
+        "organization",
+        "class",
+        "unspecified",
+    }
+)
+
 
 class ConverterToStix:
     """Build STIX 2.1 objects from Threat Library API payloads."""
@@ -123,8 +134,33 @@ class ConverterToStix:
         if not sid:
             return None
         name = created_by.get("name") or sid
-        identity_class = str(created_by.get("identity_class") or "organization")
-        return stix2.v21.Identity(id=sid, name=name, identity_class=identity_class)
+        identity_class = str(
+            created_by.get("identity_class") or "organization"
+        ).strip().lower()
+        if identity_class not in _STIX_IDENTITY_CLASSES:
+            self.helper.connector_logger.warning(
+                "Skipping invalid createdBy identity",
+                {
+                    "standard_id": sid,
+                    "identity_class": identity_class,
+                    "error": f"unsupported identity_class '{identity_class}'",
+                },
+            )
+            return None
+        try:
+            return stix2.v21.Identity(
+                id=sid, name=name, identity_class=identity_class
+            )
+        except Exception as exc:
+            self.helper.connector_logger.warning(
+                "Skipping invalid createdBy identity",
+                {
+                    "standard_id": sid,
+                    "identity_class": identity_class,
+                    "error": str(exc),
+                },
+            )
+            return None
 
     def build_intrusion_set(self, item: Dict[str, Any]) -> Any:
         kwargs = self._base_sdo_kwargs(item)

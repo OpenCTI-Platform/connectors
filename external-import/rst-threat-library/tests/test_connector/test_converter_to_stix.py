@@ -68,6 +68,33 @@ def test_build_identity_honors_upstream_identity_class(converter):
     assert payload["identity_class"] == "individual"
 
 
+def test_build_identity_skips_malformed_standard_id(converter):
+    identity = converter.build_identity(
+        {
+            "standard_id": "identity--not-a-uuid",
+            "name": "Bad ID",
+        }
+    )
+
+    assert identity is None
+    converter.helper.connector_logger.warning.assert_called()
+    args = converter.helper.connector_logger.warning.call_args.args
+    assert args[0] == "Skipping invalid createdBy identity"
+
+
+def test_build_identity_skips_invalid_identity_class(converter):
+    identity = converter.build_identity(
+        {
+            "standard_id": "identity--a1b2c3d4-e5f6-4789-a012-3456789abcde",
+            "name": "RST Cloud",
+            "identity_class": "not-a-valid-class",
+        }
+    )
+
+    assert identity is None
+    converter.helper.connector_logger.warning.assert_called()
+
+
 def test_build_external_references_skips_missing_source_name(converter):
     refs = converter.build_external_references(
         [
