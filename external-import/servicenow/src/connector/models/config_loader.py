@@ -83,33 +83,13 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     )
     queue_threshold: Optional[PositiveInt] = Field(
         alias="CONNECTOR_QUEUE_THRESHOLD",
-        default=None,
+        default=500,
         description="Connector queue max size in Mbytes. Default to 500.",
     )
     run_and_terminate: Optional[bool] = Field(
         alias="CONNECTOR_RUN_AND_TERMINATE",
         default=None,
         description="Connector run-and-terminate flag.",
-    )
-    send_to_queue: Optional[bool] = Field(
-        alias="CONNECTOR_SEND_TO_QUEUE",
-        default=None,
-        description="Connector send-to-queue flag.",
-    )
-    send_to_directory: Optional[bool] = Field(
-        alias="CONNECTOR_SEND_TO_DIRECTORY",
-        default=None,
-        description="Connector send-to-directory flag.",
-    )
-    send_to_directory_path: Optional[str] = Field(
-        alias="CONNECTOR_SEND_TO_DIRECTORY_PATH",
-        default=None,
-        description="Connector send-to-directory path.",
-    )
-    send_to_directory_retention: Optional[PositiveInt] = Field(
-        alias="CONNECTOR_SEND_TO_DIRECTORY_RETENTION",
-        default=None,
-        description="Connector send-to-directory retention in days.",
     )
 
     @field_validator("type")
