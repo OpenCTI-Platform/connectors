@@ -32,6 +32,7 @@ rst_threat_library:
   object_types: 'intrusion-sets,malware,tools,campaigns' # optional
   import_from_date: '' # optional initial backfill cutoff, e.g. '2024-01-01'
   opencti_push_mode: 'bundle' # optional: 'bundle' or 'api' (default: 'bundle')
+  opencti_batch_size: 200 # optional, max objects per OpenCTI push (default: 200)
   sync_labels: 'RST Threat Library' # optional; scopes merge/split
   reconcile_exclude_labels: '' # optional, e.g. 'MITRE,manual'
   reconcile_allow_created_by: '' # optional, comma-separated identity IDs

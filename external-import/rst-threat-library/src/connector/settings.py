@@ -151,6 +151,15 @@ class RstThreatLibraryConfig(BaseConfigModel):
         default="bundle",
         examples=["bundle", "api"],
     )
+    opencti_batch_size: int = Field(
+        description=(
+            "Max STIX objects per OpenCTI push. Large deltas are flushed in "
+            "chunks to bound memory and avoid oversized bundles/imports."
+        ),
+        default=200,
+        gt=0,
+        examples=[100, 200, 500],
+    )
     sync_labels: ListFromString = Field(
         description="Labels merged on import; scopes merge/split.",
         default="RST Threat Library",

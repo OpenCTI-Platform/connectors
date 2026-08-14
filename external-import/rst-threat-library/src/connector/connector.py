@@ -74,6 +74,7 @@ class RSTThreatLibrary:
 
         _push = (tl.opencti_push_mode or "bundle").strip().lower()
         self.opencti_push_mode = _push if _push in ("bundle", "api") else "bundle"
+        self._opencti_batch_size = max(1, int(tl.opencti_batch_size))
 
         self._sync_labels = [str(x).strip() for x in tl.sync_labels if str(x).strip()]
         self._reconcile_exclude_labels = [
@@ -150,7 +151,8 @@ class RSTThreatLibrary:
         self.helper.connector_logger.info("Starting RST Threat Library connector")
         self.helper.connector_logger.info(
             f"OpenCTI push mode: {self.opencti_push_mode} "
-            f"(CONNECTOR_UPDATE_EXISTING_DATA={self.update_existing_data})"
+            f"(batch_size={self._opencti_batch_size}, "
+            f"CONNECTOR_UPDATE_EXISTING_DATA={self.update_existing_data})"
         )
         if self._sync_labels:
             self.helper.connector_logger.info(
@@ -1067,6 +1069,32 @@ class RSTThreatLibrary:
         latest = cursor
         count = 0
         skipped_user_edit = 0
+        batch_item_count = 0
+        any_pushed = False
+        batch_size = self._opencti_batch_size
+
+        def flush_batch() -> bool:
+            nonlocal stix_objects, pushed_standard_ids, pushed_api_items
+            nonlocal batch_item_count, any_pushed
+            if not stix_objects:
+                return True
+            ok = self._batch_send(stix_objects, timestamp, obj_type)
+            if not ok:
+                return False
+            any_pushed = True
+            self._record_sync_state(state, obj_type, pushed_api_items)
+            managed = state.setdefault("managed_ids", {})
+            cur = set(managed.get(obj_type, []))
+            cur.update(pushed_standard_ids)
+            managed[obj_type] = sorted(cur)
+            # Persist managed/sync progress, but do not advance cursor yet
+            # (unsafe with order_mode=desc mid-cycle).
+            self.helper.set_state(state)
+            stix_objects = []
+            pushed_standard_ids = []
+            pushed_api_items = []
+            batch_item_count = 0
+            return True
 
         try:
             for item in client.iter_new_items(obj_type, cursor):
@@ -1088,6 +1116,7 @@ class RSTThreatLibrary:
                 if sdo is None:
                     continue
                 stix_objects.append(sdo)
+                batch_item_count += 1
                 sid = item.get("standard_id")
                 if sid:
                     pushed_standard_ids.append(sid)
@@ -1105,6 +1134,14 @@ class RSTThreatLibrary:
                     self.helper.connector_logger.info(
                         f"[{obj_type}] converted {count} object(s) so far"
                     )
+
+                if batch_item_count >= batch_size and not flush_batch():
+                    self.helper.connector_logger.warning(
+                        f"[{obj_type}] OpenCTI push failed "
+                        f"({self.opencti_push_mode}); "
+                        f"cursor not advanced (will retry on next cycle)"
+                    )
+                    return
         except Exception as ex:
             self.helper.connector_logger.error(
                 f"[{obj_type}] fetch failed: {ex}\n{traceback.format_exc()}"
@@ -1117,36 +1154,60 @@ class RSTThreatLibrary:
                 "(analyst confidence lock)"
             )
 
-        if not stix_objects:
-            if count:
-                state[cursor_key] = latest or cursor
-                self.helper.set_state(state)
-            self.helper.connector_logger.info(f"[{obj_type}] no new objects this cycle")
+        if not flush_batch():
+            self.helper.connector_logger.warning(
+                f"[{obj_type}] OpenCTI push failed ({self.opencti_push_mode}); "
+                f"cursor not advanced (will retry on next cycle)"
+            )
+            return
+
+        if any_pushed:
+            state[cursor_key] = latest or cursor
+            self.helper.set_state(state)
+            self.helper.connector_logger.info(
+                f"[{obj_type}] ingested {count} object(s), cursor now "
+                f"{state[cursor_key] or '(none)'}"
+            )
+        elif count:
+            state[cursor_key] = latest or cursor
+            self.helper.set_state(state)
+            self.helper.connector_logger.info(
+                f"[{obj_type}] no new objects this cycle "
+                f"(cursor advanced after {count} skipped)"
+            )
         else:
-            ok = self._batch_send(stix_objects, timestamp, obj_type)
-            if ok:
-                self._record_sync_state(state, obj_type, pushed_api_items)
-                state[cursor_key] = latest or cursor
-                managed = state.setdefault("managed_ids", {})
-                cur = set(managed.get(obj_type, []))
-                cur.update(pushed_standard_ids)
-                managed[obj_type] = sorted(cur)
-                self.helper.set_state(state)
-                self.helper.connector_logger.info(
-                    f"[{obj_type}] ingested {count} object(s), cursor now "
-                    f"{state[cursor_key] or '(none)'}"
-                )
-            else:
-                self.helper.connector_logger.warning(
-                    f"[{obj_type}] OpenCTI push failed ({self.opencti_push_mode}); "
-                    f"cursor not advanced (will retry on next cycle)"
-                )
-                return
+            self.helper.connector_logger.info(f"[{obj_type}] no new objects this cycle")
 
     def _item_to_sdo(self, item: Dict[str, Any], obj_type_path: str):
         return self.converter.item_to_sdo(item, obj_type_path, self._sync_labels)
 
     def _batch_send(
+        self, stix_objects: List[Any], timestamp: int, obj_type: str
+    ) -> bool:
+        if not stix_objects:
+            return True
+        batch_size = self._opencti_batch_size
+        if len(stix_objects) <= batch_size:
+            return self._batch_send_one(stix_objects, timestamp, obj_type)
+
+        identities, rest = self._partition_identities(stix_objects)
+        if not rest:
+            return self._batch_send_one(identities, timestamp, obj_type)
+
+        total_chunks = (len(rest) + batch_size - 1) // batch_size
+        for chunk_idx, offset in enumerate(range(0, len(rest), batch_size)):
+            chunk_rest = rest[offset : offset + batch_size]
+            chunk = identities + chunk_rest if chunk_idx == 0 else chunk_rest
+            self.helper.connector_logger.info(
+                f"[{obj_type}] OpenCTI push chunk "
+                f"{chunk_idx + 1}/{total_chunks} "
+                f"({len(chunk)} object(s))"
+            )
+            if not self._batch_send_one(chunk, timestamp, obj_type):
+                return False
+        return True
+
+    def _batch_send_one(
         self, stix_objects: List[Any], timestamp: int, obj_type: str
     ) -> bool:
         if self.opencti_push_mode == "api":
@@ -1249,6 +1310,13 @@ class RSTThreatLibrary:
     @staticmethod
     def _stix_objects_to_api_order(stix_objects: List[Any]) -> List[Any]:
         """Import identities before SDOs that reference created_by_ref."""
+        identities, rest = RSTThreatLibrary._partition_identities(stix_objects)
+        return identities + rest
+
+    @staticmethod
+    def _partition_identities(
+        stix_objects: List[Any],
+    ) -> Tuple[List[Any], List[Any]]:
         identities: List[Any] = []
         rest: List[Any] = []
         seen_identity: Dict[str, bool] = {}
@@ -1261,7 +1329,7 @@ class RSTThreatLibrary:
                     identities.append(obj)
             else:
                 rest.append(obj)
-        return identities + rest
+        return identities, rest
 
     def _batch_send_via_api(
         self, stix_objects: List[Any], timestamp: int, obj_type: str

@@ -263,6 +263,17 @@
       ],
       "type": "string"
     },
+    "RST_THREAT_LIBRARY_OPENCTI_BATCH_SIZE": {
+      "default": 200,
+      "description": "Max STIX objects per OpenCTI push. Large deltas are flushed in chunks to bound memory and avoid oversized bundles/imports.",
+      "examples": [
+        100,
+        200,
+        500
+      ],
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
     "RST_THREAT_LIBRARY_SYNC_LABELS": {
       "default": "RST Threat Library",
       "description": "Labels merged on import; scopes merge/split.",

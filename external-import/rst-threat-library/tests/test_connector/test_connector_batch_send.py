@@ -435,3 +435,120 @@ def test_wait_for_opencti_entity_returns_none_after_retries(monkeypatch):
 
     assert found is None
     assert connector._read_opencti_entity.call_count == 3
+
+
+def test_batch_send_splits_oversized_lists_into_chunks(connector):
+    connector._opencti_batch_size = 2
+    objects = []
+    for i in range(5):
+        obj = MagicMock()
+        obj.serialize.return_value = (
+            f'{{"type":"malware","id":"malware--{i}","name":"m{i}"}}'
+        )
+        objects.append(obj)
+
+    ok = connector._batch_send(objects, timestamp=1_700_000_000, obj_type="malware")
+
+    assert ok is True
+    assert connector.helper.send_stix2_bundle.call_count == 3
+    assert connector.helper.api.work.initiate_work.call_count == 3
+
+
+def test_batch_send_puts_identities_in_first_chunk_only(connector):
+    connector._opencti_batch_size = 2
+    identity = MagicMock()
+    identity.serialize.return_value = (
+        '{"type":"identity","id":"identity--1","name":"Author"}'
+    )
+    objects = [identity]
+    for i in range(3):
+        obj = MagicMock()
+        obj.serialize.return_value = (
+            f'{{"type":"malware","id":"malware--{i}","name":"m{i}"}}'
+        )
+        objects.append(obj)
+
+    ok = connector._batch_send(objects, timestamp=1_700_000_000, obj_type="malware")
+
+    assert ok is True
+    assert connector.helper.stix2_create_bundle.call_count == 2
+    first_chunk = connector.helper.stix2_create_bundle.call_args_list[0].args[0]
+    second_chunk = connector.helper.stix2_create_bundle.call_args_list[1].args[0]
+    assert first_chunk[0] is identity
+    assert len(first_chunk) == 3  # identity + 2 malware
+    assert identity not in second_chunk
+    assert len(second_chunk) == 1
+
+
+def test_cycle_type_flushes_in_batches_and_advances_cursor(connector):
+    connector._opencti_batch_size = 2
+    connector._batch_send = MagicMock(return_value=True)
+    connector.converter.build_identity = MagicMock(return_value=None)
+
+    items = []
+    for i in range(5):
+        items.append(
+            {
+                "standard_id": f"malware--{i}",
+                "name": f"m{i}",
+                "modified": f"2024-01-0{i + 1}T00:00:00.000Z",
+                "createdBy": {},
+            }
+        )
+
+    client = MagicMock()
+    client.iter_new_items.return_value = iter(items)
+    connector._prepare_upsert_item = MagicMock(
+        side_effect=lambda _t, item, _s: MagicMock(
+            skip=False, api_item=item, skip_reason=None
+        )
+    )
+    connector._upsert_sdo_from_prep = MagicMock(
+        side_effect=lambda _t, prep: MagicMock(name=prep.api_item["name"])
+    )
+
+    state: dict = {}
+    connector._cycle_type(client, "malware", state, timestamp=1, seed="")
+
+    assert connector._batch_send.call_count == 3  # 2+2+1
+    assert state["cursor_malware"] == "2024-01-05T00:00:00.000Z"
+    assert set(state["managed_ids"]["malware"]) == {
+        "malware--0",
+        "malware--1",
+        "malware--2",
+        "malware--3",
+        "malware--4",
+    }
+
+
+def test_cycle_type_does_not_advance_cursor_when_flush_fails(connector):
+    connector._opencti_batch_size = 2
+    connector._batch_send = MagicMock(side_effect=[True, False])
+    connector.converter.build_identity = MagicMock(return_value=None)
+
+    items = [
+        {
+            "standard_id": f"malware--{i}",
+            "name": f"m{i}",
+            "modified": f"2024-01-0{i + 1}T00:00:00.000Z",
+            "createdBy": {},
+        }
+        for i in range(4)
+    ]
+    client = MagicMock()
+    client.iter_new_items.return_value = iter(items)
+    connector._prepare_upsert_item = MagicMock(
+        side_effect=lambda _t, item, _s: MagicMock(
+            skip=False, api_item=item, skip_reason=None
+        )
+    )
+    connector._upsert_sdo_from_prep = MagicMock(
+        side_effect=lambda _t, prep: MagicMock(name=prep.api_item["name"])
+    )
+
+    state: dict = {"cursor_malware": "2023-01-01T00:00:00.000Z"}
+    connector._cycle_type(client, "malware", state, timestamp=1, seed="")
+
+    assert connector._batch_send.call_count == 2
+    assert state["cursor_malware"] == "2023-01-01T00:00:00.000Z"
+    assert set(state["managed_ids"]["malware"]) == {"malware--0", "malware--1"}
