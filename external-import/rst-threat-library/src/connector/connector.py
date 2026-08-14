@@ -135,7 +135,7 @@ class RSTThreatLibrary:
     def process_message(self) -> None:
         timestamp = int(time.time())
 
-        self._publish_connector_info(mark_last_run=True)
+        self._publish_connector_info(mark_last_run=False)
 
         current_state = self.helper.get_state() or {}
         self._cycle(current_state, timestamp)
@@ -1087,8 +1087,6 @@ class RSTThreatLibrary:
             cur = set(managed.get(obj_type, []))
             cur.update(pushed_standard_ids)
             managed[obj_type] = sorted(cur)
-            # Persist managed/sync progress, but do not advance cursor yet
-            # (unsafe with order_mode=desc mid-cycle).
             self.helper.set_state(state)
             stix_objects = []
             pushed_standard_ids = []

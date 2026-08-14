@@ -552,3 +552,43 @@ def test_cycle_type_does_not_advance_cursor_when_flush_fails(connector):
     assert connector._batch_send.call_count == 2
     assert state["cursor_malware"] == "2023-01-01T00:00:00.000Z"
     assert set(state["managed_ids"]["malware"]) == {"malware--0", "malware--1"}
+
+
+def test_process_message_marks_last_run_only_after_successful_cycle(
+    connector, monkeypatch
+):
+    mark_last_run_calls: list[bool] = []
+
+    def fake_publish(*, mark_last_run: bool) -> None:
+        mark_last_run_calls.append(mark_last_run)
+
+    monkeypatch.setattr(connector, "_publish_connector_info", fake_publish)
+    monkeypatch.setattr(connector, "_cycle", MagicMock())
+    connector.helper.get_state.return_value = {}
+    connector.helper.connect_run_and_terminate = False
+
+    connector.process_message()
+
+    assert mark_last_run_calls == [False, True]
+    connector._cycle.assert_called_once()
+
+
+def test_process_message_does_not_mark_last_run_when_cycle_fails(
+    connector, monkeypatch
+):
+    mark_last_run_calls: list[bool] = []
+
+    def fake_publish(*, mark_last_run: bool) -> None:
+        mark_last_run_calls.append(mark_last_run)
+
+    monkeypatch.setattr(connector, "_publish_connector_info", fake_publish)
+    monkeypatch.setattr(
+        connector, "_cycle", MagicMock(side_effect=RuntimeError("cycle failed"))
+    )
+    connector.helper.get_state.return_value = {}
+    connector.helper.connect_run_and_terminate = False
+
+    with pytest.raises(RuntimeError, match="cycle failed"):
+        connector.process_message()
+
+    assert mark_last_run_calls == [False]
