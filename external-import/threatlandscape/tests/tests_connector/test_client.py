@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 import responses as resp_mock
-from conftest import SAMPLE_API_ROWS, SAMPLE_STIX_BUNDLE
+from .test_data import SAMPLE_API_ROWS, SAMPLE_STIX_BUNDLE
 from threatlandscape_client.api_client import ThreatLandscapeClient
 
 
