@@ -59,11 +59,10 @@ class DomainToolsClient:
 
         # DomainTools Iris Detect - Get Monitor IDs and Terms
         monitor_id_term: dict = {}
-        response = self._request_data(
-            str(self.base_url) + "/monitors/", params=dt_parameters
-        )
+        response = self._request_data(str(self.base_url) + "monitors/", params=None)
 
         if response is None:
+            self.helper.connector_logger.error("Error while fetching data")
             return monitor_id_term, []
 
         data = response.json()
@@ -84,17 +83,12 @@ class DomainToolsClient:
                 dt_parameters["limit"] = limit
 
                 response = self._request_data(
-                    str(self.base_url) + "/domains/new/", params=dt_parameters
+                    str(self.base_url) + "domains/new/", params=dt_parameters
                 )
 
                 if response is None:
+                    self.helper.connector_logger.error("Error while fetching data")
                     break
-
-                # response.raise_for_status()
-                # if response is None:
-                #     raise RuntimeError(
-                #         "Failed to fetch Iris Detect results from DomainTools API"
-                #     )
 
                 json_response = response.json()
                 results_total = json_response.get("total_count", 0)
@@ -107,14 +101,6 @@ class DomainToolsClient:
                     break
 
                 offset += limit
-
-                # if not json_response["response"]["has_more_results"]:
-                #     break
-
-                # Update the 'position' field for pagination
-                # params["position"] = json_response["response"]["position"]
-
-            # return response.json()
             # ===========================
             # === Add your code above ===
             # ===========================
