@@ -394,6 +394,54 @@ def test_split_abandons_after_consecutive_analyst_lock_failures():
     assert connector._analyst_locks_entity.call_count == _SPLIT_FAILURE_SKIP_THRESHOLD
 
 
+def test_split_records_failure_when_opencti_push_fails():
+    from connector.connector import UpsertPrep, _SPLIT_FAILURE_SKIP_THRESHOLD
+    from connector.merge_split import SplitCandidate
+
+    settings = StubConnectorSettings()
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+    connector = RSTThreatLibrary(config=settings, helper=helper)
+    connector._analyst_locks_entity = MagicMock(return_value=False)
+    connector._batch_send = MagicMock(return_value=False)
+    connector._prepare_upsert_item = MagicMock(
+        side_effect=lambda _t, item, _s: UpsertPrep(skip=False, api_item=item)
+    )
+    connector._upsert_sdo_from_prep = MagicMock(return_value=MagicMock())
+
+    oc = {
+        "id": "uuid-earth-lusca",
+        "standard_id": "intrusion-set--keep",
+        "name": "Earth Lusca",
+        "aliases": ["RedHotel"],
+        "confidence": 50,
+    }
+    split = SplitCandidate(
+        opencti_entity=oc,
+        keep_api_item={"standard_id": oc["standard_id"], "name": "Earth Lusca"},
+        aliases_to_remove=["RedHotel"],
+        split_off_api_items=[
+            {"standard_id": "intrusion-set--split-off", "name": "RedHotel"}
+        ],
+    )
+    state: dict = {}
+
+    for _ in range(_SPLIT_FAILURE_SKIP_THRESHOLD):
+        connector._execute_intrusion_set_split(
+            split, timestamp=1, obj_type="intrusion-sets", state=state
+        )
+
+    entry = state["split_failures"]["intrusion-sets"][oc["standard_id"]]
+    assert entry["skipped"] is True
+    assert entry["count"] == _SPLIT_FAILURE_SKIP_THRESHOLD
+    assert connector._batch_send.call_count == _SPLIT_FAILURE_SKIP_THRESHOLD
+
+    connector._execute_intrusion_set_split(
+        split, timestamp=1, obj_type="intrusion-sets", state=state
+    )
+    assert connector._batch_send.call_count == _SPLIT_FAILURE_SKIP_THRESHOLD
+
+
 def test_wait_for_opencti_entity_retries_until_readable(monkeypatch):
     settings = StubConnectorSettings()
     helper = MagicMock()

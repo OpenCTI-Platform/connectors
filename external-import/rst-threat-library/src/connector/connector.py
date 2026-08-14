@@ -805,15 +805,24 @@ class RSTThreatLibrary:
                     stix_objects.append(identity)
                     seen_identities[cb_id] = True
 
-        if stix_objects and self._batch_send(stix_objects, timestamp, obj_type):
-            self._record_sync_state(state, obj_type, pushed_items)
-            managed = state.setdefault("managed_ids", {})
-            cur = set(managed.get(obj_type, []))
-            cur.update(pushed)
-            managed[obj_type] = sorted(cur)
-            self._clear_split_failure(state, obj_type, oc_sid)
-            self.helper.set_state(state)
-        elif not stix_objects and not split.aliases_to_remove:
+        if stix_objects:
+            if self._batch_send(stix_objects, timestamp, obj_type):
+                self._record_sync_state(state, obj_type, pushed_items)
+                managed = state.setdefault("managed_ids", {})
+                cur = set(managed.get(obj_type, []))
+                cur.update(pushed)
+                managed[obj_type] = sorted(cur)
+                self._clear_split_failure(state, obj_type, oc_sid)
+                self.helper.set_state(state)
+            else:
+                self._record_split_failure(
+                    split,
+                    obj_type,
+                    state,
+                    reason="OpenCTI push failed",
+                )
+                return
+        elif not split.aliases_to_remove:
             self._record_split_failure(
                 split,
                 obj_type,
