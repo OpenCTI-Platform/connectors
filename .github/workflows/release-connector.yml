@@ -299,6 +299,11 @@ jobs:
     needs: resolve
     outputs:
       changelog: ${{ steps.cliff.outputs.content || steps.rerelease-final.outputs.changelog || steps.initial.outputs.changelog }}
+    env:
+      GIT_CLIFF_VERSION: "2.13.1"
+      CONNECTOR_NAME: ${{ needs.resolve.outputs.connector_name }}
+      CONNECTOR_DIR: ${{ needs.resolve.outputs.connector_dir }}
+      CURRENT_TAG: ${{ needs.resolve.outputs.tag }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -309,16 +314,15 @@ jobs:
       - name: Check for previous tag and changes
         id: prev
         run: |
-          CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
-          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
-          CURRENT_TAG="${{ needs.resolve.outputs.tag }}"
-
+          set -euo pipefail
+  
           # Find previous tag for this connector (excluding the current one)
-          PREV_TAG=$(git tag --list "${CONNECTOR_NAME}/*" --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
-
+          PREV_TAG=$(git tag --list "${CONNECTOR_NAME}/*" --sort=-version:refname \
+            | grep -v "^${CURRENT_TAG}$" | head -1)
+  
           if [ -z "$PREV_TAG" ]; then
             echo "status=initial" >> "$GITHUB_OUTPUT"
-            echo "📌 No previous tag — initial release"
+            echo "📌 No previous tag, initial release"
           else
             echo "tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
             COMMIT_COUNT=$(git log "${PREV_TAG}..HEAD" --oneline --no-merges -- "${CONNECTOR_DIR}/" | wc -l | tr -d ' ')
@@ -327,62 +331,85 @@ jobs:
               echo "📌 Previous tag: $PREV_TAG ($COMMIT_COUNT new commits)"
             else
               echo "status=unchanged" >> "$GITHUB_OUTPUT"
-              echo "📌 Previous tag: $PREV_TAG (no new commits — re-release)"
+              echo "📌 Previous tag: $PREV_TAG (no new commits, re-release)"
             fi
           fi
+
+      # Installs the binary straight from the release asset (object storage),
+      # so it does not consume the repository's 1,000/hour REST budget.
+      - name: Install git-cliff
+        if: steps.prev.outputs.status != 'initial'
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL --retry 3 --retry-delay 5 \
+            "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+            -o /tmp/git-cliff.tar.gz
+          tar -xzf /tmp/git-cliff.tar.gz -C /tmp "git-cliff-${GIT_CLIFF_VERSION}/git-cliff"
+          install -m 0755 "/tmp/git-cliff-${GIT_CLIFF_VERSION}/git-cliff" "$HOME/.local/bin/git-cliff"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/git-cliff" --version
 
       - name: Generate changelog with git-cliff
         id: cliff
         if: steps.prev.outputs.status == 'changed'
-        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
-        with:
-          config: cliff.toml
-          args: >-
-            --tag-pattern "${{ needs.resolve.outputs.connector_name }}/*"
-            --include-path "${{ needs.resolve.outputs.connector_dir }}/**"
-            --tag "${{ needs.resolve.outputs.tag }}"
-            --unreleased
-            --strip header
-        env:
-          OUTPUT: /tmp/changelog.md
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git-cliff \
+            --config cliff.toml \
+            --tag-pattern "${CONNECTOR_NAME}/*" \
+            --include-path "${CONNECTOR_DIR}/**" \
+            --tag "${CURRENT_TAG}" \
+            --unreleased \
+            --strip header \
+            --output /tmp/changelog.md
+  
+          {
+            echo "changelog=/tmp/changelog.md"
+            echo "version=${CURRENT_TAG}"
+            echo "content<<GIT_CLIFF_EOF_a7f3"
+            cat /tmp/changelog.md
+            echo "GIT_CLIFF_EOF_a7f3"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Get previous changelog for re-release
         id: rerelease
         if: steps.prev.outputs.status == 'unchanged'
-        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
-        with:
-          config: cliff.toml
-          args: >-
-            --tag-pattern "${{ needs.resolve.outputs.connector_name }}/*"
-            --include-path "${{ needs.resolve.outputs.connector_dir }}/**"
-            --latest
-            --strip header
-        env:
-          OUTPUT: /tmp/prev-changelog.md
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git-cliff \
+            --config cliff.toml \
+            --tag-pattern "${CONNECTOR_NAME}/*" \
+            --include-path "${CONNECTOR_DIR}/**" \
+            --latest \
+            --strip header \
+            --output /tmp/prev-changelog.md
 
       - name: Prepend re-release notice
         id: rerelease-final
         if: steps.prev.outputs.status == 'unchanged'
+        env:
+          PREV_TAG: ${{ steps.prev.outputs.tag }}
         run: |
+          set -euo pipefail
           PREV_CHANGELOG=$(cat /tmp/prev-changelog.md 2>/dev/null || true)
           {
-            echo "changelog<<EOF"
-            echo "> ♻️ **Re-release** — no changes since \`${{ steps.prev.outputs.tag }}\`."
+            echo "changelog<<GIT_CLIFF_EOF_a7f3"
+            echo "> ♻️ **Re-release**: no changes since \`${PREV_TAG}\`."
             echo ""
             echo "$PREV_CHANGELOG"
-            echo "EOF"
+            echo "GIT_CLIFF_EOF_a7f3"
           } >> "$GITHUB_OUTPUT"
 
       - name: Initial release notes (no prior tag)
         id: initial
         if: steps.prev.outputs.status == 'initial'
         run: |
+          set -euo pipefail
           {
-            echo "changelog<<EOF"
-            echo "This is the first independent release for **${{ needs.resolve.outputs.connector_name }}** (\`${{ needs.resolve.outputs.connector_dir }}\`)."
-            echo "EOF"
+            echo "changelog<<GIT_CLIFF_EOF_a7f3"
+            echo "This is the first independent release for **${CONNECTOR_NAME}** (\`${CONNECTOR_DIR}\`)."
+            echo "GIT_CLIFF_EOF_a7f3"
           } >> "$GITHUB_OUTPUT"
 
   # ──────────────────────────────────────────────────────────
