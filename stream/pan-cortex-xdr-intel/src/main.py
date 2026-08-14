@@ -1,7 +1,8 @@
 import traceback
 
-from connector import Connector
+from connector import Connector, ConnectorSettings
 from cortex_xdr_client import CortexXdrClient
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """
@@ -14,13 +15,13 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        # TODO: settings = ConnectorSettings()
-        settings = None
-        # TODO: helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
-        helper = None
-        # TODO: configure the client from `settings` instead of placeholders
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
         client = CortexXdrClient(
-            api_base_url="https://ChangeMe", api_key_id="", api_key=""
+            api_base_url=settings.pan_cortex_xdr_intel.api_base_url,
+            api_key_id=settings.pan_cortex_xdr_intel.api_key_id,
+            api_key=settings.pan_cortex_xdr_intel.api_key.get_secret_value(),
         )
 
         connector = Connector(helper=helper, settings=settings, client=client)
