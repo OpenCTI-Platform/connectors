@@ -1,7 +1,8 @@
 from unittest.mock import MagicMock
 
-from .test_data import SAMPLE_STIX_BUNDLE
 from connector.converter_to_stix import ConverterToStix
+
+from .test_data import SAMPLE_STIX_BUNDLE
 
 
 def _make_converter() -> ConverterToStix:

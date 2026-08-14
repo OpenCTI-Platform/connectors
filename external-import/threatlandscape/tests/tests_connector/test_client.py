@@ -3,8 +3,9 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 import responses as resp_mock
-from .test_data import SAMPLE_API_ROWS, SAMPLE_STIX_BUNDLE
 from threatlandscape_client.api_client import ThreatLandscapeClient
+
+from .test_data import SAMPLE_API_ROWS, SAMPLE_STIX_BUNDLE
 
 
 def _make_client(api_key: str = "test-key") -> ThreatLandscapeClient:
@@ -28,7 +29,7 @@ def test_get_stix_bundles_sends_apikey_header():
     )
 
     client = _make_client(api_key="my-secret-key")
-    client.get_stix_bundles()
+    client.get_stix_bundles(since_seq_id=1)
 
     assert resp_mock.calls[0].request.headers["apikey"] == "my-secret-key"
 
@@ -89,7 +90,7 @@ def test_get_stix_bundles_source_type_filter():
     )
 
     client = _make_client()
-    client.get_stix_bundles(source_type="darknet")
+    client.get_stix_bundles(since_seq_id=1, source_type="darknet")
 
     assert "source_type=eq.darknet" in resp_mock.calls[0].request.url
 
@@ -105,7 +106,7 @@ def test_get_stix_bundles_returns_rows():
     )
 
     client = _make_client()
-    rows = client.get_stix_bundles()
+    rows = client.get_stix_bundles(since_seq_id=1)
 
     assert len(rows) == 2
     assert rows[0]["seq_id"] == 1001
@@ -124,7 +125,7 @@ def test_get_stix_bundles_raises_on_non_2xx():
 
     client = _make_client()
     with pytest.raises(requests.HTTPError):
-        client.get_stix_bundles()
+        client.get_stix_bundles(since_seq_id=1)
 
 
 @resp_mock.activate
@@ -138,7 +139,7 @@ def test_get_stix_bundles_pagination_offset():
     )
 
     client = _make_client()
-    client.get_stix_bundles(page_size=50, offset=150)
+    client.get_stix_bundles(since_seq_id=1, page_size=50, offset=150)
 
     assert "offset=150" in resp_mock.calls[0].request.url
     assert "limit=50" in resp_mock.calls[0].request.url
@@ -160,7 +161,7 @@ def test_get_actionable_iocs_sends_apikey_header():
     )
 
     client = _make_client(api_key="my-ioc-key")
-    client.get_actionable_iocs()
+    client.get_actionable_iocs(since_seq_id=1)
 
     assert resp_mock.calls[0].request.headers["apikey"] == "my-ioc-key"
 
@@ -211,7 +212,7 @@ def test_get_actionable_iocs_returns_rows():
     )
 
     client = _make_client()
-    rows = client.get_actionable_iocs()
+    rows = client.get_actionable_iocs(since_seq_id=1)
 
     assert len(rows) == 2
     assert rows[0]["seq_id"] == 1001
@@ -229,7 +230,7 @@ def test_get_actionable_iocs_raises_on_non_2xx():
 
     client = _make_client()
     with pytest.raises(requests.HTTPError):
-        client.get_actionable_iocs()
+        client.get_actionable_iocs(since_seq_id=1)
 
 
 @resp_mock.activate
@@ -243,7 +244,7 @@ def test_get_actionable_iocs_pagination_offset():
     )
 
     client = _make_client()
-    client.get_actionable_iocs(page_size=25, offset=75)
+    client.get_actionable_iocs(since_seq_id=1, page_size=25, offset=75)
 
     assert "offset=75" in resp_mock.calls[0].request.url
     assert "limit=25" in resp_mock.calls[0].request.url
