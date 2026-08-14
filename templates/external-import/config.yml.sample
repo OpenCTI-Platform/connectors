@@ -11,6 +11,8 @@ connector:
   duration_period: 'PT1H' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 
 template:
-  api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
   tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  import_since: 'PT30D'
+  import_vulnerabilities: true
+  import_reports: true
