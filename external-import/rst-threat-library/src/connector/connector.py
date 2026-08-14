@@ -23,7 +23,7 @@ from connector.merge_split import (
 )
 from connector.settings import ConnectorSettings
 from connector.utils import ThreatObjectType
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
 from rst_threat_library_client import ThreatLibraryClient
 
 _OPENCTI_MERGE_SOURCE_BATCH = 3
@@ -84,14 +84,7 @@ class RSTThreatLibrary:
             str(x).strip() for x in tl.reconcile_allow_created_by if str(x).strip()
         ]
 
-        self.update_existing_data = bool(
-            get_config_variable(
-                "CONNECTOR_UPDATE_EXISTING_DATA",
-                ["connector", "update_existing_data"],
-                self.config.to_helper_config(),
-                default=True,
-            )
-        )
+        self.update_existing_data = bool(self.config.connector.update_existing_data)
 
         self.merge_split_enabled = bool(tl.merge_split)
         self.respect_user_edits = bool(tl.respect_user_edits)

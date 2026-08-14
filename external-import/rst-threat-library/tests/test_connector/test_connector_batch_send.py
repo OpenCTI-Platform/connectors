@@ -83,6 +83,32 @@ def connector():
     return RSTThreatLibrary(config=settings, helper=helper)
 
 
+def test_connector_honors_update_existing_data_false_from_settings():
+    class StubUpdateExistingFalse(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler):
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "intrusion-set",
+                        "update_existing_data": "false",
+                    },
+                    "rst_threat_library": {
+                        "baseurl": "http://test.com",
+                        "apikey": "test-api-key",
+                    },
+                }
+            )
+
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+    connector = RSTThreatLibrary(config=StubUpdateExistingFalse(), helper=helper)
+
+    assert connector.update_existing_data is False
+
+
 def test_batch_send_stix_bundle_uses_helper_bundle_pattern(connector):
     stix_object = MagicMock()
     stix_object.serialize.return_value = '{"type":"malware","id":"malware--1"}'

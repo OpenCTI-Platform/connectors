@@ -83,6 +83,30 @@ def test_settings_passes_auto_create_service_account_to_helper_config():
     )
 
 
+def test_settings_coerces_update_existing_data_string_false():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "intrusion-set",
+                        "update_existing_data": "false",
+                    },
+                    "rst_threat_library": {
+                        "baseurl": "http://test.com",
+                        "apikey": "test-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.update_existing_data is False
+
+
 @pytest.mark.parametrize(
     "settings_dict, field_name",
     [
