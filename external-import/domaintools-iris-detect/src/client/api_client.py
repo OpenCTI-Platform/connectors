@@ -59,7 +59,9 @@ class DomainToolsClient:
 
         # DomainTools Iris Detect - Get Monitor IDs and Terms
         monitor_id_term: dict = {}
-        response = self._request_data(str(self.base_url) + "monitors/", params=None)
+        response = self._request_data(
+            f"{str(self.base_url).rstrip('/')}/monitors/", params=None
+        )
 
         if response is None:
             self.helper.connector_logger.error("Error while fetching data")
