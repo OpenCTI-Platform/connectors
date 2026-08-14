@@ -59,10 +59,11 @@ class DomainToolsClient:
 
         # DomainTools Iris Detect - Get Monitor IDs and Terms
         monitor_id_term: dict = {}
-        response = self._request_data(str(self.base_url) + "monitors/", params=None)
+        response = self._request_data(
+            f"{str(self.base_url).rstrip('/')}/monitors/", params=None
+        )
 
         if response is None:
-            self.helper.connector_logger.error("Error while fetching data")
             return monitor_id_term, []
 
         data = response.json()
@@ -83,11 +84,11 @@ class DomainToolsClient:
                 dt_parameters["limit"] = limit
 
                 response = self._request_data(
-                    str(self.base_url) + "domains/new/", params=dt_parameters
+                    f"{str(self.base_url).rstrip('/')}/domains/new/",
+                    params=dt_parameters,
                 )
 
                 if response is None:
-                    self.helper.connector_logger.error("Error while fetching data")
                     break
 
                 json_response = response.json()
