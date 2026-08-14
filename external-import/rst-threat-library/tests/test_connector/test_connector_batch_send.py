@@ -464,6 +464,12 @@ def test_wait_for_opencti_entity_retries_until_readable(monkeypatch):
 
     assert found == entity
     assert connector._read_opencti_entity.call_count == 3
+    info_msgs = [
+        str(c.args[0]) for c in helper.connector_logger.info.call_args_list if c.args
+    ]
+    assert any("attempt 2/4" in msg for msg in info_msgs)
+    assert any("attempt 3/4" in msg for msg in info_msgs)
+    assert not any("attempt 1/3" in msg or "/3," in msg for msg in info_msgs)
 
 
 def test_wait_for_opencti_entity_returns_none_after_retries(monkeypatch):
@@ -483,6 +489,13 @@ def test_wait_for_opencti_entity_returns_none_after_retries(monkeypatch):
 
     assert found is None
     assert connector._read_opencti_entity.call_count == 3
+    info_msgs = [
+        str(c.args[0])
+        for c in helper.connector_logger.info.call_args_list
+        if c.args
+    ]
+    assert any("attempt 2/3" in msg for msg in info_msgs)
+    assert any("attempt 3/3" in msg for msg in info_msgs)
 
 
 def test_batch_send_splits_oversized_lists_into_chunks(connector):

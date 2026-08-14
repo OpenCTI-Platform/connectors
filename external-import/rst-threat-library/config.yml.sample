@@ -38,3 +38,4 @@ rst_threat_library:
   reconcile_allow_created_by: '' # optional, comma-separated identity IDs
   merge_split: false # optional (default: false)
   respect_user_edits: false # optional (default: false)
+  intrusion_set_default_confidence:  # optional (unset). When set (0–100), replaces upstream confidence on imported intrusion sets

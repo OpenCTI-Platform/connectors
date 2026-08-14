@@ -201,8 +201,7 @@ def pick_opencti_merge_survivor(
     api_standard_id: str,
     candidates: List[Dict[str, Any]],
 ) -> Optional[Dict[str, Any]]:
-    """Choose the OpenCTI entity that should survive a fusion merge.
-    """
+    """Choose the OpenCTI entity that should survive a fusion merge."""
     unique: Dict[str, Dict[str, Any]] = {}
     for entity in candidates:
         sid = entity.get("standard_id")

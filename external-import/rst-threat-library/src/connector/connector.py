@@ -441,14 +441,15 @@ class RSTThreatLibrary:
         if not standard_id:
             return None
 
+        total_attempts = max(attempts, 1)
         entity = self._read_opencti_entity(obj_type_path, standard_id)
         if entity:
             return entity
 
-        for attempt in range(1, max(attempts, 1)):
+        for attempt in range(2, total_attempts + 1):
             self.helper.connector_logger.info(
                 f"[{obj_type_path}] {context}: waiting for {standard_id} "
-                f"in OpenCTI (attempt {attempt}/{attempts - 1}, "
+                f"in OpenCTI (attempt {attempt}/{total_attempts}, "
                 f"delay={delay_s:.1f}s)"
             )
             time.sleep(delay_s)
@@ -456,7 +457,7 @@ class RSTThreatLibrary:
             if entity:
                 self.helper.connector_logger.info(
                     f"[{obj_type_path}] {context}: {standard_id} readable after "
-                    f"wait (attempt {attempt}/{attempts - 1})"
+                    f"wait (attempt {attempt}/{total_attempts})"
                 )
                 return entity
         return None
