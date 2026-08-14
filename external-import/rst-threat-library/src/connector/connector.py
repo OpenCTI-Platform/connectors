@@ -1137,6 +1137,7 @@ class RSTThreatLibrary:
                     if identity is not None:
                         stix_objects.append(identity)
                         seen_identities[cb_id] = True
+                        batch_item_count += 1
 
                 if count % 100 == 0:
                     self.helper.connector_logger.info(

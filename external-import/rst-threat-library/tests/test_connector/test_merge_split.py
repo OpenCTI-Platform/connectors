@@ -60,6 +60,35 @@ def test_merge_split_detects_alias_conflict_for_split_candidate():
     assert "Shared Alias" in plan.splits[0].aliases_to_remove
 
 
+def test_split_does_not_put_opencti_name_into_aliases_to_remove():
+    api_items = [
+        {
+            "standard_id": "intrusion-set--11111111-1111-4111-8111-111111111111",
+            "name": "Group A",
+            "aliases": [],
+        },
+        {
+            "standard_id": "intrusion-set--22222222-2222-4222-8222-222222222222",
+            "name": "Group B",
+            "aliases": [],
+        },
+    ]
+    opencti_entities = [
+        {
+            "standard_id": "intrusion-set--11111111-1111-4111-8111-111111111111",
+            "name": "Group B",
+            "aliases": [],
+        }
+    ]
+
+    plan = analyze_intrusion_set_merge_split(api_items, opencti_entities)
+
+    for split in plan.splits:
+        assert "Group B" not in split.aliases_to_remove
+        oc_aliases = set(split.opencti_entity.get("aliases") or [])
+        assert set(split.aliases_to_remove) <= oc_aliases
+
+
 def test_pick_opencti_merge_survivor_prefers_more_aliases():
     """UNC3313-style internal names lose to established names with many aliases."""
     unc = {

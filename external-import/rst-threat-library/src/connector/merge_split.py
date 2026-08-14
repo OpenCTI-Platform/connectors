@@ -183,9 +183,7 @@ def analyze_intrusion_set_merge_split(
 
 
 def _raw_alias_value(entity: Dict[str, Any], normalized_ident: str) -> Optional[str]:
-    name = entity.get("name")
-    if name and normalize_identifier(str(name)) == normalized_ident:
-        return str(name)
+    """Return the original alias string. The entity name is not an alias."""
     for alias in entity.get("aliases") or []:
         if alias and normalize_identifier(str(alias)) == normalized_ident:
             return str(alias)

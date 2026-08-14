@@ -614,6 +614,44 @@ def test_cycle_type_flushes_in_batches_and_advances_cursor(connector):
     }
 
 
+def test_cycle_type_counts_identities_toward_batch_size(connector):
+    connector._opencti_batch_size = 2
+    connector._batch_send = MagicMock(return_value=True)
+    connector.converter.build_identity = MagicMock(
+        side_effect=lambda cb: MagicMock(name=cb["name"])
+    )
+
+    items = [
+        {
+            "standard_id": f"malware--{i}",
+            "name": f"m{i}",
+            "modified": f"2024-01-0{i + 1}T00:00:00.000Z",
+            "createdBy": {
+                "standard_id": f"identity--{i}",
+                "name": f"Author {i}",
+            },
+        }
+        for i in range(2)
+    ]
+    client = MagicMock()
+    client.iter_new_items.return_value = iter(items)
+    connector._prepare_upsert_item = MagicMock(
+        side_effect=lambda _t, item, _s: MagicMock(
+            skip=False, api_item=item, skip_reason=None
+        )
+    )
+    connector._upsert_sdo_from_prep = MagicMock(
+        side_effect=lambda _t, prep: MagicMock(name=prep.api_item["name"])
+    )
+
+    state: dict = {}
+    connector._cycle_type(client, "malware", state, timestamp=1, seed="")
+
+    assert connector._batch_send.call_count == 2
+    for call in connector._batch_send.call_args_list:
+        assert len(call.args[0]) == 2
+
+
 def test_cycle_type_does_not_advance_cursor_when_flush_fails(connector):
     connector._opencti_batch_size = 2
     connector._batch_send = MagicMock(side_effect=[True, False])
