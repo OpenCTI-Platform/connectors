@@ -301,6 +301,13 @@ jobs:
       changelog: ${{ steps.cliff.outputs.content || steps.rerelease-final.outputs.changelog || steps.initial.outputs.changelog }}
     env:
       GIT_CLIFF_VERSION: "2.13.1"
+      # Scoped config without the [remote.github] integration: the repo-wide
+      # cliff.toml makes git-cliff paginate the entire commit history through
+      # the REST API (hundreds of calls per release, HTTP 403 once the quota
+      # is gone). PR/issue links are rebuilt from the commit message instead.
+      CLIFF_CONFIG: .github/cliff-connector.toml
+      # Safety net in case remote enrichment is ever re-enabled.
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       CONNECTOR_NAME: ${{ needs.resolve.outputs.connector_name }}
       CONNECTOR_DIR: ${{ needs.resolve.outputs.connector_dir }}
       CURRENT_TAG: ${{ needs.resolve.outputs.tag }}
@@ -356,7 +363,7 @@ jobs:
         run: |
           set -euo pipefail
           git-cliff \
-            --config cliff.toml \
+            --config "${CLIFF_CONFIG}" \
             --tag-pattern "${CONNECTOR_NAME}/*" \
             --include-path "${CONNECTOR_DIR}/**" \
             --tag "${CURRENT_TAG}" \
@@ -378,7 +385,7 @@ jobs:
         run: |
           set -euo pipefail
           git-cliff \
-            --config cliff.toml \
+            --config "${CLIFF_CONFIG}" \
             --tag-pattern "${CONNECTOR_NAME}/*" \
             --include-path "${CONNECTOR_DIR}/**" \
             --latest \
