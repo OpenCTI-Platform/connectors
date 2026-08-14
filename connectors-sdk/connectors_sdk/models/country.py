@@ -18,6 +18,10 @@ class Country(BaseIdentifiedEntity):
         default=None,
         description="A textual description of the Country.",
     )
+    aliases: list[str] | None = Field(
+        default=None,
+        description="Alternative names used to identify this Country.",
+    )
 
     def to_stix2_object(self) -> Stix2Location:
         """Make stix object.
@@ -38,5 +42,6 @@ class Country(BaseIdentifiedEntity):
             description=self.description,
             allow_custom=True,
             x_opencti_location_type=location_type,
+            x_opencti_aliases=self.aliases,
             **self._common_stix2_properties()
         )
