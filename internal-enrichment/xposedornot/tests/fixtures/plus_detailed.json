@@ -1,0 +1,18 @@
+{
+  "email": "user+tag@example.com",
+  "breaches": [
+    {
+      "breach_id": "Sysco",
+      "breached_date": "2026",
+      "domain": "sysco.com",
+      "industry": "Food",
+      "logo": "https://xposedornot.com/static/logos/Sysco.png",
+      "password_risk": "unknown",
+      "searchable": "Yes",
+      "verified": "Yes",
+      "xposed_data": "Email addresses;Names",
+      "xposed_records": "2699339",
+      "details": "Sysco breach details"
+    }
+  ]
+}
