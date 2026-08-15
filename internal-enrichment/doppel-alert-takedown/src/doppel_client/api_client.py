@@ -194,17 +194,11 @@ class DoppelClient:
                 raise ValueError(
                     f"files must contain between 1 and {MAX_FILES_PER_REQUEST} items"
                 )
-            file_names = [
-                str(file.get("file_name") or "")
-                for file in files
-                if isinstance(file, dict)
-            ]
-            if len(file_names) != len(set(file_names)):
-                raise ValueError("Duplicate file names are not allowed")
+            file_names = []
             for file in files:
-                file_name = (
-                    str(file.get("file_name") or "") if isinstance(file, dict) else ""
-                )
+                if not isinstance(file, dict):
+                    raise ValueError("Each file must be an object")
+                file_name = str(file.get("file_name") or "")
                 if not file_name.strip():
                     raise ValueError("Each file must include a non-empty file_name")
                 if (
@@ -217,6 +211,9 @@ class DoppelClient:
                     raise ValueError(f"Invalid file_name: {file_name}")
                 if file_action == "upload" and not file.get("file_to_upload"):
                     raise ValueError("Each uploaded file must include file_to_upload")
+                file_names.append(file_name)
+            if len(file_names) != len(set(file_names)):
+                raise ValueError("Duplicate file names are not allowed")
 
         payload = {
             key: value
