@@ -661,8 +661,7 @@ class ConverterToStix:
                     "value": calculate_priority(alert.get("score", 0)),
                 }
             )
-            if alert.get("severity") is not None:
-                updates.append({"key": "severity", "value": alert["severity"]})
+            updates.append({"key": "severity", "value": alert.get("severity") or ""})
 
         return updates
 
