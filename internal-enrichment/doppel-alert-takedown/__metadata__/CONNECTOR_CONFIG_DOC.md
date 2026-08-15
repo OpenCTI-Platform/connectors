@@ -17,6 +17,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. Must be false when CONNECTOR_SCOPE includes Incident. |
 | CONNECTOR_AUTO_UPDATE | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is updated. Must be false when CONNECTOR_SCOPE includes Incident. |
 | DOPPEL_ALERT_TAKEDOWN_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.doppel.com/"` | Doppel API base URL. |
+| DOPPEL_ALERT_TAKEDOWN_ORGANIZATION_CODE | `string` |  | string | `null` | Doppel organization workspace code, sent as the `x-organization-code` header. Required for users that belong to multiple organizations. |
 | DOPPEL_ALERT_TAKEDOWN_TAGS | `array` |  | string | `[]` | List of tags to attach to the alerts created in Doppel. |
 | DOPPEL_ALERT_TAKEDOWN_TAKEDOWN_COMMENT | `string` |  | string | `"Confirmed by OpenCTI \u2014 requesting takedown."` | Comment sent to Doppel when requesting a takedown. |
 | DOPPEL_ALERT_TAKEDOWN_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:RED"` | Max TLP level of entities to enrich. |

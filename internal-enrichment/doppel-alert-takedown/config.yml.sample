@@ -13,6 +13,7 @@ connector:
 doppel_alert_takedown:
   api_key: 'ChangeMe'
   user_api_key: 'ChangeMe'
+  organization_code: '' # optional; required when the API user belongs to multiple Doppel organizations
   api_base_url: 'https://api.doppel.com' # optional (default: 'https://api.doppel.com')
   tags: [] # optional, list of tags added to created alerts (default: empty)
   takedown_comment: 'Confirmed by OpenCTI — requesting takedown.' # optional
