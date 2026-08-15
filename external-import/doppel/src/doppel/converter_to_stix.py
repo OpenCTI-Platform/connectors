@@ -206,10 +206,10 @@ class ConverterToStix:
         incident_name = self._incident_name(alert)
         created_at = parse_iso_datetime(alert.get("created_at"))
         modified_at = parse_iso_datetime(alert.get("last_activity_timestamp"))
-        fallback_timestamp = datetime(1970, 1, 1, tzinfo=timezone.utc)
-        # Never derive the identity-bearing creation timestamp from mutable
-        # activity data. A fixed fallback keeps the Incident ID stable on replay.
-        created_at = created_at or fallback_timestamp
+        identity_timestamp = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        # Alert creation time may be absent and later backfilled. Keep it out of
+        # the identity seed so the same Doppel alert always maps to one Incident.
+        created_at = created_at or identity_timestamp
         modified_at = modified_at or created_at
 
         labels = build_labels(alert)
@@ -224,12 +224,11 @@ class ConverterToStix:
             custom_properties["severity"] = alert["severity"]
 
         incident = Stix2Incident(
-            # The source alert id and immutable creation time form the stable
-            # seed. Mutable display data such as the entity does not participate
-            # in identity and cannot create replay duplicates.
+            # The source alert id and a fixed timestamp form the stable seed.
+            # Optional or mutable alert fields cannot create replay duplicates.
             id=PyctiIncident.generate_id(
                 name=f"Doppel Alert {alert_id}",
-                created=created_at,
+                created=identity_timestamp,
             ),
             name=incident_name,
             description=build_description(alert),

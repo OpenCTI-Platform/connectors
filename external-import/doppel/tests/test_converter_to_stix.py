@@ -969,6 +969,19 @@ def test_incident_id_is_stable_without_created_at(converter):
     assert first["modified"] != second["modified"]
 
 
+def test_incident_id_is_stable_when_created_at_is_backfilled(converter):
+    alert = _domains_alert(alert_id="alert_incident_backfilled_created")
+    without_created_at = {**alert}
+    without_created_at.pop("created_at")
+
+    initial = converter._create_incident(without_created_at)
+    backfilled = converter._create_incident(alert)
+
+    assert initial["id"] == backfilled["id"]
+    assert initial["created"] == "1970-01-01T00:00:00.000Z"
+    assert backfilled["created"] == "2026-06-11T09:00:00.000Z"
+
+
 @pytest.mark.parametrize(
     ("severity", "expected_severity", "expected_severity_labels"),
     [
