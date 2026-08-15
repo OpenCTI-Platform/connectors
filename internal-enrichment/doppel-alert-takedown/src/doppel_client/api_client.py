@@ -41,6 +41,7 @@ class DoppelClient:
         base_url: HttpUrl,
         api_key: str,
         user_api_key: str,
+        organization_code: str | None = None,
     ):
         """
         Initialize the client with necessary configuration.
@@ -50,19 +51,22 @@ class DoppelClient:
             base_url (HttpUrl): The Doppel API base URL.
             api_key (str): The Doppel API key (`x-api-key` header).
             user_api_key (str): The Doppel user API key (`x-user-api-key` header).
+            organization_code (str | None): The Doppel organization workspace
+                code (`x-organization-code` header), required for multi-org users.
         """
         self.helper = helper
         self.base_url = str(base_url).rstrip("/")
 
         self.session = requests.Session()
-        self.session.headers.update(
-            {
-                **DOPPEL_ATTRIBUTION_HEADERS,
-                "Content-Type": "application/json",
-                "x-api-key": api_key,
-                "x-user-api-key": user_api_key,
-            }
-        )
+        headers = {
+            **DOPPEL_ATTRIBUTION_HEADERS,
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "x-user-api-key": user_api_key,
+        }
+        if organization_code:
+            headers["x-organization-code"] = organization_code
+        self.session.headers.update(headers)
 
     def create_alert(
         self, entity: str, entity_type: str, tags: list[str] | None = None

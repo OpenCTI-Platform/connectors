@@ -16,6 +16,7 @@ services:
       # Custom parameters for connector-doppel-alert-takedown
       - DOPPEL_ALERT_TAKEDOWN_API_KEY=ChangeMe
       - DOPPEL_ALERT_TAKEDOWN_USER_API_KEY=ChangeMe
+      #- DOPPEL_ALERT_TAKEDOWN_ORGANIZATION_CODE=ChangeMe # required for multi-org users
       #- DOPPEL_ALERT_TAKEDOWN_API_BASE_URL=https://api.doppel.com # optional (default: 'https://api.doppel.com')
       #- DOPPEL_ALERT_TAKEDOWN_TAGS= # optional, comma-separated list of tags added to created alerts (default: empty)
       #- DOPPEL_ALERT_TAKEDOWN_TAKEDOWN_COMMENT=Confirmed by OpenCTI — requesting takedown. # optional

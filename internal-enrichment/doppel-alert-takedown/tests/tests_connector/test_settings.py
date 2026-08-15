@@ -25,6 +25,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "api_base_url": "https://api.doppel.com",
                     "api_key": "test-api-key",
                     "user_api_key": "test-user-api-key",
+                    "organization_code": "ACM",
                     "tags": ["test", "poc"],
                     "takedown_comment": "Confirmed phishing.",
                     "max_tlp": "TLP:CLEAR",
@@ -66,6 +67,8 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.doppel_alert_takedown, BaseConfigModel) is True
+    if settings_dict["doppel_alert_takedown"].get("organization_code"):
+        assert settings.doppel_alert_takedown.organization_code == "ACM"
 
 
 def test_settings_should_split_comma_separated_tags():

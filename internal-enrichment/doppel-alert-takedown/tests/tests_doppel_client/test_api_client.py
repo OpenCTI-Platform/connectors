@@ -13,6 +13,7 @@ def client():
         base_url="https://api.doppel.test",
         api_key="api-key",
         user_api_key="user-api-key",
+        organization_code="ACM",
     )
     doppel_client.session = MagicMock()
     response = MagicMock()
@@ -21,6 +22,25 @@ def client():
     doppel_client.session.get.return_value = response
     doppel_client.session.put.return_value = response
     return doppel_client
+
+
+def test_client_configures_optional_organization_header():
+    with_organization = DoppelClient(
+        helper=MagicMock(),
+        base_url="https://api.doppel.test",
+        api_key="api-key",
+        user_api_key="user-api-key",
+        organization_code="ACM",
+    )
+    without_organization = DoppelClient(
+        helper=MagicMock(),
+        base_url="https://api.doppel.test",
+        api_key="api-key",
+        user_api_key="user-api-key",
+    )
+
+    assert with_organization.session.headers["x-organization-code"] == "ACM"
+    assert "x-organization-code" not in without_organization.session.headers
 
 
 def test_get_alert_reads_current_state_by_id(client):
