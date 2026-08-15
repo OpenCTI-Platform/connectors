@@ -22,8 +22,8 @@ class DoppelConnector:
     alert and requests its takedown. On enrichment of a Doppel Incident, it requests
     takedown for the already-correlated alert without creating a duplicate.
 
-    To be compatible with the "playbook automation" feature, this connector always
-    sends back a STIX bundle containing the entity to enrich.
+    Observable enrichment is playbook compatible. Incident takedown is manual-only;
+    playbook attempts return the input bundle unchanged without calling Doppel.
     """
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
@@ -55,6 +55,8 @@ class DoppelConnector:
 
     def _assert_incident_automation_disabled(self) -> None:
         """Fail closed if OpenCTI could invoke the Incident action automatically."""
+        if self.helper.playbook:
+            raise ValueError("Playbook execution is disabled for Incident takedown")
         if self.config.connector.auto or self.config.connector.auto_update:
             raise ValueError(
                 "Automatic connector triggers must be disabled for Incident takedown"
@@ -189,11 +191,11 @@ class DoppelConnector:
             for reference, is_doppel_reference in matching_references.items()
             if is_doppel_reference
         ]
-        external_id, url = (
-            preferred_references[0]
-            if preferred_references
-            else next(iter(matching_references))
-        )
+        if not preferred_references:
+            raise ValueError(
+                "Incident does not contain a matching Doppel-owned external reference"
+            )
+        external_id, url = preferred_references[0]
         return {
             "id": external_id,
             "doppel_link": url,

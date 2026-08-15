@@ -11,6 +11,7 @@ def connector():
     instance = DoppelConnector.__new__(DoppelConnector)
     instance.helper = MagicMock()
     instance.helper.check_max_tlp.return_value = True
+    instance.helper.playbook = False
     instance.helper.connector_id = "connector--doppel-takedown"
     instance.helper.api.query.return_value = {
         "data": {
@@ -93,7 +94,7 @@ def test_incident_alert_reference_supports_resolved_opencti_references(connector
     assert alert["id"] == "ACM-1234"
 
 
-def test_incident_alert_reference_matches_id_in_name_among_user_references(connector):
+def test_incident_alert_reference_rejects_matching_non_doppel_reference(connector):
     incident = _incident(
         external_references=[
             {
@@ -107,9 +108,8 @@ def test_incident_alert_reference_matches_id_in_name_among_user_references(conne
         ]
     )
 
-    alert = connector._incident_alert_reference(incident, {})
-
-    assert alert["id"] == "ACM-1234"
+    with pytest.raises(ValueError, match="Doppel-owned external reference"):
+        connector._incident_alert_reference(incident, {})
 
 
 def test_incident_alert_reference_rejects_non_doppel_incident(connector):
@@ -205,6 +205,17 @@ def test_collect_incident_takedown_rejects_platform_trigger_filters(connector):
     connector.client.request_takedown.assert_not_called()
 
 
+def test_collect_incident_takedown_rejects_playbook_execution(connector):
+    connector.helper.playbook = True
+
+    with pytest.raises(ValueError, match="Playbook execution is disabled"):
+        connector._collect_incident_takedown(_incident(), {})
+
+    connector.helper.api.query.assert_not_called()
+    connector.client.get_alert.assert_not_called()
+    connector.client.request_takedown.assert_not_called()
+
+
 def test_collect_incident_takedown_prefers_live_doppel_state_over_stale_label(
     connector,
 ):
@@ -274,3 +285,26 @@ def test_process_message_routes_incidents_without_reading_observable_value(conne
     connector._collect_incident_takedown.assert_called_once_with(
         incident, data["enrichment_entity"]
     )
+
+
+def test_process_message_returns_incident_playbook_bundle_without_doppel_write(
+    connector,
+):
+    incident = _incident()
+    data = {
+        "stix_objects": [incident],
+        "stix_entity": incident,
+        "enrichment_entity": {
+            "entity_type": "Incident",
+            "objectMarking": [],
+        },
+    }
+    connector.helper.playbook = True
+    connector._send_bundle = MagicMock(return_value="sent")
+
+    result = connector.process_message(data)
+
+    assert result == "sent"
+    connector._send_bundle.assert_called_once_with([incident])
+    connector.client.get_alert.assert_not_called()
+    connector.client.request_takedown.assert_not_called()

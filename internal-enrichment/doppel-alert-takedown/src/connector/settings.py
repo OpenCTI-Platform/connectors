@@ -104,7 +104,7 @@ class ConnectorSettings(BaseConnectorSettings):
 
     @model_validator(mode="after")
     def prevent_automatic_incident_takedowns(self) -> "ConnectorSettings":
-        """Incident takedown must always be an explicit manual or playbook action."""
+        """Incident takedown must always be an explicit manual action."""
         incident_enabled = any(
             str(scope).lower() == "incident" for scope in self.connector.scope
         )
