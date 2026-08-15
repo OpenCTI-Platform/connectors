@@ -187,6 +187,22 @@ def test_request_takedown_can_fall_back_to_entity(client):
             {
                 "alert_id": "ACM-1234",
                 "file_action": "delete",
+                "files": [None],
+            },
+            "Each file must be an object",
+        ),
+        (
+            {
+                "alert_id": "ACM-1234",
+                "file_action": "delete",
+                "files": [{}, {}],
+            },
+            "non-empty file_name",
+        ),
+        (
+            {
+                "alert_id": "ACM-1234",
+                "file_action": "delete",
                 "files": [{"file_name": "../evidence.png"}],
             },
             "Invalid file_name",
