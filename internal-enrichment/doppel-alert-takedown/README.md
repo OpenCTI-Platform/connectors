@@ -10,8 +10,9 @@ workflows:
   without creating a duplicate.
 
 Both workflows set `queue_state: "actioned"` through `PUT /v1/alert` and add an
-OpenCTI **Note** summarizing the result. They can be triggered manually or from a
-playbook. Observable auto-enrichment remains supported.
+OpenCTI **Note** summarizing the result. Observable actions can be triggered manually,
+automatically, or from a playbook. Incident takedown is manual-only; playbook attempts
+are rejected before any Doppel API call.
 
 Table of Contents
 
@@ -93,8 +94,9 @@ python3 main.py
 ## Usage
 
 To trigger enrichment manually, open a URL, Domain-Name, or eligible Doppel Incident in
-OpenCTI and run **Doppel Alert and Takedown** from its enrichment menu. The connector is
-also playbook compatible.
+OpenCTI and run **Doppel Alert and Takedown** from its enrichment menu. URL and
+Domain-Name enrichment is also playbook compatible. Incident takedown must be selected
+manually from the Incident's enrichment menu.
 
 Incident support is opt-in. Add `Incident` to `CONNECTOR_SCOPE`, for example:
 
@@ -107,9 +109,10 @@ CONNECTOR_AUTO_UPDATE=false
 `CONNECTOR_AUTO` and `CONNECTOR_AUTO_UPDATE` must remain `false` whenever the scope
 includes `Incident`, and the connector's **Trigger filters** in OpenCTI must be empty.
 The connector verifies these platform settings before every Incident action and fails
-closed if any automatic trigger is enabled. This prevents newly imported or refreshed
-alerts from automatically requesting takedown. Customers that use automatic URL/Domain
-enrichment should run a separate connector instance for explicit Incident actions.
+closed if any automatic trigger is enabled or the action is running in a playbook. This
+prevents newly imported or refreshed alerts from automatically requesting takedown.
+Customers that use automatic URL/Domain enrichment should run a separate connector
+instance for explicit Incident actions.
 
 ## Behavior
 
@@ -125,7 +128,7 @@ For each in-scope observable (URL or Domain-Name), the connector:
 For an in-scope Incident, the connector:
 
 - verifies that the Incident was created from a Doppel alert;
-- resolves the Doppel alert ID from its external reference;
+- requires a matching Doppel-owned external reference and resolves its alert ID;
 - reads the current alert state from Doppel before updating it;
 - requests takedown for that existing alert without calling `POST /v1/alert`;
 - refuses to resend the request when Doppel already reports it as `actioned` or
@@ -136,7 +139,7 @@ If a takedown write fails after validation, the alert creation is still recorded
 observable actions and the Note reflects the failure. For Incident actions, the existing
 Incident is returned unchanged with a failure Note. Correlation, automation-safety, or
 GET preflight failures stop the work before any write and do not create a Note. Playbook
-runs continue with their original bundle.
+attempts for Incidents are rejected and continue with their original bundle.
 
 ## Debugging
 
