@@ -823,13 +823,22 @@ def test_existing_indicator_refreshes_source_owned_fields_and_reference(converte
     )
 
 
-def test_existing_rft_case_refreshes_source_owned_fields_and_reference(converter):
+@pytest.mark.parametrize(
+    ("severity", "expected_severity"),
+    [
+        ("high", "high"),
+        (None, ""),
+    ],
+)
+def test_existing_rft_case_refreshes_source_owned_fields_and_reference(
+    converter, severity, expected_severity
+):
     converter.enable_rft_case = True
     alert = _domains_alert(
         alert_id="alert_rft_refresh",
         queue_state="taken_down",
         score=0.91,
-        severity="high",
+        severity=severity,
         notes="Takedown completed",
         source="Doppel",
         doppel_link="https://app.doppel.com/alerts/alert_rft_refresh",
@@ -856,7 +865,7 @@ def test_existing_rft_case_refreshes_source_owned_fields_and_reference(converter
     assert "**Product**: domains" in description_update["value"]
     assert "**Notes**: Takedown completed" in description_update["value"]
     assert {"key": "priority", "value": "P1"} in field_patch
-    assert {"key": "severity", "value": "high"} in field_patch
+    assert {"key": "severity", "value": expected_severity} in field_patch
     assert not any(update["key"] == "x_opencti_score" for update in field_patch)
     assert not any(update["key"] == "modified" for update in field_patch)
 
