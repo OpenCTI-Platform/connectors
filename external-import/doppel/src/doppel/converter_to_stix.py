@@ -778,9 +778,8 @@ class ConverterToStix:
                 "key": "incident_type",
                 "value": f"doppel_{alert.get('product') or 'alert'}",
             },
+            {"key": "severity", "value": alert.get("severity") or ""},
         ]
-        if alert.get("severity") is not None:
-            updates.append({"key": "severity", "value": alert["severity"]})
         return updates
 
     def _handle_incident(self, alert: dict, stix_objects: list) -> dict | None:
