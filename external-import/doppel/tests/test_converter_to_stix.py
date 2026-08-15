@@ -1030,13 +1030,22 @@ def test_incident_id_is_stable_without_created_at(converter):
     assert first["modified"] != second["modified"]
 
 
-def test_existing_incident_refreshes_fields_labels_and_reference(converter):
+@pytest.mark.parametrize(
+    ("severity", "expected_severity", "expected_severity_labels"),
+    [
+        ("medium", "medium", {"severity:medium"}),
+        (None, "", set()),
+    ],
+)
+def test_existing_incident_refreshes_fields_labels_and_reference(
+    converter, severity, expected_severity, expected_severity_labels
+):
     converter.enable_incidents = True
     alert = _domains_alert(
         alert_id="alert_incident_refresh",
         queue_state="monitoring",
         score=0.42,
-        severity="medium",
+        severity=severity,
         notes="Updated incident context",
         source="Doppel",
         doppel_link="https://app.doppel.com/alerts/alert_incident_refresh",
@@ -1071,7 +1080,7 @@ def test_existing_incident_refreshes_fields_labels_and_reference(converter):
         "value": ("Doppel Alert - example-domain.com (alert_incident_refresh)"),
     } in field_patch
     assert not any(update["key"] == "confidence" for update in field_patch)
-    assert {"key": "severity", "value": "medium"} in field_patch
+    assert {"key": "severity", "value": expected_severity} in field_patch
     assert {"key": "incident_type", "value": "doppel_domains"} in field_patch
     description_update = next(
         update for update in field_patch if update["key"] == "description"
@@ -1088,7 +1097,7 @@ def test_existing_incident_refreshes_fields_labels_and_reference(converter):
         call.kwargs.get("label_name")
         for call in converter.helper.api.stix_domain_object.add_label.call_args_list
     }
-    assert {"queue_state:monitoring", "severity:medium", "priority:P3"} <= added
+    assert {"queue_state:monitoring", "priority:P3"} | expected_severity_labels <= added
 
     converter.helper.api.stix_domain_object.add_external_reference.assert_called_with(
         id="internal-incident-id",
