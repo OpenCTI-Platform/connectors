@@ -35,6 +35,7 @@ class DoppelConnector:
             base_url=self.config.doppel_alert_takedown.api_base_url,
             api_key=self.config.doppel_alert_takedown.api_key.get_secret_value(),
             user_api_key=self.config.doppel_alert_takedown.user_api_key.get_secret_value(),
+            organization_code=self.config.doppel_alert_takedown.organization_code,
         )
         self.converter_to_stix = ConverterToStix(self.helper)
 

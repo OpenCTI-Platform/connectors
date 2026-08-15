@@ -79,6 +79,11 @@
       "type": "string",
       "writeOnly": true
     },
+    "DOPPEL_ALERT_TAKEDOWN_ORGANIZATION_CODE": {
+      "default": null,
+      "description": "Doppel organization workspace code, sent as the `x-organization-code` header. Required for users that belong to multiple organizations.",
+      "type": "string"
+    },
     "DOPPEL_ALERT_TAKEDOWN_TAGS": {
       "default": [],
       "description": "List of tags to attach to the alerts created in Doppel.",

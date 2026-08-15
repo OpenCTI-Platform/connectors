@@ -61,6 +61,14 @@ class DoppelAlertTakedownConfig(BaseConfigModel):
     user_api_key: SecretStr = Field(
         description="Doppel user API key, sent as the `x-user-api-key` header.",
     )
+    organization_code: str | None = Field(
+        description=(
+            "Doppel organization workspace code, sent as the "
+            "`x-organization-code` header. Required for users that belong to "
+            "multiple organizations."
+        ),
+        default=None,
+    )
     tags: ListFromString = Field(
         description="List of tags to attach to the alerts created in Doppel.",
         default=[],

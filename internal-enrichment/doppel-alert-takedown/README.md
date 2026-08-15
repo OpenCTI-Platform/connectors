@@ -42,6 +42,7 @@ for an existing Doppel alert represented by an imported OpenCTI Incident.
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
 - A Doppel account with an API key and a user API key
+- The Doppel organization code when the API user belongs to multiple organizations
 - For Incident actions, the Doppel external-import connector configured with
   `DOPPEL_ENABLE_INCIDENTS=true`
 
