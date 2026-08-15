@@ -220,6 +220,26 @@ def test_update_alert_rejects_malformed_requests(client, kwargs, message):
     client.session.put.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    ("content", "body", "message"),
+    [
+        (b"", {}, "Invalid response"),
+        (b"[]", [], "Invalid response"),
+        (b'{"id":"invalid"}', {"id": "invalid"}, "Invalid response"),
+        (b'{"id":"ACM-9999"}', {"id": "ACM-9999"}, "wrong alert"),
+    ],
+)
+def test_update_alert_rejects_invalid_or_mismatched_response(
+    client, content, body, message
+):
+    response = client.session.put.return_value
+    response.content = content
+    response.json.return_value = body
+
+    with pytest.raises(DoppelClientError, match=message):
+        client.update_alert(alert_id="ACM-1234", comment="Reviewed in OpenCTI.")
+
+
 def test_update_alert_wraps_request_failures(client):
     client.session.put.return_value.raise_for_status.side_effect = requests.HTTPError(
         "service unavailable"

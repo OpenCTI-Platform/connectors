@@ -25,6 +25,7 @@ VALID_ENTITY_STATES = {
 VALID_TAG_ACTIONS = {"add", "remove"}
 VALID_FILE_ACTIONS = {"upload", "delete"}
 MAX_FILES_PER_REQUEST = 10
+DOPPEL_ALERT_ID_PATTERN = re.compile(r"[A-Za-z0-9]{1,3}-\d+")
 
 
 class DoppelClientError(Exception):
@@ -103,13 +104,34 @@ class DoppelClient:
         """Validate and build a single-alert API selector."""
         if bool(alert_id) == bool(entity):
             raise ValueError("Exactly one of alert_id or entity must be provided")
-        if alert_id and not re.fullmatch(r"[A-Za-z0-9]{1,3}-\d+", alert_id):
+        if alert_id and not DOPPEL_ALERT_ID_PATTERN.fullmatch(alert_id):
             raise ValueError(f"Invalid Doppel alert ID: {alert_id}")
         if entity is not None and not entity.strip():
             raise ValueError("entity must not be blank")
         return (
             ({"id": alert_id}, alert_id) if alert_id else ({"entity": entity}, entity)
         )
+
+    @staticmethod
+    def _validate_alert_response(
+        alert: object,
+        *,
+        identifier: str,
+        expected_alert_id: str | None = None,
+    ) -> dict:
+        """Validate that Doppel returned the selected alert."""
+        if not isinstance(alert, dict):
+            raise DoppelClientError(f"Invalid response for Doppel alert '{identifier}'")
+        returned_alert_id = alert.get("id")
+        if not isinstance(
+            returned_alert_id, str
+        ) or not DOPPEL_ALERT_ID_PATTERN.fullmatch(returned_alert_id):
+            raise DoppelClientError(f"Invalid response for Doppel alert '{identifier}'")
+        if expected_alert_id and returned_alert_id != expected_alert_id:
+            raise DoppelClientError(
+                f"Doppel returned the wrong alert for '{identifier}'"
+            )
+        return alert
 
     def get_alert(
         self,
@@ -127,16 +149,11 @@ class DoppelClient:
         try:
             response = self.session.get(url, params=params, timeout=30)
             response.raise_for_status()
-            alert = response.json()
-            if not isinstance(alert, dict):
-                raise DoppelClientError(
-                    f"Invalid response for Doppel alert '{identifier}'"
-                )
-            if alert_id and alert.get("id") != alert_id:
-                raise DoppelClientError(
-                    f"Doppel returned the wrong alert for '{identifier}'"
-                )
-            return alert
+            return self._validate_alert_response(
+                response.json(),
+                identifier=identifier,
+                expected_alert_id=alert_id,
+            )
         except (requests.RequestException, requests.HTTPError) as err:
             raise DoppelClientError(
                 f"Failed to get Doppel alert '{identifier}': {err}"
@@ -243,7 +260,15 @@ class DoppelClient:
         try:
             response = self.session.put(url, params=params, json=payload, timeout=30)
             response.raise_for_status()
-            return response.json() if response.content else {}
+            if not response.content:
+                raise DoppelClientError(
+                    f"Invalid response for Doppel alert '{identifier}'"
+                )
+            return self._validate_alert_response(
+                response.json(),
+                identifier=identifier,
+                expected_alert_id=alert_id,
+            )
         except (requests.RequestException, requests.HTTPError) as err:
             raise DoppelClientError(
                 f"Failed to update Doppel alert '{identifier}': {err}"
