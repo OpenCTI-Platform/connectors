@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/dark-web-informer_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Dark Web Informer",
+      "description": "The name of the connector.",
+      "examples": [
+        "Dark Web Informer"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "dark-web-informer"
+      ],
+      "description": "The scope of the connector.",
+      "examples": [
+        "dark-web-informer"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT6H",
+      "description": "ISO-8601 duration between two runs of the connector.",
+      "examples": [
+        "PT6H"
+      ],
+      "format": "duration",
+      "type": "string"
+    },
+    "DARK_WEB_INFORMER_BASE_URL": {
+      "default": "https://api.darkwebinformer.com",
+      "description": "Base URL of the Dark Web Informer API.",
+      "examples": [
+        "https://api.darkwebinformer.com"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "DARK_WEB_INFORMER_API_KEY": {
+      "description": "The Dark Web Informer API key, sent as the X-API-Key header.",
+      "examples": [
+        "your-dwi-api-key"
+      ],
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DARK_WEB_INFORMER_SOURCES": {
+      "default": [
+        "feed",
+        "ransomware",
+        "iocs"
+      ],
+      "description": "Which prebuilt STIX bundles to ingest: feed, ransomware, iocs (or all).",
+      "examples": [
+        "feed,ransomware,iocs"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "DARK_WEB_INFORMER_USE_PREVIEW_ENDPOINT": {
+      "default": false,
+      "description": "Use the smaller on-demand /api/stix.json preview instead of the full bulk bundles (useful for testing).",
+      "examples": [
+        false
+      ],
+      "type": "boolean"
+    },
+    "DARK_WEB_INFORMER_PREVIEW_LIMIT": {
+      "default": 5000,
+      "description": "Object limit when use_preview_endpoint is true (max 5000).",
+      "examples": [
+        5000
+      ],
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "DARK_WEB_INFORMER_API_KEY"
+  ],
+  "additionalProperties": true
+}

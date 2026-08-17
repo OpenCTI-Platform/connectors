@@ -4,11 +4,8 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def _env(monkeypatch):
-    monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
-    monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
-    monkeypatch.setenv("CONNECTOR_ID", "d1c5e2a7-0b3f-4e8a-9c6d-7f2b1a4e9c30")
-    monkeypatch.setenv("DARK_WEB_INFORMER_API_KEY", "test-key")
+def _env(mock_env):
+    """Apply the shared environment fixture to every test in this module."""
 
 
 def test_settings_defaults():

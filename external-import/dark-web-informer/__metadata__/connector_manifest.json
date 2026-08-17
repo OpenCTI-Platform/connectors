@@ -1,10 +1,21 @@
 {
   "title": "Dark Web Informer",
+  "slug": "dark-web-informer",
   "description": "Dark Web Informer is a threat intelligence service that monitors dark web forums, ransomware leak sites, and cybercrime channels, publishing alerts on data leaks, breaches, and threat-actor activity. This connector ingests Dark Web Informer threat-feed alerts, indicators of compromise, and ransomware victim intelligence into OpenCTI through the Dark Web Informer API, with scheduled incremental imports.",
   "short_description": "Ingests Dark Web Informer threat-feed alerts, IOCs, and ransomware victim intelligence into OpenCTI.",
   "logo": "external-import/dark-web-informer/__metadata__/logo.png",
-  "use_cases": ["Dark Web Monitoring", "Ransomware Intelligence"],
+  "use_cases": [
+    "Brand, Digital Risk & Underground Exposure",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed",
+    "Digital Risk Protection"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 100,
   "support_version": ">=6.8.12",

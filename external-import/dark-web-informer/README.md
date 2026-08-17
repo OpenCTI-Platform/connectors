@@ -23,6 +23,8 @@ STIX 2.1 carrying deterministic IDs, OpenCTI deduplicates and merges on re-inges
 Configuration is provided via environment variables, `config.yml`, or
 `docker-compose.yml`. The connector uses `connectors-sdk` Pydantic settings.
 
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
+
 ### OpenCTI
 
 | Parameter | Docker env var  | Mandatory | Description                                 |
