@@ -1,12 +1,10 @@
 import json
-import os
 import re
 import sys
 import time
 from datetime import datetime
 
 import stix2
-import yaml
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
@@ -24,8 +22,8 @@ from pycti import (
     StixCoreRelationship,
     StixSightingRelationship,
     Tool,
-    get_config_variable,
 )
+from settings import ConnectorSettings
 
 PATTERNTYPES = ["yara", "sigma", "pcre", "snort", "suricata"]
 OPENCTISTIX2 = {
@@ -74,110 +72,38 @@ FILETYPES = ["file-name", "file-md5", "file-sha1", "file-sha256"]
 
 class MispImportFile:
     def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        # Instantiate the connector helper from validated Pydantic settings
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         # Extra config
-        self.misp_import_file_import_from_date = get_config_variable(
-            "MISP_IMPORT_FILE_IMPORT_FROM_DATE",
-            ["misp_import_file", "import_from_date"],
-            config,
+        misp_import_file = self.config.misp_import_file
+        self.misp_import_file_import_from_date = misp_import_file.import_from_date
+        self.misp_import_file_create_reports = misp_import_file.create_reports
+        self.misp_import_file_report_type = misp_import_file.report_type
+        self.misp_import_file_create_indicators = misp_import_file.create_indicators
+        self.misp_import_file_create_observables = misp_import_file.create_observables
+        self.misp_import_file_create_tags_as_labels = (
+            misp_import_file.create_tags_as_labels
         )
-        self.misp_import_file_create_reports = get_config_variable(
-            "MISP_IMPORT_FILE_CREATE_REPORTS",
-            ["misp_import_file", "create_reports"],
-            config,
-            False,
-            True,
+        self.misp_import_file_guess_threats_from_tags = (
+            misp_import_file.guess_threats_from_tags
         )
-        self.misp_import_file_report_type = get_config_variable(
-            "MISP_IMPORT_FILE_REPORT_TYPE",
-            ["misp_import_file", "report_type"],
-            config,
-            False,
-            "misp-event",
+        self.misp_import_file_author_from_tags = misp_import_file.author_from_tags
+        self.misp_import_file_markings_from_tags = misp_import_file.markings_from_tags
+        self.misp_import_file_create_object_observables = (
+            misp_import_file.create_object_observables
         )
-        self.misp_import_file_create_indicators = get_config_variable(
-            "MISP_IMPORT_FILE_CREATE_INDICATORS",
-            ["misp_import_file", "create_indicators"],
-            config,
+        self.misp_import_file_import_to_ids_no_score = (
+            misp_import_file.import_to_ids_no_score
         )
-        self.misp_import_file_create_observables = get_config_variable(
-            "MISP_IMPORT_FILE_CREATE_OBSERVABLES",
-            ["misp_import_file", "create_observables"],
-            config,
+        self.misp_import_file_import_with_attachments = (
+            misp_import_file.import_with_attachments
         )
-        self.misp_import_file_create_tags_as_labels = get_config_variable(
-            "MISP_CREATE_TAGS_AS_LABELS",
-            ["misp_import_file", "create_tags_as_labels"],
-            config,
-            default=True,
+        self.misp_import_file_import_unsupported_observables_as_text = (
+            misp_import_file.import_unsupported_observables_as_text
         )
-        self.misp_import_file_guess_threats_from_tags = get_config_variable(
-            "MISP_IMPORT_FILE_GUESS_THREAT_FROM_TAGS",
-            ["misp_import_file", "guess_threats_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_import_file_author_from_tags = get_config_variable(
-            "MISP_IMPORT_FILE_AUTHOR_FROM_TAGS",
-            ["misp_import_file", "author_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_import_file_markings_from_tags = get_config_variable(
-            "MISP_IMPORT_FILE_MARKINGS_FROM_TAGS",
-            ["misp_import_file", "markings_from_tags"],
-            config,
-            default=False,
-        )
-        self.misp_import_file_create_object_observables = get_config_variable(
-            "MISP_IMPORT_FILE_CREATE_OBJECT_OBSERVABLES",
-            ["misp_import_file", "create_object_observables"],
-            config,
-            False,
-            False,
-        )
-        self.misp_import_file_import_to_ids_no_score = get_config_variable(
-            "MISP_IMPORT_FILE_IMPORT_TO_IDS_NO_SCORE",
-            ["misp_import_file", "import_to_ids_no_score"],
-            config,
-            True,
-        )
-        self.misp_import_file_import_with_attachments = bool(
-            get_config_variable(
-                "MISP_IMPORT_FILE_IMPORT_WITH_ATTACHMENTS",
-                ["misp_import_file", "import_with_attachments"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.misp_import_file_import_unsupported_observables_as_text = bool(
-            get_config_variable(
-                "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT",
-                ["misp_import_file", "import_unsupported_observables_as_text"],
-                config,
-                isNumber=False,
-                default=False,
-            )
-        )
-        self.misp_import_file_import_unsupported_observables_as_text_transparent = bool(
-            get_config_variable(
-                "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT",
-                [
-                    "misp_import_file",
-                    "import_unsupported_observables_as_text_transparent",
-                ],
-                config,
-                isNumber=False,
-                default=True,
-            )
+        self.misp_import_file_import_unsupported_observables_as_text_transparent = (
+            misp_import_file.import_unsupported_observables_as_text_transparent
         )
 
     def _resolve_markings(self, tags, with_default=True):
