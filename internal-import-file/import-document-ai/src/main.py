@@ -37,7 +37,7 @@ def xtm_one_special_registration():
 if __name__ == "__main__":
     try:
         config = ConfigConnector()
-        helper = OpenCTIConnectorHelper(config=config.load)
+        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
         xtm_one_special_registration()
         # Start the connector
         connector = Connector(config=config, helper=helper)
