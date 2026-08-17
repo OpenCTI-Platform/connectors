@@ -1,4 +1,5 @@
 import datetime
+import email.utils
 import json
 import re
 import ssl
@@ -110,6 +111,23 @@ class CisaIcsAdvisories:
             return None
 
     @staticmethod
+    def _to_iso8601(rfc2822_value: str) -> Optional[str]:
+        """Convert an RSS pubDate (RFC 2822) to the STIX-canonical timestamp
+        format (RFC 3339 / ISO 8601 with a literal 'Z'), or None if unparseable.
+
+        stix2's own timestamp validation rejects Python's default
+        ``datetime.isoformat()`` output (e.g. ``...+00:00``) -- it requires
+        the ``Z`` suffix, confirmed against a real ``stix2.Report`` instance.
+        """
+        try:
+            dt = email.utils.parsedate_to_datetime(rfc2822_value)
+        except (TypeError, ValueError):
+            return None
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(datetime.timezone.utc)
+        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    @staticmethod
     def _extract_products(csaf: Dict) -> Dict[str, Dict[str, str]]:
         """Walk product_tree vendor/product_name branches -> {product_id: {vendor, product}}."""
         products: Dict[str, Dict[str, str]] = {}
@@ -166,7 +184,11 @@ class CisaIcsAdvisories:
         tracking = document.get("tracking", {})
         title = document.get("title") or advisory["title"]
         advisory_id = tracking.get("id") or advisory["id"]
-        release_date = tracking.get("current_release_date") or advisory["pub_date"]
+        release_date = (
+            tracking.get("current_release_date")
+            or self._to_iso8601(advisory["pub_date"])
+            or datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        )
         created_by_id = self.created_by_stix["id"]
         marking_id = self.tlp_marking
 
@@ -290,7 +312,11 @@ class CisaIcsAdvisories:
     def process_data(self):
         try:
             current_state = self.helper.get_state() or {}
-            seen_ids = set(current_state.get("seen_advisory_ids", []))
+            # Keep insertion order explicit (oldest first) so trimming the
+            # tracked-ids list is deterministic; a set() has no stable order,
+            # so slicing one after list(...) would keep an arbitrary subset.
+            seen_ids_order: List[str] = list(current_state.get("seen_advisory_ids", []))
+            seen_ids = set(seen_ids_order)
 
             now = datetime.datetime.now(tz=datetime.timezone.utc)
             friendly_name = "CISA ICS Advisories run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
@@ -318,10 +344,13 @@ class CisaIcsAdvisories:
                     imported += 1
                 new_ids.append(advisory["id"])
 
-            seen_ids.update(new_ids)
-            message = f"Connector successfully run, {imported} advisories imported, {len(seen_ids)} tracked"
+            # Append in processing order and trim from the front (oldest) so
+            # which 2000 ids are kept is deterministic across runs.
+            seen_ids_order.extend(new_ids)
+            trimmed = seen_ids_order[-2000:]
+            message = f"Connector successfully run, {imported} advisories imported, {len(trimmed)} tracked"
             self.helper.log_info(message)
-            self.helper.set_state({"seen_advisory_ids": list(seen_ids)[-2000:]})
+            self.helper.set_state({"seen_advisory_ids": trimmed})
             self.helper.api.work.to_processed(work_id, message)
 
         except (KeyboardInterrupt, SystemExit):
