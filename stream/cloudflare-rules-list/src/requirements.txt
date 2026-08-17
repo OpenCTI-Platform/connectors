@@ -1,5 +1,5 @@
 # OpenCTI Python client (CalVer; must be compatible with your OpenCTI 7.x platform)
-pycti==7.260817.0
+pycti==7.260811.0
 
 # Modern connector SDK (Pydantic-settings base classes, shared types)
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
