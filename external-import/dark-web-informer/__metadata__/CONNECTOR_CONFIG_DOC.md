@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description | Examples |
 | -------- | ---- | -------- | --------------- | ------- | ----------- | -------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |  |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |  |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |  |
 | DARK_WEB_INFORMER_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The Dark Web Informer API key, sent as the X-API-Key header. | ```your-dwi-api-key``` |
 | CONNECTOR_NAME | `string` |  | string | `"Dark Web Informer"` | The name of the connector. | ```Dark Web Informer``` |
 | CONNECTOR_SCOPE | `array` |  | string | `["dark-web-informer"]` | The scope of the connector. | ```dark-web-informer``` |
