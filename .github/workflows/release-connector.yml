@@ -519,7 +519,7 @@ jobs:
       - name: Generate manifest fragment
         id: fragment
         # Non-blocking: the release must succeed even if the fragment can't be built
-        continue-on-error: true
+        continue-on-error: false
         run: |
           CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
           CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
@@ -545,8 +545,8 @@ jobs:
       - name: Publish manifest fragment to XTM Hub
         id: publish-fragment
         if: steps.fragment.outputs.fragment_path != ''
-        # Non-blocking: publishing to XTM Hub must never fail the release itself.
-        continue-on-error: true
+        # Blocking: publishing to XTM Hub must fail the release itself.
+        continue-on-error: false
         env:
           XTM_HUB_TOKEN: ${{ secrets.XTM_HUB_TOKEN }}
           XTM_HUB_URL: ${{ secrets.XTM_HUB_URL }}
