@@ -24,3 +24,17 @@ def test_api_key_is_secret():
 
     settings = ConnectorSettings()
     assert settings.dark_web_informer.api_key.get_secret_value() == "test-key"
+
+
+@pytest.mark.parametrize(
+    "missing_var",
+    ["OPENCTI_URL", "OPENCTI_TOKEN", "CONNECTOR_ID", "DARK_WEB_INFORMER_API_KEY"],
+)
+def test_missing_required_setting_raises(monkeypatch, missing_var):
+    from connector.settings import ConnectorSettings
+    from connectors_sdk import ConfigValidationError
+
+    monkeypatch.delenv(missing_var, raising=False)
+
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()

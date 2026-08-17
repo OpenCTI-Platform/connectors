@@ -99,9 +99,6 @@
     "DARK_WEB_INFORMER_USE_PREVIEW_ENDPOINT": {
       "default": false,
       "description": "Use the smaller on-demand /api/stix.json preview instead of the full bulk bundles (useful for testing).",
-      "examples": [
-        false
-      ],
       "type": "boolean"
     },
     "DARK_WEB_INFORMER_PREVIEW_LIMIT": {
@@ -111,6 +108,22 @@
         5000
       ],
       "type": "integer"
+    },
+    "DARK_WEB_INFORMER_TLP_LEVEL": {
+      "description": "TLP marking applied to the ingested objects that do not already carry one.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber+strict",
+      "examples": [
+        "amber+strict"
+      ]
     }
   },
   "required": [

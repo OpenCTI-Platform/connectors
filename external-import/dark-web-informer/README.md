@@ -7,10 +7,11 @@ channels, publishing alerts on data leaks, breaches, and threat-actor activity.
 
 This external-import connector ingests Dark Web Informer intelligence into OpenCTI
 in **passthrough mode**: it fetches the prebuilt STIX 2.1 bundles that Dark Web
-Informer publishes and forwards them to OpenCTI **unchanged**, without any
-client-side conversion. This mirrors the approach of the official OpenCTI TAXII 2.1
-connector, which ingests upstream STIX as-is. Because the bundles are already valid
-STIX 2.1 carrying deterministic IDs, OpenCTI deduplicates and merges on re-ingest.
+Informer publishes and forwards them without any client-side conversion. The only
+objects the connector adds are provenance ones — a "Dark Web Informer" organization
+author and a TLP marking — attached to the ingested objects that do not already
+declare their own. Because the bundles are already valid STIX 2.1 carrying
+deterministic IDs, OpenCTI deduplicates and merges on re-ingest.
 
 ## Requirements
 
@@ -51,6 +52,7 @@ Find all the configuration variables available here: [Connector Configurations](
 | Sources              | `DARK_WEB_INFORMER_SOURCES`           | feed,ransomware,iocs             | Which prebuilt STIX bundles to ingest: `feed`, `ransomware`, `iocs` (or `all`).              |
 | Use preview endpoint | `DARK_WEB_INFORMER_USE_PREVIEW_ENDPOINT` | false                         | Use the smaller on-demand `/api/stix.json` preview instead of the full bulk bundles (useful for testing). |
 | Preview limit        | `DARK_WEB_INFORMER_PREVIEW_LIMIT`     | 5000                             | Object limit when `use_preview_endpoint` is true (max 5000).                                 |
+| TLP level            | `DARK_WEB_INFORMER_TLP_LEVEL`         | amber+strict                     | TLP marking applied to ingested objects that do not already carry one. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`. |
 
 ## Deployment
 
@@ -73,7 +75,7 @@ python main.py
 
 The connector runs every `duration_period`. On each run it fetches, for each
 configured source, the corresponding prebuilt STIX 2.1 bundle and forwards it to
-OpenCTI unchanged.
+OpenCTI, adding only the author and TLP marking described below.
 
 | Source     | Endpoint                          | Content                                          |
 |------------|-----------------------------------|--------------------------------------------------|
@@ -86,10 +88,22 @@ When `use_preview_endpoint` is true, the connector instead calls
 `/api/stix.json?source=...&limit=...` to retrieve a smaller on-demand bundle,
 which is convenient for testing without transferring the full export.
 
-The bundles are forwarded with `helper.send_stix2_bundle`; no STIX is built or
-rewritten on the connector side. Dark Web Informer's bundles already include its
-own identity and a copyright marking, and use deterministic STIX IDs, so repeated
-full-snapshot ingestion merges rather than duplicates objects in the platform.
+The bundles are forwarded with `helper.send_stix2_bundle`, using
+`cleanup_inconsistent_bundle=True` so a dangling reference in a third-party bundle
+drops the offending object instead of failing the whole import. Dark Web Informer's
+bundles already include its own identity and a copyright marking, and use
+deterministic STIX IDs, so repeated full-snapshot ingestion merges rather than
+duplicates objects in the platform.
+
+**Provenance.** No STIX is rewritten on the connector side, but a "Dark Web
+Informer" organization author and a `tlp_level` marking are prepended to each
+bundle and referenced by the objects that carry neither. Objects that already
+declare a `created_by_ref` or `object_marking_refs` keep Dark Web Informer's own
+values. Observables receive `x_opencti_created_by_ref` instead, since STIX 2.1
+SCOs cannot carry `created_by_ref`.
+
+A work is only registered once a non-empty bundle is available, so a run that
+finds nothing does not leave an empty job in OpenCTI.
 
 **Authentication.** Each request carries `X-API-Key` and a single-use `X-Nonce`
 (`<10-digit epoch>:<>=6 chars [A-Za-z0-9_-]>`, 120 s window). No client-side HMAC.

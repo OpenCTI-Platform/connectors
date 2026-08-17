@@ -21,3 +21,5 @@ dark_web_informer:
   use_preview_endpoint: false
   # Object limit when use_preview_endpoint is true (max 5000).
   preview_limit: 5000
+  # TLP marking applied to ingested objects that do not already carry one.
+  tlp_level: 'amber+strict'

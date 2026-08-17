@@ -16,5 +16,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT6H"` | ISO-8601 duration between two runs of the connector. | ```PT6H``` |
 | DARK_WEB_INFORMER_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.darkwebinformer.com"` | Base URL of the Dark Web Informer API. | ```https://api.darkwebinformer.com``` |
 | DARK_WEB_INFORMER_SOURCES | `array` |  | string | `["feed", "ransomware", "iocs"]` | Which prebuilt STIX bundles to ingest: feed, ransomware, iocs (or all). | ```feed,ransomware,iocs``` |
-| DARK_WEB_INFORMER_USE_PREVIEW_ENDPOINT | `boolean` |  | boolean | `false` | Use the smaller on-demand /api/stix.json preview instead of the full bulk bundles (useful for testing). | ```False``` |
+| DARK_WEB_INFORMER_USE_PREVIEW_ENDPOINT | `boolean` |  | boolean | `false` | Use the smaller on-demand /api/stix.json preview instead of the full bulk bundles (useful for testing). |  |
 | DARK_WEB_INFORMER_PREVIEW_LIMIT | `integer` |  | integer | `5000` | Object limit when use_preview_endpoint is true (max 5000). | ```5000``` |
+| DARK_WEB_INFORMER_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber+strict"` | TLP marking applied to the ingested objects that do not already carry one. | ```amber+strict``` |

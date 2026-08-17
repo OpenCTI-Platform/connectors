@@ -8,6 +8,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, HttpUrl, SecretStr
 
 
@@ -55,12 +56,16 @@ class DarkWebInformerConfig(BaseConfigModel):
     use_preview_endpoint: bool = Field(
         default=False,
         description="Use the smaller on-demand /api/stix.json preview instead of the full bulk bundles (useful for testing).",
-        examples=[False],
     )
     preview_limit: int = Field(
         default=5000,
         description="Object limit when use_preview_endpoint is true (max 5000).",
         examples=[5000],
+    )
+    tlp_level: TLPLevel = Field(
+        default=TLPLevel.AMBER_STRICT,
+        description="TLP marking applied to the ingested objects that do not already carry one.",
+        examples=["amber+strict"],
     )
 
 
