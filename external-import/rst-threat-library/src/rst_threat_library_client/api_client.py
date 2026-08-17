@@ -35,7 +35,7 @@ class ThreatLibraryClient:
         self.auth_header = auth_header or "x-api-key"
         self.connect_timeout = int(connect_timeout)
         self.read_timeout = int(read_timeout)
-        self.retry = int(retry)
+        self.retry = max(0, int(retry))
         self.ssl_verify = bool(ssl_verify)
         self.page_size = int(page_size)
         self.order_by = order_by or "modified"
@@ -106,8 +106,9 @@ class ThreatLibraryClient:
             offset += self.page_size
 
     def _get_json(self, url: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        last_exc = None
-        for attempt in range(self.retry + 1):
+        last_exc: Optional[BaseException] = None
+        attempts = self.retry + 1
+        for attempt in range(attempts):
             try:
                 response = self._session.get(
                     url,
@@ -130,14 +131,14 @@ class ThreatLibraryClient:
                     )
                     if status is not None and 400 <= status < 500 and status != 429:
                         raise
-                if attempt < self.retry:
+                if attempt < attempts - 1:
                     delay = (attempt + 1) * 2
                     self.helper.connector_logger.warning(
                         "GET request failed; retrying",
                         {
                             "url": url,
                             "attempt": attempt + 1,
-                            "max_attempts": self.retry + 1,
+                            "max_attempts": attempts,
                             "error": str(exc),
                             "retry_in_seconds": delay,
                         },
@@ -145,4 +146,6 @@ class ThreatLibraryClient:
                     time.sleep(delay)
                 else:
                     raise
-        raise last_exc  # type: ignore[misc]
+        if last_exc is not None:
+            raise last_exc
+        raise RuntimeError(f"GET {url} failed without an exception")

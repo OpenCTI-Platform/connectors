@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 import stix2
-from connector.utils import ENTITY_TYPE_TO_STIX, PATH_TO_STIX_TYPE
+from connector.utils import ENTITY_TYPE_TO_STIX, PATH_TO_STIX_TYPE, with_sync_labels
 from pycti import OpenCTIConnectorHelper
 
 _STIX_IDENTITY_CLASSES = frozenset(
@@ -63,8 +63,6 @@ class ConverterToStix:
             )
             return None
         try:
-            from connector.utils import with_sync_labels
-
             merged = with_sync_labels(dict(item), sync_labels)
             return builders[stix_type](merged)
         except Exception as exc:

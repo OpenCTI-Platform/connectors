@@ -214,7 +214,7 @@
     },
     "RST_THREAT_LIBRARY_RETRY_DELAY": {
       "default": 10,
-      "description": "Initial retry delay in seconds for OpenCTI push failures.",
+      "description": "Initial retry delay in seconds for OpenCTI push failures. The connector sleeps at least 1 second between retries.",
       "examples": [
         10
       ],

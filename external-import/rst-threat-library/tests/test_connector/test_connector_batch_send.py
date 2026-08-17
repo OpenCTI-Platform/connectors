@@ -141,6 +141,26 @@ def test_batch_send_stix_bundle_retries_transient_failures(connector, monkeypatc
     assert connector.helper.send_stix2_bundle.call_count == 2
 
 
+def test_batch_send_stix_bundle_enforces_minimum_retry_delay(connector, monkeypatch):
+    stix_object = MagicMock()
+    connector._retry_delay = 0
+    connector.helper.send_stix2_bundle.side_effect = [
+        ConnectionError("temporary"),
+        ["bundle-sent"],
+    ]
+    slept = []
+    monkeypatch.setattr(
+        "connector.connector.time.sleep", lambda seconds: slept.append(seconds)
+    )
+
+    ok = connector._batch_send_stix_bundle(
+        [stix_object], timestamp=1_700_000_000, obj_type="malware"
+    )
+
+    assert ok is True
+    assert slept == [1]
+
+
 def test_batch_send_stix_bundle_returns_false_after_retry_budget(
     connector, monkeypatch
 ):

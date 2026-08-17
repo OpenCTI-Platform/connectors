@@ -31,6 +31,8 @@ _SPLIT_FAILURE_SKIP_THRESHOLD = 3
 _SPLIT_FAILURES_STATE_KEY = "split_failures"
 _MERGE_SURVIVOR_READ_ATTEMPTS = 8
 _MERGE_SURVIVOR_READ_DELAY_S = 2.0
+_OPENCTI_RETRY_MIN_DELAY_S = 1
+_MERGE_SPLIT_CATALOGUE_WARN = 10_000
 
 
 @dataclass
@@ -672,8 +674,19 @@ class RSTThreatLibrary:
     ) -> None:
         """Run merge/split after import against OpenCTI entities."""
         obj_type = ThreatObjectType.INTRUSION_SETS
+        api_items: List[Dict[str, Any]] = []
         try:
-            api_items = list(client.iter_all_items(obj_type))
+            for item in client.iter_all_items(obj_type):
+                api_items.append(item)
+                n = len(api_items)
+                if n == _MERGE_SPLIT_CATALOGUE_WARN or (
+                    n > _MERGE_SPLIT_CATALOGUE_WARN
+                    and n % _MERGE_SPLIT_CATALOGUE_WARN == 0
+                ):
+                    self.helper.connector_logger.warning(
+                        f"[{obj_type}] merge/split catalogue size is {n}; "
+                        "holding the full catalogue in memory"
+                    )
         except Exception as ex:
             self.helper.connector_logger.error(
                 f"[{obj_type}] merge/split catalogue fetch failed: {ex}\n"
@@ -1207,6 +1220,8 @@ class RSTThreatLibrary:
             return self._batch_send_one(stix_objects, timestamp, obj_type)
 
         identities, rest = self._partition_identities(stix_objects)
+        # Identities lead so created_by_ref can resolve; slice the combined
+        # list so no chunk exceeds opencti_batch_size.
         ordered = identities + rest
         if len(ordered) <= batch_size:
             return self._batch_send_one(ordered, timestamp, obj_type)
@@ -1229,6 +1244,14 @@ class RSTThreatLibrary:
         if self.opencti_push_mode == "api":
             return self._batch_send_via_api(stix_objects, timestamp, obj_type)
         return self._batch_send_stix_bundle(stix_objects, timestamp, obj_type)
+
+    def _sleep_before_retry(self, delay_s: int) -> int:
+        """Sleep at least 1s between OpenCTI push retries, then return next delay."""
+        sleep_s = max(_OPENCTI_RETRY_MIN_DELAY_S, int(delay_s))
+        self.helper.connector_logger.info(f"Retrying in {sleep_s} seconds...")
+        time.sleep(sleep_s)
+        next_delay = int(sleep_s * self._retry_backoff_multiplier) or sleep_s
+        return max(_OPENCTI_RETRY_MIN_DELAY_S, next_delay)
 
     @staticmethod
     def _is_retryable_upload_error(exc: BaseException) -> bool:
@@ -1302,14 +1325,7 @@ class RSTThreatLibrary:
                         f"failed: {ex}"
                     )
                     if attempt < max_retries - 1:
-                        self.helper.connector_logger.info(
-                            f"Retrying in {retry_delay} seconds..."
-                        )
-                        time.sleep(retry_delay)
-                        retry_delay = (
-                            int(retry_delay * self._retry_backoff_multiplier)
-                            or retry_delay
-                        )
+                        retry_delay = self._sleep_before_retry(retry_delay)
                         continue
                     self.helper.connector_logger.error(
                         f"[{obj_type}] failed to upload bundle after "
@@ -1406,14 +1422,7 @@ class RSTThreatLibrary:
                         f"failed: {ex}"
                     )
                     if attempt < max_retries - 1:
-                        self.helper.connector_logger.info(
-                            f"Retrying in {retry_delay} seconds..."
-                        )
-                        time.sleep(retry_delay)
-                        retry_delay = (
-                            int(retry_delay * self._retry_backoff_multiplier)
-                            or retry_delay
-                        )
+                        retry_delay = self._sleep_before_retry(retry_delay)
                         continue
                     self.helper.connector_logger.error(
                         f"[{obj_type}] failed API import after {max_retries} attempts."

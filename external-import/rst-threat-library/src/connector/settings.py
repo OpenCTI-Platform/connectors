@@ -125,7 +125,10 @@ class RstThreatLibraryConfig(BaseConfigModel):
         examples=[3],
     )
     retry_delay: int = Field(
-        description="Initial retry delay in seconds for OpenCTI push failures.",
+        description=(
+            "Initial retry delay in seconds for OpenCTI push failures. "
+            "The connector sleeps at least 1 second between retries."
+        ),
         default=10,
         ge=0,
         examples=[10],

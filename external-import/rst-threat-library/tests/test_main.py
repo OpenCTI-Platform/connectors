@@ -12,13 +12,18 @@ from pycti.connector import opencti_connector_helper as helper_mod
 def mock_opencti_connector_helper(monkeypatch):
     """Mock heavy dependencies of OpenCTIConnectorHelper (avoid OpenCTI calls)."""
 
-    monkeypatch.setattr(helper_mod, "killProgramHook", MagicMock())
-    monkeypatch.setattr(helper_mod.sched, "scheduler", MagicMock())
-    monkeypatch.setattr(helper_mod, "ConnectorInfo", MagicMock())
-    monkeypatch.setattr(helper_mod, "OpenCTIApiClient", MagicMock())
-    monkeypatch.setattr(helper_mod, "OpenCTIConnector", MagicMock())
-    monkeypatch.setattr(helper_mod, "OpenCTIMetricHandler", MagicMock())
-    monkeypatch.setattr(helper_mod, "PingAlive", MagicMock())
+    monkeypatch.setattr(helper_mod, "killProgramHook", MagicMock(), raising=False)
+    sched_mod = getattr(helper_mod, "sched", None)
+    if sched_mod is not None:
+        monkeypatch.setattr(sched_mod, "scheduler", MagicMock(), raising=False)
+    for name in (
+        "ConnectorInfo",
+        "OpenCTIApiClient",
+        "OpenCTIConnector",
+        "OpenCTIMetricHandler",
+        "PingAlive",
+    ):
+        monkeypatch.setattr(helper_mod, name, MagicMock(), raising=False)
 
 
 class StubConnectorSettings(ConnectorSettings):

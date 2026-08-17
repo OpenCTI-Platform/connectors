@@ -87,6 +87,27 @@ def test_get_json_does_not_retry_permanent_4xx(monkeypatch):
     sleep.assert_not_called()
 
 
+def test_get_json_clamps_negative_retry_to_one_attempt(monkeypatch):
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+    client = ThreatLibraryClient(
+        helper,
+        base_url="http://test.com/v1",
+        api_key="secret",
+        retry=-5,
+    )
+    client._session.get = MagicMock(return_value=_FakeResponse(500))
+    monkeypatch.setattr(
+        "rst_threat_library_client.api_client.time.sleep", lambda _: None
+    )
+
+    assert client.retry == 0
+    with pytest.raises(requests.HTTPError):
+        client._get_json("http://test.com/v1/threat-objects/malware", {"limit": 1})
+
+    assert client._session.get.call_count == 1
+
+
 def test_get_json_retries_429(monkeypatch):
     helper = MagicMock()
     helper.connector_logger = MagicMock()
