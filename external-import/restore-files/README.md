@@ -27,3 +27,5 @@ This connector allows organizations to restore their OpenCTI data from a specifi
 | `backup_path`                        | `BACKUP_PATH`                       | Yes          | Path to be used to copy the data, can be relative or absolute.          |
 | `backup_login`                       | `BACKUP_LOGIN`                      | No           | The login if the selected protocol need login auth.                                                                                                                                       |
 | `backup_password`                    | `BACKUP_PASSWORD`                   | No           | The password if the selected protocol need login auth. |
+| `archive_path`                       | `ARCHIVE_PATH`                      | No           | If specified, processed items will be moved here after loading |
+|                                      | `BACKUP_POLL_FREQUENCY`             | No           | Optional delay in seconds between docker runs. |

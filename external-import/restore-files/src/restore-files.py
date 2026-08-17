@@ -5,6 +5,7 @@ import datetime
 import json
 import os
 import sys
+import shutil
 from pathlib import Path
 
 import yaml
@@ -64,6 +65,10 @@ class RestoreFilesConnector:
         )
         self.backup_path = get_config_variable(
             "BACKUP_PATH", ["backup", "path"], config
+        )
+        self.archive_path = get_config_variable(
+            "ARCHIVE_PATH", ["archive", "path"], config,
+            default=False,
         )
 
     def find_element(self, backup_files, dir_date, id):
@@ -363,6 +368,12 @@ class RestoreFilesConnector:
                     self.helper.api.work.to_processed(work_id, message)
                     # 06 - Save the state
                     self.helper.set_state({"current": entry.name})
+            if (self.archive_path):
+                self.helper.log_info("Archiving " + str(entry) + " to " + self.archive_path)
+                Path(self.archive_path).mkdir(parents=True, exist_ok=True)
+                shutil.move(str(entry), self.archive_path)
+            else:
+                self.helper.log_debug("NOT Archiving " + entry + " to " + self.archive_path)
         self.helper.log_info("restore run completed")
 
     def start(self):
