@@ -15,14 +15,14 @@ from asyncio import Queue
 from typing import Dict
 
 import html2text
-import yaml
 from cachetools import TTLCache
 from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage
 from playwright.async_api import BrowserContext, Page, async_playwright
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
 
@@ -34,73 +34,20 @@ def is_valid_url(url: str) -> bool:
 class ImportExternalReferenceConnector:
     def __init__(self):
         # ─── Load & sanitize config ─────────────────────────────────────────
-        cfg_path = os.path.join(os.path.dirname(__file__), "config.yml")
-        if os.path.exists(cfg_path):
-            with open(cfg_path, "r", encoding="utf-8") as f:
-                config = yaml.safe_load(f) or {}
-        else:
-            config = {}
+        self.config = ConnectorSettings()
 
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
-        self.import_as_pdf = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF",
-            ["import_external_reference", "import_as_pdf"],
-            config,
-            False,
-            True,
-        )
-        self.import_as_md = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD",
-            ["import_external_reference", "import_as_md"],
-            config,
-            False,
-            True,
-        )
-        self.import_pdf_as_md = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD",
-            ["import_external_reference", "import_pdf_as_md"],
-            config,
-            False,
-            True,
-        )
-        self.timestamp_files = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_TIMESTAMP_FILES",
-            ["import_external_reference", "timestamp_files"],
-            config,
-            False,
-            False,  # Default to False
-        )
-        self.cache_size = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_CACHE_SIZE",
-            ["import_external_reference", "cache_size"],
-            config,
-            True,
-            32,  # Default to 32 MB
-        )
-        self.cache_ttl = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_CACHE_TTL",
-            ["import_external_reference", "cache_ttl"],
-            config,
-            True,
-            3600,  # Default to 1 hour
-        )
-        self.worker_count = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_BROWSER_WORKER_COUNT",
-            ["import_external_reference", "browser_worker_count"],
-            config,
-            True,
-            4,  # Default to 4 workers
-        )
+        self.import_as_pdf = self.config.import_external_reference.import_as_pdf
+        self.import_as_md = self.config.import_external_reference.import_as_md
+        self.import_pdf_as_md = self.config.import_external_reference.import_pdf_as_md
+        self.timestamp_files = self.config.import_external_reference.timestamp_files
+        self.cache_size = self.config.import_external_reference.cache_size
+        self.cache_ttl = self.config.import_external_reference.cache_ttl
+        self.worker_count = self.config.import_external_reference.browser_worker_count
 
         # Max download size (in bytes)
-        self.max_download_size = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_MAX_DOWNLOAD_SIZE",
-            ["import_external_reference", "max_download_size"],
-            config,
-            True,
-            50 * 1024 * 1024,  # Default to 50 MB
-        )
+        self.max_download_size = self.config.import_external_reference.max_download_size
 
         if not isinstance(self.cache_size, int) or self.cache_size <= 0:
             raise ValueError(
