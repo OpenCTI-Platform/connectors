@@ -67,7 +67,9 @@ class DualSignalTriageConnector:
         octi["dual_signal_disposition"] = result.disposition
         octi["deny_auto_contain"] = result.deny_auto_contain
 
-    def _create_note_stix(self, stix_entity: dict, result: TriageResult) -> dict[str, Any]:
+    def _create_note_stix(
+        self, stix_entity: dict, result: TriageResult
+    ) -> dict[str, Any]:
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         abstract = f"Dual-signal triage: {result.disposition}"
         content = (

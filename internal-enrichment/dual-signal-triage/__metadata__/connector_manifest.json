@@ -5,11 +5,11 @@
   "short_description": "Gate/Prove dual-signal triage: ML-only escalate and deny auto-contain; signature/corroborated get HITL-gated fix-now labels.",
   "logo": null,
   "use_cases": [
-    "Detection & Response Enablement",
-    "Incident Response & Case Management"
+    "Detection & Response Enablement"
   ],
   "solution_categories": [
-    "Enrichment & Reputation"
+    "Enrichment & Reputation",
+    "Incident Response & Case Management"
   ],
   "license_type": "Free",
   "contact": null,

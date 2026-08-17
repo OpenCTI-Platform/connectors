@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable, Mapping, NamedTuple
 
-
 ML_ONLY_PATTERNS = (
     r"\bis_ml_only\b",
     r"\bml[_ -]?only\b",
