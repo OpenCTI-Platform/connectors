@@ -4,14 +4,14 @@ Playbook-compatible enrichment that applies **Gate→Prove** dual-signal triage 
 
 ## Hard rule
 
-**Machine-learning confidence ≠ signature true positive.**
+**Machine-learning confidence is not a signature true positive.**
 
 | Signal basis | Disposition | Labels (examples) |
 |---|---|---|
 | `ml_only` | escalate | `dual-signal:ml-only`, `gate:escalate`, `remediation:deny-auto-contain` |
 | `signature` | gated_fix_now | `dual-signal:signature`, `gate:fix-now`, `remediation:hitl-required` |
 | `corroborated` | gated_fix_now | `dual-signal:corroborated`, `gate:fix-now`, `remediation:hitl-required` |
-| `unknown` | accept | `dual-signal:unknown`, `gate:accept` |
+| `unknown` | accept | `dual-signal:unknown`, `gate:accept`, `remediation:deny-auto-contain` |
 
 ## What it looks for
 

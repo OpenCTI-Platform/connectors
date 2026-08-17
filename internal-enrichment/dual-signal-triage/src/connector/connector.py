@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any
-from uuid import uuid4
 
+import pycti
 from connector.settings import ConnectorSettings
 from connector.triage import TriageResult, triage_entity
 from pycti import OpenCTIConnectorHelper
@@ -69,20 +69,22 @@ class DualSignalTriageConnector:
 
     def _create_note_stix(self, stix_entity: dict, result: TriageResult) -> dict[str, Any]:
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        abstract = f"Dual-signal triage: {result.disposition}"
+        content = (
+            f"**Signal basis:** `{result.signal_basis}`\n\n"
+            f"**Disposition:** `{result.disposition}`\n\n"
+            f"**Deny auto-contain:** `{result.deny_auto_contain}`\n\n"
+            f"{result.summary}\n\n"
+            "Doctrine: machine-learning confidence is not a signature true positive."
+        )
         return {
             "type": "note",
             "spec_version": "2.1",
-            "id": f"note--{uuid4()}",
+            "id": pycti.Note.generate_id(None, content, abstract),
             "created": now,
             "modified": now,
-            "abstract": f"Dual-signal triage: {result.disposition}",
-            "content": (
-                f"**Signal basis:** `{result.signal_basis}`\n\n"
-                f"**Disposition:** `{result.disposition}`\n\n"
-                f"**Deny auto-contain:** `{result.deny_auto_contain}`\n\n"
-                f"{result.summary}\n\n"
-                "Doctrine: machine-learning confidence ≠ signature true positive."
-            ),
+            "abstract": abstract,
+            "content": content,
             "object_refs": [stix_entity["id"]],
             "labels": list(result.labels),
         }

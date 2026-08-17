@@ -53,7 +53,12 @@ def _flatten_entity(entity: Mapping[str, Any] | None) -> str:
         val = entity.get(key)
         if isinstance(val, str) and val.strip():
             parts.append(val)
-    labels = entity.get("labels") or entity.get("x_opencti_labels") or []
+    labels = (
+        entity.get("labels")
+        or entity.get("x_opencti_labels")
+        or entity.get("objectLabel")
+        or []
+    )
     if isinstance(labels, list):
         for label in labels:
             if isinstance(label, str):
@@ -142,7 +147,7 @@ def triage_text(text: str) -> TriageResult:
     return TriageResult(
         signal_basis="unknown",
         disposition="accept",
-        labels=("dual-signal:unknown", "gate:accept"),
+        labels=("dual-signal:unknown", "gate:accept", "remediation:deny-auto-contain"),
         deny_auto_contain=True,
         summary=(
             "Insufficient dual-signal markers. Default to accept/monitor; do not auto-contain."
