@@ -34,6 +34,44 @@ def test_item_to_sdo_builds_intrusion_set_with_upstream_id(converter):
     assert "RST Threat Library" in payload["labels"]
 
 
+def test_item_to_sdo_sets_created_by_ref_when_identity_is_valid(converter):
+    item = {
+        "standard_id": "intrusion-set--c8d782e1-6566-4c2b-a9f8-87a757c379a4",
+        "entity_type": "Intrusion-Set",
+        "name": "APT Example",
+        "createdBy": {
+            "standard_id": "identity--a1b2c3d4-e5f6-4789-a012-3456789abcde",
+            "name": "RST Cloud",
+        },
+    }
+
+    sdo = converter.item_to_sdo(item, "intrusion-sets", [])
+
+    assert sdo is not None
+    payload = json.loads(sdo.serialize())
+    assert payload["created_by_ref"] == (
+        "identity--a1b2c3d4-e5f6-4789-a012-3456789abcde"
+    )
+
+
+def test_item_to_sdo_omits_created_by_ref_when_identity_is_invalid(converter):
+    item = {
+        "standard_id": "intrusion-set--c8d782e1-6566-4c2b-a9f8-87a757c379a4",
+        "entity_type": "Intrusion-Set",
+        "name": "APT Example",
+        "createdBy": {
+            "standard_id": "identity--not-a-uuid",
+            "name": "Bad ID",
+        },
+    }
+
+    sdo = converter.item_to_sdo(item, "intrusion-sets", [])
+
+    assert sdo is not None
+    payload = json.loads(sdo.serialize())
+    assert "created_by_ref" not in payload
+
+
 def test_item_to_sdo_returns_none_when_standard_id_missing(converter):
     item = {"entity_type": "Malware", "name": "No ID Malware"}
 

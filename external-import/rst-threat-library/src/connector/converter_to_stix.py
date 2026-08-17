@@ -116,8 +116,9 @@ class ConverterToStix:
             kwargs["external_references"] = ext
 
         created_by = item.get("createdBy") or {}
-        if created_by.get("standard_id"):
-            kwargs["created_by_ref"] = created_by["standard_id"]
+        identity = self.build_identity(created_by)
+        if identity is not None:
+            kwargs["created_by_ref"] = identity.id
 
         marking_refs = [
             marking["standard_id"]
