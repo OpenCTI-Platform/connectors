@@ -1,0 +1,27 @@
+{
+  "title": "CISA ICS Advisories",
+  "slug": "cisa-ics-advisories",
+  "description": "CISA's Industrial Control Systems Advisories (ICSA/ICSMA) are the U.S. government's authoritative, free feed of vulnerabilities affecting OT, ICS, and SCADA products, published as structured CSAF (Common Security Advisory Framework) documents.\n\nThis connector polls the ICS Advisories RSS feed, resolves each advisory's linked CSAF JSON document from the cisagov/CSAF repository, and imports it into OpenCTI as a STIX Report referencing per-CVE Vulnerability objects, the affected vendor/product Identities and Software, and the relationships between them. It gives OT-focused threat intelligence teams a free, structured alternative to commercial ICS feeds for exactly this data source.",
+  "short_description": "Imports CISA Industrial Control Systems Advisories (ICSA/ICSMA) into OpenCTI as STIX Reports, Vulnerabilities, and affected vendor/product entities.",
+  "logo": null,
+  "use_cases": [
+    "Vulnerability & Exploit Awareness",
+    "Attack Surface Management"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.cisa.gov/news-events/ics-advisories",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cisa-ics-advisories",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cisa-ics-advisories",
+  "container_type": "EXTERNAL_IMPORT"
+}
