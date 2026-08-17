@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterable, Iterator, Optional
 
 import requests
 from pycti import OpenCTIConnectorHelper
@@ -53,16 +53,29 @@ class ThreatLibraryClient:
         if self.proxy:
             self._session.proxies = {"http": self.proxy, "https": self.proxy}
 
-    def iter_new_items(self, obj_type: str, cursor: str) -> Iterator[Dict[str, Any]]:
+    def iter_new_items(
+        self,
+        obj_type: str,
+        cursor: str,
+        cursor_ids: Optional[Iterable[str]] = None,
+    ) -> Iterator[Dict[str, Any]]:
+        seen_at_cursor = {str(sid) for sid in (cursor_ids or []) if sid}
         for item in self._iter_pages(obj_type, log_label="fetched page"):
             modified = item.get("modified") or ""
-            if self.order_mode == "desc" and cursor and modified and modified < cursor:
-                self.helper.connector_logger.info(
-                    f"[{obj_type}] cursor reached at modified={modified}; stopping"
-                )
-                return
-            if self.order_mode == "asc" and cursor and modified and modified < cursor:
-                continue
+            sid = str(item.get("standard_id") or "")
+            if self.order_mode == "desc" and cursor and modified:
+                if modified < cursor:
+                    self.helper.connector_logger.info(
+                        f"[{obj_type}] cursor reached at modified={modified}; stopping"
+                    )
+                    return
+                if modified == cursor and sid in seen_at_cursor:
+                    continue
+            if self.order_mode == "asc" and cursor and modified:
+                if modified < cursor:
+                    continue
+                if modified == cursor and sid in seen_at_cursor:
+                    continue
             yield item
 
     def iter_all_items(self, obj_type: str) -> Iterator[Dict[str, Any]]:

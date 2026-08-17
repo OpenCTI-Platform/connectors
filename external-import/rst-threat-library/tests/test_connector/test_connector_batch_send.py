@@ -631,6 +631,10 @@ def test_cycle_type_flushes_in_batches_and_advances_cursor(connector):
 
     assert connector._batch_send.call_count == 3  # 2+2+1
     assert state["cursor_malware"] == "2024-01-05T00:00:00.000Z"
+    assert state["cursor_ids_malware"] == ["malware--4"]
+    client.iter_new_items.assert_called_once_with(
+        "malware", "", cursor_ids=set()
+    )
     assert set(state["managed_ids"]["malware"]) == {
         "malware--0",
         "malware--1",
@@ -638,6 +642,25 @@ def test_cycle_type_flushes_in_batches_and_advances_cursor(connector):
         "malware--3",
         "malware--4",
     }
+
+
+def test_cycle_type_passes_stored_cursor_ids_to_client(connector):
+    connector._batch_send = MagicMock(return_value=True)
+    connector.converter.build_identity = MagicMock(return_value=None)
+    client = MagicMock()
+    client.iter_new_items.return_value = iter([])
+
+    state = {
+        "cursor_malware": "2024-01-05T00:00:00.000Z",
+        "cursor_ids_malware": ["malware--4"],
+    }
+    connector._cycle_type(client, "malware", state, timestamp=1, seed="")
+
+    client.iter_new_items.assert_called_once_with(
+        "malware",
+        "2024-01-05T00:00:00.000Z",
+        cursor_ids={"malware--4"},
+    )
 
 
 def test_cycle_type_counts_identities_toward_batch_size(connector):

@@ -144,6 +144,51 @@ def test_iter_new_items_desc_includes_objects_with_cursor_timestamp():
     ]
 
 
+def test_iter_new_items_desc_skips_known_ids_at_cursor_timestamp():
+    client = _client(order_mode="desc")
+    client._iter_pages = MagicMock(
+        return_value=iter(
+            [
+                {"standard_id": "malware--new", "modified": "2024-02-01T00:00:00.000Z"},
+                {"standard_id": "malware--same", "modified": "2024-01-01T00:00:00.000Z"},
+                {"standard_id": "malware--old", "modified": "2023-12-01T00:00:00.000Z"},
+            ]
+        )
+    )
+
+    got = list(
+        client.iter_new_items(
+            "malware",
+            "2024-01-01T00:00:00.000Z",
+            cursor_ids=["malware--same"],
+        )
+    )
+
+    assert [item["standard_id"] for item in got] == ["malware--new"]
+
+
+def test_iter_new_items_desc_yields_nothing_when_only_known_cursor_items_remain():
+    client = _client(order_mode="desc")
+    client._iter_pages = MagicMock(
+        return_value=iter(
+            [
+                {"standard_id": "malware--same", "modified": "2024-01-01T00:00:00.000Z"},
+                {"standard_id": "malware--old", "modified": "2023-12-01T00:00:00.000Z"},
+            ]
+        )
+    )
+
+    got = list(
+        client.iter_new_items(
+            "malware",
+            "2024-01-01T00:00:00.000Z",
+            cursor_ids=["malware--same"],
+        )
+    )
+
+    assert got == []
+
+
 def test_iter_new_items_asc_includes_objects_with_cursor_timestamp():
     client = _client(order_mode="asc")
     client._iter_pages = MagicMock(

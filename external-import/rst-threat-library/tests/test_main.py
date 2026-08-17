@@ -5,20 +5,20 @@ import pytest
 from connector import ConnectorSettings
 from main import RSTThreatLibrary
 from pycti import OpenCTIConnectorHelper
+from pycti.connector import opencti_connector_helper as helper_mod
 
 
 @pytest.fixture
 def mock_opencti_connector_helper(monkeypatch):
     """Mock heavy dependencies of OpenCTIConnectorHelper (avoid OpenCTI calls)."""
 
-    module_import_path = "pycti.connector.opencti_connector_helper"
-    monkeypatch.setattr(f"{module_import_path}.killProgramHook", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.sched.scheduler", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.ConnectorInfo", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIApiClient", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIConnector", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIMetricHandler", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
+    monkeypatch.setattr(helper_mod, "killProgramHook", MagicMock())
+    monkeypatch.setattr(helper_mod.sched, "scheduler", MagicMock())
+    monkeypatch.setattr(helper_mod, "ConnectorInfo", MagicMock())
+    monkeypatch.setattr(helper_mod, "OpenCTIApiClient", MagicMock())
+    monkeypatch.setattr(helper_mod, "OpenCTIConnector", MagicMock())
+    monkeypatch.setattr(helper_mod, "OpenCTIMetricHandler", MagicMock())
+    monkeypatch.setattr(helper_mod, "PingAlive", MagicMock())
 
 
 class StubConnectorSettings(ConnectorSettings):

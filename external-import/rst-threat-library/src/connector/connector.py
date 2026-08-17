@@ -1060,7 +1060,11 @@ class RSTThreatLibrary:
         seed: str,
     ) -> None:
         cursor_key = f"cursor_{obj_type}"
+        cursor_ids_key = f"cursor_ids_{obj_type}"
         cursor = state.get(cursor_key) or seed
+        seen_at_cursor = {
+            str(sid) for sid in (state.get(cursor_ids_key) or []) if sid
+        }
         self.helper.connector_logger.info(
             f"[{obj_type}] cycle start (cursor={cursor or '(none)'})"
         )
@@ -1070,6 +1074,7 @@ class RSTThreatLibrary:
         pushed_standard_ids: List[str] = []
         pushed_api_items: List[Dict[str, Any]] = []
         latest = cursor
+        latest_ids: Set[str] = set(seen_at_cursor) if cursor else set()
         count = 0
         skipped_user_edit = 0
         batch_item_count = 0
@@ -1098,11 +1103,18 @@ class RSTThreatLibrary:
             return True
 
         try:
-            for item in client.iter_new_items(obj_type, cursor):
+            for item in client.iter_new_items(
+                obj_type, cursor, cursor_ids=seen_at_cursor
+            ):
                 prep = self._prepare_upsert_item(obj_type, item, state)
                 mod = item.get("modified") or ""
-                if mod and (not latest or mod > latest):
-                    latest = mod
+                sid = str(item.get("standard_id") or "")
+                if mod:
+                    if not latest or mod > latest:
+                        latest = mod
+                        latest_ids = {sid} if sid else set()
+                    elif mod == latest and sid:
+                        latest_ids.add(sid)
                 count += 1
                 if prep.skip:
                     skipped_user_edit += 1
@@ -1165,6 +1177,7 @@ class RSTThreatLibrary:
 
         if any_pushed:
             state[cursor_key] = latest or cursor
+            state[cursor_ids_key] = sorted(latest_ids)
             self.helper.set_state(state)
             self.helper.connector_logger.info(
                 f"[{obj_type}] ingested {count} object(s), cursor now "
@@ -1172,6 +1185,7 @@ class RSTThreatLibrary:
             )
         elif count:
             state[cursor_key] = latest or cursor
+            state[cursor_ids_key] = sorted(latest_ids)
             self.helper.set_state(state)
             self.helper.connector_logger.info(
                 f"[{obj_type}] no new objects this cycle "
@@ -1316,6 +1330,21 @@ class RSTThreatLibrary:
         return identities + rest
 
     @staticmethod
+    def _stix_type_and_id(obj: Any) -> Tuple[Optional[str], Optional[str]]:
+        obj_type = getattr(obj, "type", None)
+        obj_id = getattr(obj, "id", None)
+        if isinstance(obj_type, str) and obj_type:
+            return obj_type, str(obj_id) if obj_id else None
+        try:
+            payload = json.loads(obj.serialize())
+        except Exception:
+            return None, None
+        if not isinstance(payload, dict):
+            return None, None
+        oid = payload.get("id")
+        return payload.get("type"), str(oid) if oid else None
+
+    @staticmethod
     def _partition_identities(
         stix_objects: List[Any],
     ) -> Tuple[List[Any], List[Any]]:
@@ -1323,9 +1352,8 @@ class RSTThreatLibrary:
         rest: List[Any] = []
         seen_identity: Dict[str, bool] = {}
         for obj in stix_objects:
-            d = json.loads(obj.serialize())
-            if d.get("type") == "identity":
-                oid = d.get("id")
+            obj_type, oid = RSTThreatLibrary._stix_type_and_id(obj)
+            if obj_type == "identity":
                 if oid and oid not in seen_identity:
                     seen_identity[oid] = True
                     identities.append(obj)

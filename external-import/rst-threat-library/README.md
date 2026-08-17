@@ -14,6 +14,7 @@ The connector polls `GET /threat-objects/<type>` for each configured type and up
 - Python >= 3.11 (for manual deployment)
 - An RST Cloud Threat Library API key
 - Docker / Docker Compose
+- `pycti` and `connectors-sdk` pinned to the same OpenCTI release in `src/requirements.txt`
 
 ### Configuration variables
 
