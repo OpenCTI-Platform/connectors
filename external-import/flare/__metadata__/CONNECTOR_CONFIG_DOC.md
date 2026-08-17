@@ -10,14 +10,16 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
 | FLARE_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | Flare API key. |
 | CONNECTOR_NAME | `string` |  | string |  | `"Flare"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string |  | `["Flare"]` | The scope of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string |  | `["incident", "observable", "indicator"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT1H"` | The period of time to await between two runs. |
 | FLARE_API_DOMAIN | `string` |  | string |  | `"api.flare.io"` | API domain name. |
 | FLARE_TENANT_ID | `integer` |  | integer |  | `null` | Flare tenant ID. |
+| FLARE_IDENTIFIER_GROUP_ID | `integer` |  | integer |  | `null` | Flare identifier group ID. If set, events are fetched from this group's feed instead of the tenant feed. |
 | FLARE_EVENT_TYPES | `array` |  | string |  | `["stealer_log", "domain", "ransomleak", "leak"]` | Comma-separated list of Flare event types to import. |
 | FLARE_EVENT_ACTIONS | `array` |  | string |  | `[]` | Comma-separated list of event actions to filter by. If not set, all actions are imported. |
+| FLARE_SEVERITIES | `array` |  | string |  | `[]` | Comma-separated list of severities to filter by: 'info', 'low', 'medium', 'high', 'critical'. If not set, all severities are imported. |
 | FLARE_LOOKBACK_DAYS | `integer` |  | integer |  | `30` | Number of days to look back on the first run. |
 | FLARE_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` |  | `"white"` | Default TLP level of the imported entities. |
 | FLARE_API_BASE_URL | `string` |  | string | ⛔️ | `null` | Use FLARE_API_DOMAIN instead. (removal scheduled for 2027-06-30) |

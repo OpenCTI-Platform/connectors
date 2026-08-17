@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector.connector import FlareConnector
+from connector.events import UnsupportedEventTypeError
 
 
 def _make_connector(
@@ -201,6 +202,30 @@ class TestProcessEventsFlow:
 
         assert result == 1
         helper.connector_logger.error.assert_called()
+
+    def test_unsupported_event_type_is_skipped_without_error(self) -> None:
+        connector, helper, _, mapper = _make_connector()
+        good_incident = MagicMock()
+        good_incident.name = "Good"
+        mapper.map_event_to_incident.side_effect = [
+            UnsupportedEventTypeError("Unsupported event type: 'new_domain_type'"),
+            (good_incident, []),
+        ]
+        mapper.author = MagicMock()
+        helper.stix2_create_bundle.return_value = MagicMock()
+
+        events = [
+            {"data": {"uid": "u1", "index": "new_domain_type"}},
+            {"data": {"uid": "u2", "index": "domain"}},
+        ]
+        result = connector.process_events(iter(events))
+
+        assert result == 1
+        helper.connector_logger.error.assert_not_called()
+        assert any(
+            call.args[0] == "Skipping unsupported event"
+            for call in helper.connector_logger.debug.call_args_list
+        )
 
 
 @pytest.fixture
