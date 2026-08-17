@@ -1,5 +1,4 @@
-import requests
-from pycti import OpenCTIConnectorHelper
+from connectors_sdk import BaseClientApi, RateLimit
 from pydantic import HttpUrl, SecretStr
 
 # records per page for the top-level assets/exposures queries
@@ -8,52 +7,32 @@ PAGE_SIZE = 25
 EXPOSURE_INTERACTION_LIMIT = 20
 
 
-class AssetnoteImportClient:
+class AssetnoteImportClient(BaseClientApi):
 
-    def __init__(
-        self, helper: OpenCTIConnectorHelper, base_url: HttpUrl, api_key: SecretStr
-    ):
-        self.helper = helper
-        self.graphql_url = f"{str(base_url).rstrip('/')}/api/v2/graphql"
+    def __init__(self, base_url: HttpUrl, api_key: SecretStr):
+        self._api_key = api_key
         self.page_size = PAGE_SIZE
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "X-ASSETNOTE-API-KEY": api_key.get_secret_value(),
-                "Content-Type": "application/json",
-            }
+        super().__init__(
+            str(base_url),
+            max_retries=3,
+            rate_limit=RateLimit(100, "minute"),
+            raise_on_limit_exceeded=False,
         )
+
+    @property
+    def session_headers(self) -> dict[str, str]:
+        return {"X-ASSETNOTE-API-KEY": self._api_key.get_secret_value()}
 
     def _graphql_query(
         self, query: str, root: str, since: str, page: int
     ) -> list[dict]:
-        variables = {"page": page, "since": since}
-        self.helper.connector_logger.debug(
-            f"[API] POST to {self.graphql_url} with variables: {variables}"
+        body = self._post(
+            "/api/v2/graphql",
+            json={"query": query, "variables": {"page": page, "since": since}},
         )
-        response = self.session.post(
-            self.graphql_url,
-            json={"query": query, "variables": variables},
-            timeout=60,
-        )
-        response.raise_for_status()
-
-        try:
-            body = response.json()
-        except ValueError:
-            self.helper.connector_logger.error("[API] Response was not JSON")
-            raise
-
-        # raise an error for any non-request GraphQL errors
         if body.get("errors"):
-            self.helper.connector_logger.error(
-                f"[API] GraphQL errors: {body['errors']}"
-            )
             raise RuntimeError(f"Assetnote GraphQL errors: {body['errors']}")
-
-        # unwrap each GraphQL edge to the actual node
-        edges = body["data"][root]["edges"]
-        return [edge["node"] for edge in edges]
+        return [edge["node"] for edge in body["data"][root]["edges"]]
 
     def get_exposures(self, since: str, page: int = 1) -> list[dict]:
         EXPOSURES_QUERY = f"""

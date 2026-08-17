@@ -13,7 +13,6 @@ class AssetnoteImportConnector:
         self.config = config
         self.helper = helper
         self.client = AssetnoteImportClient(
-            self.helper,
             base_url=self.config.assetnote_import.api_base_url,
             api_key=self.config.assetnote_import.api_key,
         )

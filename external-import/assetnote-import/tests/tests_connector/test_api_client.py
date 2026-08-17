@@ -1,23 +1,16 @@
 from unittest.mock import MagicMock
 
 import pytest
-import requests
 from assetnote_import_client.api_client import AssetnoteImportClient
 from connector.settings import AssetnoteImportConfig
+from connectors_sdk import ApiClientError
 
 
 def _make_client():
-    helper = MagicMock()
     config = AssetnoteImportConfig(api_base_url="http://test.com", api_key="test-key")
-    client = AssetnoteImportClient(helper, config.api_base_url, config.api_key)
-    client.session = MagicMock()
+    client = AssetnoteImportClient(config.api_base_url, config.api_key)
+    client._post = MagicMock()
     return client
-
-
-def _fake_response(json_body):
-    response = MagicMock()
-    response.json.return_value = json_body
-    return response
 
 
 def test_graphql_query_unwraps_edges_to_nodes():
@@ -27,13 +20,9 @@ def test_graphql_query_unwraps_edges_to_nodes():
     dictionaries with each encompassing the contents of a node.
     """
     client = _make_client()
-    client.session.post.return_value = _fake_response(
-        {
-            "data": {
-                "exposures": {"edges": [{"node": {"id": "1"}}, {"node": {"id": "2"}}]}
-            }
-        }
-    )
+    client._post.return_value = {
+        "data": {"exposures": {"edges": [{"node": {"id": "1"}}, {"node": {"id": "2"}}]}}
+    }
     result = client._graphql_query("query", "exposures", since="2020-01-01", page=1)
     assert result == [{"id": "1"}, {"id": "2"}]
 
@@ -43,11 +32,8 @@ def test_graphql_query_raises_on_http_error():
     HTTP Errors should be propagated to the root of the connector
     """
     client = _make_client()
-    response = _fake_response({})
-
-    response.raise_for_status.side_effect = requests.HTTPError("error")
-    client.session.post.return_value = response
-    with pytest.raises(requests.HTTPError):
+    client._post.side_effect = ApiClientError("error")
+    with pytest.raises(ApiClientError):
         client._graphql_query("query", "exposures", since="2020-01-01", page=1)
 
 
@@ -58,20 +44,8 @@ def test_graphql_query_raises_on_graphql_errors():
     by raising an exception
     """
     client = _make_client()
-    client.session.post.return_value = _fake_response({"errors": ["error"]})
+    client._post.return_value = {"errors": ["error"]}
     with pytest.raises(RuntimeError):
-        client._graphql_query("query", "exposures", since="2020-01-01", page=1)
-
-
-def test_graphql_query_raises_on_non_json_response():
-    """
-    If response body isn't valid JSON a ValueError should propogate.
-    """
-    client = _make_client()
-    response = _fake_response(None)
-    response.json.side_effect = ValueError("not json")
-    client.session.post.return_value = response
-    with pytest.raises(ValueError):
         client._graphql_query("query", "exposures", since="2020-01-01", page=1)
 
 
@@ -81,9 +55,9 @@ def test_get_exposures_returns_unwrapped_nodes():
     exposure index
     """
     client = _make_client()
-    client.session.post.return_value = _fake_response(
-        {"data": {"exposures": {"edges": [{"node": {"id": "1"}}]}}}
-    )
+    client._post.return_value = {
+        "data": {"exposures": {"edges": [{"node": {"id": "1"}}]}}
+    }
     result = client.get_exposures(since="2020-01-01", page=1)
     assert result == [{"id": "1"}]
 
@@ -94,8 +68,6 @@ def test_get_assets_returns_unwrapped_nodes():
     asset index
     """
     client = _make_client()
-    client.session.post.return_value = _fake_response(
-        {"data": {"assets": {"edges": [{"node": {"id": "1"}}]}}}
-    )
+    client._post.return_value = {"data": {"assets": {"edges": [{"node": {"id": "1"}}]}}}
     result = client.get_assets(since="2020-01-01", page=1)
     assert result == [{"id": "1"}]
