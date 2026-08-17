@@ -41,7 +41,7 @@ def _find_field_line(ctx: ConnectorContext, field: str) -> int | None:
     code="VC203",
     name="manifest-short-description-length",
     description=(
-        "Manifest short_description must not exceed "
+        'Manifest "short_description" must be present, non-empty, and not exceed '
         f"{SHORT_DESCRIPTION_MAX_LENGTH} characters"
     ),
     severity=Severity.ERROR,
