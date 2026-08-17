@@ -14743,6 +14743,141 @@
       }
     },
     {
+      "title": "Threat Landscape",
+      "slug": "threatlandscape",
+      "description": "Connector for Threat Landscape (threatlandscape.io), a commercial threat intelligence platform delivering continuously updated STIX 2.1 data. Choose from four feed modes: full intelligence (OSINT and darknet combined), OSINT-only, darknet-only, or a vetted actionable IOC feed. The intelligence feeds deliver rich context including threat actors, malware families, campaigns, intrusion sets, vulnerabilities, attack patterns, and their relationships. The IOC feed delivers lean, high-confidence indicators for immediate operationalisation.",
+      "short_description": "Commercial threat intelligence connector for threatlandscape.io. Ingest full STIX 2.1 intelligence bundles (OSINT, darknet, or combined) or a vetted actionable IOC feed.",
+      "logo": "data:image/png;base64,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",
+      "use_cases": [
+        "Adversary & Campaign Insights"
+      ],
+      "solution_categories": [
+        "Threat Intelligence Feed"
+      ],
+      "license_type": "Commercial",
+      "contact": "contact@threatlandscape.io",
+      "verified": false,
+      "last_verified_date": null,
+      "playbook_supported": false,
+      "max_confidence_level": 75,
+      "support_version": ">=6.8.12",
+      "subscription_link": "https://threatlandscape.io",
+      "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/threatlandscape",
+      "manager_supported": false,
+      "container_version": "rolling",
+      "container_image": "opencti/connector-threatlandscape",
+      "container_type": "EXTERNAL_IMPORT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/threatlandscape_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI platform.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token of the OpenCTI user representing the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_NAME": {
+            "default": "Threat Landscape",
+            "description": "The name of the connector as displayed in OpenCTI.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "indicator",
+              "report",
+              "threat-actor",
+              "malware",
+              "campaign",
+              "intrusion-set",
+              "attack-pattern",
+              "vulnerability",
+              "identity",
+              "location"
+            ],
+            "description": "The STIX object types this connector imports. Adjust to match the selected feed (e.g. use 'indicator,identity' for the ioc feed).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "EXTERNAL_IMPORT",
+            "default": "EXTERNAL_IMPORT",
+            "type": "string"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "info",
+            "description": "Minimum log level to display. Use debug for troubleshooting.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_DURATION_PERIOD": {
+            "default": "PT1H",
+            "description": "ISO 8601 duration defining the interval between connector runs.",
+            "format": "duration",
+            "type": "string"
+          },
+          "THREATLANDSCAPE_API_BASE_URL": {
+            "default": "https://api.threatlandscape.io/rest/v1",
+            "description": "Base URL of the Threat Landscape REST API. Override only if using a custom deployment.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "THREATLANDSCAPE_API_KEY": {
+            "description": "API key for authenticating with the Threat Landscape API.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "THREATLANDSCAPE_FEED": {
+            "description": "Feed to ingest. 'intelligence' ingests full STIX bundles from both OSINT and darknet sources. 'intelligence-osint' restricts to OSINT only. 'intelligence-darknet' restricts to darknet only. 'ioc' ingests lean actionable indicators from the IOC feed.",
+            "enum": [
+              "intelligence",
+              "intelligence-osint",
+              "intelligence-darknet",
+              "ioc"
+            ],
+            "type": "string"
+          },
+          "THREATLANDSCAPE_IMPORT_SINCE": {
+            "default": "P30D",
+            "description": "ISO 8601 duration for the initial lookback window on the first run only. Subsequent runs use a sequence cursor and ignore this value.",
+            "format": "duration",
+            "type": "string"
+          },
+          "THREATLANDSCAPE_PAGE_SIZE": {
+            "default": 100,
+            "description": "Number of records fetched per API request.",
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN",
+          "THREATLANDSCAPE_API_KEY",
+          "THREATLANDSCAPE_FEED"
+        ],
+        "additionalProperties": true
+      }
+    },
+    {
       "title": "ThreatMatch",
       "slug": "threatmatch",
       "description": "The ThreatMatch Connector imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. It authenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configured relative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.",
