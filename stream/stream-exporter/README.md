@@ -65,7 +65,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |                 | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
 | Live Stream Start Timestamp    | live_stream_start_timestamp| `CONNECTOR_LIVE_STREAM_START_TIMESTAMP`|                 | No        | Start timestamp on first start (default: all data).                            |
 | Consumer Count                 | consumer_count            | `CONNECTOR_CONSUMER_COUNT`              | 10              | No        | Number of consumer/worker threads.                                             |
-| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            |                 | Yes       | Default confidence level (1-4).                                                |
+| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            |                 | Yes       | Default confidence level (0 = Unknown, 100 = Fully trusted).                  |
 | Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info            | No        | Determines the verbosity of the logs.                                          |
 
 ### Connector extra parameters environment variables
