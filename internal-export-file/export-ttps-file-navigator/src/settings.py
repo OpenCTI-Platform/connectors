@@ -3,18 +3,23 @@
 from connectors_sdk import (
     BaseConnectorSettings,
     BaseInternalExportFileConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field
 
 
-class ConnectorSettings(BaseConnectorSettings):
-    """Settings for the Export TTPs File Navigator connector.
-
-    This connector has no connector-specific configuration variables: it only
-    relies on the standard `opencti` and `connector` configuration sections.
+class InternalExportFileConnectorConfig(BaseInternalExportFileConnectorConfig):
+    """
+    Override the `BaseConnectorConfig` to add connector specific configuration parameters and/or defaults.
     """
 
-    connector: BaseInternalExportFileConnectorConfig = Field(
-        default_factory=BaseInternalExportFileConnectorConfig,  # type: ignore[arg-type]
-        description="Connector configurations.",
+    scope: ListFromString = Field(
+        default=["application/vnd.mitre.navigator+json"],
+        description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+    )
+
+
+class ConnectorSettings(BaseConnectorSettings):
+    connector: InternalExportFileConnectorConfig = Field(
+        default_factory=InternalExportFileConnectorConfig
     )
