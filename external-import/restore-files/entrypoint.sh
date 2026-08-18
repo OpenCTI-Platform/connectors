@@ -7,4 +7,4 @@ cd /opt/opencti-connector-restore-files
 python3 restore-files.py
 
 # Pause before exiting if requested
-[ "0$BACKUP_POLL_FREQUENCY" -gt 0 ] 2>/devnull && /bin/sleep "$BACKUP_POLL_FREQUENCY"
+[ "0$BACKUP_POLL_FREQUENCY" -gt 0 ] 2>/dev/null && /bin/sleep "$BACKUP_POLL_FREQUENCY"
