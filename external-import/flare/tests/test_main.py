@@ -136,6 +136,7 @@ class TestMain:
             api_key=mocks.settings.flare.api_key,
             api_domain=mocks.settings.flare.api_domain,
             tenant_id=mocks.settings.flare.tenant_id,
+            identifier_group_id=mocks.settings.flare.identifier_group_id,
         )
         mocks.pycti.generate_id.assert_called_once_with("Flare", "organization")
         mocks.stix2.Identity.assert_called_once_with(

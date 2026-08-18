@@ -41,6 +41,7 @@ def test_administrative_area_to_stix2_object_returns_valid_stix_object(
         description="Test description",
         latitude=48.866667,
         longitude=2.333333,
+        aliases=["Test alias"],
         author=fake_valid_organization_author,
         markings=fake_valid_tlp_markings,
         external_references=fake_valid_external_references,

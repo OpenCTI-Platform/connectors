@@ -1,0 +1,23 @@
+opencti:
+  url: http://localhost
+  token: ChangeMe
+
+connector:
+  id: ChangeMe
+  name: Ransomware Connector
+  scope: identity,domain-name,location,threat-actor,intrusion-set,campaign,report,relationship
+  log_level: info
+  duration_period: PT12H
+
+ransomwarelive:
+  api_base_url: https://api.ransomware.live/v2
+  api_key: ChangeMe
+  pull_history: false
+  history_start_year: 2023
+  create_threat_actor: false
+  create_intrusion_set: true
+  create_campaign: false
+  create_report: true
+  create_leak_site_domains: false
+  create_leak_post_refs: false
+  marking_value: TLP:CLEAR

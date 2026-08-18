@@ -6,8 +6,6 @@ from pycti import OpenCTIConnectorHelper
 from stream_connector import ZscalerConnector
 from stream_connector.settings import ConnectorSettings
 
-CONFIG_FILE_PATH = "/opt/opencti-connector-zscaler/config.yml"
-
 if __name__ == "__main__":
     try:
         # Load and validate configuration via Pydantic settings
@@ -18,10 +16,7 @@ if __name__ == "__main__":
 
         # Initialize the connector with the validated settings
         connector = ZscalerConnector(
-            config_path=CONFIG_FILE_PATH,
             helper=helper,
-            opencti_url=str(config.opencti.url),
-            opencti_token=config.opencti.token,
             ssl_verify=config.zscaler.ssl_verify,
             zscaler_username=config.zscaler.username,
             zscaler_password=config.zscaler.password.get_secret_value(),

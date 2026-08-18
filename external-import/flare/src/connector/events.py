@@ -3,6 +3,14 @@ from enum import StrEnum
 from typing import Any
 
 
+class UnsupportedEventTypeError(ValueError):
+    """Raised for event types the connector has no mapping for.
+
+    Flare keeps adding indices (new domain types, for instance), so these
+    events are skipped rather than treated as import failures.
+    """
+
+
 @dataclass
 class BaseEvent:
     uid: str
@@ -14,10 +22,23 @@ class BaseEvent:
     notes: str
 
 
+def severity_from_event(event: dict[str, Any]) -> str:
+    """Read the severity label, preferring a tenant's override over the original.
+
+    The tenant feed returns `tenant_metadata.severity` as
+    `{"original": ..., "override": ...}`, and falls back to the event's own
+    `metadata.severity` when the tenant has no severity set.
+    """
+    severity = (event.get("tenant_metadata") or {}).get("severity")
+    if isinstance(severity, dict):
+        severity = severity.get("override") or severity.get("original")
+    return severity or (event.get("metadata") or {}).get("severity") or ""
+
+
 def base_event_from_event(event: dict[str, Any]) -> BaseEvent:
     data = event.get("data", {})
-    metadata = event.get("metadata", {})
-    tenant_metadata = event.get("tenant_metadata", {})
+    metadata = event.get("metadata") or {}
+    tenant_metadata = event.get("tenant_metadata") or {}
     data_metadata = data.get("metadata", {})
     return BaseEvent(
         uid=data.get("uid", ""),
@@ -25,7 +46,7 @@ def base_event_from_event(event: dict[str, Any]) -> BaseEvent:
         flare_url=data_metadata.get("flare_url", ""),
         created_at=data_metadata.get("estimated_created_at", ""),
         matched_at=metadata.get("matched_at", ""),
-        severity=tenant_metadata.get("severity", ""),
+        severity=severity_from_event(event),
         notes=tenant_metadata.get("notes", ""),
     )
 
@@ -121,7 +142,9 @@ def get_event_from_event_json(
         case EventTypes.RANSOMLEAK | EventTypes.DOCUMENT:
             return ransomleak_from_event(event)
         case _:
-            raise ValueError(f"Unsupported event type: {event['data']['index']!r}")
+            raise UnsupportedEventTypeError(
+                f"Unsupported event type: {event['data']['index']!r}"
+            )
 
 
 class EventTypes(StrEnum):
@@ -180,7 +203,7 @@ def get_incident_type_from_event_type(event_type: str) -> str:
     try:
         et = EventTypes(event_type)
     except ValueError as e:
-        raise ValueError(f"Unknown event_type: {event_type!r}") from e
+        raise UnsupportedEventTypeError(f"Unknown event_type: {event_type!r}") from e
 
     match et:
         case (
@@ -258,5 +281,9 @@ def get_event_title_from_event_type(event_type: str) -> str:
     try:
         parsed_event_type = EventTypes(event_type)
     except ValueError as e:
-        raise ValueError(f"Unknown event_type: {event_type!r}") from e
-    return _EVENT_TITLES[parsed_event_type]
+        raise UnsupportedEventTypeError(f"Unknown event_type: {event_type!r}") from e
+
+    title = _EVENT_TITLES.get(parsed_event_type)
+    if title is None:
+        raise UnsupportedEventTypeError(f"Untitled event_type: {event_type!r}")
+    return title

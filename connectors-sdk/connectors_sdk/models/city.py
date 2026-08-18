@@ -26,6 +26,10 @@ class City(BaseIdentifiedEntity):
         default=None,
         description="The longitude of the City in decimal degrees.",
     )
+    aliases: list[str] | None = Field(
+        default=None,
+        description="Alternative names used to identify this City.",
+    )
 
     def to_stix2_object(self) -> Stix2Location:
         """Make stix object.
@@ -50,5 +54,6 @@ class City(BaseIdentifiedEntity):
             longitude=self.longitude,
             allow_custom=True,
             x_opencti_location_type=location_type,
+            x_opencti_aliases=self.aliases,
             **self._common_stix2_properties()
         )

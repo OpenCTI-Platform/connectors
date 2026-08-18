@@ -5,10 +5,14 @@
   "short_description": "Proactive AiTM infrastructure intelligence from Lab539, imported as STIX 2.1 indicators and observables.",
   "logo": "external-import/lab539-aitm-feed/__metadata__/logo.jpg",
   "use_cases": [
-    "Commercial Threat Intel",
-    "AiTM Infrastructure",
-    "Phishing Infrastructure"
+    "Adversary & Campaign Insights",
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

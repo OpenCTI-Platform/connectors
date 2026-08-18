@@ -1,5 +1,13 @@
-from ransomwarelive.ransom_conn import RansomwareAPIConnector
+__all__ = ["ConnectorSettings", "RansomwareAPIConnector"]
 
-__all__ = [
-    "RansomwareAPIConnector",
-]
+
+def __getattr__(name: str):
+    if name == "ConnectorSettings":
+        from ransomwarelive.settings import ConnectorSettings
+
+        return ConnectorSettings
+    if name == "RansomwareAPIConnector":
+        from ransomwarelive.ransom_conn import RansomwareAPIConnector
+
+        return RansomwareAPIConnector
+    raise AttributeError(name)
