@@ -369,11 +369,11 @@ class RestoreFilesConnector:
                     # 06 - Save the state
                     self.helper.set_state({"current": entry.name})
             if (self.archive_path):
-                self.helper.log_info("Archiving " + str(entry) + " to " + self.archive_path)
+                self.helper.log_info(f"Archiving {entry} to {self.archive_path}")
                 Path(self.archive_path).mkdir(parents=True, exist_ok=True)
                 shutil.move(str(entry), self.archive_path)
             else:
-                self.helper.log_debug("NOT Archiving " + entry + " to " + self.archive_path)
+                self.helper.log_debug(f"NOT Archiving {entry} to {self.archive_path}")
         self.helper.log_info("restore run completed")
 
     def start(self):
