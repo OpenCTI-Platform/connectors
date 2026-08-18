@@ -325,7 +325,7 @@ jobs:
   
           # Find previous tag for this connector (excluding the current one)
           PREV_TAG=$(git tag --list "${CONNECTOR_NAME}/*" --sort=-version:refname \
-            | grep -v "^${CURRENT_TAG}$" | head -1)
+            | { grep -v "^${CURRENT_TAG}$" || true; } | head -1)
   
           if [ -z "$PREV_TAG" ]; then
             echo "status=initial" >> "$GITHUB_OUTPUT"
