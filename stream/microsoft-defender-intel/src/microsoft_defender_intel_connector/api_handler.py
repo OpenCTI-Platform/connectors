@@ -89,11 +89,6 @@ class DefenderApiHandler:
                 seconds=int(oauth_expired * 0.9)
             )
         except (requests.exceptions.HTTPError, KeyError) as e:
-            # Raise a domain error carrying the actionable Azure AD message
-            # (e.g. AADSTS...) instead of logging here and re-raising. It
-            # propagates through _send_request (which only wraps request-level
-            # errors) up to process_message, where it is logged once -- avoiding
-            # the previous double error log for a single auth failure.
             error_description = response_json.get("error_description", "Unknown error")
             raise DefenderApiHandlerError(
                 f"Failed to generate OAuth token: {error_description}",
