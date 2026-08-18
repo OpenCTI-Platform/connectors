@@ -1,108 +1,67 @@
 import os
-from pathlib import Path
 from typing import Any
 
+import isodate
 import pycti
-import yaml
 from cyberintegrations.utils import FileHandler
-from dotenv import load_dotenv
-from pycti import get_config_variable
+from pydantic import SecretStr
+from settings import ConnectorSettings
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 from stix2.v21.vocab import MALWARE_TYPE
 
 
 class ConfigConnector:
-
     def __init__(self):
         """
-        Initialize the connector with necessary configurations
+        Initialize the connector with necessary configurations.
+
+        Configuration is loaded and validated through the Pydantic
+        ``ConnectorSettings`` model. The validated values are then exposed using
+        the connector's historical flat attribute names (e.g.
+        ``ti_api_collections_apt_threat_enable``, ``connector_duration_period``)
+        so the rest of the connector keeps working unchanged.
         """
-        self.load = self._load_config()
-        self.env_keys = self._load_env_keys()
-        self._initialize_configurations()
+        self.settings = ConnectorSettings()
+        self._expose_settings_as_attributes()
         self.collection_mapping_config = FileHandler().read_json_config(
             self.CONFIG_JSON
         )
 
-    def _load_config(self) -> dict:
+    @staticmethod
+    def _unwrap(value: Any) -> Any:
+        """Return the plain value of a ``SecretStr`` (or the value unchanged)."""
+        if isinstance(value, SecretStr):
+            return value.get_secret_value()
+        return value
+
+    def _expose_settings_as_attributes(self) -> None:
         """
-        Loads the configuration from `config.yml`. If `config.yml` does not exist, returns an empty dictionary.
+        Expose validated settings using the connector's historical attribute names.
+
+        The rest of the connector reads flat attributes such as
+        ``ti_api_proxy_ip`` or ``connector_duration_period``; they are derived
+        here from the nested Pydantic settings so no downstream code needs to
+        change.
         """
-        config_dir = Path(__file__).parents[1].joinpath("src")
-        config_file_path = config_dir.joinpath("config.yml")
+        for field_name in type(self.settings.opencti).model_fields:
+            value = self._unwrap(getattr(self.settings.opencti, field_name))
+            setattr(self, f"opencti_{field_name}", value)
 
-        if config_file_path.is_file():
-            with open(config_file_path, "r", encoding="utf-8") as file:
-                return yaml.load(file, Loader=yaml.FullLoader)
+        for field_name in type(self.settings.connector).model_fields:
+            value = getattr(self.settings.connector, field_name)
+            if field_name == "duration_period":
+                # Preserve the historical ISO-8601 string form used by the
+                # scheduler / interval validation helper.
+                value = isodate.duration_isoformat(value)
+            setattr(self, f"connector_{field_name}", self._unwrap(value))
 
-        return {}
+        for field_name in type(self.settings.ti_api).model_fields:
+            value = self._unwrap(getattr(self.settings.ti_api, field_name))
+            setattr(self, f"ti_api_{field_name}", value)
 
-    def _load_env_keys(self) -> list[str]:
-        load_dotenv()
-        return os.environ.keys()
-
-    def _extract_config_keys(self, data, parent_keys=None):
-        if parent_keys is None:
-            parent_keys = []
-
-        keys_list = []
-        if isinstance(data, dict):
-            for key, value in data.items():
-                new_keys = parent_keys + [key]
-                if isinstance(value, dict):
-                    keys_list.extend(self._extract_config_keys(value, new_keys))
-                else:
-                    keys_list.append(new_keys)
-        return keys_list
-
-    def _converting_keys_to_environment_keys(self, key):
-        if not key or not isinstance(key, list):
-            return None
-
-        key = [str(k).upper().replace("-", "_") for k in key]
-
-        if key[0] in ["OPENCTI", "CONNECTOR"]:
-            return "_".join(key)
-
-        if key[0] == "TI_API":
-            if len(key) > 1 and key[1] == "COLLECTIONS":
-                modified_key = key[2:]
-                modified_key = [part.replace("/", "_") for part in modified_key]
-                return (
-                    f"{key[0]}__{key[1]}__{'__'.join(modified_key)}"
-                    if modified_key
-                    else f"{key[0]}__{key[1]}"
-                )
-            return "__".join(key)
-
-        return "_".join(key)
-
-    def _initialize_configurations(self) -> None:
-        """
-        Connector configuration variables
-        :return: None
-        """
-        if self.load:
-            for key in self._extract_config_keys(self.load):
-                if len(key) > 2 and key[1] == "collections":
-                    key[2] = key[2].replace("/", "_")
-                env_var = self._converting_keys_to_environment_keys(key)
-                attr_name = "__".join(key).lower().replace("__", "_")
-                attr_value = get_config_variable(
-                    env_var=env_var,
-                    yaml_path=key,
-                    config=self.load,
-                )
-                setattr(self, attr_name, attr_value)
-        else:
-            for env_key in self.env_keys:
-                attr_name = env_key.lower().replace("__", "_")
-                attr_value = get_config_variable(
-                    env_var=env_key,
-                    yaml_path=None,
-                    config=None,
-                )
-                setattr(self, attr_name, attr_value)
+    def to_helper_config(self) -> dict:
+        """Return a config dict suitable for ``pycti.OpenCTIConnectorHelper``."""
+        return self.settings.to_helper_config()
 
     def get_collection_settings(self, collection, setting_name) -> Any:
         collection_attr_name = f"ti_api_collections_{collection}_{setting_name}"
