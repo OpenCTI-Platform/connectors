@@ -14,9 +14,6 @@ The Group-IB connector imports threat intelligence from Group-IB's Threat Intell
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -43,39 +40,10 @@ To use the integration, please ensure that you have an active Threat Intelligenc
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `.env` file (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-> **Note**: Currently the connector cannot run with `config.yml` file, only with `.env` file because of ConnectorHelper instantiation and proxy settings code.
-
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter       | config.yml      | Docker environment variable   | Default | Mandatory | Description                                                              |
-|-----------------|-----------------|-------------------------------|---------|-----------|--------------------------------------------------------------------------|
-| Connector ID    | id              | `CONNECTOR_ID`                |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
-| Connector Name  | name            | `CONNECTOR_NAME`              |         | Yes       | Name of the connector.                                                   |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`             |         | Yes       | The scope or type of data the connector is importing.                    |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`         | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD`   |         | Yes       | Time interval between runs in ISO 8601 format (e.g., `PT3M`, `P1D`).     |
-
-### Connector extra parameters environment variables
-
-| Parameter        | config.yml         | Docker environment variable | Default | Mandatory | Description                                      |
-|------------------|--------------------|-----------------------------|---------|-----------|--------------------------------------------------|
-| TI API URL       | ti_api.url         | `TI_API__URL`               |         | Yes       | Group-IB Threat Intelligence API URL.            |
-| TI API Username  | ti_api.username    | `TI_API__USERNAME`          |         | Yes       | Threat Intelligence Portal profile email.        |
-| TI API Token     | ti_api.token       | `TI_API__TOKEN`             |         | Yes       | Threat Intelligence API Token.                   |
-| Proxy IP         | proxy.ip           | `PROXY_IP`                  |         | No        | Proxy server IP address.                         |
-| Proxy Port       | proxy.port         | `PROXY_PORT`                |         | No        | Proxy server port.                               |
-| Proxy Protocol   | proxy.protocol     | `PROXY_PROTOCOL`            |         | No        | Proxy protocol (http/https).                     |
-| Proxy Username   | proxy.username     | `PROXY_USERNAME`            |         | No        | Proxy authentication username.                   |
-| Proxy Password   | proxy.password     | `PROXY_PASSWORD`            |         | No        | Proxy authentication password.                   |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
