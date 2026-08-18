@@ -92,7 +92,7 @@ class CVEClient:
             if body_text.strip():
                 return body_text.strip()
         except UnicodeDecodeError:
-            return None
+            pass
 
         for key in ("message", "error", "X-Error-Message"):
             value = response.headers.get(key)
