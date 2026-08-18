@@ -46,6 +46,4 @@ class ConnectorSettings(BaseConnectorSettings):
     connector: InternalImportFileConnectorConfig = Field(
         default_factory=InternalImportFileConnectorConfig
     )
-    import_document: ImportDocumentConfig = Field(
-        default_factory=ImportDocumentConfig
-    )
+    import_document: ImportDocumentConfig = Field(default_factory=ImportDocumentConfig)
