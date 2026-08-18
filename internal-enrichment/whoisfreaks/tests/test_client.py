@@ -4,6 +4,11 @@ import requests_mock
 from client import WhoisFreaksClient
 
 
+def _qs_lower(qs: dict) -> dict:
+    """requests_mock lowercases query-string keys; normalize for assertions."""
+    return {k.lower(): v for k, v in qs.items()}
+
+
 @pytest.fixture
 def client():
     return WhoisFreaksClient(api_key="test-api-key", timeout=10)
@@ -23,10 +28,10 @@ def test_client_get_success(client):
             json={"status": "success"},
         )
         res = client.live_whois_lookup("example.com")
-        assert m.last_request.qs == {
-            "apiKey": ["test-api-key"],
+        assert _qs_lower(m.last_request.qs) == {
+            "apikey": ["test-api-key"],
             "format": ["json"],
-            "domainName": ["example.com"],
+            "domainname": ["example.com"],
         }
         assert res == {"status": "success"}
 
@@ -38,10 +43,10 @@ def test_client_get_404(client):
             status_code=404,
         )
         res = client.live_whois_lookup("example.com")
-        assert m.last_request.qs == {
-            "apiKey": ["test-api-key"],
+        assert _qs_lower(m.last_request.qs) == {
+            "apikey": ["test-api-key"],
             "format": ["json"],
-            "domainName": ["example.com"],
+            "domainname": ["example.com"],
         }
         assert res is None
 
@@ -53,10 +58,10 @@ def test_client_get_401(client):
             status_code=401,
         )
         res = client.live_whois_lookup("example.com")
-        assert m.last_request.qs == {
-            "apiKey": ["test-api-key"],
+        assert _qs_lower(m.last_request.qs) == {
+            "apikey": ["test-api-key"],
             "format": ["json"],
-            "domainName": ["example.com"],
+            "domainname": ["example.com"],
         }
         assert res is None
 
@@ -68,10 +73,10 @@ def test_client_get_429(client):
             status_code=429,
         )
         res = client.live_whois_lookup("example.com")
-        assert m.last_request.qs == {
-            "apiKey": ["test-api-key"],
+        assert _qs_lower(m.last_request.qs) == {
+            "apikey": ["test-api-key"],
             "format": ["json"],
-            "domainName": ["example.com"],
+            "domainname": ["example.com"],
         }
         assert res is None
 
@@ -84,10 +89,10 @@ def test_client_get_500(client):
             text="Internal Server Error",
         )
         res = client.live_whois_lookup("example.com")
-        assert m.last_request.qs == {
-            "apiKey": ["test-api-key"],
+        assert _qs_lower(m.last_request.qs) == {
+            "apikey": ["test-api-key"],
             "format": ["json"],
-            "domainName": ["example.com"],
+            "domainname": ["example.com"],
         }
         assert res is None
 
@@ -99,10 +104,10 @@ def test_client_get_timeout(client):
             exc=requests.exceptions.Timeout,
         )
         res = client.live_whois_lookup("example.com")
-        assert m.last_request.qs == {
-            "apiKey": ["test-api-key"],
+        assert _qs_lower(m.last_request.qs) == {
+            "apikey": ["test-api-key"],
             "format": ["json"],
-            "domainName": ["example.com"],
+            "domainname": ["example.com"],
         }
         assert res is None
 
@@ -114,10 +119,10 @@ def test_client_get_request_exception(client):
             exc=requests.RequestException,
         )
         res = client.live_whois_lookup("example.com")
-        assert m.last_request.qs == {
-            "apiKey": ["test-api-key"],
+        assert _qs_lower(m.last_request.qs) == {
+            "apikey": ["test-api-key"],
             "format": ["json"],
-            "domainName": ["example.com"],
+            "domainname": ["example.com"],
         }
         assert res is None
 
