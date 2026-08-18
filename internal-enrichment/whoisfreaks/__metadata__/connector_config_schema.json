@@ -24,16 +24,9 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [
-        "Domain-Name",
-        "IPv4-Addr",
-        "IPv6-Addr"
-      ],
+      "default": "Domain-Name,IPv4-Addr,IPv6-Addr",
       "description": "The scope of the connector.",
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
+      "type": "string"
     },
     "CONNECTOR_LOG_LEVEL": {
       "default": "info",
