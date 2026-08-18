@@ -6,12 +6,13 @@ connects to OpenCTI) and drive the pure-logic methods against a hand-built
 instance and a real CSAF fixture (`tests/fixtures/icsa-26-225-05.json`,
 fetched from cisagov/CSAF).
 """
+
 import json
 from types import SimpleNamespace
 from typing import List
 
 import stix2
-from main import CisaIcsAdvisories, _CSAF_LINK_RE
+from main import _CSAF_LINK_RE, CisaIcsAdvisories
 
 
 def _make_connector() -> CisaIcsAdvisories:
@@ -175,7 +176,9 @@ class TestReleaseDateFallback:
         conn.helper = SimpleNamespace(
             log_info=lambda *a, **kw: None,
             log_error=lambda *a, **kw: None,
-            stix2_create_bundle=lambda objs: stix2.Bundle(objects=objs, allow_custom=True).serialize(),
+            stix2_create_bundle=lambda objs: stix2.Bundle(
+                objects=objs, allow_custom=True
+            ).serialize(),
         )
         conn.org = "Cybersecurity and Infrastructure Security Agency"
         conn.set_created_by_stix()
@@ -189,8 +192,13 @@ class TestReleaseDateFallback:
             "csaf_url": "https://example.invalid/x.json",
         }
         csaf_no_tracking_date = {
-            "document": {"title": "Test Advisory", "tracking": {"id": "ICSA-26-225-05"}},
-            "vulnerabilities": [{"cve": "CVE-2026-00000", "notes": [], "product_status": {}}],
+            "document": {
+                "title": "Test Advisory",
+                "tracking": {"id": "ICSA-26-225-05"},
+            },
+            "vulnerabilities": [
+                {"cve": "CVE-2026-00000", "notes": [], "product_status": {}}
+            ],
         }
         bundle_json = conn.build_bundle(advisory, csaf_no_tracking_date)
         data = json.loads(bundle_json)

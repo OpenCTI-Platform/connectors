@@ -4,6 +4,7 @@ Adds `src/` to sys.path so tests can `import main` without packaging the
 connector, mirroring how it is invoked at runtime (`python3 main.py` from
 `src/`).
 """
+
 import json
 import sys
 from pathlib import Path

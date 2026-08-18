@@ -4,7 +4,6 @@ import json
 import re
 import ssl
 import sys
-import time
 import traceback
 import urllib.error
 import urllib.request
@@ -49,7 +48,9 @@ class CisaIcsAdvisories:
     def retrieve_data(self, url: str) -> Optional[str]:
         """Retrieve a URL as text, or None on failure (logged, never raised)."""
         try:
-            request = urllib.request.Request(url, headers={"User-Agent": "OpenCTI-Connector-CISA-ICS-Advisories"})
+            request = urllib.request.Request(
+                url, headers={"User-Agent": "OpenCTI-Connector-CISA-ICS-Advisories"}
+            )
             return (
                 urllib.request.urlopen(request, context=ssl.create_default_context())
                 .read()
@@ -187,7 +188,9 @@ class CisaIcsAdvisories:
         release_date = (
             tracking.get("current_release_date")
             or self._to_iso8601(advisory["pub_date"])
-            or datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            or datetime.datetime.now(tz=datetime.timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
         )
         created_by_id = self.created_by_stix["id"]
         marking_id = self.tlp_marking
@@ -274,7 +277,9 @@ class CisaIcsAdvisories:
                 software_id = seen_software[key]
                 stix_objects.append(
                     stix2.Relationship(
-                        id=StixCoreRelationship.generate_id("has", software_id, vuln_id),
+                        id=StixCoreRelationship.generate_id(
+                            "has", software_id, vuln_id
+                        ),
                         relationship_type="has",
                         source_ref=software_id,
                         target_ref=vuln_id,
@@ -319,8 +324,12 @@ class CisaIcsAdvisories:
             seen_ids = set(seen_ids_order)
 
             now = datetime.datetime.now(tz=datetime.timezone.utc)
-            friendly_name = "CISA ICS Advisories run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-            work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
+            friendly_name = "CISA ICS Advisories run @ " + now.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id, friendly_name
+            )
 
             self.set_created_by_stix()
             self.set_tlp_marking()
