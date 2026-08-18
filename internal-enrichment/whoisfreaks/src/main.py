@@ -233,11 +233,17 @@ class WhoisFreaksConnector:
 
     def process_message(self, data: dict[str, Any]) -> str:
         """Public callback handed to the helper listener; wraps _process_message."""
+        stix_objects = []
+        if isinstance(data, dict):
+            extracted_stix_objects = data.get("stix_objects", [])
+            if isinstance(extracted_stix_objects, list):
+                stix_objects = extracted_stix_objects
+
         try:
             return self._process_message(data)
         except Exception as e:
             logger.exception(f"[WhoisFreaks Connector] Unhandled error: {e}")
-            return str(e)
+            return self._send_bundle(stix_objects)
 
     def start(self) -> None:
         """Starts the connector worker and listens to RabbitMQ queue."""
