@@ -3,14 +3,23 @@
 from connectors_sdk import (
     BaseConnectorSettings,
     BaseInternalExportFileConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field
 
 
-class ConnectorSettings(BaseConnectorSettings):
-    """Configuration of the Export File TXT connector."""
+class InternalExportFileConnectorConfig(BaseInternalExportFileConnectorConfig):
+    """
+    Override the `BaseConnectorConfig` to add connector specific configuration parameters and/or defaults.
+    """
 
-    connector: BaseInternalExportFileConnectorConfig = Field(
-        default_factory=BaseInternalExportFileConnectorConfig,
-        description="Connector configurations.",
+    scope: ListFromString = Field(
+        default=["text/plain"],
+        description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+    )
+
+
+class ConnectorSettings(BaseConnectorSettings):
+    connector: InternalExportFileConnectorConfig = Field(
+        default_factory=InternalExportFileConnectorConfig
     )
