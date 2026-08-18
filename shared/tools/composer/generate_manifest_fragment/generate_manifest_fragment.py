@@ -2,6 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "jsonschema==4.26.0",
+#     "Pillow==12.0.0",
 # ]
 # ///
 """
@@ -41,6 +42,7 @@ Constant fields:
 
 import argparse
 import base64
+import io
 import json
 import os
 import re
@@ -49,6 +51,7 @@ import traceback
 from pathlib import Path
 
 import jsonschema
+from PIL import Image
 
 CONNECTOR_METADATA_DIRECTORY = "__metadata__"
 CONNECTOR_MANIFEST_FILENAME = "connector_manifest.json"
@@ -105,6 +108,48 @@ MIME_TYPES = {
     ".svg": "image/svg+xml",
 }
 
+# Maximum logo dimensions (in pixels) embedded in the fragment. Oversized
+# logos bloat the base64 payload and can make the manifest fragment too
+# large to publish. Raster logos are downscaled (never upscaled, never
+# cropped) so the aspect ratio is always preserved. SVGs are vector-based
+# and left untouched.
+MAX_LOGO_DIMENSION = 200
+
+# Pillow format name for each supported raster extension, used to re-encode
+# the resized image back to its original format.
+PILLOW_FORMATS = {
+    ".png": "PNG",
+    ".jpg": "JPEG",
+    ".jpeg": "JPEG",
+    ".gif": "GIF",
+}
+
+
+def resize_logo_bytes(logo_data: bytes, suffix: str) -> bytes:
+    """Downscale a raster logo to fit within MAX_LOGO_DIMENSION x MAX_LOGO_DIMENSION.
+
+    Uses `Image.thumbnail`, which preserves the aspect ratio, never crops,
+    and never upscales an image already smaller than the target size.
+    SVGs (vector) are returned unchanged.
+    """
+    if suffix not in PILLOW_FORMATS:
+        return logo_data
+
+    with Image.open(io.BytesIO(logo_data)) as image:
+        if image.width <= MAX_LOGO_DIMENSION and image.height <= MAX_LOGO_DIMENSION:
+            return logo_data
+
+        image.thumbnail((MAX_LOGO_DIMENSION, MAX_LOGO_DIMENSION), Image.LANCZOS)
+
+        buffer = io.BytesIO()
+        save_kwargs = {}
+        if PILLOW_FORMATS[suffix] == "PNG" and image.mode not in ("RGBA", "RGB", "P"):
+            image = image.convert("RGBA")
+        if PILLOW_FORMATS[suffix] == "JPEG" and image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+        image.save(buffer, format=PILLOW_FORMATS[suffix], **save_kwargs)
+        return buffer.getvalue()
+
 
 def find_logo_file(metadata_dir: Path) -> Path:
     """Return the connector's logo path, or the default logo if none is found."""
@@ -117,10 +162,12 @@ def find_logo_file(metadata_dir: Path) -> Path:
 
 
 def encode_logo_to_base64(logo_path: Path) -> str:
-    """Read a logo file and encode it as a base64 data URL."""
+    """Read a logo file, downscale it if needed, and encode it as a base64 data URL."""
+    suffix = logo_path.suffix.lower()
     with open(logo_path, "rb") as logo_file:
         logo_data = logo_file.read()
-    mime_type = MIME_TYPES.get(logo_path.suffix.lower(), "image/png")
+    logo_data = resize_logo_bytes(logo_data, suffix)
+    mime_type = MIME_TYPES.get(suffix, "image/png")
     encoded_logo = base64.b64encode(logo_data).decode("utf-8")
     return f"data:{mime_type};base64,{encoded_logo}"
 
