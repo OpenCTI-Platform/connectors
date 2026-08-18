@@ -2,7 +2,7 @@ services:
   connector-pan-cortex-xdr-intel:
     image: opencti/connector-pan-cortex-xdr-intel:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       # - CONNECTOR_ID=6f1b7d7d-4655-42e6-bef1-ad6f176d25a0
