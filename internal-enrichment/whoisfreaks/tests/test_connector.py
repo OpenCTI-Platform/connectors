@@ -40,50 +40,31 @@ def test_connector_init(mock_dependencies):
     assert connector.builder.author.name == "WhoisFreaks"
 
 
-def test_get_entity_info_cyber_observable(mock_dependencies):
+def test_connector_does_not_expose_legacy_get_entity_info(mock_dependencies):
     cfg, helper = mock_dependencies
     connector = WhoisFreaksConnector()
 
-    # Mock cyber observable read
-    helper.api.stix_cyber_observable.read.return_value = {
-        "entity_type": "Domain-Name",
-        "observable_value": "example.com",
-    }
-
-    obs_type, obs_val = connector._get_entity_info("entity-123")
-    assert obs_type == "Domain-Name"
-    assert obs_val == "example.com"
-    helper.api.stix_cyber_observable.read.assert_called_once_with(id="entity-123")
+    # Entity resolution is implemented inline in _process_message/process_message.
+    # The legacy private helper should not be referenced by the tests anymore.
+    assert not hasattr(connector, "_get_entity_info")
 
 
-def test_get_entity_info_domain_object(mock_dependencies):
+def test_inline_resolution_fallback_mocks_are_configurable(mock_dependencies):
     cfg, helper = mock_dependencies
     connector = WhoisFreaksConnector()
 
-    # Mock cyber observable read returns None, domain object read returns entity
     helper.api.stix_cyber_observable.read.return_value = None
     helper.api.stix_domain_object.read.return_value = {
         "entity_type": "Domain-Name",
         "value": "domain-obj.com",
     }
 
-    obs_type, obs_val = connector._get_entity_info("entity-456")
-    assert obs_type == "Domain-Name"
-    assert obs_val == "domain-obj.com"
-    helper.api.stix_cyber_observable.read.assert_called_once_with(id="entity-456")
-    helper.api.stix_domain_object.read.assert_called_once_with(id="entity-456")
-
-
-def test_get_entity_info_not_found(mock_dependencies):
-    cfg, helper = mock_dependencies
-    connector = WhoisFreaksConnector()
-
-    helper.api.stix_cyber_observable.read.return_value = None
-    helper.api.stix_domain_object.read.return_value = None
-
-    obs_type, obs_val = connector._get_entity_info("entity-789")
-    assert obs_type is None
-    assert obs_val is None
+    assert helper.api.stix_cyber_observable.read(id="entity-456") is None
+    assert helper.api.stix_domain_object.read(id="entity-456") == {
+        "entity_type": "Domain-Name",
+        "value": "domain-obj.com",
+    }
+    assert connector.helper == helper
 
 
 def test_process_message_empty_entity(mock_dependencies):
