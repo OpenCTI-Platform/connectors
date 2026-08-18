@@ -1,5 +1,5 @@
 FROM python:3.12-alpine
-
+ENV CONNECTOR_TYPE=STREAM
 # Copy the connector
 COPY src /opt/opencti-connector-pan-cortex-xdr-intel
 WORKDIR /opt/opencti-connector-pan-cortex-xdr-intel
