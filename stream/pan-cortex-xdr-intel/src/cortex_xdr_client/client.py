@@ -54,8 +54,7 @@ class CortexXdrClient(BaseClientApi):
             secrets.choice(string.ascii_letters + string.digits) for _ in range(64)
         )
         # Current UTC time in milliseconds.
-        timestamp = int(datetime.now(timezone.utc).timestamp()) * 1000
-
+        timestamp = int(datetime.now(timezone.utc).timestamp() * 1000)
         auth_key = f"{self._api_key}{nonce}{timestamp}".encode("utf-8")
         api_key_hash = hashlib.sha256(auth_key).hexdigest()
 
