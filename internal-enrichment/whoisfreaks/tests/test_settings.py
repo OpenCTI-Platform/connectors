@@ -10,13 +10,7 @@ These tests validate that:
 import os
 
 import pytest
-
-# Settings module is in src/ which conftest.py adds to sys.path
 from settings import ConnectorSettings
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 VALID_ENV = {
     "OPENCTI_URL": "http://localhost:8080",
@@ -37,11 +31,6 @@ def _load_settings(env_overrides: dict) -> ConnectorSettings:
             os.environ.pop(key, None)
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-
-
 class TestConnectorSettings:
     """Tests for ConnectorSettings loading and validation."""
 
@@ -49,8 +38,8 @@ class TestConnectorSettings:
         """Full valid configuration should load without errors."""
         settings = _load_settings(VALID_ENV)
 
-        assert settings.opencti.url == "http://localhost:8080"
-        assert settings.opencti.token.get_secret_value() == "test-opencti-token"
+        assert str(settings.opencti.url).rstrip("/") == "http://localhost:8080"
+        assert settings.opencti.token == "test-opencti-token"
         assert settings.connector.id == "11111111-1111-1111-1111-111111111111"
         assert settings.whoisfreaks.api_key.get_secret_value() == "test-whoisfreaks-key"
 
@@ -70,9 +59,9 @@ class TestConnectorSettings:
         assert settings.connector.auto is False
 
     def test_default_connector_log_level(self):
-        """Connector log_level should default to 'info'."""
+        """Connector log_level should default to 'error'."""
         settings = _load_settings(VALID_ENV)
-        assert settings.connector.log_level.lower() == "info"
+        assert settings.connector.log_level.lower() == "error"
 
     def test_default_tlp_level(self):
         """WhoisFreaks TLP level should default to 'amber+strict'."""

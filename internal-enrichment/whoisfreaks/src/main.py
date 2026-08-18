@@ -164,11 +164,8 @@ class WhoisFreaksConnector:
             logger.error("[WhoisFreaks Connector] Entity type or value is missing")
             return self._send_bundle(stix_objects)
 
-        # VC304 / VC320: enforce TLP — object_marking_refs checked via objectMarking
+        # VC304 / VC320: enforce TLP via objectMarking
         self._extract_and_check_tlp(observable)
-
-        # VC319: detect playbook trigger vs. manual enrichment via event_type
-        is_playbook_trigger = not data.get("event_type")
 
         supported_types = {"Domain-Name", "IPv4-Addr", "IPv6-Addr"}
         if observable_type not in supported_types:
@@ -185,10 +182,16 @@ class WhoisFreaksConnector:
         )
 
         # Build enrichment bundles BEFORE initiating work (VC317)
-        if observable_type == "Domain-Name":
-            new_bundles = self._enrich_domain(observable_value)
-        else:
-            new_bundles = self._enrich_ip(observable_value)
+        try:
+            if observable_type == "Domain-Name":
+                new_bundles = self._enrich_domain(observable_value)
+            else:
+                new_bundles = self._enrich_ip(observable_value)
+        except Exception as e:
+            error_msg = f"Error during processing of {observable_value}: {str(e)}"
+            logger.exception(f"[WhoisFreaks Connector] {error_msg}")
+            # No work was initiated yet (VC317); still return a clear error message
+            return error_msg
 
         # VC317: only call initiate_work when there are bundles to send (checked by AST)
         if new_bundles:

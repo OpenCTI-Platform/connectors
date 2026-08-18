@@ -68,7 +68,21 @@
       "description": "API key for accessing the WhoisFreaks service",
       "format": "password",
       "type": "string",
-      "writeOnly": true
+      "writeOnly": true,
+      "minLength": 1
+    },
+    "WHOISFREAKS_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "Maximum TLP level this connector is allowed to process and marking applied to created STIX entities.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
     }
   },
   "required": [

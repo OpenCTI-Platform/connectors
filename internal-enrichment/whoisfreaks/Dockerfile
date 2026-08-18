@@ -1,20 +1,17 @@
 FROM python:3.12-alpine
+ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
-# Set working directory inside container
+# Copy the connector
+COPY src /opt/opencti-connector-whoisfreaks/src
 WORKDIR /opt/opencti-connector-whoisfreaks
 
-# Install system runtime/build dependencies needed by pycti and stix2
+# Install Python modules
 # hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev
+    apk --no-cache add git build-base libmagic libffi-dev && \
+    cd /opt/opencti-connector-whoisfreaks/src && \
+    pip3 install --no-cache-dir -r /opt/opencti-connector-whoisfreaks/src/requirements.txt && \
+    apk del git build-base && \
+    rm -rf /var/cache/apk/*
 
-# Install Python package dependencies
-COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
-
-# Copy source code
-COPY src ./src
-
-# Run the connector directly via Python
-ENTRYPOINT ["python3", "/opt/opencti-connector-whoisfreaks/src/main.py"]
+CMD ["python3", "src/main.py"]

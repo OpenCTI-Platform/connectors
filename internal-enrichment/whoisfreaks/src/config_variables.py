@@ -15,7 +15,7 @@ class ConfigVariables:
         self._settings = ConnectorSettings()
 
         # Generic OpenCTI connection fields (passed through to helper)
-        self.opencti_url: str = self._settings.opencti.url
+        self.opencti_url: str = str(self._settings.opencti.url)
         self.opencti_token: str = self._settings.opencti.token
 
         # Connector meta-fields

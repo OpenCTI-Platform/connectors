@@ -1,5 +1,6 @@
+import ipaddress
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pycti
 import stix2
@@ -23,12 +24,12 @@ class WhoisFreaksStixBuilder:
         )
 
     def build_whois_bundle(
-        self, domain_name: str, whois_data: Dict[str, Any]
-    ) -> Optional[stix2.Bundle]:
+        self, domain_name: str, whois_data: dict[str, Any]
+    ) -> stix2.Bundle | None:
         if not whois_data:
             return None
 
-        objects: List[Any] = [self.author]
+        objects: list[Any] = [self.author]
         clean_domain = domain_name.strip().lower()
         domain_stix = stix2.DomainName(value=clean_domain)
         objects.append(domain_stix)
@@ -141,12 +142,12 @@ class WhoisFreaksStixBuilder:
         return stix2.Bundle(objects=objects, allow_custom=True)
 
     def build_dns_bundle(
-        self, domain_or_ip: str, dns_data: Dict[str, Any]
-    ) -> Optional[stix2.Bundle]:
+        self, domain_or_ip: str, dns_data: dict[str, Any]
+    ) -> stix2.Bundle | None:
         if not dns_data:
             return None
 
-        objects: List[Any] = [self.author]
+        objects: list[Any] = [self.author]
         clean_value = domain_or_ip.strip().lower()
 
         # Unified source observable handler
@@ -206,12 +207,12 @@ class WhoisFreaksStixBuilder:
         return stix2.Bundle(objects=objects, allow_custom=True)
 
     def build_ssl_bundle(
-        self, target: str, ssl_data: Dict[str, Any]
-    ) -> Optional[stix2.Bundle]:
+        self, target: str, ssl_data: dict[str, Any]
+    ) -> stix2.Bundle | None:
         if not ssl_data:
             return None
 
-        objects: List[Any] = [self.author]
+        objects: list[Any] = [self.author]
         clean_target = target.strip().lower()
 
         if self.is_ip_address(clean_target):
@@ -253,12 +254,12 @@ class WhoisFreaksStixBuilder:
         return stix2.Bundle(objects=objects, allow_custom=True)
 
     def build_ip_geolocation_bundle(
-        self, ip_address: str, geolocation_data: Dict[str, Any]
-    ) -> Optional[stix2.Bundle]:
+        self, ip_address: str, geolocation_data: dict[str, Any]
+    ) -> stix2.Bundle | None:
         if not geolocation_data:
             return None
 
-        objects: List[Any] = [self.author]
+        objects: list[Any] = [self.author]
         clean_ip = ip_address.strip()
         ip_stix = (
             stix2.IPv6Address(value=clean_ip)
@@ -306,12 +307,12 @@ class WhoisFreaksStixBuilder:
         return stix2.Bundle(objects=objects, allow_custom=True)
 
     def build_subdomains_bundle(
-        self, domain: str, subdomains_data: Dict[str, Any]
-    ) -> Optional[stix2.Bundle]:
+        self, domain: str, subdomains_data: dict[str, Any]
+    ) -> stix2.Bundle | None:
         if not subdomains_data:
             return None
 
-        objects: List[Any] = [self.author]
+        objects: list[Any] = [self.author]
         clean_domain = domain.strip().lower()
         domain_stix = stix2.DomainName(value=clean_domain)
         objects.append(domain_stix)
@@ -343,12 +344,12 @@ class WhoisFreaksStixBuilder:
         return stix2.Bundle(objects=objects, allow_custom=True)
 
     def build_ip_reputation_bundle(
-        self, ip_address: str, reputation_data: Dict[str, Any]
-    ) -> Optional[stix2.Bundle]:
+        self, ip_address: str, reputation_data: dict[str, Any]
+    ) -> stix2.Bundle | None:
         if not reputation_data:
             return None
 
-        objects: List[Any] = [self.author]
+        objects: list[Any] = [self.author]
         clean_ip = ip_address.strip()
         ip_stix = (
             stix2.IPv6Address(value=clean_ip)
@@ -377,12 +378,12 @@ class WhoisFreaksStixBuilder:
         return stix2.Bundle(objects=objects, allow_custom=True)
 
     def build_domain_reputation_bundle(
-        self, domain: str, reputation_data: Dict[str, Any]
-    ) -> Optional[stix2.Bundle]:
+        self, domain: str, reputation_data: dict[str, Any]
+    ) -> stix2.Bundle | None:
         if not reputation_data:
             return None
 
-        objects: List[Any] = [self.author]
+        objects: list[Any] = [self.author]
         clean_dom = domain.strip().lower()
         dom_stix = stix2.DomainName(value=clean_dom)
         objects.append(dom_stix)
@@ -418,8 +419,6 @@ class WhoisFreaksStixBuilder:
 
     @staticmethod
     def is_ip_address(value: str) -> bool:
-        import ipaddress
-
         try:
             ipaddress.ip_address(value.strip())
             return True

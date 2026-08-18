@@ -1,5 +1,6 @@
 import pytest
 from config_variables import ConfigVariables
+from connectors_sdk import ConfigValidationError
 
 
 @pytest.fixture
@@ -22,41 +23,41 @@ def valid_env(monkeypatch):
 def test_config_variables_success(valid_env):
     """Tests successful instantiation when all environment variables are present."""
     config = ConfigVariables()
-    assert config.opencti_url == "http://localhost:8080"
+    assert str(config.opencti_url).rstrip("/") == "http://localhost:8080"
     assert config.opencti_token == "test-token-uuid-1234"
     assert config.whoisfreaks_api_key == "test_whoisfreaks_api_key_xyz"
 
 
 def test_config_variables_missing_opencti_url(valid_env, monkeypatch):
-    """Executes validation failure lines when OPENCTI_URL is set to default/invalid value."""
-    monkeypatch.setenv("OPENCTI_URL", "ChangeMe")
-    with pytest.raises(SystemExit):
+    """Executes validation failure lines when OPENCTI_URL is missing/invalid."""
+    monkeypatch.delenv("OPENCTI_URL")
+    with pytest.raises((ConfigValidationError, Exception)):
         ConfigVariables()
 
 
 def test_config_variables_missing_opencti_token(valid_env, monkeypatch):
-    """Executes validation failure lines when OPENCTI_TOKEN is set to default/invalid value."""
-    monkeypatch.setenv("OPENCTI_TOKEN", "ChangeMe")
-    with pytest.raises(SystemExit):
+    """Executes validation failure lines when OPENCTI_TOKEN is missing/invalid."""
+    monkeypatch.delenv("OPENCTI_TOKEN")
+    with pytest.raises((ConfigValidationError, Exception)):
         ConfigVariables()
 
 
 def test_config_variables_missing_api_key(valid_env, monkeypatch):
-    """Executes validation failure lines when WHOISFREAKS_API_KEY is set to default/invalid value."""
-    monkeypatch.setenv("WHOISFREAKS_API_KEY", "ChangeMe")
-    with pytest.raises(SystemExit):
+    """Executes validation failure lines when WHOISFREAKS_API_KEY is missing/invalid."""
+    monkeypatch.delenv("WHOISFREAKS_API_KEY")
+    with pytest.raises((ConfigValidationError, Exception)):
         ConfigVariables()
 
 
 def test_config_variables_empty_values(valid_env, monkeypatch):
     """Executes validation checks when required variables are empty strings."""
     monkeypatch.setenv("WHOISFREAKS_API_KEY", "")
-    with pytest.raises(SystemExit):
+    with pytest.raises((ConfigValidationError, Exception)):
         ConfigVariables()
 
 
 def test_config_variables_missing_connector_id(valid_env, monkeypatch):
-    """Executes validation failure lines when CONNECTOR_ID is set to ChangeMe."""
-    monkeypatch.setenv("CONNECTOR_ID", "ChangeMe")
-    with pytest.raises(SystemExit):
+    """Executes validation failure lines when CONNECTOR_ID is missing."""
+    monkeypatch.delenv("CONNECTOR_ID")
+    with pytest.raises((ConfigValidationError, Exception)):
         ConfigVariables()

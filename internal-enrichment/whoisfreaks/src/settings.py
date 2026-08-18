@@ -36,6 +36,7 @@ class WhoisFreaksConfig(BaseConfigModel):
 
     api_key: SecretStr = Field(
         description="API key used to authenticate against the WhoisFreaks API.",
+        min_length=1,
     )
     tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
         Field(

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import requests
 
@@ -14,7 +14,7 @@ class WhoisFreaksClient:
 
     BASE_URL = "https://api.whoisfreaks.com"
 
-    def __init__(self, api_key: str, timeout: Optional[int] = 30):
+    def __init__(self, api_key: str, timeout: int | None = 30):
         self.api_key = api_key
         self.timeout = timeout
         self.session = requests.Session()
@@ -28,10 +28,10 @@ class WhoisFreaksClient:
     def _post(
         self,
         endpoint: str,
-        params: Optional[dict] = None,
-        body: Optional[dict] = None,
-        timeout: Optional[int] = None,
-    ) -> Optional[Dict[str, Any]]:
+        params: dict | None = None,
+        body: dict | None = None,
+        timeout: int | None = None,
+    ) -> dict[str, Any] | None:
         url = f"{self.BASE_URL}{endpoint}"
         if params is None:
             params = {}
@@ -58,9 +58,9 @@ class WhoisFreaksClient:
     def _get(
         self,
         endpoint: str,
-        params: Optional[dict] = None,
-        timeout: Optional[int] = None,
-    ) -> Optional[Dict[str, Any]]:
+        params: dict | None = None,
+        timeout: int | None = None,
+    ) -> dict[str, Any] | None:
         url = f"{self.BASE_URL}{endpoint}"
         if params is None:
             params = {}
@@ -100,31 +100,31 @@ class WhoisFreaksClient:
 
     # --- API ENDPOINT WRAPPERS ---
     def live_whois_lookup(
-        self, domain: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, domain: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v2.0/whois/live", params={"format": format, "domainName": domain}
         )
 
     def historical_whois_lookup(
-        self, domain: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, domain: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v2.0/whois",
             params={"format": format, "domainName": domain, "whois": "historical"},
         )
 
     def reverse_whois_lookup(
-        self, keyword: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, keyword: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v1.0/whois",
             params={"format": format, "keyword": keyword, "whois": "reverse"},
         )
 
     def bulk_whois_lookup(
-        self, domains: list[str], format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, domains: list[str], format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._post(
             "/v2.0/bulkwhois/live",
             params={"format": format},
@@ -132,16 +132,16 @@ class WhoisFreaksClient:
         )
 
     def live_dns_lookup(
-        self, domain: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, domain: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v2.0/dns/live",
             params={"format": format, "domainName": domain, "type": "all"},
         )
 
     def historical_dns_lookup(
-        self, domain: str, format: Optional[str] = "json", page: Optional[int] = 1
-    ) -> Optional[Dict[str, Any]]:
+        self, domain: str, format: str | None = "json", page: int | None = 1
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v2.0/dns/historical",
             params={
@@ -153,8 +153,8 @@ class WhoisFreaksClient:
         )
 
     def reverse_dns_lookup(
-        self, ip_address: str, format: Optional[str] = "json", page: Optional[int] = 1
-    ) -> Optional[Dict[str, Any]]:
+        self, ip_address: str, format: str | None = "json", page: int | None = 1
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v2.0/dns/reverse",
             params={
@@ -170,8 +170,8 @@ class WhoisFreaksClient:
         self,
         domains: list[str],
         ip_addresses: list[str],
-        format: Optional[str] = "json",
-    ) -> Optional[Dict[str, Any]]:
+        format: str | None = "json",
+    ) -> dict[str, Any] | None:
         return self._post(
             "/v2.0/dns/bulk/live",
             params={"format": format, "type": "all"},
@@ -179,28 +179,28 @@ class WhoisFreaksClient:
         )
 
     def domain_availability_lookup(
-        self, domain: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, domain: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v1.0/domain/availability",
             params={"format": format, "domainName": domain, "sug": False},
         )
 
     def bulk_domain_availability_lookup(
-        self, domains: list[str], format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, domains: list[str], format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._post(
             "/v1.0/domain/availability",
             params={"format": format},
             body={"domainNames": domains},
         )
 
-    def typosquatting_lookup(self, keyword: str) -> Optional[Dict[str, Any]]:
+    def typosquatting_lookup(self, keyword: str) -> dict[str, Any] | None:
         return self._get("/v3.0/domain/typos", params={"keyword": keyword})
 
     def ssl_lookup(
-        self, domain: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, domain: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v1.0/ssl/live",
             params={
@@ -212,52 +212,52 @@ class WhoisFreaksClient:
         )
 
     def ip_geolocation_lookup(
-        self, ip_address: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, ip_address: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v1.0/geolocation", params={"format": format, "ip": ip_address}
         )
 
     def bulk_ip_geolocation_lookup(
         self, ip_addresses: list[str]
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         return self._post("/v1.0/geolocation", body={"ips": ip_addresses})
 
     def subdomains_lookup(
-        self, domain: str, format: Optional[str] = "json", page: Optional[int] = 1
-    ) -> Optional[Dict[str, Any]]:
+        self, domain: str, format: str | None = "json", page: int | None = 1
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v1.0/subdomains",
             params={"format": format, "domain": domain, "page": page},
         )
 
-    def ip_reputation_lookup(self, ip_address: str) -> Optional[Dict[str, Any]]:
+    def ip_reputation_lookup(self, ip_address: str) -> dict[str, Any] | None:
         return self._get("/v1.0/security", params={"ip": ip_address})
 
     def bulk_ip_reputation_lookup(
         self, ip_addresses: list[str]
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         return self._post("/v1.0/security", body={"ips": ip_addresses})
 
     def asn_whois_lookup(
-        self, asn: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, asn: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get("/v2.0/asn-whois", params={"asn": asn, "format": format})
 
     def ip_whois_lookup(
-        self, ip_address: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, ip_address: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get("/v1.0/ip-whois", params={"ip": ip_address, "format": format})
 
     def domain_reputation_lookup(
-        self, domain: str, format: Optional[str] = "json"
-    ) -> Optional[Dict[str, Any]]:
+        self, domain: str, format: str | None = "json"
+    ) -> dict[str, Any] | None:
         return self._get(
             "/v1.0/domain-reputation", params={"domainName": domain, "format": format}
         )
 
-    def account_usage(self) -> Optional[Dict[str, Any]]:
+    def account_usage(self) -> dict[str, Any] | None:
         return self._get("/v1.0/whoisapi/usage")
 
-    def rotate_api_key(self) -> Optional[Dict[str, Any]]:
+    def rotate_api_key(self) -> dict[str, Any] | None:
         return self._post("/v1.0/api-key/rotate")

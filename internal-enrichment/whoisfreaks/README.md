@@ -33,6 +33,7 @@ The connector is configured using environment variables (or `.env` / `config.yml
 | `CONNECTOR_CONFIDENCE_LEVEL` | No       | `100`                             | Confidence score (0-100) assigned to created STIX objects.               |
 | `CONNECTOR_LOG_LEVEL`        | No       | `info`                            | Log verbosity (`debug`, `info`, `warning`, `error`).                     |
 | `WHOISFREAKS_API_KEY`        | Yes      | -                                 | Your active WhoisFreaks API key.                                         |
+| `WHOISFREAKS_TLP_LEVEL`       | No       | `amber+strict`                    | Max TLP this connector may process / marking on created entities.        |
 
 ---
 

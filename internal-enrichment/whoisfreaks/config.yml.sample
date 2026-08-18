@@ -12,3 +12,4 @@ connector:
 
 whoisfreaks:
   api_key: 'ChangeMe'
+  tlp_level: 'amber+strict'
