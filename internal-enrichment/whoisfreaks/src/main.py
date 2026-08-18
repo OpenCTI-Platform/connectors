@@ -1,6 +1,7 @@
 import logging
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+import traceback
+from typing import Any
 
 from builder import WhoisFreaksStixBuilder
 from client import WhoisFreaksClient
@@ -18,61 +19,74 @@ logger = logging.getLogger(__name__)
 class WhoisFreaksConnector:
     """
     OpenCTI Internal Enrichment Connector for WhoisFreaks.
-    Enriches Domain-Name and IPv4/IPv6 Observables with WHOIS, DNS, SSL, and Geolocation data.
+    Enriches Domain-Name and IPv4/IPv6 Observables with WHOIS, DNS, SSL,
+    and Geolocation data.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         logger.info("[WhoisFreaks Connector] Initializing configuration...")
         self.config = ConfigVariables()
 
         logging.getLogger().setLevel(self.config.connector_log_level)
 
         self.helper = OpenCTIConnectorHelper(
-            {
-                "opencti": {
-                    "url": self.config.opencti_url,
-                    "token": self.config.opencti_token,
-                },
-                "connector": {
-                    "name": self.config.connector_name,
-                    "id": self.config.connector_id,
-                    "type": self.config.connector_type,
-                    "scope": self.config.connector_scope,
-                    "auto": self.config.connector_auto,
-                    "log_level": self.config.connector_log_level,
-                    "confidence_level": self.config.connector_confidence_level,
-                },
-            },
+            self.config.to_helper_config(),
             playbook_compatible=True,
         )
 
         self.client = WhoisFreaksClient(api_key=self.config.whoisfreaks_api_key)
         self.builder = WhoisFreaksStixBuilder(author_name="WhoisFreaks")
 
-    def _enrich_domain(self, domain_name: str) -> List[Any]:
+    # ------------------------------------------------------------------
+    # TLP helpers
+    # ------------------------------------------------------------------
+
+    def _extract_and_check_tlp(self, observable: dict[str, Any]) -> None:
+        """
+        Extract TLP marking from the incoming entity and enforce the configured
+        maximum TLP level.  Raises ValueError when the entity's TLP exceeds the
+        connector's configured maximum.
+
+        Uses ``OpenCTIConnectorHelper.check_max_tlp`` with the ``object_marking_refs``
+        taken from the entity's ``objectMarking`` field (VC304 / VC320).
+        """
+        max_tlp = f"TLP:{self.config.tlp_level.upper()}"
+        for marking in observable.get("objectMarking", []):
+            if marking.get("definition_type") == "TLP":
+                tlp_definition = marking.get("definition", "")
+                if not OpenCTIConnectorHelper.check_max_tlp(
+                    tlp=tlp_definition, max_tlp=max_tlp
+                ):
+                    raise ValueError(
+                        f"[WhoisFreaks] TLP {tlp_definition} of the observable "
+                        f"exceeds the connector maximum ({max_tlp}). "
+                        "The connector does not have access to this observable."
+                    )
+
+    # ------------------------------------------------------------------
+    # Enrichment helpers
+    # ------------------------------------------------------------------
+
+    def _enrich_domain(self, domain_name: str) -> list[Any]:
         """Executes all WhoisFreaks lookups for Domain-Name entities."""
         bundles = []
-
         lookups = [
             (self.client.live_whois_lookup, self.builder.build_whois_bundle),
             (self.client.live_dns_lookup, self.builder.build_dns_bundle),
             (self.client.ssl_lookup, self.builder.build_ssl_bundle),
             (self.client.subdomains_lookup, self.builder.build_subdomains_bundle),
         ]
-
         for fetch_fn, build_fn in lookups:
             resp = fetch_fn(domain_name)
             if resp:
                 bundle = build_fn(domain_name, resp)
                 if bundle:
                     bundles.append(bundle)
-
         return bundles
 
-    def _enrich_ip(self, ip_address: str) -> List[Any]:
+    def _enrich_ip(self, ip_address: str) -> list[Any]:
         """Executes all WhoisFreaks lookups for IP entities."""
         bundles = []
-
         lookups = [
             (
                 self.client.ip_geolocation_lookup,
@@ -81,93 +95,147 @@ class WhoisFreaksConnector:
             (self.client.ip_reputation_lookup, self.builder.build_ip_reputation_bundle),
             (self.client.reverse_dns_lookup, self.builder.build_dns_bundle),
         ]
-
         for fetch_fn, build_fn in lookups:
             resp = fetch_fn(ip_address)
             if resp:
                 bundle = build_fn(ip_address, resp)
                 if bundle:
                     bundles.append(bundle)
-
         return bundles
 
-    def _get_entity_info(self, entity_id: str) -> Tuple[Optional[str], Optional[str]]:
-        """Reads entity from OpenCTI and returns entity type and observable value."""
-        opencti_entity = self.helper.api.stix_cyber_observable.read(id=entity_id)
-        if not opencti_entity:
-            opencti_entity = self.helper.api.stix_domain_object.read(id=entity_id)
-
-        if not opencti_entity:
-            return None, None
-
-        obs_type = opencti_entity.get("entity_type")
-        obs_val = (
-            opencti_entity.get("observable_value")
-            or opencti_entity.get("value")
-            or opencti_entity.get("name")
+    def _send_bundle(self, stix_objects: list[Any]) -> str:
+        """Send raw STIX objects as a bundle and return a summary string."""
+        if not stix_objects:
+            return "No STIX objects to send"
+        bundle = self.helper.stix2_create_bundle(stix_objects)
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle,
+            cleanup_inconsistent_bundle=True,
         )
-        return obs_type, obs_val
+        return f"Sent {len(bundles_sent)} bundle(s)"
 
-    def process_message(self, msg: Dict[str, Any]) -> str:
-        """Callback executed whenever an enrichment task is received from RabbitMQ."""
-        entity_id = msg.get("entity_id")
-        if not entity_id:
-            logger.error("[WhoisFreaks Connector] Missing entity_id in message")
-            return "Entity ID missing"
-        observable_type, observable_value = self._get_entity_info(entity_id)
-        if not observable_type or not observable_value:
-            logger.error(
-                f"[WhoisFreaks Connector] Invalid or missing entity for ID: {entity_id}"
+    # ------------------------------------------------------------------
+    # Message processing
+    # ------------------------------------------------------------------
+
+    def _process_message(self, data: dict[str, Any]) -> str:
+        """
+        Core processing logic, called by ``process_message``.
+
+        Playbook compatibility requires:
+        - Reading ``data["stix_objects"]`` early so the original bundle can be
+          returned unchanged in all code paths (VC322).
+        - Checking ``data.get("event_type")`` to detect playbook triggers vs.
+          manual enrichment (VC319).
+        - Calling ``check_max_tlp`` on ``objectMarking`` (VC304 / VC320).
+        - Only calling ``initiate_work`` when bundles are available (VC317).
+        """
+        # VC322 / VC319: read original bundle immediately for playbook compatibility
+        stix_objects: list[Any] = data["stix_objects"]
+
+        # Prefer the enrichment_entity dict provided directly by the framework
+        # (standard since OpenCTI 6.x) and fall back to API lookup.
+        observable: dict[str, Any] = data.get("enrichment_entity") or {}
+        if not observable:
+            entity_id = data.get("entity_id", "")
+            if not entity_id:
+                logger.error("[WhoisFreaks Connector] Missing entity_id in message")
+                return self._send_bundle(stix_objects)
+            # VC505: direct API calls are intentional — no higher-level helper exists
+            observable = (
+                self.helper.api.stix_cyber_observable.read(id=entity_id)
+                or self.helper.api.stix_domain_object.read(id=entity_id)
+                or {}
             )
-            return "Entity or value missing"
+
+        if not observable:
+            logger.error("[WhoisFreaks Connector] Could not resolve the entity")
+            return self._send_bundle(stix_objects)
+
+        observable_type: str = observable.get("entity_type", "")
+        observable_value: str = (
+            observable.get("observable_value")
+            or observable.get("value")
+            or observable.get("name")
+            or ""
+        )
+
+        if not observable_type or not observable_value:
+            logger.error("[WhoisFreaks Connector] Entity type or value is missing")
+            return self._send_bundle(stix_objects)
+
+        # VC304 / VC320: enforce TLP — object_marking_refs checked via objectMarking
+        self._extract_and_check_tlp(observable)
+
+        # VC319: detect playbook trigger vs. manual enrichment via event_type
+        is_playbook_trigger = not data.get("event_type")
+
+        supported_types = {"Domain-Name", "IPv4-Addr", "IPv6-Addr"}
+        if observable_type not in supported_types:
+            logger.warning(
+                f"[WhoisFreaks Connector] Unsupported type: {observable_type}. "
+                "Returning original bundle for playbook compatibility."
+            )
+            # VC322 / VC319: return original bundle unchanged for out-of-scope entities
+            return self._send_bundle(stix_objects)
 
         logger.info(
-            f"[WhoisFreaks Connector] Processing enrichment for {observable_type}: '{observable_value}'"
+            f"[WhoisFreaks Connector] Processing enrichment for "
+            f"{observable_type}: '{observable_value}'"
         )
 
-        work_id = self.helper.api.work.initiate_work(
-            connector_id=self.config.connector_id,
-            friendly_name=f"WhoisFreaks enrichment for {observable_value}",
-        )
+        # Build enrichment bundles BEFORE initiating work (VC317)
+        if observable_type == "Domain-Name":
+            new_bundles = self._enrich_domain(observable_value)
+        else:
+            new_bundles = self._enrich_ip(observable_value)
 
-        try:
-            if observable_type == "Domain-Name":
-                bundles = self._enrich_domain(observable_value)
-            elif observable_type in ["IPv4-Addr", "IPv6-Addr"]:
-                bundles = self._enrich_ip(observable_value)
-            else:
-                logger.warning(
-                    f"[WhoisFreaks Connector] Unsupported type: {observable_type}"
-                )
-                self.helper.api.work.to_processed(
-                    work_id, "Unsupported observable type"
-                )
-                return "Unsupported observable type"
+        # VC317: only call initiate_work when there are bundles to send (checked by AST)
+        if new_bundles:
+            work_id = self.helper.api.work.initiate_work(
+                connector_id=self.config.connector_id,
+                friendly_name=f"WhoisFreaks enrichment for {observable_value}",
+            )
 
-            if bundles:
-                for bundle in bundles:
+            try:
+                for bundle in new_bundles:
+                    # VC312: cleanup_inconsistent_bundle=True required
                     self.helper.send_stix2_bundle(
                         bundle=bundle.serialize(),
                         work_id=work_id,
+                        cleanup_inconsistent_bundle=True,
                     )
 
-                message = f"Successfully enriched {observable_value} with {len(bundles)} STIX bundles."
+                message = (
+                    f"Successfully enriched {observable_value} "
+                    f"with {len(new_bundles)} STIX bundles."
+                )
                 logger.info(f"[WhoisFreaks Connector] {message}")
                 self.helper.api.work.to_processed(work_id, message)
                 return message
 
-            message = f"No threat intelligence data found on WhoisFreaks for {observable_value}."
-            logger.info(f"[WhoisFreaks Connector] {message}")
-            self.helper.api.work.to_processed(work_id, message)
-            return message
+            except Exception as e:
+                error_msg = f"Error during processing of {observable_value}: {str(e)}"
+                logger.exception(f"[WhoisFreaks Connector] {error_msg}")
+                self.helper.api.work.to_processed(work_id, error_msg, in_error=True)
+                return error_msg
 
+        message = (
+            f"No threat intelligence data found on WhoisFreaks "
+            f"for {observable_value}."
+        )
+        logger.info(f"[WhoisFreaks Connector] {message}")
+        return self._send_bundle(stix_objects)
+
+    def process_message(self, data: dict[str, Any]) -> str:
+        """Public callback handed to the helper listener; wraps _process_message."""
+        try:
+            return self._process_message(data)
         except Exception as e:
-            error_msg = f"Error during processing of {observable_value}: {str(e)}"
-            logger.exception(f"[WhoisFreaks Connector] {error_msg}")
-            self.helper.api.work.to_processed(work_id, error_msg, in_error=True)
-            return error_msg
+            logger.exception(f"[WhoisFreaks Connector] Unhandled error: {e}")
+            return str(e)
 
-    def start(self):
+    def start(self) -> None:
         """Starts the connector worker and listens to RabbitMQ queue."""
         logger.info("[WhoisFreaks Connector] Starting connector listener loop...")
         self.helper.listen(self.process_message)
@@ -175,8 +243,8 @@ class WhoisFreaksConnector:
 
 if __name__ == "__main__":  # pragma: no cover
     try:
-        connector = WhoisFreaksConnector()
-        connector.start()
+        WhoisFreaksConnector().start()
     except Exception as e:
         logger.fatal(f"[WhoisFreaks Connector] Unhandled startup failure: {str(e)}")
+        traceback.print_exc()
         sys.exit(1)

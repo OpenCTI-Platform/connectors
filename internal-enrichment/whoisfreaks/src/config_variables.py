@@ -1,9 +1,6 @@
 import logging
-import sys
-from pathlib import Path
 
-import yaml
-from pycti import get_config_variable
+from settings import ConnectorSettings
 
 logger = logging.getLogger(__name__)
 
@@ -11,87 +8,32 @@ logger = logging.getLogger(__name__)
 class ConfigVariables:
     """
     Configuration loader for WhoisFreaks OpenCTI Connector.
-    Reads settings from config.yml or environment variables.
+    Reads settings via the connectors-sdk (config.yml or environment variables).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        self._settings = ConnectorSettings()
 
-        config_file_path = Path(__file__).parents[1] / "config.yml"
-        config = {}
+        # Generic OpenCTI connection fields (passed through to helper)
+        self.opencti_url: str = self._settings.opencti.url
+        self.opencti_token: str = self._settings.opencti.token
 
-        if config_file_path.is_file():
-            with open(config_file_path, "r", encoding="utf-8") as file:
-                config = yaml.safe_load(file) or {}
+        # Connector meta-fields
+        self.connector_id: str = self._settings.connector.id
+        self.connector_type: str = self._settings.connector.type
+        self.connector_name: str = self._settings.connector.name
+        self.connector_scope: str = self._settings.connector.scope
+        self.connector_auto: bool = self._settings.connector.auto
+        self.connector_log_level: str = self._settings.connector.log_level.upper()
 
-        self.opencti_url = get_config_variable(
-            "OPENCTI_URL", ["opencti", "url"], config
+        # WhoisFreaks-specific fields
+        self.whoisfreaks_api_key: str = (
+            self._settings.whoisfreaks.api_key.get_secret_value()
         )
+        self.tlp_level: str = self._settings.whoisfreaks.tlp_level
 
-        self.opencti_token = get_config_variable(
-            "OPENCTI_TOKEN", ["opencti", "token"], config
-        )
+        logger.debug("[WhoisFreaks] Configuration loaded successfully.")
 
-        self.connector_id = get_config_variable(
-            "CONNECTOR_ID", ["connector", "id"], config
-        )
-        self.connector_type = get_config_variable(
-            "CONNECTOR_TYPE",
-            ["connector", "type"],
-            config,
-            default="INTERNAL_ENRICHMENT",
-        )
-        self.connector_name = get_config_variable(
-            "CONNECTOR_NAME",
-            ["connector", "name"],
-            config,
-            default="WhoisFreaks",
-        )
-        self.connector_scope = get_config_variable(
-            "CONNECTOR_SCOPE",
-            ["connector", "scope"],
-            config,
-            default="Domain-Name,IPv4-Addr,IPv6-Addr",
-        )
-        self.connector_confidence_level = get_config_variable(
-            "CONNECTOR_CONFIDENCE_LEVEL",
-            ["connector", "confidence_level"],
-            config,
-            isNumber=True,
-            default=100,
-        )
-        self.connector_auto = get_config_variable(
-            "CONNECTOR_AUTO", ["connector", "auto"], config, default=False
-        )
-        # Force log level to uppercase string (e.g. 'INFO')
-        raw_log_level = get_config_variable(
-            "CONNECTOR_LOG_LEVEL", ["connector", "log_level"], config, default="info"
-        )
-        self.connector_log_level = (
-            str(raw_log_level).upper() if raw_log_level else "INFO"
-        )
-        self.whoisfreaks_api_key = get_config_variable(
-            "WHOISFREAKS_API_KEY", ["whoisfreaks", "api_key"], config
-        )
-
-        self._validate()
-
-    def _validate(self) -> None:
-        """Validates that all required configuration values are present."""
-        missing = []
-        if not self.opencti_url or self.opencti_url == "ChangeMe":
-            missing.append("OPENCTI_URL / opencti.url")
-        if not self.opencti_token or self.opencti_token == "ChangeMe":
-            missing.append("OPENCTI_TOKEN / opencti.token")
-        if not self.connector_id or self.connector_id == "ChangeMe":
-            missing.append("CONNECTOR_ID / connector.id")
-        if not self.whoisfreaks_api_key or self.whoisfreaks_api_key == "ChangeMe":
-            missing.append("WHOISFREAKS_API_KEY / whoisfreaks.api_key")
-
-        if missing:
-            logger.error(
-                f"[ERROR] Missing or default configuration values for: {', '.join(missing)}"
-            )
-            logger.error(
-                "[ERROR] Please update config.yml or pass environment variables."
-            )
-            sys.exit(1)
+    def to_helper_config(self) -> dict:
+        """Return the dict expected by OpenCTIConnectorHelper."""
+        return self._settings.to_helper_config()
