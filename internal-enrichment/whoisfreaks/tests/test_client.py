@@ -19,71 +19,106 @@ def test_client_init(client):
 def test_client_get_success(client):
     with requests_mock.Mocker() as m:
         m.get(
-            "https://api.whoisfreaks.com/v2.0/whois/live?apiKey=test-api-key&format=json&domainName=example.com",
+            "https://api.whoisfreaks.com/v2.0/whois/live",
             json={"status": "success"},
         )
         res = client.live_whois_lookup("example.com")
+        assert m.last_request.qs == {
+            "apiKey": ["test-api-key"],
+            "format": ["json"],
+            "domainName": ["example.com"],
+        }
         assert res == {"status": "success"}
 
 
 def test_client_get_404(client):
     with requests_mock.Mocker() as m:
         m.get(
-            "https://api.whoisfreaks.com/v2.0/whois/live?apiKey=test-api-key&format=json&domainName=example.com",
+            "https://api.whoisfreaks.com/v2.0/whois/live",
             status_code=404,
         )
         res = client.live_whois_lookup("example.com")
+        assert m.last_request.qs == {
+            "apiKey": ["test-api-key"],
+            "format": ["json"],
+            "domainName": ["example.com"],
+        }
         assert res is None
 
 
 def test_client_get_401(client):
     with requests_mock.Mocker() as m:
         m.get(
-            "https://api.whoisfreaks.com/v2.0/whois/live?apiKey=test-api-key&format=json&domainName=example.com",
+            "https://api.whoisfreaks.com/v2.0/whois/live",
             status_code=401,
         )
         res = client.live_whois_lookup("example.com")
+        assert m.last_request.qs == {
+            "apiKey": ["test-api-key"],
+            "format": ["json"],
+            "domainName": ["example.com"],
+        }
         assert res is None
 
 
 def test_client_get_429(client):
     with requests_mock.Mocker() as m:
         m.get(
-            "https://api.whoisfreaks.com/v2.0/whois/live?apiKey=test-api-key&format=json&domainName=example.com",
+            "https://api.whoisfreaks.com/v2.0/whois/live",
             status_code=429,
         )
         res = client.live_whois_lookup("example.com")
+        assert m.last_request.qs == {
+            "apiKey": ["test-api-key"],
+            "format": ["json"],
+            "domainName": ["example.com"],
+        }
         assert res is None
 
 
 def test_client_get_500(client):
     with requests_mock.Mocker() as m:
         m.get(
-            "https://api.whoisfreaks.com/v2.0/whois/live?apiKey=test-api-key&format=json&domainName=example.com",
+            "https://api.whoisfreaks.com/v2.0/whois/live",
             status_code=500,
             text="Internal Server Error",
         )
         res = client.live_whois_lookup("example.com")
+        assert m.last_request.qs == {
+            "apiKey": ["test-api-key"],
+            "format": ["json"],
+            "domainName": ["example.com"],
+        }
         assert res is None
 
 
 def test_client_get_timeout(client):
     with requests_mock.Mocker() as m:
         m.get(
-            "https://api.whoisfreaks.com/v2.0/whois/live?apiKey=test-api-key&format=json&domainName=example.com",
+            "https://api.whoisfreaks.com/v2.0/whois/live",
             exc=requests.exceptions.Timeout,
         )
         res = client.live_whois_lookup("example.com")
+        assert m.last_request.qs == {
+            "apiKey": ["test-api-key"],
+            "format": ["json"],
+            "domainName": ["example.com"],
+        }
         assert res is None
 
 
 def test_client_get_request_exception(client):
     with requests_mock.Mocker() as m:
         m.get(
-            "https://api.whoisfreaks.com/v2.0/whois/live?apiKey=test-api-key&format=json&domainName=example.com",
+            "https://api.whoisfreaks.com/v2.0/whois/live",
             exc=requests.RequestException,
         )
         res = client.live_whois_lookup("example.com")
+        assert m.last_request.qs == {
+            "apiKey": ["test-api-key"],
+            "format": ["json"],
+            "domainName": ["example.com"],
+        }
         assert res is None
 
 
