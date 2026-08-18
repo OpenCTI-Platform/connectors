@@ -39,7 +39,13 @@ class TestConnectorSettings:
         settings = _load_settings(VALID_ENV)
 
         assert str(settings.opencti.url).rstrip("/") == "http://localhost:8080"
-        assert settings.opencti.token == "test-opencti-token"
+        token = settings.opencti.token
+        token_value = (
+            token.get_secret_value()
+            if hasattr(token, "get_secret_value")
+            else str(token)
+        )
+        assert token_value == "test-opencti-token"
         assert settings.connector.id == "11111111-1111-1111-1111-111111111111"
         assert settings.whoisfreaks.api_key.get_secret_value() == "test-whoisfreaks-key"
 

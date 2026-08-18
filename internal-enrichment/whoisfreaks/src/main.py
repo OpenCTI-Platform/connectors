@@ -104,12 +104,13 @@ class WhoisFreaksConnector:
         return bundles
 
     def _send_bundle(self, stix_objects: list[Any]) -> str:
-        """Send raw STIX objects as a bundle and return a summary string."""
+        """Send raw STIX objects as a serialized STIX2 bundle and return a summary."""
         if not stix_objects:
             return "No STIX objects to send"
-        bundle = self.helper.stix2_create_bundle(stix_objects)
+        # stix2_create_bundle returns a serialized JSON string (same form as Bundle.serialize())
+        serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
         bundles_sent = self.helper.send_stix2_bundle(
-            bundle,
+            bundle=serialized_bundle,
             cleanup_inconsistent_bundle=True,
         )
         return f"Sent {len(bundles_sent)} bundle(s)"
