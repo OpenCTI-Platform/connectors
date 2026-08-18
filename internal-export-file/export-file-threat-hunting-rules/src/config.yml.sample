@@ -1,0 +1,10 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_EXPORT_FILE'
+  id: 'ChangeMe'
+  name: 'ExportFileThreatHuntingRules'
+  scope: 'application/zip'
+  log_level: 'info'
