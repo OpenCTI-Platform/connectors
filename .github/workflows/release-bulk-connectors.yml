@@ -224,7 +224,10 @@ jobs:
               failed=$((failed + 1))
             fi
             # Space out mutating API calls to stay clear of secondary rate limits.
-            sleep 1
+            # Each dispatched run later fires several of its own mutating calls
+            # (release create + uploads), so 1s here still let bursts of many
+            # runs land in the same window; 4s spreads those bursts out further.
+            sleep 4
           done < <(printf '%s' "$CONNECTORS_JSON" | jq -r '.[]')
 
           {

@@ -631,7 +631,30 @@ jobs:
             NOTES="${NOTICE}"$'\n\n'"${NOTES}"
           fi
 
-          gh release create "$TAG" \
+          # Bulk runs dispatch dozens/hundreds of connector releases in close
+          # succession, each issuing several mutating API calls (create +
+          # multiple uploads). That burst can trip GitHub's *secondary* rate
+          # limit for the installation token (distinct from the hourly quota).
+          # Retry with exponential backoff + jitter, since GitHub explicitly
+          # recommends this for secondary rate limits rather than treating
+          # them as hard failures.
+          gh_retry() {
+            local attempt=1
+            local max_attempts=6
+            local delay=5
+            until "$@"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "::error::Command failed after ${attempt} attempts: $*"
+                return 1
+              fi
+              echo "::warning::Attempt ${attempt} failed, retrying in ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          gh_retry gh release create "$TAG" \
             --title "$TITLE" \
             --notes "$NOTES" \
             --target "${{ github.sha }}"
@@ -642,17 +665,17 @@ jobs:
           FRAGMENT="${{ steps.fragment.outputs.fragment_path }}"
 
           if [ -f "$MANIFEST" ]; then
-            gh release upload "$TAG" "$MANIFEST" --clobber
+            gh_retry gh release upload "$TAG" "$MANIFEST" --clobber
             echo "📎 Attached manifest: $MANIFEST"
           fi
 
           if [ -f "$CONFIG_SCHEMA" ]; then
-            gh release upload "$TAG" "$CONFIG_SCHEMA" --clobber
+            gh_retry gh release upload "$TAG" "$CONFIG_SCHEMA" --clobber
             echo "📎 Attached config schema: $CONFIG_SCHEMA"
           fi
 
           if [ -n "$FRAGMENT" ] && [ -f "$FRAGMENT" ]; then
-            gh release upload "$TAG" "$FRAGMENT" --clobber
+            gh_retry gh release upload "$TAG" "$FRAGMENT" --clobber
             echo "📎 Attached manifest fragment: $FRAGMENT"
           else
             echo "ℹ️ No manifest fragment to attach"
@@ -668,7 +691,7 @@ jobs:
               asset="${CONNECTOR_NAME}-$(echo "$rel" | tr '/' '-')"
               if [ -f "$file" ]; then
                 cp "$file" "${RUNNER_TEMP}/${asset}"
-                gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
+                gh_retry gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
                 echo "📎 Attached pinned dependency file: $asset"
               fi
             done < <(find "$PINNED_DIR" -type f \( -name requirements.txt -o -name pyproject.toml \))
