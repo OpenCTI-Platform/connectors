@@ -21,3 +21,6 @@ doppel:
   max_retries: 3
   retry_delay: 30
   page_size: 100
+  enable_incidents: false
+  enable_grouping_case: false
+  enable_rft_case: false
