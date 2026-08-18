@@ -370,10 +370,24 @@ class RestoreFilesConnector:
                     self.helper.set_state({"current": entry.name})
             if (self.archive_path):
                 self.helper.log_info(f"Archiving {entry} to {self.archive_path}")
-                Path(self.archive_path).mkdir(parents=True, exist_ok=True)
-                shutil.move(str(entry), self.archive_path)
+                archive_dir = Path(self.archive_path)
+                archive_dir.mkdir(parents=True, exist_ok=True)
+                archive_destination = archive_dir / entry.name
+                if not archive_destination.exists():
+                    shutil.move(str(entry), str(archive_destination))
+                else:
+                    for item in entry.iterdir():
+                        if not (archive_destination / item.name).exists():
+                            shutil.move(str(item), str(archive_destination))
+                        else:
+                            if item.is_dir():
+                                shutil.rmtree(item)
+                            else:
+                                item.unlink()
+                if entry.exists() and not any(entry.iterdir()):
+                    shutil.rmtree(entry)
             else:
-                self.helper.log_debug(f"NOT Archiving {entry} to {self.archive_path}")
+                self.helper.log_debug(f"NOT Archiving {entry}")
         self.helper.log_info("restore run completed")
 
     def start(self):
