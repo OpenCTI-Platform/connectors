@@ -10,7 +10,8 @@ from pydantic import Field
 
 class InternalExportFileConnectorConfig(BaseInternalExportFileConnectorConfig):
     """
-    Override the `BaseConnectorConfig` to add connector specific configuration parameters and/or defaults.
+    Override `BaseInternalExportFileConnectorConfig` to add connector-specific configuration
+    parameters and/or defaults.
     """
 
     id: str = Field(
