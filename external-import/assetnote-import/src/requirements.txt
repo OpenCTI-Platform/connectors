@@ -1,5 +1,5 @@
-pycti==7.260807.0
+pycti==7.260817.0
 urllib3==2.7.0
 pydantic>=2.10, <3
 pydantic-settings==2.9.1
-connectors-sdk @ git+https://github.com/opencti-platform/connectors.git@feat/7258-connectors-sdk-add-course-of-action-and-case-incident-models#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/opencti-platform/connectors.git@master#subdirectory=connectors-sdk
