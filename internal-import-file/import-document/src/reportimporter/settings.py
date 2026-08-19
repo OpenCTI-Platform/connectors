@@ -10,6 +10,10 @@ from pydantic import Field
 class InternalImportFileConnectorConfig(BaseInternalImportFileConnectorConfig):
     """Override BaseInternalImportFileConnectorConfig to add defaults for ImportDocument."""
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="b4cc8d6b-1e61-4dc9-8aa1-5e494e6f8d5a",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="ImportDocument",
