@@ -17,11 +17,15 @@
       "writeOnly": true
     },
     "CONNECTOR_NAME": {
+      "default": "ExportFileTxt",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'indicator, vulnerability'.",
+      "default": [
+        "text/plain"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
       "items": {
         "type": "string"
       },
@@ -47,9 +51,7 @@
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN",
-    "CONNECTOR_NAME",
-    "CONNECTOR_SCOPE"
+    "OPENCTI_TOKEN"
   ],
   "additionalProperties": true
 }
