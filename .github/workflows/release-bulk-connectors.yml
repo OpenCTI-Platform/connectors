@@ -181,6 +181,7 @@ jobs:
           python .github/scripts/bulk_release.py "${ARGS[@]}"
 
       - name: Dispatch per-connector releases
+        id: dispatch
         if: ${{ steps.resolve.outputs.has_connectors == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -192,6 +193,12 @@ jobs:
           DRY_RUN: ${{ steps.trigger.outputs.dry_run }}
         run: |
           set -euo pipefail
+
+          # Recorded before any run is dispatched so the tracking step below
+          # can safely disambiguate "this bulk run's dispatches" from any
+          # earlier/unrelated release-connector.yml runs sharing the same
+          # display title (e.g. a re-run of the same connector/version).
+          echo "start_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
           {
             echo "## Bulk release — version \`$VERSION\`"
@@ -229,10 +236,7 @@ jobs:
               failed=$((failed + 1))
             fi
             # Space out mutating API calls to stay clear of secondary rate limits.
-            # Each dispatched run later fires several of its own mutating calls
-            # (release create + uploads), so 1s here still let bursts of many
-            # runs land in the same window; 4s spreads those bursts out further.
-            sleep 4
+            sleep 2
           done < <(printf '%s' "$CONNECTORS_JSON" | jq -r '.[]')
 
           {
@@ -243,6 +247,152 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           echo "✅ ${ok} dispatched, ${failed} failed."
+          if [ "$failed" -gt 0 ]; then
+            exit 1
+          fi
+
+      # Runs even if some dispatches failed above (always()), so the dashboard
+      # still reflects whatever was actually dispatched. Polls each dispatched
+      # release-connector.yml run and re-renders a single live status table in
+      # the job summary until every run reaches a terminal state or the
+      # timeout is hit. One read-only ubuntu-latest job for the whole batch —
+      # no per-connector runners, no mutating API calls, so no secondary
+      # rate-limit risk.
+      - name: Track release status
+        if: always() && steps.resolve.outputs.has_connectors == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONNECTORS_JSON: ${{ steps.resolve.outputs.connectors }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+          MANIFEST_ONLY: ${{ steps.trigger.outputs.manifest_only }}
+          DRY_RUN: ${{ steps.trigger.outputs.dry_run }}
+          START_TIME: ${{ steps.dispatch.outputs.start_time }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "$START_TIME" ]; then
+            echo "ℹ️ No dispatches recorded (dispatch step didn't run) — skipping tracking."
+            exit 0
+          fi
+
+          POLL_INTERVAL=20
+          MAX_WAIT=2700  # 45 minutes
+          elapsed=0
+
+          # Snapshot the summary as written by the dispatch step so each
+          # re-render below can restore it before appending the fresh table —
+          # otherwise overwriting $GITHUB_STEP_SUMMARY here would wipe it,
+          # since it's one shared file across every step in the job.
+          cp "$GITHUB_STEP_SUMMARY" "$RUNNER_TEMP/summary_base.md" 2>/dev/null || : > "$RUNNER_TEMP/summary_base.md"
+
+          mapfile -t NAMES < <(printf '%s' "$CONNECTORS_JSON" | jq -r '.[]')
+
+          # Must match release-connector.yml's run-name template exactly:
+          # "🚀 {connector_name}@{version}[ · dry-run][ · manifest-only]"
+          declare -A TITLE_OF
+          for name in "${NAMES[@]}"; do
+            title="🚀 ${name}@${VERSION}"
+            [ "$DRY_RUN" = "true" ] && title="${title} · dry-run"
+            [ "$MANIFEST_ONLY" = "true" ] && title="${title} · manifest-only"
+            TITLE_OF["$name"]="$title"
+          done
+
+          declare -A STATUS_OF
+          declare -A URL_OF
+          for name in "${NAMES[@]}"; do
+            STATUS_OF["$name"]="⏳ not started"
+          done
+
+          render_summary() {
+            local ok=0 failed=0 pending=0
+            for name in "${NAMES[@]}"; do
+              case "${STATUS_OF[$name]}" in
+                "✅"*) ok=$((ok + 1)) ;;
+                "❌"*) failed=$((failed + 1)) ;;
+                *) pending=$((pending + 1)) ;;
+              esac
+            done
+
+            cat "$RUNNER_TEMP/summary_base.md" > "$GITHUB_STEP_SUMMARY"
+            {
+              echo ""
+              echo "## 📊 Live release status (${ok} ✅ · ${failed} ❌ · ${pending} ⏳)"
+              echo ""
+              echo "| Connector | Status | Run |"
+              echo "|-----------|--------|-----|"
+              for name in "${NAMES[@]}"; do
+                url="${URL_OF[$name]:-}"
+                link=""
+                [ -n "$url" ] && link="[view]($url)"
+                echo "| $name | ${STATUS_OF[$name]} | $link |"
+              done
+              echo ""
+              echo "_Last updated: $(date -u +%Y-%m-%dT%H:%M:%SZ) — refresh this page to see updates._"
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            echo "$ok" > "$RUNNER_TEMP/ok_count"
+            echo "$failed" > "$RUNNER_TEMP/failed_count"
+            echo "$pending" > "$RUNNER_TEMP/pending_count"
+          }
+
+          while :; do
+            runs_json=$(gh run list --workflow=release-connector.yml \
+              --json databaseId,displayTitle,status,conclusion,url,createdAt -L 500 2>/dev/null || echo '[]')
+
+            for name in "${NAMES[@]}"; do
+              # Skip lookups for connectors already in a terminal state.
+              case "${STATUS_OF[$name]}" in
+                "✅"*|"❌"*|"⛔"*) continue ;;
+              esac
+
+              title="${TITLE_OF[$name]}"
+              run=$(echo "$runs_json" | jq -c --arg t "$title" --arg start "$START_TIME" \
+                '[.[] | select(.displayTitle == $t and .createdAt >= $start)] | sort_by(.createdAt) | last // empty')
+
+              [ -z "$run" ] || [ "$run" = "null" ] && continue
+
+              status=$(echo "$run" | jq -r '.status')
+              conclusion=$(echo "$run" | jq -r '.conclusion')
+              url=$(echo "$run" | jq -r '.url')
+              URL_OF["$name"]="$url"
+
+              case "$status" in
+                queued) STATUS_OF["$name"]="⏳ queued" ;;
+                in_progress) STATUS_OF["$name"]="🔄 running" ;;
+                completed)
+                  case "$conclusion" in
+                    success) STATUS_OF["$name"]="✅ success" ;;
+                    failure) STATUS_OF["$name"]="❌ failure" ;;
+                    cancelled) STATUS_OF["$name"]="⛔ cancelled" ;;
+                    *) STATUS_OF["$name"]="⚠️ ${conclusion}" ;;
+                  esac
+                  ;;
+                *) STATUS_OF["$name"]="⏳ ${status}" ;;
+              esac
+            done
+
+            render_summary
+
+            all_done=true
+            for name in "${NAMES[@]}"; do
+              case "${STATUS_OF[$name]}" in
+                "✅"*|"❌"*|"⛔"*|"⚠️"*) ;;
+                *) all_done=false ;;
+              esac
+            done
+            [ "$all_done" = "true" ] && break
+
+            [ "$elapsed" -ge "$MAX_WAIT" ] && { echo "::warning::Tracking timed out after ${MAX_WAIT}s, some connectors still in progress."; break; }
+
+            sleep "$POLL_INTERVAL"
+            elapsed=$((elapsed + POLL_INTERVAL))
+          done
+
+          ok=$(cat "$RUNNER_TEMP/ok_count")
+          failed=$(cat "$RUNNER_TEMP/failed_count")
+          pending=$(cat "$RUNNER_TEMP/pending_count")
+          echo "📊 Final: ${ok} succeeded, ${failed} failed, ${pending} still pending/unknown."
+
           if [ "$failed" -gt 0 ]; then
             exit 1
           fi
