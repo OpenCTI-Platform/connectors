@@ -22,7 +22,6 @@ from settings import ConnectorSettings
                     "validate_before_import": True,
                     "auto": False,
                 },
-                "import_ttps_file_navigator": {},
             },
             id="full_valid_settings_dict",
         ),
@@ -35,7 +34,6 @@ from settings import ConnectorSettings
                 "connector": {
                     "id": "connector-id",
                 },
-                "import_ttps_file_navigator": {},
             },
             id="minimal_valid_settings_dict",
         ),
@@ -56,7 +54,6 @@ def test_settings_should_accept_valid_input(settings_dict):
 
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.import_ttps_file_navigator, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
@@ -78,7 +75,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "application/json",
                     "log_level": "error",
                 },
-                "import_ttps_file_navigator": {},
             },
             "opencti.token",
             id="missing_opencti_token",
@@ -93,7 +89,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "id": 12345,
                     "scope": "application/json",
                 },
-                "import_ttps_file_navigator": {},
             },
             "connector.id",
             id="invalid_connector_id",

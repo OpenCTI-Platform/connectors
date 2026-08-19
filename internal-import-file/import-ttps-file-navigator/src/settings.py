@@ -1,5 +1,4 @@
 from connectors_sdk import (
-    BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalImportFileConnectorConfig,
     ListFromString,
@@ -27,20 +26,9 @@ class InternalImportFileConnectorConfig(BaseInternalImportFileConnectorConfig):
     )
 
 
-class ImportTTPsFileNavigatorConfig(BaseConfigModel):
-    """Config fields specific to the ImportTTPsFileNavigator connector.
-
-    This connector has no custom configuration fields beyond the standard
-    connector settings.
-    """
-
-
 class ConnectorSettings(BaseConnectorSettings):
     """Global settings for the ImportTTPsFileNavigator connector."""
 
     connector: InternalImportFileConnectorConfig = Field(
         default_factory=InternalImportFileConnectorConfig
-    )
-    import_ttps_file_navigator: ImportTTPsFileNavigatorConfig = Field(
-        default_factory=ImportTTPsFileNavigatorConfig
     )
