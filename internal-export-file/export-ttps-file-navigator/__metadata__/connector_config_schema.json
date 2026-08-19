@@ -30,7 +30,7 @@
         "type": "string"
       },
       "type": "array"
-    }
+    },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
       "description": "The minimum level of logs to display.",
