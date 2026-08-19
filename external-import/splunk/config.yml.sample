@@ -1,0 +1,37 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Splunk'
+  scope: 'indicator,identity,incident'
+  log_level: 'info'
+  duration_period: 'PT5M'
+
+splunk:
+  base_url: 'https://splunk.example.com:8089'
+  token: 'ChangeMe'
+  verify_ssl: true
+  timeout_seconds: 60
+  owner: '-'
+  app: '-'
+  scopes: 'indicator,identity,incident'
+  import_indicators: true
+  import_identities: true
+  import_incidents: true
+  indicators_interval: 'PT1H'
+  identities_interval: 'P1D'
+  incidents_interval: 'PT15M'
+  incidents_lookback: 'P1D'
+  indicators_search:
+  identities_search:
+  incidents_search:
+  include_disabled: false
+  note_type_search_parameters: 'Search Parameters'
+  es_api_prefix: '/servicesNS/nobody/missioncontrol/public/v2'
+  tlp_level: 'amber'
+  confidence: 60
+  batch_size: 500
+  max_records_per_run: 10000
