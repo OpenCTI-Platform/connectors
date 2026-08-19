@@ -6,6 +6,8 @@ that configuration flows through validated Pydantic models and
 names and scheduling mechanism stay unchanged.
 """
 
+import base64
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -63,6 +65,13 @@ class ImportDocumentAIConfig(BaseConfigModel):
         ),
         default=None,
     )
+
+    @property
+    def licence_key_base64(self) -> bytes | None:
+        """Base64-encoded api_key, for the X-OpenCTI-Certificate header."""
+        if self.api_key is None:
+            return None
+        return base64.b64encode(self.api_key.get_secret_value().encode())
 
 
 class ConnectorSettings(BaseConnectorSettings):
