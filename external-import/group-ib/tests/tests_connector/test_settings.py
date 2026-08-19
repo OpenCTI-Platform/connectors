@@ -139,3 +139,68 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert "Error validating configuration" in str(err.value)
+
+
+def _fake_settings_from_dict(settings_dict: dict[str, Any]) -> type[ConnectorSettings]:
+    """Build a `ConnectorSettings` subclass returning ``settings_dict`` as raw config."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    return FakeConnectorSettings
+
+
+def test_settings_should_migrate_legacy_double_underscore_ti_api_keys():
+    """
+    Legacy ``TI_API__*`` env vars are parsed by the connectors-sdk loader into the
+    ``ti_api`` section with a leading-underscore/double-underscore suffix (e.g.
+    ``TI_API__PROXY__IP`` -> ``_proxy__ip``). They must be migrated to the flattened
+    single-underscore fields while emitting a ``DeprecationWarning``.
+    """
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "ti_api": {
+            "username": "user@example.com",
+            "token": "test-ti-token",
+            "_url": "https://legacy.group-ib.com/api/v2/",
+            "_proxy__ip": "10.0.0.5",
+            "_extra_settings__schedule_time": "02:30",
+            "_collections__apt_threat__enable": "true",
+            "_collections__apt_threat__ttl": "777",
+        },
+    }
+
+    with pytest.warns(DeprecationWarning) as warning_records:
+        settings = _fake_settings_from_dict(settings_dict)()
+
+    assert settings.ti_api.url == "https://legacy.group-ib.com/api/v2/"
+    assert settings.ti_api.proxy_ip == "10.0.0.5"
+    assert settings.ti_api.extra_settings_schedule_time == "02:30"
+    assert settings.ti_api.collections_apt_threat_enable is True
+    assert settings.ti_api.collections_apt_threat_ttl == 777
+
+    messages = [str(record.message) for record in warning_records]
+    assert any("TI_API__PROXY__IP" in message for message in messages)
+    assert any("TI_API_PROXY_IP" in message for message in messages)
+
+
+def test_settings_new_keys_take_precedence_over_legacy_keys():
+    """When both the legacy and the canonical variable are set, the canonical one wins."""
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "ti_api": {
+            "username": "user@example.com",
+            "token": "test-ti-token",
+            "proxy_ip": "5.5.5.5",
+            "_proxy__ip": "9.9.9.9",
+        },
+    }
+
+    with pytest.warns(DeprecationWarning):
+        settings = _fake_settings_from_dict(settings_dict)()
+
+    assert settings.ti_api.proxy_ip == "5.5.5.5"

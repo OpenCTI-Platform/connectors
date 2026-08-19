@@ -8,8 +8,9 @@ vars; the original attribute names are preserved (e.g. ``ti_api_collections_
 apt_threat_enable``) so the rest of the connector keeps working unchanged.
 """
 
+import warnings
 from datetime import timedelta
-from typing import Literal
+from typing import Any, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -17,7 +18,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 
 class GroupIBConnectorConfig(BaseExternalImportConnectorConfig):
@@ -64,6 +65,45 @@ class GroupIBTIApiConfig(BaseConfigModel):
     The originally nested ``proxy``, ``extra_settings`` and ``collections`` sub-sections
     are flattened into prefixed fields so each value maps to a single env var.
     """
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_double_underscore_env_vars(cls, data: Any) -> Any:
+        """Map legacy ``TI_API__*`` env vars to the flattened single-underscore fields.
+
+        Before the manager-supported migration the deeply-nested ``ti_api`` config was
+        exposed through double-underscore env vars (e.g. ``TI_API__PROXY__IP``,
+        ``TI_API__COLLECTIONS__APT_THREAT__ENABLE``). Those now map to flattened fields
+        using single underscores (``proxy_ip``, ``collections_apt_threat_enable``).
+
+        The connectors-sdk loader still parses a legacy variable into this section but
+        keeps its raw suffix (e.g. ``TI_API__PROXY__IP`` becomes the key
+        ``_proxy__ip``). This validator renames such legacy keys to their canonical
+        field name and emits a ``DeprecationWarning``. The canonical (new) variable wins
+        when both are provided.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        for legacy_key in [k for k in data if isinstance(k, str) and k.startswith("_")]:
+            canonical_key = legacy_key.lstrip("_").replace("__", "_")
+            if canonical_key == legacy_key or canonical_key not in cls.model_fields:
+                continue
+
+            legacy_env_var = f"TI_API_{legacy_key.upper()}"
+            canonical_env_var = f"TI_API_{canonical_key.upper()}"
+            warnings.warn(
+                f"Environment variable '{legacy_env_var}' is deprecated and will be "
+                f"removed in a future release; use '{canonical_env_var}' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+            legacy_value = data.pop(legacy_key)
+            if data.get(canonical_key) in (None, ""):
+                data[canonical_key] = legacy_value
+
+        return data
 
     url: str = Field(
         description="Base URL of the Group-IB Threat Intelligence API.",
