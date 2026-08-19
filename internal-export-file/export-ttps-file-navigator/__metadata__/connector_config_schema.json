@@ -25,12 +25,12 @@
       "default": [
         "application/vnd.mitre.navigator+json"
       ],
-      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "description": "The scope or type of data the connector is exporting, either a MIME type or Stix Object (for information only).",
       "items": {
         "type": "string"
       },
       "type": "array"
-    },
+    }
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
       "description": "The minimum level of logs to display.",
