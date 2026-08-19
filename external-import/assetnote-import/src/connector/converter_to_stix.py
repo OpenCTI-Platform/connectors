@@ -187,7 +187,6 @@ class ConverterToStix:
             created=datetime.fromisoformat(exposure["created"]),
             author=self.author,
             markings=[self.tlp_marking],
-            allow_custom=True,
         ).to_stix2_object()
 
     def _map_incident_response(
