@@ -1,3 +1,4 @@
+restfly==1.5.1
 pyTenable==1.5.3
 python-dateutil==2.9.0.post0
 pycti==7.260309.0.7
