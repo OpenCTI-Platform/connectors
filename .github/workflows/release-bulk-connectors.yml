@@ -202,8 +202,8 @@ jobs:
             fi
             echo "Dispatching connector release(s) on ref \`$REF\`."
             echo ""
-            echo "| Connector | Target | Status |"
-            echo "|-----------|--------|--------|"
+            echo "| Connector | Target | Status | Track |"
+            echo "|-----------|--------|--------|-------|"
           } >> "$GITHUB_STEP_SUMMARY"
 
           ok=0
@@ -211,16 +211,21 @@ jobs:
           while IFS= read -r name; do
             [ -z "$name" ] && continue
             target_label="${name}/${VERSION}"
+            # No extra API call needed: the run-name for workflow_dispatch always
+            # embeds "{connector}/{version}" verbatim, and the Actions runs page
+            # `query` param does a plain-text match against it — so this link
+            # filters straight to this connector's own run(s), free of charge.
+            track_url="https://github.com/${REPO}/actions/workflows/release-connector.yml?query=%22${target_label}%22"
             if gh workflow run release-connector.yml \
                  --ref "$REF" \
                  -f connector_name="$name" \
                  -f version="$VERSION" \
                  -f dry_run="$DRY_RUN" \
                  -f manifest_only="$MANIFEST_ONLY"; then
-              echo "| $name | $target_label | ✅ dispatched |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| $name | $target_label | ✅ dispatched | [view run]($track_url) |" >> "$GITHUB_STEP_SUMMARY"
               ok=$((ok + 1))
             else
-              echo "| $name | $target_label | ❌ dispatch failed |" >> "$GITHUB_STEP_SUMMARY"
+              echo "| $name | $target_label | ❌ dispatch failed | [view run]($track_url) |" >> "$GITHUB_STEP_SUMMARY"
               failed=$((failed + 1))
             fi
             # Space out mutating API calls to stay clear of secondary rate limits.
