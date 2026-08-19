@@ -2,8 +2,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from import_doc_ai import ConfigConnector, Connector
-from import_doc_ai.settings import ConnectorSettings
+from import_doc_ai import Connector, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 
@@ -84,19 +83,13 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.log_level == "ERROR"
 
 
-def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
+def test_connector_is_instantiated(mock_opencti_connector_helper):
     """
     Test that the connector's main class can be instantiated successfully:
-        - `ConfigConnector` MUST be backed by the validated Pydantic settings
         - the connector's main class MUST access env/config vars through self.config
         - the connector's main class MUST access pycti API through self.helper
     """
-    # Back the existing ConfigConnector with the stubbed settings.
-    monkeypatch.setattr(
-        "import_doc_ai.config_loader.ConnectorSettings", StubConnectorSettings
-    )
-
-    config = ConfigConnector()
+    config = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
 
     connector = Connector(config=config, helper=helper)
