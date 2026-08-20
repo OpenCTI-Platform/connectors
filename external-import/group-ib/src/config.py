@@ -1,10 +1,9 @@
 import os
-from typing import Any
+from typing import ClassVar
 
 import isodate
 import pycti
 from cyberintegrations.utils import FileHandler
-from pydantic import SecretStr
 from settings import ConnectorSettings
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 from stix2.v21.vocab import MALWARE_TYPE
@@ -16,60 +15,71 @@ class ConfigConnector:
         Initialize the connector with necessary configurations.
 
         Configuration is loaded and validated through the Pydantic
-        ``ConnectorSettings`` model. The validated values are then exposed using
-        the connector's historical flat attribute names (e.g.
-        ``ti_api_collections_apt_threat_enable``, ``connector_duration_period``)
-        so the rest of the connector keeps working unchanged.
+        ``ConnectorSettings`` model. Values consumed by the rest of the connector
+        are exposed under their historical names via the properties and helpers
+        below, so no downstream code needs to change.
         """
         self.settings = ConnectorSettings()
-        self._expose_settings_as_attributes()
         self.collection_mapping_config = FileHandler().read_json_config(
             self.CONFIG_JSON
         )
-
-    @staticmethod
-    def _unwrap(value: Any) -> Any:
-        """Return the plain value of a ``SecretStr`` (or the value unchanged)."""
-        if isinstance(value, SecretStr):
-            return value.get_secret_value()
-        return value
-
-    def _expose_settings_as_attributes(self) -> None:
-        """
-        Expose validated settings using the connector's historical attribute names.
-
-        The rest of the connector reads flat attributes such as
-        ``ti_api_proxy_ip`` or ``connector_duration_period``; they are derived
-        here from the nested Pydantic settings so no downstream code needs to
-        change.
-        """
-        for field_name in type(self.settings.opencti).model_fields:
-            value = self._unwrap(getattr(self.settings.opencti, field_name))
-            setattr(self, f"opencti_{field_name}", value)
-
-        for field_name in type(self.settings.connector).model_fields:
-            value = getattr(self.settings.connector, field_name)
-            if field_name == "duration_period":
-                # Preserve the historical ISO-8601 string form used by the
-                # scheduler / interval validation helper.
-                value = isodate.duration_isoformat(value)
-            setattr(self, f"connector_{field_name}", self._unwrap(value))
-
-        for field_name in type(self.settings.ti_api).model_fields:
-            value = self._unwrap(getattr(self.settings.ti_api, field_name))
-            setattr(self, f"ti_api_{field_name}", value)
 
     def to_helper_config(self) -> dict:
         """Return a config dict suitable for ``pycti.OpenCTIConnectorHelper``."""
         return self.settings.to_helper_config()
 
-    def get_collection_settings(self, collection, setting_name) -> Any:
-        collection_attr_name = f"ti_api_collections_{collection}_{setting_name}"
-        return getattr(self, collection_attr_name, None)
+    # --- Connector settings consumed by the scheduler / helpers ---
+    @property
+    def connector_duration_period(self) -> str:
+        # Historical ISO-8601 string form used by the interval validation helper.
+        return isodate.duration_isoformat(self.settings.connector.duration_period)
+
+    @property
+    def connector_update_existing_data(self) -> bool:
+        return self.settings.connector.update_existing_data
+
+    # --- Group-IB TI API credentials & proxy consumed by the TI adapter ---
+    @property
+    def ti_api_url(self) -> str:
+        return self.settings.ti_api.url
+
+    @property
+    def ti_api_username(self) -> str:
+        return self.settings.ti_api.username
+
+    @property
+    def ti_api_token(self) -> str:
+        return self.settings.ti_api.token.get_secret_value()
+
+    @property
+    def ti_api_proxy_ip(self):
+        return self.settings.ti_api.proxy_ip
+
+    @property
+    def ti_api_proxy_port(self):
+        return self.settings.ti_api.proxy_port
+
+    @property
+    def ti_api_proxy_protocol(self):
+        return self.settings.ti_api.proxy_protocol
+
+    @property
+    def ti_api_proxy_username(self):
+        return self.settings.ti_api.proxy_username
+
+    @property
+    def ti_api_proxy_password(self):
+        password = self.settings.ti_api.proxy_password
+        return password.get_secret_value() if password is not None else None
+
+    # --- Dynamic collection / extra settings (unknown names resolve to None) ---
+    def get_collection_settings(self, collection, setting_name):
+        return getattr(
+            self.settings.ti_api, f"collections_{collection}_{setting_name}", None
+        )
 
     def get_extra_settings_by_name(self, setting_name):
-        extra_setting_attr_name = f"ti_api_extra_settings_{setting_name}"
-        return getattr(self, extra_setting_attr_name, None)
+        return getattr(self.settings.ti_api, f"extra_settings_{setting_name}", None)
 
     # Set up product metadata
     PRODUCT_TYPE = "SCRIPT"
@@ -120,7 +130,7 @@ class ConfigConnector:
         # fallback if custom TLP cannot be created by stix2 in this runtime
         TLP_AMBER_STRICT = TLP_AMBER
 
-    STIX_TLP_MAP = {
+    STIX_TLP_MAP: ClassVar[dict] = {
         "white": TLP_WHITE,
         "green": TLP_GREEN,
         "amber": TLP_AMBER,
@@ -129,12 +139,12 @@ class ConfigConnector:
     }
 
     # Default TLPs by SDO type when upstream API did not provide a valid TLP
-    DEFAULT_TLP_BY_SDO = {
+    DEFAULT_TLP_BY_SDO: ClassVar[dict] = {
         "malware": "amber+strict",
         "threat-actor": "amber+strict",
         "intrusion-set": "amber+strict",
     }
-    STIX_MAIN_OBSERVABLE_TYPE_MAP = {
+    STIX_MAIN_OBSERVABLE_TYPE_MAP: ClassVar[dict] = {
         "domain": "Domain-Name",
         "domain-name": "Domain-Name",
         "file": "StixFile",
@@ -146,9 +156,9 @@ class ConfigConnector:
         "yara": "StixFile",
         "suricata": "Network-Traffic",
     }
-    STIX_MALWARE_TYPE_MAP = {*MALWARE_TYPE}
+    STIX_MALWARE_TYPE_MAP: ClassVar[set] = {*MALWARE_TYPE}
     # ISO3166-1 https://www.iso.org/standard/72482.html
-    COUNTRIES = {
+    COUNTRIES: ClassVar[dict] = {
         "AF": "Afghanistan",
         "AX": "Åland Islands",
         "AL": "Albania",
@@ -399,19 +409,19 @@ class ConfigConnector:
         "ZM": "Zambia",
         "ZW": "Zimbabwe",
     }
-    STIX_COUNTRY_TYPE_MAP = {
+    STIX_COUNTRY_TYPE_MAP: ClassVar[dict] = {
         "country": "Country",
         "city": "City",
         "state": "Administrative-Area",
     }
-    STIX_REPORT_TYPE_MAP = {"threat_report": "Threat-Report"}
-    STIX_RELATION_TYPE_MAP = {
+    STIX_REPORT_TYPE_MAP: ClassVar[dict] = {"threat_report": "Threat-Report"}
+    STIX_RELATION_TYPE_MAP: ClassVar[dict] = {
         "indicator": "based-on",
         "attack_pattern": "indicates",
         "malware": "indicates",
         "threat_actor": "indicates",
     }
-    COLLECTION_MAP = {
+    COLLECTION_MAP: ClassVar[dict] = {
         "apt_threat": "apt/threat",
         "apt_threat_actor": "apt/threat_actor",
         "attacks_ddos": "attacks/ddos",
