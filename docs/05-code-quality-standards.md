@@ -877,7 +877,7 @@ class MyConnector:
 | `title`                | Official connector name                  | Yes      |
 | `slug`                 | Directory name                           | No       |
 | `description`          | Detailed description                     | Yes      |
-| `short_description`    | Brief summary                            | Yes      |
+| `short_description`    | Brief summary (250 characters max)       | Yes      |
 | `logo`                 | Path to logo (or null)                   | No       |
 | `use_cases`            | List of use cases                        | No       |
 | `solution_categories`  | List of solution categories              | No       |

@@ -59,7 +59,7 @@
       "type": "string",
       "description": "Brief one-line summary of the connector's purpose.",
       "minLength": 1,
-      "maxLength": 200
+      "maxLength": 250
     },
     "logo": {
       "type": "string",

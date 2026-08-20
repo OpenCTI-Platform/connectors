@@ -90,9 +90,6 @@ MANIFEST_KEYS_HANDLED_EXPLICITLY = frozenset(
     }
 )
 
-# Maximum length allowed by the schema for `short_description`.
-SHORT_DESCRIPTION_MAX_LENGTH = 200
-
 # Default logo used when a connector does not ship its own.
 DEFAULT_LOGO_PATH = (
     Path(__file__).parent.parent
@@ -189,13 +186,6 @@ def normalize_slug(slug: str) -> str:
     return slug.lower().replace("_", "-")
 
 
-def truncate_short_description(text: str) -> str:
-    """Truncate `short_description` to the schema's maximum length, adding an ellipsis."""
-    if len(text) <= SHORT_DESCRIPTION_MAX_LENGTH:
-        return text
-    return text[: SHORT_DESCRIPTION_MAX_LENGTH - 3].rstrip() + "..."
-
-
 def load_json(path: Path) -> dict:
     with open(path, "r", encoding="utf-8") as file:
         return json.load(file)
@@ -223,7 +213,7 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
         "title": manifest["title"],
         "slug": slug,
         "description": manifest["description"],
-        "short_description": truncate_short_description(manifest["short_description"]),
+        "short_description": manifest["short_description"],
         "logo": logo,
         "use_cases": manifest["use_cases"],
         "solution_categories": manifest["solution_categories"],
