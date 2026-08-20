@@ -123,3 +123,77 @@ def test_is_unentitled_report_type(body, expected):
     stream, _ = _build_stream(None)
     exc = _auth_error(UnauthorizedException, body)
     assert stream._is_unentitled_report_type(exc) is expected
+
+
+class _StateStream(Intel471Stream):
+    """
+    Minimal concrete stream whose helper-state access is served from an in-memory
+    dict, so `_get_stored_initial_history` can be exercised without the queue-based
+    state handler that runs in the connector.
+    """
+
+    label = "test_state"
+    group_label = "indicators"
+    api_payload_objects_key = "indicators"
+    api_class_name = "IndicatorsApi"
+    api_method_name = "indicators_stream_get"
+
+    def _get_api_kwargs(self, cursor):
+        return {}
+
+
+def _build_state_stream(state, initial_history):
+    stream = _StateStream(
+        MagicMock(), MagicMock(), Queue(), Queue(), initial_history=initial_history
+    )
+    stream._get_state = lambda key: state.get(key)
+    stream._set_state = lambda key, value: state.__setitem__(key, value)
+    return stream
+
+
+INITIAL_HISTORY_MILLIS = 1696156471000  # 2023-10-01
+
+
+def test_stored_initial_history_is_seeded_from_config_when_absent():
+    """First run pins the configured initial history in state."""
+    state = {}
+    stream = _build_state_stream(state, INITIAL_HISTORY_MILLIS)
+
+    assert stream._get_stored_initial_history("key") == INITIAL_HISTORY_MILLIS
+    assert state["key"] == INITIAL_HISTORY_MILLIS
+
+
+def test_stored_initial_history_in_milliseconds_is_left_alone():
+    """A value already in milliseconds is returned untouched and not rewritten."""
+    state = {"key": INITIAL_HISTORY_MILLIS}
+    stream = _build_state_stream(state, 0)
+
+    assert stream._get_stored_initial_history("key") == INITIAL_HISTORY_MILLIS
+    assert state["key"] == INITIAL_HISTORY_MILLIS
+    stream.helper.log_warning.assert_not_called()
+
+
+def test_stored_initial_history_in_seconds_is_repaired():
+    """
+    A value persisted in epoch seconds (by a version that took the config as-is)
+    would be read as a 1970 date and re-ingest the whole history, so it is converted
+    and written back once, with a warning.
+    """
+    state = {"key": INITIAL_HISTORY_MILLIS // 1000}
+    stream = _build_state_stream(state, 0)
+
+    assert stream._get_stored_initial_history("key") == INITIAL_HISTORY_MILLIS
+    assert state["key"] == INITIAL_HISTORY_MILLIS
+    assert stream.helper.log_warning.call_count == 1
+
+
+def test_stored_initial_history_is_kept_when_neither_unit():
+    """
+    A stored value that is plausible as neither unit is left as-is: the run must not
+    fail mid-schedule over state the connector cannot interpret.
+    """
+    state = {"key": 12345}
+    stream = _build_state_stream(state, 0)
+
+    assert stream._get_stored_initial_history("key") == 12345
+    assert state["key"] == 12345

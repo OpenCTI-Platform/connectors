@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from queue import Queue
 from typing import TYPE_CHECKING, Any, Iterator, Union
 
-from intel471.common import HelperRequest
+from intel471.common import HelperRequest, coerce_epoch_millis
 from intel471.version import get_version
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
@@ -177,6 +177,35 @@ class Intel471Stream(ABC):
         else:
             self.helper.log_warning(message)
             self._access_claims_warned = True
+
+    def _get_stored_initial_history(self, key: str) -> int:
+        """
+        Return the initial history timestamp for streams that pin it in OpenCTI state
+        under `key`, so a later change to the config cannot desync it from the cursor.
+
+        The stored value is repaired if it was persisted in epoch seconds: such a
+        value used to be read as a date in early 1970 and re-ingest the whole
+        history on every run, and the config-level conversion alone does not reach
+        deployments that already wrote it to state.
+        """
+        stored_initial_history = self._get_state(key)
+        if not stored_initial_history:
+            stored_initial_history = self.initial_history
+            self._set_state(key, stored_initial_history)
+            return stored_initial_history
+        initial_history_millis = coerce_epoch_millis(stored_initial_history)
+        if (
+            initial_history_millis is not None
+            and initial_history_millis != stored_initial_history
+        ):
+            self.helper.log_warning(
+                f"{self.__class__.__name__} found initial history {stored_initial_history} "
+                f"stored in epoch seconds; converting it to {initial_history_millis} "
+                f"milliseconds, which is what the API expects."
+            )
+            stored_initial_history = initial_history_millis
+            self._set_state(key, stored_initial_history)
+        return stored_initial_history
 
     def send_to_server(self, bundle: Bundle) -> None:
         self.helper.log_info(

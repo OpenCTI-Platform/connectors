@@ -55,7 +55,9 @@ paging/cursor management, OpenCTI state, and sending bundles.
   (`HelperRequest` in `common.py`).
 - `settings.py` — pydantic config (`ConnectorSettings`) built on `connectors-sdk`.
   Env vars are `INTEL471_*` / `CONNECTOR_*` / `OPENCTI_*`. A stream is enabled
-  only if its `interval_<group_label>` is set (non-zero).
+  only if its `interval_<group_label>` is set (non-zero). The `initial_history_*`
+  fields use the `EpochMillis` annotated type, which converts a value given in
+  epoch seconds and rejects one that is neither unit — see "Initial history units".
 - `backend.py` — `get_client(backend_name, ...)` returns a `ClientWrapper` that
   bundles the chosen SDK module, its `Configuration`, its STIX mapper settings
   class, its empty-bundle exception, and the tuple of stream classes. This is the
@@ -93,6 +95,27 @@ purpose: each means a whole stream/category cannot run, which is a real problem 
 operator should see. The exception classes caught per backend
 (`UnauthorizedException`, `ForbiddenException`) are supplied via
 `ClientWrapper.auth_exceptions` in `backend.py`, alongside `empty_bundle_exception`.
+
+## Initial history units
+
+The APIs take `initial_history` in **epoch milliseconds**. A value handed over in
+seconds reads as a date in early 1970, which silently turns "fetch from last month"
+into "fetch the entire history", so the unit is normalised at both boundaries:
+
+- **config** — `EpochMillis` (`settings.py`) runs `normalize_epoch_millis` on every
+  `initial_history_*` field: milliseconds pass through, seconds are scaled up, `0`
+  (no initial history) is left alone, and anything plausible as neither unit fails
+  configuration validation so the connector never starts on an ambiguous date.
+- **state** — `Intel471Stream._get_stored_initial_history()` (`streams/core/base.py`)
+  backs the streams that pin the timestamp in OpenCTI state (Verity471 streams and
+  the Titan indicators stream, so a later config change cannot desync it from the
+  cursor). It repairs a value persisted in seconds by an earlier version, warns, and
+  writes it back. It deliberately does **not** raise on an uninterpretable value:
+  that would fail a scheduled run over state the connector cannot fix.
+
+Both share `coerce_epoch_millis()` in `common.py`, which returns the value in
+milliseconds or `None`. The seconds/milliseconds ranges it accepts
+(2000-01-01 .. 2100-01-01) cannot overlap, so the unit is unambiguous.
 
 ## Adding or changing a stream
 
