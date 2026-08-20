@@ -1,15 +1,18 @@
 # OpenCTI Doppel Alert and Takedown Connector
 
 The **Doppel Alert and Takedown** connector is an OpenCTI internal enrichment connector
-that integrates with [Doppel](https://www.doppel.com). From a suspicious observable
-(a **URL** or a **Domain-Name**), triggered manually by an analyst, automatically
-(auto-enrichment) or from a playbook, the connector:
+that integrates with [Doppel](https://www.doppel.com). It supports two explicit
+workflows:
 
-1. Creates an alert in Doppel (`POST /v1/alert`).
-2. Automatically requests a takedown for that alert (`PUT /v1/alert?entity=...` with
-   `queue_state: "actioned"`).
-3. Enriches the observable in OpenCTI with an **external reference** to the Doppel
-   alert and a **Note** summarizing the created alert and the takedown request.
+- From a suspicious **URL** or **Domain-Name**, it creates an alert in Doppel and
+  requests takedown.
+- From a Doppel **Incident**, it requests takedown for the already-correlated alert
+  without creating a duplicate.
+
+Both workflows set `queue_state: "actioned"` through `PUT /v1/alert` and add an
+OpenCTI **Note** summarizing the result. Observable actions can be triggered manually,
+automatically, or from a playbook. Incident takedown is manual-only; playbook attempts
+are rejected before any Doppel API call.
 
 Table of Contents
 
@@ -28,18 +31,21 @@ Table of Contents
 
 Doppel is a brand protection and digital risk protection platform used to detect and
 take down phishing sites, fraudulent domains and other online threats. This connector
-lets OpenCTI users escalate a suspicious URL or domain to Doppel directly from the
-platform: it opens a Doppel alert and requests a takedown in a single enrichment.
+lets OpenCTI users escalate a suspicious URL or domain to Doppel, or request takedown
+for an existing Doppel alert represented by an imported OpenCTI Incident.
 
 ## Installation
 
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 6.8.12
+- OpenCTI Platform >= 7.260715.0
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
 - A Doppel account with an API key and a user API key
+- The Doppel organization code when the API user belongs to multiple organizations
+- For Incident actions, the Doppel external-import connector configured with
+  `DOPPEL_ENABLE_INCIDENTS=true`
 
 ## Configuration variables
 
@@ -87,10 +93,26 @@ python3 main.py
 
 ## Usage
 
-To trigger enrichment manually, open a URL or Domain-Name observable in OpenCTI and run
-the **Doppel Alert and Takedown** enrichment from the observable's enrichment menu. To run
-it automatically on every new/updated in-scope observable, set `CONNECTOR_AUTO=true`.
-The connector is also playbook compatible and can be added as a step in a playbook.
+To trigger enrichment manually, open a URL, Domain-Name, or eligible Doppel Incident in
+OpenCTI and run **Doppel Alert and Takedown** from its enrichment menu. URL and
+Domain-Name enrichment is also playbook compatible. Incident takedown must be selected
+manually from the Incident's enrichment menu.
+
+Incident support is opt-in. Add `Incident` to `CONNECTOR_SCOPE`, for example:
+
+```text
+CONNECTOR_SCOPE=Url,Domain-Name,Incident
+CONNECTOR_AUTO=false
+CONNECTOR_AUTO_UPDATE=false
+```
+
+`CONNECTOR_AUTO` and `CONNECTOR_AUTO_UPDATE` must remain `false` whenever the scope
+includes `Incident`, and the connector's **Trigger filters** in OpenCTI must be empty.
+The connector verifies these platform settings before every Incident action and fails
+closed if any automatic trigger is enabled or the action is running in a playbook. This
+prevents newly imported or refreshed alerts from automatically requesting takedown.
+Customers that use automatic URL/Domain enrichment should run a separate connector
+instance for explicit Incident actions.
 
 ## Behavior
 
@@ -99,12 +121,25 @@ For each in-scope observable (URL or Domain-Name), the connector:
 - maps the OpenCTI observable type to the Doppel `entity_type`
   (`url` → `url`, `domain-name` → `domain`);
 - creates a Doppel alert with the configured tags;
-- requests a takedown for the alert using the configured comment;
+- requests takedown by the newly created alert ID using the configured comment;
 - returns a STIX bundle containing the observable enriched with an external reference to
   the Doppel alert (`doppel_link`) and a Note summarizing the alert and takedown request.
 
-If the takedown request fails, the alert creation is still recorded and the Note reflects
-the failure; the observable is always returned so playbooks are not interrupted.
+For an in-scope Incident, the connector:
+
+- verifies that the Incident was created from a Doppel alert;
+- requires a matching Doppel-owned external reference and resolves its alert ID;
+- reads the current alert state from Doppel before updating it;
+- requests takedown for that existing alert without calling `POST /v1/alert`;
+- refuses to resend the request when Doppel already reports it as `actioned` or
+  `taken_down`, preventing duplicate comments after retries;
+- adds a Note to the Incident recording success or failure.
+
+If a takedown write fails after validation, the alert creation is still recorded for
+observable actions and the Note reflects the failure. For Incident actions, the existing
+Incident is returned unchanged with a failure Note. Correlation, automation-safety, or
+GET preflight failures stop the work before any write and do not create a Note. Playbook
+attempts for Incidents are rejected and continue with their original bundle.
 
 ## Debugging
 
