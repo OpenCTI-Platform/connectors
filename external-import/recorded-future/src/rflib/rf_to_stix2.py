@@ -1154,7 +1154,7 @@ class StixNote:
         "Validated Intelligence Event": "Observed-Data",
         "Weekly Threat Landscape": "Threat-Report",
         "YARA Rule": "Indicator",
-        "Vulnerability Intelligence": "Vulnerability"
+        "Vulnerability Intelligence": "Vulnerability",
     }
 
     def __init__(
