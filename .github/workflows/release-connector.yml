@@ -299,6 +299,18 @@ jobs:
     needs: resolve
     outputs:
       changelog: ${{ steps.cliff.outputs.content || steps.rerelease-final.outputs.changelog || steps.initial.outputs.changelog }}
+    env:
+      GIT_CLIFF_VERSION: "2.13.1"
+      # Scoped config without the [remote.github] integration: the repo-wide
+      # cliff.toml makes git-cliff paginate the entire commit history through
+      # the REST API (hundreds of calls per release, HTTP 403 once the quota
+      # is gone). PR/issue links are rebuilt from the commit message instead.
+      CLIFF_CONFIG: .github/cliff-connector.toml
+      # Safety net in case remote enrichment is ever re-enabled.
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CONNECTOR_NAME: ${{ needs.resolve.outputs.connector_name }}
+      CONNECTOR_DIR: ${{ needs.resolve.outputs.connector_dir }}
+      CURRENT_TAG: ${{ needs.resolve.outputs.tag }}
     steps:
       - name: Checkout (full history)
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -309,16 +321,15 @@ jobs:
       - name: Check for previous tag and changes
         id: prev
         run: |
-          CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
-          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
-          CURRENT_TAG="${{ needs.resolve.outputs.tag }}"
-
+          set -euo pipefail
+  
           # Find previous tag for this connector (excluding the current one)
-          PREV_TAG=$(git tag --list "${CONNECTOR_NAME}/*" --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
-
+          PREV_TAG=$(git tag --list "${CONNECTOR_NAME}/*" --sort=-version:refname \
+            | { grep -v "^${CURRENT_TAG}$" || true; } | head -1)
+  
           if [ -z "$PREV_TAG" ]; then
             echo "status=initial" >> "$GITHUB_OUTPUT"
-            echo "📌 No previous tag — initial release"
+            echo "📌 No previous tag, initial release"
           else
             echo "tag=$PREV_TAG" >> "$GITHUB_OUTPUT"
             COMMIT_COUNT=$(git log "${PREV_TAG}..HEAD" --oneline --no-merges -- "${CONNECTOR_DIR}/" | wc -l | tr -d ' ')
@@ -327,62 +338,85 @@ jobs:
               echo "📌 Previous tag: $PREV_TAG ($COMMIT_COUNT new commits)"
             else
               echo "status=unchanged" >> "$GITHUB_OUTPUT"
-              echo "📌 Previous tag: $PREV_TAG (no new commits — re-release)"
+              echo "📌 Previous tag: $PREV_TAG (no new commits, re-release)"
             fi
           fi
+
+      # Installs the binary straight from the release asset (object storage),
+      # so it does not consume the repository's 1,000/hour REST budget.
+      - name: Install git-cliff
+        if: steps.prev.outputs.status != 'initial'
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL --retry 3 --retry-delay 5 \
+            "https://github.com/orhun/git-cliff/releases/download/v${GIT_CLIFF_VERSION}/git-cliff-${GIT_CLIFF_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+            -o /tmp/git-cliff.tar.gz
+          tar -xzf /tmp/git-cliff.tar.gz -C /tmp "git-cliff-${GIT_CLIFF_VERSION}/git-cliff"
+          install -m 0755 "/tmp/git-cliff-${GIT_CLIFF_VERSION}/git-cliff" "$HOME/.local/bin/git-cliff"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/git-cliff" --version
 
       - name: Generate changelog with git-cliff
         id: cliff
         if: steps.prev.outputs.status == 'changed'
-        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
-        with:
-          config: cliff.toml
-          args: >-
-            --tag-pattern "${{ needs.resolve.outputs.connector_name }}/*"
-            --include-path "${{ needs.resolve.outputs.connector_dir }}/**"
-            --tag "${{ needs.resolve.outputs.tag }}"
-            --unreleased
-            --strip header
-        env:
-          OUTPUT: /tmp/changelog.md
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git-cliff \
+            --config "${CLIFF_CONFIG}" \
+            --tag-pattern "${CONNECTOR_NAME}/*" \
+            --include-path "${CONNECTOR_DIR}/**" \
+            --tag "${CURRENT_TAG}" \
+            --unreleased \
+            --strip header \
+            --output /tmp/changelog.md
+  
+          {
+            echo "changelog=/tmp/changelog.md"
+            echo "version=${CURRENT_TAG}"
+            echo "content<<GIT_CLIFF_EOF_a7f3"
+            cat /tmp/changelog.md
+            echo "GIT_CLIFF_EOF_a7f3"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Get previous changelog for re-release
         id: rerelease
         if: steps.prev.outputs.status == 'unchanged'
-        uses: orhun/git-cliff-action@f50e11560dce63f7c33227798f90b924471a88b5 # v4.8.0
-        with:
-          config: cliff.toml
-          args: >-
-            --tag-pattern "${{ needs.resolve.outputs.connector_name }}/*"
-            --include-path "${{ needs.resolve.outputs.connector_dir }}/**"
-            --latest
-            --strip header
-        env:
-          OUTPUT: /tmp/prev-changelog.md
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git-cliff \
+            --config "${CLIFF_CONFIG}" \
+            --tag-pattern "${CONNECTOR_NAME}/*" \
+            --include-path "${CONNECTOR_DIR}/**" \
+            --latest \
+            --strip header \
+            --output /tmp/prev-changelog.md
 
       - name: Prepend re-release notice
         id: rerelease-final
         if: steps.prev.outputs.status == 'unchanged'
+        env:
+          PREV_TAG: ${{ steps.prev.outputs.tag }}
         run: |
+          set -euo pipefail
           PREV_CHANGELOG=$(cat /tmp/prev-changelog.md 2>/dev/null || true)
           {
-            echo "changelog<<EOF"
-            echo "> ♻️ **Re-release** — no changes since \`${{ steps.prev.outputs.tag }}\`."
+            echo "changelog<<GIT_CLIFF_EOF_a7f3"
+            echo "> ♻️ **Re-release**: no changes since \`${PREV_TAG}\`."
             echo ""
             echo "$PREV_CHANGELOG"
-            echo "EOF"
+            echo "GIT_CLIFF_EOF_a7f3"
           } >> "$GITHUB_OUTPUT"
 
       - name: Initial release notes (no prior tag)
         id: initial
         if: steps.prev.outputs.status == 'initial'
         run: |
+          set -euo pipefail
           {
-            echo "changelog<<EOF"
-            echo "This is the first independent release for **${{ needs.resolve.outputs.connector_name }}** (\`${{ needs.resolve.outputs.connector_dir }}\`)."
-            echo "EOF"
+            echo "changelog<<GIT_CLIFF_EOF_a7f3"
+            echo "This is the first independent release for **${CONNECTOR_NAME}** (\`${CONNECTOR_DIR}\`)."
+            echo "GIT_CLIFF_EOF_a7f3"
           } >> "$GITHUB_OUTPUT"
 
   # ──────────────────────────────────────────────────────────
@@ -485,7 +519,7 @@ jobs:
       - name: Generate manifest fragment
         id: fragment
         # Non-blocking: the release must succeed even if the fragment can't be built
-        continue-on-error: true
+        continue-on-error: false
         run: |
           CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
           CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
@@ -507,6 +541,66 @@ jobs:
 
           echo "fragment_path=$FRAGMENT_PATH" >> "$GITHUB_OUTPUT"
           echo "✅ Generated manifest fragment: $FRAGMENT_PATH"
+
+      - name: Publish manifest fragment to XTM Hub
+        id: publish-fragment
+        if: steps.fragment.outputs.fragment_path != ''
+        # Blocking: publishing to XTM Hub must fail the release itself.
+        continue-on-error: false
+        env:
+          XTM_HUB_TOKEN: ${{ secrets.XTM_HUB_TOKEN }}
+          XTM_HUB_URL: ${{ secrets.XTM_HUB_URL }}
+        run: |
+          FRAGMENT_PATH="${{ steps.fragment.outputs.fragment_path }}"
+
+          if [ -z "$XTM_HUB_TOKEN" ]; then
+            echo "::warning::XTM_HUB_TOKEN secret not set -- skipping XTM Hub publish"
+            exit 0
+          fi
+
+          QUERY='mutation IngestManifestFragments($manifestFragments: [ManifestFragmentInput!]!) {
+            ingestManifestFragments(manifestFragments: $manifestFragments) {
+              success
+            }
+          }'
+
+          # --slurpfile wraps the single fragment object read from disk into a
+          # one-element array, matching the `[ManifestFragmentInput!]!` shape.
+          PAYLOAD=$(jq -n \
+            --arg query "$QUERY" \
+            --slurpfile fragment "$FRAGMENT_PATH" \
+            '{query: $query, variables: {manifestFragments: $fragment}}')
+
+          echo "Publishing manifest fragment to ${XTM_HUB_URL}"
+
+          HTTP_STATUS=$(curl --silent --show-error \
+            --request POST \
+            --url "${XTM_HUB_URL}/graphql-api" \
+            --header "Content-Type: application/json" \
+            --header "x-xtm-hub-token: ${XTM_HUB_TOKEN}" \
+            --data "$PAYLOAD" \
+            --output "$RUNNER_TEMP/xtm_hub_response.json" \
+            --write-out "%{http_code}")
+
+          RESPONSE=$(cat "$RUNNER_TEMP/xtm_hub_response.json")
+          echo "$RESPONSE" | jq . 2>/dev/null || echo "$RESPONSE"
+
+          if [ "$HTTP_STATUS" -ge 400 ]; then
+            echo "::warning::XTM Hub publish failed with HTTP $HTTP_STATUS"
+            exit 0
+          fi
+
+          if echo "$RESPONSE" | jq -e '.errors' >/dev/null 2>&1; then
+            echo "::warning::XTM Hub returned errors: $(echo "$RESPONSE" | jq -c '.errors')"
+            exit 0
+          fi
+
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.data.ingestManifestFragments.success // false')
+          if [ "$SUCCESS" = "true" ]; then
+            echo "✅ Manifest fragment published to XTM Hub"
+          else
+            echo "::warning::XTM Hub did not report success for manifest fragment publish"
+          fi
 
       - name: Download pinned dependency files
         # Produced by the build job when connectors-sdk was pinned. Non-blocking:
@@ -537,7 +631,30 @@ jobs:
             NOTES="${NOTICE}"$'\n\n'"${NOTES}"
           fi
 
-          gh release create "$TAG" \
+          # Bulk runs dispatch dozens/hundreds of connector releases in close
+          # succession, each issuing several mutating API calls (create +
+          # multiple uploads). That burst can trip GitHub's *secondary* rate
+          # limit for the installation token (distinct from the hourly quota).
+          # Retry with exponential backoff + jitter, since GitHub explicitly
+          # recommends this for secondary rate limits rather than treating
+          # them as hard failures.
+          gh_retry() {
+            local attempt=1
+            local max_attempts=6
+            local delay=5
+            until "$@"; do
+              if [ "$attempt" -ge "$max_attempts" ]; then
+                echo "::error::Command failed after ${attempt} attempts: $*"
+                return 1
+              fi
+              echo "::warning::Attempt ${attempt} failed, retrying in ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          gh_retry gh release create "$TAG" \
             --title "$TITLE" \
             --notes "$NOTES" \
             --target "${{ github.sha }}"
@@ -548,17 +665,17 @@ jobs:
           FRAGMENT="${{ steps.fragment.outputs.fragment_path }}"
 
           if [ -f "$MANIFEST" ]; then
-            gh release upload "$TAG" "$MANIFEST" --clobber
+            gh_retry gh release upload "$TAG" "$MANIFEST" --clobber
             echo "📎 Attached manifest: $MANIFEST"
           fi
 
           if [ -f "$CONFIG_SCHEMA" ]; then
-            gh release upload "$TAG" "$CONFIG_SCHEMA" --clobber
+            gh_retry gh release upload "$TAG" "$CONFIG_SCHEMA" --clobber
             echo "📎 Attached config schema: $CONFIG_SCHEMA"
           fi
 
           if [ -n "$FRAGMENT" ] && [ -f "$FRAGMENT" ]; then
-            gh release upload "$TAG" "$FRAGMENT" --clobber
+            gh_retry gh release upload "$TAG" "$FRAGMENT" --clobber
             echo "📎 Attached manifest fragment: $FRAGMENT"
           else
             echo "ℹ️ No manifest fragment to attach"
@@ -574,7 +691,7 @@ jobs:
               asset="${CONNECTOR_NAME}-$(echo "$rel" | tr '/' '-')"
               if [ -f "$file" ]; then
                 cp "$file" "${RUNNER_TEMP}/${asset}"
-                gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
+                gh_retry gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
                 echo "📎 Attached pinned dependency file: $asset"
               fi
             done < <(find "$PINNED_DIR" -type f \( -name requirements.txt -o -name pyproject.toml \))

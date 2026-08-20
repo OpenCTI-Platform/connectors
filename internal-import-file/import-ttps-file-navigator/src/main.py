@@ -1,27 +1,19 @@
 import json
-import os
 import sys
 import traceback
-from typing import Dict, List
 
 import stix2
-import yaml
 from pycti import AttackPattern, OpenCTIConnectorHelper, StixCoreRelationship
+from settings import ConnectorSettings
 
 
 class ImportTTPsFileNavigator:
-
     def __init__(self):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
-    def _parse_mitre_navigator_content(self, content: str) -> List:
+    def _parse_mitre_navigator_content(self, content: str) -> list:
         """
         :param content:
         :return:
@@ -69,7 +61,7 @@ class ImportTTPsFileNavigator:
 
         return techniques_objects
 
-    def _process_message(self, data: Dict) -> str:
+    def _process_message(self, data: dict) -> str:
         """
         :param data:
         :return:
@@ -115,7 +107,7 @@ class ImportTTPsFileNavigator:
         """
         self.helper.listen(self._process_message)
 
-    def _update_bundle(self, stix_techniques: List, entity_id: str) -> List:
+    def _update_bundle(self, stix_techniques: list, entity_id: str) -> list:
         """
         :param stix_techniques:
         :param entity_id:

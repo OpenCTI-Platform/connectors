@@ -169,6 +169,7 @@ Validates connector metadata (manifest, identity).
 | Code | Severity | Name | Description |
 |------|----------|------|-------------|
 | VC202 | ERROR | `manifest-container-image` | `container_version` must be `"rolling"`, `container_image` must match `opencti/connector-<dirname>` |
+| VC203 | ERROR | `manifest-short-description-length` | `short_description` must be present and at most 250 characters |
 
 ### VC3xx — Code
 

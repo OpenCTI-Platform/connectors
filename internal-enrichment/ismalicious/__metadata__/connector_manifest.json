@@ -2,7 +2,7 @@
   "title": "isMalicious",
   "slug": "ismalicious",
   "description": "isMalicious is a threat intelligence platform that aggregates malicious IP and domain data from 50+ security sources. This connector enriches observables (IPv4, IPv6, Domain) with comprehensive threat intelligence including risk scores, threat category labels (phishing, malware, C2, botnet, ransomware, spam, scam), external references to detection sources, and geographic location data with sighting relationships.\n\nIntegrating isMalicious with OpenCTI enhances threat intelligence by providing multi-source analysis results. Security teams can leverage isMalicious data to confirm, investigate, and respond to potential threats more efficiently, fortifying their overall security posture.",
-  "short_description": "isMalicious aggregates threat intelligence from 50+ sources to identify malicious IPs and domains. Its integration with OpenCTI enriches observables with risk scores, threat categories, and source references for efficient threat confirmation and response.",
+  "short_description": "isMalicious aggregates threat intelligence from 50+ sources to identify malicious IPs and domains. Its OpenCTI integration enriches observables with risk scores, threat categories and source references for efficient threat confirmation.",
   "logo": "internal-enrichment/ismalicious/__metadata__/logo.png",
   "use_cases": [
     "Detection & Response Enablement"

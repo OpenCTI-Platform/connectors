@@ -17,3 +17,4 @@ infoblox:
   api_key: 'ChangeMe' 
   verify_ssl: true
   custom_list_id: 'ChangeMe' # Custom List ID in Infoblox
+  url: 'https://csp.infoblox.com' # Infoblox CSP endpoint, change for regional deployments (e.g. https://csp.eu.infoblox.com)
