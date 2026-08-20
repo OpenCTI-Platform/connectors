@@ -187,7 +187,7 @@ class MispImportFile:
         added_names = []
         for galaxy in galaxies:
             if "namespace" not in galaxy:
-                self.helper.log_info("Skipping galaxy without namespace")
+                self.helper.connector_logger.info("Skipping galaxy without namespace")
                 continue
             # Get the linked intrusion sets
             if (
@@ -798,14 +798,14 @@ class MispImportFile:
 
         attr_data = attribute.get("data")
         if attr_data is None:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 "No data for attribute: {0} ({1}:{2})".format(
                     attr_uuid, attr_type, attr_category
                 )
             )
             return None
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Found PDF '{0}' for attribute: {1} ({2}:{3})".format(
                 attr_value, attr_uuid, attr_type, attr_category
             )
@@ -957,7 +957,9 @@ class MispImportFile:
                         },
                     )
                 except Exception as e:
-                    self.helper.log_error(f"Error processing indicator {name}: {e}")
+                    self.helper.connector_logger.error(
+                        f"Error processing indicator {name}: {e}"
+                    )
             observable = None
             if self.misp_import_file_create_observables and observable_type is not None:
                 try:
@@ -1126,7 +1128,7 @@ class MispImportFile:
                             external_references=attribute_external_references,
                         )
                 except Exception as e:
-                    self.helper.log_error(
+                    self.helper.connector_logger.error(
                         f"Error creating observable type {observable_type} with value {observable_value}: {e}"
                     )
             sightings = []
@@ -1935,7 +1937,7 @@ class MispImportFile:
         bypass_validation = data["bypass_validation"]
         file_markings = data.get("file_markings", [])
         file_uri = self.helper.opencti_url + file_fetch
-        self.helper.log_info(f"Importing the file {file_uri}")
+        self.helper.connector_logger.info(f"Importing the file {file_uri}")
         file_content = self.helper.api.fetch_opencti_file(file_uri)
         events = json.loads(file_content)
         if not isinstance(events, list):
@@ -1948,7 +1950,7 @@ class MispImportFile:
             bundle_json = self._process_event(event)
             entity_id = data.get("entity_id", None)
             if entity_id:
-                self.helper.log_info("Contextual import.")
+                self.helper.connector_logger.info("Contextual import.")
                 bundle = json.loads(bundle_json)["objects"]
                 bundle = self._update_container(bundle, entity_id)
                 bundle_json = self.helper.stix2_create_bundle(bundle)
@@ -2003,7 +2005,7 @@ class MispImportFile:
             ][0]
             if self._is_container(container_stix.get("type")):
                 if self._contains_container(bundle):
-                    self.helper.log_info("Bundle contains container.")
+                    self.helper.connector_logger.info("Bundle contains container.")
                     container_stix["object_refs"] = []
                     for elem in bundle:
                         if self._is_container(elem.get("type")):
@@ -2012,7 +2014,7 @@ class MispImportFile:
                                 for object_id in elem.get("object_refs"):
                                     container_stix["object_refs"].append(object_id)
                 else:
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         "No container in Stix file. Updating current container"
                     )
                     container_stix["object_refs"] = [object["id"] for object in bundle]
