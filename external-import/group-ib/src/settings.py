@@ -68,40 +68,79 @@ class GroupIBTIApiConfig(BaseConfigModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _migrate_legacy_double_underscore_env_vars(cls, data: Any) -> Any:
-        """Map legacy ``TI_API__*`` env vars to the flattened single-underscore fields.
+    def _migrate_legacy_config(cls, data: Any) -> Any:
+        """Map legacy Group-IB TI API configuration shapes to the flattened fields.
 
-        Before the manager-supported migration the deeply-nested ``ti_api`` config was
-        exposed through double-underscore env vars (e.g. ``TI_API__PROXY__IP``,
-        ``TI_API__COLLECTIONS__APT_THREAT__ENABLE``). Those now map to flattened fields
-        using single underscores (``proxy_ip``, ``collections_apt_threat_enable``).
+        Before the manager-supported migration the ``ti_api`` configuration was
+        deeply nested. Two legacy shapes are still accepted for backward compatibility:
 
-        The connectors-sdk loader still parses a legacy variable into this section but
-        keeps its raw suffix (e.g. ``TI_API__PROXY__IP`` becomes the key
-        ``_proxy__ip``). This validator renames such legacy keys to their canonical
-        field name and emits a ``DeprecationWarning``. The canonical (new) variable wins
-        when both are provided.
+        * the original **nested** ``config.yml`` sub-sections ``proxy``,
+          ``extra_settings`` and ``collections`` (the latter keyed by slash, e.g.
+          ``apt/threat``);
+        * the legacy **double-underscore env vars** (e.g. ``TI_API__PROXY__IP``,
+          ``TI_API__COLLECTIONS__APT_THREAT__ENABLE``) which the connectors-sdk loader
+          keeps as raw suffix keys (``_proxy__ip``, ``_collections__apt_threat__enable``).
+
+        Both are migrated to the flattened fields (``proxy_ip``,
+        ``collections_apt_threat_enable``, ...) with a ``DeprecationWarning`` so operators
+        update their configuration. The already-flattened (canonical) value takes
+        precedence when both forms are provided.
         """
         if not isinstance(data, dict):
             return data
 
+        data = dict(data)
+
+        def set_if_absent(canonical_key: str, value: Any) -> None:
+            if canonical_key in cls.model_fields and data.get(canonical_key) in (
+                None,
+                "",
+            ):
+                data[canonical_key] = value
+
+        # 1. Legacy nested ``config.yml`` sub-sections.
+        for section in ("proxy", "extra_settings"):
+            nested = data.pop(section, None)
+            if isinstance(nested, dict):
+                warnings.warn(
+                    f"Deprecated nested 'ti_api.{section}' configuration detected; "
+                    f"use the flattened '{section}_*' settings instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                for key, value in nested.items():
+                    set_if_absent(f"{section}_{key}", value)
+
+        collections = data.pop("collections", None)
+        if isinstance(collections, dict):
+            warnings.warn(
+                "Deprecated nested 'ti_api.collections' configuration detected; use the "
+                "flattened 'collections_<name>_<setting>' settings instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            for collection_name, collection_settings in collections.items():
+                if isinstance(collection_settings, dict):
+                    flat_name = collection_name.replace("/", "_")
+                    for key, value in collection_settings.items():
+                        set_if_absent(f"collections_{flat_name}_{key}", value)
+
+        # 2. Legacy double-underscore env vars kept as raw suffix keys (e.g. _proxy__ip).
         for legacy_key in [k for k in data if isinstance(k, str) and k.startswith("_")]:
             canonical_key = legacy_key.lstrip("_").replace("__", "_")
             if canonical_key == legacy_key or canonical_key not in cls.model_fields:
                 continue
 
-            legacy_env_var = f"TI_API_{legacy_key.upper()}"
-            canonical_env_var = f"TI_API_{canonical_key.upper()}"
             warnings.warn(
-                f"Environment variable '{legacy_env_var}' is deprecated and will be "
-                f"removed in a future release; use '{canonical_env_var}' instead.",
+                f"Environment variable 'TI_API_{legacy_key.upper()}' is deprecated and "
+                f"will be removed in a future release; use "
+                f"'TI_API_{canonical_key.upper()}' instead.",
                 DeprecationWarning,
                 stacklevel=2,
             )
 
-            legacy_value = data.pop(legacy_key)
-            if data.get(canonical_key) in (None, ""):
-                data[canonical_key] = legacy_value
+            value = data.pop(legacy_key)
+            set_if_absent(canonical_key, value)
 
         return data
 

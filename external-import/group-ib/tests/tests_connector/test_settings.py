@@ -204,3 +204,65 @@ def test_settings_new_keys_take_precedence_over_legacy_keys():
         settings = _fake_settings_from_dict(settings_dict)()
 
     assert settings.ti_api.proxy_ip == "5.5.5.5"
+
+
+def test_settings_should_migrate_legacy_nested_config():
+    """
+    A legacy nested ``config.yml`` exposes ``ti_api`` with nested ``proxy``,
+    ``extra_settings`` and ``collections`` sub-sections (the latter keyed by slash,
+    e.g. ``apt/threat``). They must be flattened onto the canonical fields while
+    emitting a ``DeprecationWarning``.
+    """
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "ti_api": {
+            "username": "user@example.com",
+            "token": "test-ti-token",
+            "url": "https://legacy.group-ib.com/api/v2/",
+            "proxy": {"ip": "10.0.0.5", "port": "8080"},
+            "extra_settings": {
+                "schedule_time": "02:30",
+                "enable_statement_marking": True,
+            },
+            "collections": {
+                "apt/threat": {"enable": True, "ttl": 777},
+                "suspicious_ip/scanner": {"enable": True},
+            },
+        },
+    }
+
+    with pytest.warns(DeprecationWarning) as warning_records:
+        settings = _fake_settings_from_dict(settings_dict)()
+
+    assert settings.ti_api.url == "https://legacy.group-ib.com/api/v2/"
+    assert settings.ti_api.proxy_ip == "10.0.0.5"
+    assert settings.ti_api.proxy_port == "8080"
+    assert settings.ti_api.extra_settings_schedule_time == "02:30"
+    assert settings.ti_api.extra_settings_enable_statement_marking is True
+    assert settings.ti_api.collections_apt_threat_enable is True
+    assert settings.ti_api.collections_apt_threat_ttl == 777
+    assert settings.ti_api.collections_suspicious_ip_scanner_enable is True
+
+    messages = [str(record.message) for record in warning_records]
+    assert any("ti_api.proxy" in message for message in messages)
+    assert any("ti_api.collections" in message for message in messages)
+
+
+def test_settings_new_flat_keys_take_precedence_over_nested_config():
+    """When both a nested sub-section and its flattened field are set, the flat one wins."""
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "ti_api": {
+            "username": "user@example.com",
+            "token": "test-ti-token",
+            "proxy_ip": "5.5.5.5",
+            "proxy": {"ip": "9.9.9.9"},
+        },
+    }
+
+    with pytest.warns(DeprecationWarning):
+        settings = _fake_settings_from_dict(settings_dict)()
+
+    assert settings.ti_api.proxy_ip == "5.5.5.5"
