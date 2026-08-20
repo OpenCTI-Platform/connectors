@@ -46,7 +46,7 @@ This connector imports threat intelligence data publicly available from [Wiz Res
 ### Requirements
 
 - OpenCTI Platform >= 6.3.8
-- Internet access to https://threats.wiz.io/
+- Internet access to https://www.wiz.io/
 
 ## Configuration variables
 

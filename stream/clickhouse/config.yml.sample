@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'ClickHouse' # optional (default: 'ClickHouse')
+  scope: 'clickhouse' # optional (default: 'clickhouse')
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true # optional (default: true)
+  live_stream_no_dependencies: true # optional (default: true)
+
+clickhouse:
+  base_url: 'ChangeMe' # Base URL of the ClickHouse HTTP interface, e.g. http://clickhouse:8123
+  username: 'default' # optional (default: 'default')
+  password: 'ChangeMe'
+  database: 'default' # optional (default: 'default')
+  table: 'opencti_stream' # optional (default: 'opencti_stream')
+  create_table: true # optional (default: true)
+  ssl_verify: true # optional (default: true)

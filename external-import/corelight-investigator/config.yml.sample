@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  #name: 'Corelight Investigator' # optional (default: 'Corelight Investigator')
+  #scope: 'corelight-investigator' # optional (default: 'corelight-investigator')
+  #log_level: 'error' # optional (default: 'error')
+  #duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+corelight_investigator:
+  api_base_url: 'ChangeMe' # Corelight Investigator API base URL, region specific, e.g. 'https://eu.api.investigator.corelight.com'
+  api_key: 'ChangeMe' # Corelight Investigator API key (Authorization bearer header)
+  #alerts_path: '/api/v1/alerts' # optional, Detections and Alerts API endpoint path (default: '/api/v1/alerts')
+  #import_window_days: 7 # optional, look-back window in days on the first run (default: 7)
+  #max_alerts: 1000 # optional, max alerts to request per run (default: 1000)
+  #tlp_level: 'amber' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber')
+  #ssl_verify: true # optional (default: true)

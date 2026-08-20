@@ -5,8 +5,7 @@
     "short_description": "isMalicious aggregates threat intelligence from 50+ sources to identify malicious IPs and domains. Its integration with OpenCTI enriches observables with risk scores, threat categories, and source references for efficient threat confirmation and response.",
     "logo": "internal-enrichment/ismalicious/__metadata__/logo.png",
     "use_cases": [
-        "Enrichment & Analysis",
-        "Threat Intelligence"
+        "Enrichment & Analysis"
     ],
     "verified": false,
     "last_verified_date": null,

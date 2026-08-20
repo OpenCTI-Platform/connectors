@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/arcsight_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ArcSight",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "arcsight"
+      ],
+      "description": "The scope of the connector, used to filter the live stream events.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the OpenCTI live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "ARCSIGHT_API_BASE_URL": {
+      "description": "Base URL of the ArcSight ESM Manager (e.g. https://arcsight.example.com:8443).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "ARCSIGHT_USERNAME": {
+      "description": "ArcSight ESM user name.",
+      "type": "string"
+    },
+    "ARCSIGHT_PASSWORD": {
+      "description": "ArcSight ESM user password.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ARCSIGHT_ACTIVE_LIST_ID": {
+      "description": "Resource ID of the ArcSight Active List that receives the IOCs.",
+      "type": "string"
+    },
+    "ARCSIGHT_VALUE_COLUMN": {
+      "default": "value",
+      "description": "Name of the Active List column that stores the IOC value.",
+      "type": "string"
+    },
+    "ARCSIGHT_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify the SSL certificate of the ArcSight ESM Manager.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "ARCSIGHT_API_BASE_URL",
+    "ARCSIGHT_USERNAME",
+    "ARCSIGHT_PASSWORD",
+    "ARCSIGHT_ACTIVE_LIST_ID"
+  ],
+  "additionalProperties": true
+}

@@ -1,5 +1,7 @@
+import typing
 from datetime import datetime
 from enum import Enum
+from typing import Literal
 
 
 class DateTimeFormat(Enum):
@@ -9,9 +11,26 @@ class DateTimeFormat(Enum):
 
 
 class Utils:
+    @staticmethod
+    @typing.overload
+    def get_now(now_format: Literal[DateTimeFormat.DATETIME]) -> datetime: ...
 
     @staticmethod
-    def get_now(now_format: DateTimeFormat = None) -> datetime | str | int | dict:
+    @typing.overload
+    def get_now(now_format: Literal[DateTimeFormat.ISO]) -> str: ...
+
+    @staticmethod
+    @typing.overload
+    def get_now(now_format: Literal[DateTimeFormat.TIMESTAMP]) -> int: ...
+
+    @staticmethod
+    @typing.overload
+    def get_now(now_format: None = None) -> dict: ...
+
+    @staticmethod
+    def get_now(
+        now_format: DateTimeFormat | None = None,
+    ) -> datetime | str | int | dict:
         """
         Utility method: Get the current date and time in various formats.
 

@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-paloalto-wildfire:
+    image: opencti/connector-paloalto-wildfire:latest # 'paloalto-wildfire' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Palo Alto Networks WildFire # optional (default: 'Palo Alto Networks WildFire')
+      # - CONNECTOR_SCOPE=StixFile,Artifact # optional (default: 'StixFile,Artifact')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_AUTO=false # optional (default: false)
+      # Custom parameters for connector-paloalto-wildfire
+      - PALOALTO_WILDFIRE_API_KEY=ChangeMe
+      # - PALOALTO_WILDFIRE_API_BASE_URL=https://wildfire.paloaltonetworks.com/publicapi # optional (default: cloud endpoint)
+      # - PALOALTO_WILDFIRE_SUBMIT_UNKNOWN=false # optional, submit unknown files for analysis (default: false)
+      # - PALOALTO_WILDFIRE_MAX_FILE_SIZE=33554432 # optional, max bytes to download/submit (default: 33554432 = 32 MiB)
+      # - PALOALTO_WILDFIRE_SUBMISSION_TIMEOUT=600 # optional, max seconds to wait for a submitted file verdict (default: 600)
+      # - PALOALTO_WILDFIRE_MAX_TLP=TLP:AMBER # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')
+    restart: always

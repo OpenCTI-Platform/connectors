@@ -395,6 +395,16 @@ class MispConfig(BaseConfigModel):
         default=None,
     )
 
+    attribute_timestamp_filtering: bool = Field(
+        description=(
+            "When enabled, the connector tracks the last attribute timestamp "
+            "and only processes attributes that have been created or modified "
+            "since the previous run. This dramatically reduces processing "
+            "volume for long-lived MISP events with many attributes."
+        ),
+        default=False,
+    )
+
     search_limit: int = Field(
         description="Limit the number of results returned per page request to MISP server.",
         default=10,

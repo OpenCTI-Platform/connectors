@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/paloalto-wildfire_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Palo Alto Networks WildFire",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "StixFile",
+        "Artifact"
+      ],
+      "description": "The scope of the connector (observable types to enrich).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "PALOALTO_WILDFIRE_API_KEY": {
+      "description": "Palo Alto Networks WildFire API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "PALOALTO_WILDFIRE_API_BASE_URL": {
+      "default": "https://wildfire.paloaltonetworks.com/publicapi",
+      "description": "WildFire API base URL (cloud region or appliance).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "PALOALTO_WILDFIRE_SUBMIT_UNKNOWN": {
+      "default": false,
+      "description": "Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet. Disabled by default (opt-in): submission uploads the sample to WildFire.",
+      "type": "boolean"
+    },
+    "PALOALTO_WILDFIRE_MAX_FILE_SIZE": {
+      "default": 33554432,
+      "description": "Maximum size (in bytes) of a file the connector will download from OpenCTI and submit to WildFire.",
+      "type": "integer"
+    },
+    "PALOALTO_WILDFIRE_SUBMISSION_TIMEOUT": {
+      "default": 600,
+      "description": "Maximum time (in seconds) to wait for a submitted file's verdict before giving up.",
+      "type": "integer"
+    },
+    "PALOALTO_WILDFIRE_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Maximum TLP of the observable the connector is allowed to enrich.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "PALOALTO_WILDFIRE_API_KEY"
+  ],
+  "additionalProperties": true
+}

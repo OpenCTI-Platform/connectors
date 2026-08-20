@@ -5,7 +5,8 @@
   "short_description": "Google SecOps SIEM offers a cloud-based security information and event management solution that helps organizations collect, analyze, and respond to security incidents across their networks.",
   "logo": "stream/google-secops-siem/__metadata__/logo.png",
   "use_cases": [
-    "SIEM & Analytics"
+    "SIEM and Analytics",
+    "Detection & Response Enablement"
   ],
   "verified": true,
   "last_verified_date": "2026-05-05",

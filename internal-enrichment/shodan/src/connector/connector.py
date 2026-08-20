@@ -399,8 +399,11 @@ class ShodanConnector:
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
                 return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
             except shodan.APIError as e:
-                # Handling specific errors for Shodan API
-                raise ValueError(f"Shodan API Error : {e}") from e
+                self.helper.connector_logger.error(
+                    "Shodan API error, skipping enrichment",
+                    {"query": ip_value, "error": str(e)},
+                )
+                return f"Skipped: {e}"
         elif (
             stix_entity["type"] == "indicator"
             and stix_entity["pattern_type"] == "shodan"
@@ -504,8 +507,11 @@ class ShodanConnector:
                 )
                 return f"Sent {len(bundles_sent)} STIX bundle(s) for import"
             except shodan.APIError as e:
-                # Handling specific errors for Shodan API
-                raise ValueError(f"Shodan API Error : {e}") from e
+                self.helper.connector_logger.error(
+                    "Shodan API error, skipping enrichment",
+                    {"query": pattern_value, "error": str(e)},
+                )
+                return f"Skipped: {e}"
 
         elif stix_entity["type"] == "indicator":
             raise ValueError(f"Unsupported pattern type: {stix_entity['pattern_type']}")

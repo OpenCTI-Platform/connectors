@@ -9,6 +9,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
+from google_secops_siem_incidents.utils.enums import Priority, Severity
 from pydantic import Field, field_validator
 
 
@@ -75,11 +76,61 @@ class GoogleSecOpsConfig(BaseConfigModel):
             "(ISO-8601 duration, e.g. P1D). Used only when no prior state exists."
         ),
     )
+    severity_filter: Severity | None = Field(
+        None,
+        description=(
+            "Minimum severity level to import. All alerts at or above this "
+            "level are imported (CRITICAL > HIGH > MEDIUM > LOW > INFO). "
+            "When not set, all severities are imported. "
+            "Alerts with unknown severity are always imported."
+        ),
+    )
+    priority_filter: Priority | None = Field(
+        None,
+        description=(
+            "Minimum priority level to import. All alerts at or above this "
+            "level are imported (CRITICAL > HIGH > MEDIUM > LOW > INFO). "
+            "When not set, all priorities are imported. "
+            "Alerts with unknown priority are always imported."
+        ),
+    )
+    risk_score_filter: int | None = Field(
+        None,
+        ge=0,
+        description=(
+            "Minimum risk score to import. All alerts with a risk score "
+            "greater than or equal to this value are imported. "
+            "Alerts without a risk score always pass. "
+            "When not set, all alerts are imported regardless of risk score."
+        ),
+    )
+    tags_include: ListFromString = Field(
+        default=[],
+        description=(
+            "Comma-separated list of tags to include. Only alerts that have "
+            "at least one of these tags are imported. "
+            "When empty, no inclusion filter is applied."
+        ),
+    )
+    tags_exclude: ListFromString = Field(
+        default=[],
+        description=(
+            "Comma-separated list of tags to exclude. Alerts that have "
+            "any of these tags are excluded. "
+            "When empty, no exclusion filter is applied."
+        ),
+    )
+
+    @field_validator("tags_include", "tags_exclude", mode="after")
+    @classmethod
+    def _normalize_tags(cls, v: list[str]) -> list[str]:
+        """Normalize tag values to lowercase for case-insensitive matching."""
+        return [t.strip().lower() for t in v if t.strip()]
 
     @field_validator("private_key", mode="before")
     @classmethod
     def _normalize_pem_newlines(cls, v: str) -> str:
-        """Replace literal '\\n' with real newlines so PEM parsing succeeds."""
+        r"""Replace literal '\\n' with real newlines so PEM parsing succeeds."""
         if isinstance(v, str) and "\\n" in v:
             return v.replace("\\n", "\n")
         return v

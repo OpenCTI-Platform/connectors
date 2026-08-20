@@ -305,17 +305,19 @@ class TestCreateSector:
 # ---------------------------------------------------------------------------
 class TestRelationship:
     def test_relationship_shape(self, converter):
+        src = "malware--12345678-1234-4234-8234-123456789abc"
+        tgt = "attack-pattern--87654321-4321-4321-8321-cba987654321"
         rel = converter.create_relationship(
-            source_id="malware--test-src",
+            source_id=src,
             relationship_type="uses",
-            target_id="attack-pattern--test-tgt",
+            target_id=tgt,
             description="test relationship",
         )
         assert rel is not None
         assert rel["type"] == "relationship"
         assert rel["relationship_type"] == "uses"
-        assert rel["source_ref"] == "malware--test-src"
-        assert rel["target_ref"] == "attack-pattern--test-tgt"
+        assert rel["source_ref"] == src
+        assert rel["target_ref"] == tgt
         assert rel["description"] == "test relationship"
 
 

@@ -1,0 +1,59 @@
+{
+  "data": {
+    "signature": {
+      "id": "sig-001",
+      "name": "Exposed admin panel",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/79.html"
+      ],
+      "vulnerabilities": [
+        {
+          "cve_id": "CVE-2024-1234",
+          "name": "CVE-2024-1234",
+          "cvss_score": 9.8,
+          "cvss_metrics": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+          "epss_score": 0.95,
+          "references": [
+            "https://nvd.nist.gov/vuln/detail/CVE-2024-1234"
+          ],
+          "cwe_ids": ["79"]
+        }
+      ]
+    },
+    "asset_exposures": [
+      {
+        "asset_id": "203.0.113.10",
+        "instances": [
+          {
+            "port_number": 443
+          }
+        ],
+        "details": {
+          "target": "203.0.113.10:443",
+          "extractions": {
+            "protocol": "tls1.0"
+          }
+        }
+      },
+      {
+        "asset_id": "example.com",
+        "instances": [
+          {
+            "port_number": 80
+          }
+        ],
+        "details": {
+          "target": "example.com:80",
+          "extractions": {
+            "protocol": "http"
+          }
+        }
+      }
+    ]
+  },
+  "meta": {
+    "pagination": {
+      "next_cursor": "assets-cursor-page-2"
+    }
+  }
+}

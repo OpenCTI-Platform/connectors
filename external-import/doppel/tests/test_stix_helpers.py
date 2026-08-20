@@ -1,8 +1,11 @@
+import pytest
 from doppel.stix_helpers import (
     build_custom_properties,
     build_description,
     build_external_references,
     build_labels,
+    in_takedown_state,
+    is_reverted_state,
 )
 
 # --------------------------
@@ -85,6 +88,56 @@ def test_build_labels():
         "platform:domains",
         "brand:Brand Test",
     ]
+
+
+# Scenario: takedown states are detected regardless of spelling/whitespace
+@pytest.mark.parametrize(
+    "queue_state",
+    [
+        "actioned",
+        "ACTIONED",
+        "taken_down",
+        "taken down",  # space-separated variant seen in some payloads/fixtures
+        "Taken Down",
+        "  taken   down  ",
+    ],
+)
+def test_in_takedown_state_true(queue_state):
+    assert in_takedown_state(queue_state) is True
+
+
+# Scenario: non-takedown / invalid states are not treated as takedown
+@pytest.mark.parametrize(
+    "queue_state",
+    ["monitoring", "resolved", "doppel_review", "", None, 12345],
+)
+def test_in_takedown_state_false(queue_state):
+    assert in_takedown_state(queue_state) is False
+
+
+# Scenario: reverted states are detected regardless of spelling/whitespace
+@pytest.mark.parametrize(
+    "queue_state",
+    [
+        "archived",
+        "needs_confirmation",
+        "needs confirmation",  # space-separated variant
+        "DOPPEL_REVIEW",
+        "doppel review",
+        "monitoring",
+    ],
+)
+def test_is_reverted_state_true(queue_state):
+    assert is_reverted_state(queue_state) is True
+
+
+# Scenario: takedown / invalid states are not treated as reverted
+@pytest.mark.parametrize(
+    "queue_state",
+    ["actioned", "taken_down", "resolved", "", None, 12345],
+)
+def test_is_reverted_state_false(queue_state):
+    assert is_reverted_state(queue_state) is False
 
 
 # ---------------------------------------------------------

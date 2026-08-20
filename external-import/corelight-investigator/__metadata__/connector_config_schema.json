@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/corelight-investigator_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Corelight Investigator",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "corelight-investigator"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CORELIGHT_INVESTIGATOR_API_BASE_URL": {
+      "description": "Corelight Investigator API base URL (region specific, e.g. https://eu.api.investigator.corelight.com).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CORELIGHT_INVESTIGATOR_API_KEY": {
+      "description": "Corelight Investigator API key (sent as an Authorization bearer header).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CORELIGHT_INVESTIGATOR_ALERTS_PATH": {
+      "default": "/api/v1/alerts",
+      "description": "Path of the Investigator Detections and Alerts API endpoint.",
+      "type": "string"
+    },
+    "CORELIGHT_INVESTIGATOR_IMPORT_WINDOW_DAYS": {
+      "default": 7,
+      "description": "Number of days to look back on the first run.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CORELIGHT_INVESTIGATOR_MAX_ALERTS": {
+      "default": 1000,
+      "description": "Maximum number of alerts to request per run.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CORELIGHT_INVESTIGATOR_TLP_LEVEL": {
+      "default": "amber",
+      "description": "Default TLP marking applied to the imported entities.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "CORELIGHT_INVESTIGATOR_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify the API server TLS certificate.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CORELIGHT_INVESTIGATOR_API_BASE_URL",
+    "CORELIGHT_INVESTIGATOR_API_KEY"
+  ],
+  "additionalProperties": true
+}

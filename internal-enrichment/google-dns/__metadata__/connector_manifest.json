@@ -5,7 +5,8 @@
   "short_description": "Google Public DNS is a Google service that provides recursive DNS servers to Internet users used to enrich.",
   "logo": "internal-enrichment/google-dns/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Enrichment & Analysis",
+    "Infrastructure & Attack Surface Visibility"
   ],
   "verified": true,
   "last_verified_date": null,

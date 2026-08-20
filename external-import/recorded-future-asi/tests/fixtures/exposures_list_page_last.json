@@ -1,0 +1,17 @@
+{
+  "data": [
+    {
+      "signature": {
+        "id": "sig-003",
+        "name": "Informational banner disclosure",
+        "description": "Server banner reveals software version.",
+        "severity": "informational",
+        "added_at": "2024-06-03T16:45:00Z"
+      },
+      "asset_count": 1
+    }
+  ],
+  "meta": {
+    "pagination": {}
+  }
+}

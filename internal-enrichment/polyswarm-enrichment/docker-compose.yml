@@ -1,24 +1,23 @@
 services:
   connector-polyswarm-enrichment:
-    image: opencti/connector-polyswarm-enrichment:rolling
+    image: opencti/connector-polyswarm-enrichment:latest
     environment:
       # ========== OpenCTI Configuration ==========
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
 
       # ========== Connector Configuration ==========
       - CONNECTOR_ID=${CONNECTOR_ID}
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
-      - CONNECTOR_NAME=PolySwarm Hash Enrichment
-      - CONNECTOR_SCOPE=StixFile,Artifact
-      - CONNECTOR_AUTO=true
-      - CONNECTOR_CONFIDENCE_LEVEL=80
-      - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      # - CONNECTOR_NAME=PolySwarm Hash Enrichment
+      # - CONNECTOR_SCOPE=StixFile,Artifact
+      # - CONNECTOR_AUTO=true
+      # - CONNECTOR_LOG_LEVEL=info
 
       # ========== PolySwarm Configuration ==========
       - POLYSWARM_API_KEY=${POLYSWARM_API_KEY}
-      - POLYSWARM_COMMUNITY=default
-      - POLYSWARM_MAX_POLLING_TIME=120
-      # - POLYSWARM_MAX_TLP=TLP:AMBER  # Optional: refuse enrichment above this TLP
-      # - POLYKG_API_URL=              # Optional: production polykg URL for profile enrichment
+      # - POLYSWARM_ENRICHMENT_COMMUNITY=default
+      # - POLYSWARM_ENRICHMENT_MAX_POLLING_TIME=120
+      # - POLYSWARM_ENRICHMENT_MAX_TLP=TLP:AMBER
+      # - POLYSWARM_ENRICHMENT_POLYKG_API_URL=
     restart: always

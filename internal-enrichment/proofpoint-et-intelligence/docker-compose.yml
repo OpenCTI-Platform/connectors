@@ -8,13 +8,14 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=ChangeMe
-      - CONNECTOR_SCOPE=ChangeMe
+      - CONNECTOR_NAME=ProofPoint ET Intelligence
+      - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,StixFile
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_AUTO=true
 
       # Connector's custom execution parameters
-      - PROOFPOINT_ET_INTELLIGENCE_API_BASE_URL=ChangeMe
+      - PROOFPOINT_ET_INTELLIGENCE_API_BASE_URL=https://api.emergingthreats.net/v1/
       - PROOFPOINT_ET_INTELLIGENCE_API_KEY=ChangeMe
-      - PROOFPOINT_ET_INTELLIGENCE_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+      - PROOFPOINT_ET_INTELLIGENCE_MAX_TLP=TLP:AMBER+STRICT
+      - PROOFPOINT_ET_INTELLIGENCE_IMPORT_LAST_SEEN_TIME_WINDOW=P30D
     restart: always

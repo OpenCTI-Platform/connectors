@@ -18,16 +18,21 @@ WORKDIR /app
 RUN apk update && apk upgrade && \
   apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-# Leverage a bind mount to requirements.txt to avoid having to copy them into
-# into this layer.
-RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-  python -m pip install --no-cache-dir .
+# Install the connector as a proper package. Its packages live under src/
+# (src/ layout: connector/, vulncheck_client/), discovered via
+# [tool.setuptools.packages.find] where=["src"]. Copy the source + project
+# metadata in, install into site-packages, then drop the build inputs so the
+# source tree doesn't bloat the final image (matches the src/-layout peers).
+COPY src ./src
+COPY pyproject.toml ./pyproject.toml
+RUN python -m pip install --no-cache-dir . && \
+  apk del git build-base && \
+  rm -rf ./src ./pyproject.toml ./build
 
-# Remove dependencies for pip installing after completed
-RUN apk del git build-base
-
-# Copy the connector
-COPY src .
+# main.py is a top-level entry script (not part of an installed package), so
+# copy it in explicitly; connector/ and vulncheck_client/ resolve from
+# site-packages.
+COPY src/main.py .
 
 # Execute the connector
 CMD [ "python", "main.py" ]

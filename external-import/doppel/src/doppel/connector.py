@@ -16,7 +16,10 @@ class DoppelConnector:
         self.config = config
         self.client = ConnectorClient(self.helper, self.config)
         self.converter = ConverterToStix(
-            self.helper, tlp_level=self.config.doppel.tlp_level
+            self.helper,
+            tlp_level=self.config.doppel.tlp_level,
+            enable_grouping_case=self.config.doppel.enable_grouping_case,
+            enable_rft_case=self.config.doppel.enable_rft_case,
         )
 
     def _get_last_run(self, current_state, start_datetime: datetime) -> datetime:

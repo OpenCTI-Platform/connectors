@@ -1,11 +1,15 @@
 import traceback
 
-from connector import ProofpointEtReputationConnector
+from connector import ConnectorSettings, ProofpointEtReputationConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
-    # Entry point of the script
+    """Entry point of the connector."""
     try:
-        connector = ProofpointEtReputationConnector()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = ProofpointEtReputationConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()

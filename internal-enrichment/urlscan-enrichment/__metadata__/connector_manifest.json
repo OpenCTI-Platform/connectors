@@ -5,7 +5,8 @@
   "short_description": "URLScan is an online service that allows you to scan URLs to analyze and detect potential security threats. It provides a platform where users can submit links to be scanned to obtain information about the page's content, loaded external resources, potential threats, and other relevant security details.\n\nThe integration of URLScan with OpenCTI enables the automatic enrichment and analysis of IP addresses and URLs.",
   "logo": "internal-enrichment/urlscan-enrichment/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Enrichment & Analysis",
+    "Infrastructure & Attack Surface Visibility"
   ],
   "verified": true,
   "last_verified_date": null,

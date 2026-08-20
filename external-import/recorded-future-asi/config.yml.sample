@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Recorded Future ASI Exposures' # optional (default: 'Recorded Future ASI Exposures')
+  scope: 'incident,vulnerability,ipv4-addr,ipv6-addr,domain-name' # optional (default: 'incident,vulnerability,ipv4-addr,ipv6-addr,domain-name')
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+recorded-future-asi:
+  api_base_url: 'https://api.securitytrails.com/v2' # optional, v2 base URL for initial sync (exposures list and assets) (default: 'https://api.securitytrails.com/v2')
+  api_v1_base_url: 'https://api.securitytrails.com/v1' # optional, v1 base URL for incremental sync (exposure history activity) (default: 'https://api.securitytrails.com/v1')
+  api_key: 'ChangeMe'
+  project_id: 'ChangeMe'
+  tlp_level: 'amber+strict' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+  portal_base_url: https://app.recordedfuture.com/portal/attack-surface/project/ # optional, portal base URL for external reference deep links
+  page_limit: 100 # optional, API page size (HTTP request chunk), min 1, max 1000 (default: 100)
+  run_limit: # optional, max exposures processed per connector run, min 1 (default: no limit)
+  retry_max_attempts: 3 # optional, max HTTP attempts per request, min 1, max 10 (default: 3)
+  retry_initial_seconds: 1 # optional, initial retry backoff in seconds, min 0.1, max 30 (default: 1)
+  retry_max_seconds: 60 # optional, max retry backoff in seconds, min 1, max 300 (default: 60)
+  # filter_severity_min: moderate # optional, import exposures at or above this severity; values: unknown, informational, moderate, critical (mutually exclusive with filter_severity_exact)
+  # filter_severity_exact: critical # optional, import exposures matching this severity exactly; same values (mutually exclusive with filter_severity_min)

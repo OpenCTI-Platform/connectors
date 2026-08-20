@@ -6,7 +6,7 @@
   "logo": "external-import/mwdb/__metadata__/logo.png",
   "use_cases": [
     "Open Source Threat Intel",
-    "Malware Analysis"
+    "Malware Analysis and Sandbox"
   ],
   "verified": false,
   "last_verified_date": null,

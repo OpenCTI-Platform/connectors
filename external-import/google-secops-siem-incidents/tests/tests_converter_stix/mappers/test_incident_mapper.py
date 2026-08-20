@@ -9,11 +9,8 @@ BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 
 import pytest
 from connectors_sdk.models.enums import IncidentSeverity
-
-# --- import under test (will cause ImportError → RED) ---
-from google_secops_siem_incidents.mappers.incident_mapper import (  # noqa: E402
-    map_incident,
-)
+from google_secops_siem_incidents.mappers.incident_mapper import map_incident
+from google_secops_siem_incidents.utils.enums import Priority, Severity
 from tests_converter_stix.factories import (
     AlertFactory,
     AlertFieldFactory,
@@ -29,7 +26,13 @@ from tests_converter_stix.factories import (
 # Helpers
 # ---------------------------------------------------------------------------
 def _given_alert_with_fields_and_metadata(
-    fields, *, severity="HIGH", rule_type="MULTI_EVENT", tags="", outcomes=None
+    fields,
+    *,
+    severity="HIGH",
+    priority="",
+    rule_type="MULTI_EVENT",
+    tags="",
+    outcomes=None,
 ):
     """Build an Alert + RuleMetadata pair from explicit field/metadata values."""
     alert = AlertFactory.build(
@@ -37,10 +40,13 @@ def _given_alert_with_fields_and_metadata(
         outcomes=outcomes or [],
         rule_type=rule_type,
     )
+    metadata = {"severity": severity, "tags": tags}
+    if priority:
+        metadata["priority"] = priority
     rule_metadata = RuleMetadataFactory.build(
         properties=RulePropertiesFactory.build(
             name="rule_name",
-            metadata={"severity": severity, "tags": tags},
+            metadata=metadata,
         ),
     )
     return alert, rule_metadata
@@ -351,3 +357,476 @@ class TestIncidentExternalReference:
         assert (
             stix_obj.external_references[0]["url"] == f"{secops_url}/alerts/{alert.id}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Tests — severity filter (threshold-based)
+# ---------------------------------------------------------------------------
+class TestSeverityFilter:
+    def test_then_returns_none_when_below_threshold(self):
+        """Given severity 'LOW' and threshold 'high' → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="LOW")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_at_threshold(self):
+        """Given severity 'HIGH' and threshold 'high' → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="HIGH")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_above_threshold(self):
+        """Given severity 'CRITICAL' and threshold 'high' → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="CRITICAL")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_no_threshold(self):
+        """Given any severity and empty threshold → incident returned (no filter)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="INFO")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=None,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_unknown_severity(self):
+        """Given unknown severity and a threshold → incident returned (unknown passes)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="CUSTOM_LEVEL")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_empty_severity(self):
+        """Given empty severity and a threshold → incident returned (no severity = pass)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests — priority filter (threshold-based)
+# ---------------------------------------------------------------------------
+class TestPriorityFilter:
+    def test_then_returns_none_when_below_threshold(self):
+        """Given priority 'LOW' and threshold HIGH → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="LOW")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_at_threshold(self):
+        """Given priority 'HIGH' and threshold HIGH → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="HIGH")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_above_threshold(self):
+        """Given priority 'CRITICAL' and threshold HIGH → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="CRITICAL")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_no_threshold(self):
+        """Given any priority and None threshold → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="INFO")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=None,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_unknown_priority(self):
+        """Given unknown priority and a threshold → incident returned (unknown passes)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="P1")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_empty_priority(self):
+        """Given empty priority and a threshold → incident returned (no priority = pass)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests — risk score filter (threshold-based)
+# ---------------------------------------------------------------------------
+class TestRiskScoreFilter:
+    def test_then_returns_none_when_below_threshold(self):
+        """Given risk_score=50 and threshold 80 → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("50")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_at_threshold(self):
+        """Given risk_score=80 and threshold 80 → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("80")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_above_threshold(self):
+        """Given risk_score=95 and threshold 80 → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("95")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_no_threshold(self):
+        """Given any risk_score and None threshold → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("10")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=None,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_no_risk_score_outcome(self):
+        """Given no risk_score outcome and a threshold → incident returned (no score = pass)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], outcomes=[])
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests — tags filter (include/exclude)
+# ---------------------------------------------------------------------------
+class TestTagsFilter:
+    def test_then_returns_incident_when_tag_in_include_list(self):
+        """Given tags 'phishing,malware' and include=['phishing'] → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="phishing,malware")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_include=["phishing"],
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_none_when_no_tag_in_include_list(self):
+        """Given tags 'test' and include=['phishing'] → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="test")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_include=["phishing"],
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_none_when_tag_in_exclude_list(self):
+        """Given tags 'phishing,malware' and exclude=['malware'] → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="phishing,malware")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_exclude=["malware"],
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_no_tag_in_exclude_list(self):
+        """Given tags 'test' and exclude=['malware'] → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="test")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_exclude=["malware"],
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_none_when_no_tags_and_include_set(self):
+        """Given empty tags and include=['phishing'] → None (no tags to match)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_include=["phishing"],
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_no_tags_and_exclude_set(self):
+        """Given empty tags and exclude=['malware'] → incident returned (nothing to exclude)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_exclude=["malware"],
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_case_insensitive_matching(self):
+        """Given tags 'Phishing' and include=['phishing'] → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="Phishing")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_include=["phishing"],
+        )
+
+        # _then_
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests — edge cases
+# ---------------------------------------------------------------------------
+class TestIncidentEdgeCases:
+    def test_then_non_numeric_risk_score_passes_filter(self):
+        """Given a non-numeric risk_score and a threshold → incident returned (ValueError caught)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("not_a_number")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_description_includes_mitre_url(self):
+        """Given metadata with mitre_attach_url → row appears in description table."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="HIGH")
+        meta.properties.metadata["mitre_attach_url"] = "https://attack.mitre.org/T1234"
+
+        # _when_
+        incident = _when_map_incident(alert, meta)
+
+        # _then_
+        desc = incident.description or ""
+        assert "| Title | https://attack.mitre.org/T1234 |" in desc

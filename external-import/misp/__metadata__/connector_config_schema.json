@@ -292,6 +292,11 @@
       "description": "The timeout for the requests to the MISP API in seconds. None means no timeout.",
       "type": "number"
     },
+    "MISP_ATTRIBUTE_TIMESTAMP_FILTERING": {
+      "default": false,
+      "description": "When enabled, the connector tracks the last attribute timestamp and only processes attributes that have been created or modified since the previous run. This dramatically reduces processing volume for long-lived MISP events with many attributes.",
+      "type": "boolean"
+    },
     "MISP_SEARCH_LIMIT": {
       "default": 10,
       "description": "Limit the number of results returned per page request to MISP server.",

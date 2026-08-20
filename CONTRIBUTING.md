@@ -21,6 +21,7 @@ status: Accepted
     - [Technical Requirements](#technical-requirements)
     - [Knowledge Requirements](#knowledge-requirements)
     - [Development Environment](#development-environment)
+    - [Mise (Development Tooling \& Task Runner)](#mise-development-tooling--task-runner)
   - [Getting Started](#getting-started)
     - [Quick Start](#quick-start)
     - [Initial Setup](#initial-setup)
@@ -123,6 +124,101 @@ You can develop connectors using either:
     - Faster iteration cycle
     - Easier debugging
     - See [Local Setup Guide](./docs/01-common-implementation.md#local-environment)
+
+### Mise (Development Tooling & Task Runner)
+
+This repository uses [mise](https://mise.jdx.dev/) as a polyglot tool version manager and task runner. Mise
+automatically installs the required development tools (Python, uv, ruff, pre-commit, etc.) and provides shared tasks
+for common workflows like building Docker images and generating config schemas.
+
+#### Installation
+
+```bash
+# macOS
+brew install mise
+
+# or via the official installer (Linux/macOS)
+curl https://mise.run | sh
+```
+
+Then activate mise in your shell (add to `~/.zshrc` or `~/.bashrc`):
+
+```bash
+eval "$(mise activate zsh)"  # or bash/fish
+```
+
+#### Setup
+
+Once installed, navigate to the repository root and let mise install all required tools:
+
+```bash
+cd connectors
+mise install
+```
+
+This reads `.mise/config.toml` and installs the declared tools (uv, ruff, pre-commit, gh, etc.) at the correct
+versions.
+
+#### Available Tasks
+
+List all available tasks:
+
+```bash
+mise tasks
+```
+
+Key tasks included:
+
+| Task | Alias | Description |
+|------|-------|-------------|
+| `build_docker` | `build`, `b` | Build the connector Docker image |
+| `push_docker` | `push`, `p` | Push the image to the local registry |
+| `generate_config_schema` | `gs` | Generate JSON schema from connector settings |
+| `global_manifest` | — | Regenerate the global manifest file |
+| `deploy_to_catalog` | `deploy` | Build the connector, push to local registry, and restart OpenCTI |
+
+Run a task from inside a connector directory:
+
+```bash
+cd external-import/misp
+mise run build        # or: mise run b
+mise run gs
+```
+
+> **Note:** Docker-related tasks (`build_docker`, `push_docker`, `deploy_to_catalog`) are designed for a local
+> development setup based on [OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker) (Docker Compose)
+> with a **local registry service** included in the stack (default: `registry:5000`). The build task tags images for
+> this registry, push sends them there, and deploy restarts the OpenCTI container so it pulls the updated image.
+> If your registry address differs, override it via the `DOCKER_REGISTRY` environment variable.
+
+#### Local Configuration
+
+User-specific settings (paths, registries, env vars) should go in `.mise/config.local.toml`, which is git-ignored:
+
+```toml
+# .mise/config.local.toml (not committed)
+[env]
+DOCKER_REPO_PATH = "/path/to/your/opencti-docker-compose"  # path to your OpenCTI-Platform/docker clone
+DOCKER_REGISTRY = "localhost:5000"                          # override if your registry differs
+```
+
+You can also add personal tasks in `.mise/tasks/local/` (also git-ignored).
+
+#### Adding New Tasks
+
+Shared tasks live in `.mise/tasks/` as shell scripts with `#MISE` directives at the top:
+
+```bash
+#!/usr/bin/env bash
+#MISE description="My new task"
+#MISE alias=["mytask"]
+#MISE dir="{{cwd}}"
+
+set -euo pipefail
+# task logic here
+```
+
+See the [mise task documentation](https://mise.jdx.dev/tasks/) for the full directive reference.
 
 ## Getting Started
 

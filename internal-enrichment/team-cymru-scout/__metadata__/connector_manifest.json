@@ -5,7 +5,8 @@
   "short_description": "Enriches observables using Team Cymru's Pure Signal Scout API with real-time threat intelligence.",
   "logo": "internal-enrichment/team-cymru-scout/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Enrichment & Analysis",
+    "Infrastructure & Attack Surface Visibility"
   ],
   "verified": true,
   "last_verified_date": "2026-02-05",

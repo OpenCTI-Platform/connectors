@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-trellix-tie:
+    image: opencti/connector-trellix-tie:latest # 'trellix-tie' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type STREAM
+      - CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_SCOPE=trellix-tie # optional (default: 'trellix-tie')
+      #- CONNECTOR_NAME=Trellix TIE # optional (default: 'Trellix TIE')
+      #- CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      #- CONNECTOR_LIVE_STREAM_ID=live # optional, ID of the live stream created in the OpenCTI UI (default: 'live')
+      #- CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true # optional (default: true)
+      #- CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
+      # Custom parameters for connector-trellix-tie
+      - TRELLIX_TIE_DXL_CONFIG_PATH=ChangeMe # path to the ePO-provisioned OpenDXL config file, e.g. /opt/dxl/dxlclient.config (mount it into the container)
+      #- TRELLIX_TIE_TRUST_LEVEL=KNOWN_MALICIOUS # optional (default: KNOWN_MALICIOUS)
+      #- TRELLIX_TIE_COMMENT=Set by OpenCTI # optional (default: 'Set by OpenCTI')
+    restart: always

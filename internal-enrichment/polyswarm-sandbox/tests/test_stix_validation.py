@@ -72,6 +72,16 @@ class StubHelper:
     """Minimal OpenCTIConnectorHelper stand-in for testing."""
 
     connect_scope = "Artifact"
+    connector_logger = type(
+        "_L",
+        (),
+        {
+            "info": lambda s, *a, **k: None,
+            "warning": lambda s, *a, **k: None,
+            "error": lambda s, *a, **k: None,
+            "debug": lambda s, *a, **k: None,
+        },
+    )()
 
     def log_info(self, msg):
         pass

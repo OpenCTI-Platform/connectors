@@ -5,9 +5,7 @@
   "short_description": "ONYPHE connector enriches observables and indicators with Internet intelligence for threat intelligence (ctiscan) and attack surface management (riskscan).",
   "logo": "internal-enrichment/onyphe/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Internet scan data & mapping",
-    "Attack Surface Management",
-    "Threat Hunting"
+    "Infrastructure & Attack Surface Visibility"
   ],
   "verified": false,
   "last_verified_date": null,

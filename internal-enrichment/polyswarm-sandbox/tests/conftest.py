@@ -58,6 +58,22 @@ def _patch_stix_validator_schema_dir():
     validator_module._get_error_generator = original_get_error_generator
 
 
+class _StubLogger:
+    """No-op logger matching connector_logger interface."""
+
+    def info(self, msg, *args, **kwargs):
+        pass
+
+    def warning(self, msg, *args, **kwargs):
+        pass
+
+    def error(self, msg, *args, **kwargs):
+        pass
+
+    def debug(self, msg, *args, **kwargs):
+        pass
+
+
 class StubHelper:
     """Minimal stand-in for OpenCTIConnectorHelper.
 
@@ -69,6 +85,7 @@ class StubHelper:
     connect_scope = "Artifact"
     connect_log_level = "info"
     config = {}
+    connector_logger = _StubLogger()
 
     class _API:
         class _Observable:

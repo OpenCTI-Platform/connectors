@@ -21,7 +21,7 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "stix2"
+        "anyrun-feed"
       ],
       "description": "The scope of the connector.",
       "items": {
@@ -30,7 +30,7 @@
       "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
-      "default": "info",
+      "default": "error",
       "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
@@ -46,10 +46,11 @@
       "default": "EXTERNAL_IMPORT",
       "type": "string"
     },
-    "CONNECTOR_UPDATE_EXISTING_DATA": {
-      "default": false,
-      "description": "Whether to update data already ingested into the platform.",
-      "type": "boolean"
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT2H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
     },
     "ANYRUN_API_KEY": {
       "description": "ANY.RUN TI Feeds API key. See 'Generate your API key' section in the README file.",
@@ -58,14 +59,15 @@
       "writeOnly": true
     },
     "ANYRUN_FEED_FETCH_INTERVAL": {
-      "default": 120,
+      "default": null,
+      "deprecated": true,
       "type": "integer",
-      "description": "Specify feed fetch interval in minutes."
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
     "ANYRUN_FEED_FETCH_DEPTH": {
       "default": 90,
-      "type": "integer",
-      "description": "Specify feed fetch depth in days."
+      "description": "Feed fetch depth in days.",
+      "type": "integer"
     }
   },
   "required": [

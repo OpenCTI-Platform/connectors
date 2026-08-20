@@ -83,12 +83,12 @@ class OrchestratorCampaign(BaseOrchestrator):
             "attack_techniques",
             "vulnerabilities",
             "threat_actors",
-            # "reports",
-            # "domains",
-            # "files",
-            # "urls",
-            # "ip_addresses",
+            "domains",
+            "files",
+            "urls",
+            "ip_addresses",
             "software_toolkits",
+            # "reports",
         ]
         try:
             async for gti_campaigns in self.client_api.fetch_campaigns(initial_state):

@@ -5,7 +5,8 @@
   "short_description": "Microsoft Sentinel is a scalable, cloud-native security information and event management (SIEM) that delivers scalable, cost-efficient security across multicloud and multi-platform environments with built-in AI, automation, threat intelligence, and a modern data lake architecture. Microsoft Sentinel provides cyberthreat detection, investigation, response, and proactive hunting, with a bird's-eye view across your enterprise.",
   "logo": "stream/microsoft-sentinel-intel/__metadata__/logo.png",
   "use_cases": [
-    "SIEM & Analytics"
+    "SIEM and Analytics",
+    "Detection & Response Enablement"
   ],
   "verified": true,
   "last_verified_date": null,

@@ -2,3 +2,5 @@ config.yml
 __pycache__
 logs
 *.gql
+uv.lock
+.python-version

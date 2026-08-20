@@ -197,6 +197,26 @@ def test_get_vulnerabilities(
     assert len(vulns) == 2
 
 
+def test_get_vulnerabilities_not_ok(
+    mock_session: MagicMock, connector: VulmatchConnector
+) -> None:
+    """Test get_vulnerabilities raises on non-OK HTTP responses."""
+    connector.helper.get_state.return_value = {
+        "last_vulnerability_modified": "2026-02-17T15:24:00Z"
+    }
+
+    mock_response = MagicMock()
+    mock_response.ok = False
+    mock_response.content = "Failed because of reasons"
+    mock_response.status_code = 401
+    mock_session.get.return_value = mock_response
+    with pytest.raises(VulmatchException) as exc_info:
+        connector.get_vulnerabilities(["cpe:2.3:a:vendor:product"])
+
+    assert "401" in str(exc_info)
+    assert "Failed because of reasons" in str(exc_info)
+
+
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
 def test_process_vulnerability_success(
     mock_session: MagicMock, connector: VulmatchConnector

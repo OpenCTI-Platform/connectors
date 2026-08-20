@@ -20,6 +20,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+import stix2
 import validators
 from dateutil import parser as dateutil_parser
 from pycti import (
@@ -78,7 +79,7 @@ class ConverterToStix:
         self._software_cache = {}
         self._profile_cache = {}  # PERF-4: Clear profile cache
         self._enrichment_depth = 0
-        self.helper.log_debug("[CONVERTER] Cleared object cache")
+        self.helper.connector_logger.debug("[CONVERTER] Cleared object cache")
 
     def _get_cached_profile(self, name: str) -> dict | None:
         """
@@ -107,50 +108,32 @@ class ConverterToStix:
             return parsed_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
         except (ValueError, OverflowError, TypeError) as e:
             # dateutil raises ValueError/OverflowError for unparseable dates
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[CONVERTER] Failed to parse datetime '{date_string}': {str(e)}. Using current time."
             )
             return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
     @staticmethod
-    def create_author() -> dict | None:
+    def create_author():
         """
-        Create Author (Organization Identity) as plain dict.
+        Create Author (Organization Identity) using stix2.Identity.
         """
-        author_id = Identity.generate_id(
-            name="PolySwarm", identity_class="organization"
-        )
-        current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
-        return {
-            "type": "identity",
-            "spec_version": "2.1",
-            "id": author_id,
-            "created": current_time,
-            "modified": current_time,
-            "name": "PolySwarm_Malware_Threat_Intelligence",
-            "identity_class": "organization",
-            "description": (
+        return stix2.Identity(
+            id=Identity.generate_id(name="PolySwarm", identity_class="organization"),
+            name="PolySwarm_Malware_Threat_Intelligence",
+            identity_class="organization",
+            description=(
                 "PolySwarm is a next-generation Malware Intelligence Platform combining "
-                "the speed of crowdsourced detection with the rigor of enterprise security. "
-                "Fresh Malware Intelligence - access first-seen malware samples within minutes "
-                "of discovery. Private Community - secure, compliant scanning and sandboxing "
-                "in US or EU, with data control. File & URL Scanning - competing multi-engine "
-                "results with rich static analysis. Sandboxing & Dynamic Analysis - deep "
-                "behavioral insight in safe, isolated environments. Live & Historical Hunting - "
-                "unlimited YARA rules with cross-dataset search and retrospection. PolyScore & "
-                "PolyUnite - contextual scoring and family identification for confident automation. "
-                "Seamless Integrations - plug-and-play with SIEMs, SOARs, and threat intel platforms"
+                "the speed of crowdsourced detection with the rigor of enterprise security."
             ),
-            "external_references": [
+            external_references=[
                 {
-                    "source_name": "PolySwarm_Malware_Threat_Intelligence",
+                    "source_name": "PolySwarm",
                     "url": "https://polyswarm.io/",
                     "description": "PolySwarm next-generation Malware Intelligence Platform",
                 }
             ],
-            "x_opencti_type": "Organization",
-        }
+        )
 
     def create_relationship(
         self,
@@ -158,37 +141,41 @@ class ConverterToStix:
         relationship_type: str,
         target_id: str,
         description: str = None,
-        confidence: int = 100,
-    ) -> dict | None:
+    ) -> stix2.Relationship | None:
         """
-        Creates Relationship object as a plain dictionary.
+        Creates Relationship object using stix2.
         """
         try:
-            current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
-            relationship = {
-                "type": "relationship",
-                "spec_version": "2.1",
-                "id": StixCoreRelationship.generate_id(
-                    relationship_type, source_id, target_id
-                ),
-                "created": current_time,
-                "modified": current_time,
-                "relationship_type": relationship_type,
-                "source_ref": source_id,
-                "target_ref": target_id,
-                "created_by_ref": self.author["id"],
-                "confidence": confidence,
-            }
+            rel_id = StixCoreRelationship.generate_id(
+                relationship_type, source_id, target_id
+            )
 
             if description:
-                relationship["description"] = description
-
-            return relationship
+                return stix2.Relationship(
+                    id=rel_id,
+                    relationship_type=relationship_type,
+                    source_ref=source_id,
+                    target_ref=target_id,
+                    created_by_ref=self.author.id,
+                    description=description,
+                    allow_custom=True,
+                )
+            return stix2.Relationship(
+                id=rel_id,
+                relationship_type=relationship_type,
+                source_ref=source_id,
+                target_ref=target_id,
+                created_by_ref=self.author.id,
+                allow_custom=True,
+            )
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(f"[CONVERTER] Error creating relationship: {str(e)}")
-            self.helper.log_error(f"[CONVERTER] Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(
+                f"[CONVERTER] Error creating relationship: {str(e)}"
+            )
+            self.helper.connector_logger.error(
+                f"[CONVERTER] Traceback: {traceback.format_exc()}"
+            )
             return None
 
     def create_indicator_from_polyswarm(
@@ -231,7 +218,7 @@ class ConverterToStix:
                 "id": indicator_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author.id,
                 "name": indicator_name,
                 "description": polyswarm_data.get(
                     "x_opencti_description", "File analyzed by PolySwarm"
@@ -259,8 +246,12 @@ class ConverterToStix:
             return indicator
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(f"[CONVERTER] Error creating indicator: {str(e)}")
-            self.helper.log_error(f"[CONVERTER] Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(
+                f"[CONVERTER] Error creating indicator: {str(e)}"
+            )
+            self.helper.connector_logger.error(
+                f"[CONVERTER] Traceback: {traceback.format_exc()}"
+            )
             return None
 
     # ============= LOCATION CREATION =============
@@ -288,18 +279,20 @@ class ConverterToStix:
                 "id": location_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author.id,
                 "name": location_name,
                 "x_opencti_location_type": "Country",
                 "confidence": 75,
             }
 
             self._location_cache[location_name] = location
-            self.helper.log_debug(f"[CONVERTER] Created location: {location_name}")
+            self.helper.connector_logger.debug(
+                f"[CONVERTER] Created location: {location_name}"
+            )
             return location
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating location {location_name}: {str(e)}"
             )
             return None
@@ -364,7 +357,7 @@ class ConverterToStix:
                 "id": actor_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author.id,
                 "name": actor_name,
                 "description": description,
                 "labels": labels,
@@ -379,7 +372,7 @@ class ConverterToStix:
                 aliases = [a for a in all_actors if a != actor_name]
                 if aliases:
                     threat_actor["aliases"] = aliases
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Added {len(aliases)} aliases to {actor_name}: {aliases}"
                     )
 
@@ -415,14 +408,18 @@ class ConverterToStix:
                         )
 
             self._actor_cache[actor_name] = threat_actor
-            self.helper.log_info(f"[CONVERTER] Created threat actor: {actor_name}")
+            self.helper.connector_logger.info(
+                f"[CONVERTER] Created threat actor: {actor_name}"
+            )
             return threat_actor
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating threat actor {actor_name}: {str(e)}"
             )
-            self.helper.log_error(f"[CONVERTER] Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(
+                f"[CONVERTER] Traceback: {traceback.format_exc()}"
+            )
             return None
 
     # ============= INTRUSION SET CREATION =============
@@ -454,18 +451,20 @@ class ConverterToStix:
                 "id": intrusion_set_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author.id,
                 "name": campaign_name,
                 "description": description,
                 "confidence": 75,
             }
 
             self._intrusion_set_cache[campaign_name] = intrusion_set
-            self.helper.log_debug(f"[CONVERTER] Created intrusion set: {campaign_name}")
+            self.helper.connector_logger.debug(
+                f"[CONVERTER] Created intrusion set: {campaign_name}"
+            )
             return intrusion_set
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating intrusion set {campaign_name}: {str(e)}"
             )
             return None
@@ -493,7 +492,7 @@ class ConverterToStix:
                 "id": vuln_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author.id,
                 "name": cve_id,
                 "description": f"Vulnerability {cve_id} targeted by malware",
                 "external_references": [
@@ -507,11 +506,13 @@ class ConverterToStix:
             }
 
             self._vulnerability_cache[cve_id] = vulnerability
-            self.helper.log_debug(f"[CONVERTER] Created vulnerability: {cve_id}")
+            self.helper.connector_logger.debug(
+                f"[CONVERTER] Created vulnerability: {cve_id}"
+            )
             return vulnerability
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating vulnerability {cve_id}: {str(e)}"
             )
             return None
@@ -539,7 +540,7 @@ class ConverterToStix:
                 "id": sector_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author.id,
                 "name": sector_name.capitalize(),
                 "identity_class": "class",  # STIX class for sectors/industries
                 "x_opencti_type": "Sector",
@@ -547,11 +548,13 @@ class ConverterToStix:
             }
 
             self._sector_cache[sector_key] = sector
-            self.helper.log_debug(f"[CONVERTER] Created sector: {sector_name}")
+            self.helper.connector_logger.debug(
+                f"[CONVERTER] Created sector: {sector_name}"
+            )
             return sector
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating sector {sector_name}: {str(e)}"
             )
             return None
@@ -587,18 +590,20 @@ class ConverterToStix:
                 "id": software_id,
                 "created": current_time,
                 "modified": current_time,
-                "x_opencti_created_by_ref": self.author["id"],
+                "x_opencti_created_by_ref": self.author.id,
                 "name": os_name.capitalize(),
                 "x_opencti_type": "Software",  # Ensure OpenCTI knows what this is
                 "confidence": 75,
             }
 
             self._software_cache[os_key] = software
-            self.helper.log_debug(f"[CONVERTER] Created software (OS): {os_name}")
+            self.helper.connector_logger.debug(
+                f"[CONVERTER] Created software (OS): {os_name}"
+            )
             return software
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating software (OS) {os_name}: {str(e)}"
             )
             return None
@@ -627,14 +632,13 @@ class ConverterToStix:
                 relationship_type="related-to",
                 target_id=cached_malware["id"],
                 description=f"Related malware family: {malware_name}",
-                confidence=80,
             )
             return cached_malware, [], [rel] if rel else []
 
         try:
             # Check recursion depth
             if self._enrichment_depth >= self._max_enrichment_depth:
-                self.helper.log_debug(
+                self.helper.connector_logger.debug(
                     f"[CONVERTER] Max enrichment depth reached for {malware_name}"
                 )
                 # Create basic malware without profile enrichment
@@ -671,7 +675,7 @@ class ConverterToStix:
                 "id": malware_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author.id,
                 "name": malware_name,
                 "description": description,
                 "is_family": True,
@@ -688,7 +692,7 @@ class ConverterToStix:
                 related_aliases = related_profile["related_malware"]
                 if related_aliases:
                     malware["aliases"] = related_aliases
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Added {len(related_aliases)} aliases to related malware {malware_name}"
                     )
 
@@ -721,7 +725,6 @@ class ConverterToStix:
                 relationship_type="related-to",
                 target_id=malware_id,
                 description=f"Related malware family: {malware_name}",
-                confidence=80,
             )
             if rel:
                 relationships.append(rel)
@@ -744,7 +747,6 @@ class ConverterToStix:
                                 relationship_type="uses",
                                 target_id=malware_id,
                                 description=f"{actor_name} uses {malware_name}",
-                                confidence=85,
                             )
                             if rel:
                                 relationships.append(rel)
@@ -762,7 +764,6 @@ class ConverterToStix:
                                 relationship_type="targets",
                                 target_id=location_obj["id"],
                                 description=f"{malware_name} targets {location_name}",
-                                confidence=75,
                             )
                             if rel:
                                 relationships.append(rel)
@@ -780,7 +781,6 @@ class ConverterToStix:
                                 relationship_type="originates-from",
                                 target_id=location_obj["id"],
                                 description=f"{malware_name} originates from {location_name}",
-                                confidence=70,
                             )
                             if rel:
                                 relationships.append(rel)
@@ -798,7 +798,6 @@ class ConverterToStix:
                                 relationship_type="targets",
                                 target_id=vuln_obj["id"],
                                 description=f"{malware_name} exploits {cve_id}",
-                                confidence=90,
                             )
                             if rel:
                                 relationships.append(rel)
@@ -826,7 +825,6 @@ class ConverterToStix:
                                 relationship_type="targets",
                                 target_id=sector_obj["id"],
                                 description=f"{malware_name} targets the {sector_name} sector",
-                                confidence=75,
                             )
                             if rel:
                                 relationships.append(rel)
@@ -834,7 +832,7 @@ class ConverterToStix:
             # Decrement depth after processing this branch
             self._enrichment_depth -= 1
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONVERTER] Created related malware '{malware_name}' with "
                 f"{len(additional_objects)} objects, {len(relationships)} relationships"
             )
@@ -842,10 +840,12 @@ class ConverterToStix:
             return malware, additional_objects, relationships
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating related malware {malware_name}: {str(e)}"
             )
-            self.helper.log_error(f"[CONVERTER] Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(
+                f"[CONVERTER] Traceback: {traceback.format_exc()}"
+            )
             self._enrichment_depth -= 1  # Ensure we decrement on error
             return None, [], []
 
@@ -864,7 +864,7 @@ class ConverterToStix:
                 "id": malware_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author.id,
                 "name": malware_name,
                 "description": f"Related malware family: {malware_name}",
                 "is_family": True,
@@ -879,13 +879,12 @@ class ConverterToStix:
                 relationship_type="related-to",
                 target_id=malware_id,
                 description=f"Related malware family: {malware_name}",
-                confidence=80,
             )
 
             return malware, [], [rel] if rel else []
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating basic malware {malware_name}: {str(e)}"
             )
             return None, [], []
@@ -947,7 +946,7 @@ class ConverterToStix:
                 "id": malware_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "created_by_ref": self.author.id,
                 "name": malware_name,
                 "description": description,
                 "is_family": True,
@@ -976,7 +975,7 @@ class ConverterToStix:
                 related_aliases = profile["related_malware"]
                 if related_aliases:
                     malware["aliases"] = related_aliases
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Added {len(related_aliases)} aliases to malware {malware_name}: {related_aliases}"
                     )
 
@@ -1018,7 +1017,7 @@ class ConverterToStix:
 
             # Process profile enrichment if available
             if profile:
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"[CONVERTER] Enriching {malware_name} with profile data"
                 )
 
@@ -1027,7 +1026,7 @@ class ConverterToStix:
                     all_actors = profile[
                         "actors"
                     ]  # Get all actors for cross-referencing
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Processing {len(all_actors)} threat actors"
                     )
                     for actor_name in all_actors:
@@ -1044,7 +1043,6 @@ class ConverterToStix:
                                 relationship_type="uses",
                                 target_id=malware_id,
                                 description=f"{actor_name} uses {malware_name} malware",
-                                confidence=85,
                             )
                             if rel:
                                 relationships.append(rel)
@@ -1060,7 +1058,7 @@ class ConverterToStix:
                             )
 
                             if actor_origins:
-                                self.helper.log_info(
+                                self.helper.connector_logger.info(
                                     f"[CONVERTER] Processing {len(actor_origins)} origin locations"
                                     f" for actor {actor_name}"
                                 )
@@ -1073,7 +1071,6 @@ class ConverterToStix:
                                             relationship_type="located-at",
                                             target_id=loc_obj["id"],
                                             description=f"Attributed origin of {actor_name}",
-                                            confidence=70,
                                         )
                                         if rel:
                                             relationships.append(rel)
@@ -1086,7 +1083,7 @@ class ConverterToStix:
                             )
 
                             if actor_target_locations:
-                                self.helper.log_info(
+                                self.helper.connector_logger.info(
                                     f"[CONVERTER] Processing {len(actor_target_locations)} target locations"
                                     f" for actor {actor_name}"
                                 )
@@ -1099,7 +1096,6 @@ class ConverterToStix:
                                             relationship_type="targets",
                                             target_id=loc_obj["id"],
                                             description=f"{actor_name} targets {loc_name}",
-                                            confidence=75,
                                         )
                                         if rel:
                                             relationships.append(rel)
@@ -1112,7 +1108,7 @@ class ConverterToStix:
                             )
 
                             if actor_target_sectors:
-                                self.helper.log_info(
+                                self.helper.connector_logger.info(
                                     f"[CONVERTER] Processing {len(actor_target_sectors)} target sectors"
                                     f" for actor {actor_name}"
                                 )
@@ -1130,14 +1126,13 @@ class ConverterToStix:
                                             relationship_type="targets",
                                             target_id=sector_obj["id"],
                                             description=f"{actor_name} targets the {sector_name} sector",
-                                            confidence=75,
                                         )
                                         if rel:
                                             relationships.append(rel)
 
                 # 2. TARGET LOCATIONS (Malware -> targets -> Location)
                 if profile.get("target_locations"):
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Processing {len(profile['target_locations'])} target locations for malware"
                     )
                     for location_name in profile["target_locations"]:
@@ -1150,14 +1145,13 @@ class ConverterToStix:
                                 relationship_type="targets",
                                 target_id=location_obj["id"],
                                 description=f"{malware_name} targets entities in {location_name}",
-                                confidence=75,
                             )
                             if rel:
                                 relationships.append(rel)
 
                 # 3. ORIGIN LOCATIONS (Malware -> originates-from -> Location)
                 if profile.get("origin_locations"):
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Processing {len(profile['origin_locations'])} origin locations for malware"
                     )
                     for location_name in profile["origin_locations"]:
@@ -1174,14 +1168,13 @@ class ConverterToStix:
                                 relationship_type="originates-from",
                                 target_id=location_obj["id"],
                                 description=f"{malware_name} originates from {location_name}",
-                                confidence=70,
                             )
                             if rel:
                                 relationships.append(rel)
 
                 # 4. INTRUSION SETS / CAMPAIGNS
                 if profile.get("campaigns"):
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Processing {len(profile['campaigns'])} campaigns"
                     )
                     for campaign_name in profile["campaigns"]:
@@ -1197,14 +1190,13 @@ class ConverterToStix:
                                 relationship_type="uses",
                                 target_id=malware_id,
                                 description=f"{campaign_name} campaign uses {malware_name}",
-                                confidence=85,
                             )
                             if rel:
                                 relationships.append(rel)
 
                 # 5. VULNERABILITIES (CVEs)
                 if profile.get("target_cves"):
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Processing {len(profile['target_cves'])} CVEs"
                     )
                     for cve_id in profile["target_cves"]:
@@ -1218,14 +1210,13 @@ class ConverterToStix:
                                 relationship_type="targets",
                                 target_id=vuln_obj["id"],
                                 description=f"{malware_name} exploits {cve_id}",
-                                confidence=90,
                             )
                             if rel:
                                 relationships.append(rel)
 
                 # 6. RELATED MALWARE (WITH FULL PROFILE ENRICHMENT)
                 if profile.get("related_malware"):
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Processing {len(profile['related_malware'])} related malware families"
                     )
                     for related_name in profile["related_malware"]:
@@ -1244,7 +1235,7 @@ class ConverterToStix:
 
                 # 7. FIX: Add SYSTEMS TARGETED (Software)
                 if profile.get("systems_targeted"):
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Processing {len(profile['systems_targeted'])} targeted systems"
                     )
                     os_refs = []
@@ -1264,7 +1255,7 @@ class ConverterToStix:
 
                 # 8. FIX: Add TARGET SECTORS (Malware -> targets -> Sector)
                 if profile.get("verticals_targeted"):
-                    self.helper.log_info(
+                    self.helper.connector_logger.info(
                         f"[CONVERTER] Processing {len(profile['verticals_targeted'])} target sectors for malware"
                     )
                     for sector_name in profile["verticals_targeted"]:
@@ -1280,12 +1271,11 @@ class ConverterToStix:
                                 relationship_type="targets",
                                 target_id=sector_obj["id"],
                                 description=f"{malware_name} targets the {sector_name} sector",
-                                confidence=75,
                             )
                             if rel:
                                 relationships.append(rel)
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONVERTER] Comprehensive malware enrichment complete: "
                 f"{len(additional_objects)} objects, {len(relationships)} relationships"
             )
@@ -1298,10 +1288,12 @@ class ConverterToStix:
             return malware, list(final_additional_objects), relationships
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating malware object: {str(e)}"
             )
-            self.helper.log_error(f"[CONVERTER] Traceback: {traceback.format_exc()}")
+            self.helper.connector_logger.error(
+                f"[CONVERTER] Traceback: {traceback.format_exc()}"
+            )
             return None, [], []
 
     def create_indicator_malware_relationship(
@@ -1323,11 +1315,10 @@ class ConverterToStix:
                 relationship_type="indicates",
                 target_id=malware_id,
                 description=description,
-                confidence=polyswarm_data.get("confidence", 100),
             )
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating indicator-malware relationship: {str(e)}"
             )
             return None
@@ -1344,11 +1335,10 @@ class ConverterToStix:
                 relationship_type="based-on",
                 target_id=observable_id,
                 description="This indicator is based on the observed file hash",
-                confidence=100,
             )
 
         except (KeyError, AttributeError, TypeError, ValueError) as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"[CONVERTER] Error creating observable-indicator relationship: {str(e)}"
             )
             return None
@@ -1428,7 +1418,7 @@ class ConverterToStix:
                     count += 1
 
         if count > 0:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[CONVERTER] Created {count} network IOC observables "
                 f"+ {count} relationships (cap={max_count})"
             )
@@ -1460,7 +1450,7 @@ class ConverterToStix:
             "x_opencti_score": score,
             "x_opencti_description": self._IOC_DESCRIPTION,
             "x_opencti_labels": ["polyswarm:sandbox-observed"],
-            "x_opencti_created_by_ref": self.author["id"],
+            "x_opencti_created_by_ref": self.author.id,
         }
 
     def _create_ioc_domain(
@@ -1482,7 +1472,7 @@ class ConverterToStix:
             "x_opencti_score": score,
             "x_opencti_description": self._IOC_DESCRIPTION,
             "x_opencti_labels": ["polyswarm:sandbox-observed"],
-            "x_opencti_created_by_ref": self.author["id"],
+            "x_opencti_created_by_ref": self.author.id,
         }
 
     def _create_ioc_url(self, url: str, current_time: str, score: int) -> dict | None:
@@ -1502,7 +1492,7 @@ class ConverterToStix:
             "x_opencti_score": score,
             "x_opencti_description": self._IOC_DESCRIPTION,
             "x_opencti_labels": ["polyswarm:sandbox-observed"],
-            "x_opencti_created_by_ref": self.author["id"],
+            "x_opencti_created_by_ref": self.author.id,
         }
 
     def _create_ioc_relationship(
@@ -1525,7 +1515,7 @@ class ConverterToStix:
                 "Network traffic observed during PolySwarm sandbox analysis"
             ),
             "confidence": 30,
-            "created_by_ref": self.author["id"],
+            "created_by_ref": self.author.id,
         }
 
     # ============= UTILITY METHODS =============
@@ -1569,7 +1559,7 @@ class ConverterToStix:
                 "created": current_time,
                 "modified": current_time,
                 "value": value,
-                "x_opencti_created_by_ref": self.author["id"],
+                "x_opencti_created_by_ref": self.author.id,
             }
         if self._is_ipv4(value):
             obs_id = (
@@ -1583,7 +1573,7 @@ class ConverterToStix:
                 "created": current_time,
                 "modified": current_time,
                 "value": value,
-                "x_opencti_created_by_ref": self.author["id"],
+                "x_opencti_created_by_ref": self.author.id,
             }
         if self._is_domain(value):
             obs_id = (
@@ -1597,7 +1587,7 @@ class ConverterToStix:
                 "created": current_time,
                 "modified": current_time,
                 "value": value,
-                "x_opencti_created_by_ref": self.author["id"],
+                "x_opencti_created_by_ref": self.author.id,
             }
         self.helper.connector_logger.error(
             "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",

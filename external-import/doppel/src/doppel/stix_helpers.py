@@ -16,19 +16,36 @@ def calculate_priority(score) -> str:
         return "P4"
 
 
-def is_takedown_state(queue_state) -> bool:
+def _normalize_queue_state(queue_state) -> str:
+    """
+    Normalize a Doppel queue state for robust comparison.
+
+    The Doppel API normally returns snake_case states (e.g. ``taken_down``), but
+    some payloads/fixtures use space-separated variants (e.g. ``taken down``).
+    Lowercasing and collapsing any internal whitespace to a single underscore
+    makes the state checks resilient to both spellings.
+
+    :param queue_state: Raw queue state value (any type).
+    :return: Normalized string, or "" when the input is missing/not a string.
+    """
+    if not queue_state or not isinstance(queue_state, str):
+        return ""
+    return "_".join(queue_state.lower().split())
+
+
+def in_takedown_state(queue_state) -> bool:
     """Check if alert is in takedown state"""
-    return queue_state and queue_state.lower() in ["actioned", "taken_down"]
+    return _normalize_queue_state(queue_state) in {"actioned", "taken_down"}
 
 
 def is_reverted_state(queue_state) -> bool:
     """Check if alert is reverted from takedown"""
-    return queue_state and queue_state.lower() in [
+    return _normalize_queue_state(queue_state) in {
         "archived",
         "needs_confirmation",
         "doppel_review",
         "monitoring",
-    ]
+    }
 
 
 def build_external_references(alert) -> list:

@@ -12,10 +12,25 @@ from connector.stix_builder import StixBuilder
 # ── helpers ────────────────────────────────────────────────────────────────────
 
 
+class _StubLogger:
+    def info(self, msg, *args, **kwargs):
+        pass
+
+    def warning(self, msg, *args, **kwargs):
+        pass
+
+    def error(self, msg, *args, **kwargs):
+        pass
+
+    def debug(self, msg, *args, **kwargs):
+        pass
+
+
 class _StubHelper:
     connect_scope = "Artifact"
     connect_log_level = "info"
     config = {}
+    connector_logger = _StubLogger()
 
     class _API:
         class _Observable:

@@ -3,7 +3,7 @@
   "slug": "mattermost",
   "description": "OpenCTI external-import connector that imports messages, attachments, authors and thread relationships from one or more Mattermost channels.",
   "short_description": "Import Mattermost messages, attachments and threads into OpenCTI.",
-  "logo": null,
+  "logo": "external-import/mattermost/__metadata__/logo.png",
   "use_cases": [
     "Threat Intelligence"
   ],

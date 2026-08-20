@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'CTM360 ThreatCover' # optional (default: 'CTM360 ThreatCover')
+  scope: 'ctm360-threatcover' # mandatory
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+ctm360_threatcover:
+  discovery_url: 'ChangeMe' # CTM360 ThreatCover TAXII discovery URL (e.g. https://<tenant>.ctm360.com/taxii2/)
+  collection: 'ChangeMe' # the ThreatCover 'Observables' TAXII collection id or title
+  v21: true # optional, use TAXII 2.1 (default: true)
+  use_token: true # optional, authenticate with a token (default: true)
+  token: 'ChangeMe' # CTM360 ThreatCover API token (used when use_token is true)
+  use_apikey: false # optional, authenticate with a custom API-key header instead (default: false)
+  apikey_key: '' # optional, header name when use_apikey is true
+  apikey_value: '' # optional, header value when use_apikey is true
+  username: '' # optional, username for HTTP basic auth (when neither token nor apikey is used)
+  password: '' # optional, password for HTTP basic auth
+  cert_path: '' # optional, path to a client certificate for mutual TLS
+  verify_ssl: true # optional (default: true)
+  tlp_level: 'amber' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber')

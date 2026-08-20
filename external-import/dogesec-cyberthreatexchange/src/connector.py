@@ -77,7 +77,10 @@ class CyberThreatExchangeConnector:
             filters.update(added_after=q)
 
         for objects in self._retrieve(
-            f"v1/feeds/{feed_id}/objects/", list_key="objects", params=filters
+            f"v1/feeds/{feed_id}/objects/",
+            list_key="objects",
+            params=filters,
+            cursor_key="added_after",
         ):
             self.helper.log_info(
                 f"processing batch of {len(objects)} objects for feed {feed_id}"
@@ -92,27 +95,28 @@ class CyberThreatExchangeConnector:
             )
             self.helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
 
-    def _retrieve(self, path, list_key, params: dict = None):
-        params = params or {}
+    def _retrieve(self, path, list_key, params: dict = None, cursor_key="cursor"):
+        params = (params or {}).copy()
         params.update(page_size=200)
         objects_count = 0
-        more = True
         url = urljoin(self.base_url, path)
-        while more:
+        while True:
             resp = self.session.get(url, params=params.copy())
             data = resp.json()
-            yield data[list_key]
+            to_yield = data[list_key]
+            if to_yield:
+                yield to_yield
             objects_count += len(data[list_key])
-            if ("next" in data and not data["next"]) or (
-                "total_results_count" in data
-                and data["total_results_count"] <= objects_count
-            ):
-                more = False
-            if "next" in data:
-                url = data["next"]
-            if "total_results_count" in data:
+            if next_cursor := data.get("next"):
+                if next_cursor.startswith(("https://", "http://")):
+                    url = next_cursor
+                    params.clear()
+                else:
+                    params.update({cursor_key: next_cursor})
+            elif objects_count < data.get("total_results_count", 0):
                 params.update(page=data["page_number"] + 1)
-        return []
+            else:
+                break
 
     def retrieve(self, path, list_key, params: dict = None):
         all_objects = []

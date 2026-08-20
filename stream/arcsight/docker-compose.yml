@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-arcsight:
+    image: opencti/connector-arcsight:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type STREAM
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=ArcSight # optional (default: 'ArcSight')
+      # - CONNECTOR_SCOPE=arcsight # optional (default: 'arcsight')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true # optional (default: true)
+      # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
+      # ArcSight parameters
+      - ARCSIGHT_API_BASE_URL=ChangeMe # e.g. https://arcsight.example.com:8443
+      - ARCSIGHT_USERNAME=ChangeMe
+      - ARCSIGHT_PASSWORD=ChangeMe
+      - ARCSIGHT_ACTIVE_LIST_ID=ChangeMe # Resource ID of the target Active List
+      # - ARCSIGHT_VALUE_COLUMN=value # optional (default: 'value')
+      # - ARCSIGHT_SSL_VERIFY=true # optional (default: true)
+    restart: always

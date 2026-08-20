@@ -5,6 +5,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field
 
@@ -22,6 +23,9 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector. (Default: 1 day)",
         default=timedelta(days=1),
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector", default=["sigmahq"]
     )
 
 

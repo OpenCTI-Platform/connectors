@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-fortisandbox:
+    image: opencti/connector-fortisandbox:latest # 'fortisandbox' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=FortiSandbox # optional (default: 'FortiSandbox')
+      # - CONNECTOR_SCOPE=StixFile,Artifact # optional (default: 'StixFile,Artifact')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_AUTO=false # optional (default: false)
+      # Custom parameters for connector-fortisandbox
+      - FORTISANDBOX_API_BASE_URL=ChangeMe # FortiSandbox base URL (without /jsonrpc), e.g. https://fortisandbox.local
+      - FORTISANDBOX_USERNAME=ChangeMe
+      - FORTISANDBOX_PASSWORD=ChangeMe
+      # - FORTISANDBOX_API_VERSION=4.2.4 # optional (default: '4.2.4')
+      # - FORTISANDBOX_SSL_VERIFY=true # optional (default: true)
+      # - FORTISANDBOX_SUBMIT_UNKNOWN=true # optional, submit unknown files for analysis (default: true)
+      # - FORTISANDBOX_MAX_FILE_SIZE=33554432 # optional, max bytes to download/submit (default: 33554432 = 32 MiB)
+      # - FORTISANDBOX_SUBMISSION_TIMEOUT=600 # optional, max seconds to wait for a submitted file verdict (default: 600)
+      # - FORTISANDBOX_MAX_TLP=TLP:AMBER # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')
+    restart: always

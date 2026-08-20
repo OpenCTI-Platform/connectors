@@ -1,0 +1,4 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = ["--cov=import_doc_ai"]

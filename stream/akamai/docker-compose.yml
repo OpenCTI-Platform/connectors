@@ -9,7 +9,6 @@ services:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=STREAM
       - CONNECTOR_NAME=AkamaiClientListConnector
       - CONNECTOR_SCOPE=indicator
       - CONNECTOR_LOG_LEVEL=info

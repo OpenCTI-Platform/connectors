@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'Redpanda' # optional (default: 'Redpanda')
+  scope: 'redpanda' # optional (default: 'redpanda')
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true # optional (default: true)
+  live_stream_no_dependencies: true # optional (default: true)
+
+redpanda:
+  http_proxy_url: 'ChangeMe' # Base URL of the Redpanda HTTP Proxy, e.g. http://redpanda:8082
+  topic: 'opencti' # optional (default: 'opencti')
+  username: '' # optional, for HTTP basic authentication
+  password: '' # optional, for HTTP basic authentication
+  ssl_verify: true # optional (default: true)

@@ -220,7 +220,10 @@ def get_relationships_from(observable_id: str, rel_type: str = None) -> list[dic
                 }
             }
         }
-    """ % (observable_id, observable_id)
+    """ % (
+        observable_id,
+        observable_id,
+    )
     result = graphql(query)
     rels = [e["node"] for e in result["stixCoreRelationships"]["edges"]]
     if rel_type:
@@ -250,7 +253,10 @@ def get_observables_by_type(entity_type: str, search: str = None) -> list[dict]:
                 }
             }
         }
-    """ % (entity_type, search_arg)
+    """ % (
+        entity_type,
+        search_arg,
+    )
     result = graphql(query)
     return [e["node"] for e in result["stixCyberObservables"]["edges"]]
 

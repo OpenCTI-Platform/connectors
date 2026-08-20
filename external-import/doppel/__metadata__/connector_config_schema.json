@@ -111,6 +111,16 @@
       "default": 100,
       "description": "Optimizes request volume and memory usage per fetch",
       "type": "integer"
+    },
+    "DOPPEL_ENABLE_GROUPING_CASE": {
+      "default": false,
+      "description": "Enables creation of grouping cases",
+      "type": "boolean"
+    },
+    "DOPPEL_ENABLE_RFT_CASE": {
+      "default": false,
+      "description": "Enables creation of RFT cases for takedown alerts",
+      "type": "boolean"
     }
   },
   "required": [

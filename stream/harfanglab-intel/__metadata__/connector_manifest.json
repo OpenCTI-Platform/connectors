@@ -5,7 +5,8 @@
   "short_description": "This connector allows organizations to feed the HarfangLab EDR using OpenCTI knowledge.",
   "logo": "stream/harfanglab-intel/__metadata__/logo.png",
   "use_cases": [
-    "EDR"
+    "Endpoint Detection and Response",
+    "Detection & Response Enablement"
   ],
   "verified": true,
   "last_verified_date": null,

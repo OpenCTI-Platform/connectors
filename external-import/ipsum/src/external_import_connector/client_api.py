@@ -17,10 +17,10 @@ class ConnectorClient:
         self.helper = helper
         self.config = config
 
-        headers = {"Bearer": self.config.api_key}
         self.session = requests.Session()
-        if self.config.api_key and self.config.api_key != "":
-            self.session.headers.update(headers)
+        api_key = self.config.connector_ipsum.api_key
+        if api_key and (bearer := api_key.get_secret_value()):
+            self.session.headers.update({"Bearer": bearer})
 
     def _request_data(self, api_url: str, params=None):
         """
@@ -53,7 +53,9 @@ class ConnectorClient:
         """
         ips = []
         try:
-            response = self._request_data(self.config.api_base_url, params=params)
+            response = self._request_data(
+                self.config.connector_ipsum.api_base_url, params=params
+            )
             if response is not None:
                 for line in response.text.splitlines():
                     if not line.startswith("#"):

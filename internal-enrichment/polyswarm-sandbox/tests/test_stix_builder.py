@@ -1,6 +1,9 @@
 """Unit tests for StixBuilder — covers STIX compliance, deterministic IDs, polykg."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
+import requests
 from connector.stix_builder import StixBuilder
 
 ENTITY_ID = "artifact--00000000-0000-4000-8000-000000000001"
@@ -304,3 +307,54 @@ class TestAiSummarySection:
     def test_plain_text_string_is_passed_through(self):
         out = StixBuilder._format_ai_summary_section("not json, just prose")
         assert any("not json, just prose" in line for line in out)
+
+
+# ── Author props ─────────────────────────────────────────────────────────────
+
+
+class TestAuthorProps:
+    """Verify _author_props helper exposes created_by_ref."""
+
+    def test_returns_created_by_ref(self, builder):
+        props = builder._author_props()
+        assert "created_by_ref" in props
+        assert props["created_by_ref"] == builder.author_id
+
+
+# ── polykg HTTP error paths ───────────────────────────────────────────────────
+
+
+class TestPolyKGHTTPErrors:
+    """Verify graceful degradation on HTTP 401/403 and connection errors."""
+
+    def test_401_response_returns_none(self):
+        b = StixBuilder(helper=MagicMock(), polykg_api_url="http://fake-polykg.test")
+        resp = MagicMock(status_code=401)
+        with patch("requests.get", return_value=resp):
+            assert b._fetch_polykg_profile("WannaCry") is None
+
+    def test_403_response_returns_none(self):
+        b = StixBuilder(helper=MagicMock(), polykg_api_url="http://fake-polykg.test")
+        resp = MagicMock(status_code=403)
+        with patch("requests.get", return_value=resp):
+            assert b._fetch_polykg_profile("WannaCry") is None
+
+    def test_non_200_response_returns_none(self):
+        b = StixBuilder(helper=MagicMock(), polykg_api_url="http://fake-polykg.test")
+        resp = MagicMock(status_code=404)
+        with patch("requests.get", return_value=resp):
+            assert b._fetch_polykg_profile("Unknown") is None
+
+    def test_connection_error_opens_circuit(self):
+        b = StixBuilder(helper=MagicMock(), polykg_api_url="http://fake-polykg.test")
+        StixBuilder._POLYKG_CIRCUIT_OPEN = False
+        with patch("requests.get", side_effect=requests.ConnectionError("timeout")):
+            assert b._fetch_polykg_profile("Mirai") is None
+        assert StixBuilder._POLYKG_CIRCUIT_OPEN is True
+        StixBuilder._POLYKG_CIRCUIT_OPEN = False  # cleanup
+
+    def test_request_exception_returns_none(self):
+        b = StixBuilder(helper=MagicMock(), polykg_api_url="http://fake-polykg.test")
+        StixBuilder._POLYKG_CIRCUIT_OPEN = False
+        with patch("requests.get", side_effect=requests.RequestException("err")):
+            assert b._fetch_polykg_profile("Mirai") is None

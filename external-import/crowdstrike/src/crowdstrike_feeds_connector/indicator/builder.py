@@ -388,13 +388,17 @@ class IndicatorBundleBuilder:
     def _determine_score_by_labels(self, labels: List[str]) -> int:
         label_score = None
 
-        low = {lbl.lower() for lbl in self.indicator_low_score_labels}
-        medium = {lbl.lower() for lbl in self.indicator_medium_score_labels}
-        high = {lbl.lower() for lbl in self.indicator_high_score_labels}
+        low = {lbl.lower().replace(" ", "") for lbl in self.indicator_low_score_labels}
+        medium = {
+            lbl.lower().replace(" ", "") for lbl in self.indicator_medium_score_labels
+        }
+        high = {
+            lbl.lower().replace(" ", "") for lbl in self.indicator_high_score_labels
+        }
 
         # Score will be given floored at lowest score label found.
         for label in labels:
-            lbl = str(label).lower()
+            lbl = str(label).lower().replace(" ", "")
 
             if lbl in low:
                 label_score = self.indicator_low_score

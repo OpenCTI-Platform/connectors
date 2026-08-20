@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/microsoft-defender-incidents_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Microsoft Defender Incidents",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "defender"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INCIDENTS_TENANT_ID": {
+      "description": "Azure Tenant ID for Microsoft Graph API authentication.",
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INCIDENTS_CLIENT_ID": {
+      "description": "Azure App Client ID for Microsoft Graph API authentication.",
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INCIDENTS_CLIENT_SECRET": {
+      "description": "Azure App Client Secret for Microsoft Graph API authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE": {
+      "default": "2025-01-01T00:00:00Z",
+      "description": "Start date for importing incidents in ISO 8601 format (e.g. '2025-01-01T00:00:00Z'). Used only on the first run; subsequent runs use the stored state.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INCIDENTS_API_BASE_URL": {
+      "default": "https://graph.microsoft.com/v1.0",
+      "description": "Microsoft Graph API base URL.",
+      "type": "string"
+    },
+    "MICROSOFT_DEFENDER_INCIDENTS_INCIDENT_PATH": {
+      "default": "/security/incidents",
+      "description": "Microsoft Graph API path for retrieving security incidents.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "MICROSOFT_DEFENDER_INCIDENTS_TENANT_ID",
+    "MICROSOFT_DEFENDER_INCIDENTS_CLIENT_ID",
+    "MICROSOFT_DEFENDER_INCIDENTS_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}

@@ -5,7 +5,8 @@
   "short_description": "This connector allows organizations to feed a Splunk KV Store using OpenCTI knowledge.",
   "logo": "stream/splunk/__metadata__/logo.png",
   "use_cases": [
-    "SIEM & Analytics"
+    "SIEM and Analytics",
+    "Detection & Response Enablement"
   ],
   "verified": true,
   "last_verified_date": null,

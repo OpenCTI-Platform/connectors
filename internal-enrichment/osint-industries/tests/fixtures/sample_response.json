@@ -1,0 +1,102 @@
+[
+  {
+    "module": "okru",
+    "status": "found",
+    "query": "test@example.com",
+    "reliable_source": true,
+    "data": {},
+    "spec_format": [
+      {
+        "registered": {"proper_key": "Registered", "value": true, "type": "bool"},
+        "id": {"proper_key": "Id", "value": "ok-123", "type": "str"},
+        "name": {"proper_key": "Name", "value": "Jean Test", "type": "str"},
+        "first_name": {"proper_key": "First Name", "value": "Jean", "type": "str"},
+        "last_name": {"proper_key": "Last Name", "value": "Test", "type": "str"},
+        "location": {"proper_key": "Location", "value": "Lyon", "type": "str"},
+        "profile_url": {"proper_key": "Profile Url", "value": "https://ok.ru/profile/123", "type": "str"},
+        "platform_variables": [
+          {"key": "uid", "proper_key": "Uid", "value": "42", "type": "int"},
+          {"key": "friends", "proper_key": "Friends", "value": "161", "type": "int"}
+        ]
+      }
+    ]
+  },
+  {
+    "module": "qq",
+    "status": "found",
+    "query": "test@example.com",
+    "reliable_source": true,
+    "data": {},
+    "spec_format": [
+      {
+        "registered": {"proper_key": "Registered", "value": true, "type": "bool"},
+        "id": {"proper_key": "Id", "value": "qq-999", "type": "str"},
+        "email": {"proper_key": "Email", "value": "victim@qq.com", "type": "str"},
+        "phone": {"proper_key": "Phone", "value": "+8613800000000", "type": "str"},
+        "location": {"proper_key": "Location", "value": "Beijing", "type": "str"},
+        "platform_variables": [
+          {"key": "weibo_id", "proper_key": "Weibo Id", "value": "12345", "type": "int"}
+        ]
+      }
+    ]
+  },
+  {
+    "module": "hibp",
+    "status": "found",
+    "query": "test@example.com",
+    "reliable_source": true,
+    "data": [],
+    "spec_format": [
+      {
+        "registered": {"proper_key": "Registered", "value": true, "type": "bool"},
+        "breach": {"proper_key": "Breach", "value": true, "type": "bool"},
+        "verified": {"proper_key": "Verified", "value": true, "type": "bool"},
+        "platform_variables": [
+          {"key": "title", "proper_key": "Title", "value": "LinkedIn (2012)", "type": "str"},
+          {"key": "added_date", "proper_key": "Added Date", "value": "2016-05-21", "type": "str"},
+          {"key": "data_classes", "proper_key": "Data Classes", "value": "Email addresses, Passwords", "type": "str"}
+        ]
+      }
+    ]
+  },
+  {
+    "module": "emailchecker",
+    "status": "found",
+    "query": "test@example.com",
+    "reliable_source": true,
+    "data": {"response": "No False positives found."},
+    "spec_format": [
+      {
+        "registered": {"proper_key": "Registered", "value": true, "type": "bool"}
+      }
+    ]
+  },
+  {
+    "module": "github",
+    "status": "found",
+    "query": "test@example.com",
+    "reliable_source": true,
+    "data": {},
+    "spec_format": [
+      {
+        "registered": {"proper_key": "Registered", "value": true, "type": "bool"},
+        "id": {"proper_key": "Id", "value": "gh-555", "type": "str"},
+        "username": {"proper_key": "Username", "value": "jeantest", "type": "str"},
+        "profile_url": {"proper_key": "Profile Url", "value": "https://github.com/jeantest", "type": "str"},
+        "creation_date": {"proper_key": "Creation Date", "value": "2015-03-10", "type": "str"},
+        "platform_variables": [
+          {"key": "public_repos", "proper_key": "Public Repos", "value": "12", "type": "int"},
+          {"key": "company", "proper_key": "Company", "value": null, "type": "null"}
+        ]
+      }
+    ]
+  },
+  {
+    "module": "deadmodule",
+    "status": "not_found",
+    "query": "test@example.com",
+    "reliable_source": true,
+    "data": {},
+    "spec_format": []
+  }
+]

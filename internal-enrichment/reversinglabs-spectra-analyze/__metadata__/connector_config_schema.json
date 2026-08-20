@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/reversinglabs-spectra-analyze_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ReversingLabs Spectra Analyze",
+      "description": "Connector name.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Artifact",
+        "IPv4-Addr",
+        "Domain-Name"
+      ],
+      "description": "Comma-separated list of entity types the connector will enrich.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "REVERSINGLABS_SPECTRA_ANALYZE_URL": {
+      "description": "API base URL",
+      "type": "string"
+    },
+    "REVERSINGLABS_SPECTRA_ANALYZE_TOKEN": {
+      "description": "API token",
+      "type": "string"
+    },
+    "REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Maximum TLP for entity that connector can enrich",
+      "enum": [
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS": {
+      "default": "windows10",
+      "description": "The platform to execute the sample on",
+      "enum": [
+        "windows11",
+        "windows10",
+        "windows7",
+        "macos11",
+        "linux"
+      ],
+      "type": "string"
+    },
+    "REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS": {
+      "default": true,
+      "description": "Enable cloud analysis",
+      "type": "boolean"
+    },
+    "REVERSINGLABS_URL": {
+      "description": "Use REVERSINGLABS_SPECTRA_ANALYZE_URL instead.",
+      "type": "string",
+      "deprecated": true
+    },
+    "REVERSINGLABS_TOKEN": {
+      "description": "Use REVERSINGLABS_SPECTRA_ANALYZE_TOKEN instead.",
+      "type": "string",
+      "deprecated": true
+    },
+    "REVERSINGLABS_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Use REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP instead.",
+      "enum": [
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string",
+      "deprecated": true
+    },
+    "REVERSINGLABS_SANDBOX_OS": {
+      "default": "windows10",
+      "description": "Use REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS instead.",
+      "enum": [
+        "windows11",
+        "windows10",
+        "windows7",
+        "macos11",
+        "linux"
+      ],
+      "type": "string",
+      "deprecated": true
+    },
+    "REVERSINGLABS_CLOUD_ANALYSIS": {
+      "default": true,
+      "description": "Use REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS instead.",
+      "type": "boolean",
+      "deprecated": true
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "REVERSINGLABS_SPECTRA_ANALYZE_URL",
+    "REVERSINGLABS_SPECTRA_ANALYZE_TOKEN"
+  ],
+  "additionalProperties": true
+}

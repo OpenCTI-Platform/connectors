@@ -1,7 +1,8 @@
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
+import shodan
 from connector import ConnectorSettings, ShodanConnector
 from pycti import OpenCTIConnectorHelper
 
@@ -100,3 +101,129 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+def _make_connector():
+    """Helper to build a ShodanConnector with mocked dependencies."""
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    helper.connector_logger = MagicMock()
+    helper.send_stix2_bundle = MagicMock(return_value=["bundle-1"])
+    helper.stix2_create_bundle = MagicMock(return_value='{"type":"bundle"}')
+    connector = ShodanConnector(config=settings, helper=helper)
+    return connector
+
+
+def _make_enrichment_data():
+    """Minimal enrichment data payload for an IPv4 observable."""
+    return {
+        "stix_objects": [],
+        "stix_entity": {
+            "type": "ipv4-addr",
+            "value": "1.2.3.4",
+            "id": "ipv4-addr--test",
+        },
+        "enrichment_entity": {
+            "objectMarking": [{"definition_type": "TLP", "definition": "TLP:CLEAR"}]
+        },
+    }
+
+
+class TestProcessMessageErrorHandling:
+    """Integration tests: process_message gracefully skips all Shodan API errors."""
+
+    def test_unknown_ip_does_not_crash_consumer(self, mock_opencti_connector_helper):
+        connector = _make_connector()
+        data = _make_enrichment_data()
+
+        with patch.object(
+            connector.shodanAPI,
+            "host",
+            side_effect=shodan.APIError("No information available for that IP."),
+        ):
+            connector.process_message(data)
+
+        connector.helper.connector_logger.error.assert_called_once()
+        connector.helper.send_stix2_bundle.assert_not_called()
+
+    def test_access_denied_does_not_crash_consumer(self, mock_opencti_connector_helper):
+        connector = _make_connector()
+        data = _make_enrichment_data()
+
+        with patch.object(
+            connector.shodanAPI,
+            "host",
+            side_effect=shodan.APIError("Access denied"),
+        ):
+            connector.process_message(data)
+
+        connector.helper.connector_logger.error.assert_called_once()
+        connector.helper.send_stix2_bundle.assert_not_called()
+
+    def test_any_api_error_is_skipped_with_message(self, mock_opencti_connector_helper):
+        connector = _make_connector()
+        data = _make_enrichment_data()
+
+        with patch.object(
+            connector.shodanAPI,
+            "host",
+            side_effect=shodan.APIError("Rate limit reached"),
+        ):
+            connector.process_message(data)
+
+        connector.helper.connector_logger.error.assert_called_once()
+
+
+def _make_indicator_enrichment_data():
+    """Minimal enrichment data payload for a Shodan indicator."""
+    return {
+        "stix_objects": [],
+        "stix_entity": {
+            "type": "indicator",
+            "pattern_type": "shodan",
+            "pattern": "apache port:443",
+            "id": "indicator--test",
+        },
+        "enrichment_entity": {
+            "id": "enrichment--test",
+            "objectMarking": [{"definition_type": "TLP", "definition": "TLP:CLEAR"}],
+        },
+    }
+
+
+class TestProcessMessageIndicatorErrorHandling:
+    """Integration tests: process_message gracefully skips Shodan API errors on indicator/shodan path."""
+
+    def test_count_api_error_does_not_crash_consumer(
+        self, mock_opencti_connector_helper
+    ):
+        connector = _make_connector()
+        connector.helper.api = MagicMock()
+        data = _make_indicator_enrichment_data()
+
+        with patch.object(
+            connector.shodanAPI,
+            "count",
+            side_effect=shodan.APIError("Access denied"),
+        ):
+            connector.process_message(data)
+
+        connector.helper.connector_logger.error.assert_called_once()
+        connector.helper.send_stix2_bundle.assert_not_called()
+
+    def test_rate_limit_on_indicator_does_not_crash_consumer(
+        self, mock_opencti_connector_helper
+    ):
+        connector = _make_connector()
+        connector.helper.api = MagicMock()
+        data = _make_indicator_enrichment_data()
+
+        with patch.object(
+            connector.shodanAPI,
+            "count",
+            side_effect=shodan.APIError("Rate limit reached"),
+        ):
+            connector.process_message(data)
+
+        connector.helper.connector_logger.error.assert_called_once()
+        connector.helper.send_stix2_bundle.assert_not_called()

@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-swimlane:
+    image: opencti/connector-swimlane:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Swimlane
+      # - CONNECTOR_SCOPE=swimlane
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT15M
+      # Swimlane parameters
+      - SWIMLANE_API_BASE_URL=ChangeMe
+      - SWIMLANE_API_TOKEN=ChangeMe
+      - SWIMLANE_APPLICATION_ID=ChangeMe
+      # - SWIMLANE_MAX_RECORDS=100
+      # - SWIMLANE_TLP_LEVEL=amber
+      # - SWIMLANE_SSL_VERIFY=true
+    restart: always

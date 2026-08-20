@@ -5,9 +5,9 @@
   "short_description": "High-fidelity threat intelligence from PortSpoofPro's active deception platform.",
   "logo": "external-import/portspoof/__metadata__/logo.png",
   "use_cases": [
-    "Early Warning Intelligence",
-    "Threat Actor Profiling",
-    "Deception-Based Detection"
+    "Commercial Threat Intel",
+    "Infrastructure & Attack Surface Visibility",
+    "Adversary & Campaign Insights"
   ],
   "verified": false,
   "last_verified_date": null,
