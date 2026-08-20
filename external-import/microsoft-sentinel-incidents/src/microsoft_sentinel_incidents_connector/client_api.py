@@ -3,7 +3,13 @@ from typing import TYPE_CHECKING
 
 import requests
 from requests.adapters import HTTPAdapter
-from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
+from requests.exceptions import (
+    ConnectionError,
+    HTTPError,
+    RequestException,
+    RetryError,
+    Timeout,
+)
 from urllib3.util.retry import Retry
 
 if TYPE_CHECKING:
@@ -44,8 +50,8 @@ class ConnectorClient:
         }
         try:
             response = requests.post(url, data=oauth_data)
-        except Exception as e:
-            raise ValueError(f"[ERROR] Failed requesting oauth token: {e}")
+        except RequestException as e:
+            raise ValueError(f"[ERROR] Failed requesting oauth token: {e}") from e
 
         # Check the HTTP status first. On an auth failure Azure AD replies with
         # a 400/401 whose JSON body carries the actionable message
