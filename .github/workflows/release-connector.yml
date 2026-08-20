@@ -78,10 +78,12 @@ on:
         default: false
       force:
         description: >
-          Force — delete any existing tag and/or GitHub Release for this
-          version before recreating them from scratch. Use this to recover
-          from a partially failed release (e.g. manifest fragment generation
-          or XTM Hub publish failure) that left a dangling tag/release behind.
+          Force — delete any existing GitHub Release for this version before
+          recreating it. If a tag already exists for this version, it is
+          reused as-is rather than being deleted/recreated. Use this to
+          recover from a partially failed release (e.g. manifest fragment
+          generation or XTM Hub publish failure) that left a dangling
+          tag/release behind.
         required: false
         type: boolean
         default: false
@@ -504,21 +506,22 @@ jobs:
           FORCE: ${{ needs.resolve.outputs.force }}
         run: |
           TAG="${{ needs.resolve.outputs.tag }}"
-          echo "🏷️  Creating tag: $TAG"
 
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+          # `git rev-parse refs/tags/...` can't be used here: this job's checkout
+          # doesn't fetch tags, so a remote-only tag would look absent locally.
+          # `ls-remote` checks the remote directly regardless of local state.
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
             if [ "$FORCE" = "true" ]; then
-              echo "⚠️ Force enabled — deleting existing tag '${TAG}'"
-              git push origin --delete "$TAG" || true
-              git tag -d "$TAG" || true
+              echo "⚠️ Force enabled — tag '${TAG}' already exists, reusing it as-is"
             else
-              echo "::error::Tag '$TAG' already exists. Use a different version, push the existing tag to trigger a release, or re-run with 'force' enabled to delete and recreate it."
+              echo "::error::Tag '$TAG' already exists. Use a different version, push the existing tag to trigger a release, or re-run with 'force' enabled to reuse it."
               exit 1
             fi
+          else
+            echo "🏷️  Creating tag: $TAG"
+            git tag "$TAG"
+            git push origin "$TAG"
           fi
-
-          git tag "$TAG"
-          git push origin "$TAG"
 
       - name: Patch manifest container_version
         id: patch-manifest
