@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "intel471-hunt-connector"
+version = "1.0.0"
+description = "OpenCTI internal enrichment connector for Intel 471 Hunter (Cyborg Security) hunt packages"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Intel 471" }]
+dependencies = [
+    "pycti==7.260824.0",
+    "stix2==3.0.1",
+    "requests~=2.32",
+    "PyYAML~=6.0",
+    "python-dateutil~=2.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest~=8.3",
+    "requests-mock~=1.12",
+]
+
+[project.scripts]
+intel471-hunt-connector = "src.main:main"
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = ["ignore::DeprecationWarning"]

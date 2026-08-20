@@ -1,0 +1,11 @@
+tests/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+config.yml
+cache.json
+PLAN.md

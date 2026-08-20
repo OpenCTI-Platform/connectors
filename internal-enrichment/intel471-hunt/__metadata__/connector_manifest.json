@@ -1,0 +1,27 @@
+{
+  "title": "Intel 471 Hunter",
+  "slug": "intel471-hunt",
+  "description": "On-demand enrichment of OpenCTI entities with detection coverage from the Intel 471 Hunter hunt package corpus (formerly Cyborg Security Hunter).\nWhen an analyst triggers enrichment on a Threat-Actor, Intrusion-Set, Campaign, Attack-Pattern, Vulnerability, Malware, Tool, Sector or Location entity, the connector queries the Hunter /es/query endpoint with the matching filter (actors, campaigns, mitre_technique_ids, exploit_or_vulns, threat_names, tools, target_industries, target/source countries and regions) and materialises every returned hunt package as a STIX 2.1 Report.\nEach Report carries the hunt title, description, severity-derived score, labels and external references back to the Hunter UI. Its object_refs hold the sigma detection as an Indicator plus the auto-created context - Threat-Actor, Campaign, Malware, Vulnerability, Attack-Pattern, Tool, Sector and Location entities - and the relationships between them. Analyst runbook, mitigation, validation and running-update Notes attach to the Report.\nA UUID and last_updated cache skips unchanged hunts on repeat enrichments.\nIntel 471 Website: https://www.intel471.com",
+  "short_description": "Enrich OpenCTI entities with Intel 471 Hunter hunt packages: sigma detections, analyst runbooks and the threat context around them.",
+  "logo": "internal-enrichment/intel471-hunt/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">=7.260824.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/intel471-hunt",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-intel471-hunt",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
