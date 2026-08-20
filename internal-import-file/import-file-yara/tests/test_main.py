@@ -45,7 +45,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "scope": "text/yara+plain",
                     "log_level": "error",
                     "validate_before_import": True,
-                    "confidence_level": 15,
                     "auto": False,
                 },
                 "yara_import_file": {
@@ -96,6 +95,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_name == "ImportFileYARA"
     assert helper.connect_scope == "text/yara+plain"
     assert helper.log_level == "ERROR"
+    assert helper.get_validate_before_import() is True
 
 
 def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):

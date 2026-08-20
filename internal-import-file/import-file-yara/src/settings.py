@@ -11,7 +11,7 @@ class InternalImportFileConnectorConfig(BaseInternalImportFileConnectorConfig):
     """Override BaseInternalImportFileConnectorConfig with ImportFileYARA defaults.
 
     Mirrors the connector's existing ``connector`` section variables one-to-one,
-    including the legacy ``validate_before_import`` and ``confidence_level`` fields
+    including the legacy ``validate_before_import``fields
     the connector still relies on.
     """
 
@@ -26,6 +26,10 @@ class InternalImportFileConnectorConfig(BaseInternalImportFileConnectorConfig):
     scope: ListFromString = Field(
         description="The scope of the connector.",
         default=["text/yara+plain"],
+    )
+    validate_before_import: bool = Field(
+        description="Validate any bundle before import.",
+        default=True,
     )
 
 

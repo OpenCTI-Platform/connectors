@@ -20,7 +20,6 @@ from settings import ConnectorSettings
                     "scope": "text/yara+plain",
                     "log_level": "error",
                     "validate_before_import": True,
-                    "confidence_level": 15,
                     "auto": False,
                 },
                 "yara_import_file": {
@@ -118,4 +117,4 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert "Error validating configuration" in str(err)
+    assert "Error validating configuration" in str(err.value)

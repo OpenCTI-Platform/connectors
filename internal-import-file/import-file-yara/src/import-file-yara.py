@@ -57,7 +57,6 @@ class ImportFileYARA:
             id=Indicator.generate_id(pattern),
             name=yara_name,
             description=rule_description,
-            confidence=self.helper.connect_confidence_level,
             pattern_type=pattern_type,
             pattern=pattern,
             labels=rule_labels,
