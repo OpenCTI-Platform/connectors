@@ -42,10 +42,6 @@ class MispImportFileConfig(BaseConfigModel):
     configuration so existing behavior is preserved.
     """
 
-    import_from_date: str | None = Field(
-        description="Optional lower-bound date used when importing MISP events.",
-        default=None,
-    )
     create_reports: bool = Field(
         description="Create a report for each imported MISP event.",
         default=True,

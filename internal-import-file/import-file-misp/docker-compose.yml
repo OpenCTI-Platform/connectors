@@ -11,7 +11,6 @@ services:
       #- CONNECTOR_VALIDATE_BEFORE_IMPORT=false # Optional, validate any bundle before import (default: false)
       #- CONNECTOR_AUTO=false # Optional, enable/disable auto-import of file (default: false)
       #- CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
-      #- MISP_IMPORT_FILE_IMPORT_FROM_DATE=2024-01-01T00:00:00Z # Optional (default: none)
       #- MISP_IMPORT_FILE_CREATE_REPORTS=true # Optional, create report for MISP event (default: true)
       #- MISP_IMPORT_FILE_REPORT_TYPE=misp-event # Optional (default: 'misp-event')
       #- MISP_IMPORT_FILE_CREATE_INDICATORS=true # Optional, create indicators from attributes (default: true)

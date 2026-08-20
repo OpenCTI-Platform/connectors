@@ -77,7 +77,6 @@ class MispImportFile:
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         # Extra config
         misp_import_file = self.config.misp_import_file
-        self.misp_import_file_import_from_date = misp_import_file.import_from_date
         self.misp_import_file_create_reports = misp_import_file.create_reports
         self.misp_import_file_report_type = misp_import_file.report_type
         self.misp_import_file_create_indicators = misp_import_file.create_indicators

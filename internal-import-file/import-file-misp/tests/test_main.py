@@ -56,7 +56,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "auto": False,
                 },
                 "misp_import_file": {
-                    "import_from_date": "2024-01-01T00:00:00Z",
                     "create_reports": True,
                     "report_type": "misp-event",
                     "create_indicators": True,
