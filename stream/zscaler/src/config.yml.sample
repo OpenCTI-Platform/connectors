@@ -1,20 +1,19 @@
 opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
-  ssl_verify: false
 
 connector:
-  type: 'STREAM'
   id: 'ChangeMe'
-  name: 'ZscalerConnector'
+  # name: 'Zscaler' # optional (default: 'Zscaler')
+  # scope: 'domain-name' # optional (default: 'domain-name')
+  # log_level: 'info' # optional (default: 'info')
   live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
-  live_stream_listen_delete: true
-  
-  scope: 'Zscaler'
-  log_level: 'info'
+  # live_stream_listen_delete: true # optional (default: true)
+  # live_stream_no_dependencies: true # optional (default: true)
 
 zscaler:
-  username: "ChangeMe"
-  password: "ChangeMe"
-  api_key: "ChangeMe"
-  blacklist_name: "ChangeMe"  # Blacklist name
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  api_key: 'ChangeMe'
+  # blacklist_name: 'BLACK_LIST_DYNDNS' # optional (default: 'BLACK_LIST_DYNDNS')
+  # ssl_verify: false # optional (default: false)

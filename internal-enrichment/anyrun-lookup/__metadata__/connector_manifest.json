@@ -1,13 +1,18 @@
 {
-  "title": "ANY.RUN TI Lookup",
+  "title": "ANY.RUN Threat Intelligence Lookup",
   "slug": "anyrun-lookup",
-  "description": "ANY.RUN's Threat Intelligence Lookup (TI Lookup) is a service that allows you to browse IOCs and related threat data to simplify and enrich cyberattack investigations.\n\nThis connector enables OpenCTI users to browse various types of IOCs, from IPs and domains to URLs and hashes, directly within OpenCTI. It returns related threat data to provide actionable insights for incident response, detection rule creation, and playbook updates.\n\nKey benefits:\n\n- Early Threat Detection: Correlate IOCs to identify incidents before they escalate\n- Proactive Defense Enrichment: Collect indicators from attacks on other companies to update detection systems\n- Reduced MTTR and Increased Detection Rate: Access rich threat context to enable fast, informed decisions",
-  "short_description": "ANY.RUN TI Lookup connector enriches IPs, domains, URLs, and hashes with related threat data, providing actionable context for incident response and proactive defense.",
+  "description": "[ANY.RUN Threat Intelligence Lookup](https://any.run/threat-intelligence-lookup/?utm_source=opencti-marketplace&utm_medium=product-page&utm_campaign=lookup-integration-opencti&utm_term=250626&utm_content=linktolookuplanding) is a searchable database of live attack data. It allows SOC and MSSP analysts to check suspicious Indicators of Compromise (IOCs), Behavior (IOBs), and Action (IOAs) against a history of active malware and phishing attacks to understand the full context of an incident. The threat database is being continuously updated with fresh intelligence backed by the [ANY.RUN Interactive Sandbox's](https://any.run/features/?utm_source=opencti-marketplace&utm_medium=product-page&utm_campaign=sb-integration-opencti&utm_term=250626&utm_content=linktosandboxlanding) global community of 15,000 organizations and 600,000 analysts. \n\n**Key Capabilities:**\n\n- **Instantly Enrich Incidents with Global Context:** Query the ANY.RUN database for details on suspicious IPs, domains, hashes, and over 40 more types of indicators to see if they have been involved in real-world attacks, allowing for a more confident assessment of every alert.\n- **See the \"How\" Behind the Attack:** Rather than just seeing that an indicator is \"malicious\", you get behavioral context that explains exactly how an attacker operates, which is vital for building a stronger defense.\n- **Update Your Protections Automatically:** Use the intelligence you find to create new security rules and update your response playbooks directly within OpenCTI, turning global data into local security.\n- **Stop Breaches Before They Start:** By leveraging data from 15,000 organizations, your team can identify and block emerging threats before they even target your environment.",
+  "short_description": "The ANY.RUN Threat Intelligence Lookup connector lets SOC teams search a massive database of live attack data from 15K organizations to enrich indicators with deep behavioral context and global threat telemetry.",
   "logo": "internal-enrichment/anyrun-lookup/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Detection & Response Enablement"
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -7,7 +7,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -39,10 +39,6 @@ class PhishuntConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `PhishuntConnector`.
     """
 
-    api_key: SecretStr | None = Field(
-        description="The API key for Phishunt. If not set, the connector will use the public feed.",
-        default=None,
-    )
     create_indicators: bool = Field(
         description="If true then indicators will be created from Pulse indicators and added to the report.",
         default=True,
@@ -99,5 +95,11 @@ class ConnectorSettings(BaseConnectorSettings):
                     "Env var 'PHISHUNT_INTERVAL' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
                 )
                 connector_data["duration_period"] = timedelta(days=int(interval))
+
+        if phishunt_data.pop("api_key", None):
+            warnings.warn(
+                "Env var 'PHISHUNT_API_KEY' is deprecated and has no effect. "
+                "The phishunt.io feed is now fully public and requires no authentication."
+            )
 
         return data

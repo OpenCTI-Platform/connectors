@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-modat-enrichment:
+    image: opencti/connector-modat-enrichment:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=d2d7a7e3-4cb4-4f58-94c2-7bb6d2f8f643
+      - CONNECTOR_NAME=Modat Enrichment
+      - CONNECTOR_SCOPE=ipv4-addr
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=info
+      - MODAT_API_BASE_URL=https://api.magnify.modat.io
+      - MODAT_API_KEY=ChangeMe
+      - MODAT_MAX_TLP=TLP:AMBER
+      - MODAT_DEFAULT_SCORE=50
+      - MODAT_CREATE_NOTE=true
+      - MODAT_INCLUDE_CVES=false
+      - MODAT_MAX_SERVICES_IN_SUMMARY=25
+    restart: always

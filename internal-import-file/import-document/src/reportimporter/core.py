@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import Callable, Dict, List
 
 import stix2
-import yaml
 from pycti import (
     CustomObservableICCID,
     CustomObservableIMEI,
@@ -16,7 +15,6 @@ from pycti import (
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
-    get_config_variable,
 )
 from pydantic.v1 import BaseModel
 from reportimporter.constants import (
@@ -29,6 +27,7 @@ from reportimporter.constants import (
 )
 from reportimporter.models import Entity, EntityConfig, Observable
 from reportimporter.report_parser import ReportParser
+from reportimporter.settings import ConnectorSettings
 from reportimporter.util import MyConfigParser
 
 
@@ -36,19 +35,10 @@ class ReportImporter:
     def __init__(self) -> None:
         # Instantiate the connector helper from config
         base_path = os.path.dirname(os.path.abspath(__file__))
-        config_file_path = base_path + "/../config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
 
-        self.helper = OpenCTIConnectorHelper(config)
-        self.create_indicator = get_config_variable(
-            "IMPORT_DOCUMENT_CREATE_INDICATOR",
-            ["import_document", "create_indicator"],
-            config,
-        )
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.create_indicator = self.config.import_document.create_indicator
         self.current_file = None
 
         # Load Entity and Observable configs
@@ -72,20 +62,27 @@ class ReportImporter:
         self.file = None
 
     def _process_message(self, data: Dict) -> str:
-        self.helper.log_info("Processing new message")
+        message_start = time.perf_counter()
+        event_type = data.get("event_type", None)
+        self.helper.log_info("[timing] Processing new message")
         self.file = None
 
-        event_type = data.get("event_type", None)
-        if event_type == "INTERNAL_ANALYSIS":
-            content_type = data.get("content_type", None)
-            if content_type == "file":
-                return self._process_file_analysis(data)
-            elif content_type == "fields":
-                return self._process_fields_analysis(data)
+        try:
+            if event_type == "INTERNAL_ANALYSIS":
+                content_type = data.get("content_type", None)
+                if content_type == "file":
+                    return self._process_file_analysis(data)
+                elif content_type == "fields":
+                    return self._process_fields_analysis(data)
+                else:
+                    return "Analysis type not recognized"
             else:
-                return "Analysis type not recognized"
-        else:
-            return self._process_import(data)
+                return self._process_import(data)
+        finally:
+            self.helper.log_info(
+                f"[timing] Finished message in "
+                f"{time.perf_counter() - message_start:.2f}s"
+            )
 
     def _process_file_analysis(self, data: Dict) -> str:
         file_name = self._download_import_file(data)
@@ -195,7 +192,19 @@ class ReportImporter:
         return fields_dict
 
     def _process_import(self, data: Dict) -> str:
+        download_start = time.perf_counter()
         file_name = self._download_import_file(data)
+        try:
+            file_size = os.path.getsize(file_name)
+        except OSError:
+            file_size = None
+        self.helper.log_info(
+            f"[timing] Downloaded file '{file_name}' "
+            f"(size={file_size if file_size is not None else 'unknown'} bytes, "
+            f"mime={data.get('file_mime')}) in "
+            f"{time.perf_counter() - download_start:.2f}s"
+        )
+
         entity_id = data.get("entity_id", None)
         file_markings = data.get("file_markings", [])
         bypass_validation = data.get("bypass_validation", False)
@@ -208,7 +217,12 @@ class ReportImporter:
             return "Connector is only contextual and entity is not defined. Nothing was imported"
 
         # Retrieve entity set from OpenCTI
+        collect_start = time.perf_counter()
         entity_indicators = self._collect_stix_objects(self.entity_config)
+        self.helper.log_info(
+            f"[timing] Collected {len(entity_indicators)} entity indicators in "
+            f"{time.perf_counter() - collect_start:.2f}s"
+        )
 
         # Parse report
         parser = ReportParser(self.helper, entity_indicators, self.observable_config)
@@ -222,7 +236,13 @@ class ReportImporter:
                 "mime_type": "application/pdf",
                 "no_trigger_import": True,
             }
+
+        parse_start = time.perf_counter()
         parsed = parser.run_parser(file_name, data["file_mime"])
+        self.helper.log_info(
+            f"[timing] Parsed file '{file_name}' in "
+            f"{time.perf_counter() - parse_start:.2f}s"
+        )
         os.remove(file_name)
 
         if not parsed:
@@ -231,9 +251,15 @@ class ReportImporter:
         # Process parsing results
         self.helper.log_debug("Results: {}".format(parsed))
         observables, entities = self._process_parsing_results(parsed, entity)
+
         # Send results to OpenCTI
+        send_start = time.perf_counter()
         observable_cnt = self._process_parsed_objects(
             entity, observables, entities, bypass_validation, file_name, file_markings
+        )
+        self.helper.log_info(
+            f"[timing] Sent results to OpenCTI in "
+            f"{time.perf_counter() - send_start:.2f}s"
         )
         entity_cnt = len(entities)
 

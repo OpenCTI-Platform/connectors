@@ -23,10 +23,12 @@ def connector():
     instance.config = MagicMock()
     instance.config.connector.live_stream_opencti_url = None
     instance.config.connector.live_stream_opencti_token = None
+    # Mirror the real default: no fallback applicant unless explicitly configured.
+    instance.config.stream.default_applicant_id = None
     instance.helper = MagicMock()
     instance.helper.connector_logger = MagicMock()
-    instance.helper.stix2_create_bundle.side_effect = (
-        lambda objects: f'{{"type":"bundle","objects":[{json.dumps(objects[0]) if objects else ""}]}}'
+    instance.helper.stix2_create_bundle.side_effect = lambda objects: (
+        f'{{"type":"bundle","objects":[{json.dumps(objects[0]) if objects else ""}]}}'
     )
     instance._stream_thread = None
     return instance
@@ -160,9 +162,38 @@ def test_on_event_resets_applicant_when_origin_user_id_missing(connector):
     assert connector.helper.applicant_id is None
 
 
-# ---------------------------------------------------------------------------
-# URL / token resolution: source (live stream) vs target (helper) OpenCTI
-# ---------------------------------------------------------------------------
+def test_on_event_falls_back_to_default_applicant_when_origin_user_id_missing(
+    connector,
+):
+    """When `origin.user_id` is missing but `default_applicant_id` is configured,
+    `applicant_id` MUST fall back to that default instead of being reset to None."""
+    connector.config.stream.default_applicant_id = "default-user-uuid"
+
+    payload = {
+        "data": {
+            "id": "report--00000000-0000-0000-0000-000000000009",
+            "type": "report",
+        },
+        "origin": {"socket": "query", "ip": "::1"},
+    }
+    connector._on_event(_make_msg("create", payload))
+
+    assert connector.helper.applicant_id == "default-user-uuid"
+    connector.helper.send_stix2_bundle.assert_called_once()
+
+
+def test_on_event_prefers_origin_user_id_over_default_applicant(connector):
+    """A present `origin.user_id` MUST take precedence over the configured default."""
+    connector.config.stream.default_applicant_id = "default-user-uuid"
+
+    stix_object = {
+        "id": "report--00000000-0000-0000-0000-000000000010",
+        "type": "report",
+    }
+    payload = {"data": stix_object, "origin": {"user_id": "event-user-uuid"}}
+    connector._on_event(_make_msg("create", payload))
+
+    assert connector.helper.applicant_id == "event-user-uuid"
 
 
 def test_live_stream_url_falls_back_to_helper_when_not_configured(connector):

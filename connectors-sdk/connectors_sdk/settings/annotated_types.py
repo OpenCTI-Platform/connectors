@@ -6,7 +6,6 @@ from typing import Annotated
 from pydantic import (
     BeforeValidator,
     PlainSerializer,
-    SerializationInfo,
     TypeAdapter,
 )
 
@@ -35,58 +34,17 @@ def parse_comma_separated_list(value: str | list[str]) -> list[str]:
     return value
 
 
-def serialize_list_of_strings(
-    value: list[str], info: SerializationInfo
-) -> str | list[str]:
-    """Serialize a list[str] as a comma-separated string when the Pydantic
-    serialization context requests "pycti" mode; otherwise, return the list
-    unchanged.
-
-    This serializer is intended for use with Pydantic v2 `PlainSerializer` and
-    is typically activated only during JSON serialization (`when_used="json"`),
-    so the in-memory Python value remains a `list[str]` while the JSON output
-    can be a single string when required by external systems.
-
-    Parameters
-    - value: The value to serialize. Expected to be a list of strings.
-    - info: Serialization context provided by Pydantic. If `info.context`
-      contains `{"mode": "pycti"}`, the list will be joined into a single
-      comma-separated string.
-
-    Returns:
-    - A comma-separated string if context mode is "pycti" and `value` is a list.
-    - The original value `value` unchanged in all other cases.
-
-    Notes:
-    - Joining does not insert spaces; e.g., ["a", "b", "c"] -> "a,b,c".
-    - If any element contains commas, those commas are not escaped.
-
-    Examples:
-    - info.context={"mode": "pycti"} and value=["e1", "e2"] -> "e1,e2"
-    - info.context is None or mode != "pycti" -> ["e1", "e2"]
-    """
-    if info.context and info.context.get("mode") == "pycti":
-        return ",".join(value)  # [ "e1", "e2", "e3" ] -> "e1,e2,e3"
-    return value
-
-
 ListFromString = Annotated[
     list[str],  # Final type
     BeforeValidator(parse_comma_separated_list),
-    PlainSerializer(serialize_list_of_strings, when_used="json"),
     """Annotated list[str] that:
 - Validates: Accepts a comma-separated string (e.g., "a,b,c") or a list[str].
   If a string is provided, it is split on commas and whitespace is trimmed for
   each item.
-- Serializes (JSON): When the Pydantic serialization context includes
-  {"mode": "pycti"}, the list is serialized as a single comma-separated string
-  (e.g., ["a","b"] -> "a,b"). Otherwise, it serializes as a JSON array by default.
 
 Components
 - BeforeValidator(parse_comma_separated_list): Converts input strings to list[str]
   early in validation.
-- PlainSerializer(serialize_list_of_strings, when_used="json"): Produces the "pycti"
-  string form only for JSON serialization.
 
 Examples
 - Validation:
@@ -97,12 +55,6 @@ Examples
 
     Model.model_validate({"tags": "a, b , c"}).tags  # -> ["a", "b", "c"]
     Model.model_validate({"tags": ["x", "y"]}).tags  # -> ["x", "y"]
-
-- Serialization:
-    m = Model.model_validate({"tags": ["e1", "e2"]})
-    m.model_dump()                               # -> {'tags': ['e1', 'e2']}
-    m.model_dump_json()                          # -> {"tags":["e1","e2"]}
-    m.model_dump_json(context={"mode": "pycti"}) # -> {"tags":"e1,e2"}
 """,
 ]
 
@@ -172,6 +124,5 @@ Examples
     m = Model.model_validate({"start_date": datetime(2023, 10, 01, 0, 0, tzinfo=timezone.utc)})
     m.model_dump()                               # -> {'start_date': datetime(2023, 10, 01, 0, 0, tzinfo=timezone.utc)}
     m.model_dump_json()                          # -> {"start_date": "2023-10-01T00:00:00+00:00"}
-    m.model_dump_json(context={"mode": "pycti"}) # -> {"start_date": "2023-10-01T00:00:00+00:00"}
 """,
 ]

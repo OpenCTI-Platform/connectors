@@ -4,9 +4,16 @@
   "description": "Extracts IOCs (hashes, domains, IPs, URLs) of any OpenCTI entity description and creates corresponding STIX observables.",
   "short_description": "Extract IOCs from entity descriptions and create STIX observables.",
   "logo": null,
-  "use_cases": ["Enrichment & Analysis"],
-  "verified": false,
-  "last_verified_date": null,
+  "use_cases": [
+    "Other"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": true,
+  "last_verified_date": "2026-07-10",
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">=7.260701.0",

@@ -1,21 +1,6 @@
 name: Tests Connectors
 
 on:
-  push:
-    branches-ignore:
-      - master
-      - 'release/*'
-      - 'lts/*'
-    paths:
-      - 'connectors-sdk/**'
-      - 'external-import/**'
-      - 'internal-enrichment/**'
-      - 'internal-export-file/**'
-      - 'internal-import-file/**'
-      - 'stream/**'
-      - 'shared/**'
-      - 'templates/**'
-      - 'run_test.sh'
   pull_request:
     paths:
       - 'connectors-sdk/**'
@@ -110,7 +95,7 @@ jobs:
           echo "RELEASE_REF=${RESOLVED_RELEASE_REF}" >> "$GITHUB_ENV"
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           enable-cache: "auto"
           python-version: "3.12"

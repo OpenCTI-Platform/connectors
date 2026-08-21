@@ -1,4 +1,4 @@
-pycti==7.260706.0
+pycti==7.260817.0
 urllib3==2.7.0
 beautifulsoup4==4.15.0
 pdfminer.six==20251107
@@ -9,3 +9,4 @@ dateparser==1.4.0
 pyhumps==3.8.0
 chardet==5.2.0
 python-docx==1.1.2
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

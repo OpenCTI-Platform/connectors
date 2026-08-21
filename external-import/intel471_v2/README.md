@@ -31,7 +31,7 @@ The following table outlines the data availability across both platforms.
 Migrating is a straightforward "drop-in" replacement. Because Verity471 provides full parity for existing features, your current data and dashboards will remain consistent.
 
 ### Step 1: Prepare
-* Ensure you have your Verity471 API credentials ready.
+* Ensure you have created an **Application** in the **Intel 471 portal** and noted the **Client ID** and **Client Secret** from that application (those are your _Verity471 API_ credentials).
 
 ### Step 2: Update Configuration
 Stop your current connector and modify your `docker-compose.yml` or `config.yml`:

@@ -24,7 +24,7 @@ class ConverterToStix:
 
     def __init__(self, marking_value: str, create_leak_site_domains: bool = False):
         # Defaults to ``False`` so leak-site URL/domain enrichment is opt-in:
-        # this mirrors the ``CONNECTOR_CREATE_LEAK_SITE_DOMAINS`` config default
+        # this mirrors the ``RANSOMWARELIVE_CREATE_LEAK_SITE_DOMAINS`` config default
         # and fails closed for the compliance-sensitive behaviour, so any call
         # site that forgets to pass the flag does not silently emit leak-site
         # links. The connector always passes the configured value explicitly.
@@ -430,7 +430,7 @@ class ConverterToStix:
             item (dict): dict of data from api call
             create_leak_post_refs (bool): whether to include the direct leak post
                 URL (``post_url``) as an external reference. Defaults to ``False``
-                (opt-in) to mirror the ``CONNECTOR_CREATE_LEAK_POST_REFS`` config
+                (opt-in) to mirror the ``RANSOMWARELIVE_CREATE_LEAK_POST_REFS`` config
                 default and fail closed for this compliance-sensitive behaviour;
                 the connector always passes the configured value explicitly
         Returns:
@@ -547,7 +547,7 @@ class ConverterToStix:
         Params:
             intrusion_set_name (str): name of the intrusion set
             group_data (list[dict]): result from the ransomware api ``/groups`` feed
-                (list of group entries; ``RansomwareAPIClient.get_feed`` returns an
+                (list of group entries; the client ``get_groups`` method returns an
                 empty list when the upstream payload is empty and raises on error,
                 so callers never observe ``None`` here)
             group_name_lockbit (str): group name if intrusionset is lockbit type
@@ -608,7 +608,7 @@ class ConverterToStix:
         Params:
             actor_name (str): Name of the ransomware group (Intrusion Set) attributed to the campaign.
             group_data (list[dict]): result from the ransomware api ``/groups`` feed
-                (list of group entries; ``RansomwareAPIClient.get_feed`` returns an
+                (list of group entries; the client ``get_groups`` method returns an
                 empty list when the upstream payload is empty and raises on error,
                 so callers never observe ``None`` here)
             victim (Identity): stix2 Identity object of victim
@@ -862,7 +862,7 @@ class ConverterToStix:
         Params:
             threat_actor_name (str): name of the threat actor / ransomware group
             group_data (list[dict]): result from the ransomware api ``/groups`` feed
-                (list of group entries; ``RansomwareAPIClient.get_feed`` returns an
+                (list of group entries; the client ``get_groups`` method returns an
                 empty list when the upstream payload is empty and raises on error,
                 so callers never observe ``None`` here)
             victim (Identity): stix2 Identity object of victim

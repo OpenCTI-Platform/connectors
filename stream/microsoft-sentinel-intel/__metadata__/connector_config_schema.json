@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "MicrosoftSentinelIntel",
@@ -60,15 +62,27 @@
       "description": "Whether to ignore dependencies when processing events from the live stream.",
       "type": "boolean"
     },
+    "MICROSOFT_SENTINEL_INTEL_AUTH_TYPE": {
+      "default": "app_registration",
+      "description": "Authentication method used to call Azure APIs. 'app_registration' (default) requires tenant_id, client_id and client_secret. 'azure_credential' uses DefaultAzureCredential (managed identity, workload identity, or a local `az login` session) and ignores tenant_id/client_id/client_secret.",
+      "enum": [
+        "app_registration",
+        "azure_credential"
+      ],
+      "type": "string"
+    },
     "MICROSOFT_SENTINEL_INTEL_TENANT_ID": {
+      "default": null,
       "description": "Your Azure App Tenant ID, see the screenshot to help you find this information.",
       "type": "string"
     },
     "MICROSOFT_SENTINEL_INTEL_CLIENT_ID": {
+      "default": null,
       "description": "Your Azure App Client ID, see the screenshot to help you find this information.",
       "type": "string"
     },
     "MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET": {
+      "default": null,
       "description": "Your Azure App Client secret, See the screenshot to help you find this information.",
       "format": "password",
       "type": "string",
@@ -153,15 +167,17 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "MICROSOFT_SENTINEL_INTEL_PUBLISH_IDENTITIES": {
+      "default": false,
+      "description": "Also push STIX Identity objects (e.g. an indicator's author) received from the stream to Microsoft Sentinel, in addition to Indicators, so their display name resolves correctly instead of only showing the identifier.",
+      "type": "boolean"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
     "CONNECTOR_LIVE_STREAM_ID",
-    "MICROSOFT_SENTINEL_INTEL_TENANT_ID",
-    "MICROSOFT_SENTINEL_INTEL_CLIENT_ID",
-    "MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET",
     "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID",
     "MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME",
     "MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID"
