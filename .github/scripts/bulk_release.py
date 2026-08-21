@@ -138,6 +138,10 @@ def discover_all_connectors(repo_root: Path) -> list[Connector]:
                 continue
             if not (connector_path / "Dockerfile").exists():
                 continue
+            if not (
+                connector_path / "__metadata__" / "connector_manifest.json"
+            ).exists():
+                continue
             connectors.append(
                 Connector(
                     name=connector_path.name,

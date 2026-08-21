@@ -10,11 +10,12 @@ run-name: >-
   ${{
     github.event_name == 'push'
       && format('🚀 {0}', github.ref_name)
-      || format('🚀 {0}{1}{2}{3}',
+      || format('🚀 {0}{1}{2}{3}{4}',
            inputs.connector_name,
            inputs.version != '' && format('@{0}', inputs.version) || '',
            inputs.dry_run && ' · dry-run' || '',
-           inputs.manifest_only && ' · manifest-only' || '')
+           inputs.manifest_only && ' · manifest-only' || '',
+           inputs.force && ' · force' || '')
   }}
 
 # Production release pipeline for individual connectors.
@@ -75,6 +76,17 @@ on:
         required: false
         type: boolean
         default: false
+      force:
+        description: >
+          Force — delete any existing GitHub Release for this version before
+          recreating it. If a tag already exists for this version, it is
+          reused as-is rather than being deleted/recreated. Use this to
+          recover from a partially failed release (e.g. manifest fragment
+          generation or XTM Hub publish failure) that left a dangling
+          tag/release behind.
+        required: false
+        type: boolean
+        default: false
       sdk_ref:
         description: >
           Optional git ref to pin connectors-sdk to in the built image.
@@ -112,6 +124,7 @@ jobs:
       is_tag_push: ${{ steps.parse.outputs.is_tag_push }}
       dry_run: ${{ steps.parse.outputs.dry_run }}
       manifest_only: ${{ steps.parse.outputs.manifest_only }}
+      force: ${{ steps.parse.outputs.force }}
       tag: ${{ steps.version.outputs.tag }}
       matrix_json: ${{ steps.matrix.outputs.matrix_json }}
     steps:
@@ -133,6 +146,7 @@ jobs:
             echo "is_tag_push=true" >> "$GITHUB_OUTPUT"
             echo "dry_run=false" >> "$GITHUB_OUTPUT"
             echo "manifest_only=false" >> "$GITHUB_OUTPUT"
+            echo "force=false" >> "$GITHUB_OUTPUT"
             echo "🏷️ Tag push: $TAG → connector=$CONNECTOR_NAME version=$VERSION"
           else
             # workflow_dispatch: use inputs directly
@@ -140,6 +154,7 @@ jobs:
             echo "is_tag_push=false" >> "$GITHUB_OUTPUT"
             echo "dry_run=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"
             echo "manifest_only=${{ inputs.manifest_only }}" >> "$GITHUB_OUTPUT"
+            echo "force=${{ inputs.force }}" >> "$GITHUB_OUTPUT"
             echo "📋 Manual dispatch: connector=${{ inputs.connector_name }}"
           fi
 
@@ -469,28 +484,44 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Overwrite guard
+        id: overwrite-guard
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ needs.resolve.outputs.force }}
         run: |
           TAG="${{ needs.resolve.outputs.tag }}"
           if gh release view "$TAG" --json tagName >/dev/null 2>&1; then
-            echo "::error::A GitHub Release already exists for tag '${TAG}'. Aborting to prevent overwrite."
-            exit 1
+            if [ "$FORCE" = "true" ]; then
+              echo "⚠️ Force enabled — deleting existing release for '${TAG}'"
+              gh release delete "$TAG" --yes
+            else
+              echo "::error::A GitHub Release already exists for tag '${TAG}'. Aborting to prevent overwrite. Re-run with 'force' enabled to delete and recreate it."
+              exit 1
+            fi
           fi
 
       - name: Create tag (manual dispatch only)
         if: needs.resolve.outputs.is_tag_push != 'true'
+        env:
+          FORCE: ${{ needs.resolve.outputs.force }}
         run: |
           TAG="${{ needs.resolve.outputs.tag }}"
-          echo "🏷️  Creating tag: $TAG"
 
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-            echo "::error::Tag '$TAG' already exists. Use a different version or push the existing tag to trigger a release."
-            exit 1
+          # `git rev-parse refs/tags/...` can't be used here: this job's checkout
+          # doesn't fetch tags, so a remote-only tag would look absent locally.
+          # `ls-remote` checks the remote directly regardless of local state.
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            if [ "$FORCE" = "true" ]; then
+              echo "⚠️ Force enabled — tag '${TAG}' already exists, reusing it as-is"
+            else
+              echo "::error::Tag '$TAG' already exists. Use a different version, push the existing tag to trigger a release, or re-run with 'force' enabled to reuse it."
+              exit 1
+            fi
+          else
+            echo "🏷️  Creating tag: $TAG"
+            git tag "$TAG"
+            git push origin "$TAG"
           fi
-
-          git tag "$TAG"
-          git push origin "$TAG"
 
       - name: Patch manifest container_version
         id: patch-manifest
@@ -502,7 +533,7 @@ jobs:
           if [ ! -f "$MANIFEST" ]; then
             echo "patched=false" >> "$GITHUB_OUTPUT"
             echo "⚠️ Manifest not found: $MANIFEST — skipping version patch"
-            exit 0
+            exit 1
           fi
 
           jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$RUNNER_TEMP/manifest.json" \
@@ -528,7 +559,7 @@ jobs:
 
           if [ ! -f "$MANIFEST" ]; then
             echo "::warning::Manifest not found for ${CONNECTOR_DIR} — skipping fragment generation"
-            exit 0
+            exit 1
           fi
 
           pip install --quiet -r shared/tools/composer/generate_manifest_fragment/requirements.txt
@@ -555,7 +586,7 @@ jobs:
 
           if [ -z "$XTM_HUB_TOKEN" ]; then
             echo "::warning::XTM_HUB_TOKEN secret not set -- skipping XTM Hub publish"
-            exit 0
+            exit 1
           fi
 
           QUERY='mutation IngestManifestFragments($manifestFragments: [ManifestFragmentInput!]!) {
@@ -587,12 +618,12 @@ jobs:
 
           if [ "$HTTP_STATUS" -ge 400 ]; then
             echo "::warning::XTM Hub publish failed with HTTP $HTTP_STATUS"
-            exit 0
+            exit 1
           fi
 
           if echo "$RESPONSE" | jq -e '.errors' >/dev/null 2>&1; then
             echo "::warning::XTM Hub returned errors: $(echo "$RESPONSE" | jq -c '.errors')"
-            exit 0
+            exit 1
           fi
 
           SUCCESS=$(echo "$RESPONSE" | jq -r '.data.ingestManifestFragments.success // false')
@@ -701,6 +732,23 @@ jobs:
 
           echo "✅ Release created: $TITLE"
 
+      # Runs on any failure in this job that happens after the overwrite guard
+      # passed (guard failing itself means a real prior release exists and
+      # must be left untouched). Without this, a mid-job failure (e.g.
+      # manifest fragment generation or XTM Hub publish) leaves a dangling
+      # tag/release that blocks every future retry, since "Create tag" and
+      # "Overwrite guard" would then refuse to proceed on the next run.
+      - name: Cleanup tag on failure
+        if: failure() && steps.overwrite-guard.conclusion == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ needs.resolve.outputs.tag }}"
+          echo "::warning::Release job failed — deleting tag '${TAG}' and any partial release so a retry can recreate it cleanly."
+          gh release delete "$TAG" --yes 2>/dev/null || true
+          git push origin --delete "$TAG" 2>/dev/null || true
+
   # ──────────────────────────────────────────────────────────
   # 5. Commit manifest version back to default branch
   # ──────────────────────────────────────────────────────────
@@ -730,7 +778,7 @@ jobs:
 
           if [ ! -f "$MANIFEST" ]; then
             echo "⚠️ Manifest not found: $MANIFEST — skipping"
-            exit 0
+            exit 1
           fi
 
           # Patch container_version
@@ -779,6 +827,7 @@ jobs:
         run: |
           DRY_RUN="${{ needs.resolve.outputs.dry_run }}"
           MANIFEST_ONLY="${{ needs.resolve.outputs.manifest_only }}"
+          FORCE="${{ needs.resolve.outputs.force }}"
           CONNECTOR="${{ needs.resolve.outputs.connector_name }}"
           VERSION="${{ needs.resolve.outputs.version }}"
           DIR="${{ needs.resolve.outputs.connector_dir }}"
@@ -808,6 +857,7 @@ jobs:
             echo "| Trigger | $([ \"$IS_TAG_PUSH\" = \"true\" ] && echo \"tag push\" || echo \"manual dispatch\") |"
             echo "| Dry Run | ${DRY_RUN} |"
             echo "| Manifest Only | ${MANIFEST_ONLY} |"
+            echo "| Force | ${FORCE} |"
             echo ""
 
             echo "### Job Results"
