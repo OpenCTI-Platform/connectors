@@ -14,6 +14,10 @@ class ExportFileCsvConnectorConfig(BaseInternalExportFileConnectorConfig):
     `pycti.get_config_variable`, with the connector's own defaults.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="177c0a43-9dfe-4350-9706-040e12414d11",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="ExportFileCsv",

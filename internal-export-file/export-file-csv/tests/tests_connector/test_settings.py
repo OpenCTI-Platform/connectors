@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
@@ -76,6 +77,22 @@ def test_settings_should_apply_defaults():
     assert settings.connector.scope == ["text/csv"]
     assert settings.connector.log_level == "error"
     assert settings.export_file_csv.delimiter == ";"
+
+
+def test_settings_should_default_connector_id():
+    """The connector id falls back on its unique default UUID v4."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            settings_dict = _minimal_valid_settings()
+            settings_dict["connector"] = {}
+            return handler(settings_dict)
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.id == "177c0a43-9dfe-4350-9706-040e12414d11"
+    assert UUID(settings.connector.id).version == 4
 
 
 def test_settings_should_be_convertible_to_helper_config():
