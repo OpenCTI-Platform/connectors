@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import Callable, Dict, List
 
 import stix2
-import yaml
 from pycti import (
     CustomObservableICCID,
     CustomObservableIMEI,
@@ -16,7 +15,6 @@ from pycti import (
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
-    get_config_variable,
 )
 from pydantic.v1 import BaseModel
 from reportimporter.constants import (
@@ -29,6 +27,7 @@ from reportimporter.constants import (
 )
 from reportimporter.models import Entity, EntityConfig, Observable
 from reportimporter.report_parser import ReportParser
+from reportimporter.settings import ConnectorSettings
 from reportimporter.util import MyConfigParser
 
 
@@ -36,19 +35,10 @@ class ReportImporter:
     def __init__(self) -> None:
         # Instantiate the connector helper from config
         base_path = os.path.dirname(os.path.abspath(__file__))
-        config_file_path = base_path + "/../config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
 
-        self.helper = OpenCTIConnectorHelper(config)
-        self.create_indicator = get_config_variable(
-            "IMPORT_DOCUMENT_CREATE_INDICATOR",
-            ["import_document", "create_indicator"],
-            config,
-        )
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.create_indicator = self.config.import_document.create_indicator
         self.current_file = None
 
         # Load Entity and Observable configs
