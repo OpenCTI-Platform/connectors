@@ -15,14 +15,14 @@ from asyncio import Queue
 from typing import Dict
 
 import html2text
-import yaml
 from cachetools import TTLCache
 from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
 from pdfminer.pdfpage import PDFPage
 from playwright.async_api import BrowserContext, Page, async_playwright
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
 
@@ -34,73 +34,20 @@ def is_valid_url(url: str) -> bool:
 class ImportExternalReferenceConnector:
     def __init__(self):
         # ─── Load & sanitize config ─────────────────────────────────────────
-        cfg_path = os.path.join(os.path.dirname(__file__), "config.yml")
-        if os.path.exists(cfg_path):
-            with open(cfg_path, "r", encoding="utf-8") as f:
-                config = yaml.safe_load(f) or {}
-        else:
-            config = {}
+        self.config = ConnectorSettings()
 
-        self.helper = OpenCTIConnectorHelper(config)
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
-        self.import_as_pdf = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF",
-            ["import_external_reference", "import_as_pdf"],
-            config,
-            False,
-            True,
-        )
-        self.import_as_md = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD",
-            ["import_external_reference", "import_as_md"],
-            config,
-            False,
-            True,
-        )
-        self.import_pdf_as_md = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD",
-            ["import_external_reference", "import_pdf_as_md"],
-            config,
-            False,
-            True,
-        )
-        self.timestamp_files = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_TIMESTAMP_FILES",
-            ["import_external_reference", "timestamp_files"],
-            config,
-            False,
-            False,  # Default to False
-        )
-        self.cache_size = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_CACHE_SIZE",
-            ["import_external_reference", "cache_size"],
-            config,
-            True,
-            32,  # Default to 32 MB
-        )
-        self.cache_ttl = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_CACHE_TTL",
-            ["import_external_reference", "cache_ttl"],
-            config,
-            True,
-            3600,  # Default to 1 hour
-        )
-        self.worker_count = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_BROWSER_WORKER_COUNT",
-            ["import_external_reference", "browser_worker_count"],
-            config,
-            True,
-            4,  # Default to 4 workers
-        )
+        self.import_as_pdf = self.config.import_external_reference.import_as_pdf
+        self.import_as_md = self.config.import_external_reference.import_as_md
+        self.import_pdf_as_md = self.config.import_external_reference.import_pdf_as_md
+        self.timestamp_files = self.config.import_external_reference.timestamp_files
+        self.cache_size = self.config.import_external_reference.cache_size
+        self.cache_ttl = self.config.import_external_reference.cache_ttl
+        self.worker_count = self.config.import_external_reference.browser_worker_count
 
         # Max download size (in bytes)
-        self.max_download_size = get_config_variable(
-            "IMPORT_EXTERNAL_REFERENCE_MAX_DOWNLOAD_SIZE",
-            ["import_external_reference", "max_download_size"],
-            config,
-            True,
-            50 * 1024 * 1024,  # Default to 50 MB
-        )
+        self.max_download_size = self.config.import_external_reference.max_download_size
 
         if not isinstance(self.cache_size, int) or self.cache_size <= 0:
             raise ValueError(
@@ -142,7 +89,7 @@ class ImportExternalReferenceConnector:
             "Sec-Ch-Ua-Platform": '"Windows"',
         }
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"Config → import_as_pdf={self.import_as_pdf}, "
             f"import_as_md={self.import_as_md}, "
             f"import_pdf_as_md={self.import_pdf_as_md}, "
@@ -169,10 +116,10 @@ class ImportExternalReferenceConnector:
     def _download_url_sync(self, url: str) -> bytes:
         with self._cache_lock:
             if url in self._download_cache:
-                self.helper.log_debug(f"Cache hit: {url}")
+                self.helper.connector_logger.debug(f"Cache hit: {url}")
                 return self._download_cache[url]
 
-        self.helper.log_debug(f"Cache miss: {url}")
+        self.helper.connector_logger.debug(f"Cache miss: {url}")
         req = urllib.request.Request(url, headers=self.headers)
         try:
             with urllib.request.urlopen(
@@ -187,7 +134,7 @@ class ImportExternalReferenceConnector:
                 if len(data) > self.max_download_size:
                     raise ValueError("Downloaded data exceeds size limit")
         except Exception as e:
-            self.helper.log_warning(f"Download failed ({url}): {e}")
+            self.helper.connector_logger.warning(f"Download failed ({url}): {e}")
             raise
 
         with self._cache_lock:
@@ -258,14 +205,14 @@ class ImportExternalReferenceConnector:
                                 continue
                         await el.click(timeout=1000, force=True)
                         found = True
-                        self.helper.log_debug(
+                        self.helper.connector_logger.debug(
                             f"Clicked cookie/banner selector: {selector} (index {i})"
                         )
                         # After a successful click, break for this selector
                         await asyncio.sleep(0.5)
                         break
                     except Exception as e:
-                        self.helper.log_debug(
+                        self.helper.connector_logger.debug(
                             f"Failed to click {selector} (index {i}): {e}"
                         )
                 if found:
@@ -291,16 +238,20 @@ class ImportExternalReferenceConnector:
                     }
                     return removed;
                     """)
-                self.helper.log_debug("Ran JS fallback to hide banners/popups.")
+                self.helper.connector_logger.debug(
+                    "Ran JS fallback to hide banners/popups."
+                )
             except Exception as e:
-                self.helper.log_debug(f"JS fallback for hiding banners failed: {e}")
+                self.helper.connector_logger.debug(
+                    f"JS fallback for hiding banners failed: {e}"
+                )
         return found
 
     async def _browser_worker(self):
         while not self.stop_event.is_set():
             try:
                 url, fut = await self.task_queue.get()
-                self.helper.log_debug(f"Dequeued task for: {url}")
+                self.helper.connector_logger.debug(f"Dequeued task for: {url}")
                 ctx = None
                 page = None
                 try:
@@ -326,7 +277,7 @@ class ImportExternalReferenceConnector:
                             if response.status in (403, 429, 503):
                                 text = await response.text()
 
-                                self.helper.log_info(
+                                self.helper.connector_logger.info(
                                     f"WAF-style block: {response.status} on {response.url}"
                                 )
 
@@ -335,13 +286,15 @@ class ImportExternalReferenceConnector:
 
                                 # General detections
                                 if "captcha" in lower_text:
-                                    self.helper.log_info("Detected CAPTCHA challenge")
+                                    self.helper.connector_logger.info(
+                                        "Detected CAPTCHA challenge"
+                                    )
 
                                 if (
                                     "cloudflare" in lower_text
                                     or "checking your browser" in text
                                 ):
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         "Detected Cloudflare JS challenge"
                                     )
 
@@ -349,13 +302,13 @@ class ImportExternalReferenceConnector:
                                     c["name"]
                                     for c in await response.request.context.cookies()
                                 ]:
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         "Cloudflare cookie (__cf_bm) not present"
                                     )
 
                                 # Akamai
                                 if "_abck" in text or "akamai" in lower_text:
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         "Possible Akamai Bot Manager block detected (_abck cookie or content match)"
                                     )
 
@@ -364,7 +317,7 @@ class ImportExternalReferenceConnector:
                                     "incapsula" in lower_text
                                     or "x-iinfo" in response.headers
                                 ):
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         "Possible Imperva/Incapsula block (x-iinfo header or content match)"
                                     )
 
@@ -374,7 +327,7 @@ class ImportExternalReferenceConnector:
                                     or "awsalb"
                                     in response.headers.get("server", "").lower()
                                 ):
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         "Possible AWS WAF or ALB layer block"
                                     )
 
@@ -384,7 +337,7 @@ class ImportExternalReferenceConnector:
                                     or "big-ip"
                                     in response.headers.get("set-cookie", "").lower()
                                 ):
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         "Possible F5 BIG-IP block (cookie or content match)"
                                     )
 
@@ -395,7 +348,7 @@ class ImportExternalReferenceConnector:
                                     and "fastly"
                                     in response.headers["x-served-by"].lower()
                                 ):
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         "Fastly block indicators found"
                                     )
 
@@ -404,12 +357,14 @@ class ImportExternalReferenceConnector:
                                     "access denied" in lower_text
                                     or "request blocked" in lower_text
                                 ):
-                                    self.helper.log_info(
+                                    self.helper.connector_logger.info(
                                         "Generic access denial or bot detection trigger"
                                     )
 
                         except Exception as e:
-                            self.helper.log_warning(f"Response diagnostics failed: {e}")
+                            self.helper.connector_logger.warning(
+                                f"Response diagnostics failed: {e}"
+                            )
 
                     # Add listener before navigation
                     page.on("response", handle_response)
@@ -433,14 +388,16 @@ class ImportExternalReferenceConnector:
                         await self._dismiss_cookies(page)
 
                     except asyncio.TimeoutError:
-                        self.helper.log_warning(f"Timeout loading {url}")
+                        self.helper.connector_logger.warning(f"Timeout loading {url}")
                         if not fut.done():
                             fut.set_exception(
                                 asyncio.TimeoutError(f"Timeout loading {url}")
                             )
                         continue
                     except Exception as e:
-                        self.helper.log_warning(f"Page.goto failed for {url}: {e}")
+                        self.helper.connector_logger.warning(
+                            f"Page.goto failed for {url}: {e}"
+                        )
                         if not fut.done():
                             fut.set_exception(e)
                         continue
@@ -464,7 +421,7 @@ class ImportExternalReferenceConnector:
 
                     # skip if no status code or not 200
                     if status_code is not None and status_code != 200:
-                        self.helper.log_warning(
+                        self.helper.connector_logger.warning(
                             f"Navigation failed with status {status_code} for {url}"
                         )
                         if not fut.done():
@@ -477,13 +434,15 @@ class ImportExternalReferenceConnector:
                         fut.set_result((html, pdf_bytes))
 
                 except asyncio.CancelledError:
-                    self.helper.log_warning(f"Worker cancelled while processing {url}")
+                    self.helper.connector_logger.warning(
+                        f"Worker cancelled while processing {url}"
+                    )
                     if not fut.done():
                         fut.set_exception(
                             asyncio.CancelledError(f"Worker cancelled for {url}")
                         )
                 except Exception as e:
-                    self.helper.log_warning(f"Worker error ({url}): {e}")
+                    self.helper.connector_logger.warning(f"Worker error ({url}): {e}")
                     if not fut.done():
                         fut.set_exception(e)
                 finally:
@@ -492,25 +451,27 @@ class ImportExternalReferenceConnector:
                     if ctx is not None:
                         await ctx.close()
                     self.task_queue.task_done()
-                    self.helper.log_info(f"Worker finished for {url}")
+                    self.helper.connector_logger.info(f"Worker finished for {url}")
 
             except asyncio.CancelledError:
                 break
             except Exception as fatal:
                 tb = traceback.format_exception(type(fatal), fatal, fatal.__traceback__)
-                self.helper.log_error(f"Fatal worker error: {fatal}\n{''.join(tb)}")
+                self.helper.connector_logger.error(
+                    f"Fatal worker error: {fatal}\n{''.join(tb)}"
+                )
 
     async def _cleanup(self):
         # Signal listener to stop
-        self.helper.log_info("Signaling listener to stop…")
+        self.helper.connector_logger.info("Signaling listener to stop…")
         self.stop_event.set()
 
         # Let pending tasks finish
-        self.helper.log_info("Waiting for pending tasks to finish…")
+        self.helper.connector_logger.info("Waiting for pending tasks to finish…")
         await self.task_queue.join()
 
         # Cancel all workers
-        self.helper.log_info("Cancelling all browser workers…")
+        self.helper.connector_logger.info("Cancelling all browser workers…")
         for w in self.workers:
             w.cancel()
         await asyncio.gather(*self.workers, return_exceptions=True)
@@ -524,12 +485,12 @@ class ImportExternalReferenceConnector:
     # CORE FETCH
     # ────────────────────────────────────────────────────────────────────────────────
     async def _fetch_with_browser(self, url: str, timeout: int = 180):
-        self.helper.log_debug(f"Queueing fetch task for: {url}")
+        self.helper.connector_logger.debug(f"Queueing fetch task for: {url}")
         await self._semaphore.acquire()
         try:
             fut = asyncio.get_running_loop().create_future()
             await self.task_queue.put((url, fut))
-            self.helper.log_debug(
+            self.helper.connector_logger.debug(
                 f"Task queued for: {url} (queue size: {self.task_queue.qsize()})"
             )
             return await asyncio.wait_for(fut, timeout=timeout)
@@ -541,7 +502,7 @@ class ImportExternalReferenceConnector:
     # ────────────────────────────────────────────────────────────────────────────────
     async def _process_external_reference(self, external_reference: Dict) -> str:
         try:
-            self.helper.log_info("Processing external reference…")
+            self.helper.connector_logger.info("Processing external reference…")
             url = external_reference.get("url", "").strip()
             if not url or not is_valid_url(url):
                 raise ValueError(f"Invalid or missing URL: {url!r}")
@@ -551,7 +512,7 @@ class ImportExternalReferenceConnector:
             html = None
             pdf_bytes = None
 
-            self.helper.log_debug(
+            self.helper.connector_logger.debug(
                 f"External reference details: "
                 f"id={external_reference.get('id')}, "
                 f"url={url}, is_pdf={is_pdf}"
@@ -576,14 +537,14 @@ class ImportExternalReferenceConnector:
                     return "Skipped: empty or protected page"
 
             except asyncio.TimeoutError:
-                self.helper.log_warning(f"Fetch timed out for {url}")
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(f"Fetch timed out for {url}")
+                self.helper.connector_logger.warning(
                     f"Enrichment timed out for {external_reference.get('url')}"
                 )
                 return "Timeout"
             except asyncio.CancelledError:
-                self.helper.log_warning(f"Fetch cancelled for {url}")
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(f"Fetch cancelled for {url}")
+                self.helper.connector_logger.warning(
                     f"Enrichment cancelled for {external_reference.get('url')}"
                 )
                 return "Cancelled"
@@ -591,25 +552,25 @@ class ImportExternalReferenceConnector:
                 # Playwright navigation/network errors: treat as blocked, not as a hard error
                 err_str = str(e)
                 if "Page.goto" in err_str or "net::ERR_" in err_str:
-                    self.helper.log_warning(
+                    self.helper.connector_logger.warning(
                         f"Blocked import for {external_reference.get('url')} due to browser navigation error: {err_str}"
                     )
                     return f"Browser navigation error: {err_str}"
 
-                self.helper.log_warning(f"Fetch failed for {url}: {e}")
-                self.helper.log_error(
+                self.helper.connector_logger.warning(f"Fetch failed for {url}: {e}")
+                self.helper.connector_logger.error(
                     f"Enrichment failed for {external_reference.get('url')}: {e}"
                 )
                 return f"Failed: {e}"
 
             # Import as PDF
             if self.import_as_pdf:
-                self.helper.log_debug("Beginning PDF import logic")
+                self.helper.connector_logger.debug("Beginning PDF import logic")
                 try:
                     if is_pdf:
                         # Already downloaded above
                         file_name = self._safe_filename_from_url(url)
-                        self.helper.log_info(
+                        self.helper.connector_logger.info(
                             f"Attaching file '{file_name}' "
                             f"to {external_reference['id']}"
                         )
@@ -621,12 +582,12 @@ class ImportExternalReferenceConnector:
                                 mime_type="application/pdf",
                             )
                         except Exception as api_err:
-                            self.helper.log_error(
+                            self.helper.connector_logger.error(
                                 f"OpenCTI API file attach failed: {api_err}"
                             )
                     else:
                         file_name = self._safe_filename_from_url(url, ".pdf")
-                        self.helper.log_info(
+                        self.helper.connector_logger.info(
                             f"Attaching file '{file_name}' "
                             f"to {external_reference['id']}"
                         )
@@ -638,15 +599,15 @@ class ImportExternalReferenceConnector:
                                 mime_type="application/pdf",
                             )
                         except Exception as api_err:
-                            self.helper.log_error(
+                            self.helper.connector_logger.error(
                                 f"OpenCTI API file attach failed: {api_err}"
                             )
                 except Exception as e:
-                    self.helper.log_error(f"PDF import failed: {e}")
+                    self.helper.connector_logger.error(f"PDF import failed: {e}")
 
             # Import as Markdown
             if self.import_as_md:
-                self.helper.log_debug("Beginning Markdown import logic")
+                self.helper.connector_logger.debug("Beginning Markdown import logic")
                 # Configure html2text
                 text_maker = html2text.HTML2Text()
                 text_maker.body_width = 0
@@ -666,7 +627,7 @@ class ImportExternalReferenceConnector:
                         html_context.close()
 
                         file_name = os.path.basename(url) + ".md"
-                        self.helper.log_info(
+                        self.helper.connector_logger.info(
                             f"Attaching file '{file_name}' "
                             f"to {external_reference['id']}"
                         )
@@ -678,7 +639,7 @@ class ImportExternalReferenceConnector:
                                 mime_type="text/markdown",
                             )
                         except Exception as api_err:
-                            self.helper.log_error(
+                            self.helper.connector_logger.error(
                                 f"OpenCTI API file attach failed: {api_err}"
                             )
 
@@ -687,7 +648,7 @@ class ImportExternalReferenceConnector:
                         # Fix protocol-relative links
                         md = md.replace("](//", "](https://")
                         file_name = self._safe_filename_from_url(url, ".md")
-                        self.helper.log_info(
+                        self.helper.connector_logger.info(
                             f"Attaching file '{file_name}' "
                             f"to {external_reference['id']}"
                         )
@@ -699,30 +660,34 @@ class ImportExternalReferenceConnector:
                                 mime_type="text/markdown",
                             )
                         except Exception as api_err:
-                            self.helper.log_error(
+                            self.helper.connector_logger.error(
                                 f"OpenCTI API file attach failed: {api_err}"
                             )
 
                 except asyncio.TimeoutError:
-                    self.helper.log_warning(f"Markdown import timed out for {url}")
+                    self.helper.connector_logger.warning(
+                        f"Markdown import timed out for {url}"
+                    )
                 except asyncio.CancelledError:
-                    self.helper.log_warning(f"Markdown import cancelled for {url}")
+                    self.helper.connector_logger.warning(
+                        f"Markdown import cancelled for {url}"
+                    )
                 except Exception as e:
-                    self.helper.log_error(f"Markdown import failed: {e}")
+                    self.helper.connector_logger.error(f"Markdown import failed: {e}")
 
             return "Import complete."
         except asyncio.TimeoutError:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"Enrichment timed out for {external_reference.get('url')}"
             )
             return "Timeout"
         except asyncio.CancelledError:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"Enrichment cancelled for {external_reference.get('url')}"
             )
             return "Cancelled"
         except Exception as e:
-            self.helper.log_error(
+            self.helper.connector_logger.error(
                 f"Enrichment failed for {external_reference.get('url')}: {e}"
             )
             return f"Failed: {e}"
@@ -752,15 +717,15 @@ class ImportExternalReferenceConnector:
         thread. We schedule the real async work onto our event loop, and
         immediately return a JSON-serializable acknowledgement.
         """
-        self.helper.log_debug(f"Received raw message: {data}")
+        self.helper.connector_logger.debug(f"Received raw message: {data}")
 
         ext_ref = data.get("enrichment_entity", {})
 
-        self.helper.log_debug(
+        self.helper.connector_logger.debug(
             f"Received enrichment_entity: {ext_ref if ext_ref else 'None'}"
         )
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"Dispatching enrichment task for external-reference: "
             f"{ext_ref.get('id')}, url={ext_ref.get('url')}"
         )
@@ -772,11 +737,11 @@ class ImportExternalReferenceConnector:
         def _log_done(fut: asyncio.Future):
             try:
                 result = fut.result()
-                self.helper.log_info(
+                self.helper.connector_logger.info(
                     f"Processed reference {ext_ref.get('id')}: {result}"
                 )
             except Exception as e:
-                self.helper.log_error(
+                self.helper.connector_logger.error(
                     f"Error processing reference {ext_ref.get('id')}: {e}"
                 )
 
@@ -826,13 +791,13 @@ class ImportExternalReferenceConnector:
         Launch Playwright, spin up the browser, set up the queue and workers.
         Does NOT start `listen()`.
         """
-        self.helper.log_info("▶ entering _init_async")
+        self.helper.connector_logger.info("▶ entering _init_async")
         self.loop = asyncio.get_running_loop()
 
         # 1) start Playwright and the browser
         pw = await async_playwright().start()
         self.playwright = pw
-        self.helper.log_info("▶ launching browser…")
+        self.helper.connector_logger.info("▶ launching browser…")
         self.browser = await pw.chromium.launch(
             headless=True,
             args=[
@@ -841,18 +806,20 @@ class ImportExternalReferenceConnector:
                 "--disable-blink-features=AutomationControlled",  # Disable WebDriver detection for WAF bypass
             ],
         )
-        self.helper.log_info("▶ browser launched")
+        self.helper.connector_logger.info("▶ browser launched")
 
         # 2) task queue and workers
         # Set task queue size to match worker count (prevents over-buffering)
         self.task_queue = Queue(maxsize=self.worker_count)
 
-        self.helper.log_info("▶ browser workers starting")
+        self.helper.connector_logger.info("▶ browser workers starting")
         self.workers = [
             asyncio.create_task(self._browser_worker())
             for _ in range(self.worker_count)
         ]
-        self.helper.log_info(f"Started {self.worker_count} browser workers")
+        self.helper.connector_logger.info(
+            f"Started {self.worker_count} browser workers"
+        )
 
     def start(self):
         # 1) new loop & set it
