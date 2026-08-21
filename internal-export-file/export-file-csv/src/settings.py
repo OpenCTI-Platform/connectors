@@ -1,0 +1,45 @@
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseConnectorSettings,
+    BaseInternalExportFileConnectorConfig,
+    ListFromString,
+)
+from pydantic import Field
+
+
+class ExportFileCsvConnectorConfig(BaseInternalExportFileConnectorConfig):
+    """Connector-section configuration for the Export File CSV connector.
+
+    Mirrors the standard connector variables previously loaded through
+    `pycti.get_config_variable`, with the connector's own defaults.
+    """
+
+    name: str = Field(
+        description="The name of the connector.",
+        default="ExportFileCsv",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector, i.e. the MIME type of the exported files.",
+        default=["text/csv"],
+    )
+
+
+class ExportFileCsvConfig(BaseConfigModel):
+    """Export File CSV specific configuration.
+
+    Mirror of the existing `export-file-csv` variables.
+    """
+
+    delimiter: str = Field(
+        description="The delimiter character used to separate the values in the exported CSV files.",
+        default=";",
+    )
+
+
+class ConnectorSettings(BaseConnectorSettings):
+    """Global settings for the Export File CSV connector."""
+
+    connector: ExportFileCsvConnectorConfig = Field(
+        default_factory=ExportFileCsvConnectorConfig
+    )
+    export_file_csv: ExportFileCsvConfig = Field(default_factory=ExportFileCsvConfig)
