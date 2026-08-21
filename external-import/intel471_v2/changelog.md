@@ -1,3 +1,9 @@
+# v2.2.2
+
+  + Skip report types the account is not entitled to with a one-time warning instead of a recurring error traceback, and keep ingesting the other report types
+  + Upgrade `verity471[stix]` to version [1.1.12](https://github.com/intel471/verity471-python/releases/tag/v1.1.12) to pick up the latest Verity471 API changes (optional/required field updates across Intel Reports, Data Leak Sites, Forums, Watchers and Messaging Services, and new default page sizes)
+  + Accept `INTEL471_INITIAL_HISTORY_*` in epoch seconds as well as epoch milliseconds. A value given in seconds is detected and converted, instead of being read as a 1970 date and re-ingesting the whole history. An initial history already persisted in seconds in the connector state is repaired on the next run, and a value that is plausible as neither unit is now rejected on startup
+
 # v2.2.1
 
   + Upgrade `verity471` to version [1.1.7](https://github.com/intel471/verity471-python/releases/tag/v1.1.7)
