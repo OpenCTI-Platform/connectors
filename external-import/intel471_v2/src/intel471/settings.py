@@ -72,10 +72,14 @@ class Intel471_V2Config(BaseConfigModel):
     """
 
     api_username: str = Field(
-        description="Titan API username",
+        description="Verity Client ID or Titan API Username.",
     )
     api_key: SecretStr = Field(
-        description="Titan API key",
+        description="Verity Client Secret or Titan API Key.",
+    )
+    backend: BackendNameLiteral = Field(
+        description="Backend to use for Intel471 API calls. Defaults to `titan`.",
+        default="titan",
     )
     interval_indicators: int = Field(
         description="How often malware indicators should be fetched in minutes. If not set, the stream will not be enabled.",
@@ -84,17 +88,6 @@ class Intel471_V2Config(BaseConfigModel):
     initial_history_indicators: EpochMillis = Field(
         description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
         "the malware indicators should be fetched from on the connector's first run. "
-        "If not set, they will be fetched from the connector's start date. Excludes historical dates. "
-        "A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
-        default=0,
-    )
-    interval_yara: int = Field(
-        description="How often YARA rules should be fetched in minutes. If not set, the stream will not be enabled.",
-        default=60,
-    )
-    initial_history_yara: EpochMillis = Field(
-        description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
-        "the YARA rules should be fetched from on the connector's first run. "
         "If not set, they will be fetched from the connector's start date. Excludes historical dates. "
         "A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
         default=0,
@@ -121,6 +114,17 @@ class Intel471_V2Config(BaseConfigModel):
         "A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
         default=0,
     )
+    interval_yara: int = Field(
+        description="How often YARA rules should be fetched in minutes (Titan only). If not set, the stream will not be enabled.",
+        default=60,
+    )
+    initial_history_yara: EpochMillis = Field(
+        description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
+        "the YARA rules should be fetched from on the connector's first run (Titan only). "
+        "If not set, they will be fetched from the connector's start date. Excludes historical dates. "
+        "A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
+        default=0,
+    )
     proxy: HttpUrl | None = Field(
         description="Optional Proxy URL, for example `http://user:pass@localhost:3128`",
         default=None,
@@ -128,10 +132,6 @@ class Intel471_V2Config(BaseConfigModel):
     ioc_score: int = Field(
         description="Indicator score. Defaults to `70`.",
         default=70,
-    )
-    backend: BackendNameLiteral = Field(
-        description="Backend to use for Intel471 API calls. Defaults to `titan`.",
-        default="titan",
     )
 
 
