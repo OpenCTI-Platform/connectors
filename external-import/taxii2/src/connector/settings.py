@@ -15,6 +15,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     to the configuration for connectors of type `EXTERNAL_IMPORT`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="d3fcfd4d-9c8a-408b-9f06-50e508148fad",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="TAXII2",
