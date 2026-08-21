@@ -3,13 +3,7 @@ from typing import Annotated, Literal
 
 from connector.models.configs import ConfigBaseSettings
 from connectors_sdk import ListFromString
-from pydantic import (
-    BeforeValidator,
-    Field,
-    HttpUrl,
-    PlainSerializer,
-    field_validator,
-)
+from pydantic import BeforeValidator, Field, HttpUrl, PlainSerializer
 
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "warning", "error"],
@@ -40,7 +34,7 @@ class ConfigLoaderConnectorExtra(ConfigBaseSettings):
     name: str
     scope: ListFromString
 
-    type: str = Field(
+    type: Literal["EXTERNAL_IMPORT"] = Field(
         default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )
@@ -52,7 +46,3 @@ class ConfigLoaderConnectorExtra(ConfigBaseSettings):
         default="PT5M",
         description="Duration between two scheduled runs of the connector (ISO 8601 format).",
     )
-
-    @field_validator("type")
-    def force_value_for_type_to_be_external_import(cls, value):
-        return "EXTERNAL_IMPORT"

@@ -2,6 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "jsonschema==4.26.0",
+#     "Pillow==12.0.0",
 # ]
 # ///
 """
@@ -31,12 +32,17 @@ Field mapping (existing manifest -> fragment):
     container_type    -> image_type
     playbook_supported, max_confidence_level -> additional_properties
     connector_config_schema.json -> config_schema (embedded)
+    <any other manifest key> -> copied through as-is (see
+        MANIFEST_KEYS_HANDLED_EXPLICITLY), so new manifest fields (e.g.
+        solution_categories, license_type, contact) automatically appear in
+        the fragment without requiring a code change here.
 Constant fields:
     platform = "OpenCTI", integration_type = "connector"
 """
 
 import argparse
 import base64
+import io
 import json
 import os
 import re
@@ -45,6 +51,7 @@ import traceback
 from pathlib import Path
 
 import jsonschema
+from PIL import Image
 
 CONNECTOR_METADATA_DIRECTORY = "__metadata__"
 CONNECTOR_MANIFEST_FILENAME = "connector_manifest.json"
@@ -53,8 +60,35 @@ CONNECTOR_CONFIG_SCHEMA_FILENAME = "connector_config_schema.json"
 PLATFORM = "OpenCTI"
 INTEGRATION_TYPE = "connector"
 
-# Maximum length allowed by the schema for `short_description`.
-SHORT_DESCRIPTION_MAX_LENGTH = 200
+# Manifest keys that are explicitly transformed (renamed, reshaped, truncated,
+# or moved into a nested object) when building the fragment. Every other
+# manifest key is copied through as-is in `build_fragment`, so new manifest
+# fields automatically flow into the fragment without requiring a code change
+# here — only a schema update if strict validation of the new field is desired.
+MANIFEST_KEYS_HANDLED_EXPLICITLY = frozenset(
+    {
+        "title",
+        "slug",
+        "description",
+        "short_description",
+        "logo",
+        "verified",
+        "use_cases",
+        "solution_categories",
+        "license_type",
+        "contact",
+        "last_verified_date",
+        "subscription_link",
+        "source_code",
+        "manager_supported",
+        "support_version",
+        "container_image",
+        "container_type",
+        "container_version",
+        "playbook_supported",
+        "max_confidence_level",
+    }
+)
 
 # Default logo used when a connector does not ship its own.
 DEFAULT_LOGO_PATH = (
@@ -71,6 +105,48 @@ MIME_TYPES = {
     ".svg": "image/svg+xml",
 }
 
+# Maximum logo dimensions (in pixels) embedded in the fragment. Oversized
+# logos bloat the base64 payload and can make the manifest fragment too
+# large to publish. Raster logos are downscaled (never upscaled, never
+# cropped) so the aspect ratio is always preserved. SVGs are vector-based
+# and left untouched.
+MAX_LOGO_DIMENSION = 200
+
+# Pillow format name for each supported raster extension, used to re-encode
+# the resized image back to its original format.
+PILLOW_FORMATS = {
+    ".png": "PNG",
+    ".jpg": "JPEG",
+    ".jpeg": "JPEG",
+    ".gif": "GIF",
+}
+
+
+def resize_logo_bytes(logo_data: bytes, suffix: str) -> bytes:
+    """Downscale a raster logo to fit within MAX_LOGO_DIMENSION x MAX_LOGO_DIMENSION.
+
+    Uses `Image.thumbnail`, which preserves the aspect ratio, never crops,
+    and never upscales an image already smaller than the target size.
+    SVGs (vector) are returned unchanged.
+    """
+    if suffix not in PILLOW_FORMATS:
+        return logo_data
+
+    with Image.open(io.BytesIO(logo_data)) as image:
+        if image.width <= MAX_LOGO_DIMENSION and image.height <= MAX_LOGO_DIMENSION:
+            return logo_data
+
+        image.thumbnail((MAX_LOGO_DIMENSION, MAX_LOGO_DIMENSION), Image.LANCZOS)
+
+        buffer = io.BytesIO()
+        save_kwargs = {}
+        if PILLOW_FORMATS[suffix] == "PNG" and image.mode not in ("RGBA", "RGB", "P"):
+            image = image.convert("RGBA")
+        if PILLOW_FORMATS[suffix] == "JPEG" and image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+        image.save(buffer, format=PILLOW_FORMATS[suffix], **save_kwargs)
+        return buffer.getvalue()
+
 
 def find_logo_file(metadata_dir: Path) -> Path:
     """Return the connector's logo path, or the default logo if none is found."""
@@ -83,10 +159,12 @@ def find_logo_file(metadata_dir: Path) -> Path:
 
 
 def encode_logo_to_base64(logo_path: Path) -> str:
-    """Read a logo file and encode it as a base64 data URL."""
+    """Read a logo file, downscale it if needed, and encode it as a base64 data URL."""
+    suffix = logo_path.suffix.lower()
     with open(logo_path, "rb") as logo_file:
         logo_data = logo_file.read()
-    mime_type = MIME_TYPES.get(logo_path.suffix.lower(), "image/png")
+    logo_data = resize_logo_bytes(logo_data, suffix)
+    mime_type = MIME_TYPES.get(suffix, "image/png")
     encoded_logo = base64.b64encode(logo_data).decode("utf-8")
     return f"data:{mime_type};base64,{encoded_logo}"
 
@@ -106,13 +184,6 @@ def normalize_slug(slug: str) -> str:
     id/slug must match `^[a-z0-9]+(?:-[a-z0-9]+)*$`, so underscores become hyphens.
     """
     return slug.lower().replace("_", "-")
-
-
-def truncate_short_description(text: str) -> str:
-    """Truncate `short_description` to the schema's maximum length, adding an ellipsis."""
-    if len(text) <= SHORT_DESCRIPTION_MAX_LENGTH:
-        return text
-    return text[: SHORT_DESCRIPTION_MAX_LENGTH - 3].rstrip() + "..."
 
 
 def load_json(path: Path) -> dict:
@@ -138,15 +209,18 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
     )
 
     fragment = {
-        "id": slug,
+        "id": f"{slug}-{version}",
         "title": manifest["title"],
         "slug": slug,
         "description": manifest["description"],
-        "short_description": truncate_short_description(manifest["short_description"]),
+        "short_description": manifest["short_description"],
         "logo": logo,
         "use_cases": manifest["use_cases"],
-        "verified": manifest.get("verified"),
-        "last_verified_date": manifest.get("last_verified_date"),
+        "solution_categories": manifest["solution_categories"],
+        "license_type": manifest.get("license_type") or "",
+        "contact": manifest.get("contact") or "",
+        "verified": manifest.get("verified", False),
+        "last_verified_date": manifest.get("last_verified_date") or None,
         "subscription_link": manifest.get("subscription_link") or "",
         "source_code": manifest["source_code"],
         "manager_supported": manifest["manager_supported"],
@@ -162,6 +236,14 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
         },
         "config_schema": config_schema,
     }
+
+    # Copy through any manifest key not explicitly handled above (e.g.
+    # any future addition) so the fragment stays in sync with the manifest
+    # without code changes.
+    for key, value in manifest.items():
+        if key not in MANIFEST_KEYS_HANDLED_EXPLICITLY and key not in fragment:
+            fragment[key] = value
+
     return fragment
 
 
@@ -172,6 +254,26 @@ def validate_fragment(fragment: dict, schema_path: Path) -> None:
         instance=fragment, schema=schema, format_checker=jsonschema.FormatChecker()
     )
     print("✅ Fragment validated against schema.")
+    warn_unchecked_keys(fragment, schema)
+
+
+def warn_unchecked_keys(fragment: dict, schema: dict) -> None:
+    """Warn loudly about fragment keys the schema does not declare.
+
+    Because `additionalProperties` is `true`, these keys are accepted as-is by
+    `jsonschema.validate` above without any type/enum/format check — they are
+    passed through from the manifest (see `MANIFEST_KEYS_HANDLED_EXPLICITLY`)
+    but are otherwise unvalidated.
+    """
+    known_properties = set(schema.get("properties", {}))
+    unchecked_keys = sorted(set(fragment) - known_properties)
+    if unchecked_keys:
+        print(
+            "⚠️⚠️⚠️  WARNING: the following fragment key(s) are NOT declared in "
+            f"the JSON schema and will NOT be validated (type, enum, format, ...): "
+            f"{', '.join(unchecked_keys)}. Add them to connector_manifest_schema.json "
+            "to enforce their format.  ⚠️⚠️⚠️"
+        )
 
 
 def main() -> None:

@@ -52,9 +52,11 @@ class TestConnectorSettings:  # pylint: disable=redefined-outer-name,unused-argu
             "leak",
         ]
         assert settings.flare.event_actions == []
+        assert settings.flare.severities == []
         assert settings.flare.lookback_days == 30
         assert settings.flare.tlp_level == "white"
         assert settings.flare.tenant_id is None
+        assert settings.flare.identifier_group_id is None
 
     def test_opencti_url_override(
         self, required_env: None, monkeypatch: MonkeyPatch
@@ -77,12 +79,33 @@ class TestConnectorSettings:  # pylint: disable=redefined-outer-name,unused-argu
         settings = ConnectorSettings()
         assert settings.flare.event_actions == ["created", "updated"]
 
+    def test_flare_severities_override(
+        self, required_env: None, monkeypatch: MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("FLARE_SEVERITIES", "high,critical")
+        settings = ConnectorSettings()
+        assert settings.flare.severities == ["high", "critical"]
+
+    def test_flare_unknown_severity_raises(
+        self, required_env: None, monkeypatch: MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("FLARE_SEVERITIES", "high,catastrophic")
+        with pytest.raises(ConfigValidationError):
+            ConnectorSettings()
+
     def test_flare_tenant_id_override(
         self, required_env: None, monkeypatch: MonkeyPatch
     ) -> None:
         monkeypatch.setenv("FLARE_TENANT_ID", "42")
         settings = ConnectorSettings()
         assert settings.flare.tenant_id == 42
+
+    def test_flare_identifier_group_id_override(
+        self, required_env: None, monkeypatch: MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("FLARE_IDENTIFIER_GROUP_ID", "1337")
+        settings = ConnectorSettings()
+        assert settings.flare.identifier_group_id == 1337
 
     def test_flare_lookback_days_override(
         self, required_env: None, monkeypatch: MonkeyPatch
@@ -102,7 +125,8 @@ class TestConnectorSettings:  # pylint: disable=redefined-outer-name,unused-argu
         settings = ConnectorSettings()
         config = settings.to_helper_config()
         assert config["opencti"]["url"] == str(settings.opencti.url)
-        assert config["opencti"]["token"] == settings.opencti.token
+        # The helper needs the raw token, not the SecretStr wrapper.
+        assert config["opencti"]["token"] == settings.opencti.token.get_secret_value()
         assert config["connector"]["id"] == settings.connector.id
         assert config["connector"]["type"] == "EXTERNAL_IMPORT"
         assert config["connector"]["name"] == settings.connector.name

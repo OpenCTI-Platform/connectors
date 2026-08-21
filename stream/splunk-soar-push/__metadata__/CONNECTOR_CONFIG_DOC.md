@@ -10,8 +10,8 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The token of the user who represents the connector in the OpenCTI platform. |
 | SPLUNK_SOAR_URL | `string` | ✅ | string |  | The Splunk SOAR platform URL. |
 | CONNECTOR_NAME | `string` |  | string | `"Splunk SOAR Push"` | Name of the connector. |
-| CONNECTOR_SCOPE | `string` |  | string | `"splunk-soar-push"` | The scope or type of data the connector is processing. |
-| CONNECTOR_TYPE | `string` |  | string | `"STREAM"` | Should always be set to STREAM for this connector. |
+| CONNECTOR_SCOPE | `array` |  | string | `["splunk-soar-push"]` | The scope or type of data the connector is processing. |
+| CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` | Should always be set to STREAM for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | Determines the verbosity of the logs. |
 | CONNECTOR_CONFIDENCE_LEVEL | `integer` |  | `0 <= x <= 100` | `100` | The default confidence level for created entities (0-100). |
 | CONNECTOR_LIVE_STREAM_ID | `string` |  | string | `"ChangeMe"` | The ID of the live stream to listen to. |

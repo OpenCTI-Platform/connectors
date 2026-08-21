@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "CrowdstrikeEndpointSecurity",
@@ -123,16 +125,9 @@
       "type": "boolean"
     },
     "METRICS_PORT": {
-      "anyOf": [
-        {
-          "type": "integer"
-        },
-        {
-          "type": "string"
-        }
-      ],
       "default": 9113,
-      "description": "Port to use for metrics endpoint."
+      "description": "Port to use for metrics endpoint.",
+      "type": "integer"
     },
     "METRICS_ADDR": {
       "default": "0.0.0.0",
