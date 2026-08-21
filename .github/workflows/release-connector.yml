@@ -556,6 +556,11 @@ jobs:
           VERSION="${{ needs.resolve.outputs.version }}"
           MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
 
+          # Same resolution as the `build` job's `sdk_ref` input, so the fragment's
+          # min_version is derived from the connectors-sdk ref actually pinned into
+          # the built image, not whatever happens to be checked out here.
+          SDK_REF="${{ inputs.sdk_ref != '' && inputs.sdk_ref || github.sha }}"
+
           if [ ! -f "$MANIFEST" ]; then
             echo "::error::Manifest not found for ${CONNECTOR_DIR}"
             exit 1
@@ -567,6 +572,7 @@ jobs:
           python shared/tools/composer/generate_manifest_fragment/generate_manifest_fragment.py \
             --connector-dir "$CONNECTOR_DIR" \
             --version "$VERSION" \
+            --sdk-ref "$SDK_REF" \
             --output "$FRAGMENT_PATH"
 
           echo "fragment_path=$FRAGMENT_PATH" >> "$GITHUB_OUTPUT"
