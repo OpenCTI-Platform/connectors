@@ -27,12 +27,11 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
         description="The minimum level of logs to display.",
         default="error",
     )
-    live_stream_id: str = Field(
-        description="The ID of the live stream to connect to.",
-    )
 
 
 class TaxiiConfig(BaseConfigModel):
+    """Config fields specific to the TAXII POST connector (`TAXII_*` env vars)."""
+
     url: HttpUrl = Field(
         description="The URL of the TAXII server.",
     )
