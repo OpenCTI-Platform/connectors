@@ -2,8 +2,8 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from export_report_pdf.config import ConnectorSettings
 from export_report_pdf.connector import Connector
+from export_report_pdf.settings import ConnectorSettings
 from main import main
 from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture

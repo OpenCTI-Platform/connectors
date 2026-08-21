@@ -1,7 +1,7 @@
 import traceback
 
-from export_report_pdf.settings import ConnectorSettings
 from export_report_pdf.connector import Connector
+from export_report_pdf.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 

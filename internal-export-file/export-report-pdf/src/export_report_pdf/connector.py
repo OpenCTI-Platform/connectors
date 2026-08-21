@@ -8,7 +8,7 @@ import time
 import cairosvg
 import cmarkgfm
 from cmarkgfm import Options as cmarkgfmOptions
-from export_report_pdf.config import ConnectorSettings
+from export_report_pdf.settings import ConnectorSettings
 from jinja2 import Environment, FileSystemLoader
 from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes
 from pygal_maps_world.i18n import COUNTRIES
