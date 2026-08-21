@@ -10284,13 +10284,6 @@
             "format": "duration",
             "type": "string"
           },
-          "PHISHUNT_API_KEY": {
-            "default": null,
-            "description": "The API key for Phishunt. If not set, the connector will use the public feed.",
-            "format": "password",
-            "type": "string",
-            "writeOnly": true
-          },
           "PHISHUNT_CREATE_INDICATORS": {
             "default": true,
             "description": "If true then indicators will be created from Pulse indicators and added to the report.",
