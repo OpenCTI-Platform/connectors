@@ -1,5 +1,6 @@
 from datetime import timedelta
 from typing import Any
+from uuid import UUID
 
 import pytest
 from connector import ConnectorSettings
@@ -173,6 +174,22 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         FakeConnectorSettings()
 
     assert "Error validating configuration" in str(exc_info.value)
+
+
+def test_settings_should_default_connector_id():
+    """The connector id MUST fall back on its unique default UUID v4."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {**MINIMAL_VALID_SETTINGS_DICT, "connector": {}},
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.id == "d3fcfd4d-9c8a-408b-9f06-50e508148fad"
+    assert UUID(settings.connector.id).version == 4
 
 
 def test_settings_should_apply_taxii2_defaults():
