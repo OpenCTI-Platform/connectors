@@ -67,7 +67,7 @@ class ExternalImportConnector:
 
     def __init__(self):
         self.cfg = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper({})
+        self.helper = OpenCTIConnectorHelper(config=self.cfg.to_helper_config())
         self.helper.connector_logger.info("Initializing ExternalImportConnector")
         self.helper.connector_logger.debug(
             "Initialized ConfigConnector, OpenCTIConnectorHelper"
