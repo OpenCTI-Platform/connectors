@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import titan_client
+from intel471.common import coerce_epoch_millis
 from intel471.streams.core.base import Intel471Stream
 
 # Real exception classes are used so `except client_wrapper.auth_exceptions` works.
@@ -197,3 +198,38 @@ def test_stored_initial_history_is_kept_when_neither_unit():
 
     assert stream._get_stored_initial_history("key") == 12345
     assert state["key"] == 12345
+
+
+def test_zero_config_pins_current_time_not_zero():
+    """
+    A config value of `0` means "no initial history", which `__init__` resolves to
+    the connector's start date. It is that timestamp which gets pinned in state --
+    never `0`, which the API would take at face value and answer with the whole
+    history. This invariant is why `_get_stored_initial_history` can treat a falsy
+    stored value as absent: nothing ever writes `0`.
+    """
+    state = {}
+    stream = _build_state_stream(state, 0)
+
+    pinned = stream._get_stored_initial_history("key")
+
+    assert pinned != 0
+    assert pinned == stream.initial_history
+    assert state["key"] == pinned
+    # Returned unchanged only for a plausible millisecond timestamp.
+    assert coerce_epoch_millis(pinned) == pinned
+
+
+def test_stored_zero_is_reseeded_rather_than_sent_to_the_api():
+    """
+    Nothing writes `0` to state, but if one ever got there (a hand-edited connector
+    state, say) it must not be handed to the API, which would read it as 1970 and
+    answer with the whole history. Treating a falsy stored value as absent re-seeds
+    it with a usable timestamp instead -- the repair branch cannot help here, since
+    `0` is plausible as neither seconds nor milliseconds.
+    """
+    state = {"key": 0}
+    stream = _build_state_stream(state, INITIAL_HISTORY_MILLIS)
+
+    assert stream._get_stored_initial_history("key") == INITIAL_HISTORY_MILLIS
+    assert state["key"] == INITIAL_HISTORY_MILLIS
