@@ -11,11 +11,9 @@ services:
       - CONNECTOR_SCOPE=application/pdf,text/plain,text/html,text/markdown
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
       - CONNECTOR_LOG_LEVEL=error
-      - IMPORT_DOCUMENT_AI_INCLUDE_RELATIONSHIPS=true
-      - IMPORT_DOCUMENT_AI_CREATE_INDICATOR=false
-      - IMPORT_DOCUMENT_AI_API_BASE_URL=ChangeMe
-      - IMPORT_DOCUMENT_AI_API_KEY=|
-        -----BEGIN CERTIFICATE-----
-        ... 
-        -----END CERTIFICATE-----
+      # - CONNECTOR_XTM_ONE_INTENT=cti.stix_harvester # XTM One intent for agent-based extraction
+      # - IMPORT_DOCUMENT_AI_INCLUDE_RELATIONSHIPS=true # Include relationships extracted from the document
+      # - IMPORT_DOCUMENT_AI_CREATE_INDICATOR=false # Flag extracted observables for indicator creation
+      # - IMPORT_DOCUMENT_AI_API_BASE_URL=ChangeMe # Base URL of the Import Document AI web service (legacy direct mode)
+      # - IMPORT_DOCUMENT_AI_API_KEY=ChangeMe # PEM licence/certificate key for the web service (legacy direct mode)
     restart: always
