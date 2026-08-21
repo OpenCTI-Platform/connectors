@@ -1,22 +1,24 @@
 {
   "title": "Group-IB",
   "slug": "group-ib",
-  "description": "The Group-IB connector imports threat intelligence from the Group-IB Threat Intelligence platform into OpenCTI via its API. It collects data on threat actors, intrusion sets, campaigns, malware, domains, IPs, and infrastructure built from 22+ years of cybercrime investigation and incident response. The connector pushes structured STIX objects into OpenCTI, enabling attribution, threat hunting, and network protection workflows.",
-  "short_description": "Imports threat actor profiles, campaigns, malware, and infrastructure intelligence from Group-IB Threat Intelligence into OpenCTI via API.",
+  "description": "The Group-IB connector imports threat intelligence from the Group-IB Threat Intelligence platform into OpenCTI via its API. It collects data on threat actors, intrusion sets, campaigns, malware and its command-and-control infrastructure, IOCs, vulnerabilities, phishing and DDoS activity, compromised credentials and payment cards, and dark-web and public-source leaks, built from 22+ years of cybercrime investigation and incident response. The connector pushes structured STIX objects into OpenCTI, enabling attribution, threat hunting, fraud monitoring and network protection workflows. Each collection is enabled and tuned independently, so a deployment ingests only the feeds it is licensed for.\nTo use the integration, please ensure that you have an active Threat Intelligence license covering the API endpoints you intend to reach. Documentation can be found here - https://tap.group-ib.com/hc/api?scope=integrations&q=en%2FIntegrations%2FStarting%20Guide%2FInitial%20Steps%2FInitial%20Steps",
+  "short_description": "Imports Group-IB Threat Intelligence into OpenCTI: threat actor and APT profiles, malware and C2 infrastructure, IOCs, vulnerabilities, attack activity, compromised credentials and cards, and dark-web leaks.",
   "logo": "external-import/group-ib/__metadata__/logo.png",
   "use_cases": [
-    "Adversary & Campaign Insights"
+    "Adversary & Campaign Insights",
+    "Vulnerability & Exploit Awareness",
+    "Fraud, Financial Crime & Cryptocurrency Monitoring"
   ],
   "solution_categories": [
     "Threat Intelligence Feed"
   ],
   "license_type": "Commercial",
-  "contact": null,
+  "contact": "integration@group-ib.com",
   "verified": true,
   "last_verified_date": "2025-03-10",
   "playbook_supported": false,
   "max_confidence_level": 60,
-  "support_version": ">=6.2.12",
+  "support_version": ">=7.260811.0",
   "subscription_link": "https://www.group-ib.com",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/group-ib",
   "manager_supported": false,

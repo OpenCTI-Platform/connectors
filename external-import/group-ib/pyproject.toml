@@ -1,0 +1,30 @@
+[project]
+name = "group-ib"
+version = "2.0.0"
+requires-python = ">=3.12,<3.13"
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88
+# Upstream checks formatting with one isort run from the repository root, where
+# the connector's own packages are not importable and therefore sort into the
+# third-party block. Naming them here reproduces that grouping for runs started
+# inside the connector, which would otherwise find them under src/ and split
+# them into a first-party block the upstream check rejects.
+known_third_party = [
+    "_data",
+    "adapters",
+    "client",
+    "connector",
+    "main",
+    "models",
+    "pipeline",
+    "support",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
