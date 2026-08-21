@@ -3,7 +3,6 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'TAXII2_Import'
   scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
@@ -49,7 +48,7 @@ taxii2:
   author_reliability: 'A - Completely reliable'
   exclude_specific_labels: false
   labels_to_exclude: 'ChangeMe'
-  replace_characters_in_label: 'false'
+  replace_characters_in_label: false
   characters_to_replace_in_label: 'ChangeMe'
   ignore_pattern_types: false
   pattern_types_to_ignore: 'ChangeMe'
