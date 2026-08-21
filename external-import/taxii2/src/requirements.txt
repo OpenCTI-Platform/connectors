@@ -9,7 +9,6 @@ pika
 python-dateutil
 python-magic
 pytz
-PyYAML
 regex
 simplejson
 six
