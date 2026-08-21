@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
@@ -64,6 +65,32 @@ def test_config_should_apply_defaults() -> None:
     assert config.export_report_pdf.company_website is None
     assert config.export_report_pdf.indicators_only is False
     assert config.export_report_pdf.defang_urls is False
+
+
+def test_config_should_default_connector_id() -> None:
+    """
+    Test that the connector's id falls back on its unique default UUID v4
+    when CONNECTOR_ID is not provided.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "export_report_pdf": {},
+                }
+            )
+
+    config = FakeConnectorSettings()
+
+    assert config.connector.id == "5f4b1afc-fbf4-4ef6-bf19-a4c89bc2b726"
+    assert UUID(config.connector.id).version == 4
 
 
 @pytest.mark.parametrize(
