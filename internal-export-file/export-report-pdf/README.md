@@ -11,9 +11,6 @@
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector specific environment variables](#connector-specific-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -53,44 +50,10 @@ The OpenCTI Export Report PDF connector allows exporting professional, branded P
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml `opencti` | Docker environment variable | Default | Mandatory | Description                                          |
-|---------------|----------------------|-----------------------------|---------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `url`                | `OPENCTI_URL`               | /       | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `token`              | `OPENCTI_TOKEN`             | /       | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter      | config.yml `connector` | Docker environment variable | Default         | Mandatory | Description                                                                            |
-|----------------|------------------------|-----------------------------|-----------------|-----------|----------------------------------------------------------------------------------------|
-| Connector ID   | `id`                   | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                              |
-| Connector Name | `name`                 | `CONNECTOR_NAME`            | ExportReportPdf | No        | Name of the connector.                                                                 |
-| Connector Scope| `scope`                | `CONNECTOR_SCOPE`           | application/pdf | Yes       | The MIME type for PDF files.                                                           |
-| Log Level      | `log_level`            | `CONNECTOR_LOG_LEVEL`       | info            | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
-
-### Connector specific environment variables
-
-Below are the parameters specific to the Export Report PDF connector:
-
-| Parameter             | config.yml `export_report_pdf` | Docker environment variable             | Default | Mandatory | Description                                                     |
-|-----------------------|--------------------------------|-----------------------------------------|---------|-----------|-----------------------------------------------------------------|
-| Primary Color         | `primary_color`                | `EXPORT_REPORT_PDF_PRIMARY_COLOR`       | /       | No        | Primary color for the PDF (hex format, e.g., `#ff8c00`).        |
-| Secondary Color       | `secondary_color`              | `EXPORT_REPORT_PDF_SECONDARY_COLOR`     | /       | No        | Secondary color for the PDF (hex format, e.g., `#000000`).      |
-| Company Address Line 1| `company_address_line_1`       | `EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_1` | /    | No        | First line of company address (e.g., company name).             |
-| Company Address Line 2| `company_address_line_2`       | `EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_2` | /    | No        | Second line of company address (e.g., street address).          |
-| Company Address Line 3| `company_address_line_3`       | `EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_3` | /    | No        | Third line of company address (e.g., city, state, country).     |
-| Company Phone Number  | `company_phone_number`         | `EXPORT_REPORT_PDF_COMPANY_PHONE_NUMBER`| /       | No        | Company phone number for the PDF footer.                        |
-| Company Email         | `company_email`                | `EXPORT_REPORT_PDF_COMPANY_EMAIL`       | /       | No        | Company email for the PDF footer.                               |
-| Company Website       | `company_website`              | `EXPORT_REPORT_PDF_COMPANY_WEBSITE`     | /       | No        | Company website URL for the PDF footer.                         |
-| Indicators Only       | `indicators_only`              | `EXPORT_REPORT_PDF_INDICATORS_ONLY`     | false   | No        | If `true`, only include observables that have indicator status. |
-| Defang URLs           | `defang_urls`                  | `EXPORT_REPORT_PDF_DEFANG_URLS`         | true    | No        | If `true`, replace `http` with `hxxp` in URL observables.       |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
