@@ -1,31 +1,20 @@
 import csv
 import io
 import json
-import os
 import sys
 import time
 
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 class ExportFileCsv:
     def __init__(self):
+        # Load and validate the configuration through the Pydantic settings
+        self.config = ConnectorSettings()
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-        self.export_file_csv_delimiter = get_config_variable(
-            "EXPORT_FILE_CSV_DELIMITER",
-            ["export-file-csv", "delimiter"],
-            config,
-            False,
-            ";",
-        )
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.export_file_csv_delimiter = self.config.export_file_csv.delimiter
         self.errors: list[Exception] = (
             []
         )  # error holder to be reset before each new process
