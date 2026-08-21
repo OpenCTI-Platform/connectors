@@ -12,14 +12,13 @@ from .process_objects import ProcessObjects
 
 
 class Connector:
-
     def __init__(self):
         """
         Initialize the Connector with necessary configurations
         """
         # Load configuration file and connection helper
         self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
         self.taxii2 = Taxii2(self.helper, self.config)
         self.process = ProcessObjects(self.helper, self.config, self.converter_to_stix)
