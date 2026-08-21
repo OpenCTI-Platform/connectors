@@ -37,7 +37,7 @@ $ cp -r templates/$connector_type $connector_type/$myconnector
 $ cd $connector_type/$myconnector
 $ ls -R
 # Dockerfile              docker-compose.yml      config.yml.sample
-# README.md               entrypoint.sh           pyproject.toml
+# README.md               pyproject.toml
 # __metadata__            src                     tests
 
 ./src:

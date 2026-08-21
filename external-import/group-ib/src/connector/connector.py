@@ -39,7 +39,6 @@ class ExternalImportConnector:
 
         # A timedelta, which ``schedule_iso`` accepts as-is despite its name.
         self.interval = self.settings.connector.duration_period
-        self.update_existing_data = self.settings.connector.update_existing_data
         self.ttl = None
 
         self.IGNORE_NON_MALWARE_DDOS = False
@@ -454,7 +453,6 @@ class ExternalImportConnector:
                     )
                     self.helper.send_stix2_bundle(
                         bundle,
-                        update=self.update_existing_data,
                         work_id=work_id,
                         cleanup_inconsistent_bundle=True,
                     )

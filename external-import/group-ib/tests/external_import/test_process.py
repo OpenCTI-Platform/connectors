@@ -30,7 +30,6 @@ def _connector() -> ExternalImportConnector:
     inst.IGNORE_NON_MALWARE_DDOS = False
     inst.IGNORE_NON_INDICATOR_THREAT_REPORTS = False
     inst.IGNORE_NON_INDICATOR_THREATS = False
-    inst.update_existing_data = False
     inst.interval = "PT4H"
     return inst
 

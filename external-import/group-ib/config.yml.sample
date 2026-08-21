@@ -24,7 +24,6 @@ connector:
   # - PT5S: an interval of 5 seconds.
   # - P1DT2H: an interval of 1 day and 2 hours.
   duration_period: "PT4H"
-  update_existing_data: true
   # === RabbitMQ Server used for integration manual run ===
   mq_host: localhost
   mq_port: 5672

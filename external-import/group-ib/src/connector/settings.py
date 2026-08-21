@@ -196,7 +196,7 @@ REPORT_NOTE_COLLECTIONS = frozenset({"apt/threat", "hi/threat"})
 #
 # ``ConnectorSettings`` (below, near ``ConfigConnector``) is a separate,
 # additional layer for the standard OpenCTI/connector framework fields only
-# (id/name/scope/log_level/duration_period/update_existing_data, opencti
+# (id/name/scope/log_level/duration_period, opencti
 # url/token), built on ``connectors_sdk.settings.BaseConnectorSettings`` for
 # real Pydantic validation and ``to_helper_config()``. The Group-IB TI
 # surface (``ti_api.*``, including its per-collection settings) stays on
@@ -376,18 +376,11 @@ class GroupIBConnectorSettings(_SettingsBase):
 
 class _ConnectorFrameworkConfig(BaseExternalImportConnectorConfig):
     """The standard connectors-sdk external-import fields (id/name/scope/
-    log_level/duration_period), plus the one addition the SDK has no field
-    for: whether OpenCTI should overwrite existing entities on re-ingestion.
-    Deliberately generic -- nothing here is Group-IB-specific.
+    log_level/duration_period). Declared as a named subclass because the
+    connector type EXTERNAL_IMPORT is carried by the base class, and the
+    repository's connector linter (VC303) only recognises the type through
+    that inheritance.
     """
-
-    update_existing_data: bool = Field(
-        default=True,
-        description=(
-            "Whether OpenCTI should overwrite existing entities when the "
-            "same STIX object is re-ingested."
-        ),
-    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

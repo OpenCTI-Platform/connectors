@@ -1145,7 +1145,6 @@ These mirror the OpenCTI connector framework and are NOT TI-specific.
 | `CONNECTOR_SCOPE` | Comma-separated whitelist of STIX types the connector may emit. The default `stix2,report,threat-actor,intrusion-set,malware,attack-pattern,vulnerability,indicator,location,identity,incident,note,relationship,ipv4-addr,ipv6-addr,domain,url,StixFile,email-addr,user-account,payment-card,bank-account` covers all currently supported collections (including the native `Payment-Card` / `Bank-Account` financial observables). |
 | `CONNECTOR_LOG_LEVEL` | One of `debug`, `info`, `warning`, `error`. |
 | `CONNECTOR_DURATION_PERIOD` | Scheduled run interval as an ISO-8601 duration (e.g. `PT4H`, `PT30M`); used by the OpenCTI helper’s ISO scheduler. |
-| `CONNECTOR_UPDATE_EXISTING_DATA` | `true` to let the OpenCTI worker overwrite existing entities on re-ingestion. See `PRESERVE_MANUAL_LABELS` for the analyst-label trade-off. |
 | `CONNECTOR_DOCKER_CONTAINER_NAME` | Preferred Docker container name. Not consumed by the shipped compose files (they let Docker derive the name, and the multi-instance layout sets `container_name` per service); kept for custom deployments that reference it. |
 | `CONNECTOR_MQ_HOST`, `_PORT`, `_VHOST`, `_USE_SSL`, `_USER`, `_PASS` | RabbitMQ broker for direct manual runs (only needed if you bypass the OpenCTI helper). |
 
@@ -1310,7 +1309,7 @@ For collections that do **not** support hunting rules upstream (e.g. `malware/ya
 
 ### Preserve manual labels
 
-By default the connector emits `x_opencti_labels` custom properties on entities it ingests. With `CONNECTOR_UPDATE_EXISTING_DATA=true`, the OpenCTI worker replaces an entity's labels with the connector's set on each re-ingestion — labels added manually by analysts in the OpenCTI UI are overwritten the next time the connector touches that entity.
+By default the connector emits `x_opencti_labels` custom properties on entities it ingests. When the platform is configured to let a connector overwrite existing entities, the OpenCTI worker replaces an entity's labels with the connector's set on each re-ingestion — labels added manually by analysts in the OpenCTI UI are overwritten the next time the connector touches that entity.
 
 Set `preserve_manual_labels` to `true` to omit `x_opencti_labels` from emitted SDO/SCO custom properties. The OpenCTI worker then leaves the entity's labels untouched on update, preserving anything analysts have added manually. Connector-created Notes can still carry native STIX `labels` because those are separate from `x_opencti_labels`.
 

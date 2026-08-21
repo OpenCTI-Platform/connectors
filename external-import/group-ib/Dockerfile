@@ -20,9 +20,5 @@ RUN adduser -D -u 10001 -G root connector \
 HEALTHCHECK --interval=5m --timeout=10s --start-period=30s --retries=3 \
     CMD pgrep -f "python3 main.py" > /dev/null || exit 1
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-
 USER 10001
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["python3", "main.py"]

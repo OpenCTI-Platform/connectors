@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 def _stub_cfg():
     cfg = SimpleNamespace(
         connector_duration_period="PT4H",
-        connector_update_existing_data=True,
         ti_api_proxy_ip=None,
         ti_api_proxy_port=None,
         ti_api_proxy_protocol=None,
@@ -33,7 +32,6 @@ def _stub_settings():
     return SimpleNamespace(
         connector=SimpleNamespace(
             duration_period=timedelta(hours=4),
-            update_existing_data=True,
         ),
         to_helper_config=MagicMock(return_value={}),
     )
@@ -148,11 +146,6 @@ class TestExternalImportConnectorInit:
         # ti_creds_dict is built from cfg.ti_api_token / ti_api_username.
         creds = mock_tiadapter.call_args.kwargs["ti_creds_dict"]
         assert creds == {"api_key": "tok", "username": "u"}
-
-    def test_update_existing_data_resolved_from_helper(self):
-        conn, cfg, helper, ti_adapter = _construct()
-        # Taken straight from the sdk-validated settings; the stub says True.
-        assert conn.update_existing_data is True
 
     def test_proxies_dict_populated_from_cfg(self):
         from connector.settings import ConfigConnector as RealConfigConnector
