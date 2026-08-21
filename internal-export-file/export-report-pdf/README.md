@@ -49,6 +49,7 @@ The OpenCTI Export Report PDF connector allows exporting professional, branded P
 
 - OpenCTI Platform >= 5.6.1
 - **For Windows**: GTK Runtime Environment (see [Known issues](#known-issues))
+- **For macOS**: you’ll have to install `cairo` and `libffi` (with Homebrew for example);
 
 ## Configuration variables
 

@@ -1,3 +1,3 @@
-from export_report_pdf.config import ConnectorSettings
+from export_report_pdf.settings import ConnectorSettings
 
 __all__ = ["ConnectorSettings"]

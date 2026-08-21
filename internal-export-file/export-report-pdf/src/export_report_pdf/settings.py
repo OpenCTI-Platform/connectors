@@ -13,6 +13,10 @@ class InternalExportFileConnectorConfig(BaseInternalExportFileConnectorConfig):
     Mirrors the connector's existing ``connector`` section variables one-to-one.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="5f4b1afc-fbf4-4ef6-bf19-a4c89bc2b726",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="ExportReportPdf",
