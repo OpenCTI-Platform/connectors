@@ -6,5 +6,4 @@ connector:
   id: 'ChangeMe'
   name: 'ExportTTPsFileNavigator'
   scope: 'application/vnd.mitre.navigator+json'
-  # type: 'INTERNAL_EXPORT_FILE'
   # log_level: 'error'
