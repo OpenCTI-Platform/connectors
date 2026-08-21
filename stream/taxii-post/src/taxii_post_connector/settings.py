@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -15,6 +15,10 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     to the configuration for connectors of type `STREAM`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="27a0802c-2a6d-4ecc-ac22-151e74d5cd18",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="TAXII POST",
@@ -27,12 +31,11 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
         description="The minimum level of logs to display.",
         default="error",
     )
-    live_stream_id: str = Field(
-        description="The ID of the live stream to connect to.",
-    )
 
 
 class TaxiiConfig(BaseConfigModel):
+    """Config fields specific to the TAXII POST connector (`TAXII_*` env vars)."""
+
     url: HttpUrl = Field(
         description="The URL of the TAXII server.",
     )
@@ -51,7 +54,7 @@ class TaxiiConfig(BaseConfigModel):
         description="Bearer token for authentication. Takes precedence over basic auth.",
         default=None,
     )
-    login: SecretStr | None = Field(
+    login: str | None = Field(
         description="Username for basic auth.",
         default=None,
     )
@@ -75,6 +78,14 @@ class TaxiiConfig(BaseConfigModel):
         description="Strip object_marking_refs from objects before posting.",
         default=True,
     )
+
+    @model_validator(mode="after")
+    def _check_auth(self) -> "TaxiiConfig":
+        if not self.token and not (self.login and self.password):
+            raise ValueError(
+                "Either `token` or both `login` and `password` must be set."
+            )
+        return self
 
 
 class ConnectorSettings(BaseConnectorSettings):
