@@ -10,8 +10,7 @@ from pydantic import Field
 class ExportFileCsvConnectorConfig(BaseInternalExportFileConnectorConfig):
     """Connector-section configuration for the Export File CSV connector.
 
-    Mirrors the standard connector variables previously loaded through
-    `pycti.get_config_variable`, with the connector's own defaults.
+    Overrides the SDK defaults with the connector's own identity and scope.
     """
 
     id: str = Field(
