@@ -53,6 +53,11 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
+    "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
+      "default": true,
+      "description": "Validate any bundle before import.",
+      "type": "boolean"
+    },
     "YARA_IMPORT_FILE_SPLIT_RULES": {
       "default": true,
       "description": "Whether to create one indicator per YARA rule instead of a single indicator per file.",

@@ -13,4 +13,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_IMPORT_FILE` | `"INTERNAL_IMPORT_FILE"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
+| CONNECTOR_VALIDATE_BEFORE_IMPORT | `boolean` |  | boolean | `true` | Validate any bundle before import. |
 | YARA_IMPORT_FILE_SPLIT_RULES | `boolean` |  | boolean | `true` | Whether to create one indicator per YARA rule instead of a single indicator per file. |
