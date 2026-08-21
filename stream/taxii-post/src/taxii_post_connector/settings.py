@@ -15,6 +15,10 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     to the configuration for connectors of type `STREAM`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="27a0802c-2a6d-4ecc-ac22-151e74d5cd18",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="TAXII POST",

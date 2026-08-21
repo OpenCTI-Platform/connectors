@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
@@ -85,6 +86,22 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert settings.connector.live_stream_id == "live-stream-id"
     assert settings.taxii.collection_id == "collection-id"
     assert str(settings.taxii.url) == "https://taxii.changeme.com/"
+
+
+def test_settings_should_default_connector_id():
+    """The connector id MUST fall back on its unique default UUID v4."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            settings_dict = _minimal_valid_settings()
+            settings_dict["connector"] = {"live_stream_id": "live-stream-id"}
+            return handler(settings_dict)
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.id == "27a0802c-2a6d-4ecc-ac22-151e74d5cd18"
+    assert UUID(settings.connector.id).version == 4
 
 
 def test_settings_should_use_defaults_when_optional_fields_are_missing():
