@@ -26,7 +26,8 @@ Usage:
 Field mapping (existing manifest -> fragment):
     slug              -> id, slug
     logo (file path)  -> logo (base64 data URL)
-    support_version   -> min_version (">=" and whitespace stripped)
+    pinned pycti version (requirements.txt / pyproject.toml, connectors-sdk
+        pin, or support_version as an ultimate fallback) -> min_version
     <release version> -> version
     container_image   -> image_name
     container_type    -> image_type
@@ -57,6 +58,26 @@ CONNECTOR_METADATA_DIRECTORY = "__metadata__"
 CONNECTOR_MANIFEST_FILENAME = "connector_manifest.json"
 CONNECTOR_CONFIG_SCHEMA_FILENAME = "connector_config_schema.json"
 
+# Where a connector may declare its pycti pin, checked in order. Most
+# connectors use `src/requirements.txt`; some (uv/pyproject-based, or older
+# ones) pin it in a root `requirements.txt` or in `pyproject.toml` instead.
+CONNECTOR_REQUIREMENTS_CANDIDATES = (
+    Path("src") / "requirements.txt",
+    Path("requirements.txt"),
+    Path("pyproject.toml"),
+)
+
+# A handful of connectors only depend on connectors-sdk and don't pin pycti
+# directly; connectors-sdk's own pin is what actually gets installed then.
+CONNECTORS_SDK_PYPROJECT = (
+    Path(__file__).parents[4] / "connectors-sdk" / "pyproject.toml"
+)
+
+# Matches a pinned `pycti==X.Y.Z` requirement, whether as a plain
+# requirements.txt line or a quoted `pyproject.toml` dependencies-array entry
+# (e.g. `"pycti==X.Y.Z",`). Optional extras (`pycti[extra]==`) are handled.
+PYCTI_PIN_PATTERN = re.compile(r"\bpycti(?:\[[^\]]*\])?\s*==\s*['\"]?([^\s'\";,]+)")
+
 PLATFORM = "OpenCTI"
 INTEGRATION_TYPE = "connector"
 
@@ -81,6 +102,9 @@ MANIFEST_KEYS_HANDLED_EXPLICITLY = frozenset(
         "subscription_link",
         "source_code",
         "manager_supported",
+        # Only used as a last-resort fallback for min_version (see
+        # parse_pycti_version), so it's excluded from passthrough rather than
+        # published as its own field.
         "support_version",
         "container_image",
         "container_type",
@@ -169,12 +193,60 @@ def encode_logo_to_base64(logo_path: Path) -> str:
     return f"data:{mime_type};base64,{encoded_logo}"
 
 
-def parse_min_version(support_version: str | None) -> str:
-    """Convert a `support_version` constraint (e.g. ">= 6.8.0") to a bare version."""
+def parse_support_version_fallback(support_version: str | None) -> str | None:
+    """Extract a bare version (e.g. "6.8.0") from a `support_version` constraint
+    (e.g. ">= 6.8.0"), used only as a last resort when no pycti pin is found.
+    """
     if not support_version:
-        return ""
+        return None
     match = re.search(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?", support_version)
-    return match.group() if match else ""
+    return match.group() if match else None
+
+
+def parse_pycti_version(connector_dir: Path, support_version: str | None) -> str:
+    """Return the exact pycti version this connector release was built against.
+
+    This is the minimum OpenCTI platform version we know the connector works
+    with, since it's the pycti version the release was actually built and
+    tested against.
+
+    Checked in order: each of CONNECTOR_REQUIREMENTS_CANDIDATES at the
+    connector root; then the connectors-sdk pin, for connectors that only
+    depend on connectors-sdk (no direct pycti pin of their own) — that's what
+    actually gets installed then. As an ultimate fallback, the manually
+    maintained `support_version` manifest field is used, since it's better
+    than failing the release outright even though it can drift out of sync.
+    """
+    checked_paths = []
+    for relative_path in CONNECTOR_REQUIREMENTS_CANDIDATES:
+        candidate = connector_dir / relative_path
+        checked_paths.append(candidate)
+        if candidate.is_file():
+            match = PYCTI_PIN_PATTERN.search(candidate.read_text(encoding="utf-8"))
+            if match:
+                return match.group(1)
+
+    if CONNECTORS_SDK_PYPROJECT.is_file():
+        match = PYCTI_PIN_PATTERN.search(
+            CONNECTORS_SDK_PYPROJECT.read_text(encoding="utf-8")
+        )
+        if match:
+            return match.group(1)
+        checked_paths.append(CONNECTORS_SDK_PYPROJECT)
+
+    fallback = parse_support_version_fallback(support_version)
+    if fallback:
+        print(
+            "⚠️  No pinned 'pycti==<version>' requirement found — falling back "
+            f"to manifest 'support_version' ({support_version!r}) for min_version."
+        )
+        return fallback
+
+    raise ValueError(
+        "No pinned 'pycti==<version>' requirement found, and no usable "
+        f"'support_version' fallback in the manifest. Checked: "
+        f"{', '.join(str(path) for path in checked_paths)}"
+    )
 
 
 def normalize_slug(slug: str) -> str:
@@ -224,7 +296,9 @@ def build_fragment(connector_dir: Path, version: str) -> dict:
         "subscription_link": manifest.get("subscription_link") or "",
         "source_code": manifest["source_code"],
         "manager_supported": manifest["manager_supported"],
-        "min_version": parse_min_version(manifest.get("support_version")),
+        "min_version": parse_pycti_version(
+            connector_dir, manifest.get("support_version")
+        ),
         "version": version,
         "image_name": manifest["container_image"],
         "image_type": manifest["container_type"],
