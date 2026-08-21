@@ -1,2 +1,7 @@
 venv
 *.DS_Store
+
+# Never let real credentials into the build context.
+.env
+docker-instances/env/*.env
+docker-instances/env/groups/*.env

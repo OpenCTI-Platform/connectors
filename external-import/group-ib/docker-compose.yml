@@ -1,16 +1,8 @@
 services:
-  connector:
-    build: .
-    container_name: ${CONNECTOR_DOCKER_CONTAINER_NAME}
+  connector-group-ib:
     image: opencti/connector-group-ib:latest
-    volumes:
-      - ./docs/:/opt/connector/docs/
-      - ./logs/:/opt/connector/logs/
     env_file:
-      .env
+      - .env
+    volumes:
+      - ./logs/:/opt/connector/logs/
     restart: always
-
-networks:
-  default:
-    external: true
-    name: docker_default

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from pycti import OpenCTIConnectorHelper
+
 from adapters import DataToSTIXAdapter
 from connector.settings import ConfigConnector
 from pipeline.collection_dispatch import (
@@ -10,7 +12,6 @@ from pipeline.collection_dispatch import (
     get_observable_ioc_flags,
     resolve_special_tlp,
 )
-from pycti import OpenCTIConnectorHelper
 
 
 def collect_intelligence(

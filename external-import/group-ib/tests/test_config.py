@@ -348,3 +348,55 @@ class TestDescRegexes:
         assert DESC_PARA_RE.search("a\n\n\nb") is not None
         # Single newline is not a paragraph break.
         assert DESC_PARA_RE.search("a\nb") is None
+
+
+class TestWarnUnknownCollectionKeys:
+    """Keys that match no collection are dropped by the loader, so they have
+    to be surfaced — otherwise a retired slug or a typo looks like a
+    collection that is configured but never runs.
+    """
+
+    @staticmethod
+    def _cfg(**attrs):
+        cfg = ConfigConnector.__new__(ConfigConnector)
+        for name, value in attrs.items():
+            setattr(cfg, name, value)
+        return cfg
+
+    def test_known_collection_is_not_flagged(self, caplog):
+        cfg = self._cfg(ti_api_collections_apt_threat_enable=True)
+        with caplog.at_level("WARNING"):
+            cfg._warn_unknown_collection_keys()
+        assert caplog.text == ""
+
+    def test_retired_collection_is_named(self, caplog):
+        cfg = self._cfg(ti_api_collections_ioc_common_enable=True)
+        with caplog.at_level("WARNING"):
+            cfg._warn_unknown_collection_keys()
+        assert "ioc/common" in caplog.text
+        assert "TI_API__COLLECTIONS__IOC_COMMON__*" in caplog.text
+
+    def test_retired_collection_warned_once_per_slug(self, caplog):
+        # Multi-word setting names must not confuse slug detection, and three
+        # keys for one collection must still produce a single warning.
+        cfg = self._cfg(
+            ti_api_collections_compromised_mule_enable=True,
+            ti_api_collections_compromised_mule_default_date="2024-01-01",
+            ti_api_collections_compromised_mule_ttl=30,
+        )
+        with caplog.at_level("WARNING"):
+            cfg._warn_unknown_collection_keys()
+        assert caplog.text.count("was dropped in") == 1
+
+    def test_unknown_slug_is_reported(self, caplog):
+        cfg = self._cfg(ti_api_collections_not_a_collection_enable=True)
+        with caplog.at_level("WARNING"):
+            cfg._warn_unknown_collection_keys()
+        assert "not_a_collection_enable" in caplog.text
+        assert "match no supported collection" in caplog.text
+
+    def test_no_collection_keys_is_silent(self, caplog):
+        cfg = self._cfg(ti_api_url="https://tap.group-ib.com/api/v2/")
+        with caplog.at_level("WARNING"):
+            cfg._warn_unknown_collection_keys()
+        assert caplog.text == ""

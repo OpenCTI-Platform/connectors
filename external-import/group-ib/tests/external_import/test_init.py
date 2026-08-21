@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -23,6 +24,19 @@ def _stub_cfg():
         get_file_logging_config=MagicMock(return_value=SimpleNamespace()),
     )
     return cfg
+
+
+def _stub_settings():
+    """The sdk-validated framework settings the connector now takes injected.
+    ``duration_period`` is already a ``timedelta`` after sdk validation.
+    """
+    return SimpleNamespace(
+        connector=SimpleNamespace(
+            duration_period=timedelta(hours=4),
+            update_existing_data=True,
+        ),
+        to_helper_config=MagicMock(return_value={}),
+    )
 
 
 def _stub_helper():
@@ -55,7 +69,12 @@ def _construct():
     ):
         from connector.connector import ExternalImportConnector
 
-        return ExternalImportConnector(), cfg, helper, ti_adapter
+        return (
+            ExternalImportConnector(settings=_stub_settings()),
+            cfg,
+            helper,
+            ti_adapter,
+        )
 
 
 class TestExternalImportConnectorInit:
@@ -64,8 +83,8 @@ class TestExternalImportConnectorInit:
         assert conn.cfg is cfg
         assert conn.helper is helper
         assert conn.ti_adapter is ti_adapter
-        # ``validation_interval`` is called → ``self.interval`` set.
-        assert conn.interval == "PT4H"
+        # duration_period arrives already validated by the sdk.
+        assert conn.interval == timedelta(hours=4)
         # Defaults stamped in.
         assert conn.ttl is None
         assert conn.IGNORE_NON_MALWARE_DDOS is False
@@ -98,7 +117,7 @@ class TestExternalImportConnectorInit:
         ):
             from connector.connector import ExternalImportConnector
 
-            conn = ExternalImportConnector()
+            conn = ExternalImportConnector(settings=_stub_settings())
         assert conn.enabled_collections == ["apt/threat"]
 
     def test_ti_adapter_constructed_with_creds(self):
@@ -124,7 +143,7 @@ class TestExternalImportConnectorInit:
         ):
             from connector.connector import ExternalImportConnector
 
-            ExternalImportConnector()
+            ExternalImportConnector(settings=_stub_settings())
 
         # ti_creds_dict is built from cfg.ti_api_token / ti_api_username.
         creds = mock_tiadapter.call_args.kwargs["ti_creds_dict"]
@@ -132,8 +151,7 @@ class TestExternalImportConnectorInit:
 
     def test_update_existing_data_resolved_from_helper(self):
         conn, cfg, helper, ti_adapter = _construct()
-        # ``ExternalImportHelper.validation_update_existing_data`` reads
-        # the cfg attribute; with our stub it's ``True``.
+        # Taken straight from the sdk-validated settings; the stub says True.
         assert conn.update_existing_data is True
 
     def test_proxies_dict_populated_from_cfg(self):
@@ -156,7 +174,7 @@ class TestExternalImportConnectorInit:
         ):
             from connector.connector import ExternalImportConnector
 
-            conn = ExternalImportConnector()
+            conn = ExternalImportConnector(settings=_stub_settings())
         assert conn.proxies["proxy_ip"] == "10.99.0.1"
         assert conn.proxies["proxy_port"] == "3128"
         assert conn.proxies["proxy_protocol"] == "http"

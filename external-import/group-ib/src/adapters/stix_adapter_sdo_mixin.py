@@ -3,8 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-import models as ds
 import stix2
+
+import models as ds
 from connector.settings import ACTOR_PROFILE_COLLECTIONS as _ACTOR_PROFILE_COLLECTIONS
 from connector.settings import MALWARE_DESC_PLACEHOLDER
 from connector.settings import REPORT_NOTE_COLLECTIONS as _REPORT_NOTE_COLLECTIONS
@@ -97,7 +98,7 @@ class SdoMixin:
 
     @staticmethod
     def _region_display(raw: str) -> str:
-        token = str(raw).split(":")[-1].strip()
+        token = str(raw).rsplit(":", maxsplit=1)[-1].strip()
         return token.replace("_", " ").title() if token else str(raw)
 
     def generate_stix_targeted_entities(
@@ -212,7 +213,7 @@ class SdoMixin:
             self.helper.connector_logger.warning(
                 "No object provided for malware generation"
             )
-            return list()
+            return []
 
         _type = "malware"
         _events = obj.get("malware_report_list", [])
@@ -334,8 +335,8 @@ class SdoMixin:
         _stix_objects.extend(related_sdos)
 
         # Profile Note (platform / languages / threat level / arsenal /
-        # description) — carries the metadata no longer flattened into labels.
-        # Travels with the Malware wrapper's stix_objects.
+        # description) — holds the metadata that is deliberately kept out of
+        # labels. Travels with the Malware wrapper's stix_objects.
         mal_note = self._finalize_stix_note(
             name=f"Malware profile: {_name}",
             content=markdown_malware(obj=obj, json_date_obj=json_date_obj or {}),
@@ -491,7 +492,7 @@ class SdoMixin:
             self.helper.connector_logger.warning(
                 "No object provided for vulnerability generation"
             )
-            return list()
+            return []
 
         _description = obj.get("__")
         _type = "vulnerability"
@@ -508,7 +509,7 @@ class SdoMixin:
 
         _date_published = self._retrieve_date(json_date_obj, "date-published")
 
-        _stix_objects = list()
+        _stix_objects = []
         entity_labels, _ = self._resolve_entity_labels(
             collection_label=self.collection,
         )
@@ -625,13 +626,13 @@ class SdoMixin:
             self.helper.connector_logger.warning(
                 "No object provided for attack pattern generation"
             )
-            return list()
+            return []
 
         _description = obj.get("__")
         _type = "attack-pattern"
         _events = obj.get("mitre_matrix_list")
 
-        _stix_objects = list()
+        _stix_objects = []
 
         event_mitre_matrix = self._generate_mitre_matrix(_events)
         entity_labels, _ = self._resolve_entity_labels(
@@ -1005,7 +1006,7 @@ class SdoMixin:
             self.helper.connector_logger.warning(
                 "No object provided for file generation"
             )
-            return list()
+            return []
 
         _description = obj.get("__")
         _type = "file"
@@ -1013,7 +1014,7 @@ class SdoMixin:
 
         valid_from, valid_until = self._retrieve_ttl_dates(json_date_obj)
 
-        _stix_objects = list()
+        _stix_objects = []
 
         if _events:
             entity_labels, _ = self._compose_observable_labels()
@@ -1287,10 +1288,8 @@ class SdoMixin:
             ip.add_relationships_to_stix_objects()
             ips.append(ip)
 
-        # IPv6 IOC observables — historically dropped on the floor because the
-        # mapping only exposed ``indicators.params.ipv4``. Now ``ipv6`` from
-        # the same payload block becomes a sibling ``ipv6-addr`` observable
-        # with the same is_ioc semantics and relationship topology.
+        # ipv6 from the same payload block becomes a sibling ipv6-addr
+        # observable alongside ipv4.
         for ip6_val in ipv6_vals:
             v = str(ip6_val).strip()
             if not self.is_ipv6(v):
@@ -1354,15 +1353,9 @@ class SdoMixin:
 
         base_desc = obj.get("__")
 
-        # Build optional DDoS geo suffix + target Location SDO. The suffix
-        # used to be appended into the observable's description and that was
-        # it (no STIX Location, no relationship) — meaning operators saw
-        # "Target country: Romania" buried in a description string but had
-        # no way to pivot on it in OpenCTI. Now the country still appears
-        # in the description as a fast inline hint AND becomes a real
-        # ``Location`` SDO linked to every emitted observable via
-        # ``related-to`` so analysts can navigate from the country page to
-        # the targets and back.
+        # The target country is emitted twice on purpose: inline in the
+        # description as a fast hint, and as a Location SDO with a relationship
+        # so operators can pivot on it.
         ddos_geo_suffix = ""
         ddos_target_locations: list[Any] = []
         if self.collection == "attacks/ddos":
@@ -1520,7 +1513,6 @@ class SdoMixin:
             ),
             include_cybercriminal=(self.collection in ["hi/threat", "hi/threat_actor"]),
         )
-        # When store_report_labels_in_note: labels go only into a linked Note, not on the Report.
         store_labels_in_note = self._store_report_labels_in_note()
         report_labels = [] if store_labels_in_note else entity_labels
         report = ds.Report(
@@ -1531,8 +1523,6 @@ class SdoMixin:
             tlp_color=self.tlp_color,
             labels=report_labels,
         )
-        # Prefer the rich HTML description from the payload; fall back to the
-        # title only when description is missing entirely.
         report_desc_body = _description if _description != _title else _title
         report_desc = (
             f"Report {_id}: {report_desc_body}" if _id else (report_desc_body or "")
@@ -1547,9 +1537,8 @@ class SdoMixin:
         else:
             report.set_description(report_desc)
 
-        # Build the external_references list. Add Group-IB report number and
-        # upstream sources (e.g. onion-mirror URLs that confirm the threat)
-        # as discoverable links on the Report SDO so analysts can pivot out.
+        # Report number and upstream sources (e.g. onion-mirror URLs) become
+        # external references so analysts can pivot out of OpenCTI.
         report.generate_external_references(report_links)
         if _report_number:
             report.external_references.append(

@@ -1,7 +1,7 @@
 [project]
 name = "group-ib"
 version = "2.0.0"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 
 [tool.black]
 line-length = 88
@@ -9,6 +9,20 @@ line-length = 88
 [tool.isort]
 profile = "black"
 line_length = 88
+# The connector's own packages live under src/, which isort would otherwise
+# classify by probing the filesystem -- and therefore differently depending on
+# the directory it is invoked from. Naming them keeps the grouping identical
+# for local runs, pre-commit and the repository-wide isort run upstream does.
+known_first_party = [
+    "_data",
+    "adapters",
+    "client",
+    "connector",
+    "main",
+    "models",
+    "pipeline",
+    "support",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

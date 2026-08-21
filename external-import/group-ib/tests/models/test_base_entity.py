@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 import stix2
+
 from models.indicators import URL, Domain
 from models.sdo import Identity
 

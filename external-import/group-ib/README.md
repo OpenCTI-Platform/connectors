@@ -4,8 +4,8 @@
 | ----------------- |------------| ------- |
 | Filigran Verified | 2025-03-10 |    -    |
 
-[![Python](https://img.shields.io/badge/python-v3.11+-blue?logo=python)](https://www.python.org/downloads/release/python-3110/)
-[![OpenCTI](https://img.shields.io/badge/opencti-v6.8.12+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/6.8.12)
+[![Python](https://img.shields.io/badge/python-v3.12-blue?logo=python)](https://www.python.org/downloads/release/python-3120/)
+[![OpenCTI](https://img.shields.io/badge/opencti-v7.260811.0+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/7.260811.0)
 
 
 The OpenCTI Group-IB Connector is a standalone Python process that collects data from Threat Intelligence via API calls
@@ -106,9 +106,9 @@ interface and that it covers the API endpoints you wish to reach. Documentation 
 
 ### Requirements
 
-- **Python >= 3.12**
+- **Python >= 3.12, < 3.13**
 - Active Threat Intelligence license
-- OpenCTI Platform >= 6.8.12
+- OpenCTI Platform >= 7.260811.0 (the connector pins `pycti==7.260811.0`; platform and `pycti` versions move in lockstep)
 
 
 ## **Quick start**
@@ -124,16 +124,19 @@ Three steps to a running connector. Run all commands from the connector director
 
    At minimum set `OPENCTI_URL`, `OPENCTI_TOKEN`, `CONNECTOR_ID`, `TI_API__USERNAME`, `TI_API__TOKEN`, and enable at least one collection (`TI_API__COLLECTIONS__<NAME>__ENABLE=true` + `…__DEFAULT_DATE=YYYY-MM-DD`). See [Common environment variables](#common-environment-variables), [Recommended `DEFAULT_DATE` per collection](#recommended-default_date-per-collection), and the `.env.sample` file itself for the full list.
 
-2. **Make sure the connector joins the same Docker network as your OpenCTI containers.** The shipped `docker-compose.yml` attaches the connector to an **external** network:
+2. **Make sure the connector can reach OpenCTI and RabbitMQ.** The shipped `docker-compose.yml` follows the OpenCTI convention: it is a service definition, not a standalone stack. Pick one of:
 
-   ```yaml
-   networks:
-     default:
-       external: true
-       name: docker_default
-   ```
+   - **Recommended — merge into your OpenCTI stack.** Copy the `connector-group-ib` service from `docker-compose.yml` into the `docker-compose.yml` of your OpenCTI deployment. It then shares that stack's network and resolves `opencti`, `rabbitmq`, etc. by hostname, so `OPENCTI_URL=http://opencti:8080` works as-is.
+   - **Standalone — attach to the OpenCTI network explicitly.** Keep this directory's compose file and append the network of your OpenCTI stack:
 
-   The `name:` value must match the network where OpenCTI's `opencti`, `redis`, `rabbitmq`, `elasticsearch`, etc. run — otherwise the connector cannot reach the platform or RabbitMQ. Inspect your OpenCTI stack with `docker network ls` and update `name:` to the actual network if it differs (common variants: `docker_default`, `opencti_default`, `<project>_default`).
+     ```yaml
+     networks:
+       default:
+         external: true
+         name: docker_default
+     ```
+
+     The `name:` value must match the network where OpenCTI's `opencti`, `redis`, `rabbitmq`, `elasticsearch`, etc. run. Inspect your stack with `docker network ls` and use the actual name (common variants: `docker_default`, `opencti_default`, `<project>_default`). Without this, the connector cannot resolve those hostnames and you must point `OPENCTI_URL` at a routable address instead.
 
 3. **Start the connector** from the directory that holds the `Dockerfile` and `docker-compose.yml`:
 
@@ -142,7 +145,7 @@ Three steps to a running connector. Run all commands from the connector director
    docker compose logs -f
    ```
 
-   The container builds from the local `Dockerfile` on first start. After a few seconds you should see the connector register with OpenCTI and begin consuming the enabled collections.
+   This pulls the published `opencti/connector-group-ib` image. To run your own build instead, see [Docker Deployment](#docker-deployment). After a few seconds you should see the connector register with OpenCTI and begin consuming the enabled collections.
 
 For build internals, multi-instance deployments, and non-Docker setups, see the rest of this README and [`README_dev.md`](./README_dev.md).
 
@@ -154,7 +157,7 @@ Configuration parameters are set either in `.env` or in `config.yml`:
 - `.env` is the recommended source for both Docker and manual runs.
 - `config.yml` is supported as an alternative for local manual runs. When present, it takes precedence and `.env` is ignored at parse time.
 
-Both files carry the same logical settings; `.env.sample` and `src/config.yml.sample` are kept in sync.
+Both files carry the same logical settings; `.env.sample` and `config.yml.sample` are kept in sync. `config.yml` is read from the connector root (next to `config.yml.sample`); the pre-2.0 location `src/config.yml` is still accepted so existing deployments keep working.
 
 > **Important — choose one source per deployment.**
 > Do not mix `.env` and `config.yml`. If both are present, `config.yml` wins and `.env` is silently ignored. Use whichever fits your operations team; we recommend `.env` because Docker Compose, secret managers, and `docker-instances/` all integrate with it cleanly.
@@ -222,15 +225,12 @@ For build internals (pinning `pycti` to your OpenCTI version, manual non-Docker 
 
 ### Docker Deployment
 
-Build the Docker image:
+`docker-compose.yml` uses the published image, so `docker compose up -d` needs no build step.
+
+To run a local build instead — when testing changes to this connector — build the image under the same tag the compose file references:
 
 ```bash
 docker build -t opencti/connector-group-ib:latest .
-```
-
-Configure environment variables and start:
-
-```bash
 docker compose up -d
 ```
 
@@ -347,7 +347,7 @@ Learn more about each collection
 
 ## Collection → OpenCTI mapping
 
-The TI connector consumes **31 Group-IB collections** and maps each one to a specific set of STIX 2.1 SDOs / SCOs / SROs in OpenCTI. Two sections below: a compact one-row-per-collection **overview** for quick scanning, and a per-collection **detail** breakdown showing which entities, relationships, source fields and TLP each handler emits. 
+The TI connector consumes **31 Group-IB collections** and maps each one to a specific set of STIX 2.1 SDOs / SCOs / SROs in OpenCTI. Two sections below: a compact one-row-per-collection **overview** for quick scanning, and a per-collection **detail** breakdown showing which entities, relationships, source fields and TLP each handler emits.
 
 Each collection is routed to one of two dispatch paths inside the connector — `default` or `special`. The mechanics are described in [`README_dev.md`](./README_dev.md) (*Dispatch architecture*); when reading the overview table you only need to know that the column tells you whether the bundle has the standard report-centric shape (`default`) or a collection-specific shape (`special`).
 
@@ -1146,7 +1146,7 @@ These mirror the OpenCTI connector framework and are NOT TI-specific.
 | `CONNECTOR_LOG_LEVEL` | One of `debug`, `info`, `warning`, `error`. |
 | `CONNECTOR_DURATION_PERIOD` | Scheduled run interval as an ISO-8601 duration (e.g. `PT4H`, `PT30M`); used by the OpenCTI helper’s ISO scheduler. |
 | `CONNECTOR_UPDATE_EXISTING_DATA` | `true` to let the OpenCTI worker overwrite existing entities on re-ingestion. See `PRESERVE_MANUAL_LABELS` for the analyst-label trade-off. |
-| `CONNECTOR_DOCKER_CONTAINER_NAME` | Docker container name (used by `docker-compose.yml`). |
+| `CONNECTOR_DOCKER_CONTAINER_NAME` | Preferred Docker container name. Not consumed by the shipped compose files (they let Docker derive the name, and the multi-instance layout sets `container_name` per service); kept for custom deployments that reference it. |
 | `CONNECTOR_MQ_HOST`, `_PORT`, `_VHOST`, `_USE_SSL`, `_USER`, `_PASS` | RabbitMQ broker for direct manual runs (only needed if you bypass the OpenCTI helper). |
 
 ### TI API and proxy

@@ -5,6 +5,7 @@ from typing import Any
 
 import pycti
 import stix2
+
 from connector.settings import NOTE_MAX_CONTENT
 from models._common import _BaseSDO
 from support.note_markdown import MarkdownNote
@@ -196,9 +197,8 @@ class Note(_BaseSDO):
         self.modified = modified
 
     def _generate_sdo(self) -> Any:
-        # Stable ID: anchor + (name + first object-ref).
-        # Former strategy pycti.Note.generate_id(name, content) was content-
-        # derived — any body change produced a new ID → duplicate Notes in OpenCTI.
+        # Stable ID: anchor + (name + first object-ref). Deliberately not
+        # content-derived — editing the body must not mint a new Note.
         _anchor = datetime(2020, 1, 1, tzinfo=timezone.utc)
         _first_ref = self.object_refs[0] if self.object_refs else "unknown"
         extra_kwargs: dict[str, Any] = {}

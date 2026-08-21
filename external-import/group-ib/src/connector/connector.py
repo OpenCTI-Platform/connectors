@@ -6,35 +6,40 @@ from datetime import datetime, timezone
 from traceback import format_exc
 from typing import Any
 
+from pycti import OpenCTIConnectorHelper
+
 from client.api_client import build_ti_adapter
 from connector.logging_config import setup_file_logging
 from connector.settings import (
     INITIATE_WORK_DELAY_SEC,
     MAX_ERROR_TRUNCATE_LEN,
     ConfigConnector,
+    ConnectorSettings,
 )
-from connector.utils import ExternalImportHelper
-from pycti import OpenCTIConnectorHelper
 from support.mitre_mapper import get_mitre_mapper
 
 
 class ExternalImportConnector:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        settings: ConnectorSettings | None = None,
+        helper: OpenCTIConnectorHelper | None = None,
+    ) -> None:
+        self.settings = settings if settings is not None else ConnectorSettings()
+        self.helper = (
+            helper
+            if helper is not None
+            else OpenCTIConnectorHelper(config=self.settings.to_helper_config())
+        )
         self.cfg = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper({})
         self._setup_file_logging()
         self.helper.connector_logger.info("Initializing ExternalImportConnector")
 
         current_state = self.helper.get_state()
 
-        self.interval = ExternalImportHelper.validation_interval(
-            cfg=self.cfg, helper=self.helper
-        )
-        self.update_existing_data = (
-            ExternalImportHelper.validation_update_existing_data(
-                cfg=self.cfg, helper=self.helper
-            )
-        )
+        # A timedelta, which ``schedule_iso`` accepts as-is despite its name.
+        self.interval = self.settings.connector.duration_period
+        self.update_existing_data = self.settings.connector.update_existing_data
         self.ttl = None
 
         self.IGNORE_NON_MALWARE_DDOS = False

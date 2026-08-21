@@ -3,8 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import models as ds
 import stix2
+
+import models as ds
 from support.incident_note_markdown import (
     markdown_attacks_ddos,
     markdown_attacks_deface,
@@ -154,7 +155,7 @@ class StixAdapterSpecialMixin:
 
         valid_from, valid_until = self._retrieve_ttl_dates(json_date_obj)
 
-        _stix_objects = list()
+        _stix_objects = []
         _seen: set[str] = set()
         _skipped_invalid = 0
         _skipped_duplicate = 0
@@ -575,7 +576,6 @@ class StixAdapterSpecialMixin:
             _setup_ioc_state(obj, is_primary)
             return obj
 
-        # If `cnc` looks like an IP, treat it as IP candidate; else as domain candidate.
         cnc_is_ip = bool(cnc_value) and (
             self.is_ipv4(cnc_value) or self.is_ipv6(cnc_value)
         )
@@ -1195,9 +1195,8 @@ class StixAdapterSpecialMixin:
         nb.kv("Timestamp", msg_ts).kv(
             "Channel", f"{chan_display} (type={chan_type or '—'})"
         ).kv("Author", f"{display_name} (id={account_login or '—'})")
-        # Surface the channel-level metadata that previously sat on the
-        # channel Identity SDO. Keeps it accessible without polluting
-        # Entities / Organizations with one Identity per channel.
+        # Channel metadata goes in the Note rather than an Identity SDO, so
+        # Entities / Organizations does not gain one Identity per channel.
         if channel_obj:
             nb.kv("Channel server", channel_obj.get("server"))
             nb.kv("Channel id", chan_id)
@@ -1910,7 +1909,6 @@ class StixAdapterSpecialMixin:
             em.generate_stix_objects()
             related.append(em)
 
-        # Where the kit was hosted/downloaded from.
         for row in payload.get("downloaded_from") or []:
             if not isinstance(row, dict):
                 continue

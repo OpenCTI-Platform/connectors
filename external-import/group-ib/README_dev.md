@@ -1,8 +1,8 @@
 # OpenCTI Connector
 
 
-[![Python](https://img.shields.io/badge/python-v3.11+-blue?logo=python)](https://www.python.org/downloads/release/python-3110/)
-[![OpenCTI](https://img.shields.io/badge/opencti-v6.8.12+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/6.8.12)
+[![Python](https://img.shields.io/badge/python-v3.12-blue?logo=python)](https://www.python.org/downloads/release/python-3120/)
+[![OpenCTI](https://img.shields.io/badge/opencti-v7.260811.0+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/7.260811.0)
 
 
 The OpenCTI Connector
@@ -36,19 +36,23 @@ $ git checkout -b [branch-name]
 $ cp -r templates/$connector_type $connector_type/$myconnector
 $ cd $connector_type/$myconnector
 $ ls -R
-# Dockerfile              docker-compose.yml      requirements.txt
-# README.md               entrypoint.sh           src
+# Dockerfile              docker-compose.yml      config.yml.sample
+# README.md               entrypoint.sh           pyproject.toml
+# __metadata__            src                     tests
 
 ./src:
-# main.py   requirements.txt   dev.requirements.txt   config.yml.sample
+# main.py   requirements.txt
 # connector/   client/   adapters/   pipeline/   models/   support/   _data/   docs/
 
 ./src/connector:
-# connector.py   settings.py   utils.py   logging_config.py
+# connector.py   settings.py   logging_config.py   converter_to_stix.py
 #   connector.py    — ExternalImportConnector run loop (scheduling, work, state)
-#   settings.py     — ConfigConnector + Pydantic settings models
-#   utils.py        — validation helpers
+#   settings.py     — ConnectorSettings (connectors-sdk) + ConfigConnector
+#   converter_to_stix.py — STIX conversion boundary (delegates to adapters/)
 #   logging_config.py — stdout + rotating file logging
+
+./tests:
+# test-requirements.txt   conftest.py   test_main.py   connector/ adapters/ models/ ...
 
 ./src/client:
 # api_client.py   — Group-IB TI API boundary (builds the ciaops TIAdapter)
@@ -75,18 +79,18 @@ $ grep -Ri template .
 $ python3 -m venv venv
 $ source ./venv/bin/activate
 $ pip3 install -r src/requirements.txt
-$ cp src/config.yml.sample src/config.yml
+$ cp config.yml.sample config.yml
 # Define the opencti url and token, as well as the connector's id
-$ vim src/config.yml
+$ vim config.yml
 $ cd src && python3 main.py
 ```
 
 ## Formatting (development only)
 
-Runtime uses **`requirements.txt`** only. For local development, install pinned tools from **`dev.requirements.txt`** (Black + isort + flake8 + pre-commit; line length **88** via `pyproject.toml`).
+Runtime uses **`src/requirements.txt`** only. For local development and tests, install pinned tools from **`tests/test-requirements.txt`** (pytest + coverage + Black + isort + flake8 + pre-commit; line length **88** via `pyproject.toml`). Keeping them out of `src/` also keeps them out of the Docker image, which only copies `src/`.
 
 ```sh
-pip install -r dev.requirements.txt
+pip install -r tests/test-requirements.txt
 # optional: run hooks on every commit from this connector root
 pre-commit install
 pre-commit run --all-files   # first-time check of the whole tree
@@ -115,7 +119,7 @@ The client-facing `README.md` shows a single `docker compose up -d` flow. The no
 
 ### Docker build — `pycti` pin
 
-Before building the Docker image, set the version of `pycti` in `src/requirements.txt` to match your OpenCTI server. Example: if OpenCTI is `6.8.4`, set `pycti==6.8.4`. If you skip this, pip resolves the latest `pycti` and the SDK initializer may break (the SDK is tightly coupled to the platform version).
+Before building the Docker image, set the version of `pycti` in `src/requirements.txt` to match your OpenCTI server. Platform and `pycti` releases move in lockstep on the same date-based scheme, so the versions are identical: if OpenCTI is `7.260811.0`, set `pycti==7.260811.0`. Keep the `connectors-sdk` tag on the same version — it is pulled from the connectors repository at that tag. If you skip this, pip resolves the latest `pycti` and the SDK initializer may break (the SDK is tightly coupled to the platform version).
 
 ```bash
 docker compose up -d --build

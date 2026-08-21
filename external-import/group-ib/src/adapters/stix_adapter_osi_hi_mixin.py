@@ -3,9 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import models as ds
 import stix2
 from ciaops.collections_meta.ti import TICollections
+
+import models as ds
 from support.incident_note_markdown import (
     markdown_hi_open_threats,
     markdown_ioc_note,
@@ -887,10 +888,10 @@ class OsiHiMixin:
 
     def generate_ioc_primary(
         self,
-        event,
-        json_date_obj,
-        json_eval_obj,
-    ):
+        event: dict[str, Any],
+        json_date_obj: dict[str, Any],
+        json_eval_obj: dict[str, Any] | None,
+    ) -> list[Any]:
         """Generate STIX for an ``ioc/primary`` event."""
         ioc_primary = event.get("ioc_primary") or {}
         if not ioc_primary:
@@ -981,7 +982,7 @@ class OsiHiMixin:
 
         attribution_targets = malware_objects + threat_actor_objects
 
-        def _setup_ioc(ioc_obj):
+        def _setup_ioc(ioc_obj: Any) -> None:
             ioc_obj.is_ioc = True
             if ioc_description:
                 ioc_obj.set_description(ioc_description)
@@ -1004,13 +1005,13 @@ class OsiHiMixin:
                         )
             ioc_obj.add_relationships_to_stix_objects()
 
-        def _coerce_score(val):
+        def _coerce_score(val: Any) -> int | None:
             try:
                 return int(val) if val is not None else None
             except (TypeError, ValueError):
                 return None
 
-        def _iter_scored(raw, field_key):
+        def _iter_scored(raw: Any, field_key: str) -> list[tuple[str, int | None]]:
             """Yield (value, riskScore) pairs; accept bare strings as fallback."""
             out = []
             for entry in self._normalize_list(raw):

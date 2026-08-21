@@ -4,10 +4,12 @@ import ipaddress
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import models as ds
 import pycti
 import stix2
 from ciaops.collections_meta.ti import TICollections
+from stix2.patterns import HashConstant
+
+import models as ds
 from connector.settings import (
     COLLECTION_DISPLAY_LABEL,
     DEFAULT_TTL_DAYS,
@@ -19,7 +21,6 @@ from connector.settings import (
     TI_NOTE_ID_ANCHOR,
     ConfigConnector,
 )
-from stix2.patterns import HashConstant
 from support.portal_external_refs import portal_external_ref_rows
 from support.text_normalize import normalize_description as _normalize_description_impl
 
@@ -424,7 +425,7 @@ class AdapterCoreMixin:
         return f"{local}@{domain.lower()}"
 
     @staticmethod
-    def normalize_description(value):
+    def normalize_description(value: Any) -> str:
         """Clean an upstream HTML/text description for OpenCTI rendering.
 
         Delegates to ``support.text_normalize.normalize_description``.
@@ -970,8 +971,8 @@ class AdapterCoreMixin:
         self.helper.connector_logger.debug("Generating MITRE matrix")
         mitre_matrix = {
             _e.get("attack_pattern"): {
-                "kill_chain_phases": list(),
-                "portal_links": list(),
+                "kill_chain_phases": [],
+                "portal_links": [],
             }
             for _e in obj_events
             if _e.get("attack_pattern")

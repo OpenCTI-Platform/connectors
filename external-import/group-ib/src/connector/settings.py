@@ -6,14 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from _data.iso3166 import COUNTRIES as _ISO3166_COUNTRIES
 from ciaops.utils import FileHandler
-from connector.logging_config import (
-    _DEFAULT_LOG_BACKUP_COUNT,
-    _DEFAULT_LOG_DIR,
-    _DEFAULT_LOG_MAX_BYTES,
-    FileLoggingConfig,
-)
 from connectors_sdk.settings.base_settings import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
@@ -23,6 +16,14 @@ from pycti import get_config_variable
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 from stix2.v21.vocab import MALWARE_TYPE
+
+from _data.iso3166 import COUNTRIES as _ISO3166_COUNTRIES
+from connector.logging_config import (
+    _DEFAULT_LOG_BACKUP_COUNT,
+    _DEFAULT_LOG_DIR,
+    _DEFAULT_LOG_MAX_BYTES,
+    FileLoggingConfig,
+)
 
 # ============================================================================
 # Connector-wide constants
@@ -410,6 +411,7 @@ class ConfigConnector:
         self.load = self._load_config()
         self.env_keys = self._load_env_keys()
         self._initialize_configurations()
+        self._warn_unknown_collection_keys()
         self.collection_mapping_config = FileHandler().read_json_config(
             self.CONFIG_JSON
         )
@@ -417,6 +419,49 @@ class ConfigConnector:
         # Non-fatal by design: the loader above stays the runtime source of
         # truth, so a schema quirk must never block ingestion.
         self.settings = self._build_validated_settings()
+
+    def _warn_unknown_collection_keys(self) -> None:
+        """Warn about ``TI_API__COLLECTIONS__<NAME>__*`` keys no collection owns.
+
+        Unmatched keys are silently dropped by the loader, so a collection
+        retired in 2.0 or a typo in a slug would otherwise look like a
+        collection that is configured but never runs.
+        """
+        prefix = "ti_api_collections_"
+        retired_hits: set[str] = set()
+        unknown_keys: list[str] = []
+        for attr in vars(self):
+            if not attr.startswith(prefix):
+                continue
+            rest = attr[len(prefix) :]
+            if any(rest.startswith(slug + "_") for slug in self.COLLECTION_MAP):
+                continue
+            retired = next(
+                (s for s in self.RETIRED_COLLECTIONS if rest.startswith(s + "_")),
+                None,
+            )
+            if retired:
+                retired_hits.add(retired)
+            else:
+                unknown_keys.append(rest)
+
+        logger = logging.getLogger(__name__)
+        for slug in sorted(retired_hits):
+            logger.warning(
+                "Ignoring configuration for '%s': the collection was dropped in "
+                "connector 2.0 and 1.x never actually fetched it. Remove the "
+                "TI_API__COLLECTIONS__%s__* keys.",
+                self.RETIRED_COLLECTIONS[slug],
+                slug.upper(),
+            )
+        if unknown_keys:
+            logger.warning(
+                "Ignoring %d collection setting(s) that match no supported "
+                "collection: %s. Check the slugs against config.yml.sample / "
+                ".env.sample.",
+                len(unknown_keys),
+                ", ".join(sorted(unknown_keys)),
+            )
 
     @classmethod
     def config_json_schema(cls) -> dict[str, Any]:
@@ -478,13 +523,14 @@ class ConfigConnector:
             return None
 
     def _load_config(self) -> dict:
-        # settings.py lives in src/connector/; config.yml sits at the src/ root
-        # (one level up) alongside main.py and requirements.txt.
-        config_file_path = Path(__file__).resolve().parent.parent / "config.yml"
-
-        if config_file_path.is_file():
-            with open(config_file_path, "r", encoding="utf-8") as file:
-                return yaml.load(file, Loader=yaml.FullLoader)
+        # Probe order must match
+        # ``connectors_sdk.settings._settings_loader._get_config_yml_file_path``,
+        # or this loader and the sdk's could resolve to different files.
+        src_dir = Path(__file__).resolve().parent.parent
+        for config_file_path in (src_dir / "config.yml", src_dir.parent / "config.yml"):
+            if config_file_path.is_file():
+                with open(config_file_path, "r", encoding="utf-8") as file:
+                    return yaml.safe_load(file) or {}
 
         return {}
 
@@ -718,4 +764,12 @@ class ConfigConnector:
         "suspicious_ip_socks_proxy": "suspicious_ip/socks_proxy",
         "suspicious_ip_tor_node": "suspicious_ip/tor_node",
         "suspicious_ip_vpn": "suspicious_ip/vpn",
+    }
+
+    # Slugs no longer supported, kept only so leftover config keys for them
+    # get a targeted warning instead of the generic one.
+    RETIRED_COLLECTIONS = {
+        "ioc_common": "ioc/common",
+        "compromised_imei": "compromised/imei",
+        "compromised_mule": "compromised/mule",
     }

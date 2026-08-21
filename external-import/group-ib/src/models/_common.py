@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 import pycti
 import stix2
+
 from connector.settings import (
     CTRL_CHAR_RE,
     HTML_TAG_RE,
@@ -125,9 +126,9 @@ class BaseEntity(StixPayloadUtils):
         self.stix_observable = None
         self.stix_sdo = None
         self.stix_common = None
-        self.stix_relationships = list()
+        self.stix_relationships = []
 
-        self.external_references = list()
+        self.external_references = []
 
         self.stix_main_object = None
         self.stix_objects = None

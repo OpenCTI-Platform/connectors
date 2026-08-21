@@ -3,8 +3,9 @@ from __future__ import annotations
 import runpy
 from unittest.mock import MagicMock, patch
 
-import main
 import pytest
+
+import main
 
 
 class TestMainModule:
@@ -18,24 +19,26 @@ class TestMainModule:
 
         assert issubclass(main.CustomConnector, ExternalImportConnector)
 
-    def test_custom_connector_delegates_to_pipeline(self):
-        # ``CustomConnector._collect_intelligence`` forwards to the
-        # ``pipeline.collect_intelligence`` helper.
-        with patch(
-            "main.collect_intelligence", return_value=[1, 2, 3]
-        ) as mock_pipeline:
+    def test_custom_connector_delegates_to_converter(self):
+        # ``CustomConnector._collect_intelligence`` forwards to
+        # ``ConverterToStix.convert_event``, the STIX conversion boundary.
+        with patch("main.ConverterToStix") as mock_converter_cls:
+            mock_converter_cls.return_value.convert_event.return_value = [1, 2, 3]
             conn = main.CustomConnector.__new__(main.CustomConnector)
             conn.helper = MagicMock()
+            config = MagicMock()
             out = conn._collect_intelligence(
                 collection="apt/threat",
                 ttl=30,
                 event={},
                 mitre_mapper={"T1": "x"},
-                config=MagicMock(),
+                config=config,
                 flag_intrusion_set_instead_of_threat_actor=True,
             )
-            mock_pipeline.assert_called_once()
-            call_kwargs = mock_pipeline.call_args.kwargs
+            mock_converter_cls.assert_called_once_with(
+                helper=conn.helper, config=config
+            )
+            call_kwargs = mock_converter_cls.return_value.convert_event.call_args.kwargs
             assert call_kwargs["collection"] == "apt/threat"
             assert call_kwargs["ttl"] == 30
             assert call_kwargs["mitre_mapper"] == {"T1": "x"}
