@@ -5,7 +5,6 @@ from typing import Any
 
 import pycti
 import stix2
-
 from connector.settings import NOTE_MAX_CONTENT
 from models._common import _BaseSDO
 from support.note_markdown import MarkdownNote

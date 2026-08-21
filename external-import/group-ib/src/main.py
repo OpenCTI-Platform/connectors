@@ -4,11 +4,10 @@ import traceback
 from typing import Any
 
 import dotenv
-from pycti import OpenCTIConnectorHelper
-
 from connector.connector import ExternalImportConnector
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConfigConnector, ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 dotenv.load_dotenv()
 

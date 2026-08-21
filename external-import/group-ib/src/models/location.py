@@ -4,7 +4,6 @@ from typing import Any
 
 import pycti
 import stix2
-
 from models._common import _BaseCommon
 
 

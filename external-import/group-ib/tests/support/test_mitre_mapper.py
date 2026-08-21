@@ -4,7 +4,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-
 from support.mitre_mapper import get_mitre_mapper
 
 

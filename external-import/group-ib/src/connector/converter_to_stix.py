@@ -8,10 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from pycti import OpenCTIConnectorHelper
-
 from connector.settings import ConfigConnector
 from pipeline import collect_intelligence
+from pycti import OpenCTIConnectorHelper
 
 
 class ConverterToStix:

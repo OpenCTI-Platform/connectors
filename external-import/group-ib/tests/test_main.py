@@ -3,9 +3,8 @@ from __future__ import annotations
 import runpy
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 import main
+import pytest
 
 
 class TestMainModule:

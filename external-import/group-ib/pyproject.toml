@@ -9,11 +9,12 @@ line-length = 88
 [tool.isort]
 profile = "black"
 line_length = 88
-# The connector's own packages live under src/, which isort would otherwise
-# classify by probing the filesystem -- and therefore differently depending on
-# the directory it is invoked from. Naming them keeps the grouping identical
-# for local runs, pre-commit and the repository-wide isort run upstream does.
-known_first_party = [
+# Upstream checks formatting with one isort run from the repository root, where
+# the connector's own packages are not importable and therefore sort into the
+# third-party block. Naming them here reproduces that grouping for runs started
+# inside the connector, which would otherwise find them under src/ and split
+# them into a first-party block the upstream check rejects.
+known_third_party = [
     "_data",
     "adapters",
     "client",

@@ -4,7 +4,6 @@ import functools
 from typing import Any
 
 from ciaops import TICollections, generate_portal_link
-
 from support.text_normalize import normalize_description as _norm
 
 PortalExternalRefRow = tuple[str | None, str, str]

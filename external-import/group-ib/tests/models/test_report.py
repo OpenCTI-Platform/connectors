@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
-
 from models.report import Incident, Note, Report
 
 # --- Report ------------------------------------------------------------------
