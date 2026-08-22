@@ -9,6 +9,7 @@ from doppel.stix_helpers import (
     build_description,
     build_external_references,
     build_labels,
+    calculate_opencti_score,
     calculate_priority,
     in_takedown_state,
 )
@@ -633,6 +634,69 @@ class ConverterToStix:
             if existing:
                 self._handle_labels(alert, "Observable", existing)
 
+    def _source_owned_field_updates(
+        self,
+        alert: dict,
+        revoked: bool,
+        include_score: bool = True,
+        include_case_fields: bool = False,
+    ) -> list[dict]:
+        """Build patches for mutable fields sourced from the Doppel alert."""
+        updates = [
+            {"key": "revoked", "value": revoked},
+            {"key": "description", "value": build_description(alert)},
+        ]
+        if include_score:
+            updates.append(
+                {
+                    "key": "x_opencti_score",
+                    "value": calculate_opencti_score(alert.get("score")),
+                }
+            )
+
+        if include_case_fields:
+            updates.append(
+                {
+                    "key": "priority",
+                    "value": calculate_priority(alert.get("score", 0)),
+                }
+            )
+            updates.append({"key": "severity", "value": alert.get("severity") or ""})
+
+        return updates
+
+    def _refresh_external_references(self, object_id: str, alert: dict) -> None:
+        """Upsert Doppel references and attach them without removing user references."""
+        for reference in build_external_references(alert):
+            try:
+                external_reference = self.helper.api.external_reference.create(
+                    **reference, update=True
+                )
+                external_reference_id = (
+                    external_reference.get("id")
+                    if isinstance(external_reference, dict)
+                    else None
+                )
+                if not external_reference_id:
+                    self.helper.connector_logger.warning(
+                        "[DoppelConverter] External reference upsert returned no id",
+                        meta={"alert_id": alert.get("id"), "object_id": object_id},
+                    )
+                    continue
+                self.helper.api.stix_domain_object.add_external_reference(
+                    id=object_id,
+                    external_reference_id=external_reference_id,
+                )
+            except Exception as e:
+                self.helper.connector_logger.warning(
+                    "[DoppelConverter] Failed to refresh external reference",
+                    meta={
+                        "alert_id": alert.get("id"),
+                        "object_id": object_id,
+                        "error": str(e),
+                    },
+                )
+
     def _handle_grouping_case_creation(self, alert, observables, stix_objects):
         """
         Handle creation of grouping case and relationships with observables
@@ -735,8 +799,9 @@ class ConverterToStix:
 
             self.helper.api.indicator.update_field(
                 id=indicator["id"],
-                input={"key": "revoked", "value": revoke_indicator},
+                input=self._source_owned_field_updates(alert, revoked=revoke_indicator),
             )
+            self._refresh_external_references(indicator["id"], alert)
             # Add Note.
             _ = self._handle_note_addition(indicator, alert, observables, stix_objects)
 
@@ -924,8 +989,16 @@ class ConverterToStix:
 
             self.helper.api.stix_domain_object.update_field(
                 id=rft_case["id"],
-                input={"key": "revoked", "value": revoke_rft_case},
+                input=self._source_owned_field_updates(
+                    alert,
+                    revoked=revoke_rft_case,
+                    # Case-RFT rejects x_opencti_score as an incompatible
+                    # attribute; its score-derived mutable field is priority.
+                    include_score=False,
+                    include_case_fields=True,
+                ),
             )
+            self._refresh_external_references(rft_case["id"], alert)
 
             # Add Note.
             _ = self._handle_note_addition(rft_case, alert, observables, stix_objects)
@@ -1068,7 +1141,11 @@ class ConverterToStix:
                 indicator_id = target_object.get("id")
                 if indicator_id:
                     labels_to_remove = self._get_labels_to_remove(
-                        target_obj_type, target_object
+                        target_obj_type,
+                        target_object,
+                        include_revoked_false_positive=in_takedown_state(
+                            alert.get("queue_state")
+                        ),
                     )
                     # When the alert is no longer in takedown state the entity is
                     # revoked as a false positive, so it should gain the
@@ -1076,8 +1153,6 @@ class ConverterToStix:
                     # entity should have it removed.
                     if not in_takedown_state(alert.get("queue_state")):
                         new_labels.append("revoked-false-positive")
-                    else:
-                        labels_to_remove.append("revoked-false-positive")
 
                     for label_name in labels_to_remove or []:
                         self.helper.api.stix_domain_object.remove_label(
@@ -1108,7 +1183,11 @@ class ConverterToStix:
                 RFT_case_id = target_object.get("id")
                 if RFT_case_id:
                     labels_to_remove = self._get_labels_to_remove(
-                        target_obj_type, target_object
+                        target_obj_type,
+                        target_object,
+                        include_revoked_false_positive=in_takedown_state(
+                            alert.get("queue_state")
+                        ),
                     )
 
                     # When the alert is no longer in takedown state the entity is
@@ -1117,8 +1196,6 @@ class ConverterToStix:
                     # entity should have it removed.
                     if not in_takedown_state(alert.get("queue_state")):
                         new_labels.append("revoked-false-positive")
-                    else:
-                        labels_to_remove.append("revoked-false-positive")
 
                     for label_name in labels_to_remove or []:
                         self.helper.api.stix_domain_object.remove_label(
@@ -1135,7 +1212,9 @@ class ConverterToStix:
                 meta={"alert_id": alert.get("id"), "error": str(e)},
             )
 
-    def _get_labels_to_remove(self, target_obj_type, obj):
+    def _get_labels_to_remove(
+        self, target_obj_type, obj, include_revoked_false_positive=False
+    ):
         """Return labels added by Doppel Alert."""
         managed_prefixes = (
             "queue_state:",
@@ -1163,6 +1242,10 @@ class ConverterToStix:
             label["value"]
             for label in (obj or {}).get("objectLabel", [])
             if label.get("value", "").startswith(managed_prefixes)
+            or (
+                include_revoked_false_positive
+                and label.get("value") == "revoked-false-positive"
+            )
         ]
 
         return labels
