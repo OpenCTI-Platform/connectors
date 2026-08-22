@@ -1,3 +1,4 @@
+import os
 from typing import Any, Callable, Generator, List
 
 import requests
@@ -32,7 +33,7 @@ class VulnCheckClient:
 
         vc_config = vulncheck_sdk.Configuration(host=self.base_url)
         vc_config.api_key["Bearer"] = self.api_key
-
+        vc_config.proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
         self.vc_config = vc_config
 
     def is_source_available(self, name: str, api_prefix: str) -> bool:
