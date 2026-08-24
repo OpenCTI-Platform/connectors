@@ -2,7 +2,8 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     ":semanticCommits",
-    "config:recommended"
+    "config:recommended",
+    ":disableMajorUpdates"
   ],
   "pre-commit": {
     "enabled": true
@@ -11,7 +12,6 @@
     "dependencies",
     "filigran team"
   ],
-  "prConcurrentLimit": 2,
   "packageRules": [
     {
       "description": "Disable updates to pinned Python interpreter versions (e.g. .python-version files); connectors intentionally pin specific Python versions and should not be bumped automatically",
