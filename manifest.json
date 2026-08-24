@@ -19566,10 +19566,112 @@
       "support_version": ">=5.6.1",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/import-external-reference",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-import-external-reference",
-      "container_type": "INTERNAL_ENRICHMENT"
+      "container_type": "INTERNAL_ENRICHMENT",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/import-external-reference_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "ImportExternalReference",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "External-Reference"
+            ],
+            "description": "The scope (MIME types) handled by the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "INTERNAL_ENRICHMENT",
+            "default": "INTERNAL_ENRICHMENT",
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": false,
+            "description": "Whether the connector should run automatically when an entity is created or updated.",
+            "type": "boolean"
+          },
+          "IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF": {
+            "default": true,
+            "description": "Import external references as PDF files.",
+            "type": "boolean"
+          },
+          "IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD": {
+            "default": true,
+            "description": "Import external references as MarkDown files.",
+            "type": "boolean"
+          },
+          "IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD": {
+            "default": true,
+            "description": "If import_as_md is true, try to convert the PDF to Markdown.",
+            "type": "boolean"
+          },
+          "IMPORT_EXTERNAL_REFERENCE_TIMESTAMP_FILES": {
+            "default": false,
+            "description": "If true, timestamp imported files to prevent overwriting versions.",
+            "type": "boolean"
+          },
+          "IMPORT_EXTERNAL_REFERENCE_CACHE_SIZE": {
+            "default": 32,
+            "description": "Size of the LRU URL cache to prevent fetching the same object repeatedly.",
+            "type": "integer"
+          },
+          "IMPORT_EXTERNAL_REFERENCE_CACHE_TTL": {
+            "default": 3600,
+            "description": "Time-to-live (in seconds) for cache entries.",
+            "type": "integer"
+          },
+          "IMPORT_EXTERNAL_REFERENCE_BROWSER_WORKER_COUNT": {
+            "default": 4,
+            "description": "Number of browser worker threads to use.",
+            "type": "integer"
+          },
+          "IMPORT_EXTERNAL_REFERENCE_MAX_DOWNLOAD_SIZE": {
+            "default": 52428800,
+            "description": "Maximum download size in bytes. (default: 50MB)",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Intezer Sandbox",
@@ -24260,10 +24362,142 @@
       "support_version": ">=6.3.0",
       "subscription_link": null,
       "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-import-file/import-file-misp",
-      "manager_supported": false,
+      "manager_supported": true,
       "container_version": "rolling",
       "container_image": "opencti/connector-import-file-misp",
-      "container_type": "INTERNAL_IMPORT_FILE"
+      "container_type": "INTERNAL_IMPORT_FILE",
+      "config_schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "https://www.filigran.io/connectors/import-file-misp_config.schema.json",
+        "type": "object",
+        "properties": {
+          "OPENCTI_URL": {
+            "description": "The base URL of the OpenCTI instance.",
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "type": "string"
+          },
+          "OPENCTI_TOKEN": {
+            "description": "The API token to connect to OpenCTI.",
+            "format": "password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "CONNECTOR_NAME": {
+            "default": "ImportFileMISP",
+            "description": "The name of the connector.",
+            "type": "string"
+          },
+          "CONNECTOR_SCOPE": {
+            "default": [
+              "application/json"
+            ],
+            "description": "The scope (MIME types) handled by the connector.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "CONNECTOR_LOG_LEVEL": {
+            "default": "error",
+            "description": "The minimum level of logs to display.",
+            "enum": [
+              "debug",
+              "info",
+              "warn",
+              "warning",
+              "error"
+            ],
+            "type": "string"
+          },
+          "CONNECTOR_TYPE": {
+            "const": "INTERNAL_IMPORT_FILE",
+            "default": "INTERNAL_IMPORT_FILE",
+            "type": "string"
+          },
+          "CONNECTOR_AUTO": {
+            "default": false,
+            "description": "Whether the connector should run automatically when an entity is created or updated.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_IMPORT_FROM_DATE": {
+            "default": null,
+            "description": "Optional lower-bound date used when importing MISP events.",
+            "type": "string"
+          },
+          "MISP_IMPORT_FILE_CREATE_REPORTS": {
+            "default": true,
+            "description": "Create a report for each imported MISP event.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_REPORT_TYPE": {
+            "default": "misp-event",
+            "description": "Report type to use for imported MISP events.",
+            "type": "string"
+          },
+          "MISP_IMPORT_FILE_CREATE_INDICATORS": {
+            "default": true,
+            "description": "Create indicators from MISP attributes.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_CREATE_OBSERVABLES": {
+            "default": true,
+            "description": "Create observables from MISP attributes.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_CREATE_OBJECT_OBSERVABLES": {
+            "default": false,
+            "description": "Create text observables for MISP objects.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_CREATE_TAGS_AS_LABELS": {
+            "default": true,
+            "description": "Create MISP tags as OpenCTI labels.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_GUESS_THREATS_FROM_TAGS": {
+            "default": false,
+            "description": "Try to guess threats (threat actor, intrusion set, malware, etc.) from MISP tags when they are present in OpenCTI.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_AUTHOR_FROM_TAGS": {
+            "default": false,
+            "description": "Map creator:XX=YY so the event author is derived from MISP tags.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_MARKINGS_FROM_TAGS": {
+            "default": false,
+            "description": "Derive markings from MISP tags.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_IMPORT_TO_IDS_NO_SCORE": {
+            "default": null,
+            "description": "Score applied to the indicator/observable when the attribute 'to_ids' flag is false.",
+            "type": "integer"
+          },
+          "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT": {
+            "default": false,
+            "description": "Import unsupported observables as x_opencti_text.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT": {
+            "default": true,
+            "description": "Import unsupported observables as x_opencti_text just with the value.",
+            "type": "boolean"
+          },
+          "MISP_IMPORT_FILE_IMPORT_WITH_ATTACHMENTS": {
+            "default": false,
+            "description": "Try to import a PDF file from the attachment attribute.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "OPENCTI_URL",
+          "OPENCTI_TOKEN"
+        ],
+        "additionalProperties": true
+      }
     },
     {
       "title": "Import File STIX",
