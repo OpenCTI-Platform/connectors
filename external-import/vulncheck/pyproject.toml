@@ -26,7 +26,7 @@ test = [
 ]
 dev = [
   "black>=26.1,<27",
-  "isort>=7,<8",
+  "isort>=8,<9",
   "flake8>=7.3,<8",
 ]
 all = ["vulncheck-connector[test,dev]"]
