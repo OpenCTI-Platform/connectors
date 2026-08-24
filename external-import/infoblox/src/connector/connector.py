@@ -70,7 +70,7 @@ class Infoblox:
             for ioc_type in ioc_types:
 
                 url = (
-                    f"{self.config.infoblox.url.rstrip('/')}?type={ioc_type}"
+                    f"{str(self.config.infoblox.url).rstrip('/')}?type={ioc_type}"
                     f"&period={period_hours}h&profile=IID&dga=false&up=true&"
                     f"rlimit={self.config.infoblox.ioc_limit}"
                 )
