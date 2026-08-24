@@ -2,7 +2,7 @@
 pycti==7.260824.0
 
 # Modern connector SDK (Pydantic-settings base classes, shared types)
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260824.0#subdirectory=connectors-sdk
 
 # Configuration
 pydantic~=2.11.5
