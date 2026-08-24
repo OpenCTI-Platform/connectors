@@ -113,6 +113,8 @@ The connector will parse the document, extract entities and observables, and imp
 
 The connector supports two processing modes:
 
+> **Note**: Setting `CONNECTOR_ONLY_CONTEXTUAL` to `true` is what triggers the **Internal Analysis** mode for this connector. While this option is generic at the pycti level (it only tells the platform whether the connector processes contextual data), for this connector it is specifically used to switch it into the "Internal Analysis" use case rather than the standard "File Import" mode.
+
 ```mermaid
 flowchart TD
     A[Incoming Request] --> B{Event Type?}
