@@ -157,6 +157,9 @@ class ExportFileCsv:
 
     def export_dict_list_to_csv(self, data, columns=None):
         output = io.StringIO()
+        output.write(
+            "\ufeff"
+        )  # UTF-8 BOM required for Microsoft Excel to recognize the file as UTF-8 encoded
         data_headers = sorted(set().union(*(d.keys() for d in data)))
         column_specs = self._select_export_columns(data_headers, columns)
         # Expand a "hashes" field into one column per algorithm. The expanded
