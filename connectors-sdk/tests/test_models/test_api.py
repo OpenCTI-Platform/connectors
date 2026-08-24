@@ -102,6 +102,7 @@ def test_public_models_are_present():
         "Sector",
         "Sighting",
         "Software",
+        "System",
         "Text",
         "ThreatActorGroup",
         "Tool",
