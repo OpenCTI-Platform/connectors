@@ -11,16 +11,30 @@
     "dependencies",
     "filigran team"
   ],
+  "prConcurrentLimit": 2,
   "packageRules": [
     {
+      "description": "Disable updates to pinned Python interpreter versions (e.g. .python-version files); connectors intentionally pin specific Python versions and should not be bumped automatically",
+      "matchDatasources": [
+        "python-version"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Prioritize PyPI minor updates and cap concurrent PRs to limit noise, without affecting minor updates from other datasources (Docker, GitHub Actions, etc.)",
+      "matchDatasources": [
+        "pypi"
+      ],
       "matchUpdateTypes": [
         "minor"
       ],
-      "prPriority": 5,
-      "prConcurrentLimit": 2
+      "prPriority": 5
     },
     {
       "description": "Prioritize pycti updates and raise them as soon as a new release is detected, bypassing the default schedule and repo-wide PR concurrency cap. Automerge is off by default here; flip it to true to auto-merge passing pycti PRs",
+      "matchDatasources": [
+        "pypi"
+      ],
       "matchPackageNames": [
         "pycti"
       ],
