@@ -93,11 +93,11 @@ class ConverterToStix:
         :return:
         """
         markdown_description = f"""
-**Alert Id**: {dtm_alert.get("id")}\n
+**Alert Id**: {dtm_alert.get("id", "")}\n
 
-**Alert Summary**: {dtm_alert.get("alert_summary")}\n
+**Alert Summary**: {dtm_alert.get("alert_summary", "")}\n
         
-**Summary from Gemini**: {dtm_alert.get("ai_doc_summary")}
+**Summary from Gemini**: {dtm_alert.get("ai_doc_summary", "")}
         """
         return markdown_description
 
@@ -109,11 +109,11 @@ class ConverterToStix:
         """
         markdown_content = f"""
 ### Metadata
-- **Alert Id**: {dtm_alert.get("id")}
-- **Monitor Id**: {dtm_alert.get("monitor_id")}
-- **Created**: {dtm_alert.get("created_at")}
-- **Type**: {dtm_alert.get("alert_type")}
-- **Severity**: {dtm_alert.get("severity")}
+- **Alert Id**: {dtm_alert.get("id", "")}
+- **Monitor Id**: {dtm_alert.get("monitor_id", "")}
+- **Created**: {dtm_alert.get("created_at", "")}
+- **Type**: {dtm_alert.get("alert_type", "")}
+- **Severity**: {dtm_alert.get("severity", "")}
 
 ### Summary from Gemini
 {dtm_alert.get("ai_doc_summary", "N/A")}
@@ -132,19 +132,19 @@ class ConverterToStix:
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Author**: {dtm_alert_doc.get("source_url")}
-- **Collected**: {dtm_alert_doc.get("ingested")}
-- **Published**: {dtm_alert_doc.get("timestamp")}
-- **Source File**: {dtm_alert_doc.get("filename")}
-- **MD5**: {dtm_alert_doc.get("file_hashes", {}).get("md5")}
-- **SHA1**: {dtm_alert_doc.get("file_hashes", {}).get("sha1")}
-- **SHA256**: {dtm_alert_doc.get("file_hashes", {}).get("sha256")}
-- **Source**: {dtm_alert_doc.get("source")}
-- **Source URL**: {dtm_alert_doc.get("source_url")}
+- **Author**: {dtm_alert_doc.get("source_url", "")}
+- **Collected**: {dtm_alert_doc.get("ingested", "")}
+- **Published**: {dtm_alert_doc.get("timestamp", "")}
+- **Source File**: {dtm_alert_doc.get("filename", "")}
+- **MD5**: {dtm_alert_doc.get("file_hashes", {}).get("md5", "")}
+- **SHA1**: {dtm_alert_doc.get("file_hashes", {}).get("sha1", "")}
+- **SHA256**: {dtm_alert_doc.get("file_hashes", {}).get("sha256", "")}
+- **Source**: {dtm_alert_doc.get("source", "")}
+- **Source URL**: {dtm_alert_doc.get("source_url", "")}
 
 ### Content
 ```
-{dtm_alert_doc.get("raw_text")}
+{dtm_alert_doc.get("raw_text", "")}
 ```
 """
         return markdown_content
@@ -159,15 +159,15 @@ class ConverterToStix:
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Created**: {dtm_alert_doc.get("timestamp")}
-- **Paste Id**: {dtm_alert_doc.get("paste_id")}
+- **Created**: {dtm_alert_doc.get("timestamp", "")}
+- **Paste Id**: {dtm_alert_doc.get("paste_id", "")}
 - **URL**: {dtm_alert_doc.get("source_location", {}).get("url", "")}
 - **Author**: {dtm_alert_doc.get("author", {}).get("identity", {}).get("name", "")}
 - **Title**: {dtm_alert_doc.get("title", "")}
 
 ### Content
 ```
-{dtm_alert_doc.get("body")}
+{dtm_alert_doc.get("body", "")}
 ```
 """
         return markdown_content
@@ -184,19 +184,19 @@ class ConverterToStix:
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Source URL**: {dtm_alert_doc.get("source_url")}
-- **Collected**: {dtm_alert_doc.get("ingested")}
-- **Published**: {dtm_alert_doc.get("timestamp")}
-- **Source File**: {dtm_alert_doc.get("source_file", {}).get("filename")}
-- **MD5**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("md5")}
-- **SHA1**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("sha1")}
-- **SHA256**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("sha256")}
+- **Source URL**: {dtm_alert_doc.get("source_url", "")}
+- **Collected**: {dtm_alert_doc.get("ingested", "")}
+- **Published**: {dtm_alert_doc.get("timestamp", "")}
+- **Source File**: {dtm_alert_doc.get("source_file", {}).get("filename", "")}
+- **MD5**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("md5", "")}
+- **SHA1**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("sha1", "")}
+- **SHA256**: {dtm_alert_doc.get("source_file", {}).get("hashes", {}).get("sha256", "")}
 ### Content
-- **Service URL**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("domain")}
-- **Service Domain**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("url")}
-- **Email Domain**: {dtm_alert_doc.get("service_account", {}).get("email_domain")}
-- **Login**: {dtm_alert_doc.get("service_account", {}).get("login")}
-- **Password**: {dtm_alert_doc.get("service_account", {}).get("password", {}).get("plain_text")}
+- **Service URL**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("domain", "")}
+- **Service Domain**: {dtm_alert_doc.get("service_account", {}).get("service", {}).get("inet_location", {}).get("url", "")}
+- **Email Domain**: {dtm_alert_doc.get("service_account", {}).get("email_domain", "")}
+- **Login**: {dtm_alert_doc.get("service_account", {}).get("login", "")}
+- **Password**: {dtm_alert_doc.get("service_account", {}).get("password", {}).get("plain_text", "")}
 """
         return markdown_content
 
@@ -210,17 +210,17 @@ class ConverterToStix:
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Created**: {dtm_alert_doc.get("ingested")}
-- **Channel**: {dtm_alert_doc.get("channel", {}).get("name")}
-- **Channel URL**: {dtm_alert_doc.get("channel", {}).get("channel_url")}
-- **Channel Description**: {dtm_alert_doc.get("channel", {}).get("channel_info", {}).get("description")}
-- **Messenger**: {dtm_alert_doc.get("channel", {}).get("messenger", {}).get("name")}
-- **Author**: {dtm_alert_doc.get("sender", {}).get("identity", {}).get("name")}
-- **Message Id**: {dtm_alert_doc.get("message_id")}
+- **Created**: {dtm_alert_doc.get("ingested", "")}
+- **Channel**: {dtm_alert_doc.get("channel", {}).get("name", "")}
+- **Channel URL**: {dtm_alert_doc.get("channel", {}).get("channel_url", "")}
+- **Channel Description**: {dtm_alert_doc.get("channel", {}).get("channel_info", {}).get("description", "")}
+- **Messenger**: {dtm_alert_doc.get("channel", {}).get("messenger", {}).get("name", "")}
+- **Author**: {dtm_alert_doc.get("sender", {}).get("identity", {}).get("name", "")}
+- **Message Id**: {dtm_alert_doc.get("message_id", "")}
 
 ### Content
 ```
-{dtm_alert_doc.get("body")}
+{dtm_alert_doc.get("body", "")}
 ```
 """
         return markdown_content
@@ -235,13 +235,13 @@ class ConverterToStix:
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Created**: {dtm_alert_doc.get("timestamp")}
-- **Title**: {dtm_alert_doc.get("title")}
+- **Created**: {dtm_alert_doc.get("timestamp", "")}
+- **Title**: {dtm_alert_doc.get("title", "")}
 - **URL**: {dtm_alert_doc.get("inet_location", {}).get("url", "")}
 
 ### Content
 ```
-{dtm_alert_doc.get("text") if "text" in dtm_alert_doc else dtm_alert_doc.get("raw_text")}
+{dtm_alert_doc.get("text", "") if "text" in dtm_alert_doc else dtm_alert_doc.get("raw_text", "")}
 ```
 """
         return markdown_content
@@ -258,9 +258,9 @@ class ConverterToStix:
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Created**: {dtm_alert_doc.get("timestamp")}
-- **Domain**: {dtm_alert_doc.get("domain")}
-- **Source**: {dtm_alert_doc.get("source")}
+- **Created**: {dtm_alert_doc.get("timestamp", "")}
+- **Domain**: {dtm_alert_doc.get("domain", "")}
+- **Source**: {dtm_alert_doc.get("source", "")}
 """
         return markdown_content
 
@@ -274,15 +274,15 @@ class ConverterToStix:
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Created**: {dtm_alert_doc.get("ingested")}
-- **URL**: {dtm_alert_doc.get("listing_url", {}).get("url")}
-- **Shop Name**: {dtm_alert_doc.get("shop", {}).get("name")}
+- **Created**: {dtm_alert_doc.get("ingested", "")}
+- **URL**: {dtm_alert_doc.get("listing_url", {}).get("url", "")}
+- **Shop Name**: {dtm_alert_doc.get("shop", {}).get("name", "")}
 - **Price**: {str(dtm_alert_doc.get("price", "")) + dtm_alert_doc.get("currency", "")}
 - **Quantity**: {dtm_alert_doc.get("item_qty", "")}
-- **Seller**: {dtm_alert_doc.get("seller", {}).get("identity", {}).get("name")}
+- **Seller**: {dtm_alert_doc.get("seller", {}).get("identity", {}).get("name", "")}
 - **Listing ID**: {dtm_alert_doc.get("listing_id", "")}
 - **Listing URL**: {dtm_alert_doc.get("listing_url", {}).get("url", "")}
-- **Item Type**: {dtm_alert_doc.get("item_type")}
+- **Item Type**: {dtm_alert_doc.get("item_type", "")}
 """
         return markdown_content
 
@@ -296,7 +296,7 @@ class ConverterToStix:
 {metadata_part}
 ### Post
 ```
-{dtm_alert.get("doc", {}).get("raw_text")}
+{dtm_alert.get("doc", {}).get("raw_text", "")}
 ```
 """
         return markdown_content

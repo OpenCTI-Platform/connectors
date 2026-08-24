@@ -77,10 +77,10 @@ def test_account_discovery_without_a_plaintext_password(converter):
     markdown = _alert_markdown(stix_objects)
     converter.helper.connector_logger.error.assert_not_called()
     # The absent value is rendered empty, the ones that are there are kept.
-    assert "- **Password**: None\n" in markdown
+    assert "- **Password**: \n" in markdown
     assert "- **Login**: jdoe@acme.com\n" in markdown
     assert "- **MD5**: d41d8cd98f00b204e9800998ecf8427e\n" in markdown
-    assert "- **SHA256**: None\n" in markdown
+    assert "- **SHA256**: \n" in markdown
 
 
 def test_message_alert_without_channel_info(converter):
@@ -89,8 +89,8 @@ def test_message_alert_without_channel_info(converter):
     markdown = _alert_markdown(stix_objects)
     converter.helper.connector_logger.error.assert_not_called()
     assert "- **Channel**: leaks\n" in markdown
-    assert "- **Channel Description**: None\n" in markdown
-    assert "- **Author**: None\n" in markdown
+    assert "- **Channel Description**: \n" in markdown
+    assert "- **Author**: \n" in markdown
 
 
 @pytest.mark.parametrize(
@@ -112,6 +112,18 @@ def test_an_empty_document_still_produces_an_attachment(converter, doc):
 
     assert len(_attachments(stix_objects)) == 1
     converter.helper.connector_logger.error.assert_not_called()
+    # A missing value is an empty one, never the literal "None".
+    assert "None" not in _alert_markdown(stix_objects)
+
+
+@pytest.mark.parametrize(
+    "alert", [_ACCOUNT_DISCOVERY_ALERT, _MESSAGE_ALERT], ids=["account", "message"]
+)
+def test_a_missing_value_is_never_rendered_as_none(converter, alert):
+    """`None` in alert.md is a placeholder no analyst can interpret."""
+    markdown = _alert_markdown(converter.create_incident(alert))
+
+    assert "None" not in markdown
 
 
 # --------------------------------------------------------------------------
