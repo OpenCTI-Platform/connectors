@@ -11,9 +11,6 @@
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -52,38 +49,10 @@ The connector can operate in two modes:
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml `opencti` | Docker environment variable | Default | Mandatory | Description                                          |
-|---------------|----------------------|-----------------------------|---------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `url`                | `OPENCTI_URL`               | /       | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `token`              | `OPENCTI_TOKEN`             | /       | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter                | config.yml `connector`   | Docker environment variable        | Default                                             | Mandatory | Description                                                                              |
-|--------------------------|--------------------------|------------------------------------|-----------------------------------------------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID             | `id`                     | `CONNECTOR_ID`                     | /                                                   | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Name           | `name`                   | `CONNECTOR_NAME`                   | ImportDocument                                      | No        | Name of the connector.                                                                   |
-| Connector Scope          | `scope`                  | `CONNECTOR_SCOPE`                  | application/pdf,text/plain,text/csv,text/html,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document  | Yes       | Comma-separated list of supported MIME types.                                            |
-| Connector Auto           | `auto`                   | `CONNECTOR_AUTO`                   | false                                               | No        | Enable/disable automatic import of files matching the scope.                             |
-| Connector Only Contextual| `only_contextual`        | `CONNECTOR_ONLY_CONTEXTUAL`        | false                                               | No        | If `true`, only extract data when an entity context is provided.                         |
-| Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false                                               | No        | If enabled, bundles are sent for validation before import.                               |
-| Log Level                | `log_level`              | `CONNECTOR_LOG_LEVEL`              | info                                                | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the Import Document connector:
-
-| Parameter        | config.yml `import_document` | Docker environment variable       | Default | Mandatory | Description                                                    |
-|------------------|------------------------------|-----------------------------------|---------|-----------|----------------------------------------------------------------|
-| Create Indicator | `create_indicator`           | `IMPORT_DOCUMENT_CREATE_INDICATOR`| false   | No        | If `true`, creates an Indicator for each extracted observable. |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -143,6 +112,8 @@ The connector will parse the document, extract entities and observables, and imp
 ### Processing modes
 
 The connector supports two processing modes:
+
+> **Note**: Setting `CONNECTOR_ONLY_CONTEXTUAL` to `true` is what triggers the **Internal Analysis** mode for this connector. While this option is generic at the pycti level (it only tells the platform whether the connector processes contextual data), for this connector it is specifically used to switch it into the "Internal Analysis" use case rather than the standard "File Import" mode.
 
 ```mermaid
 flowchart TD

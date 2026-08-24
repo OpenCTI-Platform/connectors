@@ -14,4 +14,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_IMPORT_FILE` | `"INTERNAL_IMPORT_FILE"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | CONNECTOR_VALIDATE_BEFORE_IMPORT | `boolean` |  | boolean | `true` | Validate any bundle before import. |
+| CONNECTOR_ONLY_CONTEXTUAL | `boolean` |  | boolean | `false` | If `true`, only extract data when an entity context is provided. |
 | IMPORT_DOCUMENT_CREATE_INDICATOR | `boolean` |  | boolean | `false` | If true, creates an Indicator for each extracted observable. |
