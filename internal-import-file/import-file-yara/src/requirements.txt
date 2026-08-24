@@ -1,4 +1,4 @@
-pycti==7.260817.0
+pycti==7.260824.0
 typing-extensions==4.15.0
 plyara==2.2.8
 pydantic >=2.8.2, <3
