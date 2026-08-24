@@ -24328,6 +24328,11 @@
             "description": "Validate any bundle before import.",
             "type": "boolean"
           },
+          "CONNECTOR_ONLY_CONTEXTUAL": {
+            "default": false,
+            "description": "If `true`, only extract data when an entity context is provided.",
+            "type": "boolean"
+          },
           "IMPORT_DOCUMENT_CREATE_INDICATOR": {
             "default": false,
             "description": "If true, creates an Indicator for each extracted observable.",
