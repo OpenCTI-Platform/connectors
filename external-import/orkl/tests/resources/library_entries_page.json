@@ -1,0 +1,204 @@
+{
+  "data": [
+    {
+      "id": "bb301bd1-f53f-481f-9425-c60d9a2ca521",
+      "created_at": "2026-08-20T00:00:00.000000Z",
+      "updated_at": "2026-08-25T02:03:21.778076Z",
+      "deleted_at": null,
+      "sha1_hash": "ecba09f495f88a74cbe9965a2e555f8c28e161fc",
+      "title": "Operation FrostGate: APT28 Targets European Energy Sector",
+      "llm_title": "Operation FrostGate: APT28 Targets European Energy Sector",
+      "authors": ["Example Threat Intel Team"],
+      "file_creation_date": "2026-08-19T00:00:00.000000Z",
+      "file_modification_date": "2026-08-19T00:00:00.000000Z",
+      "file_size": 512000,
+      "plain_text": "APT28 has been observed targeting energy sector organizations in Europe using spear-phishing and living-off-the-land techniques. The group leveraged legitimate administration tools alongside known malware families to maintain persistence.",
+      "extraction_quality": 1,
+      "language": "en",
+      "sources": ["example-threat-intel-team"],
+      "origins": ["pdf"],
+      "references": ["https://example.com/reports/operation-frostgate"],
+      "report_names": ["Operation FrostGate: APT28 Targets European Energy Sector"],
+      "threat_actors": [
+        {
+          "id": "a1a1a1a1-1111-4111-8111-111111111111",
+          "created_at": "2026-08-20T00:00:00.000000Z",
+          "updated_at": "2026-08-25T02:03:21.778076Z",
+          "deleted_at": null,
+          "main_name": "APT28",
+          "aliases": ["Fancy Bear", "Sofacy", "STRONTIUM", "Sednit"],
+          "source_name": "MITRE:APT28",
+          "source_id": "MITRE",
+          "tools": ["PsExec", "Remcos"],
+          "reports": null
+        }
+      ],
+      "ts_created_at": 1787184000,
+      "ts_updated_at": 1787623401,
+      "ts_creation_date": 1787097600,
+      "ts_modification_date": 1787097600,
+      "files": {
+        "pdf": "https://archive.orkl.eu/ecba09f495f88a74cbe9965a2e555f8c28e161fc.pdf",
+        "text": "https://archive.orkl.eu/ecba09f495f88a74cbe9965a2e555f8c28e161fc.txt",
+        "img": "https://archive.orkl.eu/ecba09f495f88a74cbe9965a2e555f8c28e161fc.jpg"
+      }
+    },
+    {
+      "id": "dde3cc0c-8158-4e2a-b258-c632546bdbca",
+      "created_at": "2026-08-19T00:00:00.000000Z",
+      "updated_at": "2026-08-24T10:00:00.000000Z",
+      "deleted_at": null,
+      "sha1_hash": "8dae1cb0f52209d74e34b531192ccf7cd001384d",
+      "title": "",
+      "llm_title": "",
+      "authors": ["Example Web Aggregator"],
+      "file_creation_date": "2026-08-18T00:00:00.000000Z",
+      "file_modification_date": "2026-08-18T00:00:00.000000Z",
+      "file_size": 20480,
+      "plain_text": "A short web-sourced writeup with no clear title was captured for archival purposes. No named threat actors were identified in the source material.",
+      "extraction_quality": 1,
+      "language": "en",
+      "sources": ["example-web-aggregator"],
+      "origins": ["web"],
+      "references": [
+        "https://example.com/blog/untitled-writeup",
+        "https://example.com/blog/untitled-writeup-mirror"
+      ],
+      "report_names": ["Untitled Web Writeup"],
+      "threat_actors": [],
+      "ts_created_at": 1787097600,
+      "ts_updated_at": 1787565600,
+      "ts_creation_date": 1787011200,
+      "ts_modification_date": 1787011200,
+      "files": {
+        "pdf": "https://archive.orkl.eu/8dae1cb0f52209d74e34b531192ccf7cd001384d.pdf",
+        "text": "https://archive.orkl.eu/8dae1cb0f52209d74e34b531192ccf7cd001384d.txt",
+        "img": "https://archive.orkl.eu/8dae1cb0f52209d74e34b531192ccf7cd001384d.jpg"
+      }
+    },
+    {
+      "id": "709bf9ad-7489-460c-b5f6-03d9737d5c77",
+      "created_at": "2026-08-18T00:00:00.000000Z",
+      "updated_at": "2026-08-23T09:00:00.000000Z",
+      "deleted_at": null,
+      "sha1_hash": "64b5b76f26da77c63ca8ceff1d8740ebe5f908b2",
+      "title": "UAC-0056 Continues Operations Against Eastern European Targets",
+      "llm_title": "UAC-0056 Continues Operations Against Eastern European Targets",
+      "authors": ["Example CERT"],
+      "file_creation_date": "2026-08-17T00:00:00.000000Z",
+      "file_modification_date": "2026-08-17T00:00:00.000000Z",
+      "file_size": 307200,
+      "plain_text": "The activity cluster tracked under multiple names by different vendors continues to target government and defense organizations in Eastern Europe, reusing a consistent toolset across campaigns.",
+      "extraction_quality": 1,
+      "language": "en",
+      "sources": ["example-cert"],
+      "origins": ["pdf"],
+      "references": ["https://example.com/reports/uac-0056-continues-operations"],
+      "report_names": ["UAC-0056 Continues Operations Against Eastern European Targets"],
+      "threat_actors": [
+        {
+          "id": "b2b2b2b2-2222-4222-8222-222222222222",
+          "created_at": "2026-08-18T00:00:00.000000Z",
+          "updated_at": "2026-08-23T09:00:00.000000Z",
+          "deleted_at": null,
+          "main_name": "SaintBear",
+          "aliases": ["UAC-0056", "TA471"],
+          "source_name": "MISPGALAXY:SaintBear",
+          "source_id": "MISPGALAXY",
+          "tools": [],
+          "reports": null
+        },
+        {
+          "id": "b2b2b2b2-2222-4222-8222-222222222223",
+          "created_at": "2026-08-18T00:00:00.000000Z",
+          "updated_at": "2026-08-23T09:00:00.000000Z",
+          "deleted_at": null,
+          "main_name": "Ember Bear",
+          "aliases": ["UAC-0056", "Lorec53", "Bleeding Bear"],
+          "source_name": "MITRE:Ember Bear",
+          "source_id": "MITRE",
+          "tools": ["PsExec", "Impacket", "Rclone"],
+          "reports": null
+        },
+        {
+          "id": "b2b2b2b2-2222-4222-8222-222222222224",
+          "created_at": "2026-08-18T00:00:00.000000Z",
+          "updated_at": "2026-08-23T09:00:00.000000Z",
+          "deleted_at": null,
+          "main_name": "Saint Bear",
+          "aliases": ["UAC-0056", "TA471"],
+          "source_name": "MITRE:Saint Bear",
+          "source_id": "MITRE",
+          "tools": ["OutSteel", "Saint Bot"],
+          "reports": null
+        },
+        {
+          "id": "b2b2b2b2-2222-4222-8222-222222222225",
+          "created_at": "2026-08-18T00:00:00.000000Z",
+          "updated_at": "2026-08-23T09:00:00.000000Z",
+          "deleted_at": null,
+          "main_name": "SaintBear",
+          "aliases": ["UAC-0056"],
+          "source_name": "ETDA:SaintBear",
+          "source_id": "ETDA",
+          "tools": ["Cobalt Strike", "GraphSteel", "GrimPlant"],
+          "reports": null
+        }
+      ],
+      "ts_created_at": 1787011200,
+      "ts_updated_at": 1787475600,
+      "ts_creation_date": 1786924800,
+      "ts_modification_date": 1786924800,
+      "files": {
+        "pdf": "https://archive.orkl.eu/64b5b76f26da77c63ca8ceff1d8740ebe5f908b2.pdf",
+        "text": "https://archive.orkl.eu/64b5b76f26da77c63ca8ceff1d8740ebe5f908b2.txt",
+        "img": "https://archive.orkl.eu/64b5b76f26da77c63ca8ceff1d8740ebe5f908b2.jpg"
+      }
+    },
+    {
+      "id": "16e09120-0576-4d9c-bec2-3a0ce381033c",
+      "created_at": "2019-12-25T00:00:00.000000Z",
+      "updated_at": "2020-01-01T00:00:00.000000Z",
+      "deleted_at": null,
+      "sha1_hash": "0bbb19dc6bc226564cf540f8af5d072091ab7edc",
+      "title": "Legacy Report: Early Analysis of a Now-Defunct Botnet",
+      "llm_title": "Legacy Report: Early Analysis of a Now-Defunct Botnet",
+      "authors": ["Example Archive Team"],
+      "file_creation_date": "2019-12-20T00:00:00.000000Z",
+      "file_modification_date": "2019-12-20T00:00:00.000000Z",
+      "file_size": 153600,
+      "plain_text": "This older report documents a botnet that was analyzed several years ago and is included here to validate cutoff-based pagination behavior.",
+      "extraction_quality": 1,
+      "language": "en",
+      "sources": ["example-archive-team"],
+      "origins": ["pdf"],
+      "references": ["https://example.com/reports/legacy-botnet-analysis"],
+      "report_names": ["Legacy Report: Early Analysis of a Now-Defunct Botnet"],
+      "threat_actors": [
+        {
+          "id": "c3c3c3c3-3333-4333-8333-333333333333",
+          "created_at": "2019-12-25T00:00:00.000000Z",
+          "updated_at": "2020-01-01T00:00:00.000000Z",
+          "deleted_at": null,
+          "main_name": "LegacyBotnetGroup",
+          "aliases": ["OldGuard"],
+          "source_name": "MITRE:LegacyBotnetGroup",
+          "source_id": "MITRE",
+          "tools": ["Mirai"],
+          "reports": null
+        }
+      ],
+      "ts_created_at": 1577232000,
+      "ts_updated_at": 1577836800,
+      "ts_creation_date": 1576800000,
+      "ts_modification_date": 1576800000,
+      "files": {
+        "pdf": "https://archive.orkl.eu/0bbb19dc6bc226564cf540f8af5d072091ab7edc.pdf",
+        "text": "https://archive.orkl.eu/0bbb19dc6bc226564cf540f8af5d072091ab7edc.txt",
+        "img": "https://archive.orkl.eu/0bbb19dc6bc226564cf540f8af5d072091ab7edc.jpg"
+      }
+    }
+  ],
+  "message": "library entries",
+  "status": "success"
+}
