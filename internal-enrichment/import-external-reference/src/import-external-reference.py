@@ -613,7 +613,6 @@ class ImportExternalReferenceConnector:
                     if is_pdf and self.import_pdf_as_md:
                         html_context = await self._pdf_to_html(pdf_data)
                         md = self._html_to_markdown(html_context)
-                        html_context.close()
 
                         file_name = os.path.basename(url) + ".md"
                         self.helper.connector_logger.info(
@@ -692,12 +691,15 @@ class ImportExternalReferenceConnector:
         pdf_stream = io.BytesIO(pdf_bytes)
         html_buf = io.StringIO()
         rsrcmgr = PDFResourceManager(caching=True)
-        device = HTMLConverter(rsrcmgr, html_buf, laparams=LAParams())
+        # codec must be None when the output is a text stream (StringIO)
+        device = HTMLConverter(rsrcmgr, html_buf, codec=None, laparams=LAParams())
         interpreter = PDFPageInterpreter(rsrcmgr, device)
-        for page in PDFPage.get_pages(pdf_stream, check_extractable=True):
-            interpreter.process_page(page)
-        device.close()
-        pdf_stream.close()
+        try:
+            for page in PDFPage.get_pages(pdf_stream, check_extractable=True):
+                interpreter.process_page(page)
+        finally:
+            device.close()
+            pdf_stream.close()
         return html_buf.getvalue()
 
     # ────────────────────────────────────────────────────────────────────────────────
