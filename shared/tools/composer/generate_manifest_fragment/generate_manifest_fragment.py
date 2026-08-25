@@ -2,7 +2,7 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "jsonschema==4.26.0",
-#     "Pillow==12.0.0",
+#     "pillow==12.3.0",
 # ]
 # ///
 """
