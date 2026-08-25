@@ -1,5 +1,4 @@
 pycti==7.260904.0
-weasyprint==68.1
 markdownify==1.2.3
 pdfminer.six==20251107
 playwright==1.58.0
