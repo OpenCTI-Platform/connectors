@@ -85,7 +85,7 @@ class Utils:
 
     @staticmethod
     def get_location_info(geolocation: dict) -> dict:
-        """This method allows you to retrieve the official name of the country based only on the country code.
+        """Retrieve the official country name from the country code when possible.
 
         The code is not always resolvable: ET Intelligence also returns codes
         that are not part of ISO 3166-1, such as `XK` (Kosovo) or the MaxMind
