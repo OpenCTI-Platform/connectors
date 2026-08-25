@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-orkl:
+    image: opencti/connector-orkl:latest
+    environment:
+      # OpenCTI configuration
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common connector configuration
+      #- CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_NAME=ORKL
+      #- CONNECTOR_SCOPE=orkl
+      #- CONNECTOR_LOG_LEVEL=info
+      #- CONNECTOR_DURATION_PERIOD=P1D
+      # Connector configuration
+      #- ORKL_API_BASE_URL=https://orkl.eu/api/v1
+      #- ORKL_IMPORT_START_DATE=P30D
+      #- ORKL_TLP_LEVEL=clear
+      #- ORKL_THREAT_ACTOR_AS_INTRUSION_SET=true
+      #- ORKL_INGEST_TOOLS=false
+    restart: always
