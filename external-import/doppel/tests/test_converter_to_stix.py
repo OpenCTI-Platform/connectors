@@ -251,6 +251,7 @@ def test_standard_observables_use_opencti_custom_metadata(
         "ecommerce",
         "crypto",
         "email",
+        "suspicious_emails",
         "paid_ads",
         "darkweb",
     ],
@@ -277,6 +278,34 @@ def test_other_product_type_creates_url_observable_and_indicator(converter, prod
     assert indicators[0]["pattern"] == (
         "[url:value = 'http://social.example/profile/fake']"
     )
+
+
+def test_suspicious_email_tags_are_mapped_to_opencti_labels(converter):
+    """Suspicious-email alerts must not be dropped before their tags are mapped."""
+    entity = "http://<calendar-37348e36-99eb-4cf3-a252-fbd1e7058f9f@google.com>"
+    alert = _domains_alert(alert_id="TET-2075433")
+    alert.update(
+        {
+            "product": "suspicious_emails",
+            "entity": entity,
+            "tags": [{"name": "Link"}, {"name": "Payload"}],
+        }
+    )
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    observable = next(
+        obj for obj in result if isinstance(obj, dict) and obj.get("type") == "url"
+    )
+    indicator = next(
+        obj
+        for obj in result
+        if isinstance(obj, dict) and obj.get("type") == "indicator"
+    )
+    assert {"Link", "Payload"} <= set(observable["x_opencti_labels"])
+    assert {"Link", "Payload"} <= set(indicator["labels"])
 
 
 @pytest.mark.parametrize(
