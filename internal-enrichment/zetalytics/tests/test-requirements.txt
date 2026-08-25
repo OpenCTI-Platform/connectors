@@ -1,0 +1,3 @@
+# Install connector dependencies first, then test extras
+-e .[test]
+pytest-mock>=3.14

@@ -1,0 +1,219 @@
+# docker-compose.zetalytics.yml
+#
+# Deploys all four Zetalytics DNS connector profiles from a single image.
+# Start only the profiles you need, e.g.:
+#   docker compose -f docker-compose.zetalytics.yml up connector-zetalytics-analyst
+#
+# Required secrets (set in your shell environment or a .env file):
+#   OPENCTI_URL                          - OpenCTI instance URL
+#   OPENCTI_TOKEN_ZETALYTICS_ANALYST     - connector user token for analyst profile
+#   OPENCTI_TOKEN_ZETALYTICS_PLAYBOOK    - connector user token for playbook profile
+#   OPENCTI_TOKEN_ZETALYTICS_AUTO_LIGHT  - connector user token for auto-light profile
+#   OPENCTI_TOKEN_ZETALYTICS_DEEP        - connector user token for deep investigation profile
+#   ZETALYTICS_TOKEN                     - Zetalytics ZoneCruncher API token
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Profile 1: Analyst / manual enrichment
+  #
+  # Triggered manually by an analyst from an observable page in OpenCTI.
+  # Calls passive DNS, live DNS, subdomains, D8S and NS glue.
+  # Rich output is acceptable here because a human has intentionally triggered it.
+  # ---------------------------------------------------------------------------
+  connector-zetalytics-analyst:
+    image: opencti/connector-zetalytics-dns:latest
+    container_name: connector-zetalytics-analyst
+    restart: unless-stopped
+    environment:
+      # --- OpenCTI connection (required) ---
+      OPENCTI_URL: "${OPENCTI_URL}"
+      OPENCTI_TOKEN: "${OPENCTI_TOKEN_ZETALYTICS_ANALYST}"
+
+      # --- Connector identity (required) ---
+      # Each deployed profile must have a unique UUID.
+      CONNECTOR_ID: "00000000-0000-4000-8000-000000000101"
+      CONNECTOR_NAME: "Zetalytics DNS - Analyst Enrichment"
+      CONNECTOR_TYPE: "INTERNAL_ENRICHMENT"
+      # Observable types this connector will enrich.
+      CONNECTOR_SCOPE: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr"
+      # false = analyst triggers enrichment manually; true = runs on every new observable
+      CONNECTOR_AUTO: "false"
+      # optional: debug | info | warn | error (default info)
+      CONNECTOR_LOG_LEVEL: "info"
+
+      # --- Zetalytics API (required) ---
+      ZETALYTICS_TOKEN: "${ZETALYTICS_TOKEN}"
+
+      # Enrichment profile label. Informational only; individual flags below control behaviour.
+      # optional: light | playbook | manual | deep (default manual)
+      ZETALYTICS_MODE: "manual"
+
+      # Maximum TLP level of observables to enrich. Observables above this are silently skipped.
+      # optional: TLP:CLEAR | TLP:GREEN | TLP:AMBER | TLP:AMBER+STRICT | TLP:RED (default TLP:AMBER)
+      ZETALYTICS_MAX_TLP: "TLP:AMBER"
+
+      # --- Data volume controls ---
+      # Maximum passive DNS records returned per query (optional, default 300)
+      ZETALYTICS_MAX_RESULTS: "300"
+      # Maximum subdomains to retrieve; 0 disables the subdomain query (optional, default 300)
+      ZETALYTICS_MAX_SUBDOMAINS: "500"
+      # Maximum historical WHOIS records; 0 disables (optional, default 5)
+      ZETALYTICS_MAX_WHOIS_RESULTS: "5"
+      # Maximum results for nameserver pivot queries (optional, default 100)
+      ZETALYTICS_MAX_NS_PIVOT_RESULTS: "100"
+      # How far back to query passive DNS history in days (optional, default 365)
+      ZETALYTICS_LOOKBACK_DAYS: "365"
+      # Timestamp field Zetalytics filters records on (optional, default all)
+      # all = return records regardless of which timestamp field matches
+      # last_seen = filter by last seen date only (useful for recent-only queries)
+      ZETALYTICS_TSFIELD: "all"
+
+      # --- Endpoint feature flags (all optional) ---
+      # Perform a live DNS lookup in addition to passive DNS (default true)
+      ZETALYTICS_INCLUDE_LIVE_DNS: "true"
+      # Retrieve known subdomains for domain enrichment (default true)
+      ZETALYTICS_INCLUDE_SUBDOMAINS: "true"
+      # Retrieve structured D8S registration context for domains (default true)
+      ZETALYTICS_INCLUDE_D8S: "true"
+      # Retrieve raw historical WHOIS records - can produce high volume, off by default (default false)
+      ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
+      # Retrieve nameserver glue records (default true)
+      ZETALYTICS_INCLUDE_NS_GLUE: "true"
+      # Pivot from each discovered nameserver to the domains it hosts - deep mode only (default false)
+      ZETALYTICS_INCLUDE_NS2DOMAIN: "false"
+      # Pivot from each discovered MX domain to the domains it serves - deep mode only (default false)
+      ZETALYTICS_INCLUDE_MX2DOMAIN: "false"
+      # Enrich via registration email pivots - high noise potential, disabled by default (default false)
+      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
+
+      # --- STIX output controls (all optional) ---
+      # Confidence score applied to created STIX objects, 0-100 (default 60)
+      ZETALYTICS_CONFIDENCE: "60"
+      # TLP marking definition applied to STIX objects created by this connector (default TLP:AMBER)
+      ZETALYTICS_MARKING_DEFINITION: "TLP:AMBER"
+      # Create a note on the observable when Zetalytics returns no results (default false)
+      ZETALYTICS_CREATE_NOTE_WHEN_NO_RESULTS: "false"
+
+  # ---------------------------------------------------------------------------
+  # Profile 2: Playbook enrichment
+  #
+  # For controlled use inside OpenCTI automation playbooks.
+  # Passive DNS and live DNS only; no subdomains, D8S, NS glue, or pivots.
+  # Output is bounded and deterministic to avoid unexpected graph expansion.
+  # ---------------------------------------------------------------------------
+  connector-zetalytics-playbook:
+    image: opencti/connector-zetalytics-dns:latest
+    container_name: connector-zetalytics-playbook
+    restart: unless-stopped
+    environment:
+      OPENCTI_URL: "${OPENCTI_URL}"
+      OPENCTI_TOKEN: "${OPENCTI_TOKEN_ZETALYTICS_PLAYBOOK}"
+      CONNECTOR_ID: "00000000-0000-4000-8000-000000000102"
+      CONNECTOR_NAME: "Zetalytics DNS - Playbook"
+      CONNECTOR_TYPE: "INTERNAL_ENRICHMENT"
+      CONNECTOR_SCOPE: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr"
+      CONNECTOR_AUTO: "false"
+      CONNECTOR_LOG_LEVEL: "info"
+      ZETALYTICS_TOKEN: "${ZETALYTICS_TOKEN}"
+      ZETALYTICS_MODE: "playbook"
+      ZETALYTICS_MAX_TLP: "TLP:AMBER"
+      ZETALYTICS_MAX_RESULTS: "100"
+      ZETALYTICS_MAX_SUBDOMAINS: "0"
+      ZETALYTICS_LOOKBACK_DAYS: "180"
+      ZETALYTICS_TSFIELD: "all"
+      ZETALYTICS_INCLUDE_LIVE_DNS: "true"
+      ZETALYTICS_INCLUDE_SUBDOMAINS: "false"
+      ZETALYTICS_INCLUDE_D8S: "false"
+      ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
+      ZETALYTICS_INCLUDE_NS_GLUE: "false"
+      ZETALYTICS_INCLUDE_NS2DOMAIN: "false"
+      ZETALYTICS_INCLUDE_MX2DOMAIN: "false"
+      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
+      ZETALYTICS_CONFIDENCE: "50"
+      ZETALYTICS_MARKING_DEFINITION: "TLP:AMBER"
+
+  # ---------------------------------------------------------------------------
+  # Profile 3: Lightweight automatic enrichment
+  #
+  # CONNECTOR_AUTO is true: runs on every new observable that arrives in OpenCTI.
+  # Very low result limits to avoid generating graph noise at scale.
+  # Only passive DNS is called; no live DNS, subdomains, D8S, or pivots.
+  # Review result volumes carefully before enabling in a high-throughput environment.
+  # ---------------------------------------------------------------------------
+  connector-zetalytics-auto-light:
+    image: opencti/connector-zetalytics-dns:latest
+    container_name: connector-zetalytics-auto-light
+    restart: unless-stopped
+    environment:
+      OPENCTI_URL: "${OPENCTI_URL}"
+      OPENCTI_TOKEN: "${OPENCTI_TOKEN_ZETALYTICS_AUTO_LIGHT}"
+      CONNECTOR_ID: "00000000-0000-4000-8000-000000000103"
+      CONNECTOR_NAME: "Zetalytics DNS - Auto Light"
+      CONNECTOR_TYPE: "INTERNAL_ENRICHMENT"
+      CONNECTOR_SCOPE: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr"
+      # Runs automatically on every new in-scope observable
+      CONNECTOR_AUTO: "true"
+      CONNECTOR_LOG_LEVEL: "info"
+      ZETALYTICS_TOKEN: "${ZETALYTICS_TOKEN}"
+      ZETALYTICS_MODE: "light"
+      ZETALYTICS_MAX_TLP: "TLP:AMBER"
+      ZETALYTICS_MAX_RESULTS: "25"
+      ZETALYTICS_MAX_SUBDOMAINS: "0"
+      ZETALYTICS_LOOKBACK_DAYS: "90"
+      # Filter by last_seen so only the most recent resolutions are returned
+      ZETALYTICS_TSFIELD: "last_seen"
+      ZETALYTICS_INCLUDE_LIVE_DNS: "false"
+      ZETALYTICS_INCLUDE_SUBDOMAINS: "false"
+      ZETALYTICS_INCLUDE_D8S: "false"
+      ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
+      ZETALYTICS_INCLUDE_NS_GLUE: "false"
+      ZETALYTICS_INCLUDE_NS2DOMAIN: "false"
+      ZETALYTICS_INCLUDE_MX2DOMAIN: "false"
+      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
+      ZETALYTICS_CONFIDENCE: "40"
+      ZETALYTICS_MARKING_DEFINITION: "TLP:AMBER"
+
+  # ---------------------------------------------------------------------------
+  # Profile 4: Deep investigation
+  #
+  # For experienced analysts conducting broad infrastructure pivot investigations.
+  # Enables all endpoints including NS2domain, MX2domain and historical WHOIS.
+  # CONNECTOR_AUTO must remain false — this profile is analyst-triggered only.
+  # ---------------------------------------------------------------------------
+  connector-zetalytics-deep:
+    image: ${DOCKER_REGISTRY:-registry.example.internal}/zetalytics-dns-connector:${TAG:-latest}
+    container_name: connector-zetalytics-deep
+    restart: unless-stopped
+    environment:
+      OPENCTI_URL: "${OPENCTI_URL}"
+      OPENCTI_TOKEN: "${OPENCTI_TOKEN_ZETALYTICS_DEEP}"
+      CONNECTOR_ID: "00000000-0000-4000-8000-000000000104"
+      CONNECTOR_NAME: "Zetalytics DNS - Deep Investigation"
+      CONNECTOR_TYPE: "INTERNAL_ENRICHMENT"
+      # Includes Email-Addr to support email pivot enrichment
+      CONNECTOR_SCOPE: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr,Email-Addr"
+      # Must remain false - deep investigation is analyst-triggered only
+      CONNECTOR_AUTO: "false"
+      CONNECTOR_LOG_LEVEL: "info"
+      ZETALYTICS_TOKEN: "${ZETALYTICS_TOKEN}"
+      ZETALYTICS_MODE: "deep"
+      ZETALYTICS_MAX_TLP: "TLP:AMBER"
+      ZETALYTICS_MAX_RESULTS: "500"
+      ZETALYTICS_MAX_SUBDOMAINS: "1000"
+      ZETALYTICS_MAX_WHOIS_RESULTS: "10"
+      ZETALYTICS_MAX_NS_PIVOT_RESULTS: "250"
+      ZETALYTICS_LOOKBACK_DAYS: "730"
+      ZETALYTICS_TSFIELD: "all"
+      ZETALYTICS_INCLUDE_LIVE_DNS: "true"
+      ZETALYTICS_INCLUDE_SUBDOMAINS: "true"
+      ZETALYTICS_INCLUDE_D8S: "true"
+      ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "true"
+      ZETALYTICS_INCLUDE_NS_GLUE: "true"
+      ZETALYTICS_INCLUDE_NS2DOMAIN: "true"
+      ZETALYTICS_INCLUDE_MX2DOMAIN: "true"
+      # Enable if registration email pivoting is required for this investigation
+      ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
+      ZETALYTICS_CONFIDENCE: "60"
+      ZETALYTICS_MARKING_DEFINITION: "TLP:AMBER"
+      ZETALYTICS_CREATE_NOTE_WHEN_NO_RESULTS: "false"
