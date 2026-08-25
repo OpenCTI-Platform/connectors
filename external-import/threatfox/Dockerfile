@@ -1,15 +1,17 @@
 FROM python:3.12-alpine
+
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-# Copy the connector
+# hadolint ignore=DL3003
+RUN apk update && apk upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev
+
 COPY src /opt/opencti-connector-threatfox/src
+COPY pyproject.toml /opt/opencti-connector-threatfox/pyproject.toml
 WORKDIR /opt/opencti-connector-threatfox
 
-# Install Python modules
-# hadolint ignore=DL3003
-RUN apk --no-cache add git build-base libmagic libffi-dev && \
-    cd /opt/opencti-connector-threatfox/src && \
-    pip3 install --no-cache-dir -r requirements.txt && \
+# git is required to resolve the connectors-sdk VCS dependency declared in pyproject.toml
+RUN pip3 install --no-cache-dir . && \
     apk del git build-base
 
-CMD ["python", "-m", "src"]
+CMD ["threatfox-connector"]
