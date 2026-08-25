@@ -19632,7 +19632,7 @@
           },
           "IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD": {
             "default": true,
-            "description": "Import external references as MarkDown files.",
+            "description": "Import external references as Markdown files.",
             "type": "boolean"
           },
           "IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD": {
@@ -19648,21 +19648,25 @@
           "IMPORT_EXTERNAL_REFERENCE_CACHE_SIZE": {
             "default": 32,
             "description": "Size of the LRU URL cache to prevent fetching the same object repeatedly.",
+            "exclusiveMinimum": 0,
             "type": "integer"
           },
           "IMPORT_EXTERNAL_REFERENCE_CACHE_TTL": {
             "default": 3600,
             "description": "Time-to-live (in seconds) for cache entries.",
+            "exclusiveMinimum": 0,
             "type": "integer"
           },
           "IMPORT_EXTERNAL_REFERENCE_BROWSER_WORKER_COUNT": {
             "default": 4,
             "description": "Number of browser worker threads to use.",
+            "exclusiveMinimum": 0,
             "type": "integer"
           },
           "IMPORT_EXTERNAL_REFERENCE_MAX_DOWNLOAD_SIZE": {
             "default": 52428800,
             "description": "Maximum download size in bytes. (default: 50MB)",
+            "exclusiveMinimum": 0,
             "type": "integer"
           }
         },
@@ -24425,11 +24429,6 @@
             "default": false,
             "description": "Whether the connector should run automatically when an entity is created or updated.",
             "type": "boolean"
-          },
-          "MISP_IMPORT_FILE_IMPORT_FROM_DATE": {
-            "default": null,
-            "description": "Optional lower-bound date used when importing MISP events.",
-            "type": "string"
           },
           "MISP_IMPORT_FILE_CREATE_REPORTS": {
             "default": true,
