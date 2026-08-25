@@ -14,8 +14,8 @@ import urllib.request
 from asyncio import Queue
 from typing import Dict
 
-import html2text
 from cachetools import TTLCache
+from markdownify import markdownify
 from pdfminer.converter import HTMLConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfinterp import PDFPageInterpreter, PDFResourceManager
@@ -608,22 +608,11 @@ class ImportExternalReferenceConnector:
             # Import as Markdown
             if self.import_as_md:
                 self.helper.connector_logger.debug("Beginning Markdown import logic")
-                # Configure html2text
-                text_maker = html2text.HTML2Text()
-                text_maker.body_width = 0
-                text_maker.ignore_links = False
-                text_maker.ignore_images = False
-                text_maker.ignore_tables = False
-                text_maker.ignore_emphasis = False
-                text_maker.skip_internal_links = False
-                text_maker.inline_links = True
-                text_maker.protect_links = True
-                text_maker.mark_code = True
 
                 try:
                     if is_pdf and self.import_pdf_as_md:
                         html_context = await self._pdf_to_html(pdf_data)
-                        md = text_maker.handle(html_context)
+                        md = self._html_to_markdown(html_context)
                         html_context.close()
 
                         file_name = os.path.basename(url) + ".md"
@@ -644,7 +633,7 @@ class ImportExternalReferenceConnector:
                             )
 
                     elif not is_pdf:
-                        md = text_maker.handle(html)
+                        md = self._html_to_markdown(html)
                         # Fix protocol-relative links
                         md = md.replace("](//", "](https://")
                         file_name = self._safe_filename_from_url(url, ".md")
@@ -691,6 +680,9 @@ class ImportExternalReferenceConnector:
                 f"Enrichment failed for {external_reference.get('url')}: {e}"
             )
             return f"Failed: {e}"
+
+    def _html_to_markdown(self, html: str) -> str:
+        return markdownify(html, heading_style="ATX", table_infer_header=True)
 
     async def _pdf_to_html(self, pdf_bytes: bytes) -> str:
         loop = asyncio.get_running_loop()
