@@ -262,12 +262,11 @@ class ShodanConnector:
         Geolocation is optional in the Shodan response: `city`, `country_name`
         and the coordinates may be absent or null. Location.generate_id()
         needs a name, so only the levels that are present are built, and the
-        observable is attached to the most precise one available.
+        observable gets a `located-at` to each of them. When both are present,
+        the City is also linked to the Country to keep the hierarchy explicit.
         """
         city = data.get("city")
         country_name = data.get("country_name")
-        if not city and not country_name:
-            return
 
         # Generate City Location
         stix_city_location = None
@@ -287,6 +286,14 @@ class ShodanConnector:
             )
             self.stix_objects.append(stix_city_location)
 
+            # create relationship "located-at" with the city
+            observable_to_location = self._generate_stix_relationship(
+                self.stix_entity["id"],
+                "located-at",
+                stix_city_location.id,
+            )
+            self.stix_objects.append(observable_to_location)
+
         # Generate Country Location
         stix_country_location = None
         if country_name:
@@ -302,15 +309,15 @@ class ShodanConnector:
             )
             self.stix_objects.append(stix_country_location)
 
-        # Generate Relationship : observable -> "located-at" -> City or Country
-        observable_to_location = self._generate_stix_relationship(
-            self.stix_entity["id"],
-            "located-at",
-            (stix_city_location or stix_country_location).id,
-        )
-        self.stix_objects.append(observable_to_location)
+            # create relationship "located-at" with the country
+            observable_to_location = self._generate_stix_relationship(
+                self.stix_entity["id"],
+                "located-at",
+                stix_country_location.id,
+            )
+            self.stix_objects.append(observable_to_location)
 
-        # Generate Relationship : City -> "located-at" -> Country
+        # create relationship City -> "located-at" -> Country
         if stix_city_location is not None and stix_country_location is not None:
             city_to_country = self._generate_stix_relationship(
                 stix_city_location.id, "located-at", stix_country_location.id

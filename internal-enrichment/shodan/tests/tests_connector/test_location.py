@@ -59,6 +59,12 @@ def _location_type(location):
 
 
 def test_city_and_country_are_both_built():
+    """The observable is attached to every level Shodan returned.
+
+    City and Country are two independent pieces of information, so each one
+    gets its own `located-at` from the observable, plus the City -> Country
+    link that keeps the hierarchy explicit.
+    """
     conn = _connector()
 
     conn._generate_stix_location(_FULL_LOCATION)
@@ -70,6 +76,7 @@ def test_city_and_country_are_both_built():
     assert country["x_opencti_aliases"] == ["FR"]
     assert _relationships(conn) == [
         (_OBSERVABLE_ID, city["id"]),
+        (_OBSERVABLE_ID, country["id"]),
         (city["id"], country["id"]),
     ]
 
