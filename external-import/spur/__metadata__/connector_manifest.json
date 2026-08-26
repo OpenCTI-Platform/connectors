@@ -1,6 +1,5 @@
 {
   "title": "Spur",
-  "name": "Spur",
   "slug": "spur",
   "description": "Import Spur anonymous and residential proxy feed data into OpenCTI as STIX observables. Each IP is enriched with ASN, location, infrastructure type, risk labels, tunnel operators, and a computed threat score.",
   "short_description": "Bulk import of Spur anonymous and residential proxy feeds as IPv4/IPv6 STIX observables.",

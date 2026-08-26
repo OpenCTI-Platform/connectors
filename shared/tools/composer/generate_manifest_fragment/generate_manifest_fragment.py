@@ -346,11 +346,11 @@ def build_fragment(
         "logo": logo,
         "use_cases": manifest["use_cases"],
         "solution_categories": manifest["solution_categories"],
-        "license_type": manifest.get("license_type") or "",
+        "license_type": manifest.get("license_type") or None,
         "contact": manifest.get("contact") or "",
         "verified": manifest.get("verified", False),
         "last_verified_date": manifest.get("last_verified_date") or None,
-        "subscription_link": manifest.get("subscription_link") or "",
+        "subscription_link": manifest.get("subscription_link") or None,
         "source_code": manifest["source_code"],
         "manager_supported": manifest["manager_supported"],
         "min_version": parse_pycti_version(
