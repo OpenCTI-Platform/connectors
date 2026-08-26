@@ -19,10 +19,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest~=8.3",
+test = [
+    "pytest>=9.0.3,<10",
     "requests-mock~=1.12",
 ]
+# Kept as an alias so `pip install -e ".[dev]"` (see README) still works.
+dev = ["intel471-hunt-connector[test]"]
 
 [project.scripts]
 intel471-hunt-connector = "src.main:main"
