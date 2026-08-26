@@ -463,14 +463,18 @@ def test_hunt_with_blank_sigma_emits_no_indicator(first_hunt):
 
 
 def test_emitted_sigma_patterns_parse(response_payload):
-    """Every pattern we emit must satisfy the parser OpenCTI validates with."""
-    sigma_parser = pytest.importorskip(
-        "sigma.parser.collection", reason="sigmatools not installed"
-    )
+    """Every pattern we emit must satisfy pySigma, the parser OpenCTI validates
+    with. Hunter rules carry metadata pySigma rejects (status: New, non-UUID
+    ids, nested tags); src.sigma_rule normalises it before we emit."""
+    collection = pytest.importorskip("sigma.collection", reason="pysigma not installed")
     author = stix_builder.build_author()
 
+    emitted = 0
     for hunt in response_payload["results"]:
         for obj in stix_builder.build_bundle(hunt, author):
             if obj["type"] == "indicator":
                 assert obj["pattern_type"] == "sigma"
-                sigma_parser.SigmaCollectionParser(obj["pattern"])
+                collection.SigmaCollection.from_yaml(obj["pattern"])
+                emitted += 1
+    # The fixture is all sigma-bearing hunts: every one must produce a rule.
+    assert emitted == len(response_payload["results"])

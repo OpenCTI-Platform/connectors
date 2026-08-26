@@ -24,9 +24,9 @@ dependencies = [
 test = [
     "pytest>=9.0.3,<10",
     "requests-mock~=1.12",
-    # OpenCTI validates sigma patterns with this parser before accepting an
-    # Indicator; the suite asserts every pattern we emit satisfies it.
-    "sigmatools~=0.23",
+    # The parser OpenCTI validates sigma patterns with; the suite asserts every
+    # pattern the connector emits satisfies it.
+    "pysigma~=0.11",
 ]
 # Kept as an alias so `pip install -e ".[dev]"` (see README) still works.
 dev = ["intel471-hunt-connector[test]"]

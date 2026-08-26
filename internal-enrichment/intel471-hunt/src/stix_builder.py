@@ -22,6 +22,7 @@ from pycti import (
 from pycti import Tool as PyCtiTool
 from pycti import Vulnerability as PyCtiVulnerability
 from src.severity import severity_to_score
+from src.sigma_rule import normalise as normalise_sigma
 
 LOGGER = logging.getLogger(__name__)
 
@@ -328,13 +329,15 @@ def _build_indicator(
 def _sigma_rule(hunt: dict[str, Any]) -> str:
     """The hunt's sigma rule, or an empty string when it ships none.
 
-    Never synthesise a stand-in: OpenCTI parses the pattern with sigmatools and
-    rejects an Indicator whose rule does not parse (a `condition` naming an
-    undefined selection is the classic case), which then breaks every
-    relationship that points at it.
+    The rule is normalised first (see `src.sigma_rule`): OpenCTI parses the
+    pattern with pySigma and rejects an Indicator whose rule does not parse,
+    which then breaks every relationship that points at it. Never synthesise a
+    stand-in for a hunt that ships no rule.
     """
     sigma = hunt.get("sigma")
-    return sigma.strip() if isinstance(sigma, str) else ""
+    if not isinstance(sigma, str):
+        return ""
+    return normalise_sigma(sigma)
 
 
 def _build_labels(hunt: dict[str, Any]) -> list[str]:

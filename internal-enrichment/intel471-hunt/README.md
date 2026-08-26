@@ -351,6 +351,11 @@ Supported `--entity-type` values: `Threat-Actor`, `Threat-Actor-Group`, `Threat-
 - **The cache is single-process**, so multi-replica deployments need a shared store.
 - **Renames in Hunter** (a changed hunt title or actor name) do not propagate cleanly, because the related entities
   use name-derived deterministic STIX ids.
+- **Sigma metadata is normalised before import.** OpenCTI validates every sigma pattern with pySigma and rejects the
+  Indicator outright if the rule does not parse. Hunter rules carry metadata pySigma refuses — `status: New`, rule
+  `id`s that are not UUIDs, and nested `tags` lists — so the connector drops or coerces those optional keys before
+  emitting the Indicator. The `detection` and `logsource` blocks, i.e. what the rule actually matches, are never
+  touched. A hunt that ships no sigma rule at all yields a Report with no Indicator rather than a placeholder.
 
 ### Testing
 
