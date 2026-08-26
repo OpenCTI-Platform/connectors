@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  connector-whoisfreaks:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opencti/connector-whoisfreaks:latest
+    container_name: connector-whoisfreaks
+    environment:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      # - CONNECTOR_NAME=WhoisFreaks
+      # - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,IPv6-Addr
+      # - CONNECTOR_AUTO=false
+      # - CONNECTOR_LOG_LEVEL=info
+      - WHOISFREAKS_API_KEY=${WHOISFREAKS_API_KEY}
+      # - WHOISFREAKS_TLP_LEVEL=amber+strict
+    restart: unless-stopped
