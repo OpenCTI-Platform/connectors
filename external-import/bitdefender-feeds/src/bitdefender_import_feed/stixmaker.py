@@ -1,6 +1,5 @@
 import json
 import time
-
 import iso3166
 import stix2
 
@@ -278,6 +277,7 @@ class StixMakerPrivate:
             "url_hosted_on_domain": ("related-to", True),
             "domain_hosts_url": ("related-to", False),
             "domain_is_connected_to_by_file": ("related-to", True),
+            "url_is_connected_to_by_file": ("related-to", True),
         }
 
         # Skip unknown indicators as new may be added

@@ -1,7 +1,7 @@
 import traceback
 
-from bitdefender_import_feed.connector import BitdefenderFeedConnector
-from bitdefender_import_feed.settings import ConnectorSettings
+from src.bitdefender_import_feed.connector import BitdefenderFeedConnector
+from src.bitdefender_import_feed.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":

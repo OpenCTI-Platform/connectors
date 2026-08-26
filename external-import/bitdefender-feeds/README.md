@@ -35,11 +35,11 @@ The following configuration variables are optional.
 
 | Env. Variable       | Config Var. |  Description |
 |---------------------|-------------|--------------|
-| `BITDEFENDER_MIN_CONFIDENCE` | min_confidence | Number; defines the minimal confidence level (1-99) for the feed entry to be imported. Default is 75. |
-| `BITDEFENDER_MIN_SEVERITY`   | min_severity | Number; defines the minimal severity level (1-99) for the feed entry to be imported. Default is 1 |
-| `BITDEFENDER_INCLUDE_REVOKED` | include_revoked | String, defines whether to include the indicators for revoked entries. Can be "true" (include), "false" (exclude those; default), and "only (only import those entries) |
-| `BITDEFENDER_EXCLUDE_RELATED_INDICATORS` | exclude_related_indicators | Boolean, defines whether to exclude the related indicators (which provide relationship data). By default those are included |
-| `BITDEFENDER_INCLUDE_SUSPICIOUS` | include_suspicious | String, defines whether to include the entries which are marked as suspicious. Can be "true" (include), "false" (exclude those; default), and "only (only import those entries) |
+| BITDEFENDER_MIN_CONFIDENCE  | min_confidence | Number; defines the minimal confidence level (1-99) for the feed entry to be imported. Default is 75. |
+| BITDEFENDER_MIN_SEVERITY    | min_severity | Number; defines the minimal severity level (1-99) for the feed entry to be imported. Default is 1 |
+| BITDEFENDER_INCLUDE_REVOKED | include_revoked | String, defines whether to include the indicators for revoked entries. Can be "true" (include), "false" (exclude those; default), and "only (only import those entries) |
+| BITDEFENDER_EXCLUDE_RELATED_INDICATORS | exclude_related_indicators | Boolean, defines whether to exclude the related indicators (which provide relationship data). By default those are included |
+| BITDEFENDER_INCLUDE_SUSPICIOUS | include_suspicious | String, defines whether to include the entries which are marked as suspicious. Can be "true" (include), "false" (exclude those; default), and "only (only import those entries) |
 
 The settings `BITDEFENDER_MIN_CONFIDENCE` and `BITDEFENDER_MIN_SEVERITY` work together; an indicator must match both minimum levels to be imported. Both have values ranged from 1 (minimal confidence) to 99 (maximum confidence).
 
@@ -49,37 +49,33 @@ Until the source is merged into OpenCTI connectors, you can run the connector fr
 
 - Copy the directory content into the machine you're running OpenCTI on (we assume `/home/opencti/connector-bitdefender` in this example);
 
-- Add the following entry into your opencti docker-compose.yml into the services section, following the `connector-mitre` section at the same ident level as connector-mitre:
+- Add the following entry into your OpenCTI `docker-compose.yml` into the services section:
 
 ```` {.yml}
   connector-bitdefender:
-    image: python:3.12
-    volumes:
-      - /home/opencti/connector-bitdefender/:/connector-bitdefender
+    build: /home/opencti/connector-bitdefender
+    image: opencti/connector-bitdefender-feeds:latest
     depends_on:
       opencti:
         condition: service_healthy
-    restart: always
-    working_dir: /connector-bitdefender
-    command: ["bash", "entrypoint.sh"]
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - CONNECTOR_ID=9aae46c5-9e5a-4379-9f1b-49202674de3f
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=bitdefender-import-feed
-      - CONNECTOR_SCOPE=indicator,file,ipv4-addr
+      - CONNECTOR_NAME=Bitdefender
+      - CONNECTOR_SCOPE=Bitdefender
       - CONNECTOR_LOG_LEVEL=info
-      - BITDEFENDER_FEED_API_KEY=<REPLACE ME>
-      - BITDEFENDER_FEED_INTERVAL_MINUTES=60
-      - BITDEFENDER_FEEDS_LIST=file web ip
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - BITDEFENDER_API_KEY=<REPLACE ME>
+      - BITDEFENDER_LIST=file web ip
 ````
 
-and start the Docker:
+and build and start the container:
         
-```bash
-docker compose up --build
-```
+````bash
+docker compose up connector-bitdefender --build
+````
 
 ## Authorship and Code License
 

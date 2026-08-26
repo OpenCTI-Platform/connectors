@@ -1,10 +1,9 @@
 services:
   connector-bitdefender:
-    image: python:3.12
+    image: opencti/connector-bitdefender-feeds:latest
     depends_on:
       opencti:
         condition: service_healthy
-    command: ["bash", "entrypoint.sh"]
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
