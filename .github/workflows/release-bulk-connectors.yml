@@ -8,11 +8,12 @@ run-name: >-
   ${{
     github.event_name == 'push'
       && format('🚀 bulk (platform tag {0})', github.ref_name)
-      || format('🚀 bulk: {0}{1}{2}{3}',
+      || format('🚀 bulk: {0}{1}{2}{3}{4}',
            inputs.connectors,
            inputs.version != '' && format('@{0}', inputs.version) || '',
            inputs.dry_run && ' · dry-run' || '',
-           inputs.manifest_only && ' · manifest-only' || '')
+           inputs.manifest_only && ' · manifest-only' || '',
+           inputs.force && ' · force' || '')
   }}
 
 # Bulk release orchestrator.
@@ -85,6 +86,14 @@ on:
         required: false
         type: boolean
         default: true
+      force:
+        description: >
+          Force — for every dispatched connector, delete any existing GitHub
+          Release for this version before recreating it. If the tag already
+          exists, it is reused as-is (it is not deleted/recreated).
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: release-bulk-connectors
@@ -122,6 +131,7 @@ jobs:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_DRY_RUN: ${{ inputs.dry_run }}
           INPUT_MANIFEST_ONLY: ${{ inputs.manifest_only }}
+          INPUT_FORCE: ${{ inputs.force }}
         run: |
           set -euo pipefail
 
@@ -133,12 +143,14 @@ jobs:
             echo "version=${TAG_NAME}" >> "$GITHUB_OUTPUT"
             echo "dry_run=false" >> "$GITHUB_OUTPUT"
             echo "manifest_only=true" >> "$GITHUB_OUTPUT"
+            echo "force=false" >> "$GITHUB_OUTPUT"
             echo "🏷️ Platform release tag: ${TAG_NAME} → bulk manifest-only run for all connectors"
           else
             echo "connectors=${INPUT_CONNECTORS}" >> "$GITHUB_OUTPUT"
             echo "version=${INPUT_VERSION}" >> "$GITHUB_OUTPUT"
             echo "dry_run=${INPUT_DRY_RUN}" >> "$GITHUB_OUTPUT"
             echo "manifest_only=${INPUT_MANIFEST_ONLY}" >> "$GITHUB_OUTPUT"
+            echo "force=${INPUT_FORCE}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Resolve connectors and version
@@ -148,6 +160,7 @@ jobs:
           VERSION: ${{ steps.trigger.outputs.version }}
           DRY_RUN: ${{ steps.trigger.outputs.dry_run }}
           MANIFEST_ONLY: ${{ steps.trigger.outputs.manifest_only }}
+          FORCE: ${{ steps.trigger.outputs.force }}
         run: |
           set -euo pipefail
 
@@ -165,8 +178,11 @@ jobs:
           # A dry run previews the full intended set, including connectors already
           # released at this version. A real run (manifest-only or not) skips them,
           # since it creates a real tag/GitHub Release per connector and re-running
-          # for an already-released version would collide with the existing tag.
-          if [ "${DRY_RUN}" = "true" ]; then
+          # for an already-released version would collide with the existing tag —
+          # unless force is set, in which case those connectors must still be
+          # dispatched so release-connector.yml's own force logic can delete and
+          # recreate their tag/release.
+          if [ "${DRY_RUN}" = "true" ] || [ "${FORCE}" = "true" ]; then
             ARGS+=("--include-released")
           fi
 
@@ -188,6 +204,7 @@ jobs:
           CONNECTORS_JSON: ${{ steps.resolve.outputs.connectors }}
           VERSION: ${{ steps.resolve.outputs.version }}
           MANIFEST_ONLY: ${{ steps.trigger.outputs.manifest_only }}
+          FORCE: ${{ steps.trigger.outputs.force }}
           REF: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
           DRY_RUN: ${{ steps.trigger.outputs.dry_run }}
@@ -205,6 +222,10 @@ jobs:
             echo ""
             if [ "$MANIFEST_ONLY" = "true" ]; then
               echo "🧩 **Manifest-only mode** — Docker build/push is skipped for every connector (still handled by CircleCI during the transition). Tag, GitHub Release, manifest fragment, and container_version commit-back are still fully produced for each connector."
+              echo ""
+            fi
+            if [ "$FORCE" = "true" ]; then
+              echo "⚠️ **Force mode** — any existing tag/GitHub Release at this version will be deleted and recreated for every connector."
               echo ""
             fi
             echo "Dispatching connector release(s) on ref \`$REF\`."
@@ -228,7 +249,8 @@ jobs:
                  -f connector_name="$name" \
                  -f version="$VERSION" \
                  -f dry_run="$DRY_RUN" \
-                 -f manifest_only="$MANIFEST_ONLY"; then
+                 -f manifest_only="$MANIFEST_ONLY" \
+                 -f force="$FORCE"; then
               echo "| $name | $target_label | ✅ dispatched | [view run]($track_url) |" >> "$GITHUB_STEP_SUMMARY"
               ok=$((ok + 1))
             else
@@ -265,6 +287,7 @@ jobs:
           CONNECTORS_JSON: ${{ steps.resolve.outputs.connectors }}
           VERSION: ${{ steps.resolve.outputs.version }}
           MANIFEST_ONLY: ${{ steps.trigger.outputs.manifest_only }}
+          FORCE: ${{ steps.trigger.outputs.force }}
           DRY_RUN: ${{ steps.trigger.outputs.dry_run }}
           START_TIME: ${{ steps.dispatch.outputs.start_time }}
         run: |
@@ -288,12 +311,13 @@ jobs:
           mapfile -t NAMES < <(printf '%s' "$CONNECTORS_JSON" | jq -r '.[]')
 
           # Must match release-connector.yml's run-name template exactly:
-          # "🚀 {connector_name}@{version}[ · dry-run][ · manifest-only]"
+          # "🚀 {connector_name}@{version}[ · dry-run][ · manifest-only][ · force]"
           declare -A TITLE_OF
           for name in "${NAMES[@]}"; do
             title="🚀 ${name}@${VERSION}"
             [ "$DRY_RUN" = "true" ] && title="${title} · dry-run"
             [ "$MANIFEST_ONLY" = "true" ] && title="${title} · manifest-only"
+            [ "$FORCE" = "true" ] && title="${title} · force"
             TITLE_OF["$name"]="$title"
           done
 
