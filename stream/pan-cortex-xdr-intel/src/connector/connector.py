@@ -103,15 +103,45 @@ class Connector:
         )
 
     def _extract_xdr_iocs(self, octi_indicator: OctiIndicator) -> list[CortexXdrIoc]:
-        """Build `CortexXdrIoc` from `octi_indicator` and its observables,
-        mapping OpenCTI fields to Cortex XDR's IOC fields.
+        """Build `CortexXdrIoc`s from `octi_indicator`'s observables.
 
-        /!\\ Observables without a supported mapping are skipped silently.
+        Used by both `_handle_upsert` and `_handle_delete` to extract the
+        Cortex XDR IOC `type` and `indicator` fields from the OpenCTI indicator's observables.
         """
         if not octi_indicator.observables:
             return []
 
-        # Map OpenCTI indicator's fields to Cortex XDR IOC fields
+        xdr_iocs: list[CortexXdrIoc] = []
+        # TODO: improve the mapping so it correspond to the mapping defined in the MVP
+        for observable in octi_indicator.observables:
+            if observable.type.lower() == "stixfile":
+                # Only hashes are mapped for now; filename is intentionally out of scope (currently commented)
+                # if observable.name:
+                #     xdr_iocs.append(
+                #         CortexXdrIoc(type="FILENAME", indicator=observable.name)
+                #     )
+                if observable.hashes:
+                    for hash_value in observable.hashes.values():
+                        xdr_iocs.append(CortexXdrIoc(type="HASH", indicator=hash_value))
+            elif observable.type.lower() == "domain-name":
+                xdr_iocs.append(
+                    CortexXdrIoc(type="DOMAIN_NAME", indicator=observable.value)  # type: ignore[union-attr]  # `value` is always set for DomainName observables
+                )
+            elif observable.type.lower() in ("ipv4-addr", "ipv6-addr"):
+                xdr_iocs.append(CortexXdrIoc(type="IP", indicator=observable.value))  # type: ignore[union-attr]  # `value` is always set for IP observables
+
+        return xdr_iocs
+
+    def _map_indicator_fields_to_xdr_iocs(
+        self, octi_indicator: OctiIndicator, xdr_iocs: list[CortexXdrIoc]
+    ) -> list[CortexXdrIoc]:
+        """Map OpenCTI indicator's properties to each Cortex XDR IOC.
+
+        Used by `_handle_upsert` to set the Cortex XDR IOC optional fields.
+        """
+        if not xdr_iocs:
+            return []
+
         # TODO: fix the mapping so it correspond to the mapping defined in the MVP
         if octi_indicator.score is None:
             xdr_severity = None
@@ -140,51 +170,21 @@ class Connector:
             "reliability": None,  # intentionally non-set for now
         }
 
-        # Map observables' fields and build Cortex XDR IOCs
-        xdr_iocs: list[CortexXdrIoc] = []
-        for observable in octi_indicator.observables:
-            if observable.type.lower() == "stixfile":
-                # Only hashes are mapped for now; filename is intentionally out of scope (currently commented)
-                # if observable.name:
-                #     xdr_iocs.append(
-                #         CortexXdrIoc(
-                #             type="FILENAME",
-                #             indicator=observable.name,
-                #             **indicator_properties,
-                #         )
-                #     )
-                if observable.hashes:
-                    for hash_value in observable.hashes.values():
-                        xdr_iocs.append(
-                            CortexXdrIoc(
-                                type="HASH",
-                                indicator=hash_value,
-                                **indicator_properties,
-                            )
-                        )
-            elif observable.type.lower() in ("domain-name", "hostname"):
-                xdr_iocs.append(
-                    CortexXdrIoc(
-                        type="DOMAIN_NAME",
-                        indicator=observable.value,  # type: ignore[union-attr]  # `value` is always set for DomainName/Hostname observables
-                        **indicator_properties,
-                    )
-                )
-            elif observable.type.lower() in ("ipv4-addr", "ipv6-addr"):
-                xdr_iocs.append(
-                    CortexXdrIoc(
-                        type="IP",
-                        indicator=observable.value,  # type: ignore[union-attr]  # `value` is always set for IP observables
-                        **indicator_properties,
-                    )
-                )
+        # Apply the indicator properties to each Cortex XDR IOC
+        for xdr_ioc in xdr_iocs:
+            for key, value in indicator_properties.items():
+                setattr(xdr_ioc, key, value)
 
         return xdr_iocs
 
     def _resolve_xdr_iocs_rule_ids(
         self, extracted_xdr_iocs: list[CortexXdrIoc]
     ) -> list[CortexXdrIoc]:
-        """Resolve `rule_id` for each Cortex XDR IOC extracted from the indicator's observables."""
+        """Resolve `rule_id` for each Cortex XDR IOC extracted from OpenCTI indicator's observables.
+
+        Used by `_handle_upsert` to attach the Cortex XDR-assigned `rule_id` to each IOC
+        that already exists on Cortex XDR, so that XDR API will update it instead of creating a duplicate.
+        """
         if not extracted_xdr_iocs:
             return []
 
@@ -219,7 +219,9 @@ class Connector:
     def _handle_upsert(self, octi_indicator: OctiIndicator) -> None:
         """Upsert `octi_indicator`'s supported observables into Cortex XDR as IOCs."""
         # Extract Cortex XDR IOCs from the indicator's observables
+        # (`xdr_iocs` is re-assigned after each transformation to ease debugging)
         xdr_iocs = self._extract_xdr_iocs(octi_indicator)
+        xdr_iocs = self._map_indicator_fields_to_xdr_iocs(octi_indicator, xdr_iocs)
         xdr_iocs = self._resolve_xdr_iocs_rule_ids(xdr_iocs)
         if not xdr_iocs:
             self.helper.connector_logger.error(
@@ -233,7 +235,7 @@ class Connector:
             return
 
         self.helper.connector_logger.debug(
-            "Upserting indicator(s) into Cortex XDR",
+            "Upserting IOC(s) into Cortex XDR",
             {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
         )
 
@@ -243,7 +245,43 @@ class Connector:
         )
 
         self.helper.connector_logger.info(
-            "Successfully upserted indicator(s) into Cortex XDR",
+            "Successfully upserted IOC(s) into Cortex XDR",
+            {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
+        )
+
+    def _handle_delete(self, octi_indicator: OctiIndicator) -> None:
+        """Delete `octi_indicator`'s supported observables from Cortex XDR."""
+        # Extract Cortex XDR IOCs from the indicator's observables
+        xdr_iocs = self._extract_xdr_iocs(octi_indicator)
+        if not xdr_iocs:
+            self.helper.connector_logger.error(
+                "No Cortex XDR IOC could be extracted from any observable, "
+                "skipping indicator",
+                {
+                    "indicator_id": octi_indicator.id,
+                    "observables_count": len(octi_indicator.observables),
+                },
+            )
+            return
+
+        self.helper.connector_logger.debug(
+            "Deleting IOC(s) from Cortex XDR",
+            {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
+        )
+
+        # Delete all the IOCs corresponding to the filters on Cortex XDR
+        self.client.delete_iocs(
+            [
+                {
+                    "field": "indicator",
+                    "operator": "IN",
+                    "value": [ioc.indicator for ioc in xdr_iocs],
+                }
+            ]
+        )
+
+        self.helper.connector_logger.info(
+            "Successfully deleted IOC(s) from Cortex XDR",
             {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
         )
 
@@ -330,7 +368,7 @@ class Connector:
             if event in {"create", "update"}:
                 self._handle_upsert(octi_indicator)
             elif event == "delete":
-                pass  # TODO: delete from Cortex XDR (#7187)
+                self._handle_delete(octi_indicator)
 
         except CortexXdrApiError as err:
             fatal_causes = (
