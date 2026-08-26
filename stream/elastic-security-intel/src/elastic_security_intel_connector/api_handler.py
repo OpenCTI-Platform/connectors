@@ -907,6 +907,38 @@ class ElasticApiHandler:
 
         return success
 
+    def _delete_docs_by_opencti_id(self, doc_id: str) -> int:
+        """
+        Delete every document matching the given opencti_doc_id from the data stream.
+
+        Data streams auto-generate document IDs, so deduplication can only be done by
+        query. ``conflicts=proceed`` prevents version conflicts from aborting the
+        deletion and leaving stale duplicates behind.
+
+        :param doc_id: The opencti_doc_id shared by the documents to remove
+        :return: Number of documents deleted
+        """
+        delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
+        url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
+        response = requests.post(
+            url,
+            headers=self.headers,
+            params={"conflicts": "proceed"},
+            json=delete_query,
+            verify=self._get_verify_config(),
+            cert=self.cert,
+            timeout=30,
+        )
+
+        if response.status_code in [200, 404]:  # 404 is ok, index/doc not there yet
+            result = response.json() if response.status_code == 200 else {}
+            return result.get("deleted", 0)
+
+        raise ElasticApiHandlerError(
+            f"Failed to delete indicator(s): {response.status_code}",
+            {"response": response.text},
+        )
+
     def create_indicator(self, observable_data: dict) -> Optional[dict]:
         """Create a threat indicator in Elastic Security"""
         try:
@@ -915,6 +947,10 @@ class ElasticApiHandler:
 
             # Add document ID as a field for reference (since data streams auto-generate IDs)
             ecs_doc["opencti_doc_id"] = doc_id
+
+            # Remove any pre-existing document for this indicator so a duplicated
+            # "create" event cannot accumulate several copies in the data stream.
+            self._delete_docs_by_opencti_id(doc_id)
 
             # For data streams, use POST without specifying document ID
             # Data streams require POST with auto-generated IDs
@@ -1061,24 +1097,13 @@ class ElasticApiHandler:
             ecs_doc["opencti_doc_id"] = doc_id
 
             # For data streams, we can't update directly - need to delete old and create new
-            # First, try to delete the old document by opencti_doc_id
-            delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
-
-            delete_url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
-            delete_request = requests.post(
-                delete_url,
-                headers=self.headers,
-                json=delete_query,
-                verify=self._get_verify_config(),
-                cert=self.cert,
-                timeout=30,
+            # First, delete any existing document(s) for this indicator
+            deleted_count = self._delete_docs_by_opencti_id(doc_id)
+            self.helper.connector_logger.debug(
+                f"Deleted {deleted_count} old indicator(s) for update",
+                {"opencti_doc_id": doc_id},
             )
-            if delete_request.status_code == 200:
-                delete_result = delete_request.json()
-                self.helper.connector_logger.debug(
-                    f"Successfully deleted {delete_result["total"]} old indicator for update",
-                    {"opencti_doc_id": doc_id},
-                )
+
             # Now create the new document (data streams are append-only)
             url = f"{self.elastic_url}/{self.index_name}/_doc"
             response = requests.post(
@@ -1121,32 +1146,12 @@ class ElasticApiHandler:
         try:
             doc_id = self._generate_doc_id(observable_data)
 
-            # For data streams, use delete by query
-            delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
-
-            url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
-            response = requests.post(
-                url,
-                headers=self.headers,
-                json=delete_query,
-                verify=self._get_verify_config(),
-                cert=self.cert,
-                timeout=30,
+            deleted_count = self._delete_docs_by_opencti_id(doc_id)
+            self.helper.connector_logger.debug(
+                "Successfully deleted indicator(s) from Elastic",
+                {"opencti_doc_id": doc_id, "deleted_count": deleted_count},
             )
-
-            if response.status_code in [200, 404]:  # 404 is ok, already deleted
-                result = response.json() if response.status_code == 200 else {}
-                deleted_count = result.get("deleted", 0)
-                self.helper.connector_logger.debug(
-                    "Successfully deleted indicator(s) from Elastic",
-                    {"opencti_doc_id": doc_id, "deleted_count": deleted_count},
-                )
-                return True
-            else:
-                raise ElasticApiHandlerError(
-                    f"Failed to delete indicator: {response.status_code}",
-                    {"response": response.text},
-                )
+            return True
 
         except requests.exceptions.RequestException as e:
             raise ElasticApiHandlerError(
