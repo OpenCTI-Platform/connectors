@@ -9,10 +9,9 @@ CONFIG_OPENCTI_LABELS = ["popularity"]
 
 class StixMaker:
     def __init__(
-        self, helper, creator_identity, feedtype, max_bundle_entries=10000
+        self, helper, feedtype, max_bundle_entries=10000
     ) -> None:
         self.helper = helper
-        self.creator_identity = creator_identity
         self.max_bundle_entries = max_bundle_entries
         self.feedtype = feedtype
 
@@ -25,8 +24,29 @@ class StixMaker:
         # Output STIX bundle storage - everything but created objects
         self.bundles_output = []
 
+        self.creator_identity = self.findOrCreateCacheableObject(
+            "identity",
+            {
+                "name": "Bitdefender",
+                "description": "Bitdefender offers cybersecurity solutions, services and threat intelligence.",
+                "contact_information": "https://www.bitdefender.com",
+                "identity_class": "organization",
+                "custom_properties": {
+                    "x_opencti_reliability": "A - Completely reliable",
+                    "x_opencti_organization_type": "vendor",
+                },
+                "external_references": [
+                    {
+                        "source_name": "Bitdefender Threat Intelligence",
+                        "url": "https://www.bitdefender.com/en-us/business/products/operational-threat-intelligence",
+                        "description": "Bitdefender Threat Intelligence",
+                    }
+                ],
+            },
+        )
+
         self.work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, f"importing {feedtype} feed", is_multipart=True
+            self.helper.connect_id, f"importing {feedtype} feed"
         )
 
     def fromEntry(self, entry: str) -> bool:

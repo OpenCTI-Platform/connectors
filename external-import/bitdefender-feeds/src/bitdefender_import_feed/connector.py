@@ -1,10 +1,8 @@
 import os
 import time
 import traceback
-
 import requests
 from bitdefender_import_feed.stixmaker import StixMaker
-
 
 class BitdefenderFeedConnector:
     def __init__(self, config, helper) -> None:
@@ -103,31 +101,7 @@ class BitdefenderFeedConnector:
                 f"{self.helper.connect_name} importing {entry['feed']} feed"
             )
 
-            # Create Bitdefender identity as author if not already created
-            if self.creator_identity is None:
-                self.creator_identity = processor.findOrCreateCacheableObject(
-                    "identity",
-                    {
-                        "name": "Bitdefender",
-                        "description": "Bitdefender offers cybersecurity solutions, services and threat intelligence.",
-                        "contact_information": "https://www.bitdefender.com",
-                        "identity_class": "organization",
-                        "custom_properties": {
-                            "x_opencti_reliability": "A - Completely reliable",
-                            "x_opencti_organization_type": "vendor",
-                        },
-                        "external_references": [
-                            {
-                                "source_name": "Bitdefender Threat Intelligence",
-                                "url": "https://www.bitdefender.com/en-us/business/products/operational-threat-intelligence",
-                                "description": "Bitdefender Threat Intelligence",
-                            }
-                        ],
-                    },
-                )
-
             processor = StixMaker(
-                creator_identity=self.creator_identity,
                 helper=self.helper,
                 feedtype=entry["feed"],
             )
@@ -185,9 +159,13 @@ class BitdefenderFeedConnector:
         try:
             self.download_feeds()
         except Exception as e:
-            self.state["status"] = "error downloading feeds" + str(e)
+            self.state["status"] = "error downloading feeds: " + str(e)
             self._save_state()
-            return
+
+            # If no feeds were downloaded, we return.
+            # Otherwise we import those we downloaded.
+            if len(self.state["queue"]) == 0:
+                return
 
         # If the feeds are downloaded, import them
         if len(self.state["queue"]) > 0:
