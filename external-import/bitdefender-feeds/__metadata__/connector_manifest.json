@@ -1,0 +1,17 @@
+{
+  "title": "Bitdefender Threat Intelligence Feeds",
+  "slug": "bitdefender-feeds",
+  "description": "Bitdefender Threat Intelligence provides file reputation, IP reputation and Web reputation feeds which can be imported into OpenCTI platform.",
+  "short_description": "Imports Bitdefender Threat Intelligence feeds into OpenCTI platform.",
+  "logo": "external-import/bitdefender/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Cloud, SaaS & Platform Security"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed",
+    "Network Security"
+  ],
+  "support_version": ">= 6.7.0",
+  "subscription_link": "https://www.bitdefender.com/en-us/oem/contact/threat-intelligence-solutions-contact?icid=ref%7Cb%7Copencti%7Coem-trial&campaign=2026_Aug_WW_B2B2B_FCM_Partner_Generated_Cybersecurity_at_Scale_OpenCTI"
+}
