@@ -1,5 +1,5 @@
 pycti==7.260824.0
-assemblyline-client==4.9.9
+assemblyline-client==4.10.1
 stix2==3.0.1
 requests~=2.32
 PyYAML>=6.0,<7
