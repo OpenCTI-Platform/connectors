@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from connectors_sdk.client.exceptions import ApiClientError
+from connectors_sdk import ApiClientError
 from orkl.client_api import (
     BACKOFF_FACTOR,
     MAX_PAGES,

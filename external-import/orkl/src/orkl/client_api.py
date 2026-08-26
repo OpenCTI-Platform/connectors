@@ -2,14 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Generator
 from typing import Any
 
-from connectors_sdk import BaseClientApi
-from connectors_sdk.client.exceptions import ApiClientError
-
-logger = logging.getLogger(__name__)
+from connectors_sdk import ApiClientError, BaseClientApi, ConnectorLogger
 
 # ORKL (https://orkl.eu) publishes no documented request quota, so this
 # client relies on a two-layer defensive strategy:
@@ -53,12 +49,21 @@ class OrklClient(BaseClientApi):
         https://orkl.eu/api/v1
     """
 
-    def __init__(self, base_url: str, **kwargs: Any) -> None:
+    def __init__(
+        self, base_url: str, *, logger: ConnectorLogger | None = None, **kwargs: Any
+    ) -> None:
         """Initialize the client, applying ORKL-specific defaults.
 
         The module-level constants are applied via ``setdefault`` so callers
         (and tests) can still override them explicitly.
+
+        Args:
+            base_url: ORKL API base URL.
+            logger: Optional ``ConnectorLogger`` used for pagination warnings.
+                When omitted the client stays silent. ``BaseClientApi`` accepts
+                no ``logger`` kwarg, so it is consumed here and not forwarded.
         """
+        self._logger = logger
         kwargs.setdefault("rate_limit", RATE_LIMIT)
         kwargs.setdefault("max_retries", MAX_RETRIES)
         kwargs.setdefault("backoff_factor", BACKOFF_FACTOR)
@@ -77,21 +82,20 @@ class OrklClient(BaseClientApi):
         """Return the descriptive User-Agent header. No auth is required."""
         return {"User-Agent": USER_AGENT}
 
+    def _warn(self, message: str, meta: dict[str, Any]) -> None:
+        """Emit a warning only when a logger was supplied; stay silent otherwise."""
+        if self._logger is not None:
+            self._logger.warning(message, meta)
+
     def _parse_response(self, response: Any) -> Any:
-        """Unwrap the ORKL response envelope.
+        """Unwrap the ORKL ``{"data", "message", "status"}`` envelope.
 
-        ORKL wraps every response as ``{"data": ..., "message": ...,
-        "status": ...}``. This method first delegates to the base class so
-        Content-Type based parsing still applies, then:
+        Delegates to the base class first (so Content-Type parsing still
+        applies), then raises `ApiClientError` on a non-``success`` status and
+        returns the ``data`` payload. Non-enveloped responses pass through.
 
-        - raises `ApiClientError` (carrying the envelope's `message`) if
-          `status` is present and is not `"success"`.
-        - returns `result["data"]` when a `data` key is present. Note this
-          may legitimately be `None` (ORKL's empty-list sentinel for list
-          endpoints) -- normalising that `None` into `[]` is the caller's
-          responsibility, not this method's.
-        - returns the result unchanged otherwise, so non-enveloped or
-          non-JSON responses still work.
+        Note: ``data`` may legitimately be ``None`` (ORKL's empty-list sentinel
+        for list endpoints); normalising that into ``[]`` is the caller's job.
         """
         result = super()._parse_response(response)
 
@@ -113,37 +117,12 @@ class OrklClient(BaseClientApi):
     ) -> Generator[list[dict[str, Any]], None, None]:
         """Lazily paginate through ORKL library entries, newest-updated first.
 
-        Entries are sorted by `updated_at` descending. This is a lazy
-        generator: no page is fetched until it is consumed, so a caller
-        (e.g. the incremental-sync processor) that stops iterating once it
-        passes its cutoff will not trigger any further requests.
-
-        Termination is normally driven by a short final page (`len(entries)
-        < page_size`). Because the API exposes no total-count field, this
-        means a corpus whose size is an exact multiple of `page_size` costs
-        one extra, empty trailing request before the generator stops --
-        that's an accepted, known trade-off of offset pagination without a
-        count, not an oversight.
-
-        Since ORKL is a third-party public API we do not control, that
-        short-page signal alone is not trusted as the sole stop condition.
-        Two additional guards defend against a misbehaving server (e.g. one
-        that ignores/clamps `offset` and keeps serving a cached/static full
-        page forever):
-
-        - A hard cap of `MAX_PAGES` requests, sized far above a legitimate
-          full backfill (see the constant's comment for the numbers).
-        - Stall detection: if a page's entry `id`s are identical to the
-          previous page's, `offset` is clearly not being honoured.
-
-        Either guard tripping logs a warning (so the anomaly is
-        diagnosable) and stops the generator cleanly -- it never raises --
-        so a partial run still sends everything collected so far instead of
-        being silently truncated with no trace.
+        Lazy: no page is fetched until it is consumed, so a caller (e.g. the
+        incremental-sync processor) that stops iterating once it passes its
+        cutoff triggers no further requests.
 
         Args:
-            page_size: Number of entries requested per page. Clamped into
-                the API-supported range of 1..100.
+            page_size: Entries requested per page, clamped to 1..100.
 
         Yields:
             Lists of raw entry dicts, one per page, ordered newest-first.
@@ -152,6 +131,13 @@ class OrklClient(BaseClientApi):
         offset = 0
         previous_ids: list[Any] | None = None
 
+        # Termination is normally driven by a short final page. Because ORKL is
+        # a third-party API we don't control, that signal alone is not trusted:
+        # two guards defend against a misbehaving server (e.g. one that ignores
+        # `offset` and serves a cached full page forever) -- a hard MAX_PAGES
+        # cap, and stall detection on repeated ids. Either tripping logs a
+        # warning and stops cleanly (never raises), so a partial run still
+        # sends what it collected rather than being silently truncated.
         for page_number in range(1, MAX_PAGES + 1):
             params = {
                 "limit": page_size,
@@ -166,13 +152,11 @@ class OrklClient(BaseClientApi):
 
             current_ids = [entry.get("id") for entry in entries]
             if current_ids == previous_ids:
-                logger.warning(
-                    "ORKL library entries stalled: page at offset=%s returned "
-                    "the same entry ids as the previous page, meaning the "
-                    "server is not honouring `offset`. Stopping pagination "
-                    "after %s page(s) to avoid an unbounded request loop.",
-                    offset,
-                    page_number - 1,
+                self._warn(
+                    "ORKL library entries stalled: server is not honouring "
+                    "`offset` (same ids as previous page); stopping pagination "
+                    "to avoid an unbounded request loop",
+                    {"offset": offset, "pages_yielded": page_number - 1},
                 )
                 break
             previous_ids = current_ids
@@ -184,13 +168,12 @@ class OrklClient(BaseClientApi):
 
             offset += len(entries)
         else:
-            logger.warning(
-                "ORKL library entries pagination hit the MAX_PAGES cap "
-                "(%s) without reaching a short final page. Stopping to "
-                "avoid an unbounded request loop; the server may be "
-                "misbehaving or the corpus may have grown beyond this "
-                "connector's expectations.",
-                MAX_PAGES,
+            self._warn(
+                "ORKL library entries pagination hit the MAX_PAGES cap without "
+                "a short final page; stopping to avoid an unbounded request "
+                "loop (server may be misbehaving or the corpus may have grown "
+                "beyond this connector's expectations)",
+                {"max_pages": MAX_PAGES},
             )
 
     def get_library_entry(self, entry_id: str) -> dict[str, Any] | None:
