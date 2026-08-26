@@ -4,6 +4,9 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
+from client_api.common import BaseClient, ResponseModel
+from proofpoint_tap.errors import ProofPointAPIRequestParamsError
+from proofpoint_tap.warnings import PermissiveEmailStr, PermissiveLiteral, Recommended
 from pydantic import (
     AwareDatetime,
     Field,
@@ -11,10 +14,6 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-
-from client_api.common import BaseClient, ResponseModel
-from proofpoint_tap.errors import ProofPointAPIRequestParamsError
-from proofpoint_tap.warnings import PermissiveEmailStr, PermissiveLiteral, Recommended
 
 if TYPE_CHECKING:
     from yarl import URL

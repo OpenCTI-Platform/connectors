@@ -16,15 +16,14 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 from aiohttp import ClientResponse, ClientResponseError
 from aiohttp_retry import Any
-from pydantic import SecretStr
-from yarl import URL
-
 from client_api.v2.siem import ClickEvent, MessageEvent, SIEMClient, SIEMResponse
 from proofpoint_tap.errors import (
     ProofpointAPIError,
     ProofpointAPIInvalidResponseError,
     ProofPointAPIRequestParamsError,
 )
+from pydantic import SecretStr
+from yarl import URL
 
 
 def make_fake_get_client_response() -> ClientResponse:

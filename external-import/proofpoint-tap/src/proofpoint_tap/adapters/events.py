@@ -5,8 +5,6 @@ from datetime import timedelta
 from math import ceil
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Generator, Literal, Optional
 
-from pydantic import IPvAnyAddress
-
 from client_api.v2.siem import (
     ClickEvent,
     MessageEvent,
@@ -21,6 +19,7 @@ from proofpoint_tap.ports.event import (
     EventThreatPort,
     MessageEventPort,
 )
+from pydantic import IPvAnyAddress
 
 if TYPE_CHECKING:
     from datetime import datetime
