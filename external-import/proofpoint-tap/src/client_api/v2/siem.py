@@ -261,7 +261,7 @@ class ClickEvent(ResponseModel):
         ..., alias="threatTime", description="Time the threat was identified."
     )
     threat_url: Recommended[str] = Field(
-        None, alias="threatUrl", description="Theurl to follow for threat description."
+        None, alias="threatUrl", description="The url to follow for threat description."
     )
     threat_status: Literal["active", "falsepositive", "cleared"] = Field(
         ..., alias="threatStatus", description="Current state of the threat."

@@ -10,18 +10,18 @@ This module tests:
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Callable
+from typing import Any, Callable
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from aiohttp import ClientResponse, ClientResponseError
-from aiohttp_retry import Any
 from client_api.v2.siem import ClickEvent, MessageEvent, SIEMClient, SIEMResponse
 from proofpoint_tap.errors import (
     ProofpointAPIError,
     ProofpointAPIInvalidResponseError,
     ProofPointAPIRequestParamsError,
 )
+from proofpoint_tap.warnings import ValidationWarning
 from pydantic import SecretStr
 from yarl import URL
 
@@ -292,12 +292,12 @@ def _make_click_event(**overrides: Any) -> dict[str, Any]:
             id="quoted local part in fromAddress",
         ),
         pytest.param(
-            {"replyToAddress": ["=?utf-8?Q?Some=20Name?=<info@example.co.za>"]},
+            {"replyToAddress": ["Some. Name <info@example.co.za>"]},
             {
                 "field": "reply_to_address",
-                "value": ["=?utf-8?Q?Some=20Name?=<info@example.co.za>"],
+                "value": ["Some. Name <info@example.co.za>"],
             },
-            id="encoded display name in replyToAddress",
+            id="unquoted display name with period in replyToAddress",
         ),
     ],
 )
@@ -308,7 +308,8 @@ def test_message_event_accepts_malformed_emails(
     # Given a message event payload with a malformed email value
     payload = _make_message_event(**overrides)
     # When validating the MessageEvent model
-    event = MessageEvent.model_validate(payload)
+    with pytest.warns(ValidationWarning):
+        event = MessageEvent.model_validate(payload)
     # Then validation passes and the raw value is preserved
     assert getattr(event, expected["field"]) == expected["value"]  # noqa: S101
 

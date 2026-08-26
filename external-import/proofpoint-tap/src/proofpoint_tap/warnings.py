@@ -118,7 +118,7 @@ def _validate_permissive_email(value: str, info: ValidationInfo) -> str:
             FieldWarning(
                 type_="invalid_email",
                 loc=(str(info.field_name),),
-                msg=f"Value '{value}' is not a valid email address. Validation will pass.",
+                msg=f"Value {value!r} is not a valid email address. Validation will pass.",
                 input_=value,
             ),
             stacklevel=2,
