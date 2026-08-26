@@ -7,6 +7,7 @@ hunt in the response.
 
 from __future__ import annotations
 
+import pytest
 import stix2
 from src import stix_builder
 
@@ -430,3 +431,46 @@ def test_no_malware_when_threat_categories_lacks_malware(first_hunt):
     # threat_names should have moved to labels prefixed with `threat:` on the Report.
     report = next(o for o in objects if o.type == "report")
     assert any(label.startswith("threat:") for label in report.labels)
+
+
+def test_hunt_without_sigma_emits_no_indicator(first_hunt):
+    """OpenCTI validates sigma with sigmatools and rejects an Indicator whose
+    rule does not parse, which also breaks every relationship pointing at it.
+    A hunt with no rule must yield a Report and context, never a placeholder."""
+    hunt = dict(first_hunt)
+    hunt.pop("sigma", None)
+    author = stix_builder.build_author()
+
+    objects = stix_builder.build_bundle(hunt, author)
+
+    assert not [o for o in objects if o["type"] == "indicator"]
+    reports = [o for o in objects if o["type"] == "report"]
+    assert len(reports) == 1
+    # No dangling references: everything in object_refs is in the bundle or is
+    # the trigger entity.
+    ids = {o["id"] for o in objects}
+    assert all(ref in ids for ref in reports[0]["object_refs"])
+
+
+def test_hunt_with_blank_sigma_emits_no_indicator(first_hunt):
+    hunt = dict(first_hunt)
+    hunt["sigma"] = "   "
+    author = stix_builder.build_author()
+
+    objects = stix_builder.build_bundle(hunt, author)
+
+    assert not [o for o in objects if o["type"] == "indicator"]
+
+
+def test_emitted_sigma_patterns_parse(response_payload):
+    """Every pattern we emit must satisfy the parser OpenCTI validates with."""
+    sigma_parser = pytest.importorskip(
+        "sigma.parser.collection", reason="sigmatools not installed"
+    )
+    author = stix_builder.build_author()
+
+    for hunt in response_payload["results"]:
+        for obj in stix_builder.build_bundle(hunt, author):
+            if obj["type"] == "indicator":
+                assert obj["pattern_type"] == "sigma"
+                sigma_parser.SigmaCollectionParser(obj["pattern"])

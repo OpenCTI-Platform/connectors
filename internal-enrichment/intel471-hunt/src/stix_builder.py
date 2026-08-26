@@ -85,16 +85,35 @@ def build_bundle(
 
     trigger = _normalise_trigger(trigger_entity)
 
-    indicator = _build_indicator(
-        hunt,
-        hunt_uuid,
-        author,
-        markings=markings,
-        hunter_ui_base_url=hunter_ui_base_url,
+    # Only hunts that ship a sigma rule get an Indicator. OpenCTI validates the
+    # pattern with sigmatools and rejects the whole object if it does not parse,
+    # so a synthesised placeholder would fail there and take its relationships
+    # down with it ("element(s) not found"). The Report still carries the
+    # context for a hunt with no rule.
+    indicator = (
+        _build_indicator(
+            hunt,
+            hunt_uuid,
+            author,
+            markings=markings,
+            hunter_ui_base_url=hunter_ui_base_url,
+        )
+        if _sigma_rule(hunt)
+        else None
     )
+    if indicator is None:
+        LOGGER.info(
+            "Hunt %r has no sigma rule; emitting the Report without an Indicator",
+            hunt.get("title"),
+        )
+
     related = _build_related_entities(hunt, author, markings=markings, skip=trigger)
-    relationships = _build_relationships(indicator, related, author, markings=markings)
-    if trigger and trigger.get("id"):
+    relationships = (
+        _build_relationships(indicator, related, author, markings=markings)
+        if indicator
+        else []
+    )
+    if indicator and trigger and trigger.get("id"):
         relationships.append(
             stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -109,7 +128,7 @@ def build_bundle(
             )
         )
 
-    object_refs: list[str] = [indicator.id]
+    object_refs: list[str] = [indicator.id] if indicator else []
     object_refs.extend(obj.id for obj in related)
     object_refs.extend(rel.id for rel in relationships)
     if trigger and trigger.get("id"):
@@ -128,7 +147,8 @@ def build_bundle(
     )
 
     objects.append(report)
-    objects.append(indicator)
+    if indicator:
+        objects.append(indicator)
     objects.extend(related)
     objects.extend(relationships)
     objects.extend(_build_notes(hunt, report, author))
@@ -282,7 +302,7 @@ def _build_indicator(
         or _parse_date(hunt.get("created_date"))
         or datetime.now(timezone.utc)
     )
-    sigma_pattern = hunt.get("sigma") or _fallback_pattern(hunt)
+    sigma_pattern = _sigma_rule(hunt)
     sev = hunt.get("severity")
     labels = [f"severity:{str(sev).lower()}"] if sev else None
     ui_ref = _hunter_ui_reference(hunt_uuid, hunter_ui_base_url)
@@ -305,11 +325,16 @@ def _build_indicator(
     )
 
 
-def _fallback_pattern(hunt: dict[str, Any]) -> str:
-    """STIX requires a pattern; if Hunter didn't return raw sigma we synthesise
-    a minimal one from query_logic so the Indicator stays valid."""
-    title = hunt.get("title") or "untitled"
-    return f"title: {title}\ndetection:\n  condition: selection\n"
+def _sigma_rule(hunt: dict[str, Any]) -> str:
+    """The hunt's sigma rule, or an empty string when it ships none.
+
+    Never synthesise a stand-in: OpenCTI parses the pattern with sigmatools and
+    rejects an Indicator whose rule does not parse (a `condition` naming an
+    undefined selection is the classic case), which then breaks every
+    relationship that points at it.
+    """
+    sigma = hunt.get("sigma")
+    return sigma.strip() if isinstance(sigma, str) else ""
 
 
 def _build_labels(hunt: dict[str, Any]) -> list[str]:
