@@ -23,7 +23,7 @@ test = [
     "pytest-cov>=7,<8",
     "mypy>=1.15.0,<2",
     "ruff>=0.14.0,<1",
-    "black==26.3.1",
+    "black==26.5.1",
     "isort==7.0.0",
     "flake8>=7.0.0",
     "polyfactory>=3.3.0,<4",

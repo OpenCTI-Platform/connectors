@@ -3,12 +3,15 @@ services:
   connector-export-file-csv:
     image: opencti/connector-export-file-csv:latest
     environment:
+      # --- OpenCTI ---
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+      # --- Connector ---
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=ExportFileCsv
       - CONNECTOR_SCOPE=text/csv
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
-      - "EXPORT_FILE_CSV_DELIMITER=;"
+      # --- Export File CSV ---
+      # - "EXPORT_FILE_CSV_DELIMITER=;" # optional (default: ';')
     restart: always
