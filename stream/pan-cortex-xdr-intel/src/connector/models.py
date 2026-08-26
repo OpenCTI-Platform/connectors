@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -70,3 +70,26 @@ class OctiIndicator(BaseModel):
             return value.astimezone(tz=timezone.utc)
         else:
             return value.replace(tzinfo=timezone.utc)
+
+
+class CortexXdrIoc(BaseModel):
+    """Cortex XDR Indicator of Compromise (IOC) model.
+
+    Field constraints intentionally mirror `cortex_xdr_client.types.IndicatorPayload`
+    that represent Cortex XDR API expected data.
+    """
+
+    # Existing IOC's Cortex XDR ID if known (update of an existing IOC), otherwise `None` (new IOC).
+    rule_id: int | None = Field(default=None)
+
+    indicator: str
+    type: Literal["HASH", "IP", "PATH", "DOMAIN_NAME", "FILENAME", "MIXED"]
+    severity: (
+        Literal["SEV_010_INFO", "SEV_020_LOW", "SEV_030_MEDIUM", "SEV_040_HIGH"] | None
+    ) = Field(default=None)
+    expiration_date: int | None = Field(default=None)
+    comment: str | None = Field(default=None)
+    reputation: (
+        Literal["GOOD", "BAD", "SUSPICIOUS", "UNKNOWN", "NO_REPUTATION"] | None
+    ) = Field(default=None)
+    reliability: Literal["A", "B", "C", "D"] | None = Field(default=None)

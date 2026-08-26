@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 import pytest
-from connector.models import OctiIndicator, OctiIndicatorObservable
+from connector.models import CortexXdrIoc, OctiIndicator, OctiIndicatorObservable
 from pydantic import ValidationError
 
 
@@ -106,3 +106,53 @@ class TestOctiIndicator:
         )
         # Then: `valid_until` is assumed to already be UTC, and tagged as such
         assert indicator.valid_until == datetime(2030, 1, 1, 12, 0, tzinfo=timezone.utc)
+
+
+class TestCortexXdrIoc:
+    """Happy/unhappy path coverage for `CortexXdrIoc` construction."""
+
+    def test_accepts_minimal_valid_input(self):
+        # Given: only the required fields
+        # When: constructing a CortexXdrIoc
+        ioc = CortexXdrIoc(indicator="evil.com", type="DOMAIN_NAME")
+        # Then: the IOC is constructed successfully, optional fields default to None
+        assert ioc.indicator == "evil.com"
+        assert ioc.type == "DOMAIN_NAME"
+        assert ioc.severity is None
+        assert ioc.expiration_date is None
+        assert ioc.comment is None
+        assert ioc.reputation is None
+        assert ioc.reliability is None
+        assert ioc.rule_id is None
+
+    def test_rejects_invalid_type(self):
+        # Given: an unsupported `type` value
+        # When: constructing a CortexXdrIoc
+        # Then: a ValidationError is raised
+        with pytest.raises(ValidationError):
+            CortexXdrIoc(indicator="evil.com", type="INVALID")
+
+    def test_accepts_int_expiration_date(self):
+        # Given: an `expiration_date` passed as an epoch-millisecond `int`
+        # When: constructing a CortexXdrIoc
+        ioc = CortexXdrIoc(
+            indicator="evil.com", type="DOMAIN_NAME", expiration_date=1893456000000
+        )
+        # Then: `expiration_date` is left unchanged
+        assert ioc.expiration_date == 1893456000000
+
+    def test_accepts_rule_id(self):
+        # Given: an existing IOC's `rule_id`
+        # When: constructing a CortexXdrIoc
+        ioc = CortexXdrIoc(indicator="evil.com", type="DOMAIN_NAME", rule_id=42)
+        # Then: `rule_id` is set as given
+        assert ioc.rule_id == 42
+
+    def test_is_mutable_so_rule_id_can_be_resolved_after_construction(self):
+        # Given: a constructed CortexXdrIoc without a `rule_id`
+        ioc = CortexXdrIoc(indicator="evil.com", type="DOMAIN_NAME")
+        # When: mutating `rule_id` in place, as done by
+        # `Connector._resolve_xdr_iocs_rule_ids` once the existing IOC is looked up
+        ioc.rule_id = 42
+        # Then: no error is raised, and the new value is set
+        assert ioc.rule_id == 42
