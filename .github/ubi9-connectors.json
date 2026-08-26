@@ -7,6 +7,7 @@
   "external-import/cpe",
   "external-import/cve",
   "external-import/group-ib",
+  "external-import/misp",
   "external-import/mitre",
   "external-import/opencti",
   "external-import/ransomwarelive",
