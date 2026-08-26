@@ -5,6 +5,8 @@ from datetime import timedelta
 from math import ceil
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Generator, Literal, Optional
 
+from pydantic import IPvAnyAddress
+
 from client_api.v2.siem import (
     ClickEvent,
     MessageEvent,
@@ -19,7 +21,6 @@ from proofpoint_tap.ports.event import (
     EventThreatPort,
     MessageEventPort,
 )
-from pydantic import IPvAnyAddress
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -250,7 +251,7 @@ class ClickEventAPIV2(ClickEventPort):
     @property
     def threats(self) -> Optional[list[EventThreatPort]]:
         """Get the threats."""
-        return [EventThreatAPIV2.from_threat_url(self._event.threat_url)]
+        return [EventThreatAPIV2.from_threat_url(self._event.threat_url or "")]
 
     @property
     def sender_address(self) -> str:
