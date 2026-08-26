@@ -3,6 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
+import stix2
 import tldextract
 from pycti import (
     STIX_EXT_OCTI,
@@ -73,6 +74,12 @@ class HygieneConnector:
             raise ValueError(
                 "The hygiene label could not be created. If your connector does not have the permission to create labels, please create it manually before launching"
             )
+
+        self.identity = self.helper.api.identity.create(
+            type="Organization",
+            name="Hygiene",
+            description="MISP Warning Lists hygiene connector.",
+        )["standard_id"]
 
         self.helper.log_info(
             f"Thread pool initialized with {self.max_workers} max workers"
@@ -318,6 +325,30 @@ class HygieneConnector:
 
             serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
             self.helper.send_stix2_bundle(serialized_bundle)
+
+        entity_label = (
+            "indicator" if opencti_entity["entity_type"] == "Indicator" else "observable"
+        )
+        note_lines = [f"- **{wl.name}**: {wl.description}" for wl in warninglist_hits]
+        note_content = (
+            f"This {entity_label} was found in the following MISP warning list(s):\n\n" + "\n".join(note_lines)
+        )
+        note = stix2.Note(
+            type="note",
+            id=self.helper.api.note.generate_id(
+                created=None,
+                content=note_content,
+            ),
+            abstract="Hygiene: MISP Warning List match",
+            content=note_content,
+            object_refs=[stix_entity["id"]],
+            created_by_ref=self.identity,
+            custom_properties={"note_types": ["external"]},
+        )
+        stix_objects.append(note)
+        serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
+        self.helper.send_stix2_bundle(serialized_bundle)
+
         return score
 
     def _add_label_to_entity(
