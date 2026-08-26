@@ -127,7 +127,10 @@ older too, so pagination (and the underlying HTTP requests) stop immediately.
 
 The cutoff is:
 
-- the connector's last successful run time, on every run after the first;
+- the connector's last successful run time minus a small safety overlap (a few
+  minutes), on every run after the first. The overlap re-scans the boundary so
+  entries updated while a run is still in progress cannot be permanently missed;
+  re-processing them is harmless because every STIX id is deterministic;
 - `import_start_date` before now (default 30 days), on the very first run.
 
 Tombstoned entries (`deleted_at` set) are skipped but do not stop pagination,
@@ -142,7 +145,7 @@ run, since their position relative to the cutoff can't be determined.
 | Library entry                                                    | `Report`                                                                   |
 | `name`                                                            | `Report.name`                                                              |
 | `description`                                                    | `Report.description`                                                       |
-| best available date among publication/file/`ts_*` timestamps      | `Report.publication_date` (falls back to a fixed 1970-01-01 sentinel to keep the STIX id stable if no usable date exists) |
+| best available *stable* date among publication/file-creation/file-modification/`ts_*` timestamps (update timestamps are excluded so a re-fetch never changes the id) | `Report.publication_date` (falls back to a fixed 1970-01-01 sentinel to keep the STIX id stable if no usable date exists) |
 | `labels`                                                          | `Report.labels`                                                            |
 | entry id                                                          | `Report` external reference (`source_name: "ORKL"`, `external_id`, and a `url` pointing at the ORKL API entry) |
 | `sha1_hash`                                                       | `Report` external reference (SHA-1 of the source file)                    |

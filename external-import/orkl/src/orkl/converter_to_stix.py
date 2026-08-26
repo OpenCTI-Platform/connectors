@@ -198,16 +198,22 @@ class OrklConverter:
         first (ISO dates, then their `ts_*` Unix-epoch encodings); only when all
         are unusable does the fixed `_ID_STABILITY_SENTINEL_DATE` apply, which
         keeps the id stable rather than duplicating the Report on every sync.
+
+        Update timestamps (`updated_at` / `ts_updated_at`) are deliberately
+        excluded from this chain. The incremental cursor re-fetches an entry
+        *precisely because* its `updated_at` changed, so deriving the id from an
+        update timestamp would mint a brand-new id on every re-fetch and create
+        a duplicate Report instead of updating the existing one - exactly the
+        failure `_ID_STABILITY_SENTINEL_DATE` exists to avoid. Do not re-add
+        them.
         """
         candidates = (
             # `entry.publication_date` already covers file_creation_date/created_at.
             entry.publication_date,
             _usable_datetime(_parse_iso8601(entry.file_modification_date)),
-            _usable_datetime(entry.updated_datetime),
             _datetime_from_epoch(entry.ts_creation_date),
             _datetime_from_epoch(entry.ts_modification_date),
             _datetime_from_epoch(entry.ts_created_at),
-            _datetime_from_epoch(entry.ts_updated_at),
         )
         for candidate in candidates:
             if candidate is not None:

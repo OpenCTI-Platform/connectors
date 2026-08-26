@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 from orkl.converter_to_stix import OrklConverter
 from orkl.processors.orkl_report_processor import (
+    _CUTOFF_OVERLAP,
     OrklReportProcessor,
     _dedupe_by_id,
 )
@@ -96,7 +97,25 @@ class TestResolveCutoff:
     def test_uses_last_run_when_set(self):
         last_run = datetime(2025, 6, 15, 12, 0, 0, tzinfo=UTC)
         proc = _make_processor(state=MagicMock(last_run=last_run))
-        assert proc._resolve_cutoff() == last_run
+        assert proc._resolve_cutoff() == last_run - _CUTOFF_OVERLAP
+
+    def test_overlap_applied_to_last_run_path(self):
+        last_run = datetime(2025, 6, 15, 12, 0, 0, tzinfo=UTC)
+        proc = _make_processor(state=MagicMock(last_run=last_run))
+        # The cutoff is pulled back by exactly the safety overlap so entries
+        # updated mid-run are re-scanned instead of being permanently missed.
+        assert last_run - proc._resolve_cutoff() == _CUTOFF_OVERLAP
+
+    def test_overlap_not_applied_to_import_start_date_path(self):
+        proc = _make_processor(
+            state=MagicMock(last_run=None),
+            config=MagicMock(import_start_date=timedelta(days=30)),
+        )
+        cutoff = proc._resolve_cutoff()
+        diff = datetime.now(UTC) - cutoff
+        # No overlap here: the window is exactly import_start_date (30 days),
+        # not 30 days + _CUTOFF_OVERLAP.
+        assert timedelta(days=29, hours=23) <= diff <= timedelta(days=30, minutes=1)
 
     def test_falls_back_to_now_minus_import_start_date(self):
         proc = _make_processor(
@@ -132,7 +151,9 @@ class TestCollect:
         state = MagicMock(last_run=datetime(2025, 1, 1, tzinfo=UTC))
         proc = _make_processor(state=state, client=FakeClient([entries_page_data]))
         list(proc.collect())
-        assert "2025-01-01" in proc.work_name
+        # Cutoff is last_run minus the safety overlap (2025-01-01 - 5min).
+        expected = (datetime(2025, 1, 1, tzinfo=UTC) - _CUTOFF_OVERLAP).isoformat()
+        assert expected in proc.work_name
 
     def test_excludes_entries_older_than_cutoff(self, entries_page_data):
         # last_run 2025-01-01 keeps the three 2026 entries, drops the 2020 one.

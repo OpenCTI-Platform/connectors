@@ -8,7 +8,7 @@ strategy; all ORKL -> STIX mapping lives in :mod:`orkl.converter_to_stix`.
 from __future__ import annotations
 
 from collections.abc import Generator
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from connectors_sdk import BaseDataProcessor
@@ -17,6 +17,16 @@ from orkl.client_api import OrklClient
 from orkl.converter_to_stix import OrklConverter
 from orkl.models import OrklLibraryEntry, _parse_iso8601
 from pydantic import ValidationError
+
+# Safety overlap subtracted from ``state.last_run`` when computing the next
+# incremental-sync cutoff. The SDK stamps ``last_run`` only after every
+# processor finishes (T_end), while ``collect()`` reads its first page at the
+# start of the run. Any entry whose ``updated_at`` falls in that window would
+# otherwise be imported by neither run (already-fetched pages this run, and
+# below the cutoff next run). Re-scanning a few minutes of boundary is harmless
+# because every emitted STIX id is deterministic, so re-processing an entry
+# updates it in place rather than duplicating it.
+_CUTOFF_OVERLAP = timedelta(minutes=5)
 
 
 def _dedupe_by_id(objects: list[Any]) -> list[Any]:
@@ -213,10 +223,16 @@ class OrklReportProcessor(BaseDataProcessor):
         Uses ``state.last_run`` when set, otherwise falls back to
         ``now(UTC) - import_start_date``. A naive ``last_run`` is treated as
         UTC so it can be compared against tz-aware entry timestamps.
+
+        ``_CUTOFF_OVERLAP`` is subtracted from ``last_run`` (but never from the
+        first-run ``import_start_date`` path) so the next run re-scans the
+        boundary and cannot permanently miss entries updated mid-run. The
+        re-scan is safe because every STIX id is deterministic: re-processing an
+        entry updates it rather than creating a duplicate.
         """
         last_run = self.state.last_run
         if last_run is not None:
             if last_run.tzinfo is None:
-                return last_run.replace(tzinfo=timezone.utc)
-            return last_run
+                last_run = last_run.replace(tzinfo=timezone.utc)
+            return last_run - _CUTOFF_OVERLAP
         return datetime.now(timezone.utc) - self._config.import_start_date

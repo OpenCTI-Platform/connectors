@@ -96,14 +96,31 @@ def test_publication_date_set_and_timezone_aware_for_sentinel_entry(
     assert report.publication_date.utcoffset() is not None
 
 
-def test_publication_date_falls_back_to_updated_datetime(converter, full_entry_data):
-    full_entry_data["file_creation_date"] = "0001-01-01T00:00:00Z"
-    full_entry_data["created_at"] = None
-    full_entry_data["file_modification_date"] = "0001-01-01T00:00:00Z"
+def test_publication_date_ignores_updated_at_and_uses_sentinel(
+    converter, full_entry_data
+):
+    # Only `updated_at` is populated; every stable date is absent. The update
+    # timestamp must NOT feed the id, so the fixed sentinel is used instead.
+    _blank_all_dates(full_entry_data)
+    full_entry_data["updated_at"] = "2026-08-20T12:00:00Z"
     entry = OrklLibraryEntry.model_validate(full_entry_data)
     assert entry.publication_date is None  # precondition
+    assert entry.updated_datetime is not None  # updated_at is genuinely present
     report = converter.convert_entry(entry)[0]
-    assert report.publication_date == entry.updated_datetime
+    assert report.publication_date == _ID_STABILITY_SENTINEL_DATE
+
+
+def test_report_id_stable_when_only_updated_at_changes(converter, full_entry_data):
+    # Regression guard: an entry re-fetched because its `updated_at` moved must
+    # keep the same Report id, otherwise each re-fetch duplicates the Report.
+    _blank_all_dates(full_entry_data)
+    full_entry_data["updated_at"] = "2026-08-20T12:00:00Z"
+    first = converter.convert_entry(OrklLibraryEntry.model_validate(full_entry_data))[0]
+    full_entry_data["updated_at"] = "2026-08-25T18:30:00Z"
+    second = converter.convert_entry(OrklLibraryEntry.model_validate(full_entry_data))[
+        0
+    ]
+    assert first.id == second.id
 
 
 def _blank_all_dates(data: dict) -> None:
