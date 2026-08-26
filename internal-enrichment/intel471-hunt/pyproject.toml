@@ -12,6 +12,8 @@ license = { text = "Apache-2.0" }
 authors = [{ name = "Intel 471" }]
 dependencies = [
     "pycti==7.260824.0",
+    "pydantic>=2.10, <3",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
     "stix2==3.0.1",
     "requests~=2.32",
     "PyYAML~=6.0",

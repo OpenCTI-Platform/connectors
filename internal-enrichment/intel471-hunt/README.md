@@ -94,6 +94,7 @@ The full `/es/query` parameter specification is published at
 - Python >= 3.11
 - OpenCTI Platform >= 7.260824.0
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
+- [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors/tree/master/connectors-sdk) library matching your OpenCTI version
 - An Intel 471 Hunter subscription and API key (see above)
 
 ## Configuration variables
@@ -124,8 +125,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Name   | name             | `CONNECTOR_NAME`               | Intel 471 Hunter     | Yes       | Name of the connector.                                                                 |
 | Connector Scope  | scope            | `CONNECTOR_SCOPE`              | See note below       | Yes       | The entity types the connector can be triggered on **and** the types it emits.         |
 | Connector Auto   | auto             | `CONNECTOR_AUTO`               | false                | No        | `true` enables auto-enrichment on entity creation; `false` requires a manual trigger.  |
-| Confidence Level | confidence_level | `CONNECTOR_CONFIDENCE_LEVEL`   | 75                   | No        | Confidence set on the objects produced by the connector.                               |
-| Log Level        | log_level        | `CONNECTOR_LOG_LEVEL`          | info                 | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
+| Log Level        | log_level        | `CONNECTOR_LOG_LEVEL`          | error                | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
 
 The default scope is:
 
@@ -155,6 +155,7 @@ Below are the parameters you'll need to set for the connector:
 | Max results        | max_results_per_query   | `HUNTER_MAX_RESULTS_PER_QUERY`   | 100                                    | No        | Maximum number of hunt packages retrieved per query.                                        |
 | Cache path         | cache_path              | `HUNTER_CACHE_PATH`              | /opt/connector/cache/cache.json        | No        | Location of the local `(hunt_uuid, last_updated)` cache. See [Cache](#cache).                |
 | Cache TTL          | cache_ttl_hours         | `HUNTER_CACHE_TTL_HOURS`         | 24                                     | No        | Lifetime, in hours, of a cache entry.                                                        |
+| Max TLP            | max_tlp                 | `HUNTER_MAX_TLP`                 | TLP:AMBER                              | No        | Highest TLP the connector will enrich. Entities above it are refused.                        |
 
 ## Deployment
 
@@ -188,10 +189,6 @@ docker compose up -d
 Create a file `config.yml` based on the provided `config.yml.sample`, and replace the configuration variables
 (especially the "**ChangeMe**" ones) with the appropriate configurations for your environment.
 
-The connector looks for its configuration file in this order: the path in `CONNECTOR_CONFIG_FILE`, then `config.yml`
-in the connector directory, then `config.yml` in the current working directory. Any value can be overridden by the
-corresponding environment variable.
-
 Install the connector and its dependencies (preferably in a virtual environment):
 
 ```shell
@@ -204,6 +201,10 @@ Then start the connector from the connector directory:
 ```shell
 python3 -m src
 ```
+
+Configuration is resolved by connectors-sdk in the order `environment variable` ->
+`config.yml` -> default, so any value in `config.yml` can be overridden by its environment
+variable.
 
 ## Usage
 

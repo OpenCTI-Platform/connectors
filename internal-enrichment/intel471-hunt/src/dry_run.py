@@ -16,9 +16,8 @@ import sys
 import uuid
 
 import stix2
-
-from . import entity_mapper, stix_builder
-from .hunter_client import HunterClient
+from src import entity_mapper, stix_builder
+from src.hunter_client import HunterClient
 
 SUPPORTED_TRIGGER_TYPES = sorted(
     {

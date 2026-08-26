@@ -8,6 +8,7 @@ from urllib.parse import urljoin
 
 import requests
 from requests.adapters import HTTPAdapter
+from src.version import USER_AGENT
 from urllib3.util.retry import Retry
 
 LOGGER = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ class HunterClient:
             {
                 "Authorization": f"API-Key {api_key}",
                 "Accept": "application/json",
-                "User-Agent": "opencti-intel471-hunt-connector/1.0",
+                "User-Agent": USER_AGENT,
             }
         )
 

@@ -21,8 +21,7 @@ from pycti import (
 )
 from pycti import Tool as PyCtiTool
 from pycti import Vulnerability as PyCtiVulnerability
-
-from .severity import severity_to_score
+from src.severity import severity_to_score
 
 LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +58,7 @@ def build_bundle(
     hunt: dict[str, Any],
     author: stix2.Identity,
     *,
-    confidence: int = 75,
+    markings: Optional[list[str]] = None,
     hunter_ui_base_url: Optional[str] = None,
     trigger_entity: Optional[dict[str, Any]] = None,
 ) -> list[Any]:
@@ -90,13 +89,11 @@ def build_bundle(
         hunt,
         hunt_uuid,
         author,
-        confidence=confidence,
+        markings=markings,
         hunter_ui_base_url=hunter_ui_base_url,
     )
-    related = _build_related_entities(hunt, author, confidence=confidence, skip=trigger)
-    relationships = _build_relationships(
-        indicator, related, author, confidence=confidence
-    )
+    related = _build_related_entities(hunt, author, markings=markings, skip=trigger)
+    relationships = _build_relationships(indicator, related, author, markings=markings)
     if trigger and trigger.get("id"):
         relationships.append(
             stix2.Relationship(
@@ -107,7 +104,7 @@ def build_bundle(
                 source_ref=indicator.id,
                 target_ref=trigger["id"],
                 created_by_ref=author.id,
-                confidence=confidence,
+                object_marking_refs=markings,
                 allow_custom=True,
             )
         )
@@ -126,7 +123,7 @@ def build_bundle(
         hunt_uuid,
         author,
         object_refs,
-        confidence=confidence,
+        markings=markings,
         hunter_ui_base_url=hunter_ui_base_url,
     )
 
@@ -236,7 +233,7 @@ def _build_report(
     author: stix2.Identity,
     object_refs: list[str],
     *,
-    confidence: int,
+    markings: Optional[list[str]],
     hunter_ui_base_url: Optional[str],
 ) -> stix2.Report:
     """The hunt package itself. Carries the human-facing context (title,
@@ -260,7 +257,7 @@ def _build_report(
         published=published,
         object_refs=object_refs,
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
         labels=labels or None,
         external_references=external_references or None,
         allow_custom=True,
@@ -275,7 +272,7 @@ def _build_indicator(
     hunt_uuid: str,
     author: stix2.Identity,
     *,
-    confidence: int,
+    markings: Optional[list[str]],
     hunter_ui_base_url: Optional[str],
 ) -> stix2.Indicator:
     """The sigma detection. Kept lean — the surrounding context lives on the
@@ -298,7 +295,7 @@ def _build_indicator(
         pattern_type="sigma",
         valid_from=valid_from,
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
         labels=labels,
         external_references=[ui_ref] if ui_ref else None,
         allow_custom=True,
@@ -446,7 +443,7 @@ def _build_related_entities(
     hunt: dict[str, Any],
     author: stix2.Identity,
     *,
-    confidence: int,
+    markings: Optional[list[str]],
     skip: Optional[dict[str, Any]] = None,
 ) -> list[Any]:
     objects: list[Any] = []
@@ -462,7 +459,7 @@ def _build_related_entities(
     mitre = mapping.get("mitre") or {}
 
     for attack_pattern, mitre_id in _attack_patterns_from_mitre(
-        mitre, author, confidence
+        mitre, author, markings
     ):
         if _trigger_matches(skip, "attack-pattern", attack_pattern.name, mitre_id):
             continue
@@ -471,57 +468,57 @@ def _build_related_entities(
     for name in tags.get("actors") or []:
         if _trigger_matches(skip, "intrusion-set", name):
             continue
-        _push(_build_intrusion_set(name, author, confidence))
+        _push(_build_intrusion_set(name, author, markings))
 
     for name in tags.get("campaigns") or []:
         if _trigger_matches(skip, "campaign", name):
             continue
-        _push(_build_campaign(name, author, confidence))
+        _push(_build_campaign(name, author, markings))
 
     if "Malware" in (tags.get("threat_categories") or []):
         for name in tags.get("threat_names") or []:
             if _trigger_matches(skip, "malware", name):
                 continue
-            _push(_build_malware(name, author, confidence))
+            _push(_build_malware(name, author, markings))
 
     vuln_names = set(tags.get("exploit_or_vulns") or [])
     vuln_names.update(mapping.get("exploit_or_vulns") or [])
     for name in vuln_names:
         if _trigger_matches(skip, "vulnerability", name):
             continue
-        _push(_build_vulnerability(name, author, confidence))
+        _push(_build_vulnerability(name, author, markings))
 
     tool_names: set[str] = set(tags.get("tools") or [])
     tool_names.update(tags.get("tooling") or [])
     for name in tool_names:
         if _trigger_matches(skip, "tool", name):
             continue
-        _push(_build_tool(name, author, confidence))
+        _push(_build_tool(name, author, markings))
 
     for name in tags.get("target_industries") or []:
         if _trigger_matches(skip, "identity-sector", name):
             continue
-        _push(_build_sector(name, author, confidence))
+        _push(_build_sector(name, author, markings))
 
     country_names: set[str] = set(tags.get("target_countries") or [])
     country_names.update(tags.get("source_countries") or [])
     for name in country_names:
         if _trigger_matches(skip, "location-country", name):
             continue
-        _push(_build_country(name, author, confidence))
+        _push(_build_country(name, author, markings))
 
     region_names: set[str] = set(tags.get("target_regions") or [])
     region_names.update(tags.get("source_regions") or [])
     for name in region_names:
         if _trigger_matches(skip, "location-region", name):
             continue
-        _push(_build_region(name, author, confidence))
+        _push(_build_region(name, author, markings))
 
     return objects
 
 
 def _attack_patterns_from_mitre(
-    mitre: dict[str, Any], author: stix2.Identity, confidence: int
+    mitre: dict[str, Any], author: stix2.Identity, markings: Optional[list[str]]
 ) -> Iterable[tuple[stix2.AttackPattern, str]]:
     payload = mitre.get("mitre_attack_payload") or []
     # payload entries look like [{ "T1059.007": {"technique_name": ..., "tactics": [...]}}, ...]
@@ -536,7 +533,7 @@ def _attack_patterns_from_mitre(
             name = (body or {}).get("technique_name") or tech_id
             tactics = (body or {}).get("tactics") or []
             yield _build_attack_pattern(
-                tech_id, name, tactics, author, confidence
+                tech_id, name, tactics, author, markings
             ), tech_id
 
     # Fallback: if payload empty but technique_ids/names are populated, still emit them.
@@ -548,7 +545,7 @@ def _attack_patterns_from_mitre(
                 continue
             seen.add(tech_id)
             name = names[idx] if idx < len(names) else tech_id
-            yield _build_attack_pattern(tech_id, name, [], author, confidence), tech_id
+            yield _build_attack_pattern(tech_id, name, [], author, markings), tech_id
 
 
 def _build_attack_pattern(
@@ -556,7 +553,7 @@ def _build_attack_pattern(
     name: str,
     tactics: list[str],
     author: stix2.Identity,
-    confidence: int,
+    markings: Optional[list[str]],
 ) -> stix2.AttackPattern:
     kill_chain_phases = [
         stix2.KillChainPhase(kill_chain_name=KILL_CHAIN, phase_name=_phase_slug(t))
@@ -567,7 +564,7 @@ def _build_attack_pattern(
         id=PyCtiAttackPattern.generate_id(name=name, x_mitre_id=tech_id),
         name=name,
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
         kill_chain_phases=kill_chain_phases or None,
         external_references=[
             stix2.ExternalReference(
@@ -588,82 +585,90 @@ def _phase_slug(tactic: str) -> str:
 
 
 def _build_intrusion_set(
-    name: str, author: stix2.Identity, confidence: int
+    name: str, author: stix2.Identity, markings: Optional[list[str]]
 ) -> stix2.IntrusionSet:
     return stix2.IntrusionSet(
         id=PyCtiIntrusionSet.generate_id(name=name),
         name=name,
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
     )
 
 
 def _build_campaign(
-    name: str, author: stix2.Identity, confidence: int
+    name: str, author: stix2.Identity, markings: Optional[list[str]]
 ) -> stix2.Campaign:
     return stix2.Campaign(
         id=PyCtiCampaign.generate_id(name=name),
         name=name,
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
     )
 
 
-def _build_malware(name: str, author: stix2.Identity, confidence: int) -> stix2.Malware:
+def _build_malware(
+    name: str, author: stix2.Identity, markings: Optional[list[str]]
+) -> stix2.Malware:
     return stix2.Malware(
         id=PyCtiMalware.generate_id(name=name),
         name=name,
         is_family=True,
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
     )
 
 
 def _build_vulnerability(
-    name: str, author: stix2.Identity, confidence: int
+    name: str, author: stix2.Identity, markings: Optional[list[str]]
 ) -> stix2.Vulnerability:
     return stix2.Vulnerability(
         id=PyCtiVulnerability.generate_id(name=name),
         name=name,
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
     )
 
 
-def _build_tool(name: str, author: stix2.Identity, confidence: int) -> stix2.Tool:
+def _build_tool(
+    name: str, author: stix2.Identity, markings: Optional[list[str]]
+) -> stix2.Tool:
     return stix2.Tool(
         id=PyCtiTool.generate_id(name=name),
         name=name,
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
     )
 
 
-def _build_sector(name: str, author: stix2.Identity, confidence: int) -> stix2.Identity:
+def _build_sector(
+    name: str, author: stix2.Identity, markings: Optional[list[str]]
+) -> stix2.Identity:
     return stix2.Identity(
         id=PyCtiIdentity.generate_id(name, "class"),
         name=name,
         identity_class="class",
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
     )
 
 
 def _build_country(
-    name: str, author: stix2.Identity, confidence: int
+    name: str, author: stix2.Identity, markings: Optional[list[str]]
 ) -> stix2.Location:
     return stix2.Location(
         id=PyCtiLocation.generate_id(name=name, x_opencti_location_type="Country"),
         name=name,
         country=name,
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
         allow_custom=True,
         custom_properties={"x_opencti_location_type": "Country"},
     )
 
 
-def _build_region(name: str, author: stix2.Identity, confidence: int) -> stix2.Location:
+def _build_region(
+    name: str, author: stix2.Identity, markings: Optional[list[str]]
+) -> stix2.Location:
     return stix2.Location(
         id=PyCtiLocation.generate_id(name=name, x_opencti_location_type="Region"),
         name=name,
@@ -672,7 +677,7 @@ def _build_region(name: str, author: stix2.Identity, confidence: int) -> stix2.L
         # into `region` to satisfy validation; OpenCTI ignores it on import.
         region=_region_vocab(name),
         created_by_ref=author.id,
-        confidence=confidence,
+        object_marking_refs=markings,
         allow_custom=True,
         custom_properties={"x_opencti_location_type": "Region"},
     )
@@ -690,7 +695,7 @@ def _build_relationships(
     related: list[Any],
     author: stix2.Identity,
     *,
-    confidence: int,
+    markings: Optional[list[str]],
 ) -> list[stix2.Relationship]:
     relationships: list[stix2.Relationship] = []
     for target in related:
@@ -703,7 +708,7 @@ def _build_relationships(
                 source_ref=indicator.id,
                 target_ref=target.id,
                 created_by_ref=author.id,
-                confidence=confidence,
+                object_marking_refs=markings,
                 allow_custom=True,
             )
         )
@@ -720,7 +725,7 @@ def _build_relationships(
                     source_ref=actor.id,
                     target_ref=technique.id,
                     created_by_ref=author.id,
-                    confidence=confidence,
+                    object_marking_refs=markings,
                     allow_custom=True,
                 )
             )

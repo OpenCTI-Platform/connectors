@@ -83,3 +83,18 @@ def test_http_error_propagates():
         client = HunterClient("https://api.hunter.cyborgsecurity.io", "k")
         with pytest.raises(Exception):
             client.query(actors="x")
+
+
+def test_client_sends_intel471_user_agent(requests_mock):
+    """The Intel 471 User-Agent convention must not silently regress."""
+    from src.version import USER_AGENT, __version__
+
+    requests_mock.get(
+        "https://api.hunter.cyborgsecurity.io/es/query",
+        json={"results": [], "total": 0},
+    )
+    client = HunterClient("https://api.hunter.cyborgsecurity.io", "key")
+    client.query(actors="TeamPCP")
+
+    assert USER_AGENT == f"Intel471-OpenCTI-Hunter/{__version__}"
+    assert requests_mock.last_request.headers["User-Agent"] == USER_AGENT

@@ -1,40 +1,36 @@
-version: "3.8"
-
-# Plug this into the existing OpenCTI compose stack (same network as opencti +
-# rabbitmq). Adjust OPENCTI_URL/TOKEN, generate CONNECTOR_ID with `uuidgen`, and
-# drop a real HUNTER_API_KEY in.
-
 services:
   connector-intel471-hunt:
-    build: .
+    image: opencti/connector-intel471-hunt:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
-      - CONNECTOR_NAME=Intel 471 Hunter
+      # - CONNECTOR_NAME=Intel 471 Hunter # optional (default: 'Intel 471 Hunter')
       # Scope doubles as the enrichment import type-filter: EVERY type the
       # connector emits must be listed, or OpenCTI silently drops it. Report,
       # Indicator and Note are outputs (not trigger types) but must be present.
-      - CONNECTOR_SCOPE=Report,Indicator,Note,Intrusion-Set,Threat-Actor,Threat-Actor-Group,Threat-Actor-Individual,Campaign,Attack-Pattern,Vulnerability,Malware,Tool,Sector,Country,Region
-      - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=75
-      - CONNECTOR_LOG_LEVEL=info
-      - HUNTER_API_BASE_URL=https://api.hunter.cyborgsecurity.io
+      # - CONNECTOR_SCOPE=Report,Indicator,Note,Intrusion-Set,Threat-Actor,Threat-Actor-Group,Threat-Actor-Individual,Campaign,Attack-Pattern,Vulnerability,Malware,Tool,Sector,Country,Region # optional
+      # - CONNECTOR_AUTO=false # optional (default: false)
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # Custom parameters for connector-intel471-hunt
       - HUNTER_API_KEY=ChangeMe
-      - HUNTER_UI_BASE_URL=https://hunter.cyborgsecurity.io
-      - HUNTER_INDEXES=cyborg_usecases
-      - HUNTER_REQUEST_TIMEOUT_SECONDS=30
-      - HUNTER_MAX_RESULTS_PER_QUERY=100
-      - HUNTER_CACHE_PATH=/opt/connector/cache/cache.json
-      - HUNTER_CACHE_TTL_HOURS=24
+      # - HUNTER_API_BASE_URL=https://api.hunter.cyborgsecurity.io # optional
+      # - HUNTER_UI_BASE_URL=https://hunter.cyborgsecurity.io # optional
+      # - HUNTER_INDEXES=cyborg_usecases # optional
+      # - HUNTER_REQUEST_TIMEOUT_SECONDS=30 # optional
+      # - HUNTER_MAX_RESULTS_PER_QUERY=100 # optional
+      # - HUNTER_CACHE_PATH=/opt/connector/cache/cache.json # optional
+      # - HUNTER_CACHE_TTL_HOURS=24 # optional
+      # - HUNTER_MAX_TLP=TLP:AMBER # optional
     volumes:
       # Mount the cache on a DEDICATED subdir — NEVER on /opt/connector. That is
       # the WORKDIR holding the connector code (src/); a named volume mounted
       # there gets seeded once from the first image and then SHADOWS the code on
       # every subsequent image update, silently pinning the container to stale code.
       - intel471-hunt-cache:/opt/connector/cache
-    restart: unless-stopped
+    restart: always
 
 volumes:
   intel471-hunt-cache:
