@@ -67,6 +67,11 @@ class StreamImporterConnector(ExternalImportConnector):
             if "/" in os.environ.get("MINIO_DST_PATH")
             else (os.environ.get("MINIO_DST_PATH"), "")
         )
+        # Ensure S3 paths always end in '/' (but keep empty path as "")
+        if self.minio_src_path:
+            self.minio_src_path = self.minio_src_path.rstrip("/") + "/"
+        if self.minio_dst_path:
+            self.minio_dst_path = self.minio_dst_path.rstrip("/") + "/"
         # Reject the unsafe ``src bucket == dst bucket AND dst_path is
         # empty`` configuration up front. The ``bucket_exists`` /
         # ``make_bucket`` plumbing below cannot defend this case
