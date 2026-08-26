@@ -103,12 +103,6 @@ class BitdefenderFeedConnector:
                 f"{self.helper.connect_name} importing {entry['feed']} feed"
             )
 
-            processor = StixMaker(
-                creator_identity=self.creator_identity,
-                helper=self.helper,
-                feedtype=entry["feed"],
-            )
-
             # Create Bitdefender identity as author if not already created
             if self.creator_identity is None:
                 self.creator_identity = processor.findOrCreateCacheableObject(
@@ -131,6 +125,12 @@ class BitdefenderFeedConnector:
                         ],
                     },
                 )
+
+            processor = StixMaker(
+                creator_identity=self.creator_identity,
+                helper=self.helper,
+                feedtype=entry["feed"],
+            )
 
             already_processed_lines = entry["line"]
             processed_lines = 1
@@ -161,7 +161,7 @@ class BitdefenderFeedConnector:
 
             except FileNotFoundError:
                 self.helper.log_debug(
-                    "Feed file not found (container recreated?) abording import"
+                    "Feed file not found (container recreated?) aborting import"
                 )
 
             # Remove the first entry since we're done

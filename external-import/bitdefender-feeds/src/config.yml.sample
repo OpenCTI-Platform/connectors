@@ -13,10 +13,9 @@ connector:
 bitdefender:
   api_key: 'InsertMe'
   feeds: file,web,ip          # comma separated list of feeds to import, one or more of [ip,web,file]
-  interval_minutes: 60        # update feeds every 60 minutes
   http_timeout_seconds: 60    # HTTP request timeout
   min_confidence: 1           # Minimum confidence of the indicator to be imported (1-99); default is 1
   min_severity: 1             # Minimum severity of the indicator to be imported (1-99); default is 1; indicator must match both min_confidence and min_severity to be imported
   include_revoked: 'false'    # whether to import revoked entries; note this is a string. Could be 'true', 'false' or 'only'
   exclude_related_indicators: false   # do not import the related indicators if true
-  include_suspicious_entries: 'false' # whether to import entries marked as suspicious; note this is a string. Could be 'true', 'false' or 'only'
+  include_suspicious: 'false' # whether to import entries marked as suspicious; note this is a string. Could be 'true', 'false' or 'only'

@@ -215,6 +215,7 @@ class StixMakerPrivate:
 
         if "revoked" in self.data:
             self.indicator_params["revoked"] = True
+            self._getValue("revoked")
 
         if "tags" in self.data:
             self.tags = self._getValue("tags")
@@ -404,6 +405,7 @@ class StixMakerPrivate:
                         target_ref=ref_id,
                         created_by_ref=self.maker.creator_identity,
                         custom_properties={"x_opencti_impact_percentage": percent},
+                        allow_custom=True
                     )
                 )
 
@@ -436,6 +438,7 @@ class StixMakerPrivate:
                         target_ref=ref_id,
                         created_by_ref=self.maker.creator_identity,
                         custom_properties={"x_opencti_impact_percentage": percent},
+                        allow_custom=True
                     )
                 )
 
@@ -469,6 +472,7 @@ class StixMakerPrivate:
                         target_ref=country_id,
                         created_by_ref=self.maker.creator_identity,
                         custom_properties={"x_opencti_impact_percentage": percent},
+                        allow_custom=True
                     )
                 )
 
@@ -481,6 +485,7 @@ class StixMakerPrivate:
                         target_ref=industry_id,
                         created_by_ref=self.maker.creator_identity,
                         custom_properties={"x_opencti_impact_percentage": percent},
+                        allow_custom=True
                     )
                 )
 
@@ -615,7 +620,7 @@ class StixMakerPrivate:
 
         for h in filedata["hashes"]:
             indicator_pattern_array.append(
-                f"file:hashes.'{h}' = '{filedata["hashes"][h]}'"
+                f"file:hashes.'{h}' = '{filedata['hashes'][h]}'"
             )
 
         indicatordata = self.indicator_params
@@ -803,7 +808,7 @@ class StixMakerPrivate:
             if p in self.data:
                 indicatordata["custom_properties"][f"x_opencti_{p}"] = self._getValue(p)
 
-        stix_indicator = stix2.Indicator(**indicatordata)
+        stix_indicator = stix2.Indicator(**indicatordata, allow_custom=True)
         stix_bundle.append(stix_indicator)
 
         stix_bundle.append(
@@ -860,7 +865,7 @@ class StixMakerPrivate:
             if p in self.data:
                 indicatordata["custom_properties"][f"x_opencti_{p}"] = self._getValue(p)
 
-        stix_indicator = stix2.Indicator(**indicatordata)
+        stix_indicator = stix2.Indicator(**indicatordata, allow_custom=True)
 
         stix_bundle.append(stix_obj)
         stix_bundle.append(stix_indicator)
