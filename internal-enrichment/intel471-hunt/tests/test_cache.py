@@ -44,9 +44,8 @@ def test_cache_persists_to_disk(tmp_path):
 
 def test_cache_ttl_expiry(tmp_path):
     path = tmp_path / "cache.json"
-    cache = HuntCache(str(path), ttl_hours=1)
-    # Hand-roll an expired entry.
+    # Hand-roll an expired entry, then load it.
     expired = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
     path.write_text(json.dumps({"uuid-1": {"last_updated": "x", "cached_at": expired}}))
-    cache2 = HuntCache(str(path), ttl_hours=1)
-    assert cache2.is_fresh("uuid-1", "x") is False
+    cache = HuntCache(str(path), ttl_hours=1)
+    assert cache.is_fresh("uuid-1", "x") is False
