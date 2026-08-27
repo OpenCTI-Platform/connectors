@@ -15,6 +15,7 @@ class ExportFileCsv:
         # Instantiate the connector helper from config
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         self.export_file_csv_delimiter = self.config.export_file_csv.delimiter
+        self.export_file_csv_add_bom = self.config.export_file_csv.add_bom
         self.errors: list[Exception] = (
             []
         )  # error holder to be reset before each new process
@@ -146,6 +147,8 @@ class ExportFileCsv:
 
     def export_dict_list_to_csv(self, data, columns=None):
         output = io.StringIO()
+        if self.export_file_csv_add_bom:
+            output.write("\ufeff")
         data_headers = sorted(set().union(*(d.keys() for d in data)))
         column_specs = self._select_export_columns(data_headers, columns)
         # Expand a "hashes" field into one column per algorithm. The expanded
