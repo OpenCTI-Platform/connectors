@@ -1,3 +1,5 @@
+"""Entrypoint of the Wiz Cloud external import connector."""
+
 import sys
 import traceback
 
