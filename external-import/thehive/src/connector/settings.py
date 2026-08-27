@@ -70,6 +70,20 @@ class TheHiveConfig(BaseConfigModel):
         description="Whether to import attachments from TheHive cases.",
         default=False,
     )
+    case_url_template: Optional[str] = Field(
+        description=(
+            "Template for the analyst-facing URL of a TheHive case, used as the link on "
+            "the external reference that carries the case number. Supports the placeholders "
+            "{case_id} (TheHive's internal _id) and {case_number}. This is deliberately not "
+            "derived from THEHIVE_URL: that is the address the connector uses to reach the "
+            "API, which is often not the address an analyst's browser can reach, and the UI "
+            "route differs between TheHive 4 and 5. Left empty, the external reference "
+            "carries the case number with no link. "
+            "TheHive 4: http://thehive.example:9000/index.html#!/case/{case_id}/details -- "
+            "TheHive 5: https://thehive.example/cases/{case_id}/details"
+        ),
+        default=None,
+    )
     severity_mapping: ListFromString = Field(
         description="Comma-separated mapping of TheHive severity levels to OpenCTI severity labels (e.g. 1:low,2:medium,3:high,4:critical).",
         default=["1:01 - low", "2:02 - medium", "3:03 - high", "4:04 - critical"],

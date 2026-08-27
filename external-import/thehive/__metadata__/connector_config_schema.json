@@ -101,6 +101,11 @@
       "description": "Whether to import attachments from TheHive cases.",
       "type": "boolean"
     },
+    "THEHIVE_CASE_URL_TEMPLATE": {
+      "default": null,
+      "description": "Template for the analyst-facing URL of a TheHive case, used as the link on the external reference that carries the case number. Supports the placeholders {case_id} (TheHive's internal _id) and {case_number}. This is deliberately not derived from THEHIVE_URL: that is the address the connector uses to reach the API, which is often not the address an analyst's browser can reach, and the UI route differs between TheHive 4 and 5. Left empty, the external reference carries the case number with no link. TheHive 4: http://thehive.example:9000/index.html#!/case/{case_id}/details -- TheHive 5: https://thehive.example/cases/{case_id}/details",
+      "type": "string"
+    },
     "THEHIVE_SEVERITY_MAPPING": {
       "default": [
         "1:01 - low",
