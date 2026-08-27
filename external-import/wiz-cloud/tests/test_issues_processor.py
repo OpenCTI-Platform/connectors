@@ -72,3 +72,49 @@ class TestConversion:
         assert len(first) == 3  # incident, system, relationship
         assert len(second) == 2  # incident, relationship
         assert len(cache) == 1
+
+
+class TestTransformLogging:
+    def _messages(self, processor):
+        return [call.args[0] for call in processor.logger.info.call_args_list]
+
+    def test_logs_nothing_to_ingest_on_empty_collection(self, processor):
+        bundles = list(processor.transform(iter([])))
+
+        assert bundles == []
+        assert any(
+            "Nothing to ingest" in message for message in self._messages(processor)
+        )
+
+    def test_logs_nothing_to_ingest_when_every_issue_is_unparseable(self, processor):
+        bundles = list(processor.transform(iter([[{"id": "broken"}]])))
+
+        assert bundles == []
+        assert any(
+            "Nothing to ingest" in message for message in self._messages(processor)
+        )
+
+    def test_stays_quiet_when_issues_are_ingested(
+        self, processor, empty_description_issue_data
+    ):
+        bundles = list(processor.transform(iter([[empty_description_issue_data]])))
+
+        assert len(bundles) == 1
+        assert not any(
+            "Nothing to ingest" in message for message in self._messages(processor)
+        )
+
+    def test_author_and_marking_ride_with_the_first_real_bundle(
+        self, processor, empty_description_issue_data
+    ):
+        bundles = list(
+            processor.transform(
+                iter([[{"id": "broken"}], [empty_description_issue_data]])
+            )
+        )
+
+        assert len(bundles) == 1
+        assert [type(obj).__name__ for obj in bundles[0][:2]] == [
+            "OrganizationAuthor",
+            "TLPMarking",
+        ]

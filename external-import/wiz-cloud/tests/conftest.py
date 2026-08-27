@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -11,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from connectors_sdk.models import OrganizationAuthor, TLPMarking  # noqa: E402
 from wiz_cloud.models import WizIssue  # noqa: E402
 from wiz_cloud.processors import WizIssuesProcessor  # noqa: E402
+from wiz_cloud.state import WizConnectorState  # noqa: E402
 
 
 @pytest.fixture
@@ -125,9 +127,12 @@ def processor() -> WizIssuesProcessor:
 
     post_init() builds the HTTP client and reads settings, so it is skipped;
     only the author and marking it would set are provided here, which is all
-    _convert() depends on.
+    _convert() depends on. The logger and state are stubbed so transform()
+    can be exercised without a connector helper.
     """
     processor = WizIssuesProcessor()
     processor._author = OrganizationAuthor(name="Wiz")
     processor._marking = TLPMarking(level="amber+strict")
+    processor.logger = MagicMock()
+    processor.state = WizConnectorState()
     return processor
