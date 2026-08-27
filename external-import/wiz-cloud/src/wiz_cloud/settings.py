@@ -13,13 +13,19 @@ from pydantic import Field, HttpUrl, SecretStr
 
 
 class ConnectorConfig(BaseExternalImportConnectorConfig):
+    """Generic connector configuration, with Wiz Cloud defaults."""
+
     name: str = Field(default="Wiz Cloud")
     scope: ListFromString = Field(default=["wiz-cloud"])
     duration_period: timedelta = Field(default=timedelta(hours=6))
 
 
 class WizCloudConfig(BaseConfigModel):
-    """Env prefix WIZ_CLOUD_, or the wiz_cloud block in config.yml."""
+    """Wiz specific configuration.
+
+    Read from the WIZ_CLOUD_ environment prefix, or the wiz_cloud block in
+    config.yml.
+    """
 
     api_url: HttpUrl = Field(
         description="Tenant GraphQL endpoint, e.g. https://api.us17.app.wiz.io/graphql",
@@ -51,5 +57,7 @@ class WizCloudConfig(BaseConfigModel):
 
 
 class ConnectorSettings(BaseConnectorSettings):
+    """Full settings tree loaded from the environment or config.yml."""
+
     connector: ConnectorConfig = Field(default_factory=ConnectorConfig)
     wiz_cloud: WizCloudConfig

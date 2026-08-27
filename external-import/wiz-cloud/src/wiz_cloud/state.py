@@ -14,6 +14,12 @@ from connectors_sdk import ExternalImportConnectorState
 
 
 class WizConnectorState(ExternalImportConnectorState):
+    """Connector state, extended with the per-collection cursors.
+
+    Processors read and write these fields but never call state.load() or
+    state.save(); the connector owns persistence.
+    """
+
     # Highest createdAt seen across all successfully processed issues.
     # createdAt is the cursor, not statusChangedAt: each run imports issues
     # created since the last run, ordered CREATED_AT DESC. Safe because
