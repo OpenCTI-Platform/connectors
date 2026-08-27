@@ -27,10 +27,20 @@ from connectors_sdk import ApiClientError, BaseClientApi
 
 
 class WizGraphQLError(ApiClientError):
-    """HTTP 200 response carrying a populated GraphQL errors array."""
+    """Raised on an HTTP 200 response carrying a populated GraphQL errors array."""
 
 
 class WizApiClient(BaseClientApi):
+    """Client for the Wiz tenant GraphQL API.
+
+    Args:
+        base_url: Tenant GraphQL endpoint.
+        auth_url: OAuth2 token endpoint, on a different host than base_url.
+        client_id: Wiz service account client id.
+        client_secret: Wiz service account client secret.
+        **kwargs: Forwarded to BaseClientApi (timeout, max_retries, ...).
+    """
+
     def __init__(
         self,
         base_url: str,
@@ -78,6 +88,20 @@ class WizApiClient(BaseClientApi):
     # -- GraphQL ------------------------------------------------------------
 
     def execute(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+        """Run a single GraphQL query.
+
+        Args:
+            query: GraphQL document to execute.
+            variables: Variables bound to the query.
+
+        Returns:
+            The data object of the GraphQL response.
+
+        Raises:
+            WizGraphQLError: If the response carries GraphQL errors or no data.
+                Wiz answers a failed query with HTTP 200, so this cannot be
+                left to the SDK status handling.
+        """
         payload = self._post("", json={"query": query, "variables": variables})
         if errors := payload.get("errors"):
             raise WizGraphQLError(f"Wiz GraphQL error: {errors}")
@@ -92,7 +116,17 @@ class WizApiClient(BaseClientApi):
         variables: dict[str, Any],
         connection_key: str,
     ) -> Iterator[list[dict[str, Any]]]:
-        """Yield pages of nodes, following pageInfo.endCursor to exhaustion."""
+        """Paginate through a Wiz GraphQL connection using cursor-based pagination.
+
+        Args:
+            query: GraphQL document exposing an ``after`` variable.
+            variables: Variables bound to the query. The ``after`` entry is
+                overwritten on each iteration with the next cursor.
+            connection_key: Key of the connection to walk in the response.
+
+        Yields:
+            Lists of node dicts, one per page.
+        """
         variables = dict(variables)
         while True:
             connection = self.execute(query, variables)[connection_key]
