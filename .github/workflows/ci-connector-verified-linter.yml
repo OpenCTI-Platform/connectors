@@ -265,10 +265,10 @@ jobs:
   # Newly-added connectors are not yet "verified" or "manager_supported", so
   # they are skipped by the `vclint` job above (which only targets eligible
   # connectors and is blocking only for the "verified-with-date" subset). This
-  # job enforces VC305 (connectors-sdk BaseConnectorSettings) as a hard,
-  # blocking requirement for any connector introduced for the first time in
-  # this PR, so new code never lands using the legacy get_config_variable()
-  # pattern.
+  # job enforces VC105 (no absolute date) and VC305 (connectors-sdk 
+  # BaseConnectorSettings) as a hard, blocking requirement for any connector 
+  # introduced for the first time in this PR, so new code never lands 
+  # using the legacy get_config_variable() pattern.
   vclint-new-connector-settings:
     name: VC305 (new connector) ${{ matrix.name }}
     needs:
@@ -294,13 +294,13 @@ jobs:
       - name: Install connector-linter
         run: uv pip install ./shared/tools/connector_linter
 
-      - name: Run VC305 (connectors-sdk settings) on new connectors
+      - name: Run VC105/VC305 (connectors-sdk settings) on new connectors
         run: |
           exit_code=0
           while IFS= read -r connector_path; do
             [ -z "$connector_path" ] && continue
-            echo "::group::Checking VC305 for ${connector_path}"
-            uv run connector-linter check "$connector_path" --select VC305 --format github || exit_code=$?
+            echo "::group::Checking VC105/VC305 for ${connector_path}"
+            uv run connector-linter check "$connector_path" --select VC105,VC305 --format github || exit_code=$?
             echo "::endgroup::"
           done <<< "${{ matrix.connector_paths }}"
           exit "$exit_code"
