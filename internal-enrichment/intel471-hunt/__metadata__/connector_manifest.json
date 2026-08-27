@@ -15,7 +15,7 @@
   "contact": null,
   "verified": false,
   "last_verified_date": null,
-  "playbook_supported": false,
+  "playbook_supported": true,
   "max_confidence_level": 75,
   "support_version": ">=7.260824.0",
   "subscription_link": null,
