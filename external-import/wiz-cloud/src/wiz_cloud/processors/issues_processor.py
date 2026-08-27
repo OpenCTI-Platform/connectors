@@ -172,8 +172,9 @@ class WizIssuesProcessor(BaseDataProcessor):
         return objects
 
     def _incident_name(self, issue: WizIssue) -> str:
-        # sourceRule.name + entitySnapshot.name. Rule name alone
-        # repeats across hundreds of issues; description is rule-generic prose.
+        # sourceRule.name + the Wiz issue id. Rule name alone repeats across
+        # hundreds of issues and description is rule-generic prose, so the id
+        # is what keeps each incident name unambiguous.
         name = issue.rule_name or ""
         return f"{name} - Wiz issue {issue.id}" if name else f"Wiz issue {issue.id}"
 
