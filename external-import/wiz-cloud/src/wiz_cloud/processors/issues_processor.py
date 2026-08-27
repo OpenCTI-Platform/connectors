@@ -38,7 +38,10 @@ _SEVERITY = {
 
 
 def _utc(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    # Full precision matters: Wiz createdAt carries microseconds and the
+    # filter is exclusive, so truncating to the second would re-select the
+    # issue the cursor points at on every run.
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 class WizIssuesProcessor(BaseDataProcessor):
