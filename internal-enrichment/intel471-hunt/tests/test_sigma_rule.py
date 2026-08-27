@@ -104,3 +104,14 @@ def test_normalised_rule_satisfies_pysigma():
         collection.SigmaCollection.from_yaml(broken)
 
     collection.SigmaCollection.from_yaml(normalise(broken))
+
+
+def test_rule_rejected_by_pysigma_is_dropped():
+    """A defect we cannot repair must yield no rule at all, rather than one the
+    platform will reject along with every relationship pointing at it."""
+    pytest.importorskip("sigma.collection", reason="pysigma not installed")
+
+    # `condition` naming a selection that is not defined.
+    broken = "title: Broken\ndetection:\n  condition: selection\n"
+
+    assert normalise(broken) == ""

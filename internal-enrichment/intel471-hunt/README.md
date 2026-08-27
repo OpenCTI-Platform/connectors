@@ -254,9 +254,10 @@ For each hunt package returned by the query:
 - **Countries** (Location, `x_opencti_location_type=Country`) for `tags.target_countries` and `tags.source_countries`.
 - **Regions** (Location, `x_opencti_location_type=Region`) for `tags.target_regions` and `tags.source_regions`.
 - **Relationships**: `Indicator --indicates--> {Intrusion-Set, Campaign, Malware, Vulnerability, Attack-Pattern,
-  Tool, Sector, Country, Region}`, plus `Intrusion-Set --uses--> Attack-Pattern` when both are present. When the
-  enrichment was triggered on an entity, the Indicator also `indicates` that entity, and the entity is added to the
-  Report's Entities tab.
+  Tool}`, and `Indicator --related-to--> {Sector, Country, Region}` — OpenCTI's schema does not allow `indicates`
+  to target an Identity or a Location, and rejects the relationship outright if you try. Plus
+  `Intrusion-Set --uses--> Attack-Pattern` when both are present. When the enrichment was triggered on an entity,
+  the Indicator is linked to it by the same rule, and the entity is added to the Report's Entities tab.
 
 The connector identity (`Intel 471 — Hunter`, an organization) is set as `created_by_ref` on every object.
 Re-enriching an updated hunt reuses the same `report--` / `indicator--` ids (both keyed on the hunt UUID), so OpenCTI
@@ -355,7 +356,9 @@ Supported `--entity-type` values: `Threat-Actor`, `Threat-Actor-Group`, `Threat-
   Indicator outright if the rule does not parse. Hunter rules carry metadata pySigma refuses — `status: New`, rule
   `id`s that are not UUIDs, and nested `tags` lists — so the connector drops or coerces those optional keys before
   emitting the Indicator. The `detection` and `logsource` blocks, i.e. what the rule actually matches, are never
-  touched. A hunt that ships no sigma rule at all yields a Report with no Indicator rather than a placeholder.
+  touched. Each normalised rule is then re-checked with pySigma; one that still does not parse is logged by title
+  and dropped, since emitting it would cost the Indicator and every relationship pointing at it. A hunt that ships
+  no sigma rule at all yields a Report with no Indicator rather than a placeholder.
 
 ### Testing
 

@@ -372,14 +372,19 @@ def test_indicator_indicates_new_entity_types(first_hunt):
     author = stix_builder.build_author()
     objects = stix_builder.build_bundle(hunt, author)
     relationships = [o for o in objects if o.type == "relationship"]
-    target_ids = {
-        r.target_ref for r in relationships if r.relationship_type == "indicates"
-    }
+    linked = {r.target_ref for r in relationships}
     new_entity_ids = {
         o.id for o in objects if o.type in {"tool", "identity", "location"}
     }
-    # Every newly-created Tool/Sector/Location must have an incoming indicates relationship.
-    assert new_entity_ids.issubset(target_ids)
+    # Every newly-created Tool/Sector/Location must be linked to the Indicator...
+    assert new_entity_ids.issubset(linked)
+    # ...but only Tool may use `indicates`: OpenCTI's schema rejects it for
+    # Identity (Sector) and Location (Country/Region).
+    by_id = {o.id: o for o in objects}
+    for rel in relationships:
+        target = by_id.get(rel.target_ref)
+        if target is not None and target.type in {"identity", "location"}:
+            assert rel.relationship_type == "related-to"
 
 
 def test_tool_trigger_suppresses_duplicate(first_hunt):
@@ -478,3 +483,72 @@ def test_emitted_sigma_patterns_parse(response_payload):
                 emitted += 1
     # The fixture is all sigma-bearing hunts: every one must produce a rule.
     assert emitted == len(response_payload["results"])
+
+
+def test_indicates_only_targets_types_opencti_allows(response_payload):
+    """OpenCTI's schema forbids `indicates` from an Indicator to Identity or
+    Location; those must use `related-to` or the platform rejects them."""
+    author = stix_builder.build_author()
+    allowed = stix_builder._INDICATES_VALID_TARGETS
+
+    for hunt in response_payload["results"]:
+        objects = stix_builder.build_bundle(hunt, author)
+        by_id = {o["id"]: o for o in objects}
+        for obj in objects:
+            if obj["type"] != "relationship":
+                continue
+            if obj["relationship_type"] != "indicates":
+                continue
+            target = by_id.get(obj["target_ref"])
+            if target is not None:
+                assert (
+                    target["type"] in allowed
+                ), f"indicates -> {target['type']} is rejected by OpenCTI"
+
+
+def test_sector_and_location_use_related_to(response_payload):
+    author = stix_builder.build_author()
+    seen = set()
+
+    for hunt in response_payload["results"]:
+        objects = stix_builder.build_bundle(hunt, author)
+        by_id = {o["id"]: o for o in objects}
+        for obj in objects:
+            if obj["type"] != "relationship":
+                continue
+            target = by_id.get(obj["target_ref"])
+            if target is not None and target["type"] in ("identity", "location"):
+                seen.add(target["type"])
+                assert obj["relationship_type"] == "related-to"
+
+    assert seen, "fixture should contain sector/location entities"
+
+
+def test_trigger_relationship_respects_the_same_rule():
+    author = stix_builder.build_author()
+    hunt = {
+        "UUID": "11111111-1111-4111-8111-111111111111",
+        "title": "t",
+        "sigma": (
+            "title: t\nlogsource:\n  category: process_creation\n"
+            "detection:\n  selection:\n    Image: x\n  condition: selection\n"
+        ),
+    }
+
+    country_trigger = {
+        "id": "location--22222222-2222-4222-8222-222222222222",
+        "type": "Country",
+        "name": "Poland",
+    }
+    objects = stix_builder.build_bundle(hunt, author, trigger_entity=country_trigger)
+    rels = [o for o in objects if o["type"] == "relationship"]
+    assert rels and all(r["relationship_type"] == "related-to" for r in rels)
+
+    malware_trigger = {
+        "id": "malware--33333333-3333-4333-8333-333333333333",
+        "type": "Malware",
+        "name": "SmokedHam",
+    }
+    objects = stix_builder.build_bundle(hunt, author, trigger_entity=malware_trigger)
+    rels = [o for o in objects if o["type"] == "relationship"]
+    assert rels and all(r["relationship_type"] == "indicates" for r in rels)

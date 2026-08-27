@@ -115,12 +115,13 @@ def build_bundle(
         else []
     )
     if indicator and trigger and trigger.get("id"):
+        trigger_rel_type = _indicator_relationship_type(trigger["id"])
         relationships.append(
             stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    "indicates", indicator.id, trigger["id"]
+                    trigger_rel_type, indicator.id, trigger["id"]
                 ),
-                relationship_type="indicates",
+                relationship_type=trigger_rel_type,
                 source_ref=indicator.id,
                 target_ref=trigger["id"],
                 created_by_ref=author.id,
@@ -718,6 +719,33 @@ def _region_vocab(name: str) -> str:
     return slug or "unknown"
 
 
+# STIX types OpenCTI accepts as the target of an Indicator `indicates`
+# relationship (see its stixCoreRelationshipsMapping). Identity/Sector and
+# Location/Country/Region are NOT in it — the platform rejects the whole
+# relationship with "The relationship type indicates is not allowed between
+# Indicator and Country". `related-to` is allowed between any pair, so it is
+# the fallback.
+_INDICATES_VALID_TARGETS = frozenset(
+    {
+        "attack-pattern",
+        "campaign",
+        "incident",
+        "infrastructure",
+        "intrusion-set",
+        "malware",
+        "threat-actor",
+        "tool",
+        "vulnerability",
+    }
+)
+
+
+def _indicator_relationship_type(target_stix_type: str) -> str:
+    """`indicates` where OpenCTI's schema allows it, `related-to` otherwise."""
+    base = (target_stix_type or "").split("--", 1)[0].lower()
+    return "indicates" if base in _INDICATES_VALID_TARGETS else "related-to"
+
+
 def _build_relationships(
     indicator: stix2.Indicator,
     related: list[Any],
@@ -727,12 +755,11 @@ def _build_relationships(
 ) -> list[stix2.Relationship]:
     relationships: list[stix2.Relationship] = []
     for target in related:
+        rel_type = _indicator_relationship_type(target.type)
         relationships.append(
             stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "indicates", indicator.id, target.id
-                ),
-                relationship_type="indicates",
+                id=StixCoreRelationship.generate_id(rel_type, indicator.id, target.id),
+                relationship_type=rel_type,
                 source_ref=indicator.id,
                 target_ref=target.id,
                 created_by_ref=author.id,

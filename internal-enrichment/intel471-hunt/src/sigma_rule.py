@@ -22,6 +22,11 @@ from typing import Any
 
 import yaml
 
+try:  # pragma: no cover - exercised via the installed dependency
+    from sigma.collection import SigmaCollection
+except ImportError:  # pragma: no cover - keeps the connector usable without it
+    SigmaCollection = None  # type: ignore[assignment]
+
 LOGGER = logging.getLogger(__name__)
 
 # Optional metadata keys pySigma validates against a fixed vocabulary.
@@ -49,11 +54,43 @@ def normalise(sigma: str) -> str:
     for document in documents:
         changed |= _normalise_document(document)
 
-    if not changed:
-        return sigma.strip()
-    return yaml.safe_dump_all(
-        documents, sort_keys=False, default_flow_style=False, allow_unicode=True
-    ).strip()
+    if changed:
+        result = yaml.safe_dump_all(
+            documents, sort_keys=False, default_flow_style=False, allow_unicode=True
+        ).strip()
+    else:
+        result = sigma.strip()
+
+    if not _parses(result):
+        # Some other defect we do not know how to repair. Emitting it would make
+        # OpenCTI reject the Indicator and every relationship pointing at it, so
+        # drop the rule and say which one, loudly enough to chase upstream.
+        LOGGER.warning(
+            "Sigma rule %r is rejected by pySigma even after normalisation; "
+            "emitting no Indicator for it",
+            _title(documents),
+        )
+        return ""
+    return result
+
+
+def _title(documents: list[dict[str, Any]]) -> str:
+    for document in documents:
+        if document.get("title"):
+            return str(document["title"])
+    return "<untitled>"
+
+
+def _parses(sigma: str) -> bool:
+    """Whether OpenCTI's parser accepts the rule. When pySigma is unavailable we
+    assume it does rather than silently dropping every rule."""
+    if SigmaCollection is None:
+        return True
+    try:
+        SigmaCollection.from_yaml(sigma)
+        return True
+    except Exception:  # noqa: BLE001 - pySigma raises a wide range of errors
+        return False
 
 
 def _normalise_document(document: dict[str, Any]) -> bool:
