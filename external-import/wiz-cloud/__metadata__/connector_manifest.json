@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/OpenCTI-Platform/connectors/master/manifest-schema.json",
+  "slug": "wiz-cloud",
+  "title": "Wiz Cloud",
+  "short_description": "Import Wiz Threat Detection Issues as OpenCTI Incidents with their affected cloud assets.",
+  "description": "The Wiz Cloud connector polls the Wiz tenant GraphQL API (issuesV2) and ingests Threat Detection Issues as Incidents, creating the affected cloud resource as a System linked with a targets relationship. Not to be confused with the wiz connector, which imports the public Wiz Research feed from threats.wiz.io.",
+  "logo": "logo.png",
+  "use_cases": ["Threat detection", "Cloud security", "Incident response"],
+  "verified": false,
+  "playground_available": false,
+  "support_version": ">=6.0.0",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/wiz-cloud",
+  "container_image": "opencti/connector-wiz-cloud",
+  "container_version": "1.0.0"
+}
