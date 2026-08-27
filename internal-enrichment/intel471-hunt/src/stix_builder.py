@@ -153,7 +153,7 @@ def build_bundle(
         objects.append(indicator)
     objects.extend(related)
     objects.extend(relationships)
-    objects.extend(_build_notes(hunt, report, author))
+    objects.extend(_build_notes(hunt, report, author, markings=markings))
 
     return objects
 
@@ -413,7 +413,16 @@ def _build_notes(
     hunt: dict[str, Any],
     report: stix2.Report,
     author: stix2.Identity,
+    *,
+    markings: Optional[list[str]],
 ) -> list[stix2.Note]:
+    """Notes are keyed on `(abstract, content)` only — never on a timestamp.
+
+    `created` here comes from the hunt's `last_updated`, so folding it into the
+    id would mint a brand-new Note every time Hunter republishes a hunt, leaving
+    a pile of duplicates behind on re-enrichment. The dates stay on the object;
+    they just do not identify it.
+    """
     notes: list[stix2.Note] = []
     response_actions = hunt.get("response_actions") or {}
 
@@ -436,13 +445,16 @@ def _build_notes(
             continue
         notes.append(
             stix2.Note(
-                id=PyCtiNote.generate_id(base_created.isoformat(), content),
+                id=PyCtiNote.generate_id(
+                    created=None, content=content, abstract=abstract
+                ),
                 abstract=abstract,
                 content=content,
                 created=base_created,
                 modified=base_created,
                 created_by_ref=author.id,
                 object_refs=[report.id],
+                object_marking_refs=markings,
                 allow_custom=True,
             )
         )
@@ -455,13 +467,16 @@ def _build_notes(
         abstract = entry.get("analyst_note_type") or "Analyst note"
         notes.append(
             stix2.Note(
-                id=PyCtiNote.generate_id(created.isoformat(), content),
+                id=PyCtiNote.generate_id(
+                    created=None, content=content, abstract=abstract
+                ),
                 abstract=abstract,
                 content=content,
                 created=created,
                 modified=created,
                 created_by_ref=author.id,
                 object_refs=[report.id],
+                object_marking_refs=markings,
                 allow_custom=True,
             )
         )

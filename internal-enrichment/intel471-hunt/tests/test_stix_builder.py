@@ -552,3 +552,47 @@ def test_trigger_relationship_respects_the_same_rule():
     objects = stix_builder.build_bundle(hunt, author, trigger_entity=malware_trigger)
     rels = [o for o in objects if o["type"] == "relationship"]
     assert rels and all(r["relationship_type"] == "indicates" for r in rels)
+
+
+def test_note_ids_survive_a_hunt_republish(first_hunt):
+    """A Note id must not fold in a timestamp: Hunter republishes hunts, and an
+    id keyed on `last_updated` would mint duplicates on every re-enrichment."""
+    author = stix_builder.build_author()
+    hunt = dict(first_hunt)
+
+    hunt["last_updated"] = "2026-05-13T15:36:15.873627+00:00"
+    before = {
+        o["id"] for o in stix_builder.build_bundle(hunt, author) if o["type"] == "note"
+    }
+    hunt["last_updated"] = "2026-08-27T09:00:00.000000+00:00"
+    after = {
+        o["id"] for o in stix_builder.build_bundle(hunt, author) if o["type"] == "note"
+    }
+
+    assert before and before == after
+
+
+def test_notes_carry_entity_markings(first_hunt):
+    markings = ["marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"]
+    author = stix_builder.build_author()
+
+    objects = stix_builder.build_bundle(first_hunt, author, markings=markings)
+
+    notes = [o for o in objects if o["type"] == "note"]
+    assert notes
+    assert all(o["object_marking_refs"] == markings for o in notes)
+
+
+def test_notes_with_same_text_but_different_abstract_stay_distinct(first_hunt):
+    author = stix_builder.build_author()
+    hunt = dict(first_hunt)
+    shared = "Identical text in two sections."
+    hunt["response_actions"] = {
+        "analyst_runbook": shared,
+        "mitigation_recommendations": shared,
+    }
+
+    notes = [o for o in stix_builder.build_bundle(hunt, author) if o["type"] == "note"]
+
+    ids = [o["id"] for o in notes if o["content"] == shared]
+    assert len(ids) == 2 and len(set(ids)) == 2
