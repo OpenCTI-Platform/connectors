@@ -10,6 +10,26 @@ Payloads and the processor come from conftest.py fixtures; only _convert and
 the models are exercised here, no I/O.
 """
 
+from datetime import datetime, timedelta, timezone
+
+from wiz_cloud.processors.issues_processor import _utc
+
+
+class TestCursorFormatting:
+    def test_keeps_microseconds(self):
+        # Wiz createdAt carries microseconds and the filter is exclusive, so
+        # truncating to the second re-selects the issue the cursor points at.
+        dt = datetime(2025, 2, 20, 13, 27, 49, 464786, tzinfo=timezone.utc)
+        assert _utc(dt) == "2025-02-20T13:27:49.464786Z"
+
+    def test_converts_to_utc(self):
+        dt = datetime(2025, 2, 20, 15, 27, 49, 1, tzinfo=timezone(timedelta(hours=2)))
+        assert _utc(dt) == "2025-02-20T13:27:49.000001Z"
+
+    def test_whole_second_has_no_fraction(self):
+        dt = datetime(2025, 2, 20, 13, 27, 49, tzinfo=timezone.utc)
+        assert _utc(dt) == "2025-02-20T13:27:49Z"
+
 
 class TestWizIssueModel:
     def test_parses_full_issue(self, signin_issue):
