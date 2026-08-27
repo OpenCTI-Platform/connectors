@@ -102,12 +102,10 @@ class WizIssuesProcessor(BaseDataProcessor):
         systems_cache: dict[str, System] = {}
         shared_sent = False
         max_created = self.state.issues_last_created_at
+        issues_converted = 0
 
         for page in data:
             objects: list = []
-            if not shared_sent:
-                objects.extend([self._author, self._marking])
-                shared_sent = True
 
             for raw in page:
                 try:
@@ -120,11 +118,30 @@ class WizIssuesProcessor(BaseDataProcessor):
                     continue
 
                 objects.extend(self._convert(issue, systems_cache))
+                issues_converted += 1
                 if max_created is None or issue.created_at > max_created:
                     max_created = issue.created_at
 
-            if objects:
-                yield objects
+            if not objects:
+                continue
+
+            # Author and marking ride along with the first bundle that
+            # actually carries issues, never on their own.
+            if not shared_sent:
+                objects = [self._author, self._marking, *objects]
+                shared_sent = True
+
+            yield objects
+
+        if issues_converted == 0:
+            self.logger.info(
+                "[WIZ-CLOUD] Nothing to ingest, no new issue since the last run",
+                (
+                    {"since": _utc(self.state.issues_last_created_at)}
+                    if self.state.issues_last_created_at
+                    else {}
+                ),
+            )
 
         # Cursor advances only after every page converted without raising.
         # The connector persists state after all processors succeed.
