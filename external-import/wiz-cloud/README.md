@@ -60,7 +60,7 @@ graph LR
 
 | OpenCTI | Wiz source |
 |---|---|
-| Incident `name` | `sourceRules[].name` + `entitySnapshot.name` |
+| Incident `name` | `sourceRules[].name` + the Wiz issue `id` |
 | Incident `description` | `description` (omitted when empty) |
 | Incident `first_seen` / `last_seen` | `firstEventAt` / `lastEventAt` (fallback `createdAt` / `updatedAt`) |
 | Incident `severity` | `severity` |
