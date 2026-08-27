@@ -1,0 +1,22 @@
+services:
+  connector-wiz-cloud:
+    image: opencti/connector-wiz-cloud:1.0.0
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_WIZ_CLOUD_ID}
+      - CONNECTOR_NAME=Wiz Cloud
+      - CONNECTOR_SCOPE=wiz-cloud
+      - CONNECTOR_DURATION_PERIOD=PT6H
+      - CONNECTOR_LOG_LEVEL=error
+      - WIZ_CLOUD_API_URL=${WIZ_CLOUD_API_URL}
+      - WIZ_CLOUD_CLIENT_ID=${WIZ_CLOUD_CLIENT_ID}
+      - WIZ_CLOUD_CLIENT_SECRET=${WIZ_CLOUD_CLIENT_SECRET}
+      # Optional, defaults shown
+      - WIZ_CLOUD_AUTH_URL=https://auth.app.wiz.io/oauth/token
+      - WIZ_CLOUD_ISSUE_SEVERITY=CRITICAL,HIGH,MEDIUM
+      - WIZ_CLOUD_ISSUE_STATUS=OPEN,IN_PROGRESS
+      - WIZ_CLOUD_SINCE=P30D
+      - WIZ_CLOUD_MARKING=amber+strict
+      - WIZ_CLOUD_PAGE_SIZE=50
+    restart: always
