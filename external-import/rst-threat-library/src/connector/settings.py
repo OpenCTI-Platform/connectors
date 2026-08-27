@@ -19,6 +19,14 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         default="RST Threat Library",
         examples=["RST Threat Library"],
     )
+    scope: ListFromString = Field(
+        description=(
+            "The scope of the connector: STIX domain types emitted "
+            "(intrusion-set, malware, tool, campaign)."
+        ),
+        default=["intrusion-set", "malware", "tool", "campaign"],
+        examples=[["intrusion-set", "malware", "tool", "campaign"]],
+    )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=1),

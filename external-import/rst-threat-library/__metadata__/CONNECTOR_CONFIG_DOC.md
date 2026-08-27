@@ -10,10 +10,9 @@ connector.
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | Yes | URL | | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | Yes | string | | The API token used to connect to OpenCTI. |
-| CONNECTOR_ID | `string` | Yes | UUID v4 | | A unique identifier for this connector instance. |
 | CONNECTOR_TYPE | `const` | | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | The OpenCTI connector type. |
 | CONNECTOR_NAME | `string` | | string | `"RST Threat Library"` | The connector name displayed in OpenCTI. |
-| CONNECTOR_SCOPE | `array` | Yes | string | | The scope of the connector: STIX domain types emitted (`intrusion-set`, `malware`, `tool`, `campaign`). |
+| CONNECTOR_SCOPE | `array` | | string | `["intrusion-set", "malware", "tool", "campaign"]` | The scope of the connector: STIX domain types emitted (`intrusion-set`, `malware`, `tool`, `campaign`). |
 | CONNECTOR_LOG_LEVEL | `string` | | `debug`, `info`, `warn`, `warning`, `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_DURATION_PERIOD | `string` | | ISO-8601 duration | `"PT1H"` | The period between connector runs. |
 | CONNECTOR_QUEUE_THRESHOLD | `number` | | Number greater than 0 | `500` | Maximum RabbitMQ queue size in MB before ingestion pauses. |

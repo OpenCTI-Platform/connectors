@@ -10,8 +10,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 import stix2
-from connector.utils import ENTITY_TYPE_TO_STIX, PATH_TO_STIX_TYPE, with_sync_labels
 from pycti import OpenCTIConnectorHelper
+
+from connector.utils import ENTITY_TYPE_TO_STIX, PATH_TO_STIX_TYPE, with_sync_labels
 
 _STIX_IDENTITY_CLASSES = frozenset(
     {
@@ -133,9 +134,9 @@ class ConverterToStix:
         if not sid:
             return None
         name = created_by.get("name") or sid
-        identity_class = str(
-            created_by.get("identity_class") or "organization"
-        ).strip().lower()
+        identity_class = (
+            str(created_by.get("identity_class") or "organization").strip().lower()
+        )
         if identity_class not in _STIX_IDENTITY_CLASSES:
             self.helper.connector_logger.warning(
                 "Skipping invalid createdBy identity",
@@ -147,9 +148,7 @@ class ConverterToStix:
             )
             return None
         try:
-            return stix2.v21.Identity(
-                id=sid, name=name, identity_class=identity_class
-            )
+            return stix2.v21.Identity(id=sid, name=name, identity_class=identity_class)
         except Exception as exc:
             self.helper.connector_logger.warning(
                 "Skipping invalid createdBy identity",

@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+
 from connector.connector import RSTThreatLibrary
 from connector.settings import ConnectorSettings
 
@@ -441,7 +442,7 @@ def test_split_abandons_after_consecutive_analyst_lock_failures():
 
 
 def test_split_records_failure_when_opencti_push_fails():
-    from connector.connector import UpsertPrep, _SPLIT_FAILURE_SKIP_THRESHOLD
+    from connector.connector import _SPLIT_FAILURE_SKIP_THRESHOLD, UpsertPrep
     from connector.merge_split import SplitCandidate
 
     settings = StubConnectorSettings()
@@ -536,9 +537,7 @@ def test_wait_for_opencti_entity_returns_none_after_retries(monkeypatch):
     assert found is None
     assert connector._read_opencti_entity.call_count == 3
     info_msgs = [
-        str(c.args[0])
-        for c in helper.connector_logger.info.call_args_list
-        if c.args
+        str(c.args[0]) for c in helper.connector_logger.info.call_args_list if c.args
     ]
     assert any("attempt 2/3" in msg for msg in info_msgs)
     assert any("attempt 3/3" in msg for msg in info_msgs)
@@ -601,9 +600,7 @@ def test_batch_send_chunks_identities_that_exceed_batch_size(connector):
         )
         identities.append(identity)
     malware = MagicMock()
-    malware.serialize.return_value = (
-        '{"type":"malware","id":"malware--1","name":"m1"}'
-    )
+    malware.serialize.return_value = '{"type":"malware","id":"malware--1","name":"m1"}'
     objects = identities + [malware]
 
     ok = connector._batch_send(objects, timestamp=1_700_000_000, obj_type="malware")
@@ -652,9 +649,7 @@ def test_cycle_type_flushes_in_batches_and_advances_cursor(connector):
     assert connector._batch_send.call_count == 3  # 2+2+1
     assert state["cursor_malware"] == "2024-01-05T00:00:00.000Z"
     assert state["cursor_ids_malware"] == ["malware--4"]
-    client.iter_new_items.assert_called_once_with(
-        "malware", "", cursor_ids=set()
-    )
+    client.iter_new_items.assert_called_once_with("malware", "", cursor_ids=set())
     assert set(state["managed_ids"]["malware"]) == {
         "malware--0",
         "malware--1",
@@ -751,7 +746,6 @@ def test_cycle_type_does_not_advance_cursor_when_flush_fails(connector):
 
     assert connector._batch_send.call_count == 2
     assert state["cursor_malware"] == "2023-01-01T00:00:00.000Z"
-    # First chunk's managed ids are still recorded (idempotent retry next cycle).
     assert set(state["managed_ids"]["malware"]) == {"malware--0", "malware--1"}
 
 

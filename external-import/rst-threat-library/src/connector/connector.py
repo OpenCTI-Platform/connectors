@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import requests
+from pycti import OpenCTIConnectorHelper
+
 from connector.confidence import (
     confidence_value,
     make_sync_record,
@@ -23,7 +25,6 @@ from connector.merge_split import (
 )
 from connector.settings import ConnectorSettings
 from connector.utils import ThreatObjectType
-from pycti import OpenCTIConnectorHelper
 from rst_threat_library_client import ThreatLibraryClient
 
 _OPENCTI_MERGE_SOURCE_BATCH = 3
@@ -1075,9 +1076,7 @@ class RSTThreatLibrary:
         cursor_key = f"cursor_{obj_type}"
         cursor_ids_key = f"cursor_ids_{obj_type}"
         cursor = state.get(cursor_key) or seed
-        seen_at_cursor = {
-            str(sid) for sid in (state.get(cursor_ids_key) or []) if sid
-        }
+        seen_at_cursor = {str(sid) for sid in (state.get(cursor_ids_key) or []) if sid}
         self.helper.connector_logger.info(
             f"[{obj_type}] cycle start (cursor={cursor or '(none)'})"
         )
@@ -1220,8 +1219,6 @@ class RSTThreatLibrary:
             return self._batch_send_one(stix_objects, timestamp, obj_type)
 
         identities, rest = self._partition_identities(stix_objects)
-        # Identities lead so created_by_ref can resolve; slice the combined
-        # list so no chunk exceeds opencti_batch_size.
         ordered = identities + rest
         if len(ordered) <= batch_size:
             return self._batch_send_one(ordered, timestamp, obj_type)

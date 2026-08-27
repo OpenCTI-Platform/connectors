@@ -12,12 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
-    },
-    "CONNECTOR_ID": {
-      "description": "A unique identifier for this connector instance (UUID v4).",
-      "format": "uuid",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "RST Threat Library",
@@ -28,7 +25,21 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "intrusion-set",
+        "malware",
+        "tool",
+        "campaign"
+      ],
+      "description": "The scope of the connector: STIX domain types emitted (intrusion-set, malware, tool, campaign).",
+      "examples": [
+        [
+          "intrusion-set",
+          "malware",
+          "tool",
+          "campaign"
+        ]
+      ],
       "items": {
         "type": "string"
       },
@@ -205,7 +216,7 @@
     },
     "RST_THREAT_LIBRARY_MAX_RETRIES": {
       "default": 3,
-      "description": "Maximum attempts when pushing bundles to OpenCTI (at least one).",
+      "description": "Maximum attempts when pushing bundles to OpenCTI.",
       "examples": [
         3
       ],
@@ -342,8 +353,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_ID",
-    "CONNECTOR_SCOPE",
     "RST_THREAT_LIBRARY_APIKEY"
   ],
   "additionalProperties": true

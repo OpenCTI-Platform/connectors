@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
+
 from rst_threat_library_client.api_client import ThreatLibraryClient
 
 
@@ -151,7 +152,10 @@ def test_iter_new_items_desc_includes_objects_with_cursor_timestamp():
         return_value=iter(
             [
                 {"standard_id": "malware--new", "modified": "2024-02-01T00:00:00.000Z"},
-                {"standard_id": "malware--same", "modified": "2024-01-01T00:00:00.000Z"},
+                {
+                    "standard_id": "malware--same",
+                    "modified": "2024-01-01T00:00:00.000Z",
+                },
                 {"standard_id": "malware--old", "modified": "2023-12-01T00:00:00.000Z"},
             ]
         )
@@ -171,7 +175,10 @@ def test_iter_new_items_desc_skips_known_ids_at_cursor_timestamp():
         return_value=iter(
             [
                 {"standard_id": "malware--new", "modified": "2024-02-01T00:00:00.000Z"},
-                {"standard_id": "malware--same", "modified": "2024-01-01T00:00:00.000Z"},
+                {
+                    "standard_id": "malware--same",
+                    "modified": "2024-01-01T00:00:00.000Z",
+                },
                 {"standard_id": "malware--old", "modified": "2023-12-01T00:00:00.000Z"},
             ]
         )
@@ -193,7 +200,10 @@ def test_iter_new_items_desc_yields_nothing_when_only_known_cursor_items_remain(
     client._iter_pages = MagicMock(
         return_value=iter(
             [
-                {"standard_id": "malware--same", "modified": "2024-01-01T00:00:00.000Z"},
+                {
+                    "standard_id": "malware--same",
+                    "modified": "2024-01-01T00:00:00.000Z",
+                },
                 {"standard_id": "malware--old", "modified": "2023-12-01T00:00:00.000Z"},
             ]
         )
@@ -216,7 +226,10 @@ def test_iter_new_items_asc_includes_objects_with_cursor_timestamp():
         return_value=iter(
             [
                 {"standard_id": "malware--old", "modified": "2023-12-01T00:00:00.000Z"},
-                {"standard_id": "malware--same", "modified": "2024-01-01T00:00:00.000Z"},
+                {
+                    "standard_id": "malware--same",
+                    "modified": "2024-01-01T00:00:00.000Z",
+                },
                 {"standard_id": "malware--new", "modified": "2024-02-01T00:00:00.000Z"},
             ]
         )

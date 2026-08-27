@@ -1,8 +1,9 @@
 from typing import Any
 
 import pytest
-from connector import ConnectorSettings
 from connectors_sdk import ConfigValidationError
+
+from connector import ConnectorSettings
 
 
 @pytest.mark.parametrize(
