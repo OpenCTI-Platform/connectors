@@ -48,6 +48,11 @@ class WizIssuesProcessor(BaseDataProcessor):
     # -- lifecycle -----------------------------------------------------------
 
     def post_init(self) -> None:
+        """Build the Wiz client and the objects shared by every bundle.
+
+        Called by the SDK once dependencies are injected, so settings are
+        available here but not in __init__.
+        """
         self._config = self.settings.wiz_cloud
         self._client = WizApiClient(
             base_url=str(self._config.api_url),
@@ -64,6 +69,14 @@ class WizIssuesProcessor(BaseDataProcessor):
     # -- collect -------------------------------------------------------------
 
     def collect(self) -> Iterator[list[dict]]:
+        """Fetch Threat Detection issues created since the last run.
+
+        The lower bound is the stored cursor, or now minus the configured
+        since window on a first run.
+
+        Yields:
+            Lists of raw issue dicts, one per API page.
+        """
         since = self.state.issues_last_created_at or (
             datetime.now(tz=timezone.utc) - self._config.since
         )
@@ -97,6 +110,18 @@ class WizIssuesProcessor(BaseDataProcessor):
     # -- transform -----------------------------------------------------------
 
     def transform(self, data: Iterator[list[dict]]) -> Iterator[list]:
+        """Convert raw issue pages into bundle objects.
+
+        Unparseable issues are logged and skipped rather than failing the run.
+        The cursor is advanced in place once every page has been converted;
+        the connector persists it after all processors succeed.
+
+        Args:
+            data: Pages of raw issue dicts yielded by collect().
+
+        Yields:
+            Lists of SDK objects, one bundle per non-empty page.
+        """
         # Run-scoped caches: the same entitySnapshot backs many issues, and
         # author/marking must be sent once, not once per page.
         systems_cache: dict[str, System] = {}
@@ -151,10 +176,19 @@ class WizIssuesProcessor(BaseDataProcessor):
     # -- conversion ----------------------------------------------------------
 
     def _convert(self, issue: WizIssue, systems_cache: dict[str, System]) -> list:
-        """One Wiz issue to [Incident, System?, Relationship?].
+        """Convert one Wiz issue into its bundle objects.
 
-        Returns a list so further entities can be appended without changing
-        the signature.
+        Args:
+            issue: Parsed Wiz issue.
+            systems_cache: Systems already built during this run, keyed by
+                entitySnapshot id, so a resource shared by several issues is
+                emitted once and targeted many times.
+
+        Returns:
+            A list holding the Incident, plus the System and the targets
+            Relationship when the issue carries an entity snapshot. A list is
+            returned so further entities can be appended without changing the
+            signature.
         """
         objects: list = []
 
