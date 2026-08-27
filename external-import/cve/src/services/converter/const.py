@@ -1,4 +1,5 @@
 CVSS31_MAPPING = {
+    "x_opencti_cvss_vector_string": "vectorString",
     "x_opencti_base_score": "baseScore",
     "x_opencti_base_severity": "baseSeverity",
     "x_opencti_attack_vector": "attackVector",
