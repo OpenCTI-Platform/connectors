@@ -20,10 +20,14 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class _WizModel(BaseModel):
+    """Base for every Wiz payload model."""
+
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 
 class WizEntitySnapshot(_WizModel):
+    """The cloud resource an issue was raised on."""
+
     id: str
     name: str
     type: str | None = None
@@ -36,11 +40,16 @@ class WizEntitySnapshot(_WizModel):
 
 
 class WizSourceRule(_WizModel):
+    """The detection rule that raised an issue."""
+
     name: str | None = None
 
 
 class WizActor(_WizModel):
-    """Parsed and stored in the domain model, not converted to STIX yet."""
+    """An actor behind a threat detection issue.
+
+    Parsed and stored in the domain model, not converted to STIX yet.
+    """
 
     id: str
     name: str | None = None
@@ -50,10 +59,14 @@ class WizActor(_WizModel):
 
 
 class WizThreatDetectionDetails(_WizModel):
+    """Threat detection context attached to an issue."""
+
     actors: list[WizActor] | None = None
 
 
 class WizIssue(_WizModel):
+    """A Wiz issue as returned by the issuesV2 query."""
+
     id: str
     type: str
     severity: str
@@ -75,6 +88,12 @@ class WizIssue(_WizModel):
 
     @property
     def rule_name(self) -> str | None:
+        """Return the headline rule name shown by the Wiz UI.
+
+        Returns:
+            The name of the first source rule that has one, or None when the
+            issue carries no named rule.
+        """
         for rule in self.source_rules:
             if rule.name:
                 return rule.name
