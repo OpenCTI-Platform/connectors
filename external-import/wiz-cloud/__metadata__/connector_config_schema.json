@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/wiz-cloud_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Wiz Cloud",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "wiz-cloud"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT6H",
+      "format": "duration",
+      "type": "string"
+    },
+    "WIZ_CLOUD_API_URL": {
+      "description": "Tenant GraphQL endpoint, e.g. https://api.us17.app.wiz.io/graphql",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "WIZ_CLOUD_AUTH_URL": {
+      "default": "https://auth.app.wiz.io/oauth/token",
+      "description": "OAuth2 token endpoint (different host than api_url)",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "WIZ_CLOUD_CLIENT_ID": {
+      "description": "Wiz service account client id",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "WIZ_CLOUD_CLIENT_SECRET": {
+      "description": "Wiz service account client secret",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "WIZ_CLOUD_ISSUE_SEVERITY": {
+      "default": [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM"
+      ],
+      "description": "IssueFilters.severity values to import",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WIZ_CLOUD_ISSUE_STATUS": {
+      "default": [
+        "OPEN",
+        "IN_PROGRESS"
+      ],
+      "description": "IssueFilters.status values to import",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WIZ_CLOUD_SINCE": {
+      "default": "P30D",
+      "description": "Relative import start on first run (ISO 8601 duration)",
+      "format": "duration",
+      "type": "string"
+    },
+    "WIZ_CLOUD_PAGE_SIZE": {
+      "default": 50,
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "WIZ_CLOUD_MARKING": {
+      "description": "TLP Level Enum.\n\nSee https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/identifier.js#L76",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber+strict"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "WIZ_CLOUD_API_URL",
+    "WIZ_CLOUD_CLIENT_ID",
+    "WIZ_CLOUD_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}
