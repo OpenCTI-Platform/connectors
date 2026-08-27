@@ -77,7 +77,7 @@ class HunterConfig(BaseConfigModel):
             "dedicated directory: mounting a volume over the connector's working "
             "directory shadows its code."
         ),
-        default="/opt/connector/cache/cache.json",
+        default="/opt/opencti-connector-intel471-hunt/cache/cache.json",
     )
     cache_ttl_hours: int = Field(
         description="Lifetime, in hours, of a cache entry.",

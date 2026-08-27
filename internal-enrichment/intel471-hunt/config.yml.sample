@@ -19,6 +19,6 @@ hunter:
   # indexes: cyborg_usecases                   # optional
   # request_timeout_seconds: 30                # optional
   # max_results_per_query: 100                 # optional
-  # cache_path: /opt/connector/cache/cache.json  # optional; dedicated subdir, never the WORKDIR
+  # cache_path: /opt/opencti-connector-intel471-hunt/cache/cache.json  # optional; dedicated subdir, never the WORKDIR
   # cache_ttl_hours: 24                        # optional
   # max_tlp: TLP:AMBER                         # optional

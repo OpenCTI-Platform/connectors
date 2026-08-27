@@ -153,7 +153,7 @@ Below are the parameters you'll need to set for the connector:
 | Indexes            | indexes                 | `HUNTER_INDEXES`                 | cyborg_usecases                        | No        | Hunter index to query.                                                                      |
 | Request timeout    | request_timeout_seconds | `HUNTER_REQUEST_TIMEOUT_SECONDS` | 30                                     | No        | HTTP timeout, in seconds, for calls to the Hunter API.                                      |
 | Max results        | max_results_per_query   | `HUNTER_MAX_RESULTS_PER_QUERY`   | 100                                    | No        | Maximum number of hunt packages retrieved per query.                                        |
-| Cache path         | cache_path              | `HUNTER_CACHE_PATH`              | /opt/connector/cache/cache.json        | No        | Location of the local `(hunt_uuid, last_updated)` cache. See [Cache](#cache).                |
+| Cache path         | cache_path              | `HUNTER_CACHE_PATH`              | /opt/opencti-connector-intel471-hunt/cache/cache.json        | No        | Location of the local `(hunt_uuid, last_updated)` cache. See [Cache](#cache).                |
 | Cache TTL          | cache_ttl_hours         | `HUNTER_CACHE_TTL_HOURS`         | 24                                     | No        | Lifetime, in hours, of a cache entry.                                                        |
 | Max TLP            | max_tlp                 | `HUNTER_MAX_TLP`                 | TLP:AMBER                              | No        | Highest TLP the connector will enrich. Entities above it are refused.                        |
 
@@ -179,7 +179,8 @@ docker compose up -d
 ```
 
 > [!WARNING]
-> Mount the cache volume on a **dedicated subdirectory** (`/opt/connector/cache`), never on `/opt/connector`. The
+> Mount the cache volume on a **dedicated subdirectory** (`.../cache`), never on the connector's working
+> directory (`/opt/opencti-connector-intel471-hunt`). The
 > latter is the image `WORKDIR` holding the connector code: a named volume mounted there is seeded once from the
 > first image and then shadows the code on every subsequent image update, silently pinning the container to stale
 > code. The provided `docker-compose.yml` already does this correctly.

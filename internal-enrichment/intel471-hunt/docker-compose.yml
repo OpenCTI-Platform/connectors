@@ -21,15 +21,15 @@ services:
       # - HUNTER_INDEXES=cyborg_usecases # optional
       # - HUNTER_REQUEST_TIMEOUT_SECONDS=30 # optional
       # - HUNTER_MAX_RESULTS_PER_QUERY=100 # optional
-      # - HUNTER_CACHE_PATH=/opt/connector/cache/cache.json # optional
+      # - HUNTER_CACHE_PATH=/opt/opencti-connector-intel471-hunt/cache/cache.json # optional
       # - HUNTER_CACHE_TTL_HOURS=24 # optional
       # - HUNTER_MAX_TLP=TLP:AMBER # optional
     volumes:
-      # Mount the cache on a DEDICATED subdir — NEVER on /opt/connector. That is
-      # the WORKDIR holding the connector code (src/); a named volume mounted
+      # Mount the cache on a DEDICATED subdir — NEVER on the WORKDIR itself.
+      # That directory holds the connector code (src/); a named volume mounted
       # there gets seeded once from the first image and then SHADOWS the code on
       # every subsequent image update, silently pinning the container to stale code.
-      - intel471-hunt-cache:/opt/connector/cache
+      - intel471-hunt-cache:/opt/opencti-connector-intel471-hunt/cache
     restart: always
 
 volumes:
