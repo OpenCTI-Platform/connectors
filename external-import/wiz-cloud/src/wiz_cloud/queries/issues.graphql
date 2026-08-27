@@ -1,0 +1,53 @@
+# Root field is issuesV2, aliased back to `issues` so response parsing is
+# stable if we ever have to fall back to the deprecated v1 root.
+# `issues` (v1) still resolves but is absent from schema introspection,
+# which is how Wiz marks deprecation.
+query IssuesV2($after: String, $first: Int, $orderBy: IssueOrder, $filterBy: IssueFilters) {
+  issues: issuesV2(filterBy: $filterBy, first: $first, after: $after, orderBy: $orderBy) {
+    nodes {
+      id
+      type
+      severity
+      status
+      createdAt       # when Wiz raised the issue, not when the activity happened
+      updatedAt
+      firstEventAt    # real incident window for THREAT_DETECTION issues,
+      lastEventAt     # derived from the underlying cloud events
+      description     # rule-generic text, can be an empty string
+      openReason
+      url             # portal deep link, used as-is for the external reference
+
+      entitySnapshot {
+        id
+        name
+        type
+        externalId
+        cloudPlatform
+        cloudProviderURL
+        providerId
+        region
+        tags
+      }
+
+      sourceRules {
+        name          # the human-readable headline the Wiz UI shows as title
+      }
+
+      # Parsed and stored in the domain model, not converted to STIX yet
+      threatDetectionDetails {
+        actors {
+          id
+          name
+          externalId
+          providerUniqueId
+          type
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
