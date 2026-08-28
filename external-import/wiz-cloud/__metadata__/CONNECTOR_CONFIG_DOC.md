@@ -17,7 +17,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT6H"` |  |
 | WIZ_CLOUD_AUTH_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://auth.app.wiz.io/oauth/token"` | OAuth2 token endpoint (different host than api_url) |
-| WIZ_CLOUD_ISSUE_SEVERITY | `array` |  | string | `["CRITICAL", "HIGH", "MEDIUM"]` | IssueFilters.severity values to import |
+| WIZ_CLOUD_ISSUE_SEVERITY | `array` |  | string | `["CRITICAL", "HIGH"]` | IssueFilters.severity values to import |
 | WIZ_CLOUD_ISSUE_STATUS | `array` |  | string | `["OPEN", "IN_PROGRESS"]` | IssueFilters.status values to import |
 | WIZ_CLOUD_SINCE | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P30D"` | Relative import start on first run (ISO 8601 duration) |
 | WIZ_CLOUD_PAGE_SIZE | `integer` |  | `1 <= x <= 100` | `50` |  |

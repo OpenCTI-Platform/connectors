@@ -38,7 +38,7 @@ class WizCloudConfig(BaseConfigModel):
     client_secret: SecretStr = Field(description="Wiz service account client secret")
 
     issue_severity: ListFromString = Field(
-        default=["CRITICAL", "HIGH", "MEDIUM"],
+        default=["CRITICAL", "HIGH"],
         description="IssueFilters.severity values to import",
     )
     issue_status: ListFromString = Field(
