@@ -766,6 +766,13 @@ jobs:
       needs.resolve.outputs.dry_run != 'true'
     # Non-blocking: a failure here must not prevent the release from succeeding
     continue-on-error: true
+    # Scoped by target branch, not connector: bulk releases dispatch one run
+    # per connector in parallel, and each one's commit here lands on the same
+    # branch. Serializing just this job (builds/releases above stay parallel)
+    # avoids racing ghcommit-action's branch-HEAD check across runs.
+    concurrency:
+      group: release-connector-manifest-${{ needs.resolve.outputs.is_tag_push == 'true' && github.event.repository.default_branch || github.ref_name }}
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
