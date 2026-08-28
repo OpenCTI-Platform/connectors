@@ -1,4 +1,4 @@
-pycti==7.260824.0
+pycti==7.260828.0
 assemblyline-client==4.10.1
 stix2==3.0.1
 requests~=2.32

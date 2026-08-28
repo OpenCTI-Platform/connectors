@@ -1,4 +1,4 @@
-pycti==7.260824.0
+pycti==7.260828.0
 validators==0.35.0
 ruff==0.16.4
 pydantic>=2.10, <3
