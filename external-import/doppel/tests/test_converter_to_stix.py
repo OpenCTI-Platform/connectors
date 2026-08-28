@@ -124,24 +124,23 @@ def test_convert_alerts_to_stix_domains_product_with_ip(converter):
     assert "based-on" in serialized_bundle
 
 
-def test_convert_alerts_to_stix_existing_indicator_reversion(converter):
-    """
-    Scenario 3: Test reversion state updates against an already existing indicator.
-    Covers: _find_indicators_by_alert_id_or_entity_value,
-            _handle_indicators_existing, setting revoked=True,
-            and managed prefix label cleanups via _handle_labels.
-    """
-    # Given an alert moving to an un-actioned/reverted state
+@pytest.mark.parametrize(
+    "queue_state",
+    ["monitoring", "doppel_review", "needs_confirmation", "actioned", "taken_down"],
+)
+def test_existing_indicator_stays_active_across_revival_lifecycle(
+    converter, queue_state
+):
+    """Doppel workflow transitions must not revoke an existing STIX Indicator."""
     alert = {
-        "id": "alert_revert_789",
+        "id": "alert_revival_789",
         "product": "domains",
-        "entity": "reverted-domain.com",
-        "queue_state": "resolved",  # Not a takedown state -> triggers reversion
+        "entity": "revived-domain.com",
+        "queue_state": queue_state,
         "score": 0.4,
         "created_at": "2026-06-11T09:00:00Z",
     }
 
-    # Mocking that the indicator already exists in OpenCTI.
     # Real pycti API responses return "id" as an internal OpenCTI UUID (no "--"),
     # not a STIX identifier — only "standard_id" is the valid STIX id.
     mock_indicator = {
@@ -161,11 +160,20 @@ def test_convert_alerts_to_stix_existing_indicator_reversion(converter):
     # When
     converter.convert_alerts_to_stix([alert])
 
-    # Then verify that the source-owned fields include the revoked state.
+    # The Indicator remains valid while queue labels carry the Doppel lifecycle.
     update_call = converter.helper.api.indicator.update_field.call_args
     assert update_call.kwargs["id"] == mock_indicator["id"]
     field_patch = update_call.kwargs["input"]
-    assert {"key": "revoked", "value": True} in field_patch
+    assert {"key": "revoked", "value": False} in field_patch
+    added_labels = converter.helper.api.stix_domain_object.add_label.call_args_list
+    assert any(
+        call.kwargs.get("label_name") == f"queue_state:{queue_state}"
+        for call in added_labels
+    )
+    assert not any(
+        call.kwargs.get("label_name") == "revoked-false-positive"
+        for call in added_labels
+    )
 
 
 def test_convert_alerts_to_stix_with_optional_cases_enabled(converter):
@@ -449,14 +457,17 @@ def test_rft_case_new_not_takedown_is_skipped(converter):
     assert "case-rft" not in str(result)
 
 
-def test_rft_case_existing_revoked_on_reversion(converter):
-    """Covers _handle_rft_cases_existing revoke + note + RFTCase labels."""
+def test_rft_case_stays_active_during_revival(converter):
+    """RFT cases remain valid while Doppel workflow labels are refreshed."""
     converter.enable_rft_case = True
-    alert = _domains_alert(alert_id="alert_rft_exist", queue_state="resolved")
+    alert = _domains_alert(alert_id="alert_rft_exist", queue_state="doppel_review")
     existing_case = {
         "id": "case-rft--11111111-1111-4111-8111-111111111111",
         "standard_id": "case-rft--11111111-1111-4111-8111-111111111111",
-        "objectLabel": [{"value": "queue_state:taken_down"}],
+        "objectLabel": [
+            {"value": "queue_state:monitoring"},
+            {"value": "revoked-false-positive"},
+        ],
     }
     converter.helper.api.stix_cyber_observable.read.return_value = None
     converter.helper.api.indicator.list.return_value = []
@@ -467,7 +478,12 @@ def test_rft_case_existing_revoked_on_reversion(converter):
     update_call = converter.helper.api.stix_domain_object.update_field.call_args
     assert update_call.kwargs["id"] == existing_case["id"]
     field_patch = update_call.kwargs["input"]
-    assert {"key": "revoked", "value": True} in field_patch
+    assert {"key": "revoked", "value": False} in field_patch
+    remove_calls = converter.helper.api.stix_domain_object.remove_label.call_args_list
+    assert any(
+        call.kwargs.get("label_name") == "revoked-false-positive"
+        for call in remove_calls
+    )
 
 
 def test_rft_case_found_via_name_search_fallback(converter):
@@ -588,9 +604,9 @@ def test_existing_rft_case_creates_related_to_relationship(converter):
     )
 
 
-def test_reverted_indicator_gains_revoked_false_positive_label(converter):
-    """Reverting (not-takedown) must ADD the revoked-false-positive label."""
-    alert = _domains_alert(alert_id="alert_rfp_add", queue_state="resolved")
+def test_revival_does_not_add_revoked_false_positive_label(converter):
+    """A normal workflow transition must not be inferred as a false positive."""
+    alert = _domains_alert(alert_id="alert_rfp_add", queue_state="doppel_review")
     existing_indicator = {
         "id": "e5a6f272-3595-4673-9097-f5be0df2a926",
         "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
@@ -602,33 +618,18 @@ def test_reverted_indicator_gains_revoked_false_positive_label(converter):
     converter.convert_alerts_to_stix([alert])
 
     add_calls = converter.helper.api.stix_domain_object.add_label.call_args_list
-    assert any(
+    assert not any(
         call.kwargs.get("label_name") == "revoked-false-positive" for call in add_calls
     )
 
 
-def test_reverted_indicator_does_not_churn_existing_false_positive_label(converter):
-    alert = _domains_alert(alert_id="alert_rfp_keep", queue_state="resolved")
-    existing_indicator = {
-        "id": "e5a6f272-3595-4673-9097-f5be0df2a926",
-        "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
-        "objectLabel": [{"value": "revoked-false-positive"}],
-    }
-    converter.helper.api.indicator.list.return_value = [existing_indicator]
-    converter.helper.api.stix_cyber_observable.read.return_value = None
-
-    converter.convert_alerts_to_stix([alert])
-
-    remove_calls = converter.helper.api.stix_domain_object.remove_label.call_args_list
-    assert not any(
-        call.kwargs.get("label_name") == "revoked-false-positive"
-        for call in remove_calls
-    )
-
-
-def test_takedown_indicator_removes_revoked_false_positive_label(converter):
-    """An actioned/taken-down indicator must REMOVE the revoked-false-positive label."""
-    alert = _domains_alert(alert_id="alert_rfp_rm", queue_state="actioned")
+@pytest.mark.parametrize(
+    "queue_state",
+    ["monitoring", "doppel_review", "needs_confirmation", "actioned", "taken_down"],
+)
+def test_replay_removes_legacy_revoked_false_positive_label(converter, queue_state):
+    """Every lifecycle state cleans up the obsolete connector-managed label."""
+    alert = _domains_alert(alert_id="alert_rfp_cleanup", queue_state=queue_state)
     existing_indicator = {
         "id": "e5a6f272-3595-4673-9097-f5be0df2a926",
         "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
@@ -646,9 +647,9 @@ def test_takedown_indicator_removes_revoked_false_positive_label(converter):
     )
 
 
-def test_takedown_indicator_does_not_remove_absent_false_positive_label(converter):
+def test_revival_does_not_remove_absent_false_positive_label(converter):
     """Avoid a noisy API error when the false-positive label is already absent."""
-    alert = _domains_alert(alert_id="alert_rfp_absent", queue_state="actioned")
+    alert = _domains_alert(alert_id="alert_rfp_absent", queue_state="doppel_review")
     existing_indicator = {
         "id": "e5a6f272-3595-4673-9097-f5be0df2a926",
         "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",

@@ -46,16 +46,6 @@ def in_takedown_state(queue_state) -> bool:
     return _normalize_queue_state(queue_state) in {"actioned", "taken_down"}
 
 
-def is_reverted_state(queue_state) -> bool:
-    """Check if alert is reverted from takedown"""
-    return _normalize_queue_state(queue_state) in {
-        "archived",
-        "needs_confirmation",
-        "doppel_review",
-        "monitoring",
-    }
-
-
 def build_external_references(alert) -> list:
     """
     Build external references for observables/indicators

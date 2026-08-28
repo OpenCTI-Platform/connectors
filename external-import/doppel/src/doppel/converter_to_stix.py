@@ -347,7 +347,7 @@ class ConverterToStix:
     def _find_rft_cases_by_alert_id(self, alert_id: str, entity_value: str) -> list:
         """
         Find RFT cases by alert_id stored in x_opencti_workflow_id.
-        Used for revocation during reversion workflow.
+        Used to refresh existing cases across queue-state transitions.
 
         :param alert_id: Doppel alert ID
         :return: List of RFT case objects or empty list
@@ -637,13 +637,15 @@ class ConverterToStix:
     def _source_owned_field_updates(
         self,
         alert: dict,
-        revoked: bool,
         include_score: bool = True,
         include_case_fields: bool = False,
     ) -> list[dict]:
         """Build patches for mutable fields sourced from the Doppel alert."""
         updates = [
-            {"key": "revoked", "value": revoked},
+            # Queue state is workflow metadata, not a STIX validity verdict.
+            # Keep connector-managed objects active and repair objects that older
+            # connector versions revoked during normal lifecycle transitions.
+            {"key": "revoked", "value": False},
             {"key": "description", "value": build_description(alert)},
         ]
         if include_score:
@@ -772,34 +774,22 @@ class ConverterToStix:
     def _handle_indicators_existing(
         self, existing_indicators, alert, observables, stix_objects
     ):
-        """When an indicator for given alert data already exists.
-
-        Here we need to consider both the cases - actioned (TakenDown/Actioned) + Non-Actioned(Rest all)
-            If actioned - Update indicator with latest data.
-            If non-actioned - Revoke the indicator as part of reversion workflow and update indicator with latest data.
-        """
+        """Refresh an existing indicator without treating queue state as revocation."""
 
         alert_id = alert.get("id")
         for indicator in existing_indicators:
-
-            in_taken_down_state = in_takedown_state(alert.get("queue_state"))
-
-            # If taken_down/actioned = False
-            # If any other state = True
-            revoke_indicator = not in_taken_down_state
-
             self.helper.connector_logger.info(
-                "[DoppelConverter] Updating indicator revoke status",
+                "[DoppelConverter] Refreshing existing indicator",
                 meta={
                     "alert_id": alert_id,
                     "indicator_standard_id": indicator["standard_id"],
-                    "revoked": revoke_indicator,
+                    "queue_state": alert.get("queue_state"),
                 },
             )
 
             self.helper.api.indicator.update_field(
                 id=indicator["id"],
-                input=self._source_owned_field_updates(alert, revoked=revoke_indicator),
+                input=self._source_owned_field_updates(alert),
             )
             self._refresh_external_references(indicator["id"], alert)
             # Add Note.
@@ -963,27 +953,16 @@ class ConverterToStix:
     def _handle_rft_cases_existing(
         self, existing_rft_cases, alert, observables, stix_objects
     ):
-        """When an RFT case for given alert data already exists.
-
-        Here we need to consider both the cases - actioned (TakenDown/Actioned) + Non-Actioned(Rest all)
-            If actioned - Update RFT case with latest data.
-            If non-actioned - Revoke the RFT case as part of reversion workflow and update RFT case with latest data.
-        """
+        """Refresh an existing RFT case across Doppel queue transitions."""
 
         alert_id = alert.get("id")
         for rft_case in existing_rft_cases:
-            in_taken_down_state = in_takedown_state(alert.get("queue_state"))
-
-            # If taken_down/actioned => Revoke = False
-            # If any other state => Revoke = True
-            revoke_rft_case = not in_taken_down_state
-
             self.helper.connector_logger.info(
-                "[DoppelConverter] Updating RFT case revoke status",
+                "[DoppelConverter] Refreshing existing RFT case",
                 meta={
                     "alert_id": alert_id,
                     "case_ref": rft_case.get("standard_id") or rft_case.get("id"),
-                    "revoked": revoke_rft_case,
+                    "queue_state": alert.get("queue_state"),
                 },
             )
 
@@ -991,7 +970,6 @@ class ConverterToStix:
                 id=rft_case["id"],
                 input=self._source_owned_field_updates(
                     alert,
-                    revoked=revoke_rft_case,
                     # Case-RFT rejects x_opencti_score as an incompatible
                     # attribute; its score-derived mutable field is priority.
                     include_score=False,
@@ -1067,10 +1045,7 @@ class ConverterToStix:
             )
 
     def _handle_note_addition(self, obj, alert, observables, stix_objects):
-        """Handle update of note content when indicator already exists.
-
-        Whenever we have an indicator already present for given alert data and if we find that the indicator is revoked but alert is in actioned/taken down state - we will update the note content to reflect the current status of the alert.
-        """
+        """Add a note describing the current Doppel queue state."""
         ### Adding Note with details about update in Doppel queue state.
         self.helper.connector_logger.info(
             "[DoppelConverter] Note addition",
@@ -1080,7 +1055,7 @@ class ConverterToStix:
         alert_id = alert.get("id")
         queue_state = alert.get("queue_state")
         observable_id = observables[0].get("id")
-        note_content = f"Doppel alert queue state updated to {alert.get('queue_state')}. Setting revoked to {not in_takedown_state(queue_state)}."
+        note_content = f"Doppel alert queue state updated to {queue_state}."
 
         # API-returned objects expose their STIX id as "standard_id"; newly-created
         # serialized dicts expose it as "id". Prefer standard_id so the ref is always
@@ -1143,16 +1118,8 @@ class ConverterToStix:
                     labels_to_remove = self._get_labels_to_remove(
                         target_obj_type,
                         target_object,
-                        include_revoked_false_positive=in_takedown_state(
-                            alert.get("queue_state")
-                        ),
+                        remove_legacy_revoked_false_positive=True,
                     )
-                    # When the alert is no longer in takedown state the entity is
-                    # revoked as a false positive, so it should gain the
-                    # "revoked-false-positive" label; an actioned/taken-down
-                    # entity should have it removed.
-                    if not in_takedown_state(alert.get("queue_state")):
-                        new_labels.append("revoked-false-positive")
 
                     for label_name in labels_to_remove or []:
                         self.helper.api.stix_domain_object.remove_label(
@@ -1185,17 +1152,8 @@ class ConverterToStix:
                     labels_to_remove = self._get_labels_to_remove(
                         target_obj_type,
                         target_object,
-                        include_revoked_false_positive=in_takedown_state(
-                            alert.get("queue_state")
-                        ),
+                        remove_legacy_revoked_false_positive=True,
                     )
-
-                    # When the alert is no longer in takedown state the entity is
-                    # revoked as a false positive, so it should gain the
-                    # "revoked-false-positive" label; an actioned/taken-down
-                    # entity should have it removed.
-                    if not in_takedown_state(alert.get("queue_state")):
-                        new_labels.append("revoked-false-positive")
 
                     for label_name in labels_to_remove or []:
                         self.helper.api.stix_domain_object.remove_label(
@@ -1213,7 +1171,7 @@ class ConverterToStix:
             )
 
     def _get_labels_to_remove(
-        self, target_obj_type, obj, include_revoked_false_positive=False
+        self, target_obj_type, obj, remove_legacy_revoked_false_positive=False
     ):
         """Return labels added by Doppel Alert."""
         managed_prefixes = (
@@ -1243,7 +1201,7 @@ class ConverterToStix:
             for label in (obj or {}).get("objectLabel", [])
             if label.get("value", "").startswith(managed_prefixes)
             or (
-                include_revoked_false_positive
+                remove_legacy_revoked_false_positive
                 and label.get("value") == "revoked-false-positive"
             )
         ]

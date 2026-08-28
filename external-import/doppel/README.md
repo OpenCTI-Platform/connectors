@@ -161,8 +161,10 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 - Bundles and sends the STIX objects to OpenCTI
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
 - Reprocessing an alert refreshes Doppel-owned mutable data on existing
-  Indicators (description, score, external reference, revoked state) and RFT
-  cases (description, priority, severity, external reference, revoked state).
+  Indicators (description, score, external reference) and RFT cases
+  (description, priority, severity, external reference). Queue transitions are
+  represented by labels and do not revoke these objects; obsolete
+  `revoked-false-positive` labels from earlier connector versions are removed.
   External references added by users are preserved.
 - On first run, fetches up to `HISTORICAL_POLLING_DAYS`; subsequent runs are delta-based
 
