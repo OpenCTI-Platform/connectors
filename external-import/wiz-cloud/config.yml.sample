@@ -14,7 +14,7 @@ wiz_cloud:
   auth_url: 'https://auth.app.wiz.io/oauth/token'
   client_id: 'ChangeMe'
   client_secret: 'ChangeMe'
-  issue_severity: 'CRITICAL,HIGH,MEDIUM'   # IssueFilters.severity
+  issue_severity: 'CRITICAL,HIGH'   # IssueFilters.severity
   issue_status: 'OPEN,IN_PROGRESS'         # IssueFilters.status
   since: 'P30D'            # relative import start on first run (ISO 8601)
   marking: 'amber+strict'  # default TLP for all produced entities

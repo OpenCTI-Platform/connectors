@@ -81,8 +81,7 @@
     "WIZ_CLOUD_ISSUE_SEVERITY": {
       "default": [
         "CRITICAL",
-        "HIGH",
-        "MEDIUM"
+        "HIGH"
       ],
       "description": "IssueFilters.severity values to import",
       "items": {
