@@ -295,6 +295,39 @@ def test_analyst_note_report_does_not_reference_the_author():
     assert len(report.object_refs) == 2
 
 
+# Scenario: An entity present only in context_entities is not dropped (issue #6943)
+def test_analyst_note_includes_context_entities():
+    # Given an analyst note whose note_entities holds a Malware, and whose
+    # context_entities holds a Threat Actor referenced only in context
+    note = _given_stix_note()
+    _when_note_converted_from_json(note, _given_analyst_note_json_with_context_entities())
+
+    # When the note is converted to STIX objects
+    stix_objects = note.to_stix_objects()
+    report = _then_single_report(stix_objects)
+
+    # Then the context-only entity is present among the report's referenced objects
+    assert len(report.object_refs) == 2
+    _then_contains_threat_actor(stix_objects)
+
+
+# Scenario: An entity present in both note_entities and context_entities is not duplicated
+def test_analyst_note_deduplicates_entities_shared_between_both_arrays():
+    # Given an analyst note where the same entity id appears in both
+    # note_entities and context_entities
+    note = _given_stix_note()
+    _when_note_converted_from_json(
+        note, _given_analyst_note_json_with_duplicate_entity()
+    )
+
+    # When the note is converted to STIX objects
+    stix_objects = note.to_stix_objects()
+    report = _then_single_report(stix_objects)
+
+    # Then the entity is only referenced once by the report
+    assert len(report.object_refs) == 1
+
+
 # ── Given helpers ────────────────────────────────────────────────────────────
 
 
@@ -338,6 +371,44 @@ def _given_analyst_note_json():
             "note_entities": [
                 {"id": "entity-1", "type": "Malware", "name": "Test malware"},
                 {"id": "entity-2", "type": "Company", "name": "Test company"},
+            ],
+        },
+    }
+
+
+def _given_analyst_note_json_with_context_entities():
+    return {
+        "id": "note-id",
+        "attributes": {
+            "title": "Test analyst note",
+            "text": "Some intelligence content",
+            "published": "2026-08-20T00:00:00.000Z",
+            "topic": [{"name": "Flash Report"}],
+            "attachments": [],
+            "note_entities": [
+                {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+            ],
+            "context_entities": [
+                {"id": "entity-2", "type": "Threat Actor", "name": "APT99"},
+            ],
+        },
+    }
+
+
+def _given_analyst_note_json_with_duplicate_entity():
+    return {
+        "id": "note-id",
+        "attributes": {
+            "title": "Test analyst note",
+            "text": "Some intelligence content",
+            "published": "2026-08-20T00:00:00.000Z",
+            "topic": [{"name": "Flash Report"}],
+            "attachments": [],
+            "note_entities": [
+                {"id": "entity-1", "type": "Malware", "name": "Test malware"},
+            ],
+            "context_entities": [
+                {"id": "entity-1", "type": "Malware", "name": "Test malware"},
             ],
         },
     }
