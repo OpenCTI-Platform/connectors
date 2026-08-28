@@ -225,29 +225,29 @@ jobs:
       # Save logs/reports as downloadable artifacts
       - store_artifacts:
           path: test_outputs
-  build:
-    parameters:
-      ci_executor:
-        type: executor
-        description: Executor to use for this job.
-        default: ci_environment
-    executor: << parameters.ci_executor >>
-    steps:
-      - checkout
-      - resolve_release_ref
-      - run:
-          name: Install dependencies
-          command: pip install -r .circleci/scripts/requirements.txt
-      - run:
-          name: Execute Python Script
-          command: |
-            export LATEST_SEMANTIC_VERSION=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
-            python .circleci/scripts/generate_ci.py
-      - continuation/continue:
-          configuration_path: dynamic.yml
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
+  # build:
+  #   parameters:
+  #     ci_executor:
+  #       type: executor
+  #       description: Executor to use for this job.
+  #       default: ci_environment
+  #   executor: << parameters.ci_executor >>
+  #   steps:
+  #     - checkout
+  #     - resolve_release_ref
+  #     - run:
+  #         name: Install dependencies
+  #         command: pip install -r .circleci/scripts/requirements.txt
+  #     - run:
+  #         name: Execute Python Script
+  #         command: |
+  #           export LATEST_SEMANTIC_VERSION=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+  #           python .circleci/scripts/generate_ci.py
+  #     - continuation/continue:
+  #         configuration_path: dynamic.yml
+  #     - slack/notify:
+  #         event: fail
+  #         template: basic_fail_1
   notify:
     parameters:
       notification_executor:
@@ -264,10 +264,17 @@ jobs:
 workflows:
   connectors:
     jobs:
+      # Tags matching /.*/ used to trigger these jobs too, but per-connector
+      # release tags ({connector}/{version}) are pushed by release-connector.yml
+      # for both single and bulk connector releases (potentially hundreds at
+      # once) and are fully handled by GitHub Actions, not CircleCI. Restrict
+      # the tag trigger to platform CalVer tags only (same pattern as
+      # build_release below) so those connector tags no longer spin up
+      # redundant CircleCI runs.
       - ensure_formatting:
           filters:
             tags:
-              only: /.*/
+              only: /^[0-9]+(\.[0-9]+)+(\.[0-9]+)*(-lts\.[0-9]+)?$/
             branches:
               only:
                 - master
@@ -276,7 +283,7 @@ workflows:
       - base_linter:
           filters:
             tags:
-              only: /.*/
+              only: /^[0-9]+(\.[0-9]+)+(\.[0-9]+)*(-lts\.[0-9]+)?$/
             branches:
               only:
                 - master
@@ -285,7 +292,7 @@ workflows:
       - linter:
           filters:
             tags:
-              only: /.*/
+              only: /^[0-9]+(\.[0-9]+)+(\.[0-9]+)*(-lts\.[0-9]+)?$/
             branches:
               only:
                 - master
@@ -294,7 +301,7 @@ workflows:
       - test:
           filters:
             tags:
-              only: /.*/
+              only: /^[0-9]+(\.[0-9]+)+(\.[0-9]+)*(-lts\.[0-9]+)?$/
             branches:
               only:
                 - master
@@ -308,7 +315,7 @@ workflows:
       #       - test
       #     filters:
       #       tags:
-      #         only: /.*/
+      #         only: /^[0-9]+(\.[0-9]+)+(\.[0-9]+)*(-lts\.[0-9]+)?$/
       #       branches:
       #         only:
       #           - master
