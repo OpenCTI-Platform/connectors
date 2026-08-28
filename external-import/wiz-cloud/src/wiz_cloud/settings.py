@@ -39,11 +39,17 @@ class WizCloudConfig(BaseConfigModel):
 
     issue_severity: ListFromString = Field(
         default=["CRITICAL", "HIGH"],
-        description="IssueFilters.severity values to import",
+        description=(
+            "Issue severities to import (comma-separated). "
+            "E.g. 'CRITICAL,HIGH,MEDIUM,LOW,INFORMATIONAL'."
+        ),
     )
     issue_status: ListFromString = Field(
         default=["OPEN", "IN_PROGRESS"],
-        description="IssueFilters.status values to import",
+        description=(
+            "Issue statuses to import (comma-separated). "
+            "E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'."
+        ),
     )
 
     # pydantic parses ISO 8601 durations, so WIZ_CLOUD_SINCE=P30D works.

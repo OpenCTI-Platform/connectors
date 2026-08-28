@@ -83,7 +83,7 @@
         "CRITICAL",
         "HIGH"
       ],
-      "description": "IssueFilters.severity values to import",
+      "description": "Issue severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,INFORMATIONAL'.",
       "items": {
         "type": "string"
       },
@@ -94,7 +94,7 @@
         "OPEN",
         "IN_PROGRESS"
       ],
-      "description": "IssueFilters.status values to import",
+      "description": "Issue statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'.",
       "items": {
         "type": "string"
       },
