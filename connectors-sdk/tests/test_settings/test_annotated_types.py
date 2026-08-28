@@ -31,6 +31,21 @@ from pydantic import TypeAdapter
             [],
             id="empty_string",  # empty string -> empty list
         ),
+        pytest.param(
+            "a, ,c",
+            ["a", "c"],
+            id="blank_item_between_commas",
+        ),
+        pytest.param(
+            "a,,c",
+            ["a", "c"],
+            id="consecutive_commas",
+        ),
+        pytest.param(
+            ",a,",
+            ["a"],
+            id="leading_and_trailing_commas",
+        ),
     ],
 )
 def test_parse_comma_separated_list_handles_string(
@@ -51,6 +66,11 @@ def test_list_from_string_accepts_string_input() -> None:
 def test_list_from_string_accepts_list_input() -> None:
     value = TypeAdapter(ListFromString).validate_python(["a", "b"])
     assert value == ["a", "b"]
+
+
+def test_list_from_string_discards_empty_items() -> None:
+    value = TypeAdapter(ListFromString).validate_python("scope1, ,scope3")
+    assert value == ["scope1", "scope3"]
 
 
 def test_list_from_string_dumps_valid_json() -> None:
