@@ -56,7 +56,7 @@ class BitdefenderConfig(BaseConfigModel):
 
     min_confidence: int = Field(
         description="Minimum confidence value for the feed entry to be imported (1-99).",
-        default=1,
+        default=75,
     )
 
     min_severity: int = Field(

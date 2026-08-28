@@ -41,7 +41,7 @@ The following configuration variables are optional.
 | BITDEFENDER_EXCLUDE_RELATED_INDICATORS | exclude_related_indicators | Boolean, defines whether to exclude the related indicators (which provide relationship data). By default those are included |
 | BITDEFENDER_INCLUDE_SUSPICIOUS | include_suspicious | String, defines whether to include the entries which are marked as suspicious. Can be "true" (include), "false" (exclude those; default), and "only (only import those entries) |
 
-The settings `BITDEFENDER_MIN_CONFIDENCE` and `BITDEFENDER_MIN_SEVERITY` work together; an indicator must match both minimum levels to be imported. Both have values ranged from 1 (minimal confidence) to 99 (maximum confidence).
+The settings `BITDEFENDER_MIN_CONFIDENCE` and `BITDEFENDER_MIN_SEVERITY` work together; an indicator must match both minimum levels to be imported. Both have values ranged from 1 (minimal) to 99 (maximum). Please note that if you're importing all feeds, setting the minimum confidence and severity to 1 would result in large amount of data - make sure your OpenCTI instance is scalled appropriately to handle it.
 
 ## Manual Docker deployment 
 
