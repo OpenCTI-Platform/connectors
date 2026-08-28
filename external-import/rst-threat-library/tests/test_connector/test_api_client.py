@@ -2,7 +2,6 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-
 from rst_threat_library_client.api_client import ThreatLibraryClient
 
 

@@ -7,8 +7,6 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import requests
-from pycti import OpenCTIConnectorHelper
-
 from connector.confidence import (
     confidence_value,
     make_sync_record,
@@ -25,6 +23,7 @@ from connector.merge_split import (
 )
 from connector.settings import ConnectorSettings
 from connector.utils import ThreatObjectType
+from pycti import OpenCTIConnectorHelper
 from rst_threat_library_client import ThreatLibraryClient
 
 _OPENCTI_MERGE_SOURCE_BATCH = 3

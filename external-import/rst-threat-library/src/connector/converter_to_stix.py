@@ -10,9 +10,8 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 import stix2
-from pycti import OpenCTIConnectorHelper
-
 from connector.utils import ENTITY_TYPE_TO_STIX, PATH_TO_STIX_TYPE, with_sync_labels
+from pycti import OpenCTIConnectorHelper
 
 _STIX_IDENTITY_CLASSES = frozenset(
     {
