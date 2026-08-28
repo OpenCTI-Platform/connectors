@@ -29,11 +29,13 @@ class MacadressClient:
     def __init__(self, helper, base_url: str, api_key: str) -> None:
         self.helper = helper
         self.base_url = str(base_url).rstrip("/")
+        # Sent per request rather than on the session, so the token is not
+        # replayed to another host if the API ever issues a redirect.
+        self._auth_header = {"Authorization": f"Bearer {api_key}"}
 
         self.session = requests.Session()
         self.session.headers.update(
             {
-                "Authorization": f"Bearer {api_key}",
                 "Accept": "application/json",
                 "User-Agent": self._USER_AGENT,
             }
@@ -62,7 +64,9 @@ class MacadressClient:
         """
         url = f"{self.base_url}/v1/mac/{quote(mac, safe='')}"
         try:
-            resp = self.session.get(url, timeout=self._TIMEOUT)
+            resp = self.session.get(
+                url, headers=self._auth_header, timeout=self._TIMEOUT
+            )
         except requests.exceptions.RequestException as exc:
             raise MacadressAPIError(f"Request to macadress.com failed: {exc}") from exc
 

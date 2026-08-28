@@ -31,9 +31,16 @@ def test_lookup_ok_returns_payload():
     assert client.lookup("F0:18:98:11:22:33")["organization"] == "Apple, Inc."
 
 
-def test_bearer_header_is_set():
+def test_bearer_header_sent_per_request_not_on_session():
     client = MacadressClient(helper=MagicMock(), base_url="http://x", api_key="mk_k")
-    assert client.session.headers["Authorization"] == "Bearer mk_k"
+    assert client._auth_header == {"Authorization": "Bearer mk_k"}
+    assert "Authorization" not in client.session.headers
+
+    session = MagicMock()
+    session.get.return_value = FakeResp(200, {"valid": True})
+    client.session = session
+    client.lookup("F0:18:98:11:22:33")
+    assert session.get.call_args.kwargs["headers"] == {"Authorization": "Bearer mk_k"}
 
 
 def test_400_raises_invalid_mac():

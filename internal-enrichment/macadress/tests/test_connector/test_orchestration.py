@@ -63,6 +63,9 @@ def _connector(max_tlp="TLP:AMBER", create_vendor_identity=True):
 
 
 def _message(mac, marking=None, entity_type="Mac-Addr", stix_type="mac-addr"):
+    # pycti hands the connector `stix_entity` as the same dict that is already
+    # inside `stix_objects`; mirror that so tests exercise the real bundle.
+    observable = {"id": MAC_ID, "type": stix_type, "value": mac}
     return {
         "enrichment_entity": {
             "entity_type": entity_type,
@@ -70,8 +73,8 @@ def _message(mac, marking=None, entity_type="Mac-Addr", stix_type="mac-addr"):
                 [{"definition_type": "TLP", "definition": marking}] if marking else []
             ),
         },
-        "stix_entity": {"id": MAC_ID, "type": stix_type, "value": mac},
-        "stix_objects": [{"id": MAC_ID, "type": stix_type, "value": mac}],
+        "stix_entity": observable,
+        "stix_objects": [observable],
     }
 
 
@@ -102,6 +105,10 @@ def test_registered_mac_updates_observable_and_adds_vendor():
     assert "Apple, Inc." in names
     assert "relationship" in types
     assert "note" in types
+    # The enriched observable itself is part of the outgoing bundle.
+    bundle_observable = next(o for o in objects if o.get("id") == MAC_ID)
+    assert bundle_observable is msg["stix_entity"]
+    assert "x_opencti_description" in _ext(bundle_observable)
 
 
 def test_unreliable_lookup_adds_no_vendor_identity():

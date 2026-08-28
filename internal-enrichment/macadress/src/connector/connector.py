@@ -67,12 +67,26 @@ class MacadressConnector:
         scopes = [scope.lower() for scope in self.config.connector.scope]
         return entity_type.lower() in scopes
 
+    @staticmethod
+    def _observable_in_bundle(stix_objects: list, stix_entity: dict) -> dict:
+        """Return the observable dict as it lives in the outgoing bundle.
+
+        pycti normally hands us ``stix_entity`` as the same object already
+        present in ``stix_objects``; fall back to locating it by id, or appending
+        it, so the in-place enrichment is always part of what gets sent.
+        """
+        for candidate in stix_objects:
+            if candidate.get("id") == stix_entity.get("id"):
+                return candidate
+        stix_objects.append(stix_entity)
+        return stix_entity
+
     def process_message(self, data: dict) -> str:
         opencti_entity = data["enrichment_entity"]
         self._extract_and_check_markings(opencti_entity)
 
         stix_objects = data["stix_objects"]
-        stix_entity = data["stix_entity"]
+        stix_entity = self._observable_in_bundle(stix_objects, data["stix_entity"])
         observable_value = stix_entity.get("value")
         observable_markings = stix_entity.get("object_marking_refs", [])
 
