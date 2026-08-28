@@ -14,7 +14,7 @@ services:
       - WIZ_CLOUD_CLIENT_SECRET=${WIZ_CLOUD_CLIENT_SECRET}
       # Optional, defaults shown
       - WIZ_CLOUD_AUTH_URL=https://auth.app.wiz.io/oauth/token
-      - WIZ_CLOUD_ISSUE_SEVERITY=CRITICAL,HIGH,MEDIUM
+      - WIZ_CLOUD_ISSUE_SEVERITY=CRITICAL,HIGH
       - WIZ_CLOUD_ISSUE_STATUS=OPEN,IN_PROGRESS
       - WIZ_CLOUD_SINCE=P30D
       - WIZ_CLOUD_MARKING=amber+strict
