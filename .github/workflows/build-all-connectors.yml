@@ -69,8 +69,7 @@ jobs:
       packages: write
     with:
       build_mode: ${{ needs.resolve-build-mode.outputs.build_mode }}
-      # TODO: Set push to true once CircleCI is decommissioned for Alpine/FIPS builds
-      push: false
+      push: true
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_UBI9 }}
       DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS_UBI9 }}
