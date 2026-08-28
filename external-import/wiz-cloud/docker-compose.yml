@@ -1,6 +1,6 @@
 services:
   connector-wiz-cloud:
-    image: opencti/connector-wiz-cloud:1.0.0
+    image: opencti/connector-wiz-cloud:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
