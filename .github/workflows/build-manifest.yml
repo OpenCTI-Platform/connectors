@@ -18,8 +18,8 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: build-manifest-${{ github.ref }}
-  cancel-in-progress: false
+  group: build-manifest
+  cancel-in-progress: true
 
 permissions:
   contents: read
