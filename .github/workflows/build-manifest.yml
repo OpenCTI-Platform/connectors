@@ -1,52 +1,45 @@
 name: Build Manifest
 
-# on:
-#   workflow_run:
-#     workflows:
-#       - Lint & Format
-#       - Tests Connectors
-#     types:
-#       - completed
-    # branches:
-    #   - master
-    #   - release/**
-    #   - lts/**
+# Regenerates the connectors config schemas and the global manifest, then
+# commits the result back to the branch it was called from.
+#
+# Called by build-all-connectors.yml (push on master / release/* / lts/*, and
+# on version tags). workflow_dispatch is kept for manual runs on a branch.
+#
+# No standalone `push` trigger on purpose: build-all-connectors.yml already
+# triggers on those refs and calls this workflow, so a push trigger here would
+# run it twice concurrently and race on the commit-back.
+#
+# Nothing is committed when the caller ref is a tag: there is no branch to push
+# to in that case, the manifest is already built on the branch the tag came from.
 
 on:
   workflow_call:
-
+  workflow_dispatch:
 
 concurrency:
-  group: build-manifest-${{ github.event.pull_request.head.ref || github.ref }}
+  group: build-manifest-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   build_manifest:
     name: Build and Commit Manifest
-    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: read
-    # env:
-    #   GITHUB_GPG_SECRET_KEY: ${{ secrets.GITHUB_GPG_SECRET_KEY }}
-    #   GITHUB_GPG_SIGNING_KEY: ${{ secrets.GITHUB_GPG_SIGNING_KEY }}
-    #   PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          # Credentials are intentionally persisted: the commit step below
+          # pushes back to the branch using the GITHUB_TOKEN remote.
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
 
@@ -62,49 +55,51 @@ jobs:
           set -euo pipefail
           bash ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh
 
-    #   - name: Commit manifest if changed
-    #     shell: bash
-    #     run: |
-    #       set -euo pipefail
+      - name: Commit manifest if changed
+        shell: bash
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
 
-    #       if [ "${TARGET_BRANCH}" != "${RELEASE_REF}" ]; then
-    #         echo "Skipping, not ${RELEASE_REF} branch."
-    #         exit 0
-    #       fi
+          if [ "${REF_TYPE}" != "branch" ]; then
+            echo "Ref '${TARGET_BRANCH}' is a ${REF_TYPE}, not a branch. Skipping commit."
+            exit 0
+          fi
 
-    #       if [ -z "${GITHUB_GPG_SECRET_KEY:-}" ] || [ -z "${GITHUB_GPG_SIGNING_KEY:-}" ]; then
-    #         echo "Missing GPG secrets; cannot create signed commit."
-    #         exit 1
-    #       fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-    #       if git diff --quiet -- manifest.json; then
-    #         echo "Manifest not changed. Skipping commit."
-    #         exit 0
-    #       fi
+          # Stage only generated artifacts: the venvs and temporary files created
+          # by the generation scripts must never end up in the commit.
+          git add -A -- \
+            manifest.json \
+            '*/__metadata__/connector_config_schema.json' \
+            '*/__metadata__/CONNECTOR_CONFIG_DOC.md'
 
-    #       echo "${GITHUB_GPG_SECRET_KEY}" | base64 -d > /tmp/private.key
-    #       gpg --batch --import /tmp/private.key
-    #       rm /tmp/private.key
+          # Checked after staging so newly created (untracked) schemas count as changes.
+          if git diff --cached --quiet; then
+            echo "Manifest and schemas unchanged. Skipping commit."
+            exit 0
+          fi
 
-    #       git config user.email "automation@filigran.io"
-    #       git config user.name "Filigran Automation"
-    #       git config user.signingkey "${GITHUB_GPG_SIGNING_KEY}"
-    #       git config commit.gpgsign true
+          git commit -m "chore(manifest): build and update manifest [skip ci]"
 
-    #       git add .
-    #       git commit -m "chore(manifest): build and update manifest [skip ci]"
+          # Retry on non-fast-forward: concurrent runs may have moved the branch.
+          MAX_RETRIES=3
+          for attempt in $(seq 1 "$MAX_RETRIES"); do
+            if git push origin "HEAD:${TARGET_BRANCH}"; then
+              echo "Manifest changes pushed successfully (attempt ${attempt})."
+              exit 0
+            fi
+            echo "Push rejected (attempt ${attempt}/${MAX_RETRIES}) - rebasing on ${TARGET_BRANCH}."
+            if ! git pull --rebase origin "${TARGET_BRANCH}"; then
+              echo "::error::Rebase failed, aborting."
+              git rebase --abort || true
+              exit 1
+            fi
+          done
 
-    #       git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-    #       if git push -q origin "${TARGET_BRANCH}"; then
-    #         echo "Manifest changes pushed successfully."
-    #         exit 0
-    #       fi
-
-    #       echo "Push rejected, ${TARGET_BRANCH} probably moved. Trying rebase..."
-    #       if ! git pull --rebase origin "${TARGET_BRANCH}"; then
-    #         echo "Rebase failed, aborting."
-    #         git rebase --abort || true
-    #         exit 1
-    #       fi
-
-    #       git push -q origin "${TARGET_BRANCH}"
+          echo "::error::Failed to push manifest update after ${MAX_RETRIES} attempts."
+          exit 1
