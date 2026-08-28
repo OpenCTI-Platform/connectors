@@ -1,4 +1,4 @@
-FROM filigran/python-fips:latest
+FROM filigran/alpine-python-fips:python3.12
 ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
 # stixmarx (pulled in by stix2-elevator) builds a "~/.stixmarx" cache on first
 # import. Use a dedicated HOME (not /tmp, which may be shadowed by a mounted
