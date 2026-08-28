@@ -769,15 +769,29 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout default branch
+      # Tag push always targets the default branch; workflow_dispatch commits
+      # back to whichever branch it was run on instead (github.ref_name is a
+      # tag name on tag push, so it can't be used unconditionally here).
+      - name: Resolve target branch
+        id: target
+        run: |
+          if [ "${{ needs.resolve.outputs.is_tag_push }}" = "true" ]; then
+            BRANCH="${{ github.event.repository.default_branch }}"
+          else
+            BRANCH="${{ github.ref_name }}"
+          fi
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "🎯 Target branch: $BRANCH"
+
+      - name: Checkout target branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.repository.default_branch }}
+          ref: ${{ steps.target.outputs.branch }}
 
-      - name: Patch and commit container_version
+      - name: Patch container_version
+        id: patch
         run: |
           CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
-          CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
           VERSION="${{ needs.resolve.outputs.version }}"
           MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
 
@@ -793,31 +807,23 @@ jobs:
           # Validate the patched JSON
           jq empty "$MANIFEST"
 
-          # Commit
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$MANIFEST"
+          echo "manifest=$MANIFEST" >> "$GITHUB_OUTPUT"
 
-          if git diff --cached --quiet; then
-            echo "ℹ️ container_version already set to $VERSION — nothing to commit"
-            exit 0
-          fi
-
-          git commit -m "chore(manifest): update ${CONNECTOR_NAME} container_version to ${VERSION} [skip ci]"
-
-          # Push with retry on non-fast-forward (concurrent releases for other connectors)
-          MAX_RETRIES=3
-          for attempt in $(seq 1 "$MAX_RETRIES"); do
-            if git push; then
-              echo "✅ Manifest update pushed (attempt $attempt)"
-              exit 0
-            fi
-            echo "⚠️ Push rejected (attempt $attempt/$MAX_RETRIES) — rebasing"
-            git pull --rebase origin "${{ github.event.repository.default_branch }}"
-          done
-
-          echo "::warning::Failed to push manifest update after $MAX_RETRIES attempts"
-          exit 1
+      # Commits via GitHub's GraphQL API instead of raw `git commit`, so the
+      # commit is GPG-signed by GitHub (required by this repo's branch
+      # protection) without managing signing keys in CI. No local git
+      # add/commit/push: it's a no-op when container_version is unchanged,
+      # and it re-resolves the branch head through the API so it isn't
+      # affected by non-fast-forward races from concurrent connector releases.
+      - name: Commit container_version
+        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
+        with:
+          commit_message: "chore(manifest): update ${{ needs.resolve.outputs.connector_name }} container_version to ${{ needs.resolve.outputs.version }} [skip ci]"
+          repo: ${{ github.repository }}
+          branch: ${{ steps.target.outputs.branch }}
+          file_pattern: ${{ steps.patch.outputs.manifest }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ──────────────────────────────────────────────────────────
   # 6. Summary
