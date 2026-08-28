@@ -15,10 +15,18 @@ services:
       - CONNECTOR_DURATION_PERIOD=PT1H
 
       # Doppel-specific config
-      - DOPPEL_API_BASE_URL=https://api.doppel.com/v1
+      - DOPPEL_API_BASE_URL=https://api.doppel.com
+      # Choose exactly one authentication block; mixed credentials are rejected.
+      - DOPPEL_API_VERSION=v1
+      # V1 only
       - DOPPEL_API_KEY=ChangeMe
       - DOPPEL_USER_API_KEY=ChangeMe
       - DOPPEL_ORGANIZATION_CODE=ChangeMe
+      # V2 only: set API_VERSION=v2, remove V1 fields, and uncomment:
+      # - DOPPEL_CLIENT_ID=ChangeMe
+      # - DOPPEL_CLIENT_SECRET=ChangeMe
+      # - DOPPEL_TOKEN_URL=https://api.doppel.com/oauth/token
+      # - DOPPEL_TOKEN_AUDIENCE=doppel-external
       - DOPPEL_TLP_LEVEL=clear
       - DOPPEL_ALERTS_ENDPOINT=/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30

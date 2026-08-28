@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://www.filigran.io/connectors/doppel_config.schema.json",
+  "$id": "https://www.filigran.io/connectors/connector_config.schema.json",
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
@@ -55,25 +55,65 @@
       "type": "string"
     },
     "DOPPEL_API_BASE_URL": {
-      "default": "https://api.doppel.com/v1",
-      "description": "API base URL.",
+      "default": "https://api.doppel.com/",
+      "description": "Doppel API base URL. A trailing /v1 or /v2 is accepted and normalized to the selected api_version.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
-    "DOPPEL_API_KEY": {
-      "description": "API key for authentication.",
+    "DOPPEL_API_VERSION": {
+      "default": "v1",
+      "description": "Doppel API version. Choose exactly one authentication mode: V1 API keys or V2 OAuth client credentials.",
+      "enum": [
+        "v1",
+        "v2"
+      ],
       "type": "string"
+    },
+    "DOPPEL_API_KEY": {
+      "default": null,
+      "description": "V1 API key sent as the x-api-key header. Required for V1 and must be unset for V2.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "DOPPEL_USER_API_KEY": {
       "default": null,
-      "description": "Used for user-specific identity",
-      "type": "string"
+      "description": "Optional V1 user API key sent as the x-user-api-key header. Must be unset for V2.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "DOPPEL_ORGANIZATION_CODE": {
       "default": null,
-      "description": "Identifies the specific organizational workspace for multi-tenant keys",
+      "description": "Optional V1 organization workspace code sent as the x-organization-code header. Must be unset for V2.",
+      "type": "string"
+    },
+    "DOPPEL_CLIENT_ID": {
+      "default": null,
+      "description": "OAuth client ID required for V2 and must be unset for V1.",
+      "type": "string"
+    },
+    "DOPPEL_CLIENT_SECRET": {
+      "default": null,
+      "description": "OAuth client secret required for V2 and must be unset for V1.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DOPPEL_TOKEN_URL": {
+      "default": null,
+      "description": "Optional V2 OAuth token endpoint. Defaults to /oauth/token on the API base URL and must be unset for V1.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "DOPPEL_TOKEN_AUDIENCE": {
+      "default": "doppel-external",
+      "description": "OAuth audience used only for the V2 client-credentials exchange.",
+      "minLength": 1,
       "type": "string"
     },
     "DOPPEL_TLP_LEVEL": {
@@ -91,7 +131,7 @@
     },
     "DOPPEL_ALERTS_ENDPOINT": {
       "default": "/alerts",
-      "description": "Specifies the API resource path for alert ingestion",
+      "description": "API resource path for alert ingestion. A leading v1/ or v2/ is accepted and normalized to api_version.",
       "type": "string"
     },
     "DOPPEL_HISTORICAL_POLLING_DAYS": {
@@ -127,8 +167,7 @@
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN",
-    "DOPPEL_API_KEY"
+    "OPENCTI_TOKEN"
   ],
   "additionalProperties": true
 }

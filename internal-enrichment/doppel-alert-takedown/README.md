@@ -5,8 +5,9 @@ that integrates with [Doppel](https://www.doppel.com). From a suspicious observa
 (a **URL** or a **Domain-Name**), triggered manually by an analyst, automatically
 (auto-enrichment) or from a playbook, the connector:
 
-1. Creates an alert in Doppel (`POST /v1/alert`).
-2. Automatically requests a takedown for that alert (`PUT /v1/alert?entity=...` with
+1. Creates an alert in Doppel (`POST /v1/alert` or `POST /v2/alert`).
+2. Automatically requests a takedown for that alert (`PUT /v1/alert` or
+   `PUT /v2/alert` with the observable value in the `entity` query parameter and
    `queue_state: "actioned"`).
 3. Enriches the observable in OpenCTI with an **external reference** to the Doppel
    alert and a **Note** summarizing the created alert and the takedown request.
@@ -39,7 +40,8 @@ platform: it opens a Doppel alert and requests a takedown in a single enrichment
 - OpenCTI Platform >= 6.8.12
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
-- A Doppel account with an API key and a user API key
+- Doppel API access using either V1 API and user API keys or V2 OAuth client
+  credentials
 
 ## Configuration variables
 
@@ -47,6 +49,23 @@ Find all the configuration variables available here: [Connector Configurations](
 
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
 For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
+
+Configure exactly one authentication mode. V1 and V2 credential fields are
+mutually exclusive, and the connector rejects a configuration containing both.
+When changing versions, remove the inactive credential variables.
+
+Set `DOPPEL_ALERT_TAKEDOWN_API_VERSION=v1` (the default) with
+`DOPPEL_ALERT_TAKEDOWN_API_KEY` and
+`DOPPEL_ALERT_TAKEDOWN_USER_API_KEY` for V1. For V2, set
+`DOPPEL_ALERT_TAKEDOWN_API_VERSION=v2`,
+`DOPPEL_ALERT_TAKEDOWN_CLIENT_ID`, and
+`DOPPEL_ALERT_TAKEDOWN_CLIENT_SECRET`.
+
+In V2 mode, the connector exchanges its client credentials at `/oauth/token`,
+caches the bearer token in memory, and refreshes it before expiry or once after a
+`401 Unauthorized` response. Each connector container has its own token cache; if
+you deploy multiple connector instances, account for Doppel's token-issuance
+limits when deciding whether to reuse a client credential.
 
 ## Deployment
 
