@@ -11,7 +11,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from connectors_sdk.models import OrganizationAuthor, TLPMarking  # noqa: E402
 from wiz_cloud.models import WizIssue  # noqa: E402
-from wiz_cloud.processors import WizIssuesProcessor  # noqa: E402
+from wiz_cloud.processors import (  # noqa: E402
+    WizIssuesProcessor,
+    WizVulnerabilitiesProcessor,
+)
+from wiz_cloud.run_context import WizRunContext  # noqa: E402
 from wiz_cloud.state import WizConnectorState  # noqa: E402
 
 
@@ -215,6 +219,31 @@ def processor() -> WizIssuesProcessor:
     can be exercised without a connector helper.
     """
     processor = WizIssuesProcessor()
+    processor._author = OrganizationAuthor(name="Wiz")
+    processor._marking = TLPMarking(level="amber+strict")
+    processor.logger = MagicMock()
+    processor.state = WizConnectorState()
+    return processor
+
+
+@pytest.fixture
+def vulnerabilities_processor() -> WizVulnerabilitiesProcessor:
+    """A WizVulnerabilitiesProcessor with a stubbed client and no I/O.
+
+    post_init() builds the HTTP client and reads settings, so it is bypassed:
+    the config, client, author, marking, logger and state it would set are
+    provided directly.
+    """
+    from wiz_cloud.settings import WizCloudConfig
+
+    context = WizRunContext()
+    processor = WizVulnerabilitiesProcessor(run_context=context)
+    processor._config = WizCloudConfig(
+        api_url="https://api.us17.app.wiz.io/graphql",
+        client_id="id",
+        client_secret="secret",
+    )
+    processor._client = MagicMock()
     processor._author = OrganizationAuthor(name="Wiz")
     processor._marking = TLPMarking(level="amber+strict")
     processor.logger = MagicMock()
