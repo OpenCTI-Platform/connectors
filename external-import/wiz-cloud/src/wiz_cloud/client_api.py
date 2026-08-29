@@ -126,8 +126,12 @@ class WizApiClient(BaseClientApi):
 
         Yields:
             Lists of node dicts, one per page.
+
+        Pagination stops when hasNextPage is false, when the cursor is empty,
+        or when it repeats, so a misbehaving connection cannot loop forever.
         """
         variables = dict(variables)
+        previous_cursor: str | None = None
         while True:
             connection = self.execute(query, variables)[connection_key]
             nodes = connection.get("nodes") or []
@@ -136,4 +140,10 @@ class WizApiClient(BaseClientApi):
             page_info = connection.get("pageInfo") or {}
             if not page_info.get("hasNextPage"):
                 return
-            variables["after"] = page_info["endCursor"]
+            cursor = page_info.get("endCursor")
+            # Wiz can answer hasNextPage: true with a null or repeated cursor.
+            # Following it would re-request the same page forever.
+            if not cursor or cursor == previous_cursor:
+                return
+            previous_cursor = cursor
+            variables["after"] = cursor
