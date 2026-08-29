@@ -2,7 +2,7 @@ pycti==7.260828.0
 weasyprint==68.0
 html2text==2025.4.15
 pdfminer.six==20251107
-playwright==1.58.0
+playwright==1.62.0
 cachetools
 pydantic >=2.8.2, <3
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
