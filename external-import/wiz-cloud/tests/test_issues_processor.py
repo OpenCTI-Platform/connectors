@@ -118,3 +118,27 @@ class TestTransformLogging:
             "OrganizationAuthor",
             "TLPMarking",
         ]
+
+
+def test_processor_records_asset_ids_in_the_run_context(
+    processor, signin_issue, duplicate_snapshot_issue
+):
+    from wiz_cloud.run_context import WizRunContext
+
+    context = WizRunContext()
+    processor._run_context = context
+
+    cache = {}
+    processor._convert(signin_issue, cache)
+    processor._convert(duplicate_snapshot_issue, cache)
+
+    assert context.asset_ids == [
+        "8728411e-1a43-55a2-801e-44ffcb5a3dfa",
+        "b9e464fc-4b1a-5745-8d30-366690b946b8",
+    ]
+
+
+def test_processor_works_without_a_run_context(processor, signin_issue):
+    objects = processor._convert(signin_issue, {})
+
+    assert objects
