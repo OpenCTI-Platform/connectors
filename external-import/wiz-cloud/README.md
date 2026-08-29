@@ -1,6 +1,6 @@
 # OpenCTI Wiz Cloud Connector
 
-Ingests **Wiz Threat Detection Issues** from a Wiz tenant as **OpenCTI Incidents**, together with the affected cloud asset as a **System** linked by a `targets` relationship.
+Ingests **Wiz Threat Detection Issues** from a Wiz tenant as **OpenCTI Incidents**, together with the affected cloud asset as a **System** linked by a `targets` relationship. Optionally imports the **vulnerability findings** of those assets as `Vulnerability` entities linked by a `has` relationship.
 
 > **Not to be confused with the `wiz` connector**, which imports the public Wiz Research threat landscape feed from threats.wiz.io. This connector imports your own tenant's findings from the authenticated Wiz GraphQL API. The two are complementary.
 
@@ -22,7 +22,7 @@ This connector polls the Wiz GraphQL API (`issuesV2`) and converts each threat d
 ## Requirements
 
 - OpenCTI Platform
-- A Wiz **service account** (client credentials) with the `read:issues` scope
+- A Wiz **service account** (client credentials) with the `read:issues` scope, plus `read:vulnerabilities` when importing vulnerability findings
 - Your tenant GraphQL endpoint (Wiz portal, Tenant Info), e.g. `https://api.us17.app.wiz.io/graphql`
 
 ## Configuration variables
@@ -71,6 +71,30 @@ graph LR
 | Relationship | Incident `targets` System |
 
 Incremental behavior: on the first run, issues created within the `since` window are imported. On subsequent runs, only issues created after the highest `createdAt` previously seen are fetched (ordered `CREATED_AT DESC`). Entity IDs are deterministic, so re-runs never duplicate.
+
+### Vulnerabilities
+
+When `WIZ_CLOUD_IMPORT_VULNERABILITIES` is enabled, the connector fetches the vulnerability findings (`vulnerabilityFindings`) of every cloud asset referenced by the issues imported during the run. Each finding becomes a `Vulnerability` named after its CVE, linked to the asset's `System` with a `has` relationship.
+
+```mermaid
+graph LR
+    A[Wiz vulnerabilityFindings<br/>assets seen this run] --> V[Vulnerability<br/>CVE]
+    S[System] -- has --> V
+```
+
+| OpenCTI | Wiz source |
+|---|---|
+| Vulnerability `name` | `name` (the CVE id) |
+| Vulnerability `description` | `CVEDescription` (fallback `description`) |
+| Vulnerability CVSS v2 / v3 / v4 | `cvssv2` / `cvssv3` / `cvssv4`, with `score` as the v3 base score |
+| Vulnerability `epss_score` / `epss_percentile` | `epssProbability` / `epssPercentile`, converted from percentages |
+| Vulnerability `is_cisa_kev` | `hasCisaKevExploit` |
+| Vulnerability external reference | `portalUrl` + finding `id` |
+| Relationship | System `has` Vulnerability, `start_time` from `firstDetectedAt` |
+
+Only the assets seen during the current run are scanned, so a run that imports no issue performs no vulnerability call at all.
+
+**Volume warning:** a single virtual machine commonly carries several hundred findings, and severity filtering removes very few of them. Enable `WIZ_CLOUD_VULNERABILITY_HAS_EXPLOIT` to keep only the vulnerabilities with a known exploit, which is the filter that meaningfully reduces the volume.
 
 ## Known limitations
 
