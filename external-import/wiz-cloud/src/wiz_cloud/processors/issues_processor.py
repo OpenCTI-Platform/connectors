@@ -25,6 +25,7 @@ from connectors_sdk.models.enums import IncidentSeverity, IncidentType, Relation
 from pydantic import ValidationError
 from wiz_cloud.client_api import WizApiClient
 from wiz_cloud.models import WizEntitySnapshot, WizIssue
+from wiz_cloud.run_context import WizRunContext
 from wiz_cloud.observables import Credential
 
 ISSUES_QUERY = (
@@ -51,6 +52,16 @@ def _utc(dt: datetime) -> str:
 
 class WizIssuesProcessor(BaseDataProcessor):
     # -- lifecycle -----------------------------------------------------------
+
+    def __init__(self, run_context: WizRunContext | None = None) -> None:
+        """Build the processor.
+
+        Args:
+            run_context: Optional context recording the assets seen this run,
+                consumed by the vulnerabilities processor. When omitted the
+                processor behaves exactly as before.
+        """
+        self._run_context = run_context
 
     def post_init(self) -> None:
         """Build the Wiz client and the objects shared by every bundle.
@@ -310,6 +321,9 @@ class WizIssuesProcessor(BaseDataProcessor):
             The entity, or None when the snapshot type is not mapped, and
             whether it was built by this call and still has to be emitted.
         """
+        if self._run_context is not None:
+            self._run_context.add_asset(snapshot.id)
+
         if snapshot.id in cache:
             return cache[snapshot.id], False
         if not snapshot.name:
