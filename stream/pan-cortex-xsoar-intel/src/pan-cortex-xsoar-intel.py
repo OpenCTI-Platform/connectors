@@ -66,11 +66,11 @@ def compute_score(score: int | None):
 
 
 def sanitize_key(key):
-    """Sanitize key name for Splunk usage
+    """Sanitize an attribute name before it is used as an XSoar CustomFields key
 
-    Splunk KV store keys cannot contain ".". Also, keys containing
-    unusual characters like "'" make their usage less convenient
-    when writing SPL queries.
+    XSoar custom field keys cannot contain ".". Also, keys containing
+    unusual characters like "'" make the resulting indicator harder to
+    read in the XSoar UI.
 
     Args:
         key (str): value to sanitize
@@ -224,15 +224,10 @@ class XSoarConnector:
             if payload["type"] == "indicator" and payload["pattern_type"].startswith(
                 "stix"
             ):
-                # add splunk query
-                try:
-                    translation = stix_translation.StixTranslation()
-                    response = translation.translate(
-                        "splunk", "query", "{}", payload["pattern"]
-                    )
-                    payload["splunk_queries"] = response
-                except:
-                    pass
+                # stix-shifter has no XSoar target, so its splunk translator
+                # is reused here purely to parse the STIX pattern into
+                # attribute/value pairs
+                translation = stix_translation.StixTranslation()
 
                 # add mapped values
                 try:
