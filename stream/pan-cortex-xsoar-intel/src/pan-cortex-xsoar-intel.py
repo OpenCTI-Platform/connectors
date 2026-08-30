@@ -224,13 +224,12 @@ class XSoarConnector:
             if payload["type"] == "indicator" and payload["pattern_type"].startswith(
                 "stix"
             ):
-                # stix-shifter has no XSoar target, so its splunk translator
-                # is reused here purely to parse the STIX pattern into
-                # attribute/value pairs
-                translation = stix_translation.StixTranslation()
-
                 # add mapped values
                 try:
+                    # stix-shifter has no XSoar target, so its splunk
+                    # translator is reused here purely to parse the STIX
+                    # pattern into attribute/value pairs
+                    translation = stix_translation.StixTranslation()
                     parsed = translation.translate(
                         "splunk", "parse", "{}", payload["pattern"]
                     )
