@@ -19,6 +19,7 @@ from connectors_sdk.models import (
     Relationship,
     System,
     TLPMarking,
+    Vulnerability,
 )
 from connectors_sdk.models.enums import IncidentSeverity, IncidentType, RelationshipType
 from pydantic import ValidationError
@@ -151,6 +152,8 @@ class WizIssuesProcessor(BaseDataProcessor):
         shared_sent = False
         max_created = self.state.issues_last_created_at
         issues_converted = 0
+        bundles_sent = 0
+        vulnerabilities_sent = 0
 
         for page in data:
             page_objects: list = []
@@ -174,19 +177,40 @@ class WizIssuesProcessor(BaseDataProcessor):
                     page_objects.extend(objects)
                     continue
 
+                vulnerabilities = 0
                 if issue.entity_snapshot is not None:
-                    objects.extend(
-                        self._vulnerabilities.objects_for_asset(
-                            issue.entity_snapshot.id,
-                            systems_cache[issue.entity_snapshot.id],
-                        )
+                    found = self._vulnerabilities.objects_for_asset(
+                        issue.entity_snapshot.id,
+                        systems_cache[issue.entity_snapshot.id],
                     )
+                    vulnerabilities = sum(
+                        1 for obj in found if isinstance(obj, Vulnerability)
+                    )
+                    objects.extend(found)
+                vulnerabilities_sent += vulnerabilities
+
+                self.logger.info(
+                    "[WIZ-CLOUD] Sending an incident with its vulnerabilities",
+                    {
+                        "issue_id": issue.id,
+                        "asset": (
+                            issue.entity_snapshot.name
+                            if issue.entity_snapshot
+                            else None
+                        ),
+                        # Zero when the asset was already scanned this run:
+                        # its vulnerabilities went out with an earlier issue.
+                        "vulnerabilities": vulnerabilities,
+                    },
+                )
                 yield self._with_shared(objects, shared_sent)
                 shared_sent = True
+                bundles_sent += 1
 
             if page_objects:
                 yield self._with_shared(page_objects, shared_sent)
                 shared_sent = True
+                bundles_sent += 1
 
         if issues_converted == 0:
             self.logger.info(
@@ -196,6 +220,15 @@ class WizIssuesProcessor(BaseDataProcessor):
                     if self.state.issues_last_created_at
                     else {}
                 ),
+            )
+        else:
+            self.logger.info(
+                "[WIZ-CLOUD] Import finished",
+                {
+                    "incidents": issues_converted,
+                    "vulnerabilities": vulnerabilities_sent,
+                    "bundles": bundles_sent,
+                },
             )
 
         self._advance_cursor(max_created)

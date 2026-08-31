@@ -79,6 +79,26 @@ def test_queries_an_asset_only_once_per_run(
     assert vulnerabilities_processor._client.paginate.call_count == 1
 
 
+def test_logs_the_counts_for_the_asset(
+    vulnerabilities_processor, system, vulnerability_finding_data
+):
+    vulnerabilities_processor._client.paginate.return_value = iter(
+        [[vulnerability_finding_data, {"id": "broken"}]]
+    )
+
+    vulnerabilities_processor.objects_for_asset("asset-1", system)
+
+    details = next(
+        call.args[1]
+        for call in vulnerabilities_processor._logger.info.call_args_list
+        if "Collected vulnerabilities" in call.args[0]
+    )
+    assert details["asset"] == "tivan-eleonore-vm"
+    assert details["findings_returned"] == 2
+    assert details["vulnerabilities"] == 1
+    assert details["skipped"] == 1
+
+
 # -- failure handling -------------------------------------------------------
 
 

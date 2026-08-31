@@ -128,10 +128,16 @@ class WizVulnerabilitiesProcessor:
             was already queried this run, carries no finding, or failed.
         """
         if asset_id in self._seen_assets:
+            self._logger.debug(
+                "[WIZ-CLOUD] Asset already scanned this run, skipping",
+                {"asset_id": asset_id},
+            )
             return []
         self._seen_assets.add(asset_id)
 
         objects: list = []
+        findings = 0
+        converted = 0
         try:
             for page in self._client.paginate(
                 VULNERABILITIES_QUERY,
@@ -139,6 +145,7 @@ class WizVulnerabilitiesProcessor:
                 connection_key="vulnerabilityFindings",
             ):
                 for raw in page:
+                    findings += 1
                     try:
                         finding = WizVulnerabilityFinding.model_validate(raw)
                     except ValidationError as err:
@@ -147,7 +154,10 @@ class WizVulnerabilitiesProcessor:
                             {"id": raw.get("id"), "error": str(err)},
                         )
                         continue
-                    objects.extend(self._convert(finding, system))
+                    finding_objects = self._convert(finding, system)
+                    if finding_objects:
+                        converted += 1
+                    objects.extend(finding_objects)
         except (WizGraphQLError, RequestException) as err:
             self.failures += 1
             self._logger.error(
@@ -158,6 +168,16 @@ class WizVulnerabilitiesProcessor:
             # and the run will be replayed anyway.
             return []
 
+        self._logger.info(
+            "[WIZ-CLOUD] Collected vulnerabilities for an asset",
+            {
+                "asset_id": asset_id,
+                "asset": system.name,
+                "findings_returned": findings,
+                "vulnerabilities": converted,
+                "skipped": findings - converted,
+            },
+        )
         return objects
 
     def _variables(self, asset_id: str) -> dict:

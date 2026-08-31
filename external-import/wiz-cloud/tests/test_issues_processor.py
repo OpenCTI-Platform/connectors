@@ -205,6 +205,53 @@ class TestInterleavedVulnerabilities:
             isinstance(obj, (OrganizationAuthor, TLPMarking)) for obj in bundles[1]
         )
 
+    def test_each_bundle_is_logged_with_its_vulnerability_count(
+        self, processor, signin_issue_data, empty_description_issue_data
+    ):
+        self._enable(
+            processor,
+            {
+                "8728411e-1a43-55a2-801e-44ffcb5a3dfa": [
+                    Vulnerability(name="CVE-2026-46333"),
+                    Vulnerability(name="CVE-2026-3039"),
+                ]
+            },
+        )
+
+        list(
+            processor.transform(
+                iter([[signin_issue_data, empty_description_issue_data]])
+            )
+        )
+
+        counts = {
+            call.args[1]["asset"]: call.args[1]["vulnerabilities"]
+            for call in processor.logger.info.call_args_list
+            if "Sending an incident" in call.args[0]
+        }
+        assert counts == {"TA-733-INTEG-ING": 0, "tivan-eleonore-vm": 2}
+
+    def test_the_run_totals_are_logged(
+        self, processor, signin_issue_data, empty_description_issue_data
+    ):
+        self._enable(
+            processor,
+            {"8728411e-1a43-55a2-801e-44ffcb5a3dfa": [Vulnerability(name="CVE-1")]},
+        )
+
+        list(
+            processor.transform(
+                iter([[signin_issue_data, empty_description_issue_data]])
+            )
+        )
+
+        summary = next(
+            call.args[1]
+            for call in processor.logger.info.call_args_list
+            if "Import finished" in call.args[0]
+        )
+        assert summary == {"incidents": 2, "vulnerabilities": 1, "bundles": 2}
+
     def test_the_cursor_advances_when_every_fetch_succeeded(
         self, processor, empty_description_issue_data
     ):
