@@ -6,7 +6,7 @@ from typing import Any
 from connector.converter_to_stix import ConverterToStix
 from connector.labels import extract_label_values, parse_actor_labels
 from connector.settings import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
+from pycti import Identity, OpenCTIConnectorHelper
 
 INDICATOR_TYPE = "indicator"
 HANDLED_EVENTS = ("create", "update")
@@ -18,8 +18,10 @@ class MalantaAttributionConnector:
     Malanta's TAXII feed is ingested by OpenCTI's built-in TAXII ingester, which
     applies no transformation. Attribution therefore arrives as flat label
     strings on Indicators (``apt:APT44``) rather than as entities. This connector
-    listens to the platform's event stream and, for each such Indicator, creates
-    the matching Intrusion Set and an ``indicates`` relationship.
+    listens to the platform's event stream and, for each such Indicator *authored by
+    the configured source*, creates the matching Intrusion Set and an ``indicates``
+    relationship. Indicators from other feeds are skipped, so a second source using
+    the same ``apt:`` convention is never attributed to Malanta.
 
     It deliberately does **not** touch Malanta's own infrastructure clusters. An
     ``apt:`` label on an Indicator pointing at a cluster does not make the
@@ -42,6 +44,17 @@ class MalantaAttributionConnector:
         self.converter_to_stix = ConverterToStix(
             author_name=config.malanta_attribution.author_name,
             author_description=config.malanta_attribution.author_description,
+        )
+        # Provenance guard. OpenCTI normalises an identity's STIX id to a
+        # deterministic value derived from its name, and the event stream carries
+        # that normalised id -- not whatever id the upstream feed used. Computing
+        # the same id here lets us match an indicator's author without resolving
+        # anything against the API.
+        source_author = config.malanta_attribution.source_author
+        self.expected_author_ref = (
+            Identity.generate_id(source_author, "organization")
+            if source_author
+            else None
         )
 
     def check_stream_id(self) -> None:
@@ -95,6 +108,17 @@ class MalantaAttributionConnector:
         settings = self.config.malanta_attribution
         indicator_id = indicator.get("id")
 
+        if not self._is_expected_source(indicator):
+            self.helper.connector_logger.debug(
+                "[STREAM] Skipping indicator from another source",
+                {
+                    "indicator_id": indicator_id,
+                    "created_by_ref": indicator.get("created_by_ref"),
+                    "expected": self.expected_author_ref,
+                },
+            )
+            return
+
         confidence = indicator.get("confidence")
         if (
             settings.min_confidence
@@ -134,6 +158,20 @@ class MalantaAttributionConnector:
             "[STREAM] Attribution created",
             {"indicator_id": indicator_id, "actors": actors},
         )
+
+    def _is_expected_source(self, indicator: dict[str, Any]) -> bool:
+        """Check the indicator came from the configured source.
+
+        Several feeds may share a platform, and `apt:` is a plausible label
+        namespace for any of them. Without this check the connector would derive
+        Intrusion Sets from another vendor's labels and credit them to Malanta.
+
+        :param indicator: The Indicator payload from the stream event.
+        :return: True when the indicator should be processed.
+        """
+        if self.expected_author_ref is None:
+            return True  # provenance filtering disabled
+        return indicator.get("created_by_ref") == self.expected_author_ref
 
     def run(self) -> None:
         """Listen to the live stream until the process is stopped."""

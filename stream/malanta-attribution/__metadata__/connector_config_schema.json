@@ -91,6 +91,14 @@
       ],
       "type": "string"
     },
+    "MALANTA_ATTRIBUTION_SOURCE_AUTHOR": {
+      "default": "Malanta.ai",
+      "description": "Only process indicators authored by this organization. Prevents attributing another feed's `apt:` labels to Malanta when several sources are ingested into the same platform. Set to an empty string to process indicators from every source.",
+      "examples": [
+        "Malanta.ai"
+      ],
+      "type": "string"
+    },
     "MALANTA_ATTRIBUTION_AUTHOR_DESCRIPTION": {
       "default": null,
       "description": "Optional description for the author organization.",

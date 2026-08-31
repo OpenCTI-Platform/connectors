@@ -57,6 +57,16 @@ class MalantaAttributionConfig(BaseConfigModel):
         default="Malanta.ai",
         examples=["Malanta.ai"],
     )
+    source_author: str = Field(
+        description=(
+            "Only process indicators authored by this organization. Prevents"
+            " attributing another feed's `apt:` labels to Malanta when several"
+            " sources are ingested into the same platform. Set to an empty string"
+            " to process indicators from every source."
+        ),
+        default="Malanta.ai",
+        examples=["Malanta.ai"],
+    )
     author_description: str | None = Field(
         description="Optional description for the author organization.",
         default=None,

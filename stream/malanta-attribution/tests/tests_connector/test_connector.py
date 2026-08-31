@@ -8,6 +8,10 @@ from connector import ConnectorSettings, MalantaAttributionConnector
 
 INDICATOR_ID = "indicator--0a95e840-5dab-4a71-a74f-5c5ed91a6a76"
 TLP_AMBER = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+# OpenCTI normalises an identity's id from its name; this is what the stream carries
+# for `Malanta.ai`, and what `pycti.Identity.generate_id` produces.
+MALANTA_AUTHOR = "identity--816d93c2-009c-58c9-9bb0-613398a3c6de"
+OTHER_AUTHOR = "identity--11111111-2222-3333-4444-555555555555"
 
 BASE_SETTINGS: dict[str, Any] = {
     "opencti": {"url": "http://localhost:8080", "token": "test-token"},
@@ -56,6 +60,7 @@ def indicator(**overrides: Any) -> dict[str, Any]:
     payload = {
         "id": INDICATOR_ID,
         "type": "indicator",
+        "created_by_ref": MALANTA_AUTHOR,
         "confidence": 73,
         "labels": ["IOC", "apt:APT38", "domain", "source:lazarus.day"],
         "object_marking_refs": [TLP_AMBER],
@@ -195,3 +200,56 @@ def test_custom_label_prefix_is_honoured(helper):
 
     names = {o.name for o in sent_objects(helper) if o.type == "intrusion-set"}
     assert names == {"APT44"}
+
+
+# --- provenance filtering ------------------------------------------------------
+
+
+def test_indicator_from_another_source_is_ignored(connector, helper):
+    """Another feed's `apt:` labels must not be credited to Malanta.
+
+    `apt:` is a plausible namespace for any threat-intel source. Without this
+    guard, a MISP or AlienVault indicator would produce Intrusion Sets stamped
+    `created_by_ref = Malanta.ai`.
+    """
+    connector.process_message(message("create", indicator(created_by_ref=OTHER_AUTHOR)))
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_indicator_without_author_is_ignored(connector, helper):
+    """Provenance cannot be confirmed, so the indicator is skipped."""
+    payload = indicator()
+    payload.pop("created_by_ref")
+    connector.process_message(message("create", payload))
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_indicator_from_expected_source_is_processed(connector, helper):
+    connector.process_message(message("create", indicator()))
+    helper.send_stix2_bundle.assert_called_once()
+
+
+def test_empty_source_author_disables_provenance_filtering(helper):
+    """Operators integrating several sources deliberately can opt out."""
+    connector = MalantaAttributionConnector(
+        config=build_settings({"source_author": ""}), helper=helper
+    )
+    connector.process_message(message("create", indicator(created_by_ref=OTHER_AUTHOR)))
+    helper.send_stix2_bundle.assert_called_once()
+
+
+def test_source_author_is_matched_by_normalised_identity_id(helper):
+    """The guard derives the id from the name, matching what the stream sends."""
+    connector = MalantaAttributionConnector(
+        config=build_settings({"source_author": "Malanta.ai"}), helper=helper
+    )
+    assert connector.expected_author_ref == MALANTA_AUTHOR
+
+
+def test_custom_source_author_changes_the_expected_id(helper):
+    connector = MalantaAttributionConnector(
+        config=build_settings({"source_author": "Some Other Vendor"}), helper=helper
+    )
+    assert connector.expected_author_ref != MALANTA_AUTHOR
+    connector.process_message(message("create", indicator()))
+    helper.send_stix2_bundle.assert_not_called()
