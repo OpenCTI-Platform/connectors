@@ -74,12 +74,16 @@ Incremental behavior: on the first run, issues created within the `since` window
 
 ### Vulnerabilities
 
-When `WIZ_CLOUD_IMPORT_VULNERABILITIES` is enabled, the connector fetches the vulnerability findings (`vulnerabilityFindings`) of every cloud asset referenced by the issues imported during the run. Each finding becomes a `Vulnerability` named after its CVE, linked to the asset's `System` with a `has` relationship.
+When `WIZ_CLOUD_IMPORT_VULNERABILITIES` is enabled, the connector fetches the vulnerability findings (`vulnerabilityFindings`) of the cloud asset **while it converts each issue**, and sends them in the same bundle as that issue. Each finding becomes a `Vulnerability` named after its CVE, linked to the asset's `System` with a `has` relationship.
 
 ```mermaid
 graph LR
-    A[Wiz vulnerabilityFindings<br/>assets seen this run] --> V[Vulnerability<br/>CVE]
-    S[System] -- has --> V
+    A[Wiz issuesV2] --> B[Incident]
+    A --> S[System<br/>entitySnapshot]
+    B -- targets --> S
+    A -. per issue .-> F[Wiz vulnerabilityFindings<br/>assetIdV2 of that issue]
+    F --> V[Vulnerability<br/>CVE]
+    S -- has --> V
 ```
 
 | OpenCTI | Wiz source |
@@ -92,7 +96,9 @@ graph LR
 | Vulnerability external reference | `portalUrl` + finding `id` |
 | Relationship | System `has` Vulnerability, `start_time` from `firstDetectedAt` |
 
-Only the assets seen during the current run are scanned, so a run that imports no issue performs no vulnerability call at all.
+An issue and the vulnerabilities of its resource are therefore committed together, in one bundle, rather than in two separate phases. Only the assets seen during the current run are scanned, and each asset is queried once even when several issues share it, so a run that imports no issue performs no vulnerability call at all.
+
+If a vulnerability fetch fails, the issue is still imported but the incremental cursor is **not** advanced, so the whole window is imported again on the next run. Replaying is harmless because every entity ID is deterministic, whereas advancing would drop those vulnerabilities for good.
 
 **Volume warning:** a single virtual machine commonly carries several hundred findings, and severity filtering removes very few of them. Enable `WIZ_CLOUD_VULNERABILITY_HAS_EXPLOIT` to keep only the vulnerabilities with a known exploit, which is the filter that meaningfully reduces the volume.
 

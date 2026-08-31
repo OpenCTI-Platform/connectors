@@ -11,7 +11,9 @@ the models are exercised here, no I/O.
 """
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock
 
+from connectors_sdk.models import OrganizationAuthor, TLPMarking, Vulnerability
 from wiz_cloud.processors.issues_processor import _utc
 
 
@@ -120,25 +122,107 @@ class TestTransformLogging:
         ]
 
 
-def test_processor_records_asset_ids_in_the_run_context(
-    processor, signin_issue, duplicate_snapshot_issue
-):
-    from wiz_cloud.run_context import WizRunContext
+class TestInterleavedVulnerabilities:
+    """Issues and the vulnerabilities of their resource travel together."""
 
-    context = WizRunContext()
-    processor._run_context = context
+    @staticmethod
+    def _enable(processor, objects_by_asset: dict[str, list]) -> MagicMock:
+        """Attach a fetcher stub returning canned objects per asset.
 
-    cache = {}
-    processor._convert(signin_issue, cache)
-    processor._convert(duplicate_snapshot_issue, cache)
+        Args:
+            processor: The issues processor under test.
+            objects_by_asset: Objects to return for each asset id.
 
-    assert context.asset_ids == [
-        "8728411e-1a43-55a2-801e-44ffcb5a3dfa",
-        "b9e464fc-4b1a-5745-8d30-366690b946b8",
-    ]
+        Returns:
+            The stub, so calls can be asserted.
+        """
+        fetcher = MagicMock()
+        fetcher.failures = 0
+        fetcher.objects_for_asset.side_effect = (
+            lambda asset_id, system: objects_by_asset.get(asset_id, [])
+        )
+        processor._vulnerabilities = fetcher
+        return fetcher
 
+    def test_each_issue_becomes_its_own_bundle(
+        self, processor, signin_issue_data, empty_description_issue_data
+    ):
+        self._enable(processor, {})
 
-def test_processor_works_without_a_run_context(processor, signin_issue):
-    objects = processor._convert(signin_issue, {})
+        bundles = list(
+            processor.transform(
+                iter([[signin_issue_data, empty_description_issue_data]])
+            )
+        )
 
-    assert objects
+        # One page, two issues, two bundles: a page-sized bundle would carry
+        # every finding of every asset at once.
+        assert len(bundles) == 2
+
+    def test_vulnerabilities_ride_in_the_bundle_of_their_issue(
+        self, processor, signin_issue_data, empty_description_issue_data
+    ):
+        marker = Vulnerability(name="CVE-2026-46333")
+        self._enable(processor, {"8728411e-1a43-55a2-801e-44ffcb5a3dfa": [marker]})
+
+        bundles = list(
+            processor.transform(
+                iter([[signin_issue_data, empty_description_issue_data]])
+            )
+        )
+
+        assert not any(obj is marker for obj in bundles[0])
+        assert any(obj is marker for obj in bundles[1])
+
+    def test_the_fetcher_receives_the_system_of_the_issue(
+        self, processor, empty_description_issue_data
+    ):
+        fetcher = self._enable(processor, {})
+
+        list(processor.transform(iter([[empty_description_issue_data]])))
+
+        asset_id, system = fetcher.objects_for_asset.call_args[0]
+        assert asset_id == "8728411e-1a43-55a2-801e-44ffcb5a3dfa"
+        # The relationship must point at the object already in the bundle.
+        assert system.name == "tivan-eleonore-vm"
+
+    def test_author_and_marking_ride_with_the_first_issue_bundle(
+        self, processor, signin_issue_data, empty_description_issue_data
+    ):
+        self._enable(processor, {})
+
+        bundles = list(
+            processor.transform(
+                iter([[signin_issue_data, empty_description_issue_data]])
+            )
+        )
+
+        assert [type(obj).__name__ for obj in bundles[0][:2]] == [
+            "OrganizationAuthor",
+            "TLPMarking",
+        ]
+        assert not any(
+            isinstance(obj, (OrganizationAuthor, TLPMarking)) for obj in bundles[1]
+        )
+
+    def test_the_cursor_advances_when_every_fetch_succeeded(
+        self, processor, empty_description_issue_data
+    ):
+        self._enable(processor, {})
+
+        list(processor.transform(iter([[empty_description_issue_data]])))
+
+        assert processor.state.issues_last_created_at is not None
+
+    def test_the_cursor_is_held_back_when_a_fetch_failed(
+        self, processor, empty_description_issue_data
+    ):
+        fetcher = self._enable(processor, {})
+        fetcher.failures = 1
+
+        list(processor.transform(iter([[empty_description_issue_data]])))
+
+        # Advancing would mark those vulnerabilities as imported for good;
+        # replaying is harmless because every id is deterministic.
+        assert processor.state.issues_last_created_at is None
+        assert processor.logger.warning.called
