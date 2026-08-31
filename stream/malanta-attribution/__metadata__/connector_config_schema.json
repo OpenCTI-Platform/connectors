@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/malanta-attribution_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Malanta Attribution",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "indicator"
+      ],
+      "description": "Entity types processed by the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": false,
+      "description": "Whether to listen for delete events on the live stream. Disabled by default: this connector only adds attribution and does not revoke it.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "MALANTA_ATTRIBUTION_LABEL_PREFIX": {
+      "default": "apt:",
+      "description": "Label namespace treated as threat-actor attribution. Labels not starting with this prefix are ignored.",
+      "examples": [
+        "apt:"
+      ],
+      "type": "string"
+    },
+    "MALANTA_ATTRIBUTION_ACTOR_SEPARATORS": {
+      "default": [
+        ","
+      ],
+      "description": "Characters splitting several actors inside a single label. Malanta occasionally emits comma-joined tokens such as 'apt:APT17,APT5'.",
+      "examples": [
+        ","
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MALANTA_ATTRIBUTION_AUTHOR_NAME": {
+      "default": "Malanta.ai",
+      "description": "Organization credited with the derived Intrusion Sets and relationships. Keep this identical to the feed's author so derived attribution merges with the ingested data.",
+      "examples": [
+        "Malanta.ai"
+      ],
+      "type": "string"
+    },
+    "MALANTA_ATTRIBUTION_AUTHOR_DESCRIPTION": {
+      "default": null,
+      "description": "Optional description for the author organization.",
+      "type": "string"
+    },
+    "MALANTA_ATTRIBUTION_CREATE_INTRUSION_SETS": {
+      "default": true,
+      "description": "Create the Intrusion Set when it does not exist. Disable to emit only relationships towards Intrusion Sets managed elsewhere.",
+      "type": "boolean"
+    },
+    "MALANTA_ATTRIBUTION_MIN_CONFIDENCE": {
+      "default": 0,
+      "description": "Skip indicators whose confidence is below this threshold. 0 processes everything.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID"
+  ],
+  "additionalProperties": true
+}
