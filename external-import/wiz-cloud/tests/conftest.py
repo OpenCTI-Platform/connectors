@@ -13,7 +13,7 @@ from connectors_sdk.models import OrganizationAuthor, System, TLPMarking  # noqa
 from wiz_cloud.models import WizIssue  # noqa: E402
 from wiz_cloud.processors import (  # noqa: E402
     WizIssuesProcessor,
-    WizVulnerabilityFetcher,
+    WizVulnerabilitiesProcessor,
 )
 from wiz_cloud.state import WizConnectorState  # noqa: E402
 
@@ -226,11 +226,11 @@ def processor() -> WizIssuesProcessor:
 
 
 @pytest.fixture
-def fetcher() -> WizVulnerabilityFetcher:
-    """A WizVulnerabilityFetcher with a stubbed client and no I/O."""
+def vulnerabilities_processor() -> WizVulnerabilitiesProcessor:
+    """A WizVulnerabilitiesProcessor with a stubbed client and no I/O."""
     from wiz_cloud.settings import WizCloudConfig
 
-    return WizVulnerabilityFetcher(
+    return WizVulnerabilitiesProcessor(
         client=MagicMock(),
         config=WizCloudConfig(
             api_url="https://api.us17.app.wiz.io/graphql",
