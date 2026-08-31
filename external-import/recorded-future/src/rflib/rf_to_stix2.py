@@ -1228,7 +1228,24 @@ class StixNote:
         self.report_types = self._create_report_types(attr.get("topic", []))
         self.labels = [topic["name"] for topic in attr.get("topic", [])]
         self.attachments = attr["attachments"]
-        for entity in attr.get("note_entities", []):
+        # Recorded Future Analyst Notes carry two entity arrays: "note_entities"
+        # are the primary entities the note is directly about, while
+        # "context_entities" are related/referenced entities (which can include
+        # threat actors) discussed in the note's context but not tagged as
+        # primary. Both need to be converted, or a threat actor mentioned only
+        # in context is silently dropped from the resulting STIX bundle,
+        # producing an incomplete knowledge graph. Entities are deduplicated by
+        # id in case the same entity appears in both arrays.
+        seen_entity_ids = set()
+        all_entities = attr.get("note_entities", []) + attr.get(
+            "context_entities", []
+        )
+        for entity in all_entities:
+            entity_id = entity.get("id")
+            if entity_id is not None:
+                if entity_id in seen_entity_ids:
+                    continue
+                seen_entity_ids.add(entity_id)
             type_ = entity["type"]
             name = entity["name"]
             if self.person_to_ta and type_ == "Person":
