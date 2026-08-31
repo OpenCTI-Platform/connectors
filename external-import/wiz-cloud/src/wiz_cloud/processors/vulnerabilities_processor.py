@@ -154,7 +154,16 @@ class WizVulnerabilitiesProcessor:
                             {"id": raw.get("id"), "error": str(err)},
                         )
                         continue
-                    finding_objects = self._convert(finding, system)
+                    try:
+                        finding_objects = self._convert(finding, system)
+                    except ValidationError as err:
+                        # A single rejected finding must never cost us the
+                        # incident travelling in the same bundle.
+                        self._logger.warning(
+                            "[WIZ-CLOUD] Skipping vulnerability finding rejected by the model",
+                            {"id": raw.get("id"), "error": str(err)},
+                        )
+                        continue
                     if finding_objects:
                         converted += 1
                     objects.extend(finding_objects)
