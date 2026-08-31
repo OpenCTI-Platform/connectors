@@ -765,6 +765,11 @@ class ReportImporter:
             ids = []
             final_objects = []
             for object in observables:
+                if (
+                    "created_by_ref" in object
+                    and object["created_by_ref"] == "Restricted"
+                ):
+                    object["created_by_ref"] = None
                 if object["id"] not in ids:
                     ids.append(object["id"])
                     final_objects.append(object)
