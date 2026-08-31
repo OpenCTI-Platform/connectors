@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "intel471-hunt-connector"
+version = "1.0.0"
+description = "OpenCTI internal enrichment connector for Intel 471 Hunter (Cyborg Security) hunt packages"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Intel 471" }]
+dependencies = [
+    "pycti==7.260824.0",
+    "pydantic>=2.10, <3",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+    "stix2==3.0.1",
+    "requests~=2.32",
+    "PyYAML~=6.0",
+    "python-dateutil~=2.9",
+    # OpenCTI validates sigma patterns with pySigma and rejects the Indicator
+    # (and its relationships) when a rule does not parse, so the connector
+    # checks each rule with the same parser before emitting it.
+    "pysigma~=0.11",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=9.0.3,<10",
+    "requests-mock~=1.12",
+]
+# Kept as an alias so `pip install -e ".[dev]"` (see README) still works.
+dev = ["intel471-hunt-connector[test]"]
+
+[project.scripts]
+intel471-hunt-connector = "src.main:main"
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+filterwarnings = ["ignore::DeprecationWarning"]
