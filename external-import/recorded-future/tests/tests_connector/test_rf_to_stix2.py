@@ -1,5 +1,5 @@
 import json
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pycti import Identity as PyctiIdentity
@@ -295,6 +295,74 @@ def test_analyst_note_report_does_not_reference_the_author():
     assert len(report.object_refs) == 2
 
 
+# Scenario: Building an indicator computes the STIX pattern once and reuses it (issue #7473)
+def test_create_indicator_computes_pattern_once():
+    # Given a valid IPv4 address indicator
+    author = _given_author()
+    tlp = _given_tlp()
+    indicator = _given_ip_indicator("1.1.1.1", author, tlp)
+    # And a spy wrapping the real pattern-creation method
+    with patch.object(
+        indicator, "_create_pattern", wraps=indicator._create_pattern
+    ) as pattern_spy:
+        # When the indicator is created
+        stix_indicator = indicator._create_indicator()
+
+        # Then the pattern is computed only twice: once for the indicator's id/pattern
+        # fields (cached and reused), and once more inside
+        # _add_main_observable_type_to_indicators (a separate call site, unaffected
+        # by this fix)
+        assert (
+            pattern_spy.call_count == 2
+        ), f"Expected _create_pattern to be called twice, got {pattern_spy.call_count}"
+    # And the indicator's pattern and id are both derived from that single value
+    assert stix_indicator.pattern == "[ipv4-addr:value = '1.1.1.1']"
+
+
+# Scenario: Main observable type falls back to "Unknown" when pattern creation fails (issue #7473)
+def test_add_main_observable_type_returns_unknown_when_pattern_creation_fails():
+    # Given an indicator whose name is not a valid IPv4 or IPv6 address
+    author = _given_author()
+    tlp = _given_tlp()
+    indicator = _given_ip_indicator("not-a-valid-ip", author, tlp)
+
+    # When resolving the main observable type
+    observable_type = indicator._add_main_observable_type_to_indicators()
+
+    # Then it falls back to "Unknown" instead of raising
+    assert observable_type == "Unknown"
+
+
+# Scenario: A single unsupported detection-rule attachment is skipped without aborting note conversion (issue #7473)
+def test_from_json_skips_invalid_attachment_and_keeps_processing_valid_ones():
+    # Given a StixNote
+    note = _given_stix_note()
+    # And an analyst note with one unsupported attachment (docx) and one valid YARA attachment
+    note_json = _given_analyst_note_json_with_attachments(
+        [
+            {"name": "malware.docx", "type": "docx", "content": "not a rule"},
+            {
+                "name": "rule.yar",
+                "type": "yara",
+                "content": "rule test { condition: true }",
+            },
+        ]
+    )
+
+    # When the note is converted from JSON
+    _when_note_converted_from_json(note, note_json)
+
+    # Then a warning is logged for the unsupported attachment
+    note.helper.connector_logger.warning.assert_called_once()
+    warning_message = note.helper.connector_logger.warning.call_args[0][0]
+    assert "malware.docx" in warning_message
+    # And the valid attachment still produced a STIX indicator
+    detection_rule_indicators = [
+        obj for obj in note.objects if getattr(obj, "pattern_type", None) == "yara"
+    ]
+    assert len(detection_rule_indicators) == 1
+
+
 # ── Given helpers ────────────────────────────────────────────────────────────
 
 
@@ -341,6 +409,13 @@ def _given_analyst_note_json():
             ],
         },
     }
+
+
+def _given_analyst_note_json_with_attachments(attachments):
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["attachments"] = attachments
+    note_json["attributes"]["note_entities"] = []
+    return note_json
 
 
 def _given_vuln_risk_row(risk, threat_actor_name):
