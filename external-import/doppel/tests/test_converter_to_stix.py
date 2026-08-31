@@ -853,6 +853,37 @@ def test_existing_indicator_refreshes_source_owned_fields_and_reference(converte
 
 
 @pytest.mark.parametrize(
+    ("reference_result", "reference_error", "expected_message"),
+    [
+        ({}, None, "returned no id"),
+        (None, RuntimeError("OpenCTI unavailable"), "OpenCTI unavailable"),
+    ],
+)
+def test_existing_indicator_external_reference_failure_aborts_replay(
+    converter, reference_result, reference_error, expected_message
+):
+    """A partial refresh must be retried instead of advancing connector state."""
+    alert = _domains_alert(
+        alert_id="alert_reference_retry",
+        queue_state="actioned",
+    )
+    existing_indicator = {
+        "id": "internal-indicator-id",
+        "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "objectLabel": [],
+    }
+    converter.helper.api.indicator.list.return_value = [existing_indicator]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.external_reference.create.return_value = reference_result
+    converter.helper.api.external_reference.create.side_effect = reference_error
+
+    with pytest.raises(RuntimeError, match=expected_message):
+        converter.convert_alerts_to_stix([alert])
+
+    converter.helper.api.stix_domain_object.add_external_reference.assert_not_called()
+
+
+@pytest.mark.parametrize(
     ("severity", "expected_severity"),
     [
         ("high", "high"),

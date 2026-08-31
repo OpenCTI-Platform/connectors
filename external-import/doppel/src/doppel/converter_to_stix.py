@@ -680,11 +680,10 @@ class ConverterToStix:
                     else None
                 )
                 if not external_reference_id:
-                    self.helper.connector_logger.warning(
-                        "[DoppelConverter] External reference upsert returned no id",
-                        meta={"alert_id": alert.get("id"), "object_id": object_id},
+                    raise RuntimeError(
+                        "OpenCTI external reference upsert returned no id "
+                        f"for Doppel alert {alert.get('id')}"
                     )
-                    continue
                 self.helper.api.stix_domain_object.add_external_reference(
                     id=object_id,
                     external_reference_id=external_reference_id,
@@ -698,6 +697,7 @@ class ConverterToStix:
                         "error": str(e),
                     },
                 )
+                raise
 
     def _handle_grouping_case_creation(self, alert, observables, stix_objects):
         """
