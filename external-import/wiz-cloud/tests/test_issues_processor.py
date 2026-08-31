@@ -127,7 +127,7 @@ class TestInterleavedVulnerabilities:
 
     @staticmethod
     def _enable(processor, objects_by_asset: dict[str, list]) -> MagicMock:
-        """Attach a fetcher stub returning canned objects per asset.
+        """Attach a vulnerabilities processor stub returning canned objects per asset.
 
         Args:
             processor: The issues processor under test.
@@ -136,13 +136,13 @@ class TestInterleavedVulnerabilities:
         Returns:
             The stub, so calls can be asserted.
         """
-        fetcher = MagicMock()
-        fetcher.failures = 0
-        fetcher.objects_for_asset.side_effect = (
+        vulnerabilities = MagicMock()
+        vulnerabilities.failures = 0
+        vulnerabilities.objects_for_asset.side_effect = (
             lambda asset_id, system: objects_by_asset.get(asset_id, [])
         )
-        processor._vulnerabilities = fetcher
-        return fetcher
+        processor._vulnerabilities = vulnerabilities
+        return vulnerabilities
 
     def test_each_issue_becomes_its_own_bundle(
         self, processor, signin_issue_data, empty_description_issue_data
@@ -174,14 +174,14 @@ class TestInterleavedVulnerabilities:
         assert not any(obj is marker for obj in bundles[0])
         assert any(obj is marker for obj in bundles[1])
 
-    def test_the_fetcher_receives_the_system_of_the_issue(
+    def test_the_vulnerabilities_processor_receives_the_system_of_the_issue(
         self, processor, empty_description_issue_data
     ):
-        fetcher = self._enable(processor, {})
+        vulnerabilities = self._enable(processor, {})
 
         list(processor.transform(iter([[empty_description_issue_data]])))
 
-        asset_id, system = fetcher.objects_for_asset.call_args[0]
+        asset_id, system = vulnerabilities.objects_for_asset.call_args[0]
         assert asset_id == "8728411e-1a43-55a2-801e-44ffcb5a3dfa"
         # The relationship must point at the object already in the bundle.
         assert system.name == "tivan-eleonore-vm"
@@ -217,8 +217,8 @@ class TestInterleavedVulnerabilities:
     def test_the_cursor_is_held_back_when_a_fetch_failed(
         self, processor, empty_description_issue_data
     ):
-        fetcher = self._enable(processor, {})
-        fetcher.failures = 1
+        vulnerabilities = self._enable(processor, {})
+        vulnerabilities.failures = 1
 
         list(processor.transform(iter([[empty_description_issue_data]])))
 

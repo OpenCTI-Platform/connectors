@@ -1,10 +1,9 @@
 """Vulnerability findings fetched for the asset of a single issue.
 
-Despite its name, which follows the file naming of this package, this is a
-collaborator of the issues processor rather than a ``BaseDataProcessor``
-registered with the SDK: an issue and the vulnerabilities of the resource it
-was raised on are converted together and sent in the same bundle, so the two
-can never be committed apart.
+Unlike ``WizIssuesProcessor`` this is not a ``BaseDataProcessor`` registered
+with the SDK: it is driven by the issues processor, so that an issue and the
+vulnerabilities of the resource it was raised on are converted together and
+sent in the same bundle, and the two can never be committed apart.
 
 Each finding becomes a Vulnerability keyed on its CVE id, linked with a has
 relationship to the System the issue already built for that asset.
@@ -80,7 +79,7 @@ def _cvss_severity(severity: str | None) -> CvssSeverity | None:
         return None
 
 
-class WizVulnerabilityFetcher:
+class WizVulnerabilitiesProcessor:
     """Fetch and convert the vulnerabilities of one asset at a time.
 
     Args:
