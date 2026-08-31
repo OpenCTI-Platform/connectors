@@ -24,7 +24,7 @@ from connectors_sdk.models.enums import IncidentSeverity, IncidentType, Relation
 from pydantic import ValidationError
 from wiz_cloud.client_api import WizApiClient
 from wiz_cloud.models import WizEntitySnapshot, WizIssue
-from wiz_cloud.processors.vulnerabilities_processor import WizVulnerabilityFetcher
+from wiz_cloud.processors.vulnerabilities_processor import WizVulnerabilitiesProcessor
 
 ISSUES_QUERY = (
     resources.files("wiz_cloud.queries").joinpath("issues.graphql").read_text("utf-8")
@@ -51,7 +51,7 @@ def _utc(dt: datetime) -> str:
 class WizIssuesProcessor(BaseDataProcessor):
     # Set in post_init() when vulnerability import is enabled. Declared here
     # so conversion works on a processor whose post_init() was skipped.
-    _vulnerabilities: WizVulnerabilityFetcher | None = None
+    _vulnerabilities: WizVulnerabilitiesProcessor | None = None
 
     # -- lifecycle -----------------------------------------------------------
 
@@ -75,9 +75,9 @@ class WizIssuesProcessor(BaseDataProcessor):
         self._marking = TLPMarking(level=self._config.marking)
         # Built here rather than in __init__ because it needs the settings and
         # shares the client, so both queries ride on a single access token.
-        self._vulnerabilities: WizVulnerabilityFetcher | None = None
+        self._vulnerabilities: WizVulnerabilitiesProcessor | None = None
         if self._config.import_vulnerabilities:
-            self._vulnerabilities = WizVulnerabilityFetcher(
+            self._vulnerabilities = WizVulnerabilitiesProcessor(
                 client=self._client,
                 config=self._config,
                 logger=self.logger,
