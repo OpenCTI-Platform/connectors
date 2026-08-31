@@ -1,14 +1,17 @@
-"""Processor turning Wiz vulnerability findings into OpenCTI Vulnerabilities.
+"""Vulnerability findings fetched for the asset of a single issue.
 
-Each finding becomes a Vulnerability keyed on its CVE id, linked to the
-System it was found on with a has relationship. Only the assets referenced by
-the issues imported during the current run are scanned.
+Despite its name, which follows the file naming of this package, this is a
+collaborator of the issues processor rather than a ``BaseDataProcessor``
+registered with the SDK: an issue and the vulnerabilities of the resource it
+was raised on are converted together and sent in the same bundle, so the two
+can never be committed apart.
+
+Each finding becomes a Vulnerability keyed on its CVE id, linked with a has
+relationship to the System the issue already built for that asset.
 """
 
-from collections.abc import Iterator
 from importlib import resources
 
-from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import (
     ExternalReference,
     OrganizationAuthor,
@@ -21,18 +24,14 @@ from connectors_sdk.models.enums import CvssSeverity, RelationshipType
 from pydantic import ValidationError
 from requests.exceptions import RequestException
 from wiz_cloud.client_api import WizApiClient, WizGraphQLError
-from wiz_cloud.models import WizVulnerabilityFinding, WizVulnerableAsset
-from wiz_cloud.run_context import WizRunContext, batched
+from wiz_cloud.models import WizVulnerabilityFinding
+from wiz_cloud.settings import WizCloudConfig
 
 VULNERABILITIES_QUERY = (
     resources.files("wiz_cloud.queries")
     .joinpath("vulnerability_findings.graphql")
     .read_text("utf-8")
 )
-
-# assetIdV2.equals takes a list, so assets are queried in batches rather than
-# one request per asset.
-ASSET_BATCH_SIZE = 50
 
 
 def _ratio(percentage: float | None) -> float | None:
@@ -81,174 +80,125 @@ def _cvss_severity(severity: str | None) -> CvssSeverity | None:
         return None
 
 
-class WizVulnerabilitiesProcessor(BaseDataProcessor):
-    """Import vulnerability findings for the assets seen in the current run.
+class WizVulnerabilityFetcher:
+    """Fetch and convert the vulnerabilities of one asset at a time.
 
     Args:
-        run_context: Context populated by the issues processor, holding the
-            asset ids to scan.
+        client: Wiz API client, shared with the issues processor so a single
+            access token serves both queries.
+        config: The connector configuration.
+        logger: The connector logger.
+        author: Author attached to every emitted object.
+        marking: Marking attached to every emitted object.
     """
 
-    def __init__(self, run_context: WizRunContext) -> None:
-        self._run_context = run_context
+    def __init__(
+        self,
+        client: WizApiClient,
+        config: WizCloudConfig,
+        logger,
+        author: OrganizationAuthor,
+        marking: TLPMarking,
+    ) -> None:
+        self._client = client
+        self._config = config
+        self._logger = logger
+        self._author = author
+        self._marking = marking
+        # Assets already queried during this run. The same resource backs
+        # several issues, and findings convert to deterministic ids, so
+        # querying it twice would send byte-identical objects for nothing.
+        self._seen_assets: set[str] = set()
+        self.failures = 0
 
-    # -- lifecycle -----------------------------------------------------------
+    def objects_for_asset(self, asset_id: str, system: System) -> list:
+        """Convert every vulnerability of one asset into bundle objects.
 
-    def post_init(self) -> None:
-        """Build the Wiz client and the objects shared by every bundle.
-
-        Called by the SDK once dependencies are injected, so settings are
-        available here but not in __init__.
-        """
-        self._config = self.settings.wiz_cloud
-        self._client = WizApiClient(
-            base_url=str(self._config.api_url),
-            auth_url=str(self._config.auth_url),
-            client_id=self._config.client_id.get_secret_value(),
-            client_secret=self._config.client_secret.get_secret_value(),
-            timeout=60,
-            max_retries=3,
-            backoff_factor=2.0,
-        )
-        self._author = OrganizationAuthor(name="Wiz")
-        self._marking = TLPMarking(level=self._config.marking)
-
-    # -- collect -------------------------------------------------------------
-
-    def collect(self) -> Iterator[list[dict]]:
-        """Fetch the vulnerability findings of the assets seen this run.
-
-        Asset ids are batched, and each batch is paginated to exhaustion. A
-        Wiz failure is logged and swallowed: the issue bundles of this run are
-        already sent and must not be discarded.
-
-        Yields:
-            Lists of raw finding dicts, one per API page.
-        """
-        asset_ids = self._run_context.asset_ids
-        if not asset_ids:
-            self.logger.info(
-                "[WIZ-CLOUD] No asset to scan, skipping vulnerability import"
-            )
-            return
-
-        self.work_name = f"Wiz Cloud vulnerabilities import for {len(asset_ids)} assets"
-        self.logger.info(
-            "[WIZ-CLOUD] Collecting vulnerabilities",
-            {
-                "assets": len(asset_ids),
-                "severity": self._config.vulnerability_severity,
-                "status": self._config.vulnerability_status,
-                "has_exploit": self._config.vulnerability_has_exploit,
-            },
-        )
-
-        for batch in batched(asset_ids, ASSET_BATCH_SIZE):
-            filter_by: dict = {
-                "assetIdV2": {"equals": batch},
-                "severity": list(self._config.vulnerability_severity),
-                "status": list(self._config.vulnerability_status),
-            }
-            if self._config.vulnerability_has_exploit:
-                filter_by["hasExploit"] = True
-
-            variables = {
-                "first": self._config.page_size,
-                "after": None,
-                "orderBy": {"field": "CREATED_AT", "direction": "DESC"},
-                "filterBy": filter_by,
-            }
-            try:
-                yield from self._client.paginate(
-                    VULNERABILITIES_QUERY,
-                    variables,
-                    connection_key="vulnerabilityFindings",
-                )
-            except (WizGraphQLError, RequestException) as err:
-                self.logger.error(
-                    "[WIZ-CLOUD] Failed to collect vulnerabilities for an asset batch",
-                    {"assets": len(batch), "error": str(err)},
-                )
-
-    # -- transform -----------------------------------------------------------
-
-    def transform(self, data: Iterator[list[dict]]) -> Iterator[list]:
-        """Convert raw finding pages into bundle objects.
-
-        Unparseable findings are logged and skipped rather than failing the
-        run, so one bad node cannot sink a whole page.
+        A Wiz failure is logged and counted rather than raised: the issue this
+        asset belongs to is still worth importing. The count is what tells the
+        issues processor to hold the cursor back, so the window is replayed on
+        the next run instead of being silently skipped.
 
         Args:
-            data: Pages of raw finding dicts yielded by collect().
+            asset_id: The entitySnapshot id of the cloud resource.
+            system: The System the issues processor built for that asset, so
+                the relationship points at the very object in the bundle.
 
-        Yields:
-            Lists of SDK objects, one bundle per non-empty page.
+        Returns:
+            Vulnerabilities and their has relationships. Empty when the asset
+            was already queried this run, carries no finding, or failed.
         """
-        # Run-scoped caches: an asset carries hundreds of findings, and
-        # author/marking must be sent once, not once per page.
-        systems_cache: dict[str, System] = {}
-        shared_sent = False
+        if asset_id in self._seen_assets:
+            return []
+        self._seen_assets.add(asset_id)
 
-        for page in data:
-            objects: list = []
+        objects: list = []
+        try:
+            for page in self._client.paginate(
+                VULNERABILITIES_QUERY,
+                self._variables(asset_id),
+                connection_key="vulnerabilityFindings",
+            ):
+                for raw in page:
+                    try:
+                        finding = WizVulnerabilityFinding.model_validate(raw)
+                    except ValidationError as err:
+                        self._logger.warning(
+                            "[WIZ-CLOUD] Skipping unparseable vulnerability finding",
+                            {"id": raw.get("id"), "error": str(err)},
+                        )
+                        continue
+                    objects.extend(self._convert(finding, system))
+        except (WizGraphQLError, RequestException) as err:
+            self.failures += 1
+            self._logger.error(
+                "[WIZ-CLOUD] Failed to collect vulnerabilities for an asset",
+                {"asset_id": asset_id, "error": str(err)},
+            )
+            # Partial objects are dropped: half an asset is worse than none,
+            # and the run will be replayed anyway.
+            return []
 
-            for raw in page:
-                try:
-                    finding = WizVulnerabilityFinding.model_validate(raw)
-                except ValidationError as err:
-                    self.logger.warning(
-                        "[WIZ-CLOUD] Skipping unparseable vulnerability finding",
-                        {"id": raw.get("id"), "error": str(err)},
-                    )
-                    continue
+        return objects
 
-                objects.extend(self._convert(finding, systems_cache))
-
-            if not objects:
-                continue
-
-            # Author and marking ride along with the first bundle that
-            # actually carries vulnerabilities, never on their own.
-            if not shared_sent:
-                objects = [self._author, self._marking, *objects]
-                shared_sent = True
-
-            yield objects
+    def _variables(self, asset_id: str) -> dict:
+        filter_by: dict = {
+            "assetIdV2": {"equals": [asset_id]},
+            "severity": list(self._config.vulnerability_severity),
+            "status": list(self._config.vulnerability_status),
+        }
+        if self._config.vulnerability_has_exploit:
+            filter_by["hasExploit"] = True
+        return {
+            "first": self._config.page_size,
+            "after": None,
+            "orderBy": {"field": "CREATED_AT", "direction": "DESC"},
+            "filterBy": filter_by,
+        }
 
     # -- conversion ----------------------------------------------------------
 
-    def _convert(
-        self, finding: WizVulnerabilityFinding, systems_cache: dict[str, System]
-    ) -> list:
+    def _convert(self, finding: WizVulnerabilityFinding, system: System) -> list:
         """Convert one finding into its bundle objects.
 
         Args:
             finding: Parsed Wiz vulnerability finding.
-            systems_cache: Systems already built during this run, keyed by
-                asset id, so an asset carrying hundreds of findings is emitted
-                once.
+            system: The System carrying the vulnerability.
 
         Returns:
-            The Vulnerability, the has Relationship, and the System when it
-            was not emitted yet. An empty list when the finding carries no CVE
-            id or no asset, since neither can be linked.
+            The Vulnerability and its has Relationship, or an empty list when
+            the finding carries no CVE id and so cannot be keyed.
         """
-        if not finding.name or finding.vulnerable_asset is None:
-            self.logger.warning(
-                "[WIZ-CLOUD] Skipping finding without a CVE id or an asset",
+        if not finding.name:
+            self._logger.warning(
+                "[WIZ-CLOUD] Skipping finding without a CVE id",
                 {"id": finding.id},
             )
             return []
 
-        objects: list = []
         vulnerability = self._vulnerability(finding)
-        objects.append(vulnerability)
-
-        system, is_new = self._system_for(finding.vulnerable_asset, systems_cache)
-        if is_new:
-            objects.append(system)
-
-        objects.append(
+        return [
+            vulnerability,
             Relationship(
                 type=RelationshipType.HAS,
                 source=system,
@@ -262,9 +212,8 @@ class WizVulnerabilitiesProcessor(BaseDataProcessor):
                 # so lastDetectedAt would mint a new relationship every run.
                 author=self._author,
                 markings=[self._marking],
-            )
-        )
-        return objects
+            ),
+        ]
 
     def _vulnerability(self, finding: WizVulnerabilityFinding) -> Vulnerability:
         cvss_v2 = finding.cvss_v2
@@ -341,31 +290,3 @@ class WizVulnerabilitiesProcessor(BaseDataProcessor):
                 )
             )
         return references
-
-    def _system_for(
-        self, asset: WizVulnerableAsset, cache: dict[str, System]
-    ) -> tuple[System, bool]:
-        # The name matches the issue entitySnapshot name, so this System
-        # resolves to the entity the issues processor already created.
-        if asset.id in cache:
-            return cache[asset.id], False
-
-        description_parts = [
-            part
-            for part in (
-                asset.type,
-                asset.cloud_platform,
-                asset.region or None,  # "" observed in payloads
-                asset.provider_unique_id or None,
-            )
-            if part
-        ]
-        system = System(
-            name=asset.name,
-            description=" | ".join(description_parts) or None,
-            labels=[f"{key}={value}" for key, value in asset.tags.items()],
-            author=self._author,
-            markings=[self._marking],
-        )
-        cache[asset.id] = system
-        return system, True

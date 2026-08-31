@@ -9,13 +9,12 @@ import pytest
 # Add src/ to path so we can import the connector package
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from connectors_sdk.models import OrganizationAuthor, TLPMarking  # noqa: E402
+from connectors_sdk.models import OrganizationAuthor, System, TLPMarking  # noqa: E402
 from wiz_cloud.models import WizIssue  # noqa: E402
 from wiz_cloud.processors import (  # noqa: E402
     WizIssuesProcessor,
-    WizVulnerabilitiesProcessor,
+    WizVulnerabilityFetcher,
 )
-from wiz_cloud.run_context import WizRunContext  # noqa: E402
 from wiz_cloud.state import WizConnectorState  # noqa: E402
 
 
@@ -227,25 +226,28 @@ def processor() -> WizIssuesProcessor:
 
 
 @pytest.fixture
-def vulnerabilities_processor() -> WizVulnerabilitiesProcessor:
-    """A WizVulnerabilitiesProcessor with a stubbed client and no I/O.
-
-    post_init() builds the HTTP client and reads settings, so it is bypassed:
-    the config, client, author, marking, logger and state it would set are
-    provided directly.
-    """
+def fetcher() -> WizVulnerabilityFetcher:
+    """A WizVulnerabilityFetcher with a stubbed client and no I/O."""
     from wiz_cloud.settings import WizCloudConfig
 
-    context = WizRunContext()
-    processor = WizVulnerabilitiesProcessor(run_context=context)
-    processor._config = WizCloudConfig(
-        api_url="https://api.us17.app.wiz.io/graphql",
-        client_id="id",
-        client_secret="secret",
+    return WizVulnerabilityFetcher(
+        client=MagicMock(),
+        config=WizCloudConfig(
+            api_url="https://api.us17.app.wiz.io/graphql",
+            client_id="id",
+            client_secret="secret",
+        ),
+        logger=MagicMock(),
+        author=OrganizationAuthor(name="Wiz"),
+        marking=TLPMarking(level="amber+strict"),
     )
-    processor._client = MagicMock()
-    processor._author = OrganizationAuthor(name="Wiz")
-    processor._marking = TLPMarking(level="amber+strict")
-    processor.logger = MagicMock()
-    processor.state = WizConnectorState()
-    return processor
+
+
+@pytest.fixture
+def system() -> System:
+    """The System an issue would have built for its cloud resource."""
+    return System(
+        name="tivan-eleonore-vm",
+        author=OrganizationAuthor(name="Wiz"),
+        markings=[TLPMarking(level="amber+strict")],
+    )
