@@ -2,6 +2,7 @@
 
 import pytest
 from connectors_sdk.models import Relationship, System, Vulnerability
+from pydantic import ValidationError
 from wiz_cloud.client_api import WizGraphQLError
 from wiz_cloud.settings import WizCloudConfig
 
@@ -225,3 +226,27 @@ def test_skips_a_finding_without_a_cve_id(
     objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     assert objects == []
+
+
+def test_skips_a_finding_the_sdk_model_rejects(
+    vulnerabilities_processor, system, vulnerability_finding_data
+):
+    """A finding the SDK refuses must not cost us the rest of the asset."""
+    rejected = {**vulnerability_finding_data, "id": "rejected"}
+    vulnerabilities_processor._client.paginate.return_value = iter(
+        [[rejected, vulnerability_finding_data]]
+    )
+    convert = vulnerabilities_processor._convert
+
+    def fail_on_the_first(finding, target):
+        if finding.id == "rejected":
+            raise ValidationError.from_exception_data("Vulnerability", [])
+        return convert(finding, target)
+
+    vulnerabilities_processor._convert = fail_on_the_first
+
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
+
+    assert len(_of_type(objects, Vulnerability)) == 1
+    assert vulnerabilities_processor._logger.warning.called
+    assert vulnerabilities_processor.failures == 0
