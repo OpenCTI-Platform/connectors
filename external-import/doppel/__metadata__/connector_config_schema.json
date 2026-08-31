@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://www.filigran.io/connectors/connector_config.schema.json",
+  "$id": "https://www.filigran.io/connectors/doppel_config.schema.json",
   "type": "object",
   "properties": {
     "OPENCTI_URL": {

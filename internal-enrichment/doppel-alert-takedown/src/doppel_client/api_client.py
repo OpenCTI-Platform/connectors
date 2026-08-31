@@ -31,8 +31,9 @@ class DoppelClient:
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
             base_url (HttpUrl): The Doppel API base URL.
-            api_key (str): The Doppel API key (`x-api-key` header).
-            user_api_key (str): The Doppel user API key (`x-user-api-key` header).
+            api_key (str | None): Doppel API key required for V1; omit for V2.
+            user_api_key (str | None): Doppel user API key required for V1; omit
+                for V2.
             api_version (str): Doppel API version (`v1` or `v2`).
             client_id (str | None): Doppel OAuth client ID for V2.
             client_secret (str | None): Doppel OAuth client secret for V2.
