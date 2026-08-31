@@ -71,17 +71,13 @@
       "type": "string"
     },
     "MALANTA_ATTRIBUTION_ACTOR_SEPARATORS": {
-      "default": [
-        ","
-      ],
-      "description": "Characters splitting several actors inside a single label. Malanta occasionally emits comma-joined tokens such as 'apt:APT17,APT5'.",
+      "default": ",",
+      "description": "Characters splitting several actors inside a single label. Each character is treated as a separator, so ',;' splits on both. Malanta occasionally emits comma-joined tokens such as 'apt:APT17,APT5'. Deliberately a plain string rather than a list: a comma-separated list type cannot represent a comma as a value.",
       "examples": [
-        ","
+        ",",
+        ",;"
       ],
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
+      "type": "string"
     },
     "MALANTA_ATTRIBUTION_AUTHOR_NAME": {
       "default": "Malanta.ai",

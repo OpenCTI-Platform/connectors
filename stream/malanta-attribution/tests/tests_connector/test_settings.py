@@ -76,7 +76,7 @@ def test_settings_defaults_are_applied():
 
     assert settings.connector.name == "Malanta Attribution"
     assert settings.malanta_attribution.label_prefix == "apt:"
-    assert settings.malanta_attribution.actor_separators == [","]
+    assert settings.malanta_attribution.actor_separators == ","
     assert settings.malanta_attribution.author_name == "Malanta.ai"
     assert settings.malanta_attribution.create_intrusion_sets is True
     assert settings.malanta_attribution.min_confidence == 0
@@ -151,3 +151,60 @@ def test_missing_live_stream_id_is_rejected():
                 "connector": {"id": "connector-id", "scope": "indicator"},
             }
         )
+
+
+# --- regression: separators configured as a string ---------------------------
+
+
+@pytest.mark.parametrize(
+    "configured, expected",
+    [
+        pytest.param(",", ",", id="single_comma"),
+        pytest.param(",;", ",;", id="comma_and_semicolon"),
+        pytest.param("|", "|", id="pipe_only"),
+    ],
+)
+def test_actor_separators_survives_string_configuration(configured, expected):
+    """A comma must survive being configured as a string.
+
+    Regression: this field was previously typed `ListFromString`, which splits
+    its own input on commas. Configuring `actor_separators: ","` -- exactly what
+    config.yml.sample and any env var produce -- validated to an empty list, so
+    comma-joined tokens like `apt:APT17,APT5` were silently left unsplit. The
+    unit tests missed it because they only ever exercised the Python default,
+    which is a list and bypasses the validator.
+    """
+    settings = make_settings(
+        {
+            "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+            "connector": {
+                "id": "connector-id",
+                "scope": "indicator",
+                "live_stream_id": "live",
+            },
+            "malanta_attribution": {"actor_separators": configured},
+        }
+    )
+    assert settings.malanta_attribution.actor_separators == expected
+
+
+def test_comma_joined_token_splits_with_string_configured_separators():
+    """End-to-end of the above: the D8 token must actually split."""
+    from connector.labels import parse_actor_labels
+
+    settings = make_settings(
+        {
+            "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+            "connector": {
+                "id": "connector-id",
+                "scope": "indicator",
+                "live_stream_id": "live",
+            },
+            "malanta_attribution": {"actor_separators": ","},
+        }
+    )
+    actors = parse_actor_labels(
+        ["apt:APT17,APT5"],
+        separators=settings.malanta_attribution.actor_separators,
+    )
+    assert actors == ["APT17", "APT5"]

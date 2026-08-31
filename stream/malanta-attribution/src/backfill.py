@@ -19,6 +19,7 @@ import argparse
 import json
 import os
 import sys
+import uuid
 
 from connector.converter_to_stix import ConverterToStix
 from connector.labels import parse_actor_labels
@@ -82,7 +83,7 @@ def main() -> int:
 
     api = OpenCTIApiClient(url, token, log_level="error")
     converter = ConverterToStix(author_name=args.author_name)
-    separators = [s for s in args.actor_separators.split(",") if s] or [","]
+    separators = args.actor_separators or ","
     # Same provenance guard as the live connector: OpenCTI normalises an identity's
     # STIX id from its name, so the expected reference can be derived locally.
     expected_author = (
@@ -132,7 +133,7 @@ def main() -> int:
         if not args.dry_run:
             bundle = {
                 "type": "bundle",
-                "id": f"bundle--backfill-{entity.get('id')}",
+                "id": f"bundle--{uuid.uuid4()}",
                 "objects": [json.loads(o.serialize()) for o in objects],
             }
             api.stix2.import_bundle_from_json(json.dumps(bundle), update=True)

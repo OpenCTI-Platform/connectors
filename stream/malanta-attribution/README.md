@@ -94,7 +94,7 @@ manual deployment).
 | Parameter             | config.yml            | Docker environment variable                    | Default     | Mandatory | Description                                                                                          |
 |-----------------------|-----------------------|------------------------------------------------|-------------|-----------|------------------------------------------------------------------------------------------------------|
 | Label Prefix          | label_prefix          | `MALANTA_ATTRIBUTION_LABEL_PREFIX`             | `apt:`      | No        | Label namespace treated as attribution. Labels without this prefix are ignored.                       |
-| Actor Separators      | actor_separators      | `MALANTA_ATTRIBUTION_ACTOR_SEPARATORS`         | `,`         | No        | Characters splitting several actors inside one label (see [Behavior](#behavior)).                     |
+| Actor Separators      | actor_separators      | `MALANTA_ATTRIBUTION_ACTOR_SEPARATORS`         | `,`         | No        | Characters splitting several actors inside one label; each character is a separator, so `,;` splits on both (see [Behavior](#behavior)). |
 | Author Name           | author_name           | `MALANTA_ATTRIBUTION_AUTHOR_NAME`              | `Malanta.ai`| No        | Organization credited with the derived objects. Keep identical to the feed's author so they merge.    |
 | Author Description    | author_description    | `MALANTA_ATTRIBUTION_AUTHOR_DESCRIPTION`       |             | No        | Optional description for that organization.                                                           |
 | Source Author         | source_author         | `MALANTA_ATTRIBUTION_SOURCE_AUTHOR`            | `Malanta.ai`| No        | Only process indicators authored by this organization. Prevents crediting another feed's `apt:` labels to Malanta. Empty string processes every source. |
@@ -220,7 +220,7 @@ is a no-op**.
 |---|---|---|
 | `--dry-run` | off | Report what would be created without writing. |
 | `--label-prefix` | `apt:` | Must match `MALANTA_ATTRIBUTION_LABEL_PREFIX`. |
-| `--actor-separators` | `,` | Must match `MALANTA_ATTRIBUTION_ACTOR_SEPARATORS`. |
+| `--actor-separators` | `,` | Must match `MALANTA_ATTRIBUTION_ACTOR_SEPARATORS`. Each character is a separator. |
 | `--author-name` | `Malanta.ai` | Must match `MALANTA_ATTRIBUTION_AUTHOR_NAME`, or derived objects will not merge. |
 | `--source-author` | `Malanta.ai` | Must match `MALANTA_ATTRIBUTION_SOURCE_AUTHOR`. Empty string backfills every source. |
 

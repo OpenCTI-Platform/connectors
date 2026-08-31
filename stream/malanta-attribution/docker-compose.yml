@@ -1,17 +1,17 @@
 version: '3'
 services:
   connector-malanta-attribution:
-    image: opencti/connector-malanta-attribution:6.9.0
+    image: opencti/connector-malanta-attribution:latest
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_TOKEN=ChangeMe
       # Common parameters for connectors of type STREAM
-      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Malanta Attribution # optional (default: 'Malanta Attribution')
       - CONNECTOR_SCOPE=indicator # optional (default: 'indicator')
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
-      - CONNECTOR_LIVE_STREAM_ID=CHANGEME # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=false # optional (default: false)
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
       # Custom parameters for connector-malanta-attribution

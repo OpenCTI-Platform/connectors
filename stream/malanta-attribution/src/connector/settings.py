@@ -40,13 +40,16 @@ class MalantaAttributionConfig(BaseConfigModel):
         default="apt:",
         examples=["apt:"],
     )
-    actor_separators: ListFromString = Field(
+    actor_separators: str = Field(
         description=(
-            "Characters splitting several actors inside a single label. Malanta"
+            "Characters splitting several actors inside a single label. Each"
+            " character is treated as a separator, so ',;' splits on both. Malanta"
             " occasionally emits comma-joined tokens such as 'apt:APT17,APT5'."
+            " Deliberately a plain string rather than a list: a comma-separated"
+            " list type cannot represent a comma as a value."
         ),
-        default=[","],
-        examples=[","],
+        default=",",
+        examples=[",", ",;"],
     )
     author_name: str = Field(
         description=(
