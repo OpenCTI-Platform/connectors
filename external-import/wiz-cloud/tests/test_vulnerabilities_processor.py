@@ -1,4 +1,4 @@
-"""Tests for the Wiz vulnerability fetcher."""
+"""Tests for the Wiz vulnerabilities processor."""
 
 import pytest
 from connectors_sdk.models import Relationship, System, Vulnerability
@@ -10,108 +10,114 @@ def _of_type(objects: list, kind: type) -> list:
     return [item for item in objects if isinstance(item, kind)]
 
 
-def _filter_of(fetcher) -> dict:
+def _filter_of(vulnerabilities_processor) -> dict:
     """Return the filterBy of the first paginate() call.
 
     Args:
-        fetcher: The fetcher whose client was called.
+        vulnerabilities_processor: The processor whose client was called.
 
     Returns:
         The filterBy mapping sent to Wiz.
     """
-    return fetcher._client.paginate.call_args_list[0][0][1]["filterBy"]
+    return vulnerabilities_processor._client.paginate.call_args_list[0][0][1][
+        "filterBy"
+    ]
 
 
 # -- querying ---------------------------------------------------------------
 
 
-def test_queries_the_single_asset_of_the_issue(fetcher, system):
-    fetcher._client.paginate.return_value = iter([])
+def test_queries_the_single_asset_of_the_issue(vulnerabilities_processor, system):
+    vulnerabilities_processor._client.paginate.return_value = iter([])
 
-    fetcher.objects_for_asset("asset-1", system)
+    vulnerabilities_processor.objects_for_asset("asset-1", system)
 
-    assert _filter_of(fetcher)["assetIdV2"]["equals"] == ["asset-1"]
+    assert _filter_of(vulnerabilities_processor)["assetIdV2"]["equals"] == ["asset-1"]
 
 
-def test_filters_on_severity_and_status(fetcher, system):
-    fetcher._client.paginate.return_value = iter([])
+def test_filters_on_severity_and_status(vulnerabilities_processor, system):
+    vulnerabilities_processor._client.paginate.return_value = iter([])
 
-    fetcher.objects_for_asset("asset-1", system)
+    vulnerabilities_processor.objects_for_asset("asset-1", system)
 
-    filter_by = _filter_of(fetcher)
+    filter_by = _filter_of(vulnerabilities_processor)
     assert filter_by["severity"] == ["CRITICAL", "HIGH"]
     assert filter_by["status"] == ["OPEN", "IN_PROGRESS"]
     assert "hasExploit" not in filter_by
 
 
-def test_adds_the_exploit_filter_when_enabled(fetcher, system):
+def test_adds_the_exploit_filter_when_enabled(vulnerabilities_processor, system):
     # Rebuilt rather than mutated, so the test does not depend on whether the
     # settings model allows assignment.
-    fetcher._config = WizCloudConfig(
+    vulnerabilities_processor._config = WizCloudConfig(
         api_url="https://api.us17.app.wiz.io/graphql",
         client_id="id",
         client_secret="secret",
         vulnerability_has_exploit=True,
     )
-    fetcher._client.paginate.return_value = iter([])
+    vulnerabilities_processor._client.paginate.return_value = iter([])
 
-    fetcher.objects_for_asset("asset-1", system)
+    vulnerabilities_processor.objects_for_asset("asset-1", system)
 
-    assert _filter_of(fetcher)["hasExploit"] is True
+    assert _filter_of(vulnerabilities_processor)["hasExploit"] is True
 
 
 def test_queries_an_asset_only_once_per_run(
-    fetcher, system, vulnerability_finding_data
+    vulnerabilities_processor, system, vulnerability_finding_data
 ):
-    fetcher._client.paginate.return_value = iter([[vulnerability_finding_data]])
+    vulnerabilities_processor._client.paginate.return_value = iter(
+        [[vulnerability_finding_data]]
+    )
 
-    first = fetcher.objects_for_asset("asset-1", system)
-    second = fetcher.objects_for_asset("asset-1", system)
+    first = vulnerabilities_processor.objects_for_asset("asset-1", system)
+    second = vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     # The same resource backs several issues; its findings were already sent
     # with the first one and carry deterministic ids.
     assert first != []
     assert second == []
-    assert fetcher._client.paginate.call_count == 1
+    assert vulnerabilities_processor._client.paginate.call_count == 1
 
 
 # -- failure handling -------------------------------------------------------
 
 
-def test_counts_a_failure_instead_of_raising(fetcher, system):
-    fetcher._client.paginate.side_effect = WizGraphQLError("boom")
+def test_counts_a_failure_instead_of_raising(vulnerabilities_processor, system):
+    vulnerabilities_processor._client.paginate.side_effect = WizGraphQLError("boom")
 
-    objects = fetcher.objects_for_asset("asset-1", system)
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     assert objects == []
-    assert fetcher.failures == 1
-    assert fetcher._logger.error.called
+    assert vulnerabilities_processor.failures == 1
+    assert vulnerabilities_processor._logger.error.called
 
 
 def test_drops_partial_results_when_a_later_page_fails(
-    fetcher, system, vulnerability_finding_data
+    vulnerabilities_processor, system, vulnerability_finding_data
 ):
     def pages():
         yield [vulnerability_finding_data]
         raise WizGraphQLError("boom")
 
-    fetcher._client.paginate.return_value = pages()
+    vulnerabilities_processor._client.paginate.return_value = pages()
 
-    objects = fetcher.objects_for_asset("asset-1", system)
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     # Half an asset is worse than none: the run replays anyway.
     assert objects == []
-    assert fetcher.failures == 1
+    assert vulnerabilities_processor.failures == 1
 
 
 # -- conversion -------------------------------------------------------------
 
 
 @pytest.fixture
-def converted(fetcher, system, vulnerability_finding_data) -> list:
+def converted(vulnerabilities_processor, system, vulnerability_finding_data) -> list:
     """The objects produced for a single kernel CVE finding."""
-    fetcher._client.paginate.return_value = iter([[vulnerability_finding_data]])
-    return fetcher.objects_for_asset("asset-1", system)
+    vulnerabilities_processor._client.paginate.return_value = iter(
+        [[vulnerability_finding_data]]
+    )
+    return vulnerabilities_processor.objects_for_asset("asset-1", system)
 
 
 def test_maps_the_cve_fields(converted):
@@ -133,7 +139,7 @@ def test_converts_epss_percentages_to_the_zero_one_range(converted):
 
 
 def test_converts_the_user_interaction_boolean_to_a_string(
-    fetcher, system, vulnerability_finding_data
+    vulnerabilities_processor, system, vulnerability_finding_data
 ):
     data = {
         **vulnerability_finding_data,
@@ -142,19 +148,21 @@ def test_converts_the_user_interaction_boolean_to_a_string(
             "userInteractionRequired": True,
         },
     }
-    fetcher._client.paginate.return_value = iter([[data]])
+    vulnerabilities_processor._client.paginate.return_value = iter([[data]])
 
-    objects = fetcher.objects_for_asset("asset-1", system)
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     assert _of_type(objects, Vulnerability)[0].cvss_v3_user_interaction == "REQUIRED"
 
 
 def test_falls_back_to_the_finding_description(
-    fetcher, system, empty_cve_description_finding_data
+    vulnerabilities_processor, system, empty_cve_description_finding_data
 ):
-    fetcher._client.paginate.return_value = iter([[empty_cve_description_finding_data]])
+    vulnerabilities_processor._client.paginate.return_value = iter(
+        [[empty_cve_description_finding_data]]
+    )
 
-    objects = fetcher.objects_for_asset("asset-1", system)
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     vulnerability = _of_type(objects, Vulnerability)[0]
     assert vulnerability.description.startswith("The package `kernel`")
@@ -178,20 +186,22 @@ def test_never_emits_a_system_of_its_own(converted):
     assert _of_type(converted, System) == []
 
 
-def test_skips_an_unparseable_finding(fetcher, system):
-    fetcher._client.paginate.return_value = iter([[{"id": "broken"}]])
+def test_skips_an_unparseable_finding(vulnerabilities_processor, system):
+    vulnerabilities_processor._client.paginate.return_value = iter([[{"id": "broken"}]])
 
-    objects = fetcher.objects_for_asset("asset-1", system)
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     assert objects == []
-    assert fetcher._logger.warning.called
+    assert vulnerabilities_processor._logger.warning.called
 
 
-def test_skips_a_finding_without_a_cve_id(fetcher, system, vulnerability_finding_data):
-    fetcher._client.paginate.return_value = iter(
+def test_skips_a_finding_without_a_cve_id(
+    vulnerabilities_processor, system, vulnerability_finding_data
+):
+    vulnerabilities_processor._client.paginate.return_value = iter(
         [[{**vulnerability_finding_data, "name": ""}]]
     )
 
-    objects = fetcher.objects_for_asset("asset-1", system)
+    objects = vulnerabilities_processor.objects_for_asset("asset-1", system)
 
     assert objects == []
