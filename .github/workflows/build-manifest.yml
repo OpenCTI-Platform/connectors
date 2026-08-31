@@ -1,7 +1,8 @@
 name: Build Manifest
 
 # Regenerates the connectors config schemas and the global manifest, then
-# commits the result back to the branch it was called from.
+# commits the result back to the branch it was called from, through the GitHub
+# API so the commit is signed and shows as Verified.
 #
 # Called by build-all-connectors.yml (push on master / release/* / lts/*, and
 # on version tags). workflow_dispatch is kept for manual runs on a branch.
@@ -34,8 +35,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Credentials are intentionally persisted: the commit step below
-          # pushes back to the branch using the GITHUB_TOKEN remote.
+          # No git push is performed: the commit is created through the GitHub
+          # API, so the checkout token does not need to be persisted.
+          persist-credentials: false
+          # Full history: the schema generation script diffs against the base
+          # branch to decide which connectors to regenerate.
           fetch-depth: 0
 
       - name: Set up Python
@@ -43,8 +47,21 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The generation script was written for CircleCI: it compares against
+      # `$CIRCLE_BRANCH` / `$RELEASE_REF` to decide which connectors changed.
+      # Both are unset under GitHub Actions, which sends the script down its
+      # pull-request path (`git merge-base origin/master HEAD`). On a push to
+      # master that merge base *is* HEAD, so every connector is reported as
+      # unchanged and nothing is ever regenerated. Setting both to the current
+      # ref reproduces the CircleCI behaviour: diff the last commit (HEAD~1..HEAD).
+      #
+      # TODO: temporary shim. Once CircleCI is decommissioned, drop these two
+      # variables and rename them to CI-agnostic ones inside the script itself.
       - name: Build connectors schemas
         shell: bash
+        env:
+          CIRCLE_BRANCH: ${{ github.ref_name }}
+          RELEASE_REF: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           bash ./shared/tools/composer/generate_connectors_config_schemas/generate_connectors_config_json_schemas.sh
@@ -55,51 +72,41 @@ jobs:
           set -euo pipefail
           bash ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh
 
-      - name: Commit manifest if changed
+      - name: Resolve target branch
+        id: target
         shell: bash
         env:
           REF_TYPE: ${{ github.ref_type }}
-          TARGET_BRANCH: ${{ github.ref_name }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           set -euo pipefail
 
           if [ "${REF_TYPE}" != "branch" ]; then
-            echo "Ref '${TARGET_BRANCH}' is a ${REF_TYPE}, not a branch. Skipping commit."
+            echo "Ref '${REF_NAME}' is a ${REF_TYPE}, not a branch. Nothing to commit back."
+            echo "branch=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "branch=${REF_NAME}" >> "$GITHUB_OUTPUT"
 
-          # Stage only generated artifacts: the venvs and temporary files created
-          # by the generation scripts must never end up in the commit.
-          git add -A -- \
-            manifest.json \
-            '*/__metadata__/connector_config_schema.json' \
-            '*/__metadata__/CONNECTOR_CONFIG_DOC.md'
-
-          # Checked after staging so newly created (untracked) schemas count as changes.
-          if git diff --cached --quiet; then
-            echo "Manifest and schemas unchanged. Skipping commit."
-            exit 0
-          fi
-
-          git commit -m "chore(manifest): build and update manifest [skip ci]"
-
-          # Retry on non-fast-forward: concurrent runs may have moved the branch.
-          MAX_RETRIES=3
-          for attempt in $(seq 1 "$MAX_RETRIES"); do
-            if git push origin "HEAD:${TARGET_BRANCH}"; then
-              echo "Manifest changes pushed successfully (attempt ${attempt})."
-              exit 0
-            fi
-            echo "Push rejected (attempt ${attempt}/${MAX_RETRIES}) - rebasing on ${TARGET_BRANCH}."
-            if ! git pull --rebase origin "${TARGET_BRANCH}"; then
-              echo "::error::Rebase failed, aborting."
-              git rebase --abort || true
-              exit 1
-            fi
-          done
-
-          echo "::error::Failed to push manifest update after ${MAX_RETRIES} attempts."
-          exit 1
+      # Commits via GitHub's GraphQL API instead of raw `git commit`, so the
+      # commit is GPG-signed by GitHub (required by this repo's branch
+      # protection) without managing signing keys in CI. No local git
+      # add/commit/push: it's a no-op when nothing was regenerated, and it
+      # re-resolves the branch head through the API so it isn't affected by
+      # non-fast-forward races from concurrent runs.
+      #
+      # `file_pattern` is a space-separated pathspec passed to `git status`,
+      # scoped to the generated artifacts so the virtualenvs and temp files
+      # created by the generation scripts never enter the commit. Untracked
+      # (new) schemas and deletions are both picked up.
+      - name: Commit manifest if changed
+        if: steps.target.outputs.branch != ''
+        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
+        with:
+          commit_message: "chore(manifest): build and update manifest [skip ci]"
+          repo: ${{ github.repository }}
+          branch: ${{ steps.target.outputs.branch }}
+          file_pattern: "manifest.json */__metadata__/connector_config_schema.json */__metadata__/CONNECTOR_CONFIG_DOC.md"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
