@@ -26,6 +26,11 @@ def _response(payload):
     return response
 
 
+def test_client_sets_attribution_headers(client):
+    assert client.session.headers["x-doppel-client"] == "opencti/7.260901.0"
+    assert client.session.headers["User-Agent"] == "doppel-opencti/7.260901.0"
+
+
 @pytest.mark.parametrize(
     ("total_pages", "expected_pages"),
     [

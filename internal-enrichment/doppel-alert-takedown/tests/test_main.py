@@ -76,3 +76,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+    assert connector.client.session.headers["x-doppel-client"] == "opencti/7.260901.0"
+    assert connector.client.session.headers["User-Agent"] == (
+        "doppel-opencti/7.260901.0"
+    )

@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Any
 
 import requests
-from doppel.constants import RETRYABLE_REQUEST_ERRORS
+from doppel.constants import DOPPEL_ATTRIBUTION_HEADERS, RETRYABLE_REQUEST_ERRORS
 from tenacity import (
     retry,
     retry_if_exception,
@@ -26,6 +26,7 @@ class ConnectorClient:
 
         self.session = requests.Session()
         headers = {
+            **DOPPEL_ATTRIBUTION_HEADERS,
             "x-api-key": self.config.doppel.api_key,
             "accept": "application/json",
         }
