@@ -30,7 +30,7 @@ OpenCTI.
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260828.0
+- OpenCTI Platform >= 7.260901.0
 - A reachable FortiEDR Central Manager
 - A FortiEDR user with the REST API role enabled (the user must have logged in
   once to set its password)
