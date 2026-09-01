@@ -127,7 +127,7 @@ class GreyNoiseConnector:
             self._create_custom_label("gn-trust-level: context only", "#94A3B8")
             self._create_custom_label(
                 f"gn-provider: {data['business_service_intelligence']['name']} ",
-                "#57B9FF",
+                "#94A3B8",
             )
         if data["internet_scanner_intelligence"].get("bot") is True:
             self._create_custom_label("Known BOT Activity", "#7e4ec2")
