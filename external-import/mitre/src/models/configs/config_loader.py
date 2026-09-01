@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from connectors_sdk import ListFromString
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
@@ -17,6 +17,22 @@ from src.models.configs import (
     _ConfigLoaderOCTI,
 )
 
+VALID_SCOPE_VALUES = [
+    "tool",
+    "report",
+    "malware",
+    "identity",
+    "campaign",
+    "intrusion-set",
+    "attack-pattern",
+    "course-of-action",
+    "x-mitre-data-source",
+    "x-mitre-data-component",
+    "x-mitre-matrix",
+    "x-mitre-tactic",
+    "x-mitre-collection",
+]
+
 
 class ConfigLoaderConnector(_ConfigLoaderConnector):
     """A concrete implementation of _ConfigLoaderConnector defining default connector configuration values."""
@@ -30,23 +46,20 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
         description="Name of the connector.",
     )
     scope: ListFromString = Field(
-        default=[
-            "tool",
-            "report",
-            "malware",
-            "identity",
-            "campaign",
-            "intrusion-set",
-            "attack-pattern",
-            "course-of-action",
-            "x-mitre-data-source",
-            "x-mitre-data-component",
-            "x-mitre-matrix",
-            "x-mitre-tactic",
-            "x-mitre-collection",
-        ],
+        default=VALID_SCOPE_VALUES,
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
+
+    @field_validator("scope")
+    @classmethod
+    def validate_scope(cls, value: ListFromString) -> ListFromString:
+        invalid_values = [item for item in value if item not in VALID_SCOPE_VALUES]
+        if invalid_values:
+            raise ValueError(
+                f"Invalid scope value(s) {invalid_values}. "
+                f"CONNECTOR_SCOPE must only contain values from {VALID_SCOPE_VALUES}."
+            )
+        return value
 
 
 class ConfigLoader(ConfigBaseSettings):
