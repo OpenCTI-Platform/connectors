@@ -378,7 +378,9 @@ class ConnectorAccenture:
                 if "custom_properties" in stix_object:
                     stix_object["custom_properties"]["x_mitre_id"] = stix_object["name"]
                 else:
-                    stix_object["custom_properties"] = {"x_mitre_id": stix_object["name"]}
+                    stix_object["custom_properties"] = {
+                        "x_mitre_id": stix_object["name"]
+                    }
 
         stix_objects.extend(new_entities_for_bundle)
 
