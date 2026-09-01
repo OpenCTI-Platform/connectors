@@ -67,6 +67,8 @@ def test_v1_uses_static_headers_and_normalized_v1_url():
     assert client.session.headers["x-api-key"] == "api-key"
     assert client.session.headers["x-user-api-key"] == "user-api-key"
     assert client.session.headers["x-organization-code"] == "ACM"
+    assert client.session.headers["x-doppel-client"] == "opencti/7.260901.0"
+    assert client.session.headers["User-Agent"] == "doppel-opencti/7.260901.0"
     assert "Authorization" not in client.session.headers
 
     client.session = MagicMock()
@@ -300,6 +302,8 @@ def test_v2_mints_token_and_uses_bearer_auth():
     assert "x-api-key" not in client.session.headers
     assert "x-user-api-key" not in client.session.headers
     assert "x-organization-code" not in client.session.headers
+    assert client.session.headers["x-doppel-client"] == "opencti/7.260901.0"
+    assert client.session.headers["User-Agent"] == "doppel-opencti/7.260901.0"
 
     token_session = MagicMock()
     token_session.post.return_value = _response(

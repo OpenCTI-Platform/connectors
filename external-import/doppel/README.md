@@ -170,7 +170,7 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 ## Behavior
 
 - Fetches alerts from Doppel API paginated by `last_activity_timestamp`
-- Identifies every outbound Doppel API request with
+- Identifies every outbound Doppel API request, including V2 token minting, with
   `x-doppel-client: opencti/7.260901.0` and
   `User-Agent: doppel-opencti/7.260901.0` for usage attribution.
 - Converts each alert into a STIX 2.1 Observable with a value-appropriate type:
