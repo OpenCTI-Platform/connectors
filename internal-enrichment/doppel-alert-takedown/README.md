@@ -115,6 +115,9 @@ The connector is also playbook compatible and can be added as a step in a playbo
 
 For each in-scope observable (URL or Domain-Name), the connector:
 
+- identifies every outbound Doppel API request, including V2 token minting, with
+  `x-doppel-client: opencti/7.260901.0` and
+  `User-Agent: doppel-opencti/7.260901.0` for usage attribution;
 - maps the OpenCTI observable type to the Doppel `entity_type`
   (`url` → `url`, `domain-name` → `domain`);
 - creates a Doppel alert with the configured tags;

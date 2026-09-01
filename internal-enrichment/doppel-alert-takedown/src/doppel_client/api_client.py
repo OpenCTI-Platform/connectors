@@ -1,6 +1,7 @@
 from typing import Any
 
 import requests
+from doppel_client.constants import DOPPEL_ATTRIBUTION_HEADERS
 from doppel_client.oauth import OAuthTokenProvider
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
@@ -49,7 +50,10 @@ class DoppelClient:
         self.base_url = f"{api_root}/{api_version}"
 
         self.session = requests.Session()
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            **DOPPEL_ATTRIBUTION_HEADERS,
+            "Content-Type": "application/json",
+        }
         self.oauth_token_provider: OAuthTokenProvider | None = None
 
         if api_version == "v1":

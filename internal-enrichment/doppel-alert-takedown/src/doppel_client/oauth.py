@@ -4,6 +4,7 @@ import time
 from collections.abc import Callable
 
 import requests
+from doppel_client.constants import DOPPEL_ATTRIBUTION_HEADERS
 
 
 class OAuthTokenError(requests.RequestException):
@@ -30,6 +31,7 @@ class OAuthTokenProvider:
         self.audience = audience
         self.timeout = timeout
         self.session = session or requests.Session()
+        self.session.headers.update(DOPPEL_ATTRIBUTION_HEADERS)
         self.clock = clock
 
         self._access_token: str | None = None

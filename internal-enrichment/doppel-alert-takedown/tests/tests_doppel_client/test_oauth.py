@@ -17,6 +17,18 @@ def _token_response(
     return response
 
 
+def test_token_session_sets_attribution_headers():
+    provider = OAuthTokenProvider(
+        token_url="https://api.doppel.test/oauth/token",
+        client_id="client-id",
+        client_secret="client-secret",
+        audience="doppel-external",
+    )
+
+    assert provider.session.headers["x-doppel-client"] == "opencti/7.260901.0"
+    assert provider.session.headers["User-Agent"] == "doppel-opencti/7.260901.0"
+
+
 def test_token_is_cached_across_concurrent_requests_and_refreshed():
     now = [100.0]
     session = MagicMock()

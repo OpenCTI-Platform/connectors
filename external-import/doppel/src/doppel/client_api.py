@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Any
 
 import requests
-from doppel.constants import RETRYABLE_REQUEST_ERRORS
+from doppel.constants import DOPPEL_ATTRIBUTION_HEADERS, RETRYABLE_REQUEST_ERRORS
 from doppel.oauth import OAuthTokenProvider
 from tenacity import (
     retry,
@@ -30,7 +30,10 @@ class ConnectorClient:
         self.api_base_url = f"{api_root}/{self.config.doppel.api_version}"
 
         self.session = requests.Session()
-        headers = {"accept": "application/json"}
+        headers = {
+            **DOPPEL_ATTRIBUTION_HEADERS,
+            "accept": "application/json",
+        }
         self.oauth_token_provider: OAuthTokenProvider | None = None
 
         if self.config.doppel.api_version == "v1":
