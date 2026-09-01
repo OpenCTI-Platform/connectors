@@ -6,10 +6,9 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.errors import ProofPointAPIRequestParamsError
-from proofpoint_tap.warnings import PermissiveLiteral, Recommended
+from proofpoint_tap.warnings import PermissiveEmailStr, PermissiveLiteral, Recommended
 from pydantic import (
     AwareDatetime,
-    EmailStr,
     Field,
     IPvAnyAddress,
     field_validator,
@@ -122,7 +121,7 @@ class ThreatInfo(ResponseModel):
 class MessageEvent(ResponseModel):
     """Model MessageEvent from /v2/siem/* responses."""
 
-    cc_addresses: Optional[list[EmailStr]] = Field(
+    cc_addresses: Optional[list[PermissiveEmailStr]] = Field(
         None, alias="ccAddresses", description="List of CC email addresses."
     )
     cluster: str = Field(
@@ -132,7 +131,7 @@ class MessageEvent(ResponseModel):
     completely_rewritten: Optional[bool] = Field(
         None, alias="completelyRewritten", description="URL rewrite status."
     )
-    from_address: list[EmailStr] = Field(
+    from_address: list[PermissiveEmailStr] = Field(
         ...,
         alias="fromAddress",
         description="Email address in the From header. Note: The documentation specifies a single email address but the API response is a list.",
@@ -199,12 +198,12 @@ class MessageEvent(ResponseModel):
         ...,
         description="SMTP recipient email address. Note: The documentation specifies a single email address but the API response is a list.",
     )
-    reply_to_address: Optional[list[EmailStr]] = Field(
+    reply_to_address: Optional[list[PermissiveEmailStr]] = Field(
         None,
         alias="replyToAddress",
         description="Email address in the Reply-To header.",
     )
-    sender: EmailStr = Field(..., description="SMTP sender email address.")
+    sender: PermissiveEmailStr = Field(..., description="SMTP sender email address.")
     sender_ip: str = Field(..., alias="senderIP", description="Sender's IP address.")
     spam_score: Optional[int] = Field(
         None,
@@ -217,7 +216,7 @@ class MessageEvent(ResponseModel):
     threats_info_map: list[ThreatInfo] = Field(
         ..., alias="threatsInfoMap", description="Details about detected threats."
     )
-    to_addresses: Optional[list[EmailStr]] = Field(
+    to_addresses: Optional[list[PermissiveEmailStr]] = Field(
         None, alias="toAddresses", description="list of To email addresses."
     )
     xmailer: Optional[str] = Field(None, description="Content of the X-Mailer header.")
@@ -261,8 +260,8 @@ class ClickEvent(ResponseModel):
     threat_time: AwareDatetime = Field(
         ..., alias="threatTime", description="Time the threat was identified."
     )
-    threat_url: str = Field(
-        ..., alias="threatUrl", description="Theurl to follow for threat description."
+    threat_url: Recommended[str] = Field(
+        None, alias="threatUrl", description="The url to follow for threat description."
     )
     threat_status: Literal["active", "falsepositive", "cleared"] = Field(
         ..., alias="threatStatus", description="Current state of the threat."
