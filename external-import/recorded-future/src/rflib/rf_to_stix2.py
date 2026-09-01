@@ -166,6 +166,7 @@ class Indicator(RFStixEntity):
         """Handle x_opencti_main_observable_type for filtering"""
         stix_main_observable_mapping = {
             "domain-name:value": "Domain-Name",
+            "email-addr:value": "Email-Addr",
             "file:hashes": "StixFile",
             "ipv4-addr:value": "IPv4-Addr",
             "ipv6-addr:value": "IPv6-Addr",
@@ -364,6 +365,25 @@ class URL(Indicator):
 
     def _create_obs(self):
         return stix2.URL(
+            value=self.name,
+            object_marking_refs=self.tlp,
+            custom_properties={"x_opencti_created_by_ref": self.author.id},
+        )
+
+
+class EmailAddress(Indicator):
+    """Converts Email Address to Email Address indicator and observable"""
+
+    def __init__(
+        self, name, _type, author=None, tlp=None, first_seen=None, last_seen=None
+    ):
+        super().__init__(name, _type, author, tlp, first_seen, last_seen)
+
+    def _create_pattern(self):
+        return f"[email-addr:value = '{self.name}']"
+
+    def _create_obs(self):
+        return stix2.EmailAddress(
             value=self.name,
             object_marking_refs=self.tlp,
             custom_properties={"x_opencti_created_by_ref": self.author.id},
@@ -1038,6 +1058,7 @@ ENTITY_TYPE_MAPPER = {
     "IpAddress": IPAddress,
     "InternetDomainName": Domain,
     "URL": URL,
+    "EmailAddress": EmailAddress,
     "Hash": FileHash,
     "MitreAttackIdentifier": TTP,
     "Company": Identity,
@@ -1437,7 +1458,6 @@ class StixNote:
         """
         event_objects = []
         for event_capability in event_attr["capabilities"]:
-
             # Get capability (AttackPattern,  Malware, Vulnerability, Indicator)
             capability_name = event_capability["name"]
             capability_type = event_capability["type"]
@@ -1499,7 +1519,6 @@ class StixNote:
                 if event_attr.get("adversary") and event_attr["adversary"][0][
                     "type"
                 ] in ["Organization", "Person"]:
-
                     # Retrieve adversary in self.objects depending on adversary name in event
                     # self.objects contains all IntrusionSet, Malware, Identity, AttackPattern et ThreatActor linked to note
                     event_adversary = event_attr["adversary"][0]["name"]
