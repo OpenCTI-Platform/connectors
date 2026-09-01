@@ -20,7 +20,7 @@ from pycti import (
     Vulnerability,
 )
 
-INTEGRATION_NAME = "opencti-enricher-v4.0"
+INTEGRATION_NAME = "opencti-enricher-v4.1"
 
 
 class GreyNoiseConnector:
@@ -48,7 +48,7 @@ class GreyNoiseConnector:
     def _get_indicator_score(self, classification):
         if classification == "malicious":
             self.indicator_score = self.indicator_score_malicious
-        elif classification == "suspicious" or classification == "2":
+        elif classification == "suspicious" or classification in ["2", "3"]:
             self.indicator_score = self.indicator_score_suspicious
         else:
             self.indicator_score = self.indicator_score_benign
@@ -119,6 +119,12 @@ class GreyNoiseConnector:
             )
         elif data["business_service_intelligence"]["trust_level"] == "2":
             self._create_custom_label("gn-trust-level: commonly seen", "#57B9FF")
+            self._create_custom_label(
+                f"gn-provider: {data['business_service_intelligence']['name']} ",
+                "#57B9FF",
+            )
+        elif data["business_service_intelligence"]["trust_level"] == "3":
+            self._create_custom_label("gn-trust-level: context only", "#94A3B8")
             self._create_custom_label(
                 f"gn-provider: {data['business_service_intelligence']['name']} ",
                 "#57B9FF",
@@ -566,7 +572,7 @@ class GreyNoiseConnector:
                     data["business_service_intelligence"]["last_updated"]
                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
                 self._get_indicator_score(
-                    data["business_service_intelligence"].get("trust_level", "2")
+                    data["business_service_intelligence"].get("trust_level", "3")
                 )
 
             if (
