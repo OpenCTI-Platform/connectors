@@ -69,7 +69,36 @@
             },
             "rules": {
               "items": {
-                "additionalProperties": true,
+                "properties": {
+                  "label": {
+                    "title": "Label",
+                    "type": "string"
+                  },
+                  "search": {
+                    "title": "Search",
+                    "type": "string"
+                  },
+                  "flags": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "title": "Flags",
+                    "type": "array"
+                  },
+                  "attributes": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "title": "Attributes",
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "label",
+                  "search",
+                  "attributes"
+                ],
+                "title": "Rule",
                 "type": "object"
               },
               "title": "Rules",
