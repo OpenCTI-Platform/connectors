@@ -23,12 +23,13 @@ _spec.loader.exec_module(export_file_csv)
 ExportFileCsv = export_file_csv.ExportFileCsv
 
 
-def _make_connector():
-    """Build an instance without running __init__ (which needs a live helper)."""
+def _make_connector(add_bom=None):
     connector = ExportFileCsv.__new__(ExportFileCsv)
     connector.export_file_csv_delimiter = ";"
     connector.errors = []
     connector.helper = MagicMock()
+    if add_bom is not None:
+        connector.export_file_csv_add_bom = add_bom
     return connector
 
 
@@ -67,9 +68,9 @@ class TestSelectExportColumns:
         assert ExportFileCsv._select_export_columns(
             data_headers, ["fromName", "fromType"]
         ) == [
-            ("fromName", "from", None),
-            ("fromType", "from", "entity_type"),
-        ]
+                   ("fromName", "from", None),
+                   ("fromType", "from", "entity_type"),
+               ]
 
     def test_deduplicates_exact_duplicate_columns(self):
         data_headers = ["from", "to"]
@@ -171,6 +172,40 @@ class TestExportDictListToCsv:
         # row-generation logic actually populates it (regression test).
         assert "hashes_MD5" in headers
         assert rows[1][headers.index("hashes_MD5")] == "abc"
+
+class TestExportDictListToCsvBom:
+
+    def test_no_bom_when_attribute_missing(self):
+        connector = _make_connector()
+        data = [{"name": "A"}]
+        out = connector.export_dict_list_to_csv(data)
+        assert not out.startswith("\ufeff")
+
+    def test_no_bom_when_disabled(self):
+        connector = _make_connector(add_bom=False)
+        data = [{"name": "A"}]
+        out = connector.export_dict_list_to_csv(data)
+        assert not out.startswith("\ufeff")
+
+    def test_bom_prefix_when_enabled(self):
+        connector = _make_connector(add_bom=True)
+        data = [{"name": "A", "entity_type": "Malware"}]
+        out = connector.export_dict_list_to_csv(data)
+
+        assert out.startswith("\ufeff")
+        stripped = out[len("\ufeff") :]
+        assert _csv_headers(stripped) == ["entity_type", "name"]
+
+    def test_bom_appears_only_once_at_the_start(self):
+        connector = _make_connector(add_bom=True)
+        data = [
+            {"name": "A", "entity_type": "Malware"},
+            {"name": "B", "entity_type": "Tool"},
+        ]
+        out = connector.export_dict_list_to_csv(data)
+
+        assert out.count("\ufeff") == 1
+        assert out.startswith("\ufeff")
 
 
 class TestExportListVisibleColumns:
