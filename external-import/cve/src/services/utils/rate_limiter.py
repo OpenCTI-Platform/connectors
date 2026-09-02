@@ -48,7 +48,13 @@ class AsyncRateLimiter:
 
             await asyncio.sleep(wait_time)
 
-    def reset(self) -> None:
-        """Reset the limiter state (e.g. between asyncio.run() calls)."""
-        self._timestamps.clear()
+    def reset_lock(self) -> None:
+        """Drop the asyncio.Lock so the next ``asyncio.run()`` call rebinds it
+        to its own event loop.
+
+        The request timestamps are intentionally preserved: they rely on
+        ``time.monotonic()`` and stay valid across runs, keeping the sliding
+        window continuous across historical-backfill chunk boundaries so no
+        burst can fire when a new ``asyncio.run()`` starts.
+        """
         self._lock = None

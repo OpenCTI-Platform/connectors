@@ -3,7 +3,8 @@
 Validates that:
 - The sliding-window algorithm enforces the request cap.
 - Concurrent callers are properly serialised by the internal lock.
-- ``reset()`` clears state for cross-asyncio.run() safety.
+- ``reset_lock()`` rebinds the lock for cross-asyncio.run() safety while
+  keeping the request history so the window stays continuous.
 """
 
 import asyncio
@@ -85,36 +86,46 @@ async def test_concurrent_acquires_respect_limit():
             pass
 
 
-async def test_reset_clears_state():
-    """After reset(), the full budget should be available again."""
+async def test_reset_lock_preserves_window_history():
+    """reset_lock() must keep the request history so a full budget is NOT
+    freed at a chunk boundary; the (max+1)-th acquire still blocks."""
     limiter = AsyncRateLimiter()
 
     for _ in range(NVD_MAX_REQUESTS):
         await limiter.acquire()
 
-    limiter.reset()
+    limiter.reset_lock()
 
-    t0 = time.monotonic()
-    for _ in range(NVD_MAX_REQUESTS):
+    # Timestamps survive the reset, so the window is still full.
+    assert len(limiter._timestamps) == NVD_MAX_REQUESTS
+
+    acquired = asyncio.Event()
+
+    async def try_acquire():
         await limiter.acquire()
-    elapsed = time.monotonic() - t0
+        acquired.set()
 
-    assert (
-        elapsed < 1.0
-    ), f"After reset, acquires should be instant, took {elapsed:.2f}s"
+    task = asyncio.create_task(try_acquire())
+    await asyncio.sleep(0.15)
+    assert not acquired.is_set(), "reset_lock() must not free the window budget"
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
-async def test_reset_invalidates_lock():
-    """reset() must set _lock to None so a fresh Lock is created
+async def test_reset_lock_invalidates_lock():
+    """reset_lock() must set _lock to None so a fresh Lock is created
     in the next event loop (cross-asyncio.run safety)."""
     limiter = AsyncRateLimiter()
     await limiter.acquire()
 
     old_lock = limiter._lock
-    limiter.reset()
+    limiter.reset_lock()
 
     assert limiter._lock is None
-    assert len(limiter._timestamps) == 0
 
     # A new acquire should create a new lock
     await limiter.acquire()
