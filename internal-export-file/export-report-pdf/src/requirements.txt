@@ -6,3 +6,5 @@ wheel==0.46.2
 CairoSVG==2.9.0
 pygal_maps_world==1.0.2
 cmarkgfm==2024.11.20
+pydantic >=2.8.2, <3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
