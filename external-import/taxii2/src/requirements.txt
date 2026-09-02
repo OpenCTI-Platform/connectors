@@ -1,4 +1,6 @@
 pycti==7.260901.0
+pydantic >=2.8.2, <3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
 antlr4-python3-runtime
 chardet
 datefinder
@@ -7,7 +9,6 @@ pika
 python-dateutil
 python-magic
 pytz
-PyYAML
 regex
 simplejson
 six
