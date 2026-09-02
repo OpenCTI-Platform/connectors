@@ -12,7 +12,28 @@
     "dependencies",
     "filigran team"
   ],
+  "baseBranchPatterns": [
+    "master",
+    "/^lts\\/.*/"
+  ],
+  "branchConcurrentLimit": 5,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security"
+    ]
+  },
   "packageRules": [
+    {
+      "description": "On lts/* branches, only raise vulnerability/security-fix PRs; all other (non-security) updates are disabled. vulnerabilityAlerts always bypass this 'enabled: false' rule.",
+      "matchBaseBranches": [
+        "/^lts\\/.*/"
+      ],
+      "matchPackageNames": [
+        "*"
+      ],
+      "enabled": false
+    },
     {
       "description": "Disable updates to pinned Python interpreter versions (e.g. .python-version files); connectors intentionally pin specific Python versions and should not be bumped automatically",
       "matchDatasources": [
