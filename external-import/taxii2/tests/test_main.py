@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector import ConnectorSettings
-from connector.config_variables import ConfigConnector
 from connector.connector import Connector
 from pycti import OpenCTIConnectorHelper
 
@@ -62,12 +61,10 @@ def mock_opencti_connector_helper(monkeypatch):
 
 
 @pytest.fixture
-def stub_config_connector(monkeypatch):
-    """Force `ConfigConnector` to build its attributes from `StubConnectorSettings`."""
+def stub_connector_settings(monkeypatch):
+    """Force `Connector` to build its settings from `StubConnectorSettings`."""
 
-    monkeypatch.setattr(
-        "connector.config_variables.ConnectorSettings", StubConnectorSettings
-    )
+    monkeypatch.setattr("connector.connector.ConnectorSettings", StubConnectorSettings)
 
 
 def test_connector_settings_is_instantiated():
@@ -106,37 +103,8 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_duration_period == "PT1H"
 
 
-def test_config_connector_exposes_settings_values(stub_config_connector):
-    """
-    Test that `ConfigConnector` (the connector's own config holder) is fed by `ConnectorSettings`:
-        - it MUST expose the validated settings through `self.settings`
-        - it MUST flatten the settings into the attributes consumed by the connector's classes
-        - it MUST reveal the secret values so they can be used as plain strings by the TAXII client
-    """
-    config = ConfigConnector()
-
-    assert isinstance(config.settings, ConnectorSettings)
-    assert isinstance(config.to_helper_config(), dict)
-
-    assert config.discovery_url == "https://taxii.example.com/taxii2/"
-    assert config.username == "test-username"
-    assert config.password == "test-password"  # revealed SecretStr
-    assert config.collections == ["*.*"]
-    assert config.taxii2v21 is True
-    assert config.initial_history == 24
-    assert config.verify_ssl is True
-    assert config.create_indicators is True
-    assert config.create_observables is True
-    # Defaults defined in `Taxii2Config` are applied
-    assert config.use_token is False
-    assert config.use_apikey is False
-    assert config.token is None
-    assert config.default_x_opencti_score == 50
-    assert config.labels_to_exclude == []
-
-
 def test_connector_is_instantiated(
-    mock_opencti_connector_helper, stub_config_connector
+    mock_opencti_connector_helper, stub_connector_settings
 ):
     """
     Test that the connector's main class can be instantiated successfully:
@@ -145,12 +113,12 @@ def test_connector_is_instantiated(
 
     :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid
         any external calls to OpenCTI API
-    :param stub_config_connector: `ConfigConnector` is fed by `StubConnectorSettings` during this test
+    :param stub_connector_settings: `Connector` is fed by `StubConnectorSettings` during this test
         to avoid reading the real env/config vars
     """
     connector = Connector()
 
-    assert isinstance(connector.config, ConfigConnector)
+    assert isinstance(connector.config, ConnectorSettings)
     assert isinstance(connector.helper, OpenCTIConnectorHelper)
     assert connector.helper.connect_name == "TAXII2"
     assert connector.taxii2.config is connector.config

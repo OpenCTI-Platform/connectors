@@ -6,9 +6,9 @@ from requests.exceptions import HTTPError
 from taxii2client.exceptions import TAXIIServiceException
 
 from .client_taxii import Taxii2
-from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
 from .process_objects import ProcessObjects
+from .settings import ConnectorSettings
 
 
 class Connector:
@@ -17,7 +17,7 @@ class Connector:
         Initialize the Connector with necessary configurations
         """
         # Load configuration file and connection helper
-        self.config = ConfigConnector()
+        self.config = ConnectorSettings()
         self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
         self.taxii2 = Taxii2(self.helper, self.config)
@@ -30,7 +30,7 @@ class Connector:
         """
         stix_objects = []
 
-        for collection in self.config.collections:
+        for collection in self.config.taxii2.collections:
             try:
                 root_path, coll_title = collection.split(".")
                 if root_path == "*":
@@ -103,14 +103,14 @@ class Connector:
                 dt = datetime.fromtimestamp(last_run, tz=timezone.utc)
                 dt_format = dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-            if self.config.enable_url_query_limit and self.config.taxii2v21:
-                self.taxii2.filters["limit"] = int(self.config.url_query_limit)
+            if self.config.taxii2.enable_url_query_limit and self.config.taxii2.v21:
+                self.taxii2.filters["limit"] = int(self.config.taxii2.url_query_limit)
             # Set added_after to either last run or initial history
             if current_state is not None and "last_run" in current_state:
                 self.taxii2.filters["added_after"] = dt_format
             else:
                 added_after = datetime.now() - timedelta(
-                    hours=int(self.config.initial_history)
+                    hours=int(self.config.taxii2.initial_history)
                 )
                 self.taxii2.filters["added_after"] = added_after
 
@@ -161,14 +161,8 @@ class Connector:
             self.helper.connector_logger.error(str(err))
 
     def run(self) -> None:
-        if self.config.duration_period:
-            self.helper.schedule_iso(
-                message_callback=self.process_message,
-                duration_period=self.config.duration_period,
-            )
-        else:
-            self.helper.schedule_unit(
-                message_callback=self.process_message,
-                duration_period=self.config.interval,
-                time_unit=self.helper.TimeUnit.HOURS,
-            )
+        # `taxii2.interval` (deprecated) is automatically migrated into `connector.duration_period`
+        self.helper.schedule_iso(
+            message_callback=self.process_message,
+            duration_period=self.config.connector.duration_period,
+        )
