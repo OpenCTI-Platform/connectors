@@ -1,9 +1,12 @@
 import configparser
+import logging
 import re
 from typing import Dict, List
 
 import ioc_finder
 from dateparser.search import search_dates
+
+logger = logging.getLogger(__name__)
 
 
 class MyConfigParser(configparser.ConfigParser):
@@ -55,11 +58,11 @@ def custom_asnparse(text: str) -> List:
                 asn_value = int(asn_value[0])
                 output.append(asn_value)
             except SyntaxError:
-                print(
-                    f"Error ReportParser: Could not convert ASN match to int from {value}"
+                logger.error(
+                    "Could not convert ASN match to int", extra={"value": value}
                 )
         else:
-            print(f"Error ReportParser: Could not extract ASN number from {value}")
+            logger.error("Could not extract ASN number", extra={"value": value})
 
     return output
 
