@@ -117,13 +117,13 @@ docker compose up -d
 2. Install dependencies:
 
 ```bash
-pip3 install -r requirements.txt
+pip3 install .
 ```
 
-3. Start the connector from the `src` directory:
+3. Start the connector:
 
 ```bash
-python3 -m __main__
+threatfox-connector
 ```
 
 ## Usage
