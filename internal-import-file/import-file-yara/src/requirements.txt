@@ -1,5 +1,5 @@
 pycti==7.260901.0
-typing-extensions==4.15.0
+typing-extensions==4.16.0
 plyara==2.2.8
 pydantic >=2.8.2, <3
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
