@@ -68,9 +68,9 @@ class TestSelectExportColumns:
         assert ExportFileCsv._select_export_columns(
             data_headers, ["fromName", "fromType"]
         ) == [
-                   ("fromName", "from", None),
-                   ("fromType", "from", "entity_type"),
-               ]
+            ("fromName", "from", None),
+            ("fromType", "from", "entity_type"),
+        ]
 
     def test_deduplicates_exact_duplicate_columns(self):
         data_headers = ["from", "to"]
@@ -172,6 +172,7 @@ class TestExportDictListToCsv:
         # row-generation logic actually populates it (regression test).
         assert "hashes_MD5" in headers
         assert rows[1][headers.index("hashes_MD5")] == "abc"
+
 
 class TestExportDictListToCsvBom:
 
