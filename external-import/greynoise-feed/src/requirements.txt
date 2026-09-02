@@ -3,4 +3,4 @@ pycti==7.260901.0
 certifi==2025.11.12
 greynoise==3.0.1
 pydantic>=2.10, <3
-pydantic-settings~=2.9.1
+pydantic-settings~=2.15.0

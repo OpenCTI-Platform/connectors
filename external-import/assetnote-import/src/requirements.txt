@@ -1,5 +1,5 @@
 pycti==7.260901.0
 urllib3==2.7.0
 pydantic>=2.10, <3
-pydantic-settings==2.9.1
+pydantic-settings==2.15.0
 connectors-sdk @ git+https://github.com/opencti-platform/connectors.git@master#subdirectory=connectors-sdk

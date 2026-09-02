@@ -2,7 +2,7 @@
 imap-tools==1.13.0
 pycti==7.260901.0
 pydantic~=2.11.3
-pydantic-settings==2.8.1
+pydantic-settings==2.15.0
 google-api-python-client>=2.169.0
 google-api-core==2.33.0
 google-auth==2.56.3
