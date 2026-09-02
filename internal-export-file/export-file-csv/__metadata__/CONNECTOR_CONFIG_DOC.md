@@ -13,3 +13,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_EXPORT_FILE` | `"INTERNAL_EXPORT_FILE"` |  |
 | EXPORT_FILE_CSV_DELIMITER | `string` |  | string | `";"` | The delimiter character used to separate the values in the exported CSV files. |
+| EXPORT_FILE_CSV_ADD_BOM | `boolean` |  | boolean | `false` | Prepend a UTF-8 BOM (byte order mark) to exported CSV files. Required for Microsoft Excel to correctly auto-detect UTF-8 encoding Without it, Excel falls back to the system's local codepageand non-ASCII text (Arabic, Cyrillic, CJK, etc.) is rendered as garbled characters. Disabled by default. |
