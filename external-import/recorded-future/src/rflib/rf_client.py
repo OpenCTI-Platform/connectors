@@ -271,24 +271,26 @@ class RFClient:
         return threat_map_data
 
     def get_entities_links(self, entities_id: list):
-        try:
-            # The Links API doesn't allow more than 100 links between entities.
-            # The connector will retrieve only the 100 first links.
-            entities_params = {"entities": entities_id[:1]}
+        # The Links API accepts at most 100 entities per request,
+        # so all mapped entities are enriched in batches of 100.
+        entity_links = []
+        for batch_start in range(0, len(entities_id), 100):
+            entities_batch = entities_id[batch_start : batch_start + 100]
+            try:
+                res = self.session.post(LINKS_PATH, json={"entities": entities_batch})
+                res.raise_for_status()
 
-            res = self.session.post(LINKS_PATH, json=entities_params)
-            res.raise_for_status()
-
-            entity_links = res.json()["data"]
-
-            return entity_links
-        except requests.RequestException as err:
-            error_msg = f"[API] Error while fetching data from {LINKS_PATH}: {str(err)}"
-            error_response = err.response.json()
-            self.helper.connector_logger.error(
-                error_msg, {"error_response": str(error_response["message"])}
-            )
-            return None
+                entity_links.extend(res.json()["data"])
+            except requests.RequestException as err:
+                error_msg = (
+                    f"[API] Error while fetching data from {LINKS_PATH}: {str(err)}"
+                )
+                error_response = err.response.json()
+                self.helper.connector_logger.error(
+                    error_msg, {"error_response": str(error_response["message"])}
+                )
+                return None
+        return entity_links
 
     def check_vul_entitlement(self):
         try:
