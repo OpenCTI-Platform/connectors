@@ -113,7 +113,7 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.taxii2, BaseConfigModel) is True
     assert settings.connector.type == "EXTERNAL_IMPORT"
-    assert settings.taxii2.discovery_url == "https://taxii.example.com/taxii2/"
+    assert str(settings.taxii2.discovery_url) == "https://taxii.example.com/taxii2/"
 
 
 @pytest.mark.parametrize(
@@ -213,7 +213,6 @@ def test_settings_should_apply_taxii2_defaults():
     assert settings.taxii2.verify_ssl is True
     assert settings.taxii2.collections == ["*.*"]
     assert settings.taxii2.initial_history == 24
-    assert settings.taxii2.interval == 1
     assert settings.taxii2.create_indicators is True
     assert settings.taxii2.create_observables is True
     assert settings.taxii2.url_query_limit == 100
@@ -224,6 +223,8 @@ def test_settings_should_apply_taxii2_defaults():
     assert settings.taxii2.token is None
     assert settings.taxii2.password is None
     assert settings.taxii2.characters_to_replace_in_label == []
+    # Deprecated in favor of `connector.duration_period`, always `None` unless explicitly migrated
+    assert settings.taxii2.interval is None
 
 
 def test_settings_should_parse_lists_and_secrets():

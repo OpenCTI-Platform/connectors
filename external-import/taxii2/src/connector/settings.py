@@ -4,9 +4,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -47,7 +48,7 @@ class Taxii2Config(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the TAXII2 connector.
     """
 
-    discovery_url: str = Field(
+    discovery_url: HttpUrl = Field(
         description="The TAXII 2 server discovery URL.",
     )
     username: str | None = Field(
@@ -103,10 +104,12 @@ class Taxii2Config(BaseConfigModel):
         description="The number of hours of history to fetch during the first run.",
         default=24,
     )
-    interval: int = Field(
-        description="The number of hours to await between two runs of the connector. "
-        "Only used when `CONNECTOR_DURATION_PERIOD` is not set.",
-        default=1,
+    interval: int | None = DeprecatedField(
+        default=None,
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(hours=int(x)),
     )
     create_indicators: bool = Field(
         description="Whether to create indicators from the imported observables.",
