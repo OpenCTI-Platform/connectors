@@ -63,6 +63,9 @@
     },
     "TAXII2_DISCOVERY_URL": {
       "description": "The TAXII 2 server discovery URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "TAXII2_USERNAME": {
@@ -142,9 +145,10 @@
       "type": "integer"
     },
     "TAXII2_INTERVAL": {
-      "default": 1,
-      "description": "The number of hours to await between two runs of the connector. Only used when `CONNECTOR_DURATION_PERIOD` is not set.",
-      "type": "integer"
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
     "TAXII2_CREATE_INDICATORS": {
       "default": true,
