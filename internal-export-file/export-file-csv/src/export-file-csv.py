@@ -147,7 +147,7 @@ class ExportFileCsv:
 
     def export_dict_list_to_csv(self, data, columns=None):
         output = io.StringIO()
-        if self.export_file_csv_add_bom:
+        if getattr(self, "export_file_csv_add_bom", False):
             output.write("\ufeff")
         data_headers = sorted(set().union(*(d.keys() for d in data)))
         column_specs = self._select_export_columns(data_headers, columns)
