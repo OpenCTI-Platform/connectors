@@ -1,0 +1,33 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'External Import Connector Template'
+  scope: 'ChangeMe'
+  log_level: 'info'
+  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+crowdstrike_incidents:
+  # Cloud region of the tenant: us-1, us-2, eu-1 or usgov1
+  base_url: 'us-1'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  # Starting point of the first run (ISO-8601). Without it, every alert of the
+  # tenant is collected on the first run.
+  import_start_date: '2026-01-01T00:00:00Z'
+  # Optional extra FQL filter on alerts, e.g. "severity_name:['High','Critical']"
+  #alert_filter: ''
+  # Retrieve previously hidden alerts
+  alert_include_hidden: false
