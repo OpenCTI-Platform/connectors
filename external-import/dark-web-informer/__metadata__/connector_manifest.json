@@ -22,7 +22,7 @@
   "subscription_link": "https://darkwebinformer.com/api-details/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/dark-web-informer",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "7.260902.0",
   "container_image": "opencti/connector-dark-web-informer",
   "container_type": "EXTERNAL_IMPORT"
 }
