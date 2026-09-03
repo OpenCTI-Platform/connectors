@@ -1,4 +1,4 @@
 pycti==7.260902.0
 beautifulsoup4==4.15.0
-pydantic==2.11.9
+pydantic==2.13.5
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
