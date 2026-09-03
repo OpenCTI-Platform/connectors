@@ -25,6 +25,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "api_base_url": "https://api.doppel.com",
                     "api_key": "test-api-key",
                     "user_api_key": "test-user-api-key",
+                    "organization_code": "ACM",
                     "tags": ["test", "poc"],
                     "takedown_comment": "Confirmed phishing.",
                     "max_tlp": "TLP:CLEAR",
@@ -66,6 +67,8 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.doppel_alert_takedown, BaseConfigModel) is True
+    if settings_dict["doppel_alert_takedown"].get("organization_code"):
+        assert settings.doppel_alert_takedown.organization_code == "ACM"
 
 
 def test_settings_should_split_comma_separated_tags():
@@ -94,6 +97,63 @@ def test_settings_should_split_comma_separated_tags():
 
     settings = FakeConnectorSettings()
     assert settings.doppel_alert_takedown.tags == ["test", "filigran-poc", "phishing"]
+
+
+def test_settings_should_allow_explicit_incident_takedown_scope():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "Url,Domain-Name,Incident",
+                        "auto": False,
+                    },
+                    "doppel_alert_takedown": {
+                        "api_key": "test-api-key",
+                        "user_api_key": "test-user-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.connector.scope == ["Url", "Domain-Name", "Incident"]
+
+
+@pytest.mark.parametrize("automatic_field", ["auto", "auto_update"])
+def test_settings_should_reject_automatic_incident_takedowns(automatic_field):
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "Url,Domain-Name,Incident",
+                        automatic_field: True,
+                    },
+                    "doppel_alert_takedown": {
+                        "api_key": "test-api-key",
+                        "user_api_key": "test-user-api-key",
+                    },
+                }
+            )
+
+    with pytest.raises(ConfigValidationError) as err:
+        FakeConnectorSettings()
+    assert "CONNECTOR_AUTO and CONNECTOR_AUTO_UPDATE must be false" in str(
+        err.value.__cause__
+    )
 
 
 @pytest.mark.parametrize(

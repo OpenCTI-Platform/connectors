@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Any
 
 import requests
-from doppel.constants import RETRYABLE_REQUEST_ERRORS
+from doppel.constants import DOPPEL_ATTRIBUTION_HEADERS, RETRYABLE_REQUEST_ERRORS
 from tenacity import (
     retry,
     retry_if_exception,
@@ -26,6 +26,7 @@ class ConnectorClient:
 
         self.session = requests.Session()
         headers = {
+            **DOPPEL_ATTRIBUTION_HEADERS,
             "x-api-key": self.config.doppel.api_key,
             "accept": "application/json",
         }
@@ -124,7 +125,9 @@ class ConnectorClient:
         """
         Retrieve alerts from api
         """
-        url = f"{self.config.doppel.api_base_url}{self.config.doppel.alerts_endpoint}"
+        base_url = str(self.config.doppel.api_base_url).rstrip("/")
+        alerts_endpoint = self.config.doppel.alerts_endpoint.lstrip("/")
+        url = f"{base_url}/{alerts_endpoint}"
 
         # Dynamically set retry settings
         self._request_data.retry.wait = wait_fixed(self.config.doppel.retry_delay)
@@ -152,12 +155,15 @@ class ConnectorClient:
             "[DoppelConnector] Fetched first page of alerts",
             {"url": url, "params": params, "metadata": metadata},
         )
+        total_pages = metadata.get("total_pages", 0)
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [
                 executor.submit(
-                    self._get_alerts, url, params, page, metadata["total_pages"]
+                    self._get_alerts, url, params, current_page, total_pages
                 )
-                for page in range(1, metadata["total_pages"] + 1)
+                # Doppel pagination is zero-indexed and total_pages is a count,
+                # so the final valid page is total_pages - 1.
+                for current_page in range(page + 1, total_pages)
             ]
             for future in as_completed(futures):
                 res.extend(future.result())
