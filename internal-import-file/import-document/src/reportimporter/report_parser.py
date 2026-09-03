@@ -2,6 +2,7 @@ import io
 import ipaddress
 import logging
 import os
+import traceback
 from typing import IO, Dict, Iterable, List, Pattern, Tuple
 
 import chardet
@@ -134,7 +135,9 @@ class ReportParser(object):
                 parse_info.update(self.parse(no_newline_text))
 
         except Exception as e:
-            logging.exception(f"Pdf Parsing Error: {e}")
+            self.helper.connector_logger.error(
+                "Pdf Parsing Error", {"error": str(e), "trace": traceback.format_exc()}
+            )
 
         return parse_info
 
@@ -163,7 +166,9 @@ class ReportParser(object):
                         if text:
                             parse_info.update(self.parse(text))
         except Exception as e:
-            logging.exception(f"Docx Parsing Error: {e}")
+            self.helper.connector_logger.error(
+                "Docx Parsing Error", {"error": str(e), "trace": traceback.format_exc()}
+            )
         return parse_info
 
     def _parse_html(self, file_data: IO) -> Dict[str, Dict]:
@@ -190,7 +195,14 @@ class ReportParser(object):
             with open(file_path, "rb") as file_data:
                 parsing_results = file_parser(file_data)
         except Exception as e:
-            logging.exception(f"Parsing Error: {e}")
+            self.helper.connector_logger.error(
+                "Parsing Error",
+                {
+                    "file_path": file_path,
+                    "error": str(e),
+                    "trace": traceback.format_exc(),
+                },
+            )
 
         return parsing_results
 
