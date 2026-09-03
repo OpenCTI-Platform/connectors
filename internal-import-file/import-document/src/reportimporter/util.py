@@ -57,7 +57,7 @@ def custom_asnparse(text: str) -> List:
             try:
                 asn_value = int(asn_value[0])
                 output.append(asn_value)
-            except SyntaxError:
+            except ValueError:
                 logger.error(
                     "Could not convert ASN match to int", extra={"value": value}
                 )
