@@ -1,6 +1,6 @@
 pycti==7.260902.0
 pydantic~=2.13.5
-requests~=2.33.0
+requests~=2.34.2
 aiohttp~=3.14.1
 google-auth~=2.0
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

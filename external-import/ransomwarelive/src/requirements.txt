@@ -1,6 +1,6 @@
 pycti==7.260902.0
 pydantic>=2.10, <3
-requests==2.33.0
+requests==2.34.2
 stix2==3.0.1
 tldextract==5.3.0
 validators==0.35.0
