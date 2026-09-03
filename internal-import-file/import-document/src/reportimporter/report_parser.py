@@ -2,6 +2,7 @@ import io
 import ipaddress
 import logging
 import os
+import re
 from typing import IO, Dict, Iterable, List, Pattern, Tuple
 
 import chardet
@@ -35,6 +36,11 @@ class ReportParser(object):
     """
     Report parser based on IOCParser
     """
+
+    # Dotted-quad candidates used to detect an IPv4 address embedded in a
+    # phone-number match (e.g. when a neighbouring number is pulled into the
+    # match). Each candidate is validated with ``ipaddress`` before use.
+    _IPV4_CANDIDATE_REGEX = re.compile(r"\d{1,3}(?:\.\d{1,3}){3}")
 
     def __init__(
         self,
@@ -70,21 +76,28 @@ class ReportParser(object):
                 return True
         return False
 
+    def _contains_ipv4_address(self, value: str) -> bool:
+        for candidate in self._IPV4_CANDIDATE_REGEX.findall(value):
+            try:
+                ipaddress.IPv4Address(candidate)
+            except ValueError:
+                continue
+            return True
+        return False
+
     def _post_parse_observables(
         self, ind_match: str, observable: Observable, match_range: Tuple
     ) -> Dict:
         self.helper.log_debug(f"Observable match: {ind_match}")
 
-        if observable.stix_target == "Phone-Number.value":
-            try:
-                ipaddress.ip_address(ind_match)
-            except ValueError:
-                pass
-            else:
-                self.helper.log_debug(
-                    f"Discarding phone number match for IP address '{ind_match}'"
-                )
-                return {}
+        if (
+            observable.stix_target == "Phone-Number.value"
+            and self._contains_ipv4_address(ind_match)
+        ):
+            self.helper.log_debug(
+                f"Discarding phone number match for IP address '{ind_match}'"
+            )
+            return {}
 
         if self._is_whitelisted(observable.filter_regex, ind_match):
             return {}
