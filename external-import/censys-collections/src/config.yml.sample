@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+#connector:
+#  type: 'EXTERNAL_IMPORT'
+#  id: "ChangeMe"          # Unique UUID v4 for this connector instance
+#  name: "Censys Collections"
+#  log_level: "error"
+#  duration_period: "PT1H" # ISO 8601 duration — how often to re-ingest
+
+censys_collections:
+  organisation_id: "ChangeMe"
+  token: "ChangeMe"
+#  collection_ids: ""        # Comma-separated collection IDs. Empty = ingest all.
+#  tlp_level: "TLP:AMBER"   # TLP marking applied to all ingested objects
+#  indicator_score: 50       # Score (0-100) assigned to observables / indicators
