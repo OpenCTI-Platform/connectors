@@ -17,13 +17,16 @@
       "writeOnly": true
     },
     "CONNECTOR_NAME": {
-      "default": "RstThreatFeed",
+      "default": "RST Threat Feed",
       "description": "The name of the connector.",
+      "examples": [
+        "RST Threat Feed",
+        "RST Threat Feed - Domain"
+      ],
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
-      "description": "The scope of the connector.",
+      "description": "The scope of the connector, e.g. 'indicator, vulnerability'.",
       "items": {
         "type": "string"
       },
@@ -47,147 +50,320 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
-      "description": "The period of time to await between two runs of the connector.",
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector. Prefer ISO-8601 (e.g. PT24H). Legacy RST_THREAT_FEED_INTERVAL (seconds) is still accepted and mapped here.",
+      "examples": [
+        "PT24H",
+        "PT1H",
+        "PT12H"
+      ],
       "format": "duration",
       "type": "string"
     },
+    "CONNECTOR_QUEUE_THRESHOLD": {
+      "default": 500.0,
+      "description": "Server capacity: max RabbitMQ queue size (in MB) before the connector pauses ingestion. Surfaced in the OpenCTI UI.",
+      "examples": [
+        500.0
+      ],
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "CONNECTOR_UPDATE_EXISTING_DATA": {
+      "default": true,
+      "description": "Whether to update existing STIX objects in OpenCTI.",
+      "examples": [
+        true,
+        false
+      ],
+      "type": "boolean"
+    },
+    "CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT": {
+      "default": false,
+      "description": "Create a dedicated Connectors-group service account for this connector on first start and run subsequent API calls as that user.",
+      "examples": [
+        true,
+        false
+      ],
+      "type": "boolean"
+    },
+    "CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL": {
+      "default": 50,
+      "description": "Max confidence level for the auto-created connector service account.",
+      "examples": [
+        50,
+        80
+      ],
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
     "RST_THREAT_FEED_BASEURL": {
       "default": "https://api.rstcloud.net/v1",
-      "description": "RST Threat Feed Base URL. By default, use https://api.rstcloud.net/v1. In some cases, you may want to use a local API endpoint.",
+      "description": "RST Cloud API base URL.",
+      "examples": [
+        "https://api.rstcloud.net/v1"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "RST_THREAT_FEED_APIKEY": {
-      "description": "Your API Key for accessing RST Cloud.",
-      "format": "password",
-      "type": "string",
-      "writeOnly": true
-    },
-    "RST_THREAT_FEED_SSL_VERIFY": {
-      "default": true,
-      "description": "If set to false, SSL verification is disabled (use with caution, sometimes needed when SSL inspection is enabled).",
-      "type": "boolean"
+      "description": "RST Cloud Threat Feed API key.",
+      "examples": [
+        "ChangeMe"
+      ],
+      "type": "string"
     },
     "RST_THREAT_FEED_CONTIMEOUT": {
       "default": 30,
-      "description": "Connection timeout (seconds) to the RST Threat Feed API.",
+      "description": "HTTP connect timeout in seconds.",
+      "examples": [
+        30
+      ],
+      "exclusiveMinimum": 0,
       "type": "integer"
     },
     "RST_THREAT_FEED_READTIMEOUT": {
       "default": 120,
-      "description": "Read timeout (seconds) for each feed download (API redirects to AWS S3).",
+      "description": "HTTP read timeout in seconds for feed downloads.",
+      "examples": [
+        120,
+        600
+      ],
+      "exclusiveMinimum": 0,
       "type": "integer"
     },
     "RST_THREAT_FEED_RETRY": {
       "default": 2,
-      "description": "Number of attempts to download the feed.",
+      "description": "Per-request HTTP retry count for feed downloads.",
+      "examples": [
+        2
+      ],
+      "minimum": 0,
       "type": "integer"
     },
-    "RST_THREAT_FEED_INTERVAL": {
-      "default": 86400,
-      "description": "Fetch interval in seconds (how often the connector will run for the feed download).",
-      "type": "integer"
+    "RST_THREAT_FEED_SSL_VERIFY": {
+      "default": true,
+      "description": "Verify TLS certificates for API requests.",
+      "examples": [
+        true,
+        false
+      ],
+      "type": "boolean"
     },
-    "RST_THREAT_FEED_MAX_RETRIES": {
-      "default": 3,
-      "description": "Maximum number of retry attempts for connection issues when sending the STIX bundle to OpenCTI.",
-      "type": "integer"
-    },
-    "RST_THREAT_FEED_RETRY_DELAY": {
-      "default": 10,
-      "description": "Initial delay in seconds before retrying a failed connection to OpenCTI.",
-      "type": "integer"
-    },
-    "RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER": {
-      "default": 2.0,
-      "description": "Multiplier applied to the retry delay for exponential backoff between retries to send data to OpenCTI.",
-      "type": "number"
-    },
-    "RST_THREAT_FEED_MIN_SCORE_IMPORT": {
-      "default": 20,
-      "description": "Import only indicators with risk score more than this value.",
-      "type": "integer"
+    "RST_THREAT_FEED_PROXY": {
+      "default": "",
+      "description": "Optional explicit forward proxy URL for feed downloads. When empty (default), requests honor standard HTTP_PROXY, HTTPS_PROXY, and NO_PROXY environment variables.",
+      "examples": [
+        "",
+        "http://proxy.example.com:8080"
+      ],
+      "type": "string"
     },
     "RST_THREAT_FEED_LATEST": {
       "default": "day",
-      "description": "Defines how often the latest threat feed data is fetched. Options: 1h, 4h, 12h, day.",
+      "description": "Which feed snapshot window to download.",
+      "enum": [
+        "day",
+        "1h",
+        "4h",
+        "12h"
+      ],
+      "examples": [
+        "day",
+        "1h",
+        "4h",
+        "12h"
+      ],
       "type": "string"
+    },
+    "RST_THREAT_FEED_INTERVAL": {
+      "default": null,
+      "description": "Deprecated. Run interval in seconds. Prefer CONNECTOR_DURATION_PERIOD. When set, overrides duration_period.",
+      "examples": [
+        86400,
+        3600
+      ],
+      "exclusiveMinimum": 0,
+      "type": "integer"
     },
     "RST_THREAT_FEED_IP": {
       "default": true,
-      "description": "If true, the connector retrieves threat intelligence data for IP addresses.",
+      "description": "Import the IP indicator feed.",
+      "examples": [
+        true,
+        false
+      ],
       "type": "boolean"
     },
     "RST_THREAT_FEED_DOMAIN": {
       "default": true,
-      "description": "If true, the connector retrieves threat intelligence data for domains.",
+      "description": "Import the Domain indicator feed.",
+      "examples": [
+        true,
+        false
+      ],
       "type": "boolean"
     },
     "RST_THREAT_FEED_URL": {
       "default": true,
-      "description": "If true, the connector retrieves threat intelligence data for URLs.",
+      "description": "Import the URL indicator feed.",
+      "examples": [
+        true,
+        false
+      ],
       "type": "boolean"
     },
     "RST_THREAT_FEED_HASH": {
       "default": true,
-      "description": "If true, the connector retrieves threat intelligence data for file hashes (MD5, SHA1, SHA256).",
+      "description": "Import the Hash (file) indicator feed.",
+      "examples": [
+        true,
+        false
+      ],
       "type": "boolean"
+    },
+    "RST_THREAT_FEED_MIN_SCORE_IMPORT": {
+      "default": 20,
+      "description": "Import only indicators with total score at or above this value.",
+      "examples": [
+        20,
+        40
+      ],
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
     },
     "RST_THREAT_FEED_MIN_SCORE_DETECTION_IP": {
       "default": 45,
-      "description": "IP indicators with risk score more than this value are marked with x_opencti_detection=true.",
+      "description": "Score threshold for x_opencti_detection on IPv4 indicators.",
+      "examples": [
+        45
+      ],
+      "maximum": 100,
+      "minimum": 0,
       "type": "integer"
     },
     "RST_THREAT_FEED_MIN_SCORE_DETECTION_DOMAIN": {
       "default": 45,
-      "description": "Domain indicators with risk score more than this value are marked with x_opencti_detection=true.",
+      "description": "Score threshold for x_opencti_detection on Domain indicators.",
+      "examples": [
+        45
+      ],
+      "maximum": 100,
+      "minimum": 0,
       "type": "integer"
     },
     "RST_THREAT_FEED_MIN_SCORE_DETECTION_URL": {
       "default": 45,
-      "description": "URL indicators with risk score more than this value are marked with x_opencti_detection=true.",
+      "description": "Score threshold for x_opencti_detection on URL indicators.",
+      "examples": [
+        45
+      ],
+      "maximum": 100,
+      "minimum": 0,
       "type": "integer"
     },
     "RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH": {
       "default": 45,
-      "description": "Hash indicators with risk score more than this value are marked with x_opencti_detection=true.",
+      "description": "Score threshold for x_opencti_detection on Hash indicators.",
+      "examples": [
+        45
+      ],
+      "maximum": 100,
+      "minimum": 0,
       "type": "integer"
     },
     "RST_THREAT_FEED_ONLY_NEW": {
       "default": true,
-      "description": "If true, import only indicators with recent \"First Seen\" (do not re-import older indicators based on \"Last Seen\").",
+      "description": "Skip indicators whose last-seen is older than the collect window.",
+      "examples": [
+        true,
+        false
+      ],
       "type": "boolean"
     },
     "RST_THREAT_FEED_ONLY_ATTRIBUTED": {
       "default": false,
-      "description": "If true, import only indicators that are attributed to known threats.",
+      "description": "Import only indicators attributed to known threats.",
+      "examples": [
+        false,
+        true
+      ],
       "type": "boolean"
     },
     "RST_THREAT_FEED_KEEP_NAMED_VULNS": {
       "default": true,
-      "description": "If true, create named vulnerabilities as separate objects, otherwise prefer CVE numbers.",
-      "type": "boolean"
-    },
-    "RST_THREAT_FEED_CREATE_MITRE_TTP": {
-      "default": null,
-      "deprecated": true,
-      "description": "Use RST_THREAT_FEED_CREATE_MITRE_TTPS instead.",
-      "type": "boolean"
-    },
-    "RST_THREAT_FEED_CREATE_CUSTOM_TTPS": {
-      "default": true,
-      "description": "If true, create custom attack-pattern objects for named techniques/attacks not present in MITRE ATT&CK.",
+      "description": "Create named vulnerability objects (e.g. printnightmare).",
+      "examples": [
+        true,
+        false
+      ],
       "type": "boolean"
     },
     "RST_THREAT_FEED_CREATE_MITRE_TTPS": {
       "default": false,
-      "description": "If true, create relationships: Indicator -> indicates -> Attack-Pattern (MITRE TTP). Will create many relationships, use with caution.",
+      "description": "Create Attack-Pattern objects for MITRE TTP IDs and relate them to indicators. Can produce a large number of relationships.",
+      "examples": [
+        false,
+        true
+      ],
       "type": "boolean"
+    },
+    "RST_THREAT_FEED_CREATE_CUSTOM_TTPS": {
+      "default": true,
+      "description": "Create custom Attack-Pattern objects for named techniques not yet covered by MITRE ATT&CK.",
+      "examples": [
+        true,
+        false
+      ],
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_MAX_RETRIES": {
+      "default": 3,
+      "description": "Maximum attempts when pushing bundles to OpenCTI.",
+      "examples": [
+        3
+      ],
+      "minimum": 1,
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_RETRY_DELAY": {
+      "default": 10,
+      "description": "Initial retry delay in seconds for OpenCTI push failures. The connector sleeps at least 1 second between retries.",
+      "examples": [
+        10
+      ],
+      "minimum": 0,
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER": {
+      "default": 2.0,
+      "description": "Exponential backoff multiplier for OpenCTI push retries.",
+      "examples": [
+        2.0
+      ],
+      "exclusiveMinimum": 0,
+      "type": "number"
+    },
+    "RST_THREAT_FEED_OPENCTI_BATCH_SIZE": {
+      "default": 200,
+      "description": "Max STIX objects per OpenCTI push. Large feeds (especially Domain) are flushed in chunks to bound memory and avoid oversized works.",
+      "examples": [
+        100,
+        200,
+        500
+      ],
+      "exclusiveMinimum": 0,
+      "type": "integer"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
+    "CONNECTOR_SCOPE",
     "RST_THREAT_FEED_APIKEY"
   ],
   "additionalProperties": true
