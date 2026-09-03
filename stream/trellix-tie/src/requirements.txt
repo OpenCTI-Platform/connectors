@@ -1,5 +1,5 @@
 pycti==7.260902.0
-pydantic~=2.11.3
+pydantic~=2.13.5
 dxlclient==5.7.0.1
 dxltieclient==0.3.0
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
