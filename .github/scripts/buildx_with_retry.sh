@@ -48,16 +48,14 @@ INITIAL_DELAY="${INITIAL_DELAY:-60}"
 
 METADATA_FILE="$(mktemp)"
 
-# Assemble the shared buildx argument list (everything except cache-to, which
-# is applied only to the separate cache-export attempt below).
+# Assemble the shared buildx argument list. --push is added only to the image
+# invocation below (step 1): the cache-export invocation (step 2) omits it so
+# it doesn't needlessly re-push the already-published image, just the cache.
 base_args=(build "$CONTEXT" --file "$DOCKERFILE" --platform "$PLATFORMS")
 base_args+=(--provenance "$PROVENANCE" --metadata-file "$METADATA_FILE")
 
 if [ "$PULL" = "true" ]; then
   base_args+=(--pull)
-fi
-if [ "$PUSH" = "true" ]; then
-  base_args+=(--push)
 fi
 
 while IFS= read -r tag; do
@@ -137,7 +135,11 @@ run_with_retry() {
 }
 
 # Step 1: build + push the actual image. Must succeed.
-if ! run_with_retry "${base_args[@]}"; then
+image_args=("${base_args[@]}")
+if [ "$PUSH" = "true" ]; then
+  image_args+=(--push)
+fi
+if ! run_with_retry "${image_args[@]}"; then
   echo "❌ buildx image push failed after ${MAX_ATTEMPTS} attempts"
   rm -f "$METADATA_FILE"
   exit 1
@@ -149,10 +151,13 @@ if [ -n "${DIGEST_OUT:-}" ]; then
   echo "📋 Digest: ${DIGEST:-(none)}"
 fi
 
-# Step 2: export the registry build cache, isolated from the image push so a
-# transient registry write failure here can't discard the already-pushed
-# image. Everything is already cached locally from step 1, so this is fast.
-# Failure is non-fatal: it only slows down the *next* CI build.
+# Step 2: export the registry build cache only — no --push, so BuildKit
+# produces no image output and doesn't redundantly re-push what step 1
+# already published. Everything is already cached locally from step 1 (same
+# context/args), so BuildKit reuses it and this just uploads the cache
+# manifest/layers. Isolated from the image push so a transient registry write
+# failure here can't discard the already-pushed image. Failure is non-fatal:
+# it only slows down the *next* CI build.
 if [ -n "${CACHE_TO:-}" ]; then
   cache_args=("${base_args[@]}" --cache-to "$CACHE_TO")
   if ! run_with_retry "${cache_args[@]}"; then
