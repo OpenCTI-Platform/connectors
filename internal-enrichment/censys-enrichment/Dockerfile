@@ -1,24 +1,17 @@
-FROM python:3.12-alpine AS base
+FROM python:3.12-alpine
+
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
+# hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
-    apk add --no-cache  \
-      build-base  \
-      git  \
-      libffi-dev  \
-      libmagic  \
-      libxml2-dev  \
-      libxslt-dev
+    apk --no-cache add git build-base libmagic libffi-dev
 
-FROM base AS dependencies
+COPY src/censys_enrichment /opt/opencti-connector-censys-enrichment/src/censys_enrichment
+COPY pyproject.toml /opt/opencti-connector-censys-enrichment/pyproject.toml
+WORKDIR /opt/opencti-connector-censys-enrichment
 
-COPY requirements.txt /tmp/requirements.txt
-RUN pip3 install --no-cache-dir -r /tmp/requirements.txt && \
-    rm /tmp/requirements.txt
+# git is required to resolve the connectors-sdk VCS dependency declared in pyproject.toml
+RUN pip3 install --no-cache-dir . && \
+    apk del git build-base
 
-FROM dependencies AS connector
-# Copy the connector
-COPY src /opt/connector
-WORKDIR /opt/connector
-
-CMD ["python3", "main.py"]
+CMD ["censys-enrichment-connector"]
