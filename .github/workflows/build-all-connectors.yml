@@ -1,6 +1,22 @@
 name: Build Connector Images
 
 on:
+  workflow_dispatch:
+    inputs:
+      build_mode:
+        description: "Build mode (rolling, prerelease, release)"
+        required: true
+        default: "rolling"
+        type: choice
+        options:
+          - rolling
+          - prerelease
+          - release
+      push:
+        description: "Push images to registries"
+        required: true
+        default: "true"
+        type: boolean
   push:
     branches:
       - master

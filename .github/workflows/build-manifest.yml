@@ -89,6 +89,25 @@ jobs:
 
           echo "branch=${REF_NAME}" >> "$GITHUB_OUTPUT"
 
+      - name: Check branch is still at the expected commit
+        id: freshness
+        if: steps.target.outputs.branch != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ steps.target.outputs.branch }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          current_sha=$(gh api "repos/${REPO}/git/refs/heads/${BRANCH}" --jq '.object.sha')
+          if [ "$current_sha" != "$EXPECTED_SHA" ]; then
+            echo "::warning::Branch '${BRANCH}' moved from ${EXPECTED_SHA} to ${current_sha} while this workflow was running. Skipping manifest commit to avoid committing on top of newer changes."
+            echo "still_head=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "still_head=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # Commits via GitHub's GraphQL API instead of raw `git commit`, so the
       # commit is GPG-signed by GitHub (required by this repo's branch
       # protection) without managing signing keys in CI. No local git
@@ -100,8 +119,15 @@ jobs:
       # scoped to the generated artifacts so the virtualenvs and temp files
       # created by the generation scripts never enter the commit. Untracked
       # (new) schemas and deletions are both picked up.
+      #
+      # continue-on-error: this repo's branch protection rules are currently
+      # too strict for the bot commit to always go through. That's a
+      # separate, known issue — it must not turn this whole build red; the
+      # step below just surfaces a warning instead.
       - name: Commit manifest if changed
-        if: steps.target.outputs.branch != ''
+        id: commit
+        if: steps.target.outputs.branch != '' && steps.freshness.outputs.still_head == 'true'
+        continue-on-error: true
         uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
         with:
           commit_message: "chore(manifest): build and update manifest [skip ci]"
@@ -110,3 +136,8 @@ jobs:
           file_pattern: "manifest.json */__metadata__/connector_config_schema.json */__metadata__/CONNECTOR_CONFIG_DOC.md"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Warn if manifest commit failed
+        if: steps.target.outputs.branch != '' && steps.freshness.outputs.still_head == 'true' && steps.commit.outcome == 'failure'
+        run: |
+          echo "::warning::Failed to commit the updated manifest/schemas back to '${{ steps.target.outputs.branch }}' (likely blocked by branch protection rules). This does not fail the build — investigate/commit manually if needed."
