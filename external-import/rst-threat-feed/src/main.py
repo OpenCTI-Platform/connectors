@@ -1,24 +1,51 @@
+import sys
+import time
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from rstcloud import ConnectorSettings, RSTThreatFeed
+from pycti.entities.opencti_user import User
+
+from connector.connector import RSTThreatFeed
+from connector.settings import ConnectorSettings
+
+__all__ = ["RSTThreatFeed"]
+
+
+def _patch_pycti_create_token_response() -> None:
+    """
+    pycti 7.260817.0 auto-create service account assigns create_token()'s return
+    value into user['api_tokens'], then looks up item['name'] / item['id'].
+
+    userAdminTokenAdd returns {token_id, plaintext_token, expires_at} — no name/id —
+    which raises KeyError and aborts helper init. Normalize the response shape.
+    """
+    if getattr(User.create_token, "_rst_threat_feed_patched", False):
+        return
+
+    original = User.create_token
+
+    def create_token(self, **kwargs):
+        token = original(self, **kwargs)
+        if not isinstance(token, dict):
+            return token
+        if "name" not in token and kwargs.get("token_name"):
+            token["name"] = kwargs["token_name"]
+        if "id" not in token and token.get("token_id"):
+            token["id"] = token["token_id"]
+        return token
+
+    create_token._rst_threat_feed_patched = True
+    User.create_token = create_token  
+
 
 if __name__ == "__main__":
-    """
-    Entry point of the script
-
-    - traceback.print_exc(): This function prints the traceback of the exception to the standard error (stderr).
-    The traceback includes information about the point in the program where the exception occurred,
-    which is very useful for debugging purposes.
-    - exit(1): effective way to terminate a Python program when an error is encountered.
-    It signals to the operating system and any calling processes that the program did not complete successfully.
-    """
     try:
+        _patch_pycti_create_token_response()
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
-
         connector = RSTThreatFeed(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        time.sleep(10)
+        sys.exit(1)
