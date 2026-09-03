@@ -13,6 +13,12 @@ name: Build Manifest
 #
 # Nothing is committed when the caller ref is a tag: there is no branch to push
 # to in that case, the manifest is already built on the branch the tag came from.
+#
+# Schema generation is parallelized: one matrix job per manager-supported
+# connector, all of them regenerated unconditionally (not just the ones that
+# changed) since the global manifest must stay complete even for untouched
+# connectors. A single sequential job used to loop over every connector,
+# which is what made this workflow slow.
 
 on:
   workflow_call:
@@ -26,8 +32,75 @@ permissions:
   contents: read
 
 jobs:
+  detect_connectors:
+    name: Detect manager-supported connectors
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_connectors: ${{ steps.set-matrix.outputs.has_connectors }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - id: set-matrix
+        name: Build manifest matrix from connector manifests
+        run: python .github/scripts/build_manifest_matrix.py
+
+  generate_config_schema:
+    name: Generate schema ${{ matrix.name }}
+    needs: detect_connectors
+    if: needs.detect_connectors.outputs.has_connectors == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect_connectors.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
+
+      - name: Generate config schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r connector_path; do
+            [ -z "$connector_path" ] && continue
+            echo "::group::Generating schema for ${connector_path}"
+            mise run generate_config_schema "$connector_path"
+            echo "::endgroup::"
+          done <<< "${{ matrix.connector_paths }}"
+
+      # Uploaded to be collected by the build_manifest job below: each matrix
+      # job only checks out/regenerates its own connector(s), so the schemas
+      # need to be handed off rather than committed from here directly.
+      - name: Upload generated schema
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: manifest-schema-${{ strategy.job-index }}
+          path: |
+            */*/__metadata__/connector_config_schema.json
+            */*/__metadata__/CONNECTOR_CONFIG_DOC.md
+          if-no-files-found: ignore
+          retention-days: 1
+
   build_manifest:
     name: Build and Commit Manifest
+    needs:
+      - detect_connectors
+      - generate_config_schema
+    # Runs even if there were no manager-supported connectors (generate_config_schema
+    # skipped) or if some individual schema jobs failed — the global manifest
+    # still needs to be rebuilt from whatever schemas are available.
+    if: |
+      always() &&
+      needs.detect_connectors.result == 'success' &&
+      needs.generate_config_schema.result != 'cancelled'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,33 +111,14 @@ jobs:
           # No git push is performed: the commit is created through the GitHub
           # API, so the checkout token does not need to be persisted.
           persist-credentials: false
-          # Full history: the schema generation script diffs against the base
-          # branch to decide which connectors to regenerate.
-          fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - name: Download generated schemas
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          python-version: "3.12"
-
-      # The generation script was written for CircleCI: it compares against
-      # `$CIRCLE_BRANCH` / `$RELEASE_REF` to decide which connectors changed.
-      # Both are unset under GitHub Actions, which sends the script down its
-      # pull-request path (`git merge-base origin/master HEAD`). On a push to
-      # master that merge base *is* HEAD, so every connector is reported as
-      # unchanged and nothing is ever regenerated. Setting both to the current
-      # ref reproduces the CircleCI behaviour: diff the last commit (HEAD~1..HEAD).
-      #
-      # TODO: temporary shim. Once CircleCI is decommissioned, drop these two
-      # variables and rename them to CI-agnostic ones inside the script itself.
-      - name: Build connectors schemas
-        shell: bash
-        env:
-          CIRCLE_BRANCH: ${{ github.ref_name }}
-          RELEASE_REF: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          bash ./shared/tools/composer/generate_connectors_config_schemas/generate_connectors_config_json_schemas.sh
+          pattern: manifest-schema-*
+          path: .
+          merge-multiple: true
+        continue-on-error: true
 
       - name: Build global manifest
         shell: bash
@@ -89,6 +143,11 @@ jobs:
 
           echo "branch=${REF_NAME}" >> "$GITHUB_OUTPUT"
 
+      # The matrix above takes long enough that the branch may have moved
+      # (new pushes landed) since this run started. Committing our generated
+      # manifest/schemas on top of a tip we never actually built from would
+      # silently mix stale and fresh content, so skip the commit entirely in
+      # that case rather than force it through.
       - name: Check branch is still at the expected commit
         id: freshness
         if: steps.target.outputs.branch != ''
