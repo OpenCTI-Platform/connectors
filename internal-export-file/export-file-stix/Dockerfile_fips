@@ -1,4 +1,4 @@
-FROM filigran/python-fips:latest
+FROM filigran/alpine-python-fips:python3.12
 ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
 
 # Copy the worker
