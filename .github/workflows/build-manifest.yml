@@ -1,57 +1,67 @@
 name: Build Manifest
 
-# on:
-#   workflow_run:
-#     workflows:
-#       - Lint & Format
-#       - Tests Connectors
-#     types:
-#       - completed
-    # branches:
-    #   - master
-    #   - release/**
-    #   - lts/**
+# Regenerates the connectors config schemas and the global manifest, then
+# commits the result back to the branch it was called from, through the GitHub
+# API so the commit is signed and shows as Verified.
+#
+# Called by build-all-connectors.yml (push on master / release/* / lts/*, and
+# on version tags). workflow_dispatch is kept for manual runs on a branch.
+#
+# No standalone `push` trigger on purpose: build-all-connectors.yml already
+# triggers on those refs and calls this workflow, so a push trigger here would
+# run it twice concurrently and race on the commit-back.
+#
+# Nothing is committed when the caller ref is a tag: there is no branch to push
+# to in that case, the manifest is already built on the branch the tag came from.
 
 on:
   workflow_call:
-
+  workflow_dispatch:
 
 concurrency:
-  group: build-manifest-${{ github.event.pull_request.head.ref || github.ref }}
-  cancel-in-progress: false
+  group: build-manifest
+  cancel-in-progress: true
 
 permissions:
   contents: read
-  actions: read
 
 jobs:
   build_manifest:
     name: Build and Commit Manifest
-    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      actions: read
-    # env:
-    #   GITHUB_GPG_SECRET_KEY: ${{ secrets.GITHUB_GPG_SECRET_KEY }}
-    #   GITHUB_GPG_SIGNING_KEY: ${{ secrets.GITHUB_GPG_SIGNING_KEY }}
-    #   PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          fetch-depth: 0
+          # No git push is performed: the commit is created through the GitHub
+          # API, so the checkout token does not need to be persisted.
           persist-credentials: false
+          # Full history: the schema generation script diffs against the base
+          # branch to decide which connectors to regenerate.
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
 
+      # The generation script was written for CircleCI: it compares against
+      # `$CIRCLE_BRANCH` / `$RELEASE_REF` to decide which connectors changed.
+      # Both are unset under GitHub Actions, which sends the script down its
+      # pull-request path (`git merge-base origin/master HEAD`). On a push to
+      # master that merge base *is* HEAD, so every connector is reported as
+      # unchanged and nothing is ever regenerated. Setting both to the current
+      # ref reproduces the CircleCI behaviour: diff the last commit (HEAD~1..HEAD).
+      #
+      # TODO: temporary shim. Once CircleCI is decommissioned, drop these two
+      # variables and rename them to CI-agnostic ones inside the script itself.
       - name: Build connectors schemas
         shell: bash
+        env:
+          CIRCLE_BRANCH: ${{ github.ref_name }}
+          RELEASE_REF: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           bash ./shared/tools/composer/generate_connectors_config_schemas/generate_connectors_config_json_schemas.sh
@@ -62,49 +72,41 @@ jobs:
           set -euo pipefail
           bash ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh
 
-    #   - name: Commit manifest if changed
-    #     shell: bash
-    #     run: |
-    #       set -euo pipefail
+      - name: Resolve target branch
+        id: target
+        shell: bash
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
 
-    #       if [ "${TARGET_BRANCH}" != "${RELEASE_REF}" ]; then
-    #         echo "Skipping, not ${RELEASE_REF} branch."
-    #         exit 0
-    #       fi
+          if [ "${REF_TYPE}" != "branch" ]; then
+            echo "Ref '${REF_NAME}' is a ${REF_TYPE}, not a branch. Nothing to commit back."
+            echo "branch=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-    #       if [ -z "${GITHUB_GPG_SECRET_KEY:-}" ] || [ -z "${GITHUB_GPG_SIGNING_KEY:-}" ]; then
-    #         echo "Missing GPG secrets; cannot create signed commit."
-    #         exit 1
-    #       fi
+          echo "branch=${REF_NAME}" >> "$GITHUB_OUTPUT"
 
-    #       if git diff --quiet -- manifest.json; then
-    #         echo "Manifest not changed. Skipping commit."
-    #         exit 0
-    #       fi
-
-    #       echo "${GITHUB_GPG_SECRET_KEY}" | base64 -d > /tmp/private.key
-    #       gpg --batch --import /tmp/private.key
-    #       rm /tmp/private.key
-
-    #       git config user.email "automation@filigran.io"
-    #       git config user.name "Filigran Automation"
-    #       git config user.signingkey "${GITHUB_GPG_SIGNING_KEY}"
-    #       git config commit.gpgsign true
-
-    #       git add .
-    #       git commit -m "chore(manifest): build and update manifest [skip ci]"
-
-    #       git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-    #       if git push -q origin "${TARGET_BRANCH}"; then
-    #         echo "Manifest changes pushed successfully."
-    #         exit 0
-    #       fi
-
-    #       echo "Push rejected, ${TARGET_BRANCH} probably moved. Trying rebase..."
-    #       if ! git pull --rebase origin "${TARGET_BRANCH}"; then
-    #         echo "Rebase failed, aborting."
-    #         git rebase --abort || true
-    #         exit 1
-    #       fi
-
-    #       git push -q origin "${TARGET_BRANCH}"
+      # Commits via GitHub's GraphQL API instead of raw `git commit`, so the
+      # commit is GPG-signed by GitHub (required by this repo's branch
+      # protection) without managing signing keys in CI. No local git
+      # add/commit/push: it's a no-op when nothing was regenerated, and it
+      # re-resolves the branch head through the API so it isn't affected by
+      # non-fast-forward races from concurrent runs.
+      #
+      # `file_pattern` is a space-separated pathspec passed to `git status`,
+      # scoped to the generated artifacts so the virtualenvs and temp files
+      # created by the generation scripts never enter the commit. Untracked
+      # (new) schemas and deletions are both picked up.
+      - name: Commit manifest if changed
+        if: steps.target.outputs.branch != ''
+        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
+        with:
+          commit_message: "chore(manifest): build and update manifest [skip ci]"
+          repo: ${{ github.repository }}
+          branch: ${{ steps.target.outputs.branch }}
+          file_pattern: "manifest.json */__metadata__/connector_config_schema.json */__metadata__/CONNECTOR_CONFIG_DOC.md"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
