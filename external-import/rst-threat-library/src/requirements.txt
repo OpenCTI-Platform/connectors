@@ -1,0 +1,12 @@
+# Pin pycti to your OpenCTI platform version (OPENCTI_VERSION in root .env).
+pycti==7.260715.0
+pydantic~=2.11.3
+pydantic-settings>=2.9.1,<3
+requests~=2.33.0
+stix2>=3.0.0,<4
+# connectors-sdk is installed with --no-deps; include its non-pycti deps here.
+limits>=5.0,<6
+
+# Pin connectors-sdk to the same OpenCTI/connectors release as pycti above.
+# Dockerfile installs this line with --no-deps so it cannot override the pycti pin.
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260715.0#subdirectory=connectors-sdk
