@@ -17,6 +17,13 @@
     "/^lts\\/.*/"
   ],
   "branchConcurrentLimit": 5,
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__fixtures__/**"
+  ],
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": [
