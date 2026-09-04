@@ -533,7 +533,7 @@ class ImportExternalReferenceConnector:
                 if not is_pdf and pdf_data is None:
                     html, pdf_bytes = await self._fetch_with_browser(url)
 
-                if html is None and pdf_bytes is None:
+                if html is None and pdf_bytes is None and pdf_data is None:
                     return "Skipped: empty or protected page"
 
             except asyncio.TimeoutError:
