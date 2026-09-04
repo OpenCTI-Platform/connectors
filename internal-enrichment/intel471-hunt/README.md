@@ -92,7 +92,7 @@ The full `/es/query` parameter specification is published at
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 7.260902.0
+- OpenCTI Platform >= 7.260904.0
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors/tree/master/connectors-sdk) library matching your OpenCTI version
 - An Intel 471 Hunter subscription and API key (see above)

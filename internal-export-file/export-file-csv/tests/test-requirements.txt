@@ -1,5 +1,5 @@
 -r ../src/requirements.txt
 pytest==9.0.3
 PyYAML==6.0.2
-pycti==7.260902.0
+pycti==7.260904.0
 PyYAML==6.0.2

@@ -1,4 +1,4 @@
-pycti==7.260902.0
+pycti==7.260904.0
 pydantic~=2.13.5
 dxlclient==5.7.0.1
 dxltieclient==0.3.0
