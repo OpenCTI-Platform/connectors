@@ -371,6 +371,17 @@ class ConnectorAccenture:
                 # Remove items after iteration
                 for item in items_to_remove:
                     stix_objects.remove(item)
+
+            if stix_object.get("type") == "attack-pattern":
+                # rework attack-pattern stix entity
+                stix_object["name"] = stix_object["name"].capitalize()
+                if "custom_properties" in stix_object:
+                    stix_object["custom_properties"]["x_mitre_id"] = stix_object["name"]
+                else:
+                    stix_object["custom_properties"] = {
+                        "x_mitre_id": stix_object["name"]
+                    }
+
         stix_objects.extend(new_entities_for_bundle)
 
         if self.config.threat_actor_as_intrusion_set:
