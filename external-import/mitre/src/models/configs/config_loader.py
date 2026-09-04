@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -18,19 +19,20 @@ from src.models.configs import (
 )
 
 VALID_SCOPE_VALUES = [
+    "attack-pattern",
+    "campaign",
+    "course-of-action",
+    "identity",
+    "intrusion-set",
+    "malware",
+    "marking-definition",
     "tool",
     "report",
-    "malware",
-    "identity",
-    "campaign",
-    "intrusion-set",
-    "attack-pattern",
-    "course-of-action",
-    "x-mitre-data-source",
+    "x-mitre-collection",
     "x-mitre-data-component",
+    "x-mitre-data-source",
     "x-mitre-matrix",
     "x-mitre-tactic",
-    "x-mitre-collection",
 ]
 
 
@@ -55,9 +57,10 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     def validate_scope(cls, value: ListFromString) -> ListFromString:
         invalid_values = [item for item in value if item not in VALID_SCOPE_VALUES]
         if invalid_values:
-            raise ValueError(
+            warnings.warn(
                 f"Invalid scope value(s) {invalid_values}. "
-                f"CONNECTOR_SCOPE must only contain values from {VALID_SCOPE_VALUES}."
+                f"CONNECTOR_SCOPE must only contain values from {VALID_SCOPE_VALUES}.",
+                stacklevel=2,
             )
         return value
 
