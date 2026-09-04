@@ -3,4 +3,4 @@ python-magic~=0.4.27; sys_platform == 'linux' or sys_platform == 'darwin'
 python-magic-bin~=0.4.14; sys_platform == 'win32'
 git+https://github.com/hatching/triage.git#subdirectory=python
 pydantic>=2.8.2,<3
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260904.0#subdirectory=connectors-sdk

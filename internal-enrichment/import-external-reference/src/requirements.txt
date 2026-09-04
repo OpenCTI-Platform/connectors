@@ -5,4 +5,4 @@ pdfminer.six==20251107
 playwright==1.58.0
 cachetools
 pydantic >=2.8.2, <3
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260904.0#subdirectory=connectors-sdk
