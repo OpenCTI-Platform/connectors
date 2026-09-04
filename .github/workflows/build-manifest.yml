@@ -30,7 +30,7 @@ jobs:
     name: Build and Commit Manifest
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -108,6 +108,22 @@ jobs:
             echo "still_head=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # GITHUB_TOKEN cannot push to the default branch: the `filigran`
+      # enterprise ruleset requires a pull request there, and `github-actions`
+      # is not an eligible bypass actor at enterprise level (only GitHub Apps
+      # are). The `Connectors Manifest Bot` App is registered in that ruleset's
+      # bypass list, so its installation token is what allows the commit back.
+      #
+      # Resolved right before the commit: installation tokens live for one
+      # hour, and the generation steps above can be slow.
+      - name: Generate GitHub App token
+        id: app-token
+        if: steps.target.outputs.branch != ''
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.RELEASE_COMMIT_GITHUB_APP_ID }}
+          private-key: ${{ secrets.RELEASE_COMMIT_GITHUB_APP_PRIVATE_KEY }}
+
       # Commits via GitHub's GraphQL API instead of raw `git commit`, so the
       # commit is GPG-signed by GitHub (required by this repo's branch
       # protection) without managing signing keys in CI. No local git
@@ -135,7 +151,7 @@ jobs:
           branch: ${{ steps.target.outputs.branch }}
           file_pattern: "manifest.json */__metadata__/connector_config_schema.json */__metadata__/CONNECTOR_CONFIG_DOC.md"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Warn if manifest commit failed
         if: steps.target.outputs.branch != '' && steps.freshness.outputs.still_head == 'true' && steps.commit.outcome == 'failure'
