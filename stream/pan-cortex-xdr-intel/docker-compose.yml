@@ -1,0 +1,17 @@
+services:
+  connector-pan-cortex-xdr-intel:
+    image: opencti/connector-pan-cortex-xdr-intel:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      # - CONNECTOR_ID=6f1b7d7d-4655-42e6-bef1-ad6f176d25a0
+      # - CONNECTOR_NAME=Palo Alto Cortex XDR Intel
+      # - CONNECTOR_SCOPE=pan-cortex-xdr-intel
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      # - CONNECTOR_LOG_LEVEL=error
+      - PAN_CORTEX_XDR_INTEL_API_BASE_URL=ChangeMe # Cortex XDR API base URL (tenant FQDN), e.g. https://api-<fqdn>
+      - PAN_CORTEX_XDR_INTEL_API_KEY_ID=ChangeMe
+      - PAN_CORTEX_XDR_INTEL_API_KEY=ChangeMe
+    restart: always

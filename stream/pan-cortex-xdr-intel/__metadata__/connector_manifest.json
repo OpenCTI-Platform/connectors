@@ -1,0 +1,26 @@
+{
+  "title": "Palo Alto Cortex XDR Intel",
+  "slug": "palo-alto-cortex-xdr-intel",
+  "description": "Palo Alto Cortex XDR is an extended detection and response (XDR) platform that integrates endpoint, network, and cloud data to detect, investigate, and respond to threats across the enterprise.\n\nThis connector consumes STIX Indicators from an OpenCTI live stream, extracts the underlying observables (file hashes, domain names, IP addresses, email addresses, and URLs), and synchronizes them as Indicators of Compromise (IOCs) in Palo Alto Cortex XDR — without any manual IOC management.\n\nKey features:\n- Real-time IOC push from OpenCTI live stream to Cortex XDR\n- Supports file hashes, domain names, IP addresses, email addresses, and URLs\n- Automatic IOC expiration derived from the indicator's valid_until field\n- IOC severity mapped from OpenCTI confidence score\n- Automatic IOC deletion in Cortex XDR when the indicator is removed in OpenCTI",
+  "short_description": "Palo Alto Cortex XDR Intel connector synchronizes OpenCTI indicators to Palo Alto Cortex XDR, keeping your EDR detection base continuously aligned with your threat intelligence.",
+  "logo": "stream/pan-cortex-xdr-intel/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Endpoint Detection & Response"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260811.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/pan-cortex-xdr-intel",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-pan-cortex-xdr-intel",
+  "container_type": "STREAM"
+}
