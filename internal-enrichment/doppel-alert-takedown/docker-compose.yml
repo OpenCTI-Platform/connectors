@@ -13,9 +13,17 @@ services:
       #- CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       #- CONNECTOR_AUTO=false # optional (default: false)
       # Custom parameters for connector-doppel-alert-takedown
+      #- DOPPEL_ALERT_TAKEDOWN_API_BASE_URL=https://api.doppel.com # optional
+      # Choose exactly one authentication block; mixed credentials are rejected.
+      - DOPPEL_ALERT_TAKEDOWN_API_VERSION=v1
+      # V1 only
       - DOPPEL_ALERT_TAKEDOWN_API_KEY=ChangeMe
       - DOPPEL_ALERT_TAKEDOWN_USER_API_KEY=ChangeMe
-      #- DOPPEL_ALERT_TAKEDOWN_API_BASE_URL=https://api.doppel.com # optional (default: 'https://api.doppel.com')
+      # V2 only: set API_VERSION=v2, remove V1 fields, and uncomment:
+      #- DOPPEL_ALERT_TAKEDOWN_CLIENT_ID=ChangeMe
+      #- DOPPEL_ALERT_TAKEDOWN_CLIENT_SECRET=ChangeMe
+      #- DOPPEL_ALERT_TAKEDOWN_TOKEN_URL=https://api.doppel.com/oauth/token
+      #- DOPPEL_ALERT_TAKEDOWN_TOKEN_AUDIENCE=doppel-external
       #- DOPPEL_ALERT_TAKEDOWN_TAGS= # optional, comma-separated list of tags added to created alerts (default: empty)
       #- DOPPEL_ALERT_TAKEDOWN_TAKEDOWN_COMMENT=Confirmed by OpenCTI — requesting takedown. # optional
       #- DOPPEL_ALERT_TAKEDOWN_MAX_TLP=TLP:AMBER+STRICT # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:RED')
