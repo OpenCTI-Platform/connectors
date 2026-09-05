@@ -52,6 +52,36 @@ class WizCloudConfig(BaseConfigModel):
         ),
     )
 
+    import_vulnerabilities: bool = Field(
+        default=False,
+        description=(
+            "Whether to import vulnerability findings for the cloud assets "
+            "referenced by the imported issues."
+        ),
+    )
+    vulnerability_severity: ListFromString = Field(
+        default=["CRITICAL", "HIGH"],
+        description=(
+            "Vulnerability severities to import (comma-separated). "
+            "E.g. 'CRITICAL,HIGH,MEDIUM,LOW,NONE'."
+        ),
+    )
+    vulnerability_status: ListFromString = Field(
+        default=["OPEN", "IN_PROGRESS"],
+        description=(
+            "Vulnerability statuses to import (comma-separated). "
+            "E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'."
+        ),
+    )
+    vulnerability_has_exploit: bool = Field(
+        default=False,
+        description=(
+            "Import only vulnerabilities with a known exploit. Severity alone "
+            "barely reduces the volume, so this is the effective filter when "
+            "an asset carries hundreds of findings."
+        ),
+    )
+
     # pydantic parses ISO 8601 durations, so WIZ_CLOUD_SINCE=P30D works.
     since: timedelta = Field(
         default=timedelta(days=30),

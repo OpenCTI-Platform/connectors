@@ -9,9 +9,12 @@ import pytest
 # Add src/ to path so we can import the connector package
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from connectors_sdk.models import OrganizationAuthor, TLPMarking  # noqa: E402
+from connectors_sdk.models import OrganizationAuthor, System, TLPMarking  # noqa: E402
 from wiz_cloud.models import WizIssue  # noqa: E402
-from wiz_cloud.processors import WizIssuesProcessor  # noqa: E402
+from wiz_cloud.processors import (  # noqa: E402
+    WizIssuesProcessor,
+    WizVulnerabilitiesProcessor,
+)
 from wiz_cloud.state import WizConnectorState  # noqa: E402
 
 
@@ -122,6 +125,90 @@ def duplicate_snapshot_issue(duplicate_snapshot_issue_data) -> WizIssue:
 
 
 @pytest.fixture
+def vulnerability_finding_data() -> dict:
+    """A kernel CVE finding with CVSS v3 metrics and no CVSS v4 block."""
+    return {
+        "id": "4f6f2001-3a9b-5ef7-a934-e6780bdfeb0b",
+        "name": "CVE-2026-46333",
+        "description": "The package `kernel` was detected on a machine.",
+        "CVEDescription": (
+            "In the Linux kernel, the following vulnerability has been resolved."
+        ),
+        "CVSSSeverity": "HIGH",
+        "score": 7.1,
+        "severity": "HIGH",
+        "status": "OPEN",
+        "hasCisaKevExploit": False,
+        "portalUrl": (
+            "https://app.wiz.io/explorer/vulnerability-findings#~(entity~(~'4f6f2001))"
+        ),
+        "firstDetectedAt": "2026-05-26T14:03:31.119827Z",
+        "lastDetectedAt": "2026-08-28T06:08:26Z",
+        "epssSeverity": "HIGH",
+        "epssPercentile": 72.4,
+        "epssProbability": 1.5,
+        "cvssv2": {
+            "attackVector": None,
+            "attackComplexity": None,
+            "confidentialityImpact": None,
+            "integrityImpact": None,
+            "availabilityImpact": None,
+        },
+        "cvssv3": {
+            "attackVector": "LOCAL",
+            "attackComplexity": "LOW",
+            "privilegesRequired": "LOW",
+            "confidentialityImpact": "HIGH",
+            "integrityImpact": "HIGH",
+            "availabilityImpact": "NONE",
+            "exploitCodeMaturity": None,
+            "userInteractionRequired": False,
+            "scope": "UNCHANGED",
+        },
+        "cvssv4": None,
+        "vulnerableAsset": {
+            "id": "8728411e-1a43-55a2-801e-44ffcb5a3dfa",
+            "type": "VIRTUAL_MACHINE",
+            "name": "tivan-eleonore-vm",
+            "region": "us-east-2",
+            "providerUniqueId": (
+                "arn:aws:ec2:us-east-2:998231069301:instance/i-038b4a2cfb0c1f036"
+            ),
+            "cloudProviderURL": (
+                "https://us-east-2.console.aws.amazon.com/ec2/v2/home"
+            ),
+            "cloudPlatform": "AWS",
+            "status": "Active",
+            "tags": {"Name": "tivan-eleonore-vm", "owner": "tivan"},
+        },
+    }
+
+
+@pytest.fixture
+def second_asset_finding_data(vulnerability_finding_data) -> dict:
+    """A finding on a different asset, used to test per-asset attribution."""
+    return {
+        **vulnerability_finding_data,
+        "id": "faa59c04-b85f-598a-ba11-26069ca558c1",
+        "name": "CVE-2026-3039",
+        "CVEDescription": (
+            "BIND servers are vulnerable to excessive memory consumption."
+        ),
+        "vulnerableAsset": {
+            **vulnerability_finding_data["vulnerableAsset"],
+            "id": "b9e464fc-4b1a-5745-8d30-366690b946b8",
+            "name": "TA-733-INTEG-ING",
+        },
+    }
+
+
+@pytest.fixture
+def empty_cve_description_finding_data(vulnerability_finding_data) -> dict:
+    """A finding whose CVEDescription is empty, forcing the fallback."""
+    return {**vulnerability_finding_data, "CVEDescription": ""}
+
+
+@pytest.fixture
 def processor() -> WizIssuesProcessor:
     """A WizIssuesProcessor ready for conversion, with no I/O performed.
 
@@ -136,3 +223,31 @@ def processor() -> WizIssuesProcessor:
     processor.logger = MagicMock()
     processor.state = WizConnectorState()
     return processor
+
+
+@pytest.fixture
+def vulnerabilities_processor() -> WizVulnerabilitiesProcessor:
+    """A WizVulnerabilitiesProcessor with a stubbed client and no I/O."""
+    from wiz_cloud.settings import WizCloudConfig
+
+    return WizVulnerabilitiesProcessor(
+        client=MagicMock(),
+        config=WizCloudConfig(
+            api_url="https://api.us17.app.wiz.io/graphql",
+            client_id="id",
+            client_secret="secret",
+        ),
+        logger=MagicMock(),
+        author=OrganizationAuthor(name="Wiz"),
+        marking=TLPMarking(level="amber+strict"),
+    )
+
+
+@pytest.fixture
+def system() -> System:
+    """The System an issue would have built for its cloud resource."""
+    return System(
+        name="tivan-eleonore-vm",
+        author=OrganizationAuthor(name="Wiz"),
+        markings=[TLPMarking(level="amber+strict")],
+    )

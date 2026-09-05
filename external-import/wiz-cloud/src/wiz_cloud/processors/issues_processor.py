@@ -1,7 +1,10 @@
 """Processor turning Wiz Threat Detection issues into OpenCTI Incidents.
 
 Each issue becomes an Incident, and the cloud resource it was raised on
-becomes a System linked with a targets relationship.
+becomes a System linked with a targets relationship. When vulnerability
+import is enabled, the findings of that resource are fetched while the issue
+is converted and travel in the same bundle, so an issue and its
+vulnerabilities are never committed apart.
 """
 
 from collections.abc import Iterator
@@ -16,11 +19,13 @@ from connectors_sdk.models import (
     Relationship,
     System,
     TLPMarking,
+    Vulnerability,
 )
 from connectors_sdk.models.enums import IncidentSeverity, IncidentType, RelationshipType
 from pydantic import ValidationError
 from wiz_cloud.client_api import WizApiClient
 from wiz_cloud.models import WizEntitySnapshot, WizIssue
+from wiz_cloud.processors.vulnerabilities_processor import WizVulnerabilitiesProcessor
 
 ISSUES_QUERY = (
     resources.files("wiz_cloud.queries").joinpath("issues.graphql").read_text("utf-8")
@@ -45,6 +50,10 @@ def _utc(dt: datetime) -> str:
 
 
 class WizIssuesProcessor(BaseDataProcessor):
+    # Set in post_init() when vulnerability import is enabled. Declared here
+    # so conversion works on a processor whose post_init() was skipped.
+    _vulnerabilities: WizVulnerabilitiesProcessor | None = None
+
     # -- lifecycle -----------------------------------------------------------
 
     def post_init(self) -> None:
@@ -65,6 +74,17 @@ class WizIssuesProcessor(BaseDataProcessor):
         )
         self._author = OrganizationAuthor(name="Wiz")
         self._marking = TLPMarking(level=self._config.marking)
+        # Built here rather than in __init__ because it needs the settings and
+        # shares the client, so both queries ride on a single access token.
+        self._vulnerabilities: WizVulnerabilitiesProcessor | None = None
+        if self._config.import_vulnerabilities:
+            self._vulnerabilities = WizVulnerabilitiesProcessor(
+                client=self._client,
+                config=self._config,
+                logger=self.logger,
+                author=self._author,
+                marking=self._marking,
+            )
 
     # -- collect -------------------------------------------------------------
 
@@ -113,14 +133,18 @@ class WizIssuesProcessor(BaseDataProcessor):
         """Convert raw issue pages into bundle objects.
 
         Unparseable issues are logged and skipped rather than failing the run.
-        The cursor is advanced in place once every page has been converted;
-        the connector persists it after all processors succeed.
+
+        When vulnerability import is enabled, each issue is emitted as its own
+        bundle carrying the vulnerabilities of its resource, so the two are
+        committed together. Otherwise one bundle per page is emitted, as
+        before.
 
         Args:
             data: Pages of raw issue dicts yielded by collect().
 
         Yields:
-            Lists of SDK objects, one bundle per non-empty page.
+            Lists of SDK objects: one bundle per issue when vulnerabilities
+            are imported, one bundle per non-empty page otherwise.
         """
         # Run-scoped caches: the same entitySnapshot backs many issues, and
         # author/marking must be sent once, not once per page.
@@ -128,9 +152,11 @@ class WizIssuesProcessor(BaseDataProcessor):
         shared_sent = False
         max_created = self.state.issues_last_created_at
         issues_converted = 0
+        bundles_sent = 0
+        vulnerabilities_sent = 0
 
         for page in data:
-            objects: list = []
+            page_objects: list = []
 
             for raw in page:
                 try:
@@ -142,21 +168,49 @@ class WizIssuesProcessor(BaseDataProcessor):
                     )
                     continue
 
-                objects.extend(self._convert(issue, systems_cache))
+                objects = self._convert(issue, systems_cache)
                 issues_converted += 1
                 if max_created is None or issue.created_at > max_created:
                     max_created = issue.created_at
 
-            if not objects:
-                continue
+                if self._vulnerabilities is None:
+                    page_objects.extend(objects)
+                    continue
 
-            # Author and marking ride along with the first bundle that
-            # actually carries issues, never on their own.
-            if not shared_sent:
-                objects = [self._author, self._marking, *objects]
+                vulnerabilities = 0
+                if issue.entity_snapshot is not None:
+                    found = self._vulnerabilities.objects_for_asset(
+                        issue.entity_snapshot.id,
+                        systems_cache[issue.entity_snapshot.id],
+                    )
+                    vulnerabilities = sum(
+                        1 for obj in found if isinstance(obj, Vulnerability)
+                    )
+                    objects.extend(found)
+                vulnerabilities_sent += vulnerabilities
+
+                self.logger.info(
+                    "[WIZ-CLOUD] Sending an incident with its vulnerabilities",
+                    {
+                        "issue_id": issue.id,
+                        "asset": (
+                            issue.entity_snapshot.name
+                            if issue.entity_snapshot
+                            else None
+                        ),
+                        # Zero when the asset was already scanned this run:
+                        # its vulnerabilities went out with an earlier issue.
+                        "vulnerabilities": vulnerabilities,
+                    },
+                )
+                yield self._with_shared(objects, shared_sent)
                 shared_sent = True
+                bundles_sent += 1
 
-            yield objects
+            if page_objects:
+                yield self._with_shared(page_objects, shared_sent)
+                shared_sent = True
+                bundles_sent += 1
 
         if issues_converted == 0:
             self.logger.info(
@@ -167,11 +221,60 @@ class WizIssuesProcessor(BaseDataProcessor):
                     else {}
                 ),
             )
+        else:
+            self.logger.info(
+                "[WIZ-CLOUD] Import finished",
+                {
+                    "incidents": issues_converted,
+                    "vulnerabilities": vulnerabilities_sent,
+                    "bundles": bundles_sent,
+                },
+            )
 
-        # Cursor advances only after every page converted without raising.
-        # The connector persists state after all processors succeed.
-        if max_created is not None:
-            self.state.issues_last_created_at = max_created
+        self._advance_cursor(max_created)
+
+    def _with_shared(self, objects: list, already_sent: bool) -> list:
+        """Prepend the author and marking to the first bundle carrying data.
+
+        Args:
+            objects: The bundle objects.
+            already_sent: Whether a previous bundle carried them.
+
+        Returns:
+            The bundle, with author and marking in front when they are still
+            owed. They never travel in a bundle of their own.
+        """
+        if already_sent:
+            return objects
+        return [self._author, self._marking, *objects]
+
+    def _advance_cursor(self, max_created: datetime | None) -> None:
+        """Store the newest issue createdAt, unless vulnerabilities failed.
+
+        A failed fetch is not fatal, but the issues it belongs to must not be
+        marked as done: leaving the cursor where it is replays the whole
+        window on the next run. Replaying is harmless because every object
+        carries a deterministic id, whereas advancing would drop those
+        vulnerabilities for good.
+
+        The connector persists the state only after all processors succeed.
+
+        Args:
+            max_created: The newest createdAt converted this run, if any.
+        """
+        if max_created is None:
+            return
+
+        failures = self._vulnerabilities.failures if self._vulnerabilities else 0
+        if failures:
+            self.logger.warning(
+                "[WIZ-CLOUD] Holding the issues cursor back after vulnerability "
+                "failures, the window will be imported again on the next run",
+                {"failed_assets": failures},
+            )
+            return
+
+        self.state.issues_last_created_at = max_created
 
     # -- conversion ----------------------------------------------------------
 

@@ -9,8 +9,11 @@ from wiz_cloud.processors import WizIssuesProcessor
 
 if __name__ == "__main__":
     try:
+        settings = ConnectorSettings()
         connector = ExternalImportConnector(
-            settings=ConnectorSettings(),
+            settings=settings,
+            # A single processor: vulnerabilities are fetched while each issue
+            # is converted, so they share its bundle and its work.
             data_processors=[WizIssuesProcessor()],
             state=WizConnectorState(),
         )
