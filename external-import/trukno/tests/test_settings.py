@@ -1,0 +1,96 @@
+from datetime import timedelta
+
+import pytest
+from connectors_sdk.settings.exceptions import ConfigValidationError
+from pydantic import HttpUrl, SecretStr
+from trukno_connector import ConnectorSettings
+
+
+@pytest.fixture
+def required_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENCTI_URL", "http://opencti:8080")
+    monkeypatch.setenv("OPENCTI_TOKEN", "opencti-token")
+    monkeypatch.setenv("CONNECTOR_ID", "connector-id")
+    monkeypatch.setenv("TRUKNO_API_KEY", "trukno-secret")
+
+
+def test_settings_require_opencti_url(required_environment, monkeypatch):
+    monkeypatch.delenv("OPENCTI_URL")
+
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()
+
+
+def test_settings_require_opencti_token(required_environment, monkeypatch):
+    monkeypatch.delenv("OPENCTI_TOKEN")
+
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()
+
+
+def test_settings_require_connector_id(required_environment, monkeypatch):
+    monkeypatch.delenv("CONNECTOR_ID")
+
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()
+
+
+def test_settings_require_trukno_api_key(required_environment, monkeypatch):
+    monkeypatch.delenv("TRUKNO_API_KEY")
+
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()
+
+
+def test_settings_apply_trukno_defaults(required_environment):
+    settings = ConnectorSettings()
+
+    assert settings.opencti.url == HttpUrl("http://opencti:8080")
+    assert settings.connector.name == "TruKno"
+    assert settings.connector.scope == ["report", "attack-pattern", "malware"]
+    assert settings.connector.type == "EXTERNAL_IMPORT"
+    assert settings.connector.duration_period == timedelta(hours=1)
+    assert settings.trukno.api_base_url == HttpUrl("https://api.trukno.com/v2")
+    assert settings.trukno.initial_lookback_days == 30
+
+
+def test_settings_parse_scope_from_comma_separated_environment(
+    required_environment, monkeypatch
+):
+    monkeypatch.setenv("CONNECTOR_SCOPE", "report, attack-pattern, malware")
+
+    settings = ConnectorSettings()
+
+    assert settings.connector.scope == ["report", "attack-pattern", "malware"]
+
+
+def test_settings_keep_trukno_api_key_secret(required_environment):
+    settings = ConnectorSettings()
+
+    assert isinstance(settings.trukno.api_key, SecretStr)
+    assert settings.trukno.api_key.get_secret_value() == "trukno-secret"
+    assert "trukno-secret" not in repr(settings.trukno.api_key)
+
+
+def test_settings_serialize_helper_config_without_exposing_trukno_secret(
+    required_environment,
+):
+    settings = ConnectorSettings()
+
+    helper_config = settings.to_helper_config()
+
+    assert helper_config["opencti"]["token"] == "opencti-token"
+    assert helper_config["connector"]["scope"] == "report,attack-pattern,malware"
+    assert helper_config["connector"]["duration_period"] == "PT1H"
+    assert helper_config["trukno"]["api_key"] == "**********"
+
+
+def test_settings_migrate_deprecated_interval_to_duration(
+    required_environment, monkeypatch
+):
+    monkeypatch.setenv("TRUKNO_INTERVAL_MINUTES", "15")
+
+    with pytest.warns(UserWarning, match="interval_minutes"):
+        settings = ConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(minutes=15)
