@@ -9,7 +9,12 @@ class TruKnoClient:
         self.session = session or requests.Session()
 
     def _headers(self) -> dict[str, str]:
-        return {"x-api-key": self.api_key}
+        return {"Authorization": self._authorization_value()}
+
+    def _authorization_value(self) -> str:
+        if self.api_key.casefold().startswith("bearer "):
+            return self.api_key
+        return f"Bearer {self.api_key}"
 
     def list_updated_breaches(self, updated_after: str) -> list[BreachSummary]:
         response = self.session.get(

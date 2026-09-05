@@ -55,7 +55,7 @@ def test_list_updated_breaches_returns_ids_and_request_details():
     assert session.requests == [
         {
             "url": "https://api.trukno.com/v2/breaches",
-            "headers": {"x-api-key": "secret"},
+            "headers": {"Authorization": "Bearer secret"},
             "params": {"updated_after": "2026-04-20T00:00:00Z"},
             "timeout": 60,
         }
@@ -72,7 +72,7 @@ def test_get_breach_details_returns_payload_and_request_details():
     assert session.requests == [
         {
             "url": "https://api.trukno.com/v2/breaches/b1",
-            "headers": {"x-api-key": "secret"},
+            "headers": {"Authorization": "Bearer secret"},
             "params": None,
             "timeout": 60,
         }
@@ -85,3 +85,12 @@ def test_raise_for_status_errors_propagate_from_list_calls():
 
     with pytest.raises(RuntimeError, match="boom"):
         client.list_updated_breaches("2026-04-20T00:00:00Z")
+
+
+def test_bearer_prefix_is_not_duplicated_in_auth_header():
+    session = DummySession([DummyResponse(_load_fixture("breach_list.json"))])
+    client = TruKnoClient("https://api.trukno.com/v2", "Bearer secret", session=session)
+
+    client.list_updated_breaches("2026-04-20T00:00:00Z")
+
+    assert session.requests[0]["headers"] == {"Authorization": "Bearer secret"}
