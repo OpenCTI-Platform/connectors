@@ -7,11 +7,14 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, field_validator
 
 
 def _minutes_to_duration(value: object) -> timedelta:
-    return timedelta(minutes=int(value))
+    minutes = int(value)
+    if minutes <= 0:
+        raise ValueError("interval_minutes must be a positive integer")
+    return timedelta(minutes=minutes)
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -27,6 +30,13 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The period of time to await between two runs.",
         default=timedelta(hours=1),
     )
+
+    @field_validator("duration_period")
+    @classmethod
+    def validate_duration_period(cls, value: timedelta) -> timedelta:
+        if value <= timedelta(0):
+            raise ValueError("duration_period must be a positive duration")
+        return value
 
 
 class TruKnoConfig(BaseConfigModel):
@@ -45,6 +55,13 @@ class TruKnoConfig(BaseConfigModel):
         new_namespaced_var="duration_period",
         new_value_factory=_minutes_to_duration,
     )
+
+    @field_validator("initial_lookback_days")
+    @classmethod
+    def validate_initial_lookback_days(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("initial_lookback_days must be a positive integer")
+        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):

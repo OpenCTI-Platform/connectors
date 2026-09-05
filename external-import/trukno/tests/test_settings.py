@@ -94,3 +94,34 @@ def test_settings_migrate_deprecated_interval_to_duration(
         settings = ConnectorSettings()
 
     assert settings.connector.duration_period == timedelta(minutes=15)
+
+
+@pytest.mark.parametrize("interval_minutes", ["0", "-1"])
+def test_settings_reject_non_positive_deprecated_interval(
+    required_environment, monkeypatch, interval_minutes
+):
+    monkeypatch.setenv("TRUKNO_INTERVAL_MINUTES", interval_minutes)
+
+    with pytest.warns(UserWarning, match="interval_minutes"):
+        with pytest.raises(ConfigValidationError):
+            ConnectorSettings()
+
+
+@pytest.mark.parametrize("duration_period", ["PT0S", "-PT1S"])
+def test_settings_reject_non_positive_duration(
+    required_environment, monkeypatch, duration_period
+):
+    monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", duration_period)
+
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()
+
+
+@pytest.mark.parametrize("lookback_days", ["0", "-1"])
+def test_settings_reject_non_positive_initial_lookback(
+    required_environment, monkeypatch, lookback_days
+):
+    monkeypatch.setenv("TRUKNO_INITIAL_LOOKBACK_DAYS", lookback_days)
+
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()
