@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Any
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -69,3 +70,16 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig,
     )
     trukno: TruKnoConfig = Field(default_factory=TruKnoConfig)
+
+    @classmethod
+    def _migrate_deprecated_variables(cls, data: dict[str, Any]) -> dict[str, Any]:
+        trukno = data.get("trukno", {})
+        connector = data.get("connector", {})
+        if (
+            isinstance(trukno, dict)
+            and "interval_minutes" in trukno
+            and isinstance(connector, dict)
+            and "duration_period" in connector
+        ):
+            _minutes_to_duration(trukno["interval_minutes"])
+        return super()._migrate_deprecated_variables(data)

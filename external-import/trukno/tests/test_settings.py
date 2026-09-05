@@ -107,6 +107,29 @@ def test_settings_reject_non_positive_deprecated_interval(
             ConnectorSettings()
 
 
+@pytest.mark.parametrize("interval_minutes", ["0", "-1"])
+def test_settings_reject_invalid_deprecated_interval_with_canonical_duration(
+    required_environment, monkeypatch, interval_minutes
+):
+    monkeypatch.setenv("TRUKNO_INTERVAL_MINUTES", interval_minutes)
+    monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT1H")
+
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()
+
+
+def test_settings_preserve_canonical_duration_over_valid_deprecated_interval(
+    required_environment, monkeypatch
+):
+    monkeypatch.setenv("TRUKNO_INTERVAL_MINUTES", "15")
+    monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT1H")
+
+    with pytest.warns(UserWarning, match="interval_minutes"):
+        settings = ConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(hours=1)
+
+
 @pytest.mark.parametrize("duration_period", ["PT0S", "-PT1S"])
 def test_settings_reject_non_positive_duration(
     required_environment, monkeypatch, duration_period
