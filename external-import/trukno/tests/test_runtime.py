@@ -216,6 +216,42 @@ def test_build_runtime_uses_sdk_settings_and_unwraps_trukno_secret(monkeypatch):
     ]
 
 
+def test_build_runtime_uses_provided_settings_instance(monkeypatch):
+    helper_calls = []
+    client_calls = []
+
+    class DummyHelperWithState:
+        def __init__(self, config):
+            helper_calls.append(config)
+
+        def get_state(self):
+            return None
+
+    class DummyClientForBuild:
+        def __init__(self, base_url, api_key):
+            client_calls.append((base_url, api_key))
+
+    monkeypatch.setenv("OPENCTI_URL", "http://opencti:8080")
+    monkeypatch.setenv("OPENCTI_TOKEN", "token")
+    monkeypatch.setenv("CONNECTOR_ID", "connector-id")
+    monkeypatch.setenv("TRUKNO_API_BASE_URL", "https://api.trukno.test/v2")
+    monkeypatch.setenv("TRUKNO_API_KEY", "secret")
+    monkeypatch.setenv("TRUKNO_INITIAL_LOOKBACK_DAYS", "7")
+    settings = ConnectorSettings()
+
+    monkeypatch.setattr(runtime, "OpenCTIConnectorHelper", DummyHelperWithState)
+    monkeypatch.setattr(runtime, "TruKnoClient", DummyClientForBuild)
+    monkeypatch.setattr(runtime, "_utc_now_iso", lambda: "2026-05-01T09:30:00Z")
+
+    _, _, _, returned_settings = runtime.build_runtime(settings)
+
+    assert returned_settings is settings
+    assert helper_calls == [settings.to_helper_config()]
+    assert client_calls == [
+        (str(settings.trukno.api_base_url), settings.trukno.api_key.get_secret_value())
+    ]
+
+
 def test_main_schedules_process_using_configured_iso_duration(monkeypatch):
     helper = MagicMock()
     client = object()

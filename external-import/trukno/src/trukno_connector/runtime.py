@@ -45,8 +45,9 @@ def _complete_work(
     helper.api.work.to_processed(work_id, message, in_error=in_error)
 
 
-def build_runtime():
-    settings = ConnectorSettings()
+def build_runtime(settings: ConnectorSettings | None = None):
+    if settings is None:
+        settings = ConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
     client = TruKnoClient(
         str(settings.trukno.api_base_url),
