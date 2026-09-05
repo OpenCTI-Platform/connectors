@@ -1,11 +1,12 @@
-import builtins
+from datetime import timedelta
 import json
-from io import StringIO
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 from trukno_connector import runtime
 from trukno_connector.runtime import run_once
+from trukno_connector.settings import ConnectorSettings
 from trukno_connector.state import ConnectorState
 
 
@@ -90,29 +91,6 @@ def test_run_once_skips_breach_without_linkable_entities_but_advances_checkpoint
     assert helper.persisted == [{"last_seen_updated_at": "2026-04-20T10:00:00Z"}]
 
 
-def test_prepare_helper_config_falls_back_to_defaults_for_blank_connector_fields():
-    helper_config = runtime._prepare_helper_config(
-        {"connector": {"name": "", "scope": "", "log_level": ""}}
-    )
-
-    connector = helper_config["connector"]
-    assert connector["type"] == "EXTERNAL_IMPORT"
-    assert connector["name"] == runtime.DEFAULT_CONNECTOR_NAME
-    assert connector["scope"] == runtime.DEFAULT_CONNECTOR_SCOPE
-    assert connector["log_level"] == "info"
-
-
-def test_prepare_helper_config_preserves_explicit_connector_fields():
-    helper_config = runtime._prepare_helper_config(
-        {"connector": {"name": "Custom", "scope": "report", "log_level": "debug"}}
-    )
-
-    connector = helper_config["connector"]
-    assert connector["name"] == "Custom"
-    assert connector["scope"] == "report"
-    assert connector["log_level"] == "debug"
-
-
 def test_run_once_persists_checkpoint_after_each_successful_send_before_mid_batch_failure():
     helper = DummyHelper()
     state = ConnectorState(last_seen_updated_at="2026-04-20T00:00:00Z")
@@ -190,7 +168,7 @@ def test_run_once_marks_work_processed_on_success():
     assert kwargs.get("in_error") is False
 
 
-def test_build_runtime_reads_env_when_config_file_is_absent(monkeypatch):
+def test_build_runtime_uses_sdk_settings_and_unwraps_trukno_secret(monkeypatch):
     helper_calls = []
     client_calls = []
 
@@ -205,22 +183,16 @@ def test_build_runtime_reads_env_when_config_file_is_absent(monkeypatch):
         def __init__(self, base_url, api_key):
             client_calls.append((base_url, api_key))
 
-    monkeypatch.setattr(runtime.os.path, "isfile", lambda path: False)
-    monkeypatch.setattr(
-        runtime.os,
-        "environ",
-        {
-            "OPENCTI_URL": "http://opencti:8080",
-            "OPENCTI_TOKEN": "token",
-            "CONNECTOR_ID": "connector-id",
-            "CONNECTOR_NAME": "TruKno",
-            "CONNECTOR_SCOPE": "report",
-            "TRUKNO_API_BASE_URL": "https://api.trukno.test/v2",
-            "TRUKNO_API_KEY": "secret",
-            "TRUKNO_INTERVAL_MINUTES": "15",
-            "TRUKNO_INITIAL_LOOKBACK_DAYS": "7",
-        },
-    )
+    monkeypatch.setenv("OPENCTI_URL", "http://opencti:8080")
+    monkeypatch.setenv("OPENCTI_TOKEN", "token")
+    monkeypatch.setenv("CONNECTOR_ID", "connector-id")
+    monkeypatch.setenv("CONNECTOR_NAME", "TruKno Runtime")
+    monkeypatch.setenv("TRUKNO_API_BASE_URL", "https://api.trukno.test/v2")
+    monkeypatch.setenv("TRUKNO_API_KEY", "secret")
+    monkeypatch.setenv("TRUKNO_INITIAL_LOOKBACK_DAYS", "7")
+    settings = ConnectorSettings()
+
+    monkeypatch.setattr(runtime, "ConnectorSettings", lambda: settings, raising=False)
     monkeypatch.setattr(runtime, "OpenCTIConnectorHelper", DummyHelperWithState)
     monkeypatch.setattr(runtime, "TruKnoClient", DummyClientForBuild)
     monkeypatch.setattr(runtime, "_utc_now_iso", lambda: "2026-05-01T09:30:00Z")
@@ -237,65 +209,46 @@ def test_build_runtime_reads_env_when_config_file_is_absent(monkeypatch):
     _, _, state, config = runtime.build_runtime()
 
     assert state.last_seen_updated_at == "2026-04-24T12:00:00Z"
-    assert config.trukno_api_key == "secret"
-    assert client_calls == [("https://api.trukno.test/v2", "secret")]
-    assert helper_calls[0]["trukno"]["api_base_url"] == "https://api.trukno.test/v2"
+    assert config is settings
+    assert helper_calls == [settings.to_helper_config()]
+    assert client_calls == [
+        (str(settings.trukno.api_base_url), settings.trukno.api_key.get_secret_value())
+    ]
 
 
-def test_build_runtime_checks_explicit_config_path_first(monkeypatch):
-    raw_config = {
-        "opencti": {"url": "http://opencti:8080", "token": "token"},
-        "connector": {
-            "id": "connector-id",
-            "name": "TruKno",
-            "scope": "report",
-        },
-        "trukno": {
-            "api_base_url": "https://api.trukno.test/v2",
-            "api_key": "secret",
-            "interval_minutes": 15,
-            "initial_lookback_days": 7,
-        },
-    }
-    opened_paths = []
-
-    class DummyHelperWithState:
-        def __init__(self, config):
-            self.raw = config
-
-        def get_state(self):
-            return None
+def test_main_schedules_process_using_configured_iso_duration(monkeypatch):
+    helper = MagicMock()
+    client = object()
+    state = ConnectorState(last_seen_updated_at="2026-04-20T00:00:00Z")
+    settings = SimpleNamespace(
+        connector=SimpleNamespace(
+            name="TruKno Runtime", duration_period=timedelta(seconds=90)
+        )
+    )
+    run_once_mock = MagicMock(return_value=state)
 
     monkeypatch.setattr(
-        runtime.os,
-        "environ",
-        {"TRUKNO_CONNECTOR_CONFIG": "C:/runtime/trukno.yml"},
+        runtime, "build_runtime", lambda: (helper, client, state, settings)
     )
-    monkeypatch.setattr(runtime.os, "getcwd", lambda: "C:/workspace")
+    monkeypatch.setattr(runtime, "run_once", run_once_mock)
     monkeypatch.setattr(
-        runtime.os.path,
-        "isfile",
-        lambda path: path == "C:/runtime/trukno.yml",
-    )
-    monkeypatch.setattr(
-        builtins,
-        "open",
-        lambda path, *args, **kwargs: opened_paths.append(path) or StringIO("ignored"),
-    )
-    monkeypatch.setattr(runtime.yaml, "safe_load", lambda stream: raw_config)
-    monkeypatch.setattr(runtime, "OpenCTIConnectorHelper", DummyHelperWithState)
-    monkeypatch.setattr(runtime, "TruKnoClient", lambda *args: object())
-    monkeypatch.setattr(runtime, "_utc_now_iso", lambda: "2026-05-01T09:30:00Z")
-    monkeypatch.setattr(
-        runtime.ConnectorState,
-        "empty",
-        classmethod(
-            lambda cls, initial_lookback_days, now_iso: ConnectorState(
-                last_seen_updated_at="2026-04-24T12:00:00Z"
-            )
-        ),
+        runtime,
+        "time",
+        SimpleNamespace(sleep=lambda seconds: pytest.fail("manual sleep polling")),
+        raising=False,
     )
 
-    runtime.build_runtime()
+    runtime.main()
 
-    assert opened_paths == ["C:/runtime/trukno.yml"]
+    helper.schedule_process.assert_called_once()
+    _, kwargs = helper.schedule_process.call_args
+    assert kwargs["duration_period"] == 90.0
+
+    kwargs["message_callback"]()
+
+    run_once_mock.assert_called_once_with(
+        helper=helper,
+        client=client,
+        state=state,
+        connector_name="TruKno Runtime",
+    )
