@@ -137,6 +137,25 @@ Describe how the connector functions:
 * Additional relevant details
 -->
 
+## How to adapt this template
+
+To turn this template into your own external-import connector:
+
+1. **Settings** (`src/connector/settings.py`): rename `TemplateConfig`/`ExternalImportConnectorConfig`
+   fields to match your source. Replace `id`/`name`/`scope` defaults, and adjust the
+   `Auth`/`Incremental import`/`Feature flags` field groups for your API.
+2. **Client** (`src/template_client/`): implement `session_headers` for your API's auth
+   scheme, and one fetch method per endpoint (`api_client.py`). Add one Pydantic model
+   per raw entity type (`models.py`) so payloads are validated as soon as they're fetched.
+3. **State** (`src/connector/state.py`): add one checkpoint field per processor that
+   needs to resume (timestamp, page number, cursor, etc.).
+4. **Processors** (`src/connector/data_processors/`): one processor per data type/feature
+   flag. Implement `collect()` (fetch + resume params), `transform()` (map + skip invalid
+   items + update checkpoint), and a private `_convert_*()` mapping method per entity.
+5. **Entry point** (`src/main.py`): register your processors behind their feature flags.
+6. Regenerate `__metadata__/connector_config_schema.json` and `CONNECTOR_CONFIG_DOC.md`
+   from the settings model — never edit these generated files by hand.
+
 ## Debugging
 
 The connector can be debugged by setting the appropiate log level.
