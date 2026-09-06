@@ -49,6 +49,31 @@ def test_settings_apply_trukno_defaults(required_environment):
     assert settings.trukno.initial_lookback_days == 30
 
 
+def test_settings_treat_blank_optional_environment_values_as_unset(
+    required_environment, monkeypatch
+):
+    for name in (
+        "CONNECTOR_NAME",
+        "CONNECTOR_SCOPE",
+        "CONNECTOR_TYPE",
+        "CONNECTOR_LOG_LEVEL",
+        "CONNECTOR_DURATION_PERIOD",
+        "TRUKNO_API_BASE_URL",
+        "TRUKNO_INITIAL_LOOKBACK_DAYS",
+    ):
+        monkeypatch.setenv(name, "")
+
+    settings = ConnectorSettings()
+
+    assert settings.connector.name == "TruKno"
+    assert settings.connector.scope == ["report", "attack-pattern", "malware"]
+    assert settings.connector.type == "EXTERNAL_IMPORT"
+    assert settings.connector.log_level == "error"
+    assert settings.connector.duration_period == timedelta(hours=1)
+    assert settings.trukno.api_base_url == HttpUrl("https://api.trukno.com/v2")
+    assert settings.trukno.initial_lookback_days == 30
+
+
 def test_settings_parse_scope_from_comma_separated_environment(
     required_environment, monkeypatch
 ):

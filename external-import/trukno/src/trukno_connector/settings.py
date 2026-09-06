@@ -11,7 +11,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr, field_validator
+from pydantic import Field, HttpUrl, SecretStr, field_validator, model_validator
 
 LEGACY_CONFIG_MESSAGE = (
     "TRUKNO_CONNECTOR_CONFIG is no longer supported. Unset it and move configuration "
@@ -49,6 +49,22 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         default=timedelta(hours=1),
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def apply_defaults_to_blank_optional_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data = data.copy()
+            for field_name in (
+                "name",
+                "scope",
+                "type",
+                "log_level",
+                "duration_period",
+            ):
+                if data.get(field_name) == "":
+                    data.pop(field_name)
+        return data
+
     @field_validator("duration_period")
     @classmethod
     def validate_duration_period(cls, value: timedelta) -> timedelta:
@@ -73,6 +89,16 @@ class TruKnoConfig(BaseConfigModel):
         new_namespaced_var="duration_period",
         new_value_factory=_minutes_to_duration,
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def apply_defaults_to_blank_optional_fields(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            data = data.copy()
+            for field_name in ("api_base_url", "initial_lookback_days"):
+                if data.get(field_name) == "":
+                    data.pop(field_name)
+        return data
 
     @field_validator("initial_lookback_days")
     @classmethod
