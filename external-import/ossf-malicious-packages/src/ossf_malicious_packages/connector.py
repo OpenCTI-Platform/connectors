@@ -1,115 +1,68 @@
 import json
-import logging
 import os
 import subprocess
-import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import stix2
-from pycti import (
-    Indicator,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
-    get_config_variable,
-)
+from ossf_malicious_packages.settings import ConnectorSettings
+from pycti import Indicator, OpenCTIConnectorHelper, StixCoreRelationship
 
 
 class OSSFMaliciousPackagesConnector:
-    def __init__(self):
-
-        # Load config from file + env
-        config = self._load_config()
-        self.helper = OpenCTIConnectorHelper(config)
-
-        # Connector-specific config
-        self.github_repo_url = get_config_variable(
-            "OSSF_GITHUB_REPO_URL", ["ossf", "github_repo_url"], config
-        )
-        self.github_branch = get_config_variable(
-            "OSSF_GITHUB_BRANCH", ["ossf", "branch"], config, default="main"
-        )
-        self.local_repo_path = get_config_variable(
-            "OSSF_LOCAL_REPO_PATH",
-            ["ossf", "local_repo_path"],
-            config,
-            default="/opt/ossf-malicous-packages-repo",
-        )
-        self.run_interval = int(
-            get_config_variable(
-                "OSSF_RUN_INTERVAL_SECONDS",
-                ["ossf", "run_interval_seconds"],
-                config,
-                default=86400,
-            )
-        )
-        self.default_score = int(
-            get_config_variable(
-                "OSSF_DEFAULT_SCORE", ["ossf", "default_score"], config, default=80
-            )
-        )
-        self.source_name = get_config_variable(
-            "OSSF_SOURCE_NAME",
-            ["ossf", "source_name"],
-            config,
-            default="ossf/malicious-packages",
-        )
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
 
         self.helper.log_info("OSSF Malicious Packages connector initialized")
-
-    @staticmethod
-    def _load_config() -> Dict[str, Any]:
-        """
-        Load connector config from config.yml placed next to this file.
-        """
-        import yaml
-
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(base_dir, "config.yml")
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f)
 
     # -------------------------------------------------------------------------
     # Git / repo utilities
     # -------------------------------------------------------------------------
     def _init_or_update_repo(self) -> None:
         """Clone or update the local ossf/malicious-packages repo."""
-        if not os.path.isdir(self.local_repo_path):
+        if not os.path.isdir(self.config.ossf.local_repo_path):
             self.helper.log_info(
-                f"Cloning {self.github_repo_url} into {self.local_repo_path}"
+                f"Cloning {str(self.config.ossf.github_repo_url)} into {self.config.ossf.local_repo_path}"
             )
             subprocess.check_call(
                 [
                     "git",
                     "clone",
                     "--branch",
-                    self.github_branch,
-                    self.github_repo_url,
-                    self.local_repo_path,
+                    self.config.ossf.branch,
+                    str(self.config.ossf.github_repo_url),
+                    self.config.ossf.local_repo_path,
                 ]
             )
         else:
-            self.helper.log_info(f"Updating repo in {self.local_repo_path}")
+            self.helper.log_info(f"Updating repo in {self.config.ossf.local_repo_path}")
             subprocess.check_call(
-                ["git", "-C", self.local_repo_path, "fetch", "origin"]
-            )
-            subprocess.check_call(
-                ["git", "-C", self.local_repo_path, "checkout", self.github_branch]
+                ["git", "-C", self.config.ossf.local_repo_path, "fetch", "origin"]
             )
             subprocess.check_call(
                 [
                     "git",
                     "-C",
-                    self.local_repo_path,
+                    self.config.ossf.local_repo_path,
+                    "checkout",
+                    self.config.ossf.branch,
+                ]
+            )
+            subprocess.check_call(
+                [
+                    "git",
+                    "-C",
+                    self.config.ossf.local_repo_path,
                     "pull",
                     "origin",
-                    self.github_branch,
+                    self.config.ossf.branch,
                 ]
             )
 
     def _get_current_head(self) -> str:
         result = subprocess.check_output(
-            ["git", "-C", self.local_repo_path, "rev-parse", "HEAD"]
+            ["git", "-C", self.config.ossf.local_repo_path, "rev-parse", "HEAD"]
         )
         return result.decode().strip()
 
@@ -121,7 +74,9 @@ class OSSFMaliciousPackagesConnector:
         between old_commit and new_commit. If old_commit is None, return all.
         """
         if old_commit is None:
-            malicious_dir = os.path.join(self.local_repo_path, "osv", "malicious")
+            malicious_dir = os.path.join(
+                self.config.ossf.local_repo_path, "osv", "malicious"
+            )
             changed_files = []
             for root, _, files in os.walk(malicious_dir):
                 for f in files:
@@ -132,7 +87,7 @@ class OSSFMaliciousPackagesConnector:
         diff_cmd = [
             "git",
             "-C",
-            self.local_repo_path,
+            self.config.ossf.local_repo_path,
             "diff",
             "--name-only",
             f"{old_commit}..{new_commit}",
@@ -141,7 +96,9 @@ class OSSFMaliciousPackagesConnector:
         ]
         output = subprocess.check_output(diff_cmd).decode().splitlines()
         changed_files = [
-            os.path.join(self.local_repo_path, p) for p in output if p.endswith(".json")
+            os.path.join(self.config.ossf.local_repo_path, p)
+            for p in output
+            if p.endswith(".json")
         ]
         return changed_files
 
@@ -151,8 +108,10 @@ class OSSFMaliciousPackagesConnector:
         Example:
           https://github.com/ossf/malicious-packages/blob/<commit>/osv/malicious/...
         """
-        rel_path = os.path.relpath(file_path, self.local_repo_path).replace("\\", "/")
-        base = self.github_repo_url.replace(".git", "")
+        rel_path = os.path.relpath(file_path, self.config.ossf.local_repo_path).replace(
+            "\\", "/"
+        )
+        base = str(self.config.ossf.github_repo_url).replace(".git", "")
         return f"{base}/blob/{commit}/{rel_path}"
 
     # -------------------------------------------------------------------------
@@ -248,11 +207,11 @@ class OSSFMaliciousPackagesConnector:
         package = parsed["package"]
         summary = parsed.get("summary") or f"Malicious package {ecosystem}/{package}"
         name = f"{ecosystem}/{package}"
-        score = self.default_score
+        score = self.config.ossf.default_score
 
         # Shared external reference (File + Indicator)
         external_ref = stix2.ExternalReference(
-            source_name=self.source_name,
+            source_name=self.config.ossf.source_name,
             url=github_url,
             external_id=parsed.get("osv_id"),
         )
@@ -361,23 +320,24 @@ class OSSFMaliciousPackagesConnector:
         self.helper.set_state(new_state)
         self.helper.log_info(f"State updated: {new_state}")
 
+    def process_message(self) -> None:
+        """
+        Connector main process to collect intelligence.
+        Called on a schedule by `self.helper.schedule_process`.
+        """
+        try:
+            self._process_once()
+        except Exception as e:
+            self.helper.log_error(f"Error during processing: {e}")
+
     def run(self) -> None:
-        self.helper.log_info("Starting OSSF Malicious Packages connector main loop")
-        while True:
-            try:
-                self._process_once()
-            except Exception as e:
-                self.helper.log_error(f"Error during processing: {e}")
-            self.helper.log_info(
-                f"Sleeping for {self.run_interval} seconds before next run"
-            )
-            time.sleep(self.run_interval)
-
-
-if __name__ == "__main__":
-    try:
-        connector = OSSFMaliciousPackagesConnector()
-        connector.run()
-    except Exception as e:
-        logging.exception(e)
-        raise
+        """
+        Start the connector and schedule its runs at the configured
+        `duration_period` interval, using the standard OpenCTIConnectorHelper
+        scheduler (also enforces CONNECTOR_QUEUE_THRESHOLD if set).
+        """
+        self.helper.log_info("Starting OSSF Malicious Packages connector")
+        self.helper.schedule_process(
+            message_callback=self.process_message,
+            duration_period=self.config.connector.duration_period.total_seconds(),
+        )
