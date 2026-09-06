@@ -61,13 +61,22 @@ The remaining variables are optional and fall back to the defaults documented in
 `Authorization: Bearer <key>`; an already-prefixed `Bearer <key>` value is
 accepted without adding a second prefix.
 
-### Interval Migration
+### Configuration Migration
+
+`TRUKNO_CONNECTOR_CONFIG` is no longer supported. If this environment variable
+is non-empty, settings construction and startup fail explicitly without logging
+its configured path or configuration values. Unset it and move configuration to
+the connector-root `config.yml` using `config.yml.sample`, or use environment
+variables. The connector does not load configuration from the legacy custom path.
 
 `CONNECTOR_DURATION_PERIOD` is the canonical scheduling setting and should be
 used for all new deployments. `TRUKNO_INTERVAL_MINUTES` remains accepted only
 to migrate existing runtime configuration: its value is converted to the
 equivalent duration and emits a deprecation warning. When both are supplied,
 the canonical `CONNECTOR_DURATION_PERIOD` value takes precedence.
+The legacy interval must still be a positive integer even when the canonical
+duration is set. Boolean, floating-point, fractional, blank, and non-numeric
+values are rejected rather than coerced.
 
 Additional metadata for Connector Manager and operator documentation is available in:
 

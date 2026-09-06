@@ -1,3 +1,5 @@
+import os
+import re
 from datetime import timedelta
 from typing import Any
 
@@ -5,13 +7,28 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ConfigValidationError,
     DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr, field_validator
 
+LEGACY_CONFIG_MESSAGE = (
+    "TRUKNO_CONNECTOR_CONFIG is no longer supported. Unset it and move configuration "
+    "to the connector-root config.yml (see config.yml.sample), or use environment variables."
+)
+
+
+class LegacyConfigPathError(ConfigValidationError):
+    """The removed configuration-path override is still configured."""
+
 
 def _minutes_to_duration(value: object) -> timedelta:
+    if isinstance(value, bool) or not (
+        isinstance(value, int)
+        or (isinstance(value, str) and re.fullmatch(r"[+-]?[0-9]+", value.strip()))
+    ):
+        raise ValueError("interval_minutes must be a positive integer")
     minutes = int(value)
     if minutes <= 0:
         raise ValueError("interval_minutes must be a positive integer")
@@ -70,6 +87,12 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig,
     )
     trukno: TruKnoConfig = Field(default_factory=TruKnoConfig)
+
+    def __init__(self) -> None:
+        # Reject the override before the SDK loads any configuration or secrets.
+        if os.environ.get("TRUKNO_CONNECTOR_CONFIG"):
+            raise LegacyConfigPathError(LEGACY_CONFIG_MESSAGE)
+        super().__init__()
 
     @classmethod
     def _migrate_deprecated_variables(cls, data: dict[str, Any]) -> dict[str, Any]:

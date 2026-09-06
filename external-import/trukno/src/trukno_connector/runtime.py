@@ -119,8 +119,8 @@ def run_once(helper, client, state, connector_name: str = "TruKno"):
     return state
 
 
-def main():
-    helper, client, state, settings = build_runtime()
+def main(settings: ConnectorSettings | None = None):
+    helper, client, state, settings = build_runtime(settings)
 
     def scheduled_run():
         nonlocal state

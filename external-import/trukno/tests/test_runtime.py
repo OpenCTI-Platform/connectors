@@ -264,7 +264,9 @@ def test_main_schedules_process_using_configured_iso_duration(monkeypatch):
     run_once_mock = MagicMock(return_value=state)
 
     monkeypatch.setattr(
-        runtime, "build_runtime", lambda: (helper, client, state, settings)
+        runtime,
+        "build_runtime",
+        lambda _settings=None: (helper, client, state, settings),
     )
     monkeypatch.setattr(runtime, "run_once", run_once_mock)
     monkeypatch.setattr(
@@ -288,3 +290,66 @@ def test_main_schedules_process_using_configured_iso_duration(monkeypatch):
         state=state,
         connector_name="TruKno Runtime",
     )
+
+
+def test_scheduled_success_error_success_retains_last_successful_checkpoint(
+    monkeypatch,
+):
+    initial = "2026-04-20T00:00:00Z"
+    first = "2026-04-20T10:00:00Z"
+    second = "2026-04-20T12:00:00Z"
+    state = ConnectorState(last_seen_updated_at=initial)
+
+    class ScheduledHelper(DummyHelper):
+        fail_send = False
+
+        def send_stix2_bundle(self, bundle, *args, **kwargs):
+            if self.fail_send:
+                raise RuntimeError("simulated send failure")
+            super().send_stix2_bundle(bundle, *args, **kwargs)
+
+        def schedule_process(self, message_callback, duration_period):
+            self.callback = message_callback
+
+    class ScheduledClient(DummyClient):
+        def __init__(self):
+            super().__init__([SimpleNamespace(id="b1", updated_at=first)])
+            self.queries = []
+
+        def list_updated_breaches(self, updated_after):
+            self.queries.append(updated_after)
+            return super().list_updated_breaches(updated_after)
+
+    helper = ScheduledHelper()
+    client = ScheduledClient()
+    settings = SimpleNamespace(
+        connector=SimpleNamespace(name="TruKno", duration_period=timedelta(hours=1))
+    )
+    monkeypatch.setattr(
+        runtime,
+        "build_runtime",
+        lambda _settings=None: (helper, client, state, settings),
+    )
+    runtime.main()
+
+    helper.callback()
+    assert state.last_seen_updated_at == first
+    assert helper.persisted == [{"last_seen_updated_at": first}]
+    assert len(helper.sent) == 1
+
+    client.items = [SimpleNamespace(id="b2", updated_at=second)]
+    helper.fail_send = True
+    helper.callback()
+    assert state.last_seen_updated_at == first
+    assert helper.persisted == [{"last_seen_updated_at": first}]
+    assert len(helper.sent) == 1
+
+    helper.fail_send = False
+    helper.callback()
+    assert client.queries == [initial, first, first]
+    assert state.last_seen_updated_at == second
+    assert helper.persisted == [
+        {"last_seen_updated_at": first},
+        {"last_seen_updated_at": second},
+    ]
+    assert len(helper.sent) == 2

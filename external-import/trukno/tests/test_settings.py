@@ -1,17 +1,12 @@
+import json
 from datetime import timedelta
 
 import pytest
+from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.exceptions import ConfigValidationError
 from pydantic import HttpUrl, SecretStr
 from trukno_connector import ConnectorSettings
-
-
-@pytest.fixture
-def required_environment(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OPENCTI_URL", "http://opencti:8080")
-    monkeypatch.setenv("OPENCTI_TOKEN", "opencti-token")
-    monkeypatch.setenv("CONNECTOR_ID", "connector-id")
-    monkeypatch.setenv("TRUKNO_API_KEY", "trukno-secret")
+from trukno_connector.settings import _minutes_to_duration
 
 
 def test_settings_require_opencti_url(required_environment, monkeypatch):
@@ -148,3 +143,56 @@ def test_settings_reject_non_positive_initial_lookback(
 
     with pytest.raises(ConfigValidationError):
         ConnectorSettings()
+
+
+@pytest.mark.parametrize(
+    "value", [True, False, 1.0, 1.5, "1.5", "", " ", "abc", "1_0", None, 0, -1]
+)
+def test_minutes_to_duration_rejects_non_integer_or_non_positive_values(value):
+    with pytest.raises(ValueError, match="positive integer"):
+        _minutes_to_duration(value)
+
+
+@pytest.mark.parametrize("value", [15, "15", "+15", "015", " 15 "])
+def test_minutes_to_duration_accepts_integer_values(value):
+    assert _minutes_to_duration(value) == timedelta(minutes=15)
+
+
+@pytest.mark.parametrize("canonical", [False, True])
+@pytest.mark.parametrize("value", [True, 1.0, 1.5, "1.5", "", " ", "abc", "1_0"])
+def test_settings_validate_raw_legacy_interval_before_migration(
+    required_environment, monkeypatch, tmp_path, canonical, value
+):
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(
+        "trukno:\n  interval_minutes: " + json.dumps(value) + "\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(
+        _SettingsLoader, "_get_config_yml_file_path", lambda: config_path
+    )
+    if canonical:
+        monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT1H")
+    with pytest.raises((ConfigValidationError, ValueError)):
+        ConnectorSettings()
+
+
+@pytest.mark.parametrize("legacy_path", ["/private/PATH-SENTINEL/config.yml", " "])
+def test_settings_reject_legacy_config_path_without_disclosing_it(
+    required_environment, monkeypatch, legacy_path, capsys, caplog
+):
+    monkeypatch.setenv("TRUKNO_CONNECTOR_CONFIG", legacy_path)
+    with pytest.raises(ConfigValidationError) as error:
+        ConnectorSettings()
+    captured = capsys.readouterr()
+    output = str(error.value) + captured.out + captured.err + caplog.text
+    assert "TRUKNO_CONNECTOR_CONFIG" in output
+    assert "config.yml" in output
+    assert "environment variables" in output
+    assert "PATH-SENTINEL" not in output
+    assert "trukno-secret" not in output
+    assert "opencti-token" not in output
+
+
+def test_settings_allow_empty_legacy_config_path(required_environment, monkeypatch):
+    monkeypatch.setenv("TRUKNO_CONNECTOR_CONFIG", "")
+    assert ConnectorSettings().connector.duration_period == timedelta(hours=1)
