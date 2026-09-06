@@ -25,6 +25,12 @@ def test_entrypoint_fails_fast_and_executes_python_as_pid_one():
     assert "exec python3 main.py" in entrypoint
 
 
+def test_entrypoint_uses_unix_line_endings_for_alpine():
+    entrypoint = (CONNECTOR_ROOT / "entrypoint.sh").read_bytes()
+
+    assert b"\r\n" not in entrypoint
+
+
 def test_manager_metadata_exposes_the_sdk_generated_settings_contract():
     manifest = json.loads(
         (CONNECTOR_ROOT / "__metadata__" / "connector_manifest.json").read_text(
