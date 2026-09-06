@@ -26,7 +26,7 @@ class DummyClient:
     def __init__(self, items):
         self.items = items
 
-    def list_updated_breaches(self, updated_after):
+    def list_updated_breaches(self, updated_after, scan_after=None):
         return self.items
 
     def get_breach_details(self, breach_id):
@@ -66,9 +66,12 @@ def test_run_once_fetches_transforms_and_sends_bundle():
     assert updated_state.last_seen_updated_at == "2026-04-20T10:00:00Z"
 
 
-def test_run_once_skips_breach_without_linkable_entities_but_advances_checkpoint():
+def test_run_once_skips_breach_without_linkable_entities_but_advances_checkpoint(
+    monkeypatch,
+):
     helper = DummyHelper()
     state = ConnectorState(last_seen_updated_at="2026-04-20T00:00:00Z")
+    monkeypatch.setattr(runtime, "_utc_now_iso", lambda: "2026-04-21T09:00:00Z")
 
     class EmptyBreachClient(DummyClient):
         def get_breach_details(self, breach_id):
@@ -91,7 +94,48 @@ def test_run_once_skips_breach_without_linkable_entities_but_advances_checkpoint
     # but the checkpoint still advances so the breach is not refetched forever.
     assert helper.sent == []
     assert updated_state.last_seen_updated_at == "2026-04-20T10:00:00Z"
-    assert helper.persisted == [{"last_seen_updated_at": "2026-04-20T10:00:00Z"}]
+    assert helper.persisted == [
+        {
+            "last_seen_updated_at": "2026-04-20T10:00:00Z",
+            "last_successful_scan_at": "2026-04-21T09:00:00Z",
+        }
+    ]
+
+
+def test_empty_cycles_advance_scan_watermark_and_bound_the_next_query(monkeypatch):
+    helper = DummyHelper()
+    state = ConnectorState(last_seen_updated_at="2026-04-01T00:00:00Z")
+
+    class EmptyClient(DummyClient):
+        def __init__(self):
+            super().__init__([])
+            self.queries = []
+
+        def list_updated_breaches(self, updated_after, scan_after=None):
+            self.queries.append((updated_after, scan_after))
+            return []
+
+    scan_times = iter(["2026-05-01T10:00:00Z", "2026-05-01T11:00:00Z"])
+    monkeypatch.setattr(runtime, "_utc_now_iso", lambda: next(scan_times))
+    client = EmptyClient()
+
+    run_once(helper=helper, client=client, state=state)
+    run_once(helper=helper, client=client, state=state)
+
+    assert client.queries == [
+        ("2026-04-01T00:00:00Z", "2026-04-01T00:00:00Z"),
+        ("2026-04-01T00:00:00Z", "2026-04-30T10:00:00Z"),
+    ]
+    assert helper.persisted == [
+        {
+            "last_seen_updated_at": "2026-04-01T00:00:00Z",
+            "last_successful_scan_at": "2026-05-01T10:00:00Z",
+        },
+        {
+            "last_seen_updated_at": "2026-04-01T00:00:00Z",
+            "last_successful_scan_at": "2026-05-01T11:00:00Z",
+        },
+    ]
 
 
 def test_run_once_does_not_persist_checkpoint_before_mid_batch_success():
@@ -195,6 +239,36 @@ def test_run_once_marks_work_processed_on_success():
     assert kwargs.get("in_error") is False
 
 
+def test_run_once_keeps_durable_success_when_work_finalization_fails(monkeypatch):
+    class HelperWithFailingWork(DummyHelper):
+        def __init__(self):
+            super().__init__()
+            self.connect_id = "connector-id"
+            self.api = MagicMock()
+            self.api.work.initiate_work.return_value = "work-1"
+            self.api.work.to_processed.side_effect = RuntimeError("finalization failed")
+            self.connector_logger = MagicMock()
+
+    helper = HelperWithFailingWork()
+    state = ConnectorState(last_seen_updated_at="2026-04-20T00:00:00Z")
+    client = DummyClient(
+        [type("Item", (), {"id": "b1", "updated_at": "2026-04-20T10:00:00Z"})()]
+    )
+    monkeypatch.setattr(runtime, "_utc_now_iso", lambda: "2026-04-21T09:00:00Z")
+
+    updated_state = run_once(helper=helper, client=client, state=state)
+
+    assert updated_state.last_seen_updated_at == "2026-04-20T10:00:00Z"
+    assert updated_state.last_successful_scan_at == "2026-04-21T09:00:00Z"
+    assert helper.persisted == [
+        {
+            "last_seen_updated_at": "2026-04-20T10:00:00Z",
+            "last_successful_scan_at": "2026-04-21T09:00:00Z",
+        }
+    ]
+    helper.connector_logger.warning.assert_called_once()
+
+
 def test_build_runtime_uses_sdk_settings_and_unwraps_trukno_secret(monkeypatch):
     helper_calls = []
     client_calls = []
@@ -241,6 +315,28 @@ def test_build_runtime_uses_sdk_settings_and_unwraps_trukno_secret(monkeypatch):
     assert client_calls == [
         (str(settings.trukno.api_base_url), settings.trukno.api_key.get_secret_value())
     ]
+
+
+def test_build_runtime_restores_successful_scan_watermark(
+    required_environment, monkeypatch
+):
+    class DummyHelperWithState:
+        def __init__(self, config):
+            pass
+
+        def get_state(self):
+            return {
+                "last_seen_updated_at": "2026-04-20T10:00:00Z",
+                "last_successful_scan_at": "2026-05-01T11:00:00Z",
+            }
+
+    monkeypatch.setattr(runtime, "OpenCTIConnectorHelper", DummyHelperWithState)
+    monkeypatch.setattr(runtime, "TruKnoClient", lambda base_url, api_key: object())
+
+    _, _, state, _ = runtime.build_runtime(ConnectorSettings())
+
+    assert state.last_seen_updated_at == "2026-04-20T10:00:00Z"
+    assert state.last_successful_scan_at == "2026-05-01T11:00:00Z"
 
 
 def test_build_runtime_uses_provided_settings_instance(monkeypatch):
@@ -343,9 +439,9 @@ def test_scheduled_success_error_success_retains_last_successful_checkpoint(
             super().__init__([SimpleNamespace(id="b1", updated_at=first)])
             self.queries = []
 
-        def list_updated_breaches(self, updated_after):
-            self.queries.append(updated_after)
-            return super().list_updated_breaches(updated_after)
+        def list_updated_breaches(self, updated_after, scan_after=None):
+            self.queries.append((updated_after, scan_after))
+            return super().list_updated_breaches(updated_after, scan_after)
 
     helper = ScheduledHelper()
     client = ScheduledClient()
@@ -357,26 +453,57 @@ def test_scheduled_success_error_success_retains_last_successful_checkpoint(
         "build_runtime",
         lambda _settings=None: (helper, client, state, settings),
     )
+    scan_times = iter(
+        [
+            "2026-04-21T10:00:00Z",
+            "2026-04-21T11:00:00Z",
+            "2026-04-21T12:00:00Z",
+        ]
+    )
+    monkeypatch.setattr(runtime, "_utc_now_iso", lambda: next(scan_times))
     runtime.main()
 
     helper.callback()
     assert state.last_seen_updated_at == first
-    assert helper.persisted == [{"last_seen_updated_at": first}]
+    assert state.last_successful_scan_at == "2026-04-21T10:00:00Z"
+    assert helper.persisted == [
+        {
+            "last_seen_updated_at": first,
+            "last_successful_scan_at": "2026-04-21T10:00:00Z",
+        }
+    ]
     assert len(helper.sent) == 1
 
     client.items = [SimpleNamespace(id="b2", updated_at=second)]
     helper.fail_send = True
     helper.callback()
     assert state.last_seen_updated_at == first
-    assert helper.persisted == [{"last_seen_updated_at": first}]
+    assert state.last_successful_scan_at == "2026-04-21T10:00:00Z"
+    assert helper.persisted == [
+        {
+            "last_seen_updated_at": first,
+            "last_successful_scan_at": "2026-04-21T10:00:00Z",
+        }
+    ]
     assert len(helper.sent) == 1
 
     helper.fail_send = False
     helper.callback()
-    assert client.queries == [initial, first, first]
+    assert client.queries == [
+        (initial, initial),
+        (first, "2026-04-20T10:00:00Z"),
+        (first, "2026-04-20T10:00:00Z"),
+    ]
     assert state.last_seen_updated_at == second
+    assert state.last_successful_scan_at == "2026-04-21T12:00:00Z"
     assert helper.persisted == [
-        {"last_seen_updated_at": first},
-        {"last_seen_updated_at": second},
+        {
+            "last_seen_updated_at": first,
+            "last_successful_scan_at": "2026-04-21T10:00:00Z",
+        },
+        {
+            "last_seen_updated_at": second,
+            "last_successful_scan_at": "2026-04-21T12:00:00Z",
+        },
     ]
     assert len(helper.sent) == 2

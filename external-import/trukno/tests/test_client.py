@@ -215,6 +215,27 @@ def test_list_updated_breaches_splits_the_range_into_daily_windows():
     ]
 
 
+def test_list_updated_breaches_uses_scan_start_separately_from_import_checkpoint():
+    payload = {
+        "results": [{"_id": "late", "date": "2026-04-20T12:00:00Z"}],
+        "metadata": {"totalPages": 1},
+    }
+    empty_partition = {"results": [], "metadata": {"totalPages": 1}}
+    session = DummySession([DummyResponse(payload), DummyResponse(empty_partition)])
+    client = TruKnoClient("https://api.trukno.com/v2", "secret", session=session)
+    client._today = lambda: date(2026, 4, 20)
+
+    items = client.list_updated_breaches(
+        updated_after="2026-04-01T00:00:00Z",
+        scan_after="2026-04-20T00:00:00Z",
+    )
+
+    assert [item.id for item in items] == ["late"]
+    assert {request["params"]["start_date"] for request in session.requests} == {
+        "2026-04-20"
+    }
+
+
 def test_list_updated_breaches_retries_rate_limited_requests():
     session = DummySession(
         [

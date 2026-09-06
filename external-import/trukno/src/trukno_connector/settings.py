@@ -82,6 +82,7 @@ class TruKnoConfig(BaseConfigModel):
     initial_lookback_days: int = Field(
         description="Number of days to look back on the first run.",
         default=30,
+        gt=0,
     )
     interval_minutes: int | None = DeprecatedField(
         deprecated="Use CONNECTOR_DURATION_PERIOD instead.",

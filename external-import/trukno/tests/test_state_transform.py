@@ -16,6 +16,21 @@ def test_first_run_uses_bootstrap_window():
     assert state.last_seen_updated_at == "2026-04-14T12:00:00Z"
 
 
+def test_legacy_state_uses_import_checkpoint_as_initial_scan_start():
+    state = ConnectorState(last_seen_updated_at="2026-04-20T10:00:00Z")
+
+    assert state.scan_after() == "2026-04-20T10:00:00Z"
+
+
+def test_scan_start_has_one_day_overlap_from_last_successful_scan():
+    state = ConnectorState(
+        last_seen_updated_at="2026-04-01T10:00:00Z",
+        last_successful_scan_at="2026-04-20T10:00:00.500999Z",
+    )
+
+    assert state.scan_after() == "2026-04-19T10:00:00.500999Z"
+
+
 def test_next_checkpoint_advances_to_max_seen_timestamp():
     current = ConnectorState(last_seen_updated_at="2026-04-20T10:00:00Z")
     updated = next_checkpoint(
@@ -34,6 +49,17 @@ def test_next_checkpoint_preserves_fractional_seconds():
     )
 
     assert updated.last_seen_updated_at == "2026-04-20T10:00:00.500Z"
+
+
+def test_next_checkpoint_preserves_submillisecond_fractional_seconds():
+    current = ConnectorState(last_seen_updated_at="2026-04-20T10:00:00Z")
+
+    updated = next_checkpoint(
+        current,
+        seen_timestamps=["2026-04-20T10:00:00.500999Z"],
+    )
+
+    assert updated.last_seen_updated_at == "2026-04-20T10:00:00.500999Z"
 
 
 def test_transform_includes_linked_attack_patterns_and_malware():

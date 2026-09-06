@@ -118,23 +118,35 @@ uv run --python 3.12 --with-requirements src/requirements.txt python src/main.py
 
 ## Behavior
 
-The connector polls the TruKno `/breaches/list` endpoint from the calendar date
-of the last stored checkpoint. It queries both `hasTTPs=true` and
-`hasTTPs=false` result partitions, paginates through each response, deduplicates
-by breach ID, and filters results whose publication `date` is newer than the
-checkpoint. It then fetches full breach details for each match, converts the
+The connector polls the TruKno `/breaches/list` endpoint in daily windows. It
+queries both `hasTTPs=true` and `hasTTPs=false` result partitions, paginates
+through each response, deduplicates by breach ID, and filters results whose
+publication `date` is newer than the import checkpoint. After the initial
+backfill, scans begin with a one-day overlap from the last successful scan so
+API work stays bounded while tolerating short publication delays when the
+returned publication timestamp is newer than the import checkpoint. The
+connector then fetches `/breaches/{id}` details for each match, converts the
 result to a STIX bundle, and sends the bundle to OpenCTI.
 
 The current TruKno v2 schema does not expose a breach update timestamp. The
-connector can therefore guarantee incremental ingestion of newly published
-breaches, but cannot reliably detect changes to an older breach until the API
-provides an update timestamp and corresponding filter.
+connector therefore tracks publication dates and queries only the initial
+backfill or the latest one-day overlap. It cannot detect changes to an older
+breach or a record first exposed after its publication date falls outside that
+query window. A record with a publication timestamp equal to or older than
+`last_seen_updated_at` is also filtered as already processed. Covering these
+cases requires an API update timestamp or stable change feed.
 
 ### Incremental State
 
-- State is stored in OpenCTI as `last_seen_updated_at`.
+- `last_seen_updated_at` stores the latest publication timestamp from a fully
+  processed batch.
+- `last_successful_scan_at` advances after every successful scan, including an
+  empty scan, and bounds the next query with a one-day overlap.
 - On a first run without state, the connector backfills from `now - TRUKNO_INITIAL_LOOKBACK_DAYS`.
-- Each successfully sent breach advances the checkpoint.
+- Existing state containing only `last_seen_updated_at` remains compatible and
+  uses that timestamp as the first scan boundary after upgrade.
+- A failed fetch, transform, or send advances neither watermark, so the batch is
+  retried on the next cycle.
 
 ### Entity Mapping
 

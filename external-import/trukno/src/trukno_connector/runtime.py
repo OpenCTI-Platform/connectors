@@ -13,10 +13,23 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _persist_checkpoint(helper, state, updated_at: str) -> ConnectorState:
-    next_state = next_checkpoint(state, [updated_at])
-    helper.set_state({"last_seen_updated_at": next_state.last_seen_updated_at})
+def _persist_checkpoint(
+    helper,
+    state,
+    updated_at: str | None,
+    last_successful_scan_at: str,
+) -> ConnectorState:
+    seen_timestamps = [updated_at] if updated_at is not None else []
+    next_state = next_checkpoint(state, seen_timestamps)
+    next_state.last_successful_scan_at = last_successful_scan_at
+    helper.set_state(
+        {
+            "last_seen_updated_at": next_state.last_seen_updated_at,
+            "last_successful_scan_at": next_state.last_successful_scan_at,
+        }
+    )
     state.last_seen_updated_at = next_state.last_seen_updated_at
+    state.last_successful_scan_at = next_state.last_successful_scan_at
     return state
 
 
@@ -42,7 +55,15 @@ def _complete_work(
 ) -> None:
     if work_id is None:
         return
-    helper.api.work.to_processed(work_id, message, in_error=in_error)
+    try:
+        helper.api.work.to_processed(work_id, message, in_error=in_error)
+    except Exception as exc:
+        _log(
+            helper,
+            "warning",
+            "Unable to finalize TruKno import work.",
+            {"work_id": work_id, "in_error": in_error, "error": str(exc)},
+        )
 
 
 def build_runtime(settings: ConnectorSettings | None = None):
@@ -56,7 +77,8 @@ def build_runtime(settings: ConnectorSettings | None = None):
     persisted_state = helper.get_state() or {}
     if persisted_state.get("last_seen_updated_at"):
         state = ConnectorState(
-            last_seen_updated_at=persisted_state["last_seen_updated_at"]
+            last_seen_updated_at=persisted_state["last_seen_updated_at"],
+            last_successful_scan_at=persisted_state.get("last_successful_scan_at"),
         )
     else:
         state = ConnectorState.empty(
@@ -66,13 +88,26 @@ def build_runtime(settings: ConnectorSettings | None = None):
 
 
 def run_once(helper, client, state, connector_name: str = "TruKno"):
-    items = client.list_updated_breaches(state.last_seen_updated_at)
+    scan_started_at = _utc_now_iso()
+    items = client.list_updated_breaches(
+        updated_after=state.last_seen_updated_at,
+        scan_after=state.scan_after(),
+    )
     if not items:
+        _persist_checkpoint(
+            helper,
+            state,
+            updated_at=None,
+            last_successful_scan_at=scan_started_at,
+        )
         _log(
             helper,
             "info",
             "No updated TruKno breaches found for this cycle.",
-            {"last_seen_updated_at": state.last_seen_updated_at},
+            {
+                "last_seen_updated_at": state.last_seen_updated_at,
+                "last_successful_scan_at": state.last_successful_scan_at,
+            },
         )
         return state
 
@@ -90,7 +125,12 @@ def run_once(helper, client, state, connector_name: str = "TruKno"):
                 sent_count += 1
         # Persist only after the complete batch succeeds. If a later item fails,
         # the next cycle retries the whole timestamp window without data loss.
-        _persist_checkpoint(helper, state, items[-1].updated_at)
+        _persist_checkpoint(
+            helper,
+            state,
+            updated_at=items[-1].updated_at,
+            last_successful_scan_at=scan_started_at,
+        )
     except Exception as exc:
         # Don't leave the work item stuck in a running state if a breach
         # fetch/transform/send fails mid-batch: mark it errored and re-raise so
@@ -116,6 +156,7 @@ def run_once(helper, client, state, connector_name: str = "TruKno"):
         {
             "bundles_sent": sent_count,
             "last_seen_updated_at": state.last_seen_updated_at,
+            "last_successful_scan_at": state.last_successful_scan_at,
         },
     )
     return state

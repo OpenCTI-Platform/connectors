@@ -57,6 +57,7 @@ def test_manager_metadata_exposes_the_sdk_generated_settings_contract():
         "format": "duration",
         "type": "string",
     }
+    assert schema["properties"]["TRUKNO_INITIAL_LOOKBACK_DAYS"]["exclusiveMinimum"] == 0
     assert "CONNECTOR_ID" not in schema["properties"]
     assert "CONNECTOR_ID" not in schema["required"]
 

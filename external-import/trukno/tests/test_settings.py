@@ -170,6 +170,17 @@ def test_settings_reject_non_positive_initial_lookback(
         ConnectorSettings()
 
 
+def test_settings_schema_rejects_non_positive_initial_lookback():
+    schema = ConnectorSettings.model_json_schema()
+
+    assert (
+        schema["$defs"]["TruKnoConfig"]["properties"]["initial_lookback_days"][
+            "exclusiveMinimum"
+        ]
+        == 0
+    )
+
+
 @pytest.mark.parametrize(
     "value", [True, False, 1.0, 1.5, "1.5", "", " ", "abc", "1_0", None, 0, -1]
 )

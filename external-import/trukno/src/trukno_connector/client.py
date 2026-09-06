@@ -50,10 +50,12 @@ class TruKnoClient:
 
         raise RuntimeError("Unreachable request retry state")
 
-    def list_updated_breaches(self, updated_after: str) -> list[BreachSummary]:
+    def list_updated_breaches(
+        self, updated_after: str, scan_after: str | None = None
+    ) -> list[BreachSummary]:
         checkpoint = self._parse_timestamp(updated_after)
         items_by_id: dict[str, BreachSummary] = {}
-        window_date = checkpoint.date()
+        window_date = self._parse_timestamp(scan_after or updated_after).date()
 
         while window_date <= self._today():
             date_value = window_date.isoformat()
