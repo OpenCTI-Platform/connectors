@@ -1,13 +1,18 @@
-import os
-import time
 import json
 import logging
+import os
 import subprocess
+import time
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import stix2
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import (
+    Indicator,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+    get_config_variable,
+)
 
 
 class OSSFMaliciousPackagesConnector:
@@ -92,7 +97,14 @@ class OSSFMaliciousPackagesConnector:
                 ["git", "-C", self.local_repo_path, "checkout", self.github_branch]
             )
             subprocess.check_call(
-                ["git", "-C", self.local_repo_path, "pull", "origin", self.github_branch]
+                [
+                    "git",
+                    "-C",
+                    self.local_repo_path,
+                    "pull",
+                    "origin",
+                    self.github_branch,
+                ]
             )
 
     def _get_current_head(self) -> str:
@@ -102,7 +114,7 @@ class OSSFMaliciousPackagesConnector:
         return result.decode().strip()
 
     def _get_changed_files(
-            self, old_commit: Optional[str], new_commit: str
+        self, old_commit: Optional[str], new_commit: str
     ) -> List[str]:
         """
         Return list of JSON files under osv/malicious/** that changed
@@ -129,9 +141,7 @@ class OSSFMaliciousPackagesConnector:
         ]
         output = subprocess.check_output(diff_cmd).decode().splitlines()
         changed_files = [
-            os.path.join(self.local_repo_path, p)
-            for p in output
-            if p.endswith(".json")
+            os.path.join(self.local_repo_path, p) for p in output if p.endswith(".json")
         ]
         return changed_files
 
@@ -181,7 +191,9 @@ class OSSFMaliciousPackagesConnector:
             "hashes": hashes,  # dict algo -> list[str]
         }
 
-    def _extract_hashes_from_osv(self, osv_data: Dict[str, Any]) -> Dict[str, List[str]]:
+    def _extract_hashes_from_osv(
+        self, osv_data: Dict[str, Any]
+    ) -> Dict[str, List[str]]:
         """
         Extract hashes from OSV entry in ossf/malicious-packages format.
         We look into:
@@ -216,13 +228,13 @@ class OSSFMaliciousPackagesConnector:
                     unique.append(v)
             hashes[algo] = unique
 
-        return hashes            
+        return hashes
 
     # -------------------------------------------------------------------------
     # STIX creation
     # -------------------------------------------------------------------------
     def _create_objects_for_entry(
-            self, parsed: Dict[str, Any], github_url: str
+        self, parsed: Dict[str, Any], github_url: str
     ) -> List:
         """
         For a parsed OSV entry, create:
@@ -267,6 +279,7 @@ class OSSFMaliciousPackagesConnector:
                 pattern = f"[file:hashes.'{algo}' = '{hash_value}']"
                 now = datetime.now(timezone.utc)
                 indicator = stix2.Indicator(
+                    id=Indicator.generate_id(pattern),
                     name=name,
                     description=summary,
                     pattern_type="stix",
@@ -283,6 +296,9 @@ class OSSFMaliciousPackagesConnector:
 
                 # --- based-on relationship: Indicator → File ---
                 rel = stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "based-on", indicator.id, file_stix.id
+                    ),
                     relationship_type="based-on",
                     source_ref=indicator.id,
                     target_ref=file_stix.id,
@@ -346,9 +362,7 @@ class OSSFMaliciousPackagesConnector:
         self.helper.log_info(f"State updated: {new_state}")
 
     def run(self) -> None:
-        self.helper.log_info(
-            "Starting OSSF Malicious Packages connector main loop"
-        )
+        self.helper.log_info("Starting OSSF Malicious Packages connector main loop")
         while True:
             try:
                 self._process_once()
