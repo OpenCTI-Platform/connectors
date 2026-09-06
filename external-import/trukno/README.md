@@ -118,7 +118,17 @@ uv run --python 3.12 --with-requirements src/requirements.txt python src/main.py
 
 ## Behavior
 
-The connector polls the TruKno `/breaches` endpoint for items updated after the last stored checkpoint, fetches full breach details for each match, converts the result to a STIX bundle, and sends the bundle to OpenCTI.
+The connector polls the TruKno `/breaches/list` endpoint from the calendar date
+of the last stored checkpoint. It queries both `hasTTPs=true` and
+`hasTTPs=false` result partitions, paginates through each response, deduplicates
+by breach ID, and filters results whose publication `date` is newer than the
+checkpoint. It then fetches full breach details for each match, converts the
+result to a STIX bundle, and sends the bundle to OpenCTI.
+
+The current TruKno v2 schema does not expose a breach update timestamp. The
+connector can therefore guarantee incremental ingestion of newly published
+breaches, but cannot reliably detect changes to an older breach until the API
+provides an update timestamp and corresponding filter.
 
 ### Incremental State
 

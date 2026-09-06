@@ -31,4 +31,6 @@ def _parse_iso_datetime(value: str) -> datetime:
 
 
 def _format_utc(value: datetime) -> str:
+    if value.microsecond:
+        return value.isoformat(timespec="milliseconds").replace("+00:00", "Z")
     return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

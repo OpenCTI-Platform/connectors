@@ -31,11 +31,12 @@ class DummyClient:
 
     def get_breach_details(self, breach_id):
         return {
-            "id": breach_id,
+            "_id": breach_id,
             "title": "Example",
-            "publishedAt": "2026-04-20T12:00:00Z",
-            "summary": "Summary",
-            "relatedTTPs": [{"id": "ttp-1", "title": "Credential Access"}],
+            "date": "2026-04-20T12:00:00Z",
+            "description": "Summary",
+            "relatedTTPs": [{"_id": "ttp-1", "name": "Credential Access"}],
+            "relatedMalware": [],
         }
 
 
@@ -72,10 +73,12 @@ def test_run_once_skips_breach_without_linkable_entities_but_advances_checkpoint
     class EmptyBreachClient(DummyClient):
         def get_breach_details(self, breach_id):
             return {
-                "id": breach_id,
+                "_id": breach_id,
                 "title": "Empty breach",
-                "publishedAt": "2026-04-20T12:00:00Z",
-                "summary": "No linkable entities",
+                "date": "2026-04-20T12:00:00Z",
+                "description": "No linkable entities",
+                "relatedTTPs": [],
+                "relatedMalware": [],
             }
 
     client = EmptyBreachClient(
@@ -91,7 +94,7 @@ def test_run_once_skips_breach_without_linkable_entities_but_advances_checkpoint
     assert helper.persisted == [{"last_seen_updated_at": "2026-04-20T10:00:00Z"}]
 
 
-def test_run_once_persists_checkpoint_after_each_successful_send_before_mid_batch_failure():
+def test_run_once_does_not_persist_checkpoint_before_mid_batch_success():
     helper = DummyHelper()
     state = ConnectorState(last_seen_updated_at="2026-04-20T00:00:00Z")
 
@@ -111,8 +114,32 @@ def test_run_once_persists_checkpoint_after_each_successful_send_before_mid_batc
     with pytest.raises(RuntimeError, match="boom"):
         run_once(helper=helper, client=client, state=state)
 
-    assert helper.persisted == [{"last_seen_updated_at": "2026-04-20T10:00:00Z"}]
-    assert state.last_seen_updated_at == "2026-04-20T10:00:00Z"
+    assert helper.persisted == []
+    assert state.last_seen_updated_at == "2026-04-20T00:00:00Z"
+
+
+def test_run_once_retries_equal_timestamp_items_after_mid_batch_failure():
+    helper = DummyHelper()
+    state = ConnectorState(last_seen_updated_at="2026-04-20T00:00:00Z")
+
+    class FailingClient(DummyClient):
+        def get_breach_details(self, breach_id):
+            if breach_id == "b2":
+                raise RuntimeError("boom")
+            return super().get_breach_details(breach_id)
+
+    client = FailingClient(
+        [
+            type("Item", (), {"id": "b1", "updated_at": "2026-04-20T10:00:00Z"})(),
+            type("Item", (), {"id": "b2", "updated_at": "2026-04-20T10:00:00Z"})(),
+        ]
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        run_once(helper=helper, client=client, state=state)
+
+    assert helper.persisted == []
+    assert state.last_seen_updated_at == "2026-04-20T00:00:00Z"
 
 
 def test_run_once_marks_work_errored_on_mid_batch_failure():

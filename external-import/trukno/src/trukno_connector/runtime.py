@@ -88,12 +88,14 @@ def run_once(helper, client, state, connector_name: str = "TruKno"):
             if bundle["objects"]:
                 helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
                 sent_count += 1
-            _persist_checkpoint(helper, state, item.updated_at)
+        # Persist only after the complete batch succeeds. If a later item fails,
+        # the next cycle retries the whole timestamp window without data loss.
+        _persist_checkpoint(helper, state, items[-1].updated_at)
     except Exception as exc:
         # Don't leave the work item stuck in a running state if a breach
-        # fetch/transform/send fails mid-batch: mark it errored (the per-item
-        # checkpoint above means the next cycle resumes after the last
-        # successfully imported breach) and re-raise so main() logs and backs off.
+        # fetch/transform/send fails mid-batch: mark it errored and re-raise so
+        # main() logs and backs off. The checkpoint remains at the last complete
+        # batch, so the next cycle retries any partial work safely.
         _complete_work(
             helper,
             work_id,
