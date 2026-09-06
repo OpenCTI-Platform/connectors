@@ -20,12 +20,13 @@ It does not yet create threat actors, intrusion sets, indicators, vulnerabilitie
 
 ### Requirements
 
-| Dependency       | Version                        |
-|------------------|--------------------------------|
-| OpenCTI Platform | >= 7.x (tested on 7.260609.0)  |
-| pycti            | == 7.260609.0                  |
-| requests         | ~= 2.32.3                      |
-| Python           | 3.12 (Docker image)            |
+| Dependency       | Version                                    |
+|------------------|--------------------------------------------|
+| OpenCTI Platform | >= 7.x (tested on 7.260904.0)              |
+| pycti            | == 7.260904.0                              |
+| connectors-sdk   | GitHub `master` (repository subdirectory) |
+| requests         | ~= 2.33.0                                  |
+| Python           | 3.12 (Docker image)                        |
 
 - Network access to the TruKno API
 - A valid TruKno API key

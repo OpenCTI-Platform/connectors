@@ -12,7 +12,7 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 @pytest.fixture
 def required_environment(monkeypatch):
-    for name in os.environ:
+    for name in list(os.environ):
         if name.startswith(("OPENCTI_", "CONNECTOR_", "TRUKNO_")):
             monkeypatch.delenv(name)
     monkeypatch.setattr(_SettingsLoader, "_get_config_yml_file_path", lambda: None)
