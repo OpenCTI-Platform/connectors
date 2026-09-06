@@ -24,7 +24,6 @@ It does not yet create threat actors, intrusion sets, indicators, vulnerabilitie
 |------------------|--------------------------------|
 | OpenCTI Platform | >= 7.x (tested on 7.260609.0)  |
 | pycti            | == 7.260609.0                  |
-| PyYAML           | ~= 6.0.2                       |
 | requests         | ~= 2.32.3                      |
 | Python           | 3.12 (Docker image)            |
 
@@ -33,7 +32,9 @@ It does not yet create threat actors, intrusion sets, indicators, vulnerabilitie
 
 ## Configuration
 
-The connector can be configured with environment variables through `docker-compose.yml` or with `src/config.yml`.
+The connector uses the `connectors-sdk` settings contract. Configure it with
+environment variables through `docker-compose.yml` or a root-level `config.yml`
+copied from `config.yml.sample`; environment variables take precedence.
 
 At minimum you must supply:
 
@@ -41,17 +42,32 @@ At minimum you must supply:
 - `OPENCTI_TOKEN`
 - `TRUKNO_API_KEY`
 
-`CONNECTOR_ID` (a unique UUID for this connector instance) is also required at runtime. For manual or `docker-compose` deployments you must set it yourself; when the connector is deployed through the OpenCTI Connector Manager it is generated and injected automatically, which is why it is not listed as `required` in `__metadata__/connector_config_schema.json`.
+`CONNECTOR_ID` (a unique UUID for this connector instance) is also required at
+runtime. For manual or `docker-compose` deployments you must set it yourself.
+The OpenCTI Connector Manager injects it, so it is intentionally absent from
+the Manager schema.
 
 The remaining variables are optional and fall back to the defaults documented in `__metadata__/connector_config_schema.json`:
 
 - `CONNECTOR_NAME` (default `TruKno`)
 - `CONNECTOR_SCOPE` (default `report,attack-pattern,malware`)
 - `CONNECTOR_TYPE` (default `EXTERNAL_IMPORT`)
-- `CONNECTOR_LOG_LEVEL` (default `info`)
+- `CONNECTOR_LOG_LEVEL` (default `error`)
+- `CONNECTOR_DURATION_PERIOD` (default `PT1H`, ISO 8601 duration)
 - `TRUKNO_API_BASE_URL` (default `https://api.trukno.com/v2`)
-- `TRUKNO_INTERVAL_MINUTES` (default `60`)
 - `TRUKNO_INITIAL_LOOKBACK_DAYS` (default `30`)
+
+`TRUKNO_API_KEY` is a secret setting. The connector sends it as
+`Authorization: Bearer <key>`; an already-prefixed `Bearer <key>` value is
+accepted without adding a second prefix.
+
+### Interval Migration
+
+`CONNECTOR_DURATION_PERIOD` is the canonical scheduling setting and should be
+used for all new deployments. `TRUKNO_INTERVAL_MINUTES` remains accepted only
+to migrate existing runtime configuration: its value is converted to the
+equivalent duration and emits a deprecation warning. When both are supplied,
+the canonical `CONNECTOR_DURATION_PERIOD` value takes precedence.
 
 Additional metadata for Connector Manager and operator documentation is available in:
 
@@ -59,6 +75,13 @@ Additional metadata for Connector Manager and operator documentation is availabl
 - `__metadata__/connector_config_schema.json`
 
 ## Deployment
+
+### Connector Manager Deployment
+
+The TruKno connector supports deployment through OpenCTI Connector Manager.
+Configure the required OpenCTI connection and `TRUKNO_API_KEY` through the
+Manager form. The Manager injects `CONNECTOR_ID`; do not add it to the Manager
+configuration. Use `CONNECTOR_DURATION_PERIOD` to select the run frequency.
 
 ### Docker Deployment
 
@@ -76,13 +99,11 @@ docker compose up -d
 
 ### Manual Deployment
 
-1. Create `src/config.yml` from `src/config.yml.sample`.
-2. Install dependencies from `src/requirements.txt`.
-3. Start the connector from the `src` directory:
+1. Create `config.yml` from `config.yml.sample` and set `connector.id`.
+2. Install dependencies and start the connector from the connector root:
 
 ```bash
-pip3 install -r requirements.txt
-python3 main.py
+uv run --python 3.12 --with-requirements src/requirements.txt python src/main.py
 ```
 
 ## Behavior

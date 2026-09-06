@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/trukno_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "TruKno",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "report",
+        "attack-pattern",
+        "malware"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs.",
+      "format": "duration",
+      "type": "string"
+    },
+    "TRUKNO_API_BASE_URL": {
+      "default": "https://api.trukno.com/v2",
+      "description": "TruKno API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "TRUKNO_API_KEY": {
+      "description": "TruKno API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TRUKNO_INITIAL_LOOKBACK_DAYS": {
+      "default": 30,
+      "description": "Number of days to look back on the first run.",
+      "type": "integer"
+    },
+    "TRUKNO_INTERVAL_MINUTES": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "TRUKNO_API_KEY"
+  ],
+  "additionalProperties": true
+}
