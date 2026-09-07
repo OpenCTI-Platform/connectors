@@ -94,7 +94,7 @@ class TemplateConfig(BaseConfigModel):
     import_since: DatetimeFromIsoString = Field(
         description="The start date (ISO 8601 format) for importing data. "
         "Can be either absolute e.g., a given date like '2023-01-01T00:00:00Z' or "
-        "relative e.g., a given period of time like 'PT30D' (meaning '30 days ago'). "
+        "relative e.g., a given period of time like 'P30D' (meaning '30 days ago'). "
         "Used as the initial checkpoint on connector first run; subsequent runs resume from connector state.",
         default_factory=lambda: (datetime.now(timezone.utc) - timedelta(days=30)),
     )
