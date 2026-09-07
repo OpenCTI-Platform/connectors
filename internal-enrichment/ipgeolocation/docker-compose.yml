@@ -1,0 +1,51 @@
+services:
+  connector-ipgeolocation:
+    build: .
+    image: opencti/connector-ipgeolocation:1.0.0
+    environment:
+      # --- OpenCTI Platform ---
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      # --- Connector Core ---
+      - CONNECTOR_ID=${IPGEOLOCATION_CONNECTOR_ID}  # Generate a UUIDv4
+      - CONNECTOR_NAME=IPGeolocation.io
+      - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr
+      - CONNECTOR_AUTO=false                          # Set true for auto-enrichment
+      - CONNECTOR_CONFIDENCE_LEVEL=80
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_UPDATE_EXISTING_DATA=true
+      # --- IPGeolocation.io API ---
+      - IPGEOLOCATION_API_KEY=${IPGEOLOCATION_API_KEY}
+      - IPGEOLOCATION_BASE_URL=https://api.ipgeolocation.io
+      - IPGEOLOCATION_TIMEOUT=30
+      - IPGEOLOCATION_MAX_RETRIES=3
+      # --- API Modules ---
+      - IPGEOLOCATION_USE_GEO_API=true
+      - IPGEOLOCATION_USE_SECURITY_API=true
+      - IPGEOLOCATION_USE_ASN_API=true
+      - IPGEOLOCATION_USE_ABUSE_API=true
+      # --- Credit Optimization ---
+      # true  = single /v3/ipgeo?include=security,abuse call (fewer HTTP requests)
+      # false = call /v3/security, /v3/asn, /v3/abuse separately (per-endpoint control)
+      - IPGEOLOCATION_SINGLE_CALL_MODE=true
+      # --- Enrichment Features ---
+      - IPGEOLOCATION_CREATE_LABELS=true
+      - IPGEOLOCATION_CREATE_INDICATORS=true
+      - IPGEOLOCATION_CREATE_RELATIONSHIPS=true
+      - IPGEOLOCATION_CREATE_NOTES=true
+      - IPGEOLOCATION_CREATE_OPINIONS=false
+      - IPGEOLOCATION_CREATE_SUMMARY=true
+      # --- Thresholds ---
+      - IPGEOLOCATION_MIN_THREAT_SCORE=0              # Skip IPs below this score
+      - IPGEOLOCATION_INDICATOR_THREAT_THRESHOLD=50   # Create indicator only above this
+      # --- TLP ---
+      - IPGEOLOCATION_MAX_TLP=TLP:AMBER
+      - IPGEOLOCATION_DEFAULT_MARKING=TLP:WHITE
+    restart: unless-stopped
+    networks:
+      - default
+
+networks:
+  default:
+    external: true
+    name: docker_default
