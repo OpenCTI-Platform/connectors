@@ -1,0 +1,21 @@
+{
+  "title": "Import Document LLM",
+  "slug": "import-document-llm",
+    "description": "This advanced connector enables Enterprise Organizations to ingest and extract complex intelligence from unstructured documents (e.g., reports, articles). Unlike traditional connectors, this system utilizes advanced Large Language Models (LLMs) to perform semantic entity and relationship extraction, ensuring high-fidelity data mapping into OpenCTI.\n\n**Key Features:**\n*   **Intelligent Extraction:** Extracts detailed STIX entities and relationships (e.g., Malware, Country, Intrusion-Set) by interpreting textual context, not just matching keywords.\n*   **Multi-Provider Support:** Supports multiple LLM providers (Azure OpenAI, OpenAI, Ollama) for flexibility and enterprise control.\n*   **Comprehensive Pipeline:** Includes a full document preprocessing pipeline supporting PDF handling, OCR integration, and text normalization.\n*   **Schema Enforcement:** Ensures all extracted data is schema-aware and validated against OpenCTI rules, minimizing invalid data imports.\n*   **Robustness:** Built with prompt control, token budgeting, and detailed tracing hooks for reliability in complex environments.",
+  "short_description": "AI-powered connector for ingesting unstructured documents. Extracts complex STIX entities and relationships from reports using multiple LLM providers (OpenAI, Azure, Ollama).",
+  "logo": null,
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=7.260710.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-import-file/import-document-llm",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-import-document-llm",
+  "container_type": "INTERNAL_IMPORT_FILE"
+}
