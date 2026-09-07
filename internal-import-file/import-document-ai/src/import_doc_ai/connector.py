@@ -7,7 +7,7 @@ import json
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ImportDocumentAIClient
-from .config_loader import ConfigConnector
+from .settings import ConnectorSettings
 from .util import (
     OpenCTIFileObject,
     bulk_update_object_markings,
@@ -40,7 +40,7 @@ class Connector:
     It basically uses the same functions and principle than the internal enrichment connector type.
     """
 
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper) -> None:
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper) -> None:
         """
         Initialize the Connector with necessary configurations
         """
@@ -50,7 +50,7 @@ class Connector:
 
         self.import_doc_ia_client = ImportDocumentAIClient(helper, config)
 
-        if not self.config.include_relationships:
+        if not self.config.import_document_ai.include_relationships:
             # for backward behavior due to previous connector capabilities
             self.allowed_relationships_triplets = set()
         else:
@@ -99,7 +99,10 @@ class Connector:
             )
         else:
             # Legacy mode: direct call to Ariane web service
-            if not self.config.api_base_url or not self.config.api_key:
+            if (
+                not self.config.import_document_ai.api_base_url
+                or not self.config.import_document_ai.api_key
+            ):
                 raise ValueError(
                     "No agent_slug provided and api_base_url/api_key is not configured. "
                     "Either configure XTM One on the platform or set api_base_url/api_key for legacy mode."
@@ -133,7 +136,7 @@ class Connector:
             )
 
         # Handle observables: indicator creation delegation to the platform if relevant
-        if self.config.create_indicator:
+        if self.config.import_document_ai.create_indicator:
             ai_observables_bundle = filter_bundle_observables(ai_bundle)
             for ai_observable in ai_observables_bundle.get("objects", []):
                 updated_observable = update_custom_properties(

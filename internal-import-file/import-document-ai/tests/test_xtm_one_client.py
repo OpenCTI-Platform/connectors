@@ -50,7 +50,7 @@ def fixture_xtm_client() -> ImportDocumentAIClient:
     helper.connector_logger.info = Mock()
     helper.connector_logger.error = Mock()
     config = Mock()
-    config.licence_key_base64 = None
+    config.import_document_ai.licence_key_base64 = None
     return ImportDocumentAIClient(helper, config)
 
 
