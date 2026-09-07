@@ -1,0 +1,16 @@
+opencti:
+  url: http://localhost:8080
+  token: YOUR_OPENCTI_TOKEN
+
+connector:
+  id: YOUR_CONNECTOR_ID
+  name: WithaName Connector
+  scope: withaname
+  log_level: info
+  duration_period: 1h
+
+withaname:
+  api_base_url: https://witha.name
+  tlp_level: green
+  import_start_timestamp: null # 0 for all history, null for latest only
+  create_notes: true # whether to create STIX Note objects with raw targets data
