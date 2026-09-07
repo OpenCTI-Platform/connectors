@@ -1,6 +1,22 @@
 name: Build Connector Images
 
 on:
+  workflow_dispatch:
+    inputs:
+      build_mode:
+        description: "Build mode (rolling, prerelease, release)"
+        required: true
+        default: "rolling"
+        type: choice
+        options:
+          - rolling
+          - prerelease
+          - release
+      push:
+        description: "Push images to registries"
+        required: true
+        default: "true"
+        type: boolean
   push:
     branches:
       - master
@@ -69,8 +85,7 @@ jobs:
       packages: write
     with:
       build_mode: ${{ needs.resolve-build-mode.outputs.build_mode }}
-      # TODO: Set push to true once CircleCI is decommissioned for Alpine/FIPS builds
-      push: false
+      push: true
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_UBI9 }}
       DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS_UBI9 }}

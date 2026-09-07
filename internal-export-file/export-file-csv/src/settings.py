@@ -37,6 +37,16 @@ class ExportFileCsvConfig(BaseConfigModel):
         description="The delimiter character used to separate the values in the exported CSV files.",
         default=";",
     )
+    add_bom: bool = Field(
+        description=(
+            "Prepend a UTF-8 BOM (byte order mark) to exported CSV files. "
+            "Required for Microsoft Excel to correctly auto-detect UTF-8 encoding "
+            "Without it, Excel falls back to the system's local codepage"
+            "and non-ASCII text (Arabic, Cyrillic, CJK, "
+            "etc.) is rendered as garbled characters. Disabled by default."
+        ),
+        default=False,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
