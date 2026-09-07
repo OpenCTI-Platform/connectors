@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Dual Signal Triage'
+  scope: 'Case-Incident,Incident,Report,Indicator'
+  auto: false
+  log_level: 'info'
+
+dual_signal_triage:
+  max_tlp_level: 'amber+strict'
+  create_note: true
