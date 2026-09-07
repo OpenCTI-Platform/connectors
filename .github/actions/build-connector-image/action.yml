@@ -140,6 +140,81 @@ runs:
           grep -E 'connectors-sdk' src/requirements.txt || echo "(no connectors-sdk ref)"
         fi
 
+    - name: Write connector version stamp
+      # Exposes the connector version to the running process: pycti reads this file
+      # at startup and reports it to the platform. A container cannot otherwise know
+      # its own image tag (OCI labels are unreadable without the Docker socket).
+      #
+      # The file rides the `COPY src ...` that every Dockerfile already performs
+      # (or, for packaged connectors, travels inside the installed package), so no
+      # connector source file needs to change. The name is flat and dot-prefixed on
+      # purpose: `src/__metadata__/` would be caught by the 73 .dockerignore files
+      # that exclude `**/__metadata__`.
+      #
+      # /!\ STABLE FIELDS ONLY. This lands in `src/`, which is copied BEFORE
+      # `pip install`. A value changing per commit (SHA, timestamp, run id) would
+      # invalidate the layer cache for every connector on each push to master.
+      # Volatile data belongs in an OCI label (see "Compute OCI labels").
+      shell: bash
+      run: |
+        set -euo pipefail
+        CONNECTOR_PATH="${{ inputs.connector_path }}"
+        BUILD_MODE="${{ inputs.build_mode }}"
+        VARIANT="${{ inputs.variant }}"
+
+        # Where the stamp must land so the running process can reach it. pycti
+        # walks up from the launched script's directory, so the target depends on
+        # how the connector is started:
+        #   - packaged connectors (a top-level package with __main__.py, started
+        #     with `python -m <pkg>`): inside the package, shipped to
+        #     site-packages via [tool.setuptools.package-data]
+        #   - standard connectors: src/, carried by the `COPY src ...` that every
+        #     Dockerfile already performs
+        STAMP_DIR=""
+        for main_module in "${CONNECTOR_PATH}"/*/__main__.py; do
+          [ -f "$main_module" ] || continue
+          candidate="$(dirname "$main_module")"
+          if [ "$(basename "$candidate")" != "src" ]; then
+            STAMP_DIR="$candidate"
+            break
+          fi
+        done
+        if [ -z "$STAMP_DIR" ] && [ -d "${CONNECTOR_PATH}/src" ]; then
+          STAMP_DIR="${CONNECTOR_PATH}/src"
+        fi
+
+        # First meaningful tag wins. Variant suffixes (e.g. "7.1.0-ubi9") are
+        # stripped so the reported version does not depend on the base image.
+        TAGS="$(printf '%s' "${{ inputs.image_tags }}" | tr ',' '\n' | xargs -n1)"
+        if [ -n "$VARIANT" ]; then
+          TAGS="$(printf '%s\n' "$TAGS" | sed "s/-${VARIANT}\$//")"
+        fi
+        VERSION="$(printf '%s\n' "$TAGS" | grep -vx 'latest' | head -1 || true)"
+        VERSION="${VERSION:-$BUILD_MODE}"
+
+        MANIFEST="${CONNECTOR_PATH}/__metadata__/connector_manifest.json"
+        SLUG="$(jq -r '.slug // empty' "$MANIFEST" 2>/dev/null || true)"
+
+        if [ -n "$STAMP_DIR" ]; then
+          STAMP="${STAMP_DIR}/.connector_version.json"
+          jq -nc --arg v "$VERSION" \
+                 --arg s "${SLUG:-${{ inputs.connector_name }}}" \
+                 --arg m "$BUILD_MODE" \
+                 '{version: $v, slug: $s, build_mode: $m}' > "$STAMP"
+          echo "🏷️ ${STAMP}: $(cat "$STAMP")"
+        elif [ -f "$MANIFEST" ]; then
+          # Flat-layout connectors start their entry script straight from the image
+          # root, so no package directory can carry the stamp. They ship the
+          # manifest instead — the other source the resolver already reads — with
+          # container_version patched to the build version.
+          PATCHED="$(mktemp)"
+          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$PATCHED"
+          mv "$PATCHED" "$MANIFEST"
+          echo "🏷️ ${MANIFEST}: container_version=${VERSION}"
+        else
+          echo "ℹ️ ${CONNECTOR_PATH}: no stamp target and no manifest — skipping"
+        fi
+
     - name: Resolve Dockerfile and build args
       id: resolve
       shell: bash

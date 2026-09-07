@@ -22,6 +22,8 @@ RUN cd /opt/ && \
 FROM package AS app
 # Copy the app
 COPY app.py /opt/app.py    
+# Entry script runs from /opt, so this is where pycti looks for the version.
+COPY __metadata__/connector_manifest.json /opt/__metadata__/connector_manifest.json
 
 # Run the app
 CMD ["python3", "/opt/app.py"]

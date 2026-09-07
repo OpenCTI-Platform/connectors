@@ -56,6 +56,13 @@ GoogleTIFeeds = "connector.__main__:main"
 [tool.setuptools.packages.find]
 where = ["."]
 
+[tool.setuptools.package-data]
+# Version stamp generated at build time by the CI (see
+# .github/actions/build-connector-image). Shipped inside the installed package so
+# pycti can resolve the running version — the connector is started with
+# `python -m connector`, which anchors the lookup on this directory.
+connector = [".connector_version.json"]
+
 
 [tool.pytest.ini_options]
 testpaths = ["./tests"]

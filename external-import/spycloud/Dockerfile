@@ -5,6 +5,8 @@ ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 COPY spycloud_connector /opt/spycloud_connector
 COPY pyproject.toml /opt/pyproject.toml
 COPY main.py /opt/main.py
+# Entry script runs from /opt, so this is where pycti looks for the version.
+COPY __metadata__/connector_manifest.json /opt/__metadata__/connector_manifest.json
 
 # Install Python modules
 # hadolint ignore=DL3003
