@@ -1,0 +1,21 @@
+{
+  "title": "Flowtriq DDoS Incidents",
+  "slug": "flowtriq",
+  "description": "The Flowtriq connector imports DDoS attack incident data from the Flowtriq network monitoring platform into OpenCTI as STIX 2.1 threat intelligence.\n\nFlowtriq detects volumetric DDoS attacks in real time using NetFlow and sFlow analysis. This connector periodically polls the Flowtriq REST API to retrieve resolved or active incident records, then transforms target IPs, attack metadata, and source IPs into STIX Observables and Indicators.\n\nEach incident produces an IPv4 or IPv6 Observable for the attack target, along with optional Indicator objects containing STIX patterns. Attack metadata such as type (SYN flood, UDP flood, DNS amplification), severity, peak volume (PPS/BPS), and timestamps are preserved as labels and descriptions.\n\nWhen source IP data is available from Flowtriq's Service Port detection, the connector also creates Observables and Indicators for attacker source IPs, linking them back to the target infrastructure.\n\nTLP markings, confidence scores derived from severity, and external references to the Flowtriq dashboard are applied to all objects for proper attribution and sharing controls.",
+  "short_description": "Imports DDoS attack incidents from Flowtriq as STIX threat intelligence, including target IPs, attack types, severity, and source IPs.",
+  "logo": "external-import/flowtriq/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://flowtriq.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/flowtriq",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-flowtriq",
+  "container_type": "EXTERNAL_IMPORT"
+}
