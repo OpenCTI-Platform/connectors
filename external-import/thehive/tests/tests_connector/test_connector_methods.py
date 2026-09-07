@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import connector.connector as module
 import pytest
 from connector.constants import PAP_MAPPINGS, TLP_MAPPINGS
+from pycti import Indicator
 
 IDENTITY_ID = "identity--a5f78c07-79e2-4e8a-b1dd-fa3e5e5f1a5c"
 
@@ -27,6 +28,7 @@ def _make_mock_config(
     case_status_mapping=None,
     task_status_mapping=None,
     user_mapping=None,
+    case_url_template=None,
 ):
     cfg = MagicMock()
     cfg.thehive.url = "http://thehive.example.com"
@@ -48,6 +50,7 @@ def _make_mock_config(
     cfg.thehive.task_status_mapping = task_status_mapping or []
     cfg.thehive.alert_status_mapping = []
     cfg.thehive.user_mapping = user_mapping or []
+    cfg.thehive.case_url_template = case_url_template
     return cfg
 
 
@@ -795,3 +798,171 @@ def test_run_calls_schedule_iso(connector):
         message_callback=connector.process_message,
         duration_period=connector.config.connector.duration_period,
     )
+
+
+# ---------------------------------------------------------------------------
+# generate_companion_indicator
+# ---------------------------------------------------------------------------
+
+OBSERVABLE_CREATED_MS = 1680336900000  # 2023-04-01T08:15:00Z
+
+
+def _make_observable(data_type="ip", data="8.8.8.8", ioc=True, **overrides):
+    observable = {
+        "_id": "obs-001",
+        "_createdAt": OBSERVABLE_CREATED_MS,
+        "_updatedAt": OBSERVABLE_CREATED_MS + 1000,
+        "startDate": OBSERVABLE_CREATED_MS,
+        "dataType": data_type,
+        "data": data,
+        "message": "an observable",
+        "tags": ["obs-tag"],
+        "ioc": ioc,
+        "sighted": False,
+    }
+    observable.update(overrides)
+    return observable
+
+
+def _companion(connector, observable):
+    stix_observable = connector.convert_observable(observable, [])
+    return connector.generate_companion_indicator(observable, stix_observable, [])
+
+
+def test_companion_indicator_carries_the_observable_creation_date(connector):
+    indicator = _companion(connector, _make_observable())
+    assert indicator is not None
+    assert indicator.created.isoformat().startswith("2023-04-01T08:15:00")
+    assert indicator.pattern == "[ipv4-addr:value = '8.8.8.8']"
+    assert indicator.pattern_type == "stix"
+    assert indicator.x_opencti_main_observable_type == "IPv4-Addr"
+
+
+def test_companion_indicator_id_is_derived_from_the_pattern(connector):
+    # The promoted indicator's id comes from its pattern, so the companion must
+    # resolve to the same id to upsert onto it rather than duplicate it.
+    indicator = _companion(connector, _make_observable())
+    assert indicator.id == Indicator.generate_id(indicator.pattern)
+
+
+def test_companion_indicator_leaves_valid_from_to_the_platform(connector):
+    # The promotion rewrites valid_from on every run, so the companion does not
+    # try to own it: it must not carry the TheHive date.
+    indicator = _companion(connector, _make_observable())
+    assert not indicator.valid_from.isoformat().startswith("2023-04-01")
+
+
+def test_no_companion_indicator_for_a_non_ioc_observable(connector):
+    assert _companion(connector, _make_observable(ioc=False)) is None
+
+
+def test_no_companion_indicator_without_a_creation_date(connector):
+    observable = _make_observable()
+    del observable["_createdAt"]
+    assert _companion(connector, observable) is None
+
+
+def test_no_companion_indicator_for_a_type_without_a_pattern(connector):
+    # 'organisation' becomes an Identity SDO, which the platform never promotes.
+    assert _companion(connector, _make_observable("organisation", "ACME")) is None
+
+
+def test_observable_still_requests_platform_promotion(connector):
+    # The companion supplements the promotion, it does not replace it.
+    stix_observable = connector.convert_observable(_make_observable(), [])
+    assert stix_observable.x_opencti_create_indicator is True
+
+
+# ---------------------------------------------------------------------------
+# build_case_external_reference / build_case_url
+# ---------------------------------------------------------------------------
+
+
+def test_case_external_reference_carries_the_case_number(connector):
+    case = dict(_make_case(), number=42)
+    reference = connector.build_case_external_reference(case)
+    assert reference.source_name == "TheHive"
+    assert reference.external_id == "42"
+
+
+def test_case_external_reference_is_omitted_without_a_number(connector):
+    assert connector.build_case_external_reference(_make_case()) is None
+
+
+def test_case_external_reference_has_no_url_when_undetectable(connector):
+    # No template configured and no version to detect: the number alone is
+    # correct on every version and deployment, a wrong link is not.
+    connector.thehive_api.session.make_request.side_effect = Exception("404")
+    reference = connector.build_case_external_reference(dict(_make_case(), number=42))
+    assert "url" not in reference
+
+
+def test_explicit_url_template_wins_over_detection():
+    # The connector may reach TheHive at an address an analyst's browser cannot
+    # (internal network, reverse proxy), so an explicit template must win.
+    with patch.object(module, "TheHiveApi"):
+        c = module.TheHive(
+            _make_mock_config(
+                case_url_template="https://public.example/case/{case_number}"
+            ),
+            MagicMock(),
+        )
+        c.current_state = {}
+        assert c.build_case_url(_make_case(), 42) == "https://public.example/case/42"
+        c.thehive_api.session.make_request.assert_not_called()
+
+
+def test_url_template_with_an_unknown_placeholder_is_survivable():
+    with patch.object(module, "TheHiveApi"):
+        c = module.TheHive(
+            _make_mock_config(case_url_template="https://x/{nope}"), MagicMock()
+        )
+        assert c.build_case_url(_make_case(), 42) is None
+
+
+# ---------------------------------------------------------------------------
+# get_thehive_major_version
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "status,expected",
+    [
+        ({"versions": {"TheHive": "4.1.24-1"}}, 4),
+        ({"versions": {"TheHive": "5.2.9-1"}}, 5),
+        ({"version": "5.3.0"}, 5),
+        ({"unexpected": "shape"}, None),
+        ("not a mapping", None),
+    ],
+)
+def test_version_detection_tolerates_status_shapes(connector, status, expected):
+    connector.thehive_api.session.make_request.return_value = status
+    assert connector.get_thehive_major_version() == expected
+
+
+def test_version_detection_survives_a_missing_status_endpoint(connector):
+    connector.thehive_api.session.make_request.side_effect = Exception("404")
+    assert connector.get_thehive_major_version() is None
+
+
+def test_version_is_detected_once_and_cached(connector):
+    connector.thehive_api.session.make_request.return_value = {
+        "versions": {"TheHive": "4.1.24-1"}
+    }
+    for _ in range(5):
+        connector.build_case_url(_make_case(), 42)
+    assert connector.thehive_api.session.make_request.call_count == 1
+
+
+@pytest.mark.parametrize(
+    "version,expected",
+    [
+        (4, "http://thehive.example.com/index.html#!/case/case-001/details"),
+        (5, "http://thehive.example.com/cases/case-001/details"),
+    ],
+)
+def test_case_url_route_per_major_version(connector, version, expected):
+    connector.thehive_api.session.make_request.return_value = {
+        "versions": {"TheHive": f"{version}.1.0"}
+    }
+    assert connector.build_case_url(_make_case(), 42) == expected

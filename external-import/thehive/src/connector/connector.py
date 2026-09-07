@@ -1,5 +1,6 @@
 import base64
 import json
+import re
 import time
 from datetime import datetime
 
@@ -14,6 +15,11 @@ from connector.hive_observable_transform import (
     HiveObservableTransform,
     UnsupportedIndicatorTypeError,
 )
+from connector.indicator_pattern import (
+    build_pattern,
+    main_observable_type,
+    resolve_pattern_key_value,
+)
 from connector.settings import ConnectorSettings
 from connector.utils import format_datetime
 from pycti import (
@@ -22,6 +28,7 @@ from pycti import (
     CustomObjectTask,
     Identity,
     Incident,
+    Indicator,
     Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -34,6 +41,16 @@ from thehive4py.query.page import Paginate
 from thehive4py.query.sort import Asc
 from thehive4py.types.alert import OutputAlert
 from thehive4py.types.case import OutputCase
+
+_UNSET = object()
+
+# UI route per TheHive major version, appended to the instance base URL.
+# v4 (AngularJS hashbang routing) is confirmed against a live 4.x instance;
+# v5 is the documented route for the current UI.
+CASE_URL_ROUTES = {
+    4: "{base}/index.html#!/case/{case_id}/details",
+    5: "{base}/cases/{case_id}/details",
+}
 
 
 class TheHive:
@@ -56,6 +73,10 @@ class TheHive:
         self.thehive_import_only_tlp = config.thehive.import_only_tlp
         self.thehive_import_alerts = config.thehive.import_alerts
         self.thehive_import_attachments = config.thehive.import_attachments
+        self.thehive_case_url_template = config.thehive.case_url_template
+        # Resolved lazily on first use; _UNSET distinguishes 'not yet asked'
+        # from 'asked and could not tell'.
+        self._thehive_major_version = _UNSET
 
         self.thehive_severity_mapping = config.thehive.severity_mapping
         self.thehive_case_status_mapping = config.thehive.case_status_mapping
@@ -182,6 +203,11 @@ class TheHive:
                 # a None element in the bundle aborts the whole send downstream.
                 if stix_relation:
                     bundle_objects.append(stix_relation)
+                companion = self.generate_companion_indicator(
+                    observable, stix_observable, markings
+                )
+                if companion:
+                    bundle_objects.append(companion)
         try:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.connector_logger.info(
@@ -288,6 +314,64 @@ class TheHive:
                 )
 
         return bundle
+
+    def generate_companion_indicator(self, observable, stix_observable, markings):
+        """Build a thin Indicator carrying TheHive's creation date, or None.
+
+        OpenCTI promotes IOC observables to indicators itself (the observable
+        carries ``x_opencti_create_indicator``), but the promoted indicator is
+        stamped with the ingest time: ``generateIndicatorFromObservable`` reads
+        no date from the observable, and an SCO has none to read. This
+        companion object carries the same pattern -- so it upserts onto the
+        promoted indicator instead of creating a second one -- and supplies
+        ``created`` from TheHive's ``_createdAt``.
+
+        ``created`` cannot be clobbered by the promotion: the platform aligns
+        ``created`` only when the incoming patch actually carries one, and the
+        promotion's never does. ``valid_from`` is deliberately left to default
+        -- the promotion rewrites it on every run, so it is not ours to own.
+        """
+        if not observable.get("ioc"):
+            return None
+        created_at = observable.get("_createdAt")
+        if created_at is None:
+            # Observed on payloads that omit the v1 metadata fields. Without a
+            # source date there is nothing for the companion to add, so the
+            # observable and its promoted indicator are left as they are.
+            self.helper.connector_logger.debug(
+                f"Observable {observable.get('_id')} has no '_createdAt'; "
+                "no companion indicator."
+            )
+            return None
+        pattern = build_pattern(stix_observable)
+        if pattern is None:
+            self.helper.connector_logger.debug(
+                f"No pattern mapping for observable type "
+                f"({getattr(stix_observable, 'type', None)}); no companion indicator."
+            )
+            return None
+        created = format_datetime(int(created_at) / 1000, DEFAULT_UTC_DATETIME)
+        # Name and description mirror what the promotion would set, so the two
+        # objects agree on every field they both write. The pattern value is the
+        # platform's observableValue() for every type mapped here -- notably for
+        # a file, whose TheHive "data" is empty and whose value is the hash.
+        _, name = resolve_pattern_key_value(stix_observable)
+        return stix2.Indicator(
+            id=Indicator.generate_id(pattern),
+            pattern=pattern,
+            pattern_type="stix",
+            created=created,
+            name=name,
+            description=observable.get("message", "Imported from TheHive"),
+            labels=observable.get("tags") if observable.get("tags") else None,
+            object_marking_refs=markings,
+            created_by_ref=self.identity.id,
+            allow_custom=True,
+            custom_properties={
+                "x_opencti_main_observable_type": main_observable_type(stix_observable),
+                "x_opencti_score": 80,
+            },
+        )
 
     def generate_sighting(self, observable, stix_observable):
         """Generate a STIX sighting from a provided observable and stix observable."""
@@ -441,6 +525,110 @@ class TheHive:
         )
         self.helper.set_state(self.current_state)
 
+    def build_case_external_reference(self, case):
+        """Link the OpenCTI case back to its TheHive case, or None.
+
+        OpenCTI's Case-Incident has no dedicated case-number field, so TheHive's
+        ``number`` is carried as an external reference, where it shows in the
+        External References panel.
+
+        The link is only added when ``case_url_template`` is configured. It is
+        not derived from ``thehive.url``: that is the address the connector uses
+        to reach the API, which is frequently not the address an analyst's
+        browser can reach (internal Docker network, reverse proxy, split DNS),
+        and the UI route differs between TheHive 4 and 5. The number alone is
+        correct everywhere; a wrong link is worse than none.
+        """
+        number = case.get("number")
+        if number is None:
+            return None
+        reference = {"source_name": "TheHive", "external_id": str(number)}
+        url = self.build_case_url(case, number)
+        if url:
+            reference["url"] = url
+        return stix2.ExternalReference(**reference)
+
+    def get_thehive_major_version(self):
+        """Return TheHive's major version as an int, or None if undetermined.
+
+        Asked once and cached: the answer cannot change while the connector is
+        running, and a status endpoint that is absent or shaped unexpectedly
+        must not be re-queried for every case.
+        """
+        if self._thehive_major_version is not _UNSET:
+            return self._thehive_major_version
+
+        version = None
+        try:
+            status = self.thehive_api.session.make_request("GET", path="/api/status")
+            version = self._extract_major_version(status)
+        except Exception as e:
+            self.helper.connector_logger.info(
+                "Could not determine the TheHive version; case links will be "
+                "omitted unless THEHIVE_CASE_URL_TEMPLATE is set",
+                meta={"error": str(e)},
+            )
+        if version is not None:
+            self.helper.connector_logger.info(
+                f"Detected TheHive major version: {version}"
+            )
+        self._thehive_major_version = version
+        return version
+
+    @staticmethod
+    def _extract_major_version(status):
+        """Pull the leading integer of TheHive's version out of /api/status.
+
+        Tolerant of shape: 4.x nests it under versions.TheHive, and the payload
+        has changed between releases, so every plausible location is tried
+        before giving up.
+        """
+        if not isinstance(status, dict):
+            return None
+        candidates = []
+        versions = status.get("versions")
+        if isinstance(versions, dict):
+            for key in ("TheHive", "thehive", "Thehive"):
+                if versions.get(key):
+                    candidates.append(versions[key])
+        for key in ("version", "Version"):
+            if status.get(key):
+                candidates.append(status[key])
+        for candidate in candidates:
+            match = re.match(r"\s*(\d+)", str(candidate))
+            if match:
+                return int(match.group(1))
+        return None
+
+    def build_case_url(self, case, number):
+        """Build the analyst-facing case URL, or None.
+
+        An explicit template always wins -- it is the only thing that can be
+        right when the connector reaches TheHive at a different address than an
+        analyst's browser does. Otherwise the route is chosen from the detected
+        major version, appended to the configured instance URL.
+        """
+        template = self.thehive_case_url_template
+        if not template:
+            version = self.get_thehive_major_version()
+            route = CASE_URL_ROUTES.get(version)
+            if route is None:
+                return None
+            template = route.format(
+                base=self.thehive_url, case_id="{case_id}", case_number="{case_number}"
+            )
+        try:
+            return template.format(case_id=case.get("_id", ""), case_number=number)
+        except (KeyError, IndexError, ValueError) as e:
+            # A template naming a placeholder we do not provide must not take
+            # the whole case import down with it.
+            self.helper.connector_logger.warning(
+                "Could not render the TheHive case URL template; "
+                "the external reference will carry the case number only",
+                meta={"template": template, "error": str(e)},
+            )
+            return None
+
     def process_main_case(self, case, markings, object_refs=None):
         """Process Hive case and return CustomObjectCaseIncident"""
         created = format_datetime(
@@ -458,11 +646,15 @@ class TheHive:
                 user_mapping_split = user_mapping.split(":")
                 if case.get("owner") == user_mapping_split[0]:
                     opencti_case_user = user_mapping_split[1]
+        external_reference = self.build_case_external_reference(case)
         stix_case = CustomObjectCaseIncident(
             id=CaseIncident.generate_id(case.get("title"), created),
             name=case.get("title"),
             description=case.get("description"),
             created=created,
+            external_references=(
+                [external_reference] if external_reference is not None else None
+            ),
             object_marking_refs=markings,
             labels=case.get("tags") if case.get("tags") else None,
             created_by_ref=self.identity.id,
@@ -509,6 +701,11 @@ class TheHive:
                             )
                             if sighting:
                                 processed_observables.append(sighting)
+                            companion = self.generate_companion_indicator(
+                                observable, stix_observable, markings
+                            )
+                            if companion:
+                                processed_observables.append(companion)
                 return processed_observables, object_refs
             else:
                 self.helper.connector_logger.info(
