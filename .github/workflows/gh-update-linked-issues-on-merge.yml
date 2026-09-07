@@ -3,6 +3,7 @@ name: "Update linked issues on PR merge"
 on:
   pull_request_target:
     types: [closed]
+    branches: [master]
 
 permissions:
   issues: write
