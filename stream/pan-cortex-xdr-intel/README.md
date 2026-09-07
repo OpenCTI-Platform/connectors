@@ -85,6 +85,8 @@ a `StixFile` with only a `name` and no hash passes the type filter but still yie
 - OpenCTI Platform >= 7.260811.0
 - A Palo Alto Cortex XDR tenant with API access enabled
 - A Cortex XDR API Key (**Advanced** security level) and its associated Key ID
+- A role granting **Threat Management -> Detections -> Rules** with the **View/Edit** permission (the
+  only permission this connector needs; everything else can stay disabled)
 
 ### Getting the Cortex XDR API base URL
 
@@ -100,9 +102,12 @@ See [Get Your FQDN](https://cortex-docs.paloaltonetworks.com/xdr-5-api/get-your-
 
 1. In the Cortex XDR management console, go to **Settings** -> **Configurations** -> **API Keys** -> **New Key**.
 2. Select **Advanced** as the security level (**Standard** keys are not supported by this connector).
-3. Copy the generated **API Key** (`api_key`) and its **Key ID** (`api_key_id`); the API Key is only shown once
+3. Assign the key a role that grants **Threat Management -> Detections -> Rules** with the **View/Edit**
+   permission. This is the only permission the connector requires: it covers reading, inserting/updating
+   and deleting IOCs. All other permissions can stay disabled (least privilege).
+4. Copy the generated **API Key** (`api_key`) and its **Key ID** (`api_key_id`); the API Key is only shown once
    and cannot be retrieved again.
-4. Use these values, together with the base URL above, to sign every request: the Key ID is sent as the
+5. Use these values, together with the base URL above, to sign every request: the Key ID is sent as the
    `x-xdr-auth-id` header, and the Key is used to compute the `Authorization` header.
 
 See [Make Your First API Call](https://cortex-docs.paloaltonetworks.com/xdr-5-api/make-your-first-api-call)
@@ -157,7 +162,7 @@ this points to an unexpected data shape rather than the normal type-filtering be
 
 | Symptom | Likely cause | Fix |
 | ------- | ------------ | --- |
-| Connector exits right after startup or after processing one event; logs show a 401/403 Cortex XDR error | Invalid, revoked, or **Standard** (non-Advanced) API key | Generate an **Advanced** API key/Key ID pair (see [Getting the Cortex XDR API credentials](#getting-the-cortex-xdr-api-credentials)) and update `PAN_CORTEX_XDR_INTEL_API_KEY`/`PAN_CORTEX_XDR_INTEL_API_KEY_ID` |
+| Connector exits right after startup or after processing one event; logs show a 401/403 Cortex XDR error | Invalid, revoked, or **Standard** (non-Advanced) API key, or a key whose role lacks **Threat Management -> Detections -> Rules** (**View/Edit**) | Generate an **Advanced** API key/Key ID pair with a role granting **Threat Management -> Detections -> Rules** (**View/Edit**) (see [Getting the Cortex XDR API credentials](#getting-the-cortex-xdr-api-credentials)) and update `PAN_CORTEX_XDR_INTEL_API_KEY`/`PAN_CORTEX_XDR_INTEL_API_KEY_ID` |
 | Same as above but with a 429 error | Cortex XDR API rate limit exceeded (not currently configurable from the connector side) | Restart the connector; if the issue persists, contact Filigran support |
 | Logs repeatedly show `No supported observable(s) found in indicator, skipping it` | The indicator's observables are all of an unsupported type (e.g. `Hostname`, `Email-Addr`, `Url`) | Expected behavior for unspported observable types; no action needed unless those indicators are expected to be pushed to Cortex XDR |
 | Logs repeatedly show `No Cortex XDR IOC could be extracted from any observable, skipping indicator` | The indicator only has `StixFile` observable(s) without any hash (e.g. only a `name`) | Expected behavior since only hashes are mapped for `StixFile`; no action needed unless those indicators are expected to be pushed to Cortex XDR |
