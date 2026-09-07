@@ -94,3 +94,22 @@ def test_converter_to_stix_convert_ccm_alert_to_incident(
             if isinstance(stix_object, stix2.MarkingDefinition)
         ]
     )
+
+
+def test_generate_incident_name_with_none_fields():
+    alert = {
+        "alert_reason": "Credential leak",
+        "channel_type": None,
+        "channel_name": None,
+        "alert_id": "alert-123",
+    }
+
+    name = ConverterToStix._generate_incident_name(alert)
+
+    assert name == "Alert: Credential leak -  -  - alert-123"
+
+
+def test_generate_incident_name_with_all_none_fields():
+    name = ConverterToStix._generate_incident_name({})
+
+    assert name == "Alert:  -  -  - "

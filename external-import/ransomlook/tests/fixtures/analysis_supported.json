@@ -1,0 +1,12 @@
+{
+  "fixture_status": "synthetic conversion contract; not an observed live endpoint response",
+  "id": "analysis-1",
+  "title": "Sanitized technical analysis",
+  "published": "2026-01-03T00:00:00Z",
+  "post_id": "post-1",
+  "malware": [{"name": "ExampleCrypt", "is_family": true, "aliases": ["EC"]}],
+  "attack_patterns": [{"external_id": "T1486", "name": "Data Encrypted for Impact"}],
+  "observables": [{"type": "domain", "value": "malicious.example", "malicious": true, "detection": {"rule_id": "RL-1", "kind": "signature"}}],
+  "document": "JVBERi0xLjQKc2FuaXRpemVkCiUlRU9G",
+  "document_mime_type": "application/pdf"
+}

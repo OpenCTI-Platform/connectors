@@ -8,12 +8,12 @@ services:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=SOC Prime
       - CONNECTOR_SCOPE=socprime
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT1H
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT1H
       - SOCPRIME_API_KEY=ChangeMe
       - SOCPRIME_CONTENT_LIST_NAME=ChangeMe
-      - SOCPRIME_INDICATOR_SIEM_TYPE=sigma
       # - SOCPRIME_JOB_IDS=ChangeMe
-      - SOCPRIME_SIEM_TYPE=
-      - SOCPRIME_TLP_LEVEL=amber+strict
+      # - SOCPRIME_SIEM_TYPE=
+      # - SOCPRIME_INDICATOR_SIEM_TYPE=sigma
+      # - SOCPRIME_TLP_LEVEL=amber+strict
     restart: always

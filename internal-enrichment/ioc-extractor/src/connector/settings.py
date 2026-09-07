@@ -1,3 +1,5 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -31,6 +33,17 @@ class IOCExtractorConfig(BaseConfigModel):
     skip_private_ips: bool = Field(
         description="Skip private/reserved IP addresses (RFC 1918, loopback, etc.).",
         default=True,
+    )
+    max_tlp: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
+        description="The maximal TLP of the observable being enriched.",
+        default="TLP:AMBER",
     )
 
 

@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-zerofox-alerts:
+    image: opencti/connector-zerofox-alerts:latest
+    environment:
+      # OpenCTI configuration
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common connector configuration
+      #- CONNECTOR_ID=6dc34623-7346-476b-b105-e7b5c2e8f9c8
+      #- CONNECTOR_NAME=ZeroFox Alerts
+      #- CONNECTOR_SCOPE=zerofox-alerts
+      #- CONNECTOR_LOG_LEVEL=info
+      #- CONNECTOR_DURATION_PERIOD=PT15M
+      # Connector configuration
+      #- ZEROFOX_ALERTS_API_BASE_URL=https://api.zerofox.com
+      - ZEROFOX_ALERTS_API_TOKEN=ChangeMe
+      #- ZEROFOX_ALERTS_MARKING=amber
+      #- ZEROFOX_ALERTS_IMPORT_START_DATE=P30D
+      #- ZEROFOX_ALERTS_ALERT_STATUSES=open,escalated,investigation_completed
+      #- ZEROFOX_ALERTS_PAGE_SIZE=100
+    restart: always

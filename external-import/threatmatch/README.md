@@ -15,9 +15,6 @@ relative start date on first run), and maps them to STIX 2.1 objects and relatio
 - [🧩 Introduction](#-introduction)
 - [⚙️ Requirements](#-requirements)
 - [🔧 Configuration](#-configuration)
-    - [OpenCTI configuration](#opencti-configuration)
-    - [Base connector configuration](#base-connector-configuration)
-    - [ThreatMatch configuration](#threatmatch-configuration)
 - [🚀 Deployment](#-deployment)
     - [Docker](#docker)
     - [Manual (venv)](#manual-venv)
@@ -41,42 +38,12 @@ datasets (profiles, alerts, IOCs) and set a default TLP for items missing markin
 
 ---
 
-## 🔧 Configuration
+## 🔧 Configuration variables
 
-Configuration can be provided via a `config.yml` file, or **environment variables**.
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI configuration
-
-| Parameter     | `config.yml` | Environment variable | Required | Description                                 |
-|---------------|--------------|----------------------|----------|---------------------------------------------|
-| OpenCTI URL   | `url`        | `OPENCTI_URL`        | ✅        | Base URL of your OpenCTI instance.          |
-| OpenCTI Token | `token`      | `OPENCTI_TOKEN`      | ✅        | Platform token (typically the admin token). |
-
-### Base connector configuration
-
-| Parameter                 | `config.yml`      | Environment variable        | Required | Default     | Description                                         |
-|---------------------------|-------------------|-----------------------------|----------|-------------|-----------------------------------------------------|
-| Connector ID              | `id`              | `CONNECTOR_ID`              | ✅        | ❌           | Unique `UUIDv4` for this connector instance.        |
-| Connector Name            | `name`            | `CONNECTOR_NAME`            | ❌        | ThreatMatch | Display name of the connector.                      |
-| Connector Scope           | `scope`           | `CONNECTOR_SCOPE`           | ❌        | threatmatch | Scope/type handled by this connector.               |
-| Connector Log Level       | `log_level`       | `CONNECTOR_LOG_LEVEL`       | ❌        | error       | One of `debug`, `info`, `warn`, `error`.            |
-| Connector Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | ❌        | `P1D`       | Polling frequency (ISO‑8601 duration, e.g., `P1D`). |
-
-### ThreatMatch configuration
-
-| Parameter                       | `config.yml`                                | Environment variable                         | Required | Default / Example            | Description                                                                                           |
-|---------------------------------|---------------------------------------------|----------------------------------------------|----------|------------------------------|-------------------------------------------------------------------------------------------------------|
-| ThreatMatch Client ID           | `threatmatch.client_id`                     | `THREATMATCH_CLIENT_ID`                      | ✅        |                              | OAuth2 client id (Client Credentials).                                                                |
-| ThreatMatch Client Secret       | `threatmatch.client_secret`                 | `THREATMATCH_CLIENT_SECRET`                  | ✅        |                              | OAuth2 client secret.                                                                                 |
-| ThreatMatch URL                 | `threatmatch.url`                           | `THREATMATCH_URL`                            | ❌        | `https://eu.threatmatch.com` | Base URL of the ThreatMatch API.                                                                      |
-| Relative Import Start Date      | `threatmatch.import_from_date`              | `THREATMATCH_IMPORT_FROM_DATE`               | ❌        | `P30D`                       | **Relative** ISO‑8601 duration (e.g., `P30D`) to set the first import window. Used only on first run. |
-| Import Profiles                 | `threatmatch.import_profiles`               | `THREATMATCH_IMPORT_PROFILES`                | ❌        | `true`                       | Import ThreatMatch *profiles* dataset.                                                                |
-| Import Alerts                   | `threatmatch.import_alerts`                 | `THREATMATCH_IMPORT_ALERTS`                  | ❌        | `true`                       | Import ThreatMatch *alerts* dataset.                                                                  |
-| Import IOCs                     | `threatmatch.import_iocs`                   | `THREATMATCH_IMPORT_IOCS`                    | ❌        | `true`                       | Import ThreatMatch *IOCs* dataset.                                                                    |
-| Default TLP                     | `threatmatch.tlp_level`                     | `THREATMATCH_TLP_LEVEL`                      | ❌        | `amber`                      | TLP if missing on source objects. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.   |
-| Threat actors as intrusion sets | `threatmatch.threat_actor_as_intrusion_set` | `THREATMATCH_THREAT_ACTOR_AS_INSTRUSION_SET` | ❌        | `true`                       | Map ThreatMatch `threat-actor` to STIX `intrusion-set`.                                               |
-
-> **Note**: Set `CONNECTOR_LOG_LEVEL=debug` to see detailed fetch/mapping logs during troubleshooting.
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ---
 

@@ -2,11 +2,16 @@
   "title": "CTM360 CYNA Connector",
   "slug": "ctm360-cyna",
   "description": "External import connector for CTM360 CYNA (Cyber News & Alerts). Imports cyber news, threat actor claims, CVE vulnerability mentions, and CTM360 advisories as STIX Reports and Vulnerabilities.",
-  "short_description": "Import CTM360 CYNA cyber news and alerts",
+  "short_description": "Imports CTM360 CYNA cyber news and alerts into OpenCTI as STIX Reports and Vulnerabilities, covering threat actor claims, CVE mentions, and CTM360 advisories.",
   "logo": "external-import/ctm360-cyna-feed/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

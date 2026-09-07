@@ -73,11 +73,11 @@ from crowdstrike_connector import ConnectorSettings
                 },
                 "metrics": {
                     "enable": False,
-                    "port": "ChangeMe",
-                    "addr": "ChangeMe",
+                    "port": "any value",  # discarded silently by MetricsConfig model
+                    "addr": "any value",  # discarded silently by MetricsConfig model
                 },
             },
-            id="metrics_disabled_with_placeholder_addr_and_port_is_valid",
+            id="metrics_disabled_any_addr_and_port_is_valid",
         ),
         pytest.param(
             {

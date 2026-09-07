@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | IBM_XTI_TAXII_SERVER_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the IBM X-Force PTI TAXII Server. |
 | IBM_XTI_TAXII_USER | `string` | ✅ | string |  | Your TAXII Server username. |
 | IBM_XTI_TAXII_PASS | `string` | ✅ | string |  | Your TAXII Server password. |

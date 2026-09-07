@@ -3,22 +3,30 @@ services:
   connector-splunk:
     image: opencti/connector-splunk:latest
     environment:
+      # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type STREAM
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
-      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
       - "CONNECTOR_NAME=OpenCTI Splunk Connector"
       - CONNECTOR_SCOPE=splunk
       - CONNECTOR_CONFIDENCE_LEVEL=80 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=error
-      - SPLUNK_URL=https://splunk1.changeme.com:8089
-      - SPLUNK_TOKEN=Token1
-      - SPLUNK_AUTH_TYPE=Bearer
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
+      # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true # optional (default: true)
+      # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
+      # - CONNECTOR_CONSUMER_COUNT=10 # optional (default: 10)
+      # Splunk parameters
+      - SPLUNK_URL=ChangeMe # e.g. https://splunk1.changeme.com:8089
+      - SPLUNK_TOKEN=ChangeMe
+      # - SPLUNK_AUTH_TYPE=Bearer # optional (default: 'Bearer')
       - SPLUNK_OWNER=nobody
-      - SPLUNK_SSL_VERIFY=true
+      # - SPLUNK_SSL_VERIFY=true # optional (default: true)
       - SPLUNK_APP=search
       - SPLUNK_KV_STORE_NAME=opencti
       - SPLUNK_IGNORE_TYPES="attack-pattern,campaign,course-of-action,data-component,data-source,external-reference,identity,intrusion-set,kill-chain-phase,label,location,malware,marking-definition,relationship,threat-actor,tool,vocabulary,vulnerability"
+      # Prometheus metrics parameters
+      # - METRICS_ENABLE=false # optional (default: false)
+      # - METRICS_PORT=9113 # optional (default: 9113)
+      # - METRICS_ADDR=0.0.0.0 # optional (default: '0.0.0.0')
     restart: always

@@ -13,4 +13,5 @@ RUN apk update && apk upgrade && \
     rm -rf /var/cache/apk/*
 
 # Expose and entrypoint
+WORKDIR /opt/opencti-connector-infoblox
 ENTRYPOINT ["python3", "main.py"]

@@ -5,9 +5,13 @@
   "short_description": "Malpedia connector imports curated malware family intelligence, threat actor associations, and YARA detection rules from Fraunhofer FKIE's open research platform.",
   "logo": "external-import/malpedia/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel",
     "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

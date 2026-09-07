@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Doppel Alert and Takedown' # optional (default: 'Doppel Alert and Takedown')
+  scope: 'Url,Domain-Name' # optional (default: 'Url,Domain-Name')
+  log_level: 'error' # optional (default: 'error')
+  auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+
+doppel_alert_takedown:
+  api_key: 'ChangeMe'
+  user_api_key: 'ChangeMe'
+  api_base_url: 'https://api.doppel.com' # optional (default: 'https://api.doppel.com')
+  tags: [] # optional, list of tags added to created alerts (default: empty)
+  takedown_comment: 'Confirmed by OpenCTI — requesting takedown.' # optional
+  max_tlp: 'TLP:RED' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:RED')

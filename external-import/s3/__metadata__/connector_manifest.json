@@ -1,10 +1,17 @@
 {
   "title": "S3",
   "slug": "s3",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The S3 connector imports STIX 2.1 bundles and threat intelligence files stored in an Amazon S3 bucket into OpenCTI. It periodically scans the configured S3 bucket, downloads new files, parses STIX content, and ingests the resulting objects into OpenCTI. Useful for integrating custom or third-party feeds delivered via S3.",
+  "short_description": "Imports STIX 2.1 bundles and threat intelligence files from an Amazon S3 bucket into OpenCTI on a configurable schedule.",
   "logo": null,
-  "use_cases": [],
+  "use_cases": [
+    "Other"
+  ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

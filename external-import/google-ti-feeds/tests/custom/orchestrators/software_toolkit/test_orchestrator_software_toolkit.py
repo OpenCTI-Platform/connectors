@@ -71,6 +71,7 @@ class DummySoftwareToolkitConfig:
         self.software_toolkit_import_start_date = timedelta(days=1)
         self.software_toolkit_origins = ["google threat intelligence"]
         self.software_toolkit_extra_filters = []
+        self.software_toolkit_subentities = ["malware_families", "attack_techniques"]
         self.report_import_start_date = timedelta(days=1)
         self.threat_actor_import_start_date = timedelta(days=1)
         self.malware_family_import_start_date = timedelta(days=1)

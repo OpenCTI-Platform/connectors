@@ -8,7 +8,7 @@ import time
 import cairosvg
 import cmarkgfm
 from cmarkgfm import Options as cmarkgfmOptions
-from export_report_pdf.config import ConnectorConfig
+from export_report_pdf.settings import ConnectorSettings
 from jinja2 import Environment, FileSystemLoader
 from pycti import OpenCTIConnectorHelper, StixCyberObservableTypes
 from pygal_maps_world.i18n import COUNTRIES
@@ -23,7 +23,9 @@ CMARKGFM_OPTIONS = (
 
 
 class Connector:
-    def __init__(self, config: ConnectorConfig, helper: OpenCTIConnectorHelper) -> None:
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
         # Instantiate the connector helper from config
         self.config = config
         self.helper = helper
@@ -161,12 +163,12 @@ class Connector:
                 "list_filters": str(main_filter),
                 "list_marking": list_marking,
                 "list_report_date": list_report_date,
-                "company_address_line_1": self.config.company_address_line_1,
-                "company_address_line_2": self.config.company_address_line_2,
-                "company_address_line_3": self.config.company_address_line_3,
-                "company_phone_number": self.config.company_phone_number,
-                "company_email": self.config.company_email,
-                "company_website": self.config.company_website,
+                "company_address_line_1": self.config.export_report_pdf.company_address_line_1,
+                "company_address_line_2": self.config.export_report_pdf.company_address_line_2,
+                "company_address_line_3": self.config.export_report_pdf.company_address_line_3,
+                "company_phone_number": self.config.export_report_pdf.company_phone_number,
+                "company_email": self.config.export_report_pdf.company_email,
+                "company_website": self.config.export_report_pdf.company_website,
                 "entities": {},
                 "observables": {},
             }
@@ -178,7 +180,10 @@ class Connector:
                 ):
                     # If only include indicators and
                     # the observable doesn't have an indicator, skip it
-                    if self.config.indicators_only and not entity["indicators"]:
+                    if (
+                        self.config.export_report_pdf.indicators_only
+                        and not entity["indicators"]
+                    ):
                         self.helper.log_info(
                             f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
                         )
@@ -188,7 +193,10 @@ class Connector:
                         context["observables"][obj_entity_type] = []
 
                     # Defang urls
-                    if self.config.defang_urls and obj_entity_type == "Url":
+                    if (
+                        self.config.export_report_pdf.defang_urls
+                        and obj_entity_type == "Url"
+                    ):
                         entity["observable_value"] = entity["observable_value"].replace(
                             "http", "hxxp", 1
                         )
@@ -285,12 +293,12 @@ class Connector:
             "report_confidence": report_confidence,
             "report_external_refs": report_external_refs,
             "report_date": report_date,
-            "company_address_line_1": self.config.company_address_line_1,
-            "company_address_line_2": self.config.company_address_line_2,
-            "company_address_line_3": self.config.company_address_line_3,
-            "company_phone_number": self.config.company_phone_number,
-            "company_email": self.config.company_email,
-            "company_website": self.config.company_website,
+            "company_address_line_1": self.config.export_report_pdf.company_address_line_1,
+            "company_address_line_2": self.config.export_report_pdf.company_address_line_2,
+            "company_address_line_3": self.config.export_report_pdf.company_address_line_3,
+            "company_phone_number": self.config.export_report_pdf.company_phone_number,
+            "company_email": self.config.export_report_pdf.company_email,
+            "company_website": self.config.export_report_pdf.company_website,
             "entities": {},
             "observables": {},
         }
@@ -316,7 +324,10 @@ class Connector:
                 ):
                     # If only include indicators and
                     # the observable doesn't have an indicator, skip it
-                    if self.config.indicators_only and not entity["indicators"]:
+                    if (
+                        self.config.export_report_pdf.indicators_only
+                        and not entity["indicators"]
+                    ):
                         self.helper.log_info(
                             f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
                         )
@@ -326,7 +337,10 @@ class Connector:
                         context["observables"][obj_entity_type] = []
 
                     # Defang urls
-                    if self.config.defang_urls and obj_entity_type == "Url":
+                    if (
+                        self.config.export_report_pdf.defang_urls
+                        and obj_entity_type == "Url"
+                    ):
                         entity["observable_value"] = entity["observable_value"].replace(
                             "http", "hxxp", 1
                         )
@@ -373,12 +387,12 @@ class Connector:
             "entities": {},
             "target_map_country": None,
             "report_date": now_date,
-            "company_address_line_1": self.config.company_address_line_1,
-            "company_address_line_2": self.config.company_address_line_2,
-            "company_address_line_3": self.config.company_address_line_3,
-            "company_phone_number": self.config.company_phone_number,
-            "company_email": self.config.company_email,
-            "company_website": self.config.company_website,
+            "company_address_line_1": self.config.export_report_pdf.company_address_line_1,
+            "company_address_line_2": self.config.export_report_pdf.company_address_line_2,
+            "company_address_line_3": self.config.export_report_pdf.company_address_line_3,
+            "company_phone_number": self.config.export_report_pdf.company_phone_number,
+            "company_email": self.config.export_report_pdf.company_email,
+            "company_website": self.config.export_report_pdf.company_website,
         }
 
         # Get a bundle of all objects affiliated with the intrusion set
@@ -474,12 +488,12 @@ class Connector:
             "entities": {},
             "target_map_country": None,
             "report_date": now_date,
-            "company_address_line_1": self.config.company_address_line_1,
-            "company_address_line_2": self.config.company_address_line_2,
-            "company_address_line_3": self.config.company_address_line_3,
-            "company_phone_number": self.config.company_phone_number,
-            "company_email": self.config.company_email,
-            "company_website": self.config.company_website,
+            "company_address_line_1": self.config.export_report_pdf.company_address_line_1,
+            "company_address_line_2": self.config.export_report_pdf.company_address_line_2,
+            "company_address_line_3": self.config.export_report_pdf.company_address_line_3,
+            "company_phone_number": self.config.export_report_pdf.company_phone_number,
+            "company_email": self.config.export_report_pdf.company_email,
+            "company_website": self.config.export_report_pdf.company_website,
         }
 
         # Get a bundle of all objects affiliated with the threat actor group
@@ -575,12 +589,12 @@ class Connector:
             "entities": {},
             "target_map_country": None,
             "report_date": now_date,
-            "company_address_line_1": self.config.company_address_line_1,
-            "company_address_line_2": self.config.company_address_line_2,
-            "company_address_line_3": self.config.company_address_line_3,
-            "company_phone_number": self.config.company_phone_number,
-            "company_email": self.config.company_email,
-            "company_website": self.config.company_website,
+            "company_address_line_1": self.config.export_report_pdf.company_address_line_1,
+            "company_address_line_2": self.config.export_report_pdf.company_address_line_2,
+            "company_address_line_3": self.config.export_report_pdf.company_address_line_3,
+            "company_phone_number": self.config.export_report_pdf.company_phone_number,
+            "company_email": self.config.export_report_pdf.company_email,
+            "company_website": self.config.export_report_pdf.company_website,
         }
 
         # Get a bundle of all objects affiliated with the threat actor individual
@@ -717,12 +731,12 @@ class Connector:
             "case_id": case_id,
             "case_external_refs": case_external_refs,
             "case_report_date": case_report_date,
-            "company_address_line_1": self.config.company_address_line_1,
-            "company_address_line_2": self.config.company_address_line_2,
-            "company_address_line_3": self.config.company_address_line_3,
-            "company_phone_number": self.config.company_phone_number,
-            "company_email": self.config.company_email,
-            "company_website": self.config.company_website,
+            "company_address_line_1": self.config.export_report_pdf.company_address_line_1,
+            "company_address_line_2": self.config.export_report_pdf.company_address_line_2,
+            "company_address_line_3": self.config.export_report_pdf.company_address_line_3,
+            "company_phone_number": self.config.export_report_pdf.company_phone_number,
+            "company_email": self.config.export_report_pdf.company_email,
+            "company_website": self.config.export_report_pdf.company_website,
             "tasks": case_tasks,
             "case_type": case_type,
             "case_priority": case_priority,
@@ -753,7 +767,10 @@ class Connector:
                 ):
                     # If only include indicators and
                     # the observable doesn't have an indicator, skip it
-                    if self.config.indicators_only and not entity["indicators"]:
+                    if (
+                        self.config.export_report_pdf.indicators_only
+                        and not entity["indicators"]
+                    ):
                         self.helper.log_info(
                             f"Skipping {obj_entity_type} observable with value {entity['observable_value']} as it was not an Indicator."
                         )
@@ -763,7 +780,10 @@ class Connector:
                         context["observables"][obj_entity_type] = []
 
                     # Defang urls
-                    if self.config.defang_urls and obj_entity_type == "Url":
+                    if (
+                        self.config.export_report_pdf.defang_urls
+                        and obj_entity_type == "Url"
+                    ):
                         entity["observable_value"] = entity["observable_value"].replace(
                             "http", "hxxp", 1
                         )
@@ -806,12 +826,12 @@ class Connector:
         # Prepare our context
         context = {
             "report_date": now_date,
-            "company_address_line_1": self.config.company_address_line_1,
-            "company_address_line_2": self.config.company_address_line_2,
-            "company_address_line_3": self.config.company_address_line_3,
-            "company_phone_number": self.config.company_phone_number,
-            "company_email": self.config.company_email,
-            "company_website": self.config.company_website,
+            "company_address_line_1": self.config.export_report_pdf.company_address_line_1,
+            "company_address_line_2": self.config.export_report_pdf.company_address_line_2,
+            "company_address_line_3": self.config.export_report_pdf.company_address_line_3,
+            "company_phone_number": self.config.export_report_pdf.company_phone_number,
+            "company_email": self.config.export_report_pdf.company_email,
+            "company_website": self.config.export_report_pdf.company_website,
             # these will be filled in:
             "vulnerability": None,
             "softwares_impacted": [],
@@ -898,10 +918,12 @@ class Connector:
                     with open(os.path.join(root, file_name), "r") as f:
                         new_css = f.read()
                         new_css = new_css.replace(
-                            "<primary_color>", self.config.primary_color
+                            "<primary_color>",
+                            self.config.export_report_pdf.primary_color,
                         )
                         new_css = new_css.replace(
-                            "<secondary_color>", self.config.secondary_color
+                            "<secondary_color>",
+                            self.config.export_report_pdf.secondary_color,
                         )
 
                     file_name = file_name.replace(".template", "")

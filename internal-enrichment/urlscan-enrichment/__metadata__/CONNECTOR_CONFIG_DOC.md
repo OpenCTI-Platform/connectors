@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | URLSCAN_ENRICHMENT_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | URLScan API Key |
 | CONNECTOR_NAME | `string` |  | string | `"Urlscan Enrichment"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["url", "ipv4-addr", "ipv6-addr"]` | The scope of the connector. Availables: `url or hostname or domain-name` (scope-submission), `ipv4-addr` and `ipv6-addr` (scope-search) |

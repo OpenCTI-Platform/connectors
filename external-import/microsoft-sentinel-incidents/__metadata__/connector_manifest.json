@@ -1,13 +1,17 @@
 {
   "title": "Microsoft Sentinel Incidents",
   "slug": "microsoft-sentinel-incidents",
-  "description": "This OpenCTI connector allows to import indicators and observables from Microsoft Sentinel's incidents to your OpenCTI platform.",
-  "short_description": "This OpenCTI connector allows to import indicators and observables from Microsoft Sentinel's incidents to your OpenCTI platform.",
+  "description": "The Microsoft Sentinel Incidents connector imports security incidents, alerts, indicators, and observables from Microsoft Sentinel SIEM into OpenCTI. It creates structured STIX Incidents linked to associated entities and IOCs, enabling analysts to correlate SIEM detections with threat intelligence data.",
+  "short_description": "Imports security incidents, alerts, and observables from Microsoft Sentinel SIEM into OpenCTI as STIX Incidents with associated IOCs.",
   "logo": "external-import/microsoft-sentinel-incidents/__metadata__/logo.png",
   "use_cases": [
-    "Detection & Response Enablement",
-    "SIEM and Analytics"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

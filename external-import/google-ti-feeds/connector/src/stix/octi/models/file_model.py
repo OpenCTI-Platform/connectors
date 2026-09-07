@@ -40,7 +40,7 @@ class OctiFileModel:
         custom_properties = kwargs.pop("custom_properties", {})
         if organization_id:
             custom_properties["x_opencti_created_by_ref"] = organization_id
-        if score:
+        if score is not None:
             custom_properties["x_opencti_score"] = score
         if additional_names:
             custom_properties["x_opencti_additional_names"] = additional_names

@@ -1,0 +1,24 @@
+opencti:
+  url: http://localhost
+  token: ChangeMe
+
+connector:
+  id: ChangeMe                                 # generate with uuidgen
+  # name: Intel 471 Hunter                     # optional
+  # Scope is also the enrichment import type-filter, so it must include every
+  # type the connector *emits* (Report, Indicator, Note), not just the types it
+  # can be triggered on — otherwise OpenCTI silently drops the emitted objects.
+  # scope: Report,Indicator,Note,Intrusion-Set,Threat-Actor,Threat-Actor-Group,Threat-Actor-Individual,Campaign,Attack-Pattern,Vulnerability,Malware,Tool,Sector,Country,Region  # optional
+  # auto: false                                # optional; true auto-enriches on create
+  # log_level: error                           # optional
+
+hunter:
+  api_key: ChangeMe                            # sent as `Authorization: API-Key <key>`
+  # api_base_url: https://api.hunter.cyborgsecurity.io   # optional
+  # ui_base_url: https://hunter.cyborgsecurity.io        # optional; blank disables the Hunter UI links
+  # indexes: cyborg_usecases                   # optional
+  # request_timeout_seconds: 30                # optional
+  # max_results_per_query: 100                 # optional
+  # cache_path: /opt/opencti-connector-intel471-hunt/cache/cache.json  # optional; dedicated subdir, never the WORKDIR
+  # cache_ttl_hours: 24                        # optional
+  # max_tlp: TLP:AMBER                         # optional

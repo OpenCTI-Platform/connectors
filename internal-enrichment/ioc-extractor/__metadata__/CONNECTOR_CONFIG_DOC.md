@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | CONNECTOR_NAME | `string` |  | string | `"IOC Extractor"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["Report"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
@@ -19,3 +19,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | IOC_EXTRACTOR_EXTRACT_DOMAINS | `boolean` |  | boolean | `true` | Extract domain names. |
 | IOC_EXTRACTOR_EXTRACT_URLS | `boolean` |  | boolean | `true` | Extract URLs. |
 | IOC_EXTRACTOR_SKIP_PRIVATE_IPS | `boolean` |  | boolean | `true` | Skip private/reserved IP addresses (RFC 1918, loopback, etc.). |
+| IOC_EXTRACTOR_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | The maximal TLP of the observable being enriched. |

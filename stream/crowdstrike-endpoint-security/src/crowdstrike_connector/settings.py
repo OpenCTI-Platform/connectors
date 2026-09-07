@@ -7,7 +7,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic.networks import HttpUrl
 
 
@@ -76,7 +76,7 @@ class MetricsConfig(BaseConfigModel):
         description="Whether or not Prometheus metrics should be enabled.",
         default=False,
     )
-    port: int | str = Field(
+    port: int = Field(
         description="Port to use for metrics endpoint.",
         default=9113,
     )
@@ -85,13 +85,15 @@ class MetricsConfig(BaseConfigModel):
         default="0.0.0.0",
     )
 
-    @field_validator("port", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def normalize_port(cls, v) -> int | str:
-        try:
-            return int(v)
-        except (TypeError, ValueError):
-            return v
+    def drop_metrics_network_values_when_disabled(cls, values: dict) -> dict:
+        metrics_enabled_values = {True, "true", "True", "1", 1}
+        if values.get("enable") not in metrics_enabled_values:
+            values.pop("port", None)
+            values.pop("addr", None)
+
+        return values
 
     @model_validator(mode="after")
     def validate_metrics_if_enabled(self) -> "MetricsConfig":
@@ -103,8 +105,6 @@ class MetricsConfig(BaseConfigModel):
             raise ValueError(
                 "Metrics address must be a valid IPv4 address when enabled."
             ) from e
-        if not isinstance(self.port, int):
-            raise ValueError("Metrics port must be an integer when enabled.")
         return self
 
 

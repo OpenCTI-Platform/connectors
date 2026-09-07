@@ -18,6 +18,7 @@ from pycti import (
 )
 from stix2 import URL, DomainName, EmailAddress, IPv4Address
 from triage import Client
+from triage.client import ServerError
 
 
 class HatchingTriageSandboxConnector:
@@ -456,21 +457,27 @@ class HatchingTriageSandboxConnector:
         sample_id = None
 
         if self.use_existing_analysis:
-            search_paginator = self.triage_client.search(query=search_query, max=1)
-            for search in search_paginator:
-                existing_status = search["status"]
-                if existing_status == "reported":
-                    sample_id = search["id"]
-                    self.helper.connector_logger.info(
-                        f"Found existing analysis with id {sample_id} and status {existing_status}."
-                    )
-                elif existing_status == "pending":
-                    sample_id = search["id"]
-                    self.helper.connector_logger.info(
-                        f"Found existing analysis with id {sample_id} and status {existing_status}."
-                    )
-                    self._wait_for_analysis(sample_id)
-                break
+            try:
+                search_paginator = self.triage_client.search(query=search_query, max=1)
+                for search in search_paginator:
+                    existing_status = search["status"]
+                    if existing_status == "reported":
+                        sample_id = search["id"]
+                        self.helper.connector_logger.info(
+                            f"Found existing analysis with id {sample_id} and status {existing_status}."
+                        )
+                    elif existing_status == "pending":
+                        sample_id = search["id"]
+                        self.helper.connector_logger.info(
+                            f"Found existing analysis with id {sample_id} and status {existing_status}."
+                        )
+                        self._wait_for_analysis(sample_id)
+                    break
+            except ServerError as e:
+                self.helper.connector_logger.warning(
+                    f"Search API returned an error for query '{search_query}': {e}. "
+                    "Falling back to submitting a new sample."
+                )
 
         return sample_id
 

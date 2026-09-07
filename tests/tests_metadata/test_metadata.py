@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -46,12 +47,25 @@ def test_every_connector_metadata_contains_connector_manifest(connector_path: st
 
 @pytest.mark.parametrize("connector_path", get_connectors_paths())
 def test_every_connector_metadata_contains_connector_config_schema(connector_path: str):
-    # TODO: remove xfail() once every connector has its config JSON schema
-    pytest.xfail(reason="Not implemented in every connector yet")
-
     # Given a connector path
-    # When checking connector's `__metadata__` subdirectory
-    # Then `connector_config_schema.json` should exist
+    # When reading connector_manifest.json
+    manifest_path = Path(connector_path) / "__metadata__" / "connector_manifest.json"
+    try:
+        with open(manifest_path) as f:
+            manifest = json.load(f)
+    except FileNotFoundError:
+        pytest.fail(f"{connector_path}: connector_manifest.json not found")
+    except json.JSONDecodeError as e:
+        pytest.fail(f"{connector_path}: connector_manifest.json is invalid JSON: {e}")
+
+    # Then xfail if connector is not manager_supported
+    if not manifest.get("manager_supported"):
+        # TODO: Remove pytest.xfail() once all connectors have a connector_config_schema.json
+        pytest.xfail(
+            "Connector not 'manager_supported' yet, 'connector_config_schema.json' not required"
+        )
+
+    # Or if connector is manager_supported, connector_config_schema.json must exist
     assert (
         os.path.exists(
             Path(connector_path) / "__metadata__" / "connector_config_schema.json"
@@ -62,12 +76,16 @@ def test_every_connector_metadata_contains_connector_config_schema(connector_pat
 
 @pytest.mark.parametrize("connector_path", get_connectors_paths())
 def test_every_connector_metadata_contains_connector_logo(connector_path: str):
-    # TODO: remove xfail() once every connector has its logo
-    pytest.xfail(reason="Not implemented in every connector yet")
-
     # Given a connector path
     # When checking connector's `__metadata__` subdirectory
     files = os.listdir(Path(connector_path) / "__metadata__")
 
-    # Then a `logo.*` file should exist (extension doesn't matter)
-    assert any([file.startswith("logo.") for file in files]) is True
+    logo = next((f for f in files if f.startswith("logo.")), None)
+
+    # Then xfail if no logo is present yet
+    if not logo:
+        # TODO: Remove pytest.xfail() once all connectors have a logo
+        pytest.xfail("No logo implemented yet")
+
+    # Or a logo is present
+    assert logo is not None

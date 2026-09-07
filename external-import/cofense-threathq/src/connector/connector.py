@@ -5,13 +5,13 @@ from datetime import datetime
 
 import pytz
 from aiohttp import ClientConnectionError, ClientResponseError
-from connector.models import ConfigLoader
 from connector.services import (
     CofenseThreatHQClient,
     ConverterToStix,
     DateTimeFormat,
     Utils,
 )
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from tenacity import RetryError
 
@@ -52,15 +52,15 @@ class CofenseThreatHQ:
 
     """
 
-    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
-        """Initialize the Connector with necessary configurations"""
-
-        # Load configuration file and connection helper
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        """Initialize the Connector with necessary configurations."""
         self.config = config
         self.helper = helper
+
         self.client = CofenseThreatHQClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(self.helper, self.config)
         self.utils = Utils()
+
         self.last_run_start_datetime = None
         self.last_run_end_datetime_with_ingested_data = None
         self.current_position = None
@@ -71,16 +71,10 @@ class CofenseThreatHQ:
         """Starts a work process.
         Sends a request to the API with the initiate_work method to initialize the work.
         """
-
         now_utc_isoformat = self.utils.get_now(DateTimeFormat.ISO)
         self.helper.connector_logger.info(
-            "[CONNECTOR] Starting work...",
-            {
-                "now_utc_isoformat": now_utc_isoformat,
-            },
+            "[CONNECTOR] Starting work...", {"now_utc_isoformat": now_utc_isoformat}
         )
-
-        # Friendly name will be displayed on OpenCTI platform
         friendly_name = f"Cofense ThreatHQ - run @ {now_utc_isoformat}"
         self.work_id = self.helper.api.work.initiate_work(
             self.config.connector.id, friendly_name
@@ -99,14 +93,12 @@ class CofenseThreatHQ:
         Returns:
             int : Return the length bundle sent
         """
-
         stix_objects_bundle = self.helper.stix2_create_bundle(prepared_objects)
         bundle_sent = self.helper.send_stix2_bundle(
             stix_objects_bundle,
             work_id=self.work_id,
             cleanup_inconsistent_bundle=True,
         )
-
         length_bundle_sent = len(bundle_sent)
         self.helper.connector_logger.info(
             "[CONNECTOR] Sending STIX objects to OpenCTI...",
@@ -123,39 +115,32 @@ class CofenseThreatHQ:
             None
         """
         self.helper.connector_logger.info(
-            "[CONNECTOR] Complete work...",
-            {
-                "work_id": self.work_id,
-            },
+            "[CONNECTOR] Complete work...", {"work_id": self.work_id}
         )
         message = "Cofense ThreatHQ - Finished work"
         self.helper.api.work.to_processed(self.work_id, message)
         self.work_id = None
 
-    def _handle_errors_tenacity(
-        self, collected_data: list[dict], category: str
-    ) -> dict:
+    def _handle_errors_tenacity(self, collected_data: list, category: str) -> dict:
         results = {}
-
         new_results = (
             collected_data[0].get("data", [])
-            if collected_data
-            and isinstance(collected_data, list)
-            and isinstance(collected_data[0], dict)
-            and "data" in collected_data[0]
+            if (
+                collected_data
+                and isinstance(collected_data, list)
+                and isinstance(collected_data[0], dict)
+                and ("data" in collected_data[0])
+            )
             else collected_data
         )
-
         if isinstance(new_results, list):
             for result in new_results:
                 if isinstance(result, RetryError):
                     inner_exception = result.last_attempt.exception()
                     inner_exception_name = type(inner_exception).__name__
-
                     if isinstance(inner_exception, ClientResponseError):
                         self.helper.connector_logger.warning(
-                            "[CONNECTOR-API] A HTTP error occurred during data recovery, "
-                            "the entity where filtering will be ignored",
+                            "[CONNECTOR-API] A HTTP error occurred during data recovery, the entity where filtering will be ignored",
                             {
                                 "category": category,
                                 "error_name": inner_exception_name,
@@ -166,8 +151,7 @@ class CofenseThreatHQ:
                         )
                     elif isinstance(inner_exception, ClientConnectionError):
                         self.helper.connector_logger.warning(
-                            "[CONNECTOR-API] A connection error occurred during data recovery, "
-                            "the entity where filtering will be ignored",
+                            "[CONNECTOR-API] A connection error occurred during data recovery, the entity where filtering will be ignored",
                             {
                                 "category": category,
                                 "error_name": inner_exception_name,
@@ -176,15 +160,13 @@ class CofenseThreatHQ:
                         )
                     else:
                         self.helper.connector_logger.warning(
-                            "[CONNECTOR-API] An unexpected error occurred during the recovery of all data, "
-                            "the entity where filtering will be ignored",
+                            "[CONNECTOR-API] An unexpected error occurred during the recovery of all data, the entity where filtering will be ignored",
                             {
                                 "category": category,
                                 "error_name": inner_exception_name,
                                 "error": str(inner_exception),
                             },
                         )
-
         if isinstance(new_results, dict):
             if category == "reports":
                 results[category] = new_results.get("changelog")
@@ -193,7 +175,6 @@ class CofenseThreatHQ:
                 return new_results.get("data")
             if category == "pdf_binary":
                 return new_results
-
         return results
 
     async def _collect_intelligence(self) -> list | None:
@@ -213,15 +194,11 @@ class CofenseThreatHQ:
             reports_with_next_position = self._handle_errors_tenacity(
                 collected_reports, "reports"
             )
-
             reports = reports_with_next_position.get("reports")
             self.next_position = reports_with_next_position.get("next_position")
-
             if not reports:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] No reports found.",
-                )
-                return
+                self.helper.connector_logger.info("[CONNECTOR] No reports found.")
+                return None
 
             self._initiate_work()
 
@@ -230,17 +207,12 @@ class CofenseThreatHQ:
             )
             reports_observed = set()
             filtered = []
-            filtered_out = []
-
             for item in reports_sorted:
                 threat_id = item["threatId"]
                 if threat_id not in reports_observed:
                     filtered.append(item)
                     reports_observed.add(threat_id)
-                else:
-                    filtered_out.append(item)
 
-            # Details include malwares, indicators and others information.
             report_details_futures = [
                 (
                     report,
@@ -251,35 +223,29 @@ class CofenseThreatHQ:
                         self.client.get_report_pdf(report.get("threatId"))
                     ),
                 )
-                for report in reports
+                for report in filtered
             ]
-
             report_details_results = []
             for report, report_malware_details, report_pdf in report_details_futures:
                 reports_combined = {"report": report}
-
                 collected_report_malware_details, collected_report_pdf = (
                     await asyncio.gather(
                         report_malware_details, report_pdf, return_exceptions=True
                     )
                 )
-
                 report_malware_details = self._handle_errors_tenacity(
                     collected_report_malware_details, "malware_details"
                 )
                 if report_malware_details:
-                    reports_combined.get("report")[
+                    reports_combined["report"][
                         "malware_details"
                     ] = report_malware_details
-
                 report_pdf_binary = self._handle_errors_tenacity(
                     collected_report_pdf, "pdf_binary"
                 )
                 if report_pdf_binary:
-                    reports_combined.get("report")["pdf_binary"] = report_pdf_binary
-
+                    reports_combined["report"]["pdf_binary"] = report_pdf_binary
                 report_details_results.append(reports_combined)
-
             return report_details_results
         except Exception as err:
             self.helper.connector_logger.error(
@@ -293,12 +259,9 @@ class CofenseThreatHQ:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starts preparing data for Cofense ThreatHQ..."
             )
-
-            # Todo Validation
             transformed_intelligence = self._transform_intelligence(
                 collected_intelligence
             )
-
             self.helper.connector_logger.info(
                 "[CONNECTOR] Finalisation of the preparing of intelligence from Cofense ThreatHQ"
             )
@@ -316,10 +279,8 @@ class CofenseThreatHQ:
         seen_labels = set()
         for field, key in labels_to_extract_from_data.items():
             items = data.get(field, [])
-
             if isinstance(items, dict):
                 items = [items]
-
             if isinstance(items, list):
                 for item in items:
                     if isinstance(item, dict):
@@ -337,16 +298,7 @@ class CofenseThreatHQ:
                 "[CONNECTOR] Starts transforming intelligence to STIX 2.1 format..."
             )
             stix_objects = []
-
             for report in collected_intelligence:
-                """
-                - Make Location
-                - Make ASN
-                - Make Country / Region
-                - Promote observables as indicators
-                - Make Vulnerability (CVE)
-                """
-
                 stix_object_refs = []
                 stix_external_references = []
                 all_sub_sector = []
@@ -354,8 +306,10 @@ class CofenseThreatHQ:
                 global_report_info = report.get("report")
                 report_malware_details = global_report_info.get("malware_details")
 
-                # Create an External Reference linked to the report (threatDetailURL)
-                if "threatDetailURL" in report_malware_details:
+                if (
+                    report_malware_details
+                    and "threatDetailURL" in report_malware_details
+                ):
                     external_reference_details = {
                         "entity_name": "Report",
                         "threat_id": report_malware_details.get("id"),
@@ -369,30 +323,23 @@ class CofenseThreatHQ:
                     )
                     stix_external_references.append(external_reference)
 
-                # Creates sub-sector linked to the report
-                if "naicsCodes" in report_malware_details:
+                if report_malware_details and "naicsCodes" in report_malware_details:
                     sub_sectors = report_malware_details.get("naicsCodes", [])
                     for sector in sub_sectors:
                         sector_name = sector.get("label", "")
-                        # Replaces “and” and “,” with a special temporary separator, but only outside parentheses
-                        # Example: 'Mining (except Oil and Gas)'
                         parts = re.split(r",(?![^(]*\))| and (?![^(]*\))", sector_name)
                         list_sector_name = [
                             part.strip() for part in parts if part.strip()
                         ]
                         for per_sector_name in list_sector_name:
                             all_sub_sector.append(per_sector_name)
-
                             new_sector = self.converter_to_stix.make_sector(
                                 per_sector_name
                             )
                             stix_objects.append(new_sector)
                             stix_object_refs.append(new_sector.get("id"))
 
-                # Creates Email message (Subject) linked to the report
-                if "subjectSet" in report_malware_details:
-
-                    # Global labels report :
+                if report_malware_details and "subjectSet" in report_malware_details:
                     labels_to_extract_from_malware_details = {
                         "malwareFamilySet": "familyName",
                         "deliveryMechanisms": "mechanismName",
@@ -401,7 +348,6 @@ class CofenseThreatHQ:
                         report_malware_details, labels_to_extract_from_malware_details
                     )
                     global_report_labels.extend(list_labels_from_malware_details)
-
                     emails = report_malware_details.get("subjectSet", [])
                     for email in emails:
                         email_subject = email.get("subject")
@@ -417,15 +363,9 @@ class CofenseThreatHQ:
                             stix_objects.append(make_email_subject)
                             stix_object_refs.append(make_email_subject.get("id"))
 
-                # INFO : Both API calls - "/apiv1/indicator/search" and "/apiv1/threat/malware/{threat_id}" -
-                # return identical severity information. However, this data is called "severityLevel" in one
-                # and "impact" in the other.
-
-                # Creates Observables linked to the report (File)
-                if "executableSet" in report_malware_details:
+                if report_malware_details and "executableSet" in report_malware_details:
                     files = report_malware_details.get("executableSet", [])
                     for file in files:
-
                         file_severity_level = file.get("severityLevel")
                         if (
                             file_severity_level
@@ -433,8 +373,6 @@ class CofenseThreatHQ:
                             in self.config.cofense_threathq.impact_to_exclude
                         ):
                             continue
-
-                        # Setting up labels for each observable (malwareFamily, deliveryMechanism and Type):
                         labels_to_extract_from_executable_set = {
                             "malwareFamily": "familyName",
                             "deliveryMechanisms": "mechanismName",
@@ -442,12 +380,10 @@ class CofenseThreatHQ:
                         list_labels_from_executable_set = self._get_labels(
                             file, labels_to_extract_from_executable_set
                         )
-
                         label_type = file.get("type")
                         if label_type:
                             list_labels_from_executable_set.append(label_type)
                         global_report_labels.extend(list_labels_from_executable_set)
-
                         make_file = self.converter_to_stix.make_file(
                             file,
                             list_labels_from_executable_set,
@@ -456,8 +392,7 @@ class CofenseThreatHQ:
                         stix_objects.append(make_file)
                         stix_object_refs.append(make_file.get("id"))
 
-                # Creates Observables linked to the report (URL, Email, IPv4 Address, Domain Name)
-                if "blockSet" in report_malware_details:
+                if report_malware_details and "blockSet" in report_malware_details:
                     observables_mapping = {
                         "URL": lambda *args: self.converter_to_stix.make_url(*args),
                         "Email": lambda *args: self.converter_to_stix.make_email(*args),
@@ -468,7 +403,6 @@ class CofenseThreatHQ:
                             *args
                         ),
                     }
-
                     observables = report_malware_details.get("blockSet", [])
                     for observable in observables:
                         observable_impact = observable.get("impact", [])
@@ -478,8 +412,6 @@ class CofenseThreatHQ:
                             in self.config.cofense_threathq.impact_to_exclude
                         ):
                             continue
-
-                        # Setting up labels for each observable (malwareFamilySet, deliveryMechanisms and Role):
                         labels_to_extract_from_block_set = {
                             "malwareFamily": "familyName",
                             "deliveryMechanism": "mechanismName",
@@ -487,12 +419,10 @@ class CofenseThreatHQ:
                         list_labels_from_block_set = self._get_labels(
                             observable, labels_to_extract_from_block_set
                         )
-
                         label_role = observable.get("role")
                         if label_role:
                             list_labels_from_block_set.append(label_role)
                         global_report_labels.extend(list_labels_from_block_set)
-
                         observable_type = observable.get("blockType")
                         if observable_type in observables_mapping:
                             make_observable = observables_mapping[observable_type](
@@ -503,54 +433,62 @@ class CofenseThreatHQ:
                             stix_objects.append(make_observable)
                             stix_object_refs.append(make_observable.get("id"))
 
-                # Build Report and description
-
-                # First published info
-                first_published = report_malware_details.get("firstPublished")
+                first_published = (
+                    report_malware_details.get("firstPublished")
+                    if report_malware_details
+                    else None
+                )
                 first_published_timestamp_utc = (
                     datetime.fromtimestamp(first_published / 1000, tz=pytz.utc)
                     if first_published
                     else None
                 )
+                first_published_iso_eastern = None
+                if first_published_timestamp_utc is not None:
+                    first_published_eastern = first_published_timestamp_utc.astimezone(
+                        pytz.timezone("US/Eastern")
+                    )
+                    first_published_iso_eastern = first_published_eastern.isoformat(
+                        timespec="seconds"
+                    )
 
-                first_published_eastern = first_published_timestamp_utc.astimezone(
-                    pytz.timezone("US/Eastern")
-                )
-                first_published_iso_eastern = (
-                    first_published_eastern.isoformat(timespec="seconds")
-                    if first_published
+                last_published = (
+                    report_malware_details.get("lastPublished")
+                    if report_malware_details
                     else None
                 )
-
-                # Last published info
-                last_published = report_malware_details.get("lastPublished")
                 last_published_timestamp_utc = (
                     datetime.fromtimestamp(last_published / 1000, tz=pytz.utc)
                     if last_published
                     else None
                 )
+                last_published_iso_eastern = None
+                if last_published_timestamp_utc is not None:
+                    last_published_eastern = last_published_timestamp_utc.astimezone(
+                        pytz.timezone("US/Eastern")
+                    )
+                    last_published_iso_eastern = last_published_eastern.isoformat(
+                        timespec="seconds"
+                    )
 
-                last_published_eastern = last_published_timestamp_utc.astimezone(
-                    pytz.timezone("US/Eastern")
-                )
-                last_published_iso_eastern = (
-                    last_published_eastern.isoformat(timespec="seconds")
-                    if last_published
-                    else None
-                )
-
-                # Brand info
                 brands = []
-                brand_list = report_malware_details.get("campaignBrandSet", [])
+                brand_list = (
+                    report_malware_details.get("campaignBrandSet", [])
+                    if report_malware_details
+                    else []
+                )
                 if brand_list:
                     for item in brand_list:
                         brand_dict = item.get("brand")
                         brand_info = brand_dict.get("text") if brand_dict else "N/A"
                         brands.append(brand_info)
 
-                # Language
                 language = []
-                language_list = report_malware_details.get("campaignLanguageSet", [])
+                language_list = (
+                    report_malware_details.get("campaignLanguageSet", [])
+                    if report_malware_details
+                    else []
+                )
                 if language_list:
                     for item in language_list:
                         language_dict = item.get("languageDefinition")
@@ -559,18 +497,33 @@ class CofenseThreatHQ:
                         )
                         language.append(language_info)
 
-                # SEG Data
                 seg_data = []
-                seg_data_list = report_malware_details.get("secureEmailGatewaySet", [])
+                seg_data_list = (
+                    report_malware_details.get("secureEmailGatewaySet", [])
+                    if report_malware_details
+                    else []
+                )
                 if seg_data_list:
                     for item in seg_data_list:
                         seg_data_info = item.get("segName") if item else "N/A"
                         seg_data.append(seg_data_info)
 
                 new_report_info = {
-                    "threat_id": report_malware_details.get("id"),
-                    "threat_title": report_malware_details.get("label"),
-                    "description": report_malware_details.get("executiveSummary"),
+                    "threat_id": (
+                        report_malware_details.get("id")
+                        if report_malware_details
+                        else None
+                    ),
+                    "threat_title": (
+                        report_malware_details.get("label")
+                        if report_malware_details
+                        else None
+                    ),
+                    "description": (
+                        report_malware_details.get("executiveSummary")
+                        if report_malware_details
+                        else None
+                    ),
                     "first_published": first_published_iso_eastern,
                     "last_published": last_published_iso_eastern,
                     "language": language,

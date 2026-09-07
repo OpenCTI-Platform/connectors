@@ -5,8 +5,14 @@
   "short_description": "Recorded Future is a cybersecurity company that specializes in providing real-time threat intelligence to help organizations anticipate, identify, and mitigate cyber threats.",
   "logo": "external-import/recorded-future/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Adversary & Campaign Insights",
+    "Vulnerability & Exploit Awareness"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

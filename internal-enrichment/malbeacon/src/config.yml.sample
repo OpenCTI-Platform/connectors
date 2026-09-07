@@ -7,11 +7,11 @@ connector:
   id: "ChangeMe"
   name: "Malbeacon"
   scope: "IPv4-Addr,IPv6-Addr,Domain-Name"
-  auto: false # Enable/disable auto-enrichment of observables
-  log_level: "info"
+  #auto: false # Enable/disable auto-enrichment of observables
+  #log_level: "error"
 
 malbeacon:
   api_key: "ChangeMe"
-  api_base_url: "https://api.malbeacon.com/v1/" # Required
-  indicator_score_level: 50
-  max_tlp: "TLP:AMBER" # Required, Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+  #api_base_url: "https://api.malbeacon.com/v1/"
+  #indicator_score_level: 50
+  #max_tlp: "TLP:AMBER" # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED

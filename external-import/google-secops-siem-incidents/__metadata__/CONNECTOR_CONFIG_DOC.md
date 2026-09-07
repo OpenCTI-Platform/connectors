@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_ID | `string` | ✅ | string |  | GCP project ID. |
 | GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_REGION | `string` | ✅ | string |  | Region (e.g. 'us', 'eu', 'asia'). |
 | GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_INSTANCE | `string` | ✅ | string |  | Instance UUID. |

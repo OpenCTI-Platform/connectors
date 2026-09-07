@@ -1,0 +1,8 @@
+{
+  "name": "Synthetic breach",
+  "columns": ["email"],
+  "records": 1,
+  "domain": "example.invalid",
+  "date": "2026-01-01",
+  "description": "Tiny synthetic fixture"
+}

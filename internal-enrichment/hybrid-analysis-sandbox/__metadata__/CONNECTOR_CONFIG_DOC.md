@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Deprecated | Default | Description |
 | -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
 | HYBRID_ANALYSIS_SANDBOX_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | Hybrid Analysis API token. |
 | CONNECTOR_NAME | `string` |  | string |  | `"Hybrid Analysis (Sandbox Windows 10 64bit)"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string |  | `["StixFile", "Artifact", "Url", "Domain-Name", "Hostname"]` | The scope of the connector. |

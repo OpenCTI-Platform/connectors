@@ -11,8 +11,8 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | RECORDED_FUTURE_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Recorded Future API token for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"Recorded Future"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["ipv4-addr", "ipv6-addr", "vulnerability", "domain", "url", "file-sha256", "file-md5", "file-sha1"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_DURATION_PERIOD | `string` |  | string | `"PT24H"` | ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours). |
-| CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
+| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P1D"` | The period of time to await between two runs of the connector (in ISO 8601 format, e.g., 'PT24H' for 24 hours). |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | RECORDED_FUTURE_INITIAL_LOOKBACK | `integer` |  | `0 < x ` | `240` | Initial lookback period in hours when first running the connector. |
 | RECORDED_FUTURE_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber+strict"` | Default Traffic Light Protocol (TLP) marking for imported data. |

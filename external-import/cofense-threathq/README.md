@@ -48,50 +48,10 @@ Cofense ThreatHQ is a specialized phishing threat detection, analysis, and manag
 
 ## Configuration variables
 
-Configuration parameters can be provided via `.env` file, `config.yml` file, or directly as environment variables (e.g., from `docker-compose.yml`).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-Priority: **YAML > .env > environment > defaults**.
-
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter                   | config.yml                    | Docker environment variable             | Default            | Mandatory | Description                                                                      |
-|-----------------------------|-------------------------------|-----------------------------------------|--------------------|-----------|----------------------------------------------------------------------------------|
-| Connector ID                | id                            | `CONNECTOR_ID`                          |                    | Yes       | A unique `UUIDv4` identifier for this connector instance.                        |
-| Connector Type              | type                          | `CONNECTOR_TYPE`                        | EXTERNAL_IMPORT    | No        | Should always be set to `EXTERNAL_IMPORT` for this connector.                    |
-| Connector Name              | name                          | `CONNECTOR_NAME`                        | Cofense ThreatHQ   | No        | Name of the connector.                                                           |
-| Connector Scope             | scope                         | `CONNECTOR_SCOPE`                       | Cofense ThreatHQ   | No        | The scope or type of data the connector is importing.                            |
-| Log Level                   | log_level                     | `CONNECTOR_LOG_LEVEL`                   | info               | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.           |
-| Duration Period             | duration_period               | `CONNECTOR_DURATION_PERIOD`             | PT5H               | No        | Time interval between connector runs in ISO 8601 format.                         |
-| Queue Threshold             | queue_threshold               | `CONNECTOR_QUEUE_THRESHOLD`             | 500                | No        | RabbitMQ queue size limit (MB) before entering buffering mode.                   |
-| Run and Terminate           | run_and_terminate             | `CONNECTOR_RUN_AND_TERMINATE`           | false              | No        | Launch the connector once if set to `true`.                                      |
-| Send to Queue               | send_to_queue                 | `CONNECTOR_SEND_TO_QUEUE`               | true               | No        | If set to `true`, the connector will send data to the queue.                     |
-| Send to Directory           | send_to_directory             | `CONNECTOR_SEND_TO_DIRECTORY`           | false              | No        | If set to `true`, the connector will send data to a directory.                   |
-| Send to Directory Path      | send_to_directory_path        | `CONNECTOR_SEND_TO_DIRECTORY_PATH`      |                    | No        | Path to directory where data will be sent if `send_to_directory` is `true`.      |
-| Send to Directory Retention | send_to_directory_retention   | `CONNECTOR_SEND_TO_DIRECTORY_RETENTION` | 7                  | No        | Number of days to retain data in the directory.                                  |
-
-### Connector extra parameters environment variables
-
-| Parameter                        | config.yml                          | Docker environment variable                          | Default                           | Mandatory | Description                                                                                                 |
-|----------------------------------|-------------------------------------|------------------------------------------------------|-----------------------------------|-----------|-------------------------------------------------------------------------------------------------------------|
-| Token User                       | token_user                          | `COFENSE_THREATHQ_TOKEN_USER`                        |                                   | Yes       | Token user for Cofense ThreatHQ API authentication.                                                         |
-| Token Password                   | token_password                      | `COFENSE_THREATHQ_TOKEN_PASSWORD`                    |                                   | Yes       | Token password for Cofense ThreatHQ API authentication.                                                     |
-| API Base URL                     | api_base_url                        | `COFENSE_THREATHQ_API_BASE_URL`                      | https://www.threathq.com/apiv1/   | No        | Cofense ThreatHQ API base URL.                                                                              |
-| API Leaky Bucket Rate            | api_leaky_bucket_rate               | `COFENSE_THREATHQ_API_LEAKY_BUCKET_RATE`             | 10                                | No        | Leaky bucket rate per second for API rate limiting.                                                         |
-| API Leaky Bucket Capacity        | api_leaky_bucket_capacity           | `COFENSE_THREATHQ_API_LEAKY_BUCKET_CAPACITY`         | 10                                | No        | Leaky bucket capacity for API rate limiting.                                                                |
-| API Retry                        | api_retry                           | `COFENSE_THREATHQ_API_RETRY`                         | 5                                 | No        | Maximum number of retry attempts in case of API failure.                                                    |
-| API Backoff                      | api_backoff                         | `COFENSE_THREATHQ_API_BACKOFF`                       | PT30S                             | No        | Exponential backoff duration between API retries (ISO 8601 format).                                         |
-| Import Start Date                | import_start_date                   | `COFENSE_THREATHQ_IMPORT_START_DATE`                 | P30D                              | No        | Date from which data import should start (`YYYY-MM-DD`, `YYYY-MM-DD HH:MM:SS+HH:MM`, or `P30D` for 30 days before start). |
-| Import Report PDF                | import_report_pdf                   | `COFENSE_THREATHQ_IMPORT_REPORT_PDF`                 | true                              | No        | Retrieve and attach PDF reports generated by Cofense ThreatHQ.                                              |
-| Impact to Exclude                | impact_to_exclude                   | `COFENSE_THREATHQ_IMPACT_TO_EXCLUDE`                 |                                   | No        | Comma-separated list of report impacts to exclude (e.g., `None,Moderate,Major`).                            |
-| TLP Level                        | tlp_level                           | `COFENSE_THREATHQ_TLP_LEVEL`                         | amber+strict                      | No        | TLP marking for exported data (`clear`, `green`, `amber`, `amber+strict`, `red`).                           |
-| Promote Observables as Indicators| promote_observables_as_indicators   | `COFENSE_THREATHQ_PROMOTE_OBSERVABLES_AS_INDICATORS` | true                              | No        | Create indicators based on observables from Cofense ThreatHQ.                                               |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

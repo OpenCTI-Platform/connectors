@@ -5,8 +5,13 @@
   "short_description": "Enriches OpenCTI Vulnerability entities with Vulners intelligence: CVSS, EPSS, CISA KEV status, known exploits and related software, delivered as a ready-made STIX bundle.",
   "logo": "internal-enrichment/vulners/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Vulnerability & Exploit Awareness"
   ],
+  "solution_categories": [
+    "Vulnerability & Exposure Management"
+  ],
+  "license_type": null,
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": true,

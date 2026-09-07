@@ -16,10 +16,10 @@ services:
       #- CONNECTOR_LOG_LEVEL=error
       #- CONNECTOR_DURATION_PERIOD=PT24H
       #- CONNECTOR_QUEUE_THRESHOLD=500
-      #- CONNECTOR_RUN_AND_TERMINATE=False
-      #- CONNECTOR_SEND_TO_QUEUE=True
+      #- CONNECTOR_RUN_AND_TERMINATE=false
+      #- CONNECTOR_SEND_TO_QUEUE=true
       #- CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7
-      #- CONNECTOR_SEND_TO_DIRECTORY=False
+      #- CONNECTOR_SEND_TO_DIRECTORY=false
       # (if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path for CONNECTOR_SEND_TO_DIRECTORY_PATH)
       #- CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe
 
@@ -40,11 +40,11 @@ services:
       #- SERVICENOW_COMMENT_TO_EXCLUDE=
       #- SERVICENOW_TLP_LEVEL=red
       #- SERVICENOW_OBSERVABLES_DEFAULT_SCORE=50
-      #- SERVICENOW_PROMOTE_OBSERVABLES_AS_INDICATORS=True
+      #- SERVICENOW_PROMOTE_OBSERVABLES_AS_INDICATORS=true
       # Forwards ``sysparm_display_value`` to every ServiceNow Table
       # API call. Default ``true`` matches ServiceNow's REST default
       # (human-readable display strings); set to ``false`` on
       # instances that return non-ISO 8601 datetimes when display
       # values are enabled, which the connector cannot parse.
-      #- SERVICENOW_SYSPARM_DISPLAY_VALUE=True
+      #- SERVICENOW_SYSPARM_DISPLAY_VALUE=true
     restart: always

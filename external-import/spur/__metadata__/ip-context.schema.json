@@ -1,0 +1,412 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "The IP Context Object",
+  "type": "object",
+  "description": "The IP Context object summarizes all available information for an IP Address. It is provided as a single dictionary. All fields not explicitly marked as required may be omitted when the value is null.",
+  "properties": {
+    "ai": {
+      "type": "object",
+      "description": "A top-level field describing AI activity that has been observed from this IP address.",
+      "properties": {
+        "operator": {
+          "type": "string",
+          "description": "The name of the AI entity that is performing activity on this IP address."
+        },
+        "types": {
+          "type": "array",
+          "description": "The types of AI activity that have been observed from this IP address.",
+          "items": {
+            "type": "string",
+            "description": "The different AI activity types observed from this IP address.",
+            "anyOf": [
+              {
+                "const": "AGENTIC",
+                "description": "AI activity that is performed by an AI agent."
+              },
+              {
+                "const": "CRAWLER",
+                "description": "AI activity that is performed by an AI crawler."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "as": {
+      "type": "object",
+      "description": "Spur IP GeoBGP autonomous system information.",
+      "properties": {
+        "number": {
+          "type": "integer",
+          "description": "The autonomous system number."
+        },
+        "organization": {
+          "type": "string",
+          "description": "The organization that owns and operates the Autonomous System (AS) responsible for routing the IP address via BGP."
+        }
+      },
+      "required": [
+        "number",
+        "organization"
+      ]
+    },
+    "organization": {
+      "type": "string",
+      "description": "The organization currently assigned to use the specific IP address, such as a customer, hosting provider, or service operator."
+    },
+    "client": {
+      "type": "object",
+      "description": "Descriptive data about the connecting client.",
+      "properties": {
+        "behaviors": {
+          "type": "array",
+          "description": "List of behaviors and usage detected for clients.",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "description": "Describes client behaviors and usage activity.",
+            "anyOf": [
+              {
+                "const": "FILE_SHARING",
+                "description": "File sharing activity detected."
+              },
+              {
+                "const": "WEB_SCRAPING",
+                "description": "Web scraping activity detected."
+              },
+              {
+                "title": "Service User",
+                "pattern": "^[A-Z0-9_]+_USER$",
+                "description": "A user of the provided service tag (e.g. 'TOR_PROXY_USER', 'EXAMPLE_USER')."
+              }
+            ]
+          }
+        },
+        "concentration": {
+          "type": "object",
+          "description": "Geographical and density information for clients on this IP Address.",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "Name of the city."
+            },
+            "country": {
+              "type": "string",
+              "description": "Country code or name."
+            },
+            "density": {
+              "type": "number",
+              "description": "A numerical measure of the client’s concentration (0-1)."
+            },
+            "geohash": {
+              "type": "string",
+              "description": "A geohash representing the location."
+            },
+            "skew": {
+              "type": "number",
+              "description": "A measure representing point-to-point distance skew from the IP `location` field (KM)."
+            },
+            "state": {
+              "type": "string",
+              "description": "Name or code of the state."
+            }
+          },
+          "required": [
+            "city",
+            "country",
+            "density",
+            "geohash",
+            "skew",
+            "state"
+          ]
+        },
+        "count": {
+          "type": "integer",
+          "description": "Number of instances or connections from this client."
+        },
+        "countries": {
+          "type": "integer",
+          "description": "Number of unique countries the client connects from."
+        },
+        "proxies": {
+          "type": "array",
+          "description": "List of proxy services used by the client.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "spread": {
+          "type": "integer",
+          "description": "An integer measuring the client spread (e.g., distance or distribution)."
+        },
+        "types": {
+          "type": "array",
+          "description": "Types of devices or clients connecting (e.g., MOBILE, DESKTOP).",
+          "items": {
+            "type": "string",
+            "enum": [
+              "DESKTOP",
+              "HEADLESS",
+              "IOT",
+              "MOBILE"
+            ],
+            "oneOf": [
+              {
+                "const": "DESKTOP",
+                "description": "Standard computers or laptops."
+              },
+              {
+                "const": "HEADLESS",
+                "description": "Devices/browsers without a standard display."
+              },
+              {
+                "const": "IOT",
+                "description": "Connected devices such as game systems, smart TVs, streaming sticks, etc."
+              },
+              {
+                "const": "MOBILE",
+                "description": "Mobile phones and tablets."
+              }
+            ]
+          }
+        }
+      },
+      "required": [
+        "behaviors",
+        "concentration",
+        "count",
+        "countries",
+        "proxies",
+        "spread",
+        "types"
+      ]
+    },
+    "infrastructure": {
+      "type": "string",
+      "description": "Infrastructure type.",
+      "enum": [
+        "DATACENTER",
+        "MOBILE",
+        "SATELLITE",
+        "IN_FLIGHT_WIFI",
+        "GOOGLE"
+      ],
+      "oneOf": [
+        {
+          "const": "DATACENTER",
+          "description": "Generic datacenter or VPS environment."
+        },
+        {
+          "const": "MOBILE",
+          "description": "Infrastructure for mobile networks (e.g., 4G/LTE)."
+        },
+        {
+          "const": "SATELLITE",
+          "description": "Long range satellite-related infrastructure. IP Location is often distinct from physical location."
+        },
+        {
+          "const": "IN_FLIGHT_WIFI",
+          "description": "Infrastructure related to airline transit. IP Location is often distinct from physical location."
+        },
+        {
+          "const": "GOOGLE",
+          "description": "Infrastructure hosted by Google that pools and routes traffic from public wifi spaces and untrusted mobile networks."
+        }
+      ]
+    },
+    "ip": {
+      "type": "string",
+      "format": "ipv4",
+      "description": "IPv4 address associated with the connection."
+    },
+    "location": {
+      "type": "object",
+      "description": "Spur IP Geo location information of the IP.",
+      "properties": {
+        "city": {
+          "type": "string",
+          "description": "City name or location."
+        },
+        "country": {
+          "type": "string",
+          "description": "Country code or name."
+        },
+        "state": {
+          "type": "string",
+          "description": "Name or code of the state."
+        }
+      },
+      "required": [
+        "city",
+        "country",
+        "state"
+      ]
+    },
+    "risks": {
+      "type": "array",
+      "description": "List of identified risk factors or behaviors.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "AD_FRAUD",
+          "CALLBACK_PROXY",
+          "GEO_MISMATCH",
+          "LOGIN_BRUTEFORCE",
+          "TUNNEL",
+          "WEB_SCRAPING"
+        ],
+        "oneOf": [
+          {
+            "const": "AD_FRAUD",
+            "description": "This IP has exhibited signs of committing ad fraud."
+          },
+          {
+            "const": "CALLBACK_PROXY",
+            "description": "Network can route traffic for residential or malware proxies."
+          },
+          {
+            "const": "GEO_MISMATCH",
+            "description": "The datacenter or hosting location differs from the location of its users."
+          },
+          {
+            "const": "LOGIN_BRUTEFORCE",
+            "description": "Persistent login attempts against web forms detected."
+          },
+          {
+            "const": "TUNNEL",
+            "description": "Exit point for an anonymizing VPN/proxy/tunnel. Traffic is likely associated with this service."
+          },
+          {
+            "const": "WEB_SCRAPING",
+            "description": "Automated or headless web scraping activity."
+          }
+        ]
+      }
+    },
+    "services": {
+      "type": "array",
+      "description": "List of services or protocols in use (e.g., OPENVPN, IPSEC).",
+      "items": {
+        "type": "string",
+        "enum": [
+          "HTTP",
+          "IPSEC",
+          "L2TP",
+          "OPENVPN",
+          "PPTP",
+          "SHADOWSOCKS",
+          "SOCKS",
+          "VMESS",
+          "V2RAY",
+          "TROJAN",
+          "WIREGUARD",
+          "PROPRIETARY"
+        ],
+        "oneOf": [
+          {
+            "const": "HTTP",
+            "description": "Standard hypertext transfer protocol for web traffic."
+          },
+          {
+            "const": "IPSEC",
+            "description": "Encrypted IP security protocol suite."
+          },
+          {
+            "const": "L2TP",
+            "description": "Layer 2 Tunneling Protocol for secure VPN connections."
+          },
+          {
+            "const": "OPENVPN",
+            "description": "Popular open-source VPN protocol."
+          },
+          {
+            "const": "PPTP",
+            "description": "Point-to-Point Tunneling Protocol for older VPN connections."
+          },
+          {
+            "const": "SHADOWSOCKS",
+            "description": "Secure proxy protocol built for censorship circumvention."
+          },
+          {
+            "const": "SOCKS",
+            "description": "Proxy protocol that relays TCP/UDP traffic."
+          },
+          {
+            "const": "VMESS",
+            "description": "Encryption/transport protocol used by V2Ray."
+          },
+          {
+            "const": "V2RAY",
+            "description": "Platform supporting encrypted traffic and multiple protocols."
+          },
+          {
+            "const": "TROJAN",
+            "description": "Encrypted proxy protocol designed to imitate HTTPS."
+          },
+          {
+            "const": "WIREGUARD",
+            "description": "Modern, high-performance VPN protocol."
+          },
+          {
+            "const": "PROPRIETARY",
+            "description": "Non-standard or private/closed-source protocol."
+          }
+        ]
+      }
+    },
+    "tunnels": {
+      "type": "array",
+      "description": "Information about tunneling methods (VPN, TOR, etc.) used.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "anonymous": {
+            "type": "boolean",
+            "description": "Whether the tunnel operation is anonymized."
+          },
+          "entries": {
+            "type": "array",
+            "description": "Entry node IP addresses for the tunnel.",
+            "items": {
+              "type": "string",
+              "format": "ipv4"
+            }
+          },
+          "exits": {
+            "type": "array",
+            "description": "Exit node IP addresses for the tunnel.",
+            "items": {
+              "type": "string",
+              "format": "ipv4"
+            }
+          },
+          "operator": {
+            "type": "string",
+            "description": "Operator or vendor of the tunnel service."
+          },
+          "type": {
+            "type": "string",
+            "description": "Type of tunnel, e.g. VPN, TOR."
+          }
+        },
+        "required": [
+          "anonymous",
+          "entries",
+          "exits",
+          "operator",
+          "type"
+        ]
+      }
+    }
+  },
+  "required": [
+    "as",
+    "client",
+    "infrastructure",
+    "ip",
+    "location",
+    "risks",
+    "services",
+    "tunnels"
+  ]
+}

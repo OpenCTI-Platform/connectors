@@ -31,6 +31,15 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
     scope: str = Field(
         default="splunk-soar-push",
         description="The scope or type of data the connector is processing.",
+        # Override the generated JSON schema so that CONNECTOR_SCOPE is
+        # emitted as an array, matching the schema convention produced by
+        # connectors_sdk.BaseSettings. The runtime type stays str because
+        # this connector does not use connectors_sdk.BaseSettings yet.
+        json_schema_extra={
+            "type": "array",
+            "items": {"type": "string"},
+            "default": ["splunk-soar-push"],
+        },
     )
     live_stream_id: str = Field(
         default="ChangeMe",

@@ -1,0 +1,20 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Assetnote External Import Connector'
+  scope: 'Assetnote' # optional (default: 'Assetnote')
+  log_level: 'error'
+  duration_period: 'PT1H'
+
+assetnote_import:
+  api_base_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  # unresolved_status_name: '' # Status template name for UNRESOLVED Exposures
+  # triaged_status_name: '' # Status template name for TRIAGED Exposures
+  # resolved_status_name: '' # Status template name for RESOLVED Exposures
+  # ignored_status_name: '' # Status template name for IGNORED Exposures
+  # first_run_retrieval_datetime: '' # ISO 8601 datetime to retrieve assets/exposures from on the connector's first run

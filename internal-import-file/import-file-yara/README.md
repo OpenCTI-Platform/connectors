@@ -11,9 +11,6 @@
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -45,30 +42,10 @@ As YARA files can contain one or multiple YARA rules, the connector can operate 
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml `opencti` | Docker environment variable | Default | Mandatory | Description                                          |
-|---------------|----------------------|-----------------------------|---------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `url`                | `OPENCTI_URL`               | /       | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `token`              | `OPENCTI_TOKEN`             | /       | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter                | config.yml `connector`   | Docker environment variable        | Default         | Mandatory | Description                                                                                |
-|--------------------------|--------------------------|------------------------------------|-----------------|-----------|--------------------------------------------------------------------------------------------|
-| Connector ID             | `id`                     | `CONNECTOR_ID`                     | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                  |
-| Connector Name           | `name`                   | `CONNECTOR_NAME`                   | ImportFileYARA  | No        | Name of the connector.                                                                     |
-| Connector Scope          | `scope`                  | `CONNECTOR_SCOPE`                  | text/yara+plain | Yes       | The MIME type of files this connector handles. Must be `text/yara+plain`.                  |
-| Connector Auto           | `auto`                   | `CONNECTOR_AUTO`                   | false           | No        | Enable/disable automatic import of files matching the scope.                               |
-| Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false           | No        | If enabled, bundles are sent for validation before import.                                 |
-| Confidence Level         | `confidence_level`       | `CONNECTOR_CONFIDENCE_LEVEL`       | 15              | No        | Default confidence level for created indicators (0-100).                                   |
-| Log Level                | `log_level`              | `CONNECTOR_LOG_LEVEL`              | info            | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.     |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ### Connector extra parameters environment variables
 
@@ -184,7 +161,6 @@ graph LR
 | - | `pattern_type` | Always set to `yara` |
 | - | `x_opencti_main_observable_type` | Always set to `StixFile` |
 | - | `x_opencti_score` | Always set to `100` |
-| - | `confidence` | Set from `CONNECTOR_CONFIDENCE_LEVEL` config |
 
 ### YARA metadata extraction
 

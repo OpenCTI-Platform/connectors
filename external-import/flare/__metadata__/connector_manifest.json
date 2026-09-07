@@ -1,13 +1,17 @@
 {
   "title": "Flare",
   "slug": "flare",
-  "description": "This connector integrates Flare (https://flare.io) — a cyber threat intelligence platform monitoring dark web, leak sites, threat actor forums, and other external sources — with OpenCTI. It periodically fetches new security events from the Flare API and converts them into STIX2 incidents with related observables. Supported event types include leaked credentials (emails, usernames), stealer logs from infected devices (with associated malware family), lookalike/typosquatting domains, and ransomware leak publications. Each event is imported as a STIX Incident linked to its relevant observables (EmailAddress, UserAccount, IPv4Address, DomainName, URL) via `related-to` relationships.",
+  "description": "This connector integrates Flare (https://flare.io) \u2014 a cyber threat intelligence platform monitoring dark web, leak sites, threat actor forums, and other external sources \u2014 with OpenCTI. It periodically fetches new security events from the Flare API and converts them into STIX2 incidents with related observables. Supported event types include leaked credentials (emails, usernames), stealer logs from infected devices (with associated malware family), lookalike/typosquatting domains, and ransomware leak publications. Each event is imported as a STIX Incident linked to its relevant observables (EmailAddress, UserAccount, IPv4Address, DomainName, URL) via `related-to` relationships.",
   "short_description": "Import Flare threat intelligence events (leaked credentials, stealer logs, lookalike domains, ransomware leaks) as STIX2 incidents into OpenCTI.",
   "logo": "external-import/flare/__metadata__/logo.png",
-  "use_cases" : [
-    "Brand, Digital Risk & Underground Exposure",
-    "Third-Party & Supply Chain Oversight"
+  "use_cases": [
+    "Brand, Digital Risk & Underground Exposure"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2026-06-18",
   "playbook_supported": false,

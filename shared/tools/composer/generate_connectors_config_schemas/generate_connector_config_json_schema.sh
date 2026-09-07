@@ -7,6 +7,7 @@ set -euo pipefail  # exit on error
 
 CONNECTOR_METADATA_DIRECTORY="__metadata__"
 VENV_NAME=".temp_venv"
+PYTHON_VERSION="3.12"
 
 find_connector_directories() {
   # Method to find all directories matching the search term
@@ -85,7 +86,8 @@ activate_venv() {
     # Method to activate isolate venv
 
     # Create isolated virtual environment in connector path
-    uv venv "$1/$VENV_NAME"
+    # Use Python 3.12, as some connectors require it (but none require 3.11 strictly)
+    uv venv --python "$PYTHON_VERSION" "$1/$VENV_NAME"
 
     # Activate virtual environment according to OS
     if [ -f "$1/$VENV_NAME/bin/activate" ]; then

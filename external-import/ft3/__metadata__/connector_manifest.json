@@ -5,9 +5,13 @@
   "short_description": "FT3 is a fraud framework by Stripe that provides a structured taxonomy of fraud tactics and techniques, similar to MITRE ATT&CK but focused on fraud prevention and detection.",
   "logo": "external-import/ft3/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel",
     "Fraud, Financial Crime & Cryptocurrency Monitoring"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-10-13",
   "playbook_supported": false,

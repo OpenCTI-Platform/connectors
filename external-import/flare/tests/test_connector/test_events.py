@@ -9,9 +9,11 @@ from connector.events import (
     LookalikeDomainEvent,
     RansomleakEvent,
     StealerLogEvent,
+    UnsupportedEventTypeError,
     get_event_from_event_json,
     get_event_title_from_event_type,
     get_incident_type_from_event_type,
+    severity_from_event,
 )
 
 BASE_DIR = Path(__file__).parent.parent / "test_events"
@@ -27,7 +29,7 @@ class TestGetEventFromEventJson:
         activity = _load_json("stealer_log.json")["activity"]
         activity["metadata"]["matched_at"] = "2025-11-04T23:40:00+00:00"
         activity["tenant_metadata"] = {
-            "severity": 3,
+            "severity": {"original": "medium", "override": "high"},
             "notes": "A note",
         }
 
@@ -40,7 +42,7 @@ class TestGetEventFromEventJson:
             flare_url=activity["data"]["metadata"]["flare_url"],
             created_at=activity["data"]["metadata"]["estimated_created_at"],
             matched_at=activity["metadata"]["matched_at"],
-            severity=activity["tenant_metadata"]["severity"],
+            severity="high",
             notes=activity["tenant_metadata"]["notes"],
             emails=["user@example.com"],
             usernames=["12345"],
@@ -52,7 +54,7 @@ class TestGetEventFromEventJson:
         activity = _load_json("document.json")["activity"]
         activity["metadata"]["matched_at"] = "2025-11-04T23:40:00+00:00"
         activity["tenant_metadata"] = {
-            "severity": 3,
+            "severity": {"original": "medium", "override": "high"},
             "notes": "A note",
         }
 
@@ -65,7 +67,7 @@ class TestGetEventFromEventJson:
             flare_url=activity["data"]["metadata"]["flare_url"],
             created_at=activity["data"]["metadata"]["estimated_created_at"],
             matched_at=activity["metadata"]["matched_at"],
-            severity=activity["tenant_metadata"]["severity"],
+            severity="high",
             notes=activity["tenant_metadata"]["notes"],
             title=activity["data"]["docmeta"]["title"],
             url=activity["data"]["url"],
@@ -76,7 +78,7 @@ class TestGetEventFromEventJson:
         activity = _load_json("domain.json")["activity"]
         activity["metadata"]["matched_at"] = "2025-11-04T23:40:00+00:00"
         activity["tenant_metadata"] = {
-            "severity": 3,
+            "severity": {"original": "medium", "override": "high"},
             "notes": "A note",
         }
 
@@ -89,7 +91,7 @@ class TestGetEventFromEventJson:
             flare_url=activity["data"]["metadata"]["flare_url"],
             created_at=activity["data"]["metadata"]["estimated_created_at"],
             matched_at=activity["metadata"]["matched_at"],
-            severity=activity["tenant_metadata"]["severity"],
+            severity="high",
             notes=activity["tenant_metadata"]["notes"],
             original_domain="example.com",
             lookalike_domain="examples.com",
@@ -99,7 +101,7 @@ class TestGetEventFromEventJson:
         activity = _load_json("leak.json")["activity"]
         activity["metadata"]["matched_at"] = "2025-11-04T23:40:00+00:00"
         activity["tenant_metadata"] = {
-            "severity": 3,
+            "severity": {"original": "medium", "override": "high"},
             "notes": "A note",
         }
 
@@ -112,7 +114,7 @@ class TestGetEventFromEventJson:
             flare_url=activity["data"]["metadata"]["flare_url"],
             created_at=activity["data"]["metadata"]["estimated_created_at"],
             matched_at=activity["metadata"]["matched_at"],
-            severity=activity["tenant_metadata"]["severity"],
+            severity="high",
             notes=activity["tenant_metadata"]["notes"],
             username="example@example.com",
             identity_name="",
@@ -171,6 +173,46 @@ class TestBaseEventFromEvent:
         assert result.matched_at == ""
         assert result.severity == ""
         assert result.notes == ""
+
+
+class TestSeverityFromEvent:
+    def test_override_wins_over_original(self) -> None:
+        assert (
+            severity_from_event(
+                {
+                    "tenant_metadata": {
+                        "severity": {"original": "low", "override": "critical"}
+                    }
+                }
+            )
+            == "critical"
+        )
+
+    def test_falls_back_to_original_when_no_override(self) -> None:
+        assert (
+            severity_from_event(
+                {"tenant_metadata": {"severity": {"original": "low", "override": None}}}
+            )
+            == "low"
+        )
+
+    def test_falls_back_to_event_metadata_without_tenant_severity(self) -> None:
+        assert (
+            severity_from_event(
+                {"metadata": {"severity": "high"}, "tenant_metadata": {}}
+            )
+            == "high"
+        )
+
+    def test_returns_label_not_dict(self) -> None:
+        severity = severity_from_event(
+            {
+                "tenant_metadata": {
+                    "severity": {"original": "low", "override": "critical"}
+                }
+            }
+        )
+        assert isinstance(severity, str)
 
 
 class TestStealerLogFromEvent:
@@ -395,5 +437,15 @@ class TestGetEventFromEventJSON:
         assert isinstance(get_event_from_event_json(event), expected_type)
 
     def test_raises_value_error_on_unknown_event_type(self) -> None:
-        with pytest.raises(ValueError, match="Unsupported event type"):
+        with pytest.raises(UnsupportedEventTypeError, match="Unsupported event type"):
             get_event_from_event_json(_make_event("not_a_real_type"))
+
+    @pytest.mark.parametrize(
+        "event_type",
+        ["whois", "host", "cookie", "not_a_real_type"],
+    )
+    def test_unsupported_types_raise_unsupported_event_type_error(
+        self, event_type: str
+    ) -> None:
+        with pytest.raises(UnsupportedEventTypeError):
+            get_event_from_event_json(_make_event(event_type))

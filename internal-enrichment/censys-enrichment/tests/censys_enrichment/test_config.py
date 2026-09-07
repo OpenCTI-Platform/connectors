@@ -10,7 +10,7 @@ def test_config() -> None:
 
     # Test config from env
     assert config.opencti.url == HttpUrl("http://test")
-    assert config.opencti.token == "opencti-token"
+    assert config.opencti.token.get_secret_value() == "opencti-token"
 
     assert (
         config.censys_enrichment.organisation_id.get_secret_value()

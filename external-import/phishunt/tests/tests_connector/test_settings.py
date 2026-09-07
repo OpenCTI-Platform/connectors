@@ -19,7 +19,6 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "duration_period": "PT5M",
                 },
                 "phishunt": {
-                    "api_key": "SecretStr",
                     "create_indicators": True,
                     "default_x_opencti_score": 42,
                     "x_opencti_score_domain": 42,
@@ -34,7 +33,6 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                 "connector": {},
                 "phishunt": {
-                    "api_key": "SecretStr",
                     "create_indicators": True,
                     "default_x_opencti_score": 42,
                     "x_opencti_score_domain": 42,
@@ -43,6 +41,21 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 },
             },
             id="minimal_valid_settings_dict",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {},
+                "phishunt": {
+                    "api_key": "some-legacy-key",
+                    "create_indicators": True,
+                    "default_x_opencti_score": 42,
+                    "x_opencti_score_domain": 42,
+                    "x_opencti_score_ip": 42,
+                    "x_opencti_score_url": 42,
+                },
+            },
+            id="deprecated_api_key_is_ignored_with_warning",
         ),
     ],
 )
@@ -86,7 +99,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "phishunt": {
-                    "api_key": "SecretStr",
                     "create_indicators": True,
                     "default_x_opencti_score": 42,
                     "x_opencti_score_domain": 42,
@@ -108,7 +120,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "phishunt": {
-                    "api_key": "SecretStr",
                     "create_indicators": True,
                     "default_x_opencti_score": 42,
                     "x_opencti_score_domain": 42,

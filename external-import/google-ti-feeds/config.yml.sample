@@ -11,3 +11,6 @@ gti:
   # import_indicators: false
   # indicator_types: file,ip,url,domain
   # indicator_import_start_date: PT1H
+  # indicator_min_score: 50
+  # indicator_require_malware_family: false
+  # indicator_require_threat_actor: false

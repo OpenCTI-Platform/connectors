@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "IOC Extractor",
@@ -80,6 +82,19 @@
       "default": true,
       "description": "Skip private/reserved IP addresses (RFC 1918, loopback, etc.).",
       "type": "boolean"
+    },
+    "IOC_EXTRACTOR_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "The maximal TLP of the observable being enriched.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
     }
   },
   "required": [

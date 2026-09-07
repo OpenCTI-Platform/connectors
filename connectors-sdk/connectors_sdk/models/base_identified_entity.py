@@ -20,17 +20,18 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
         default=None,
         description="The Author reporting this Observable.",
     )
-
     markings: list[TLPMarking | Reference] | None = Field(
         default=None,
         description="References for object marking.",
     )
-
     external_references: list[ExternalReference] | None = Field(
         default=None,
         description="External references of the observable.",
     )
-
+    labels: list[str] | None = Field(
+        default=None,
+        description="Labels of the entity.",
+    )
     created: AwareDatetime | None = Field(
         default=None,
         description="The time at which the object was originally created (STIX standard property).",
@@ -53,5 +54,6 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
                 if self.external_references is not None
                 else None
             ),
+            labels=self.labels,
             created=self.created,
         )

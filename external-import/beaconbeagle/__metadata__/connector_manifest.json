@@ -7,6 +7,11 @@
   "use_cases": [
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

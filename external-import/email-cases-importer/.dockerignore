@@ -1,0 +1,42 @@
+# VCS / editor
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+*.swp
+*.swo
+
+# Build artifacts / caches
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+dist
+build
+
+# Local virtualenvs and secrets
+.venv
+venv
+env
+.env
+
+# Connector ops files (not needed in the image)
+docker-compose.yml
+config.yml
+config.yml.sample
+README.md
+.dockerignore
+Dockerfile
+
+# Tests and tooling (image should not ship test code)
+tests
+test-requirements.txt
+pyproject.toml
+.pylintrc

@@ -153,7 +153,14 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 ## Behavior
 
 - Fetches alerts from Doppel API paginated by `last_activity_timestamp`
-- Converts each alert into a STIX 2.1 Observable object
+- Converts each alert into a STIX 2.1 Observable with a value-appropriate type:
+  - `domains` alerts become `Domain-Name` observables. URL schemes, paths,
+    queries, and fragments added by the Doppel API are removed from the domain
+    value.
+  - `telco` alerts become `Phone-Number` observables.
+  - Email-address entities become `Email-Addr` observables.
+  - Other supported alert products become `Url` observables, preserving their
+    full URL value.
 - Bundles and sends the STIX objects to OpenCTI
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
 - On first run, fetches up to `HISTORICAL_POLLING_DAYS`; subsequent runs are delta-based

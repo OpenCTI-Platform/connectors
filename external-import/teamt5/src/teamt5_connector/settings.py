@@ -5,6 +5,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, SecretStr, model_validator
 
@@ -18,6 +19,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     name: str = Field(
         description="The name of the connector.",
         default="Team T5 External Import Connector",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=[],
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
         description="The minimum level of logs to display.",

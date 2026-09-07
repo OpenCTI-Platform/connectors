@@ -141,6 +141,23 @@ def domain_with_threat_score() -> GTIDomainData:
 
 
 @pytest.fixture
+def domain_with_zero_score() -> GTIDomainData:
+    """Fixture for domain data with a genuine zero threat score (fully benign, e.g. youtube.com)."""
+    return GTIDomainDataFactory.build(
+        id="benign.example.com",
+        attributes=DomainModelFactory.build(
+            gti_assessment=GTIAssessmentFactory.build(
+                contributing_factors=ContributingFactorsFactory.build(
+                    mandiant_confidence_score=None
+                ),
+                threat_score=ThreatScoreFactory.build(value=0),
+                verdict=None,
+            ),
+        ),
+    )
+
+
+@pytest.fixture
 def domain_with_malicious_verdict() -> GTIDomainData:
     """Fixture for domain data with malicious verdict."""
     return GTIDomainDataFactory.build(
@@ -329,6 +346,33 @@ def test_gti_domain_to_stix_with_threat_score(
     _then_stix_objects_have_score(domain_observable, indicator, 70)
 
 
+# Scenario: Convert GTI domain with a genuine zero threat score to STIX objects
+@pytest.mark.order(1)
+def test_gti_domain_to_stix_with_zero_score(
+    domain_with_zero_score: GTIDomainData,
+    mock_organization: Identity,
+    mock_tlp_marking: MarkingDefinition,
+) -> None:
+    """Test conversion of GTI domain with a genuine zero threat score to STIX objects.
+
+    Regression test: `if score:` previously treated a real score of 0 as falsy,
+    dropping x_opencti_score entirely and letting OpenCTI fall back to its own
+    default score of 50 instead of the real value.
+    """
+    # Given a GTI domain with a genuine zero threat score
+    mapper = _given_gti_domain_mapper(
+        domain_with_zero_score, mock_organization, mock_tlp_marking
+    )
+
+    # When converting to STIX
+    stix_objects = _when_convert_to_stix(mapper)
+
+    # Then the STIX objects should have a score of 0, not a missing score
+    _then_stix_objects_created_successfully(stix_objects)
+    domain_observable, indicator, relationship = stix_objects
+    _then_stix_objects_have_score(domain_observable, indicator, 0)
+
+
 # Scenario: Convert GTI domain with malicious verdict to STIX objects
 @pytest.mark.order(1)
 def test_gti_domain_to_stix_with_malicious_verdict(
@@ -417,7 +461,7 @@ def test_gti_domain_to_stix_with_all_data(
     _then_stix_domain_has_correct_properties(
         domain_observable, domain_with_all_data, mock_organization, mock_tlp_marking
     )
-    _then_stix_objects_have_score(domain_observable, indicator, 95)
+    _then_stix_objects_have_score(domain_observable, indicator, 85)
     _then_stix_indicator_has_type(indicator, IndicatorTypeOV("MALICIOUS"))
     _then_stix_indicator_has_correct_timestamps(indicator, domain_with_all_data)
 
@@ -560,6 +604,32 @@ def test_get_score_with_threat_score(
 
     # Then threat score should be returned
     assert score == 70  # noqa: S101
+
+
+# Scenario: Extract score with a genuine zero threat score
+@pytest.mark.order(1)
+def test_get_score_with_zero_threat_score(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test _get_score method returns 0, not None, for a genuine zero threat score."""
+    # Given a domain with a real threat score of 0 and no mandiant score
+    domain_data = GTIDomainDataFactory.build(
+        attributes=DomainModelFactory.build(
+            gti_assessment=GTIAssessmentFactory.build(
+                contributing_factors=ContributingFactorsFactory.build(
+                    mandiant_confidence_score=None
+                ),
+                threat_score=ThreatScoreFactory.build(value=0),
+            )
+        )
+    )
+    mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
+
+    # When getting score
+    score = mapper._get_score()
+
+    # Then the real zero score should be returned, not None
+    assert score == 0  # noqa: S101
 
 
 # Scenario: Extract score with mandiant confidence score available fallback
@@ -742,14 +812,21 @@ def _then_stix_domain_has_correct_properties(
     assert tlp_marking.id in domain_observable.object_marking_refs  # noqa: S101
 
 
+def _get_opencti_score(obj: Any) -> int | None:
+    """Extract x_opencti_score from a raw pydantic model or a converted STIX2 object."""
+    score = getattr(obj, "x_opencti_score", None)
+    if score is not None:
+        return score
+    custom_properties = getattr(obj, "custom_properties", None) or {}
+    return custom_properties.get("x_opencti_score")
+
+
 def _then_stix_objects_have_score(
     domain_observable: Any, indicator: Any, expected_score: int
 ) -> None:
     """Assert that STIX objects have score."""
-    if hasattr(domain_observable, "score"):
-        assert domain_observable.score == expected_score  # noqa: S101
-    if hasattr(indicator, "score"):
-        assert indicator.score == expected_score  # noqa: S101
+    assert _get_opencti_score(domain_observable) == expected_score  # noqa: S101
+    assert _get_opencti_score(indicator) == expected_score  # noqa: S101
 
 
 def _then_stix_indicator_has_type(

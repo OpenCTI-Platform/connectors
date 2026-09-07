@@ -7,6 +7,11 @@
   "use_cases": [
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

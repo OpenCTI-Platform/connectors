@@ -12,7 +12,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MANDIANT_API_V4_KEY_SECRET | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Mandiant API v4 Key Secret for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"Mandiant"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["mandiant"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. Options are debug, info, warn, warning or error. |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT5M"` | Duration between two scheduled runs of the connector (ISO 8601 format). |
 | MANDIANT_MARKING | `string` |  | `white` `clear` `green` `amber` `amber+strict` `red` | `"amber+strict"` | TLP Marking for data imported, possible values: white, clear, green, amber, amber+strict, red. NB: Some of the entities retrieved from the Mandiant portal already have a marking. We do not modify the marking on these entities. The marking defined by this parameter only takes into account entities created by the connector, or entities retrieved without marking. |

@@ -3,63 +3,84 @@ services:
   connector-taxii2:
     image: opencti/connector-taxii2:latest
     environment:
+      # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+
+      # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=TAXII2
-      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT60M
-      - TAXII2_DISCOVERY_URL=ChangeMe
-      - TAXII2_CERT_PATH=
-      - TAXII2_USERNAME=ChangeMe
-      - TAXII2_PASSWORD=ChangeMe
-      - TAXII2_USE_TOKEN=false
-      - TAXII2_TOKEN=ChangeMe
-      - TAXII2_USE_APIKEY=false
-      - TAXII2_APIKEY_KEY=ChangeMe
-      - TAXII2_APIKEY_VALUE=ChangeMe
-      - TAXII2_V21=true
-      - TAXII2_COLLECTIONS=*.*
-      - TAXII2_INITIAL_HISTORY=24
-      - TAXII2_VERIFY_SSL=true
-      - TAXII2_CREATE_INDICATORS=true
-      - TAXII2_CREATE_OBSERVABLES=true
-      - TAXII2_ADD_CUSTOM_LABEL=false
-      - TAXII2_CUSTOM_LABEL=ChangeMe
-      - TAXII2_FORCE_PATTERN_AS_NAME=false
-      - "TAXII2_FORCE_MULTIPLE_PATTERN_NAME=Multiple Indicators"
-      - TAXII2_STIX_CUSTOM_PROPERTY_TO_LABEL=false
-      - TAXII2_STIX_CUSTOM_PROPERTY=ChangeMe
-      - TAXII2_ENABLE_URL_QUERY_LIMIT=false
-      - TAXII2_URL_QUERY_LIMIT=100
-      - TAXII2_DETERMINE_X_OPENCTI_SCORE_BY_LABEL=false
-      - TAXII2_DEFAULT_X_OPENCTI_SCORE=50
-      - "TAXII2_INDICATOR_HIGH_SCORE_LABELS=high"
-      - TAXII2_INDICATOR_HIGH_SCORE=80
-      - "TAXII2_INDICATOR_MEDIUM_SCORE_LABELS=medium"
-      - TAXII2_INDICATOR_MEDIUM_SCORE=60
-      - "TAXII2_INDICATOR_LOW_SCORE_LABELS=low"
-      - TAXII2_INDICATOR_LOW_SCORE=40
-      - TAXII2_SET_INDICATOR_AS_DETECTION=false
-      - TAXII2_CREATE_AUTHOR=false
-      - TAXII2_AUTHOR_NAME=ChangeMe
-      - TAXII2_AUTHOR_DESCRIPTION=ChangeMe
-      - "TAXII2_AUTHOR_RELIABILITY=A - Completely reliable"
-      - TAXII2_EXCLUDE_SPECIFIC_LABELS=false
-      - TAXII2_LABELS_TO_EXCLUDE=ChangeMe
-      - TAXII2_REPLACE_CHARACTERS_IN_LABEL=false
-      - TAXII2_CHARACTERS_TO_REPLACE_IN_LABEL=ChangeMe
-      - TAXII2_IGNORE_PATTERN_TYPES=false
-      - TAXII2_PATTERN_TYPES_TO_IGNORE=ChangeMe
-      - TAXII2_IGNORE_OBJECT_TYPES=false
-      - TAXII2_OBJECT_TYPES_TO_IGNORE=ChangeMe
-      - TAXII2_IGNORE_SPECIFIC_PATTERNS=false
-      - TAXII2_PATTERNS_TO_IGNORE=ChangeMe
-      - TAXII2_IGNORE_SPECIFIC_NOTES=false
-      - TAXII2_NOTES_TO_IGNORE=ChangeMe
-      - TAXII2_SAVE_ORIGINAL_INDICATOR_ID_TO_NOTE=false
-      - TAXII2_SAVE_ORIGINAL_INDICATOR_ID_ABSTRACT=ChangeMe
-      - TAXII2_CHANGE_REPORT_STATUS=false
-      - TAXII2_CHANGE_REPORT_STATUS_X_OPENCTI_WORKFLOW_ID=ChangeMe
+      # - CONNECTOR_NAME=TAXII2 # Default TAXII2
+      # - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1 # Default ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1
+      # - CONNECTOR_LOG_LEVEL=error # Default error
+      # - CONNECTOR_DURATION_PERIOD=PT60M # ISO8601 format in String, start with 'P...' for Period. Default PT60M
+
+      # Connector's custom execution parameters
+      - TAXII2_DISCOVERY_URL=ChangeMe # Required. The TAXII 2 server discovery URL
+
+      # Authentication (basic auth by default)
+      # - TAXII2_USERNAME=ChangeMe # Username for basic authentication
+      # - TAXII2_PASSWORD=ChangeMe # Password for basic authentication
+      # - TAXII2_USE_TOKEN=false # Default false. Use bearer token authentication instead of basic auth
+      # - TAXII2_TOKEN=ChangeMe # Bearer token, used when TAXII2_USE_TOKEN is true
+      # - TAXII2_USE_APIKEY=false # Default false. Use API key authentication instead of basic auth
+      # - TAXII2_APIKEY_KEY=ChangeMe # Name of the HTTP header holding the API key
+      # - TAXII2_APIKEY_VALUE=ChangeMe # Value of the API key HTTP header
+      # - TAXII2_USE_CERT=false # Default false. Use a client certificate (mTLS)
+      # - TAXII2_CERT_PATH= # Path to the client certificate used for mTLS
+      # - TAXII2_VERIFY_SSL=true # Default true. Verify the SSL certificate of the TAXII server
+
+      # Polling
+      # - TAXII2_V21=true # Default true. Set to false for a TAXII 2.0 server
+      # - TAXII2_COLLECTIONS=*.* # Default *.*. Collections to poll, formatted as `api_root.collection`
+      # - TAXII2_INITIAL_HISTORY=24 # Default 24. Hours of history to fetch on the first run
+      # - TAXII2_INTERVAL=1 # Default 1 (hour). Only used when CONNECTOR_DURATION_PERIOD is not set
+      # - TAXII2_ENABLE_URL_QUERY_LIMIT=false # Default false. Add a `limit` query parameter (TAXII 2.1 only)
+      # - TAXII2_URL_QUERY_LIMIT=100 # Default 100
+
+      # Object creation
+      # - TAXII2_CREATE_INDICATORS=true # Default true
+      # - TAXII2_CREATE_OBSERVABLES=true # Default true
+      # - TAXII2_FORCE_PATTERN_AS_NAME=false # Default false. Use the indicator pattern as its name
+      # - "TAXII2_FORCE_MULTIPLE_PATTERN_NAME=Multiple Indicators" # Name given to indicators holding multiple patterns
+      # - TAXII2_SET_INDICATOR_AS_DETECTION=false # Default false
+      # - TAXII2_SAVE_ORIGINAL_INDICATOR_ID_TO_NOTE=false # Default false
+      # - TAXII2_SAVE_ORIGINAL_INDICATOR_ID_ABSTRACT=ChangeMe # Abstract of the note holding the original indicator ID
+      # - TAXII2_CHANGE_REPORT_STATUS=false # Default false
+      # - TAXII2_CHANGE_REPORT_STATUS_X_OPENCTI_WORKFLOW_ID=ChangeMe # OpenCTI workflow status ID to set on reports
+
+      # Labels
+      # - TAXII2_ADD_CUSTOM_LABEL=false # Default false
+      # - TAXII2_CUSTOM_LABEL=ChangeMe # Label added to every imported object
+      # - TAXII2_STIX_CUSTOM_PROPERTY_TO_LABEL=false # Default false
+      # - TAXII2_STIX_CUSTOM_PROPERTY=ChangeMe # Custom STIX property converted into a label
+      # - TAXII2_EXCLUDE_SPECIFIC_LABELS=false # Default false
+      # - TAXII2_LABELS_TO_EXCLUDE=ChangeMe # Comma-separated regular expressions matching the labels to exclude
+      # - TAXII2_REPLACE_CHARACTERS_IN_LABEL=false # Default false
+      # - TAXII2_CHARACTERS_TO_REPLACE_IN_LABEL=ChangeMe # Comma-separated list of `find:replace` pairs
+
+      # Scoring
+      # - TAXII2_DETERMINE_X_OPENCTI_SCORE_BY_LABEL=false # Default false
+      # - TAXII2_DEFAULT_X_OPENCTI_SCORE=50 # Default 50
+      # - "TAXII2_INDICATOR_HIGH_SCORE_LABELS=high" # Comma-separated labels triggering the high score
+      # - TAXII2_INDICATOR_HIGH_SCORE=80 # Default 80
+      # - "TAXII2_INDICATOR_MEDIUM_SCORE_LABELS=medium" # Comma-separated labels triggering the medium score
+      # - TAXII2_INDICATOR_MEDIUM_SCORE=60 # Default 60
+      # - "TAXII2_INDICATOR_LOW_SCORE_LABELS=low" # Comma-separated labels triggering the low score
+      # - TAXII2_INDICATOR_LOW_SCORE=40 # Default 40
+
+      # Author
+      # - TAXII2_CREATE_AUTHOR=false # Default false
+      # - TAXII2_AUTHOR_NAME=ChangeMe # Name of the author identity
+      # - TAXII2_AUTHOR_DESCRIPTION=ChangeMe # Description of the author identity
+      # - "TAXII2_AUTHOR_RELIABILITY=A - Completely reliable" # Reliability of the author identity
+
+      # Filtering
+      # - TAXII2_IGNORE_PATTERN_TYPES=false # Default false
+      # - TAXII2_PATTERN_TYPES_TO_IGNORE=ChangeMe # Comma-separated indicator pattern types to ignore
+      # - TAXII2_IGNORE_OBJECT_TYPES=false # Default false
+      # - TAXII2_OBJECT_TYPES_TO_IGNORE=ChangeMe # Comma-separated STIX object types to ignore
+      # - TAXII2_IGNORE_SPECIFIC_PATTERNS=false # Default false
+      # - TAXII2_PATTERNS_TO_IGNORE=ChangeMe # Comma-separated indicator pattern contents to ignore
+      # - TAXII2_IGNORE_SPECIFIC_NOTES=false # Default false
+      # - TAXII2_NOTES_TO_IGNORE=ChangeMe # Comma-separated note contents to ignore
     restart: always

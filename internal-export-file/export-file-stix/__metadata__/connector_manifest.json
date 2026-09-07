@@ -5,8 +5,13 @@
   "short_description": "The Export File STIX connector generates STIX 2.1 JSON bundle files from OpenCTI data, supporting single-entity, selected-entity, and query-based exports for sharing with other STIX-compatible platforms.",
   "logo": "internal-export-file/export-file-stix/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Other"
   ],
+  "solution_categories": [
+    "Import, Export & Sharing"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -14,7 +19,7 @@
   "support_version": ">=5.6.1",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-export-file/export-file-stix",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-export-file-stix",
   "container_type": "INTERNAL_EXPORT_FILE"

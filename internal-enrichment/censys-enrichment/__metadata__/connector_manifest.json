@@ -2,12 +2,17 @@
   "title": "Censys Enrichment",
   "slug": "censys-enrichment",
   "description": "The Censys Enrichment connector allows OpenCTI to enrich observables (such as domains, IP addresses, and certificates) using data from the Censys search and intelligence platform. It retrieves detailed information on hosts, certificates, services, and organizations to enhance context and visibility within investigations.",
-  "short_description": "The Censys Enrichment connector allows OpenCTI to enrich observables (such as domains, IP addresses, and certificates) using data from the Censys search and intelligence platform. It retrieves detailed information on hosts, certificates, services, and organizations to enhance context and visibility within investigations.",
+  "short_description": "Enriches domains, IP addresses, and certificates in OpenCTI with Censys data, including host services, open ports, and certificate details for infrastructure visibility.",
   "logo": "internal-enrichment/censys-enrichment/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Infrastructure & Attack Surface Visibility"
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-11-04",
   "playbook_supported": true,

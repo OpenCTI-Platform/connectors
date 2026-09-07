@@ -1,0 +1,783 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/group-ib_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Group-IB Connector",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "stix2",
+        "ipv4-addr",
+        "ipv6-addr",
+        "vulnerability",
+        "domain",
+        "url",
+        "StixFile"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT4H",
+      "description": "The period of time to await between two runs of the connector (ISO-8601 duration format).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_UPDATE_EXISTING_DATA": {
+      "default": true,
+      "description": "Whether to update data already ingested into the platform.",
+      "type": "boolean"
+    },
+    "TI_API_URL": {
+      "default": "https://tap.group-ib.com/api/v2/",
+      "description": "Base URL of the Group-IB Threat Intelligence API.",
+      "type": "string"
+    },
+    "TI_API_USERNAME": {
+      "description": "Username used to authenticate against the Group-IB TI API.",
+      "type": "string"
+    },
+    "TI_API_TOKEN": {
+      "description": "API token used to authenticate against the Group-IB TI API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TI_API_PROXY_IP": {
+      "default": null,
+      "description": "Optional proxy ip used to reach the Group-IB TI API.",
+      "type": "string"
+    },
+    "TI_API_PROXY_PORT": {
+      "default": null,
+      "description": "Optional proxy port used to reach the Group-IB TI API.",
+      "type": "string"
+    },
+    "TI_API_PROXY_PROTOCOL": {
+      "default": null,
+      "description": "Optional proxy protocol used to reach the Group-IB TI API.",
+      "type": "string"
+    },
+    "TI_API_PROXY_USERNAME": {
+      "default": null,
+      "description": "Optional proxy username used to reach the Group-IB TI API.",
+      "type": "string"
+    },
+    "TI_API_PROXY_PASSWORD": {
+      "default": null,
+      "description": "Optional proxy password used to reach the Group-IB TI API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TI_API_EXTRA_SETTINGS_IGNORE_NON_INDICATOR_THREAT_REPORTS": {
+      "default": false,
+      "description": "Extra setting 'ignore_non_indicator_threat_reports'.",
+      "type": "boolean"
+    },
+    "TI_API_EXTRA_SETTINGS_IGNORE_NON_INDICATOR_THREATS": {
+      "default": false,
+      "description": "Extra setting 'ignore_non_indicator_threats'.",
+      "type": "boolean"
+    },
+    "TI_API_EXTRA_SETTINGS_IGNORE_NON_MALWARE_DDOS": {
+      "default": true,
+      "description": "Extra setting 'ignore_non_malware_ddos'.",
+      "type": "boolean"
+    },
+    "TI_API_EXTRA_SETTINGS_INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR": {
+      "default": false,
+      "description": "Extra setting 'intrusion_set_instead_of_threat_actor'.",
+      "type": "boolean"
+    },
+    "TI_API_EXTRA_SETTINGS_SCHEDULE_TIME": {
+      "default": "00:00",
+      "description": "Extra setting 'schedule_time'.",
+      "type": "string"
+    },
+    "TI_API_EXTRA_SETTINGS_TIME_OUTPUT_FORMAT": {
+      "default": "%Y-%m-%d %H:%M:%S",
+      "description": "Extra setting 'time_output_format'.",
+      "type": "string"
+    },
+    "TI_API_EXTRA_SETTINGS_ENABLE_STATEMENT_MARKING": {
+      "default": false,
+      "description": "Extra setting 'enable_statement_marking'.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_APT_THREAT_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'apt/threat' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_APT_THREAT_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'apt/threat' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_APT_THREAT_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'apt/threat' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_APT_THREAT_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'apt/threat' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_APT_THREAT_USE_HUNTING_RULES": {
+      "default": false,
+      "description": "Apply Group-IB hunting rules when importing the 'apt/threat' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_APT_THREAT_ACTOR_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'apt/threat_actor' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_APT_THREAT_ACTOR_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'apt/threat_actor' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_APT_THREAT_ACTOR_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'apt/threat_actor' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_APT_THREAT_ACTOR_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'apt/threat_actor' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_DDOS_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'attacks/ddos' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_DDOS_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'attacks/ddos' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_DDOS_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'attacks/ddos' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_DDOS_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'attacks/ddos' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_DEFACE_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'attacks/deface' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_DEFACE_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'attacks/deface' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_DEFACE_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'attacks/deface' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_DEFACE_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'attacks/deface' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'attacks/phishing_group' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'attacks/phishing_group' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'attacks/phishing_group' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'attacks/phishing_group' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'attacks/phishing_kit' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'attacks/phishing_kit' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'attacks/phishing_kit' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'attacks/phishing_kit' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_ACCESS_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'compromised/access' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_ACCESS_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'compromised/access' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_ACCESS_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'compromised/access' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_ACCESS_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'compromised/access' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'compromised/account_group' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'compromised/account_group' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'compromised/account_group' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'compromised/account_group' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'compromised/bank_card_group' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'compromised/bank_card_group' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'compromised/bank_card_group' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'compromised/bank_card_group' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_DISCORD_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'compromised/discord' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_DISCORD_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'compromised/discord' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_DISCORD_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'compromised/discord' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_DISCORD_TTL": {
+      "default": null,
+      "description": "Time-to-live (in days) for indicators from the 'compromised/discord' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_IMEI_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'compromised/imei' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_IMEI_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'compromised/imei' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_IMEI_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'compromised/imei' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_IMEI_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'compromised/imei' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'compromised/masked_card' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'compromised/masked_card' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'compromised/masked_card' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'compromised/masked_card' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'compromised/messenger' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'compromised/messenger' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'compromised/messenger' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MESSENGER_TTL": {
+      "default": null,
+      "description": "Time-to-live (in days) for indicators from the 'compromised/messenger' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MULE_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'compromised/mule' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MULE_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'compromised/mule' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MULE_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'compromised/mule' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_COMPROMISED_MULE_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'compromised/mule' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_HI_OPEN_THREATS_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'hi/open_threats' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_HI_OPEN_THREATS_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'hi/open_threats' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_HI_OPEN_THREATS_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'hi/open_threats' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_HI_OPEN_THREATS_TTL": {
+      "default": null,
+      "description": "Time-to-live (in days) for indicators from the 'hi/open_threats' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_HI_THREAT_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'hi/threat' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_HI_THREAT_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'hi/threat' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_HI_THREAT_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'hi/threat' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_HI_THREAT_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'hi/threat' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_HI_THREAT_USE_HUNTING_RULES": {
+      "default": false,
+      "description": "Apply Group-IB hunting rules when importing the 'hi/threat' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_HI_THREAT_ACTOR_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'hi/threat_actor' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_HI_THREAT_ACTOR_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'hi/threat_actor' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_HI_THREAT_ACTOR_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'hi/threat_actor' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_HI_THREAT_ACTOR_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'hi/threat_actor' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_IOC_COMMON_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'ioc/common' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_IOC_COMMON_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'ioc/common' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_IOC_COMMON_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'ioc/common' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_IOC_COMMON_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'ioc/common' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_MALWARE_CNC_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'malware/cnc' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_CNC_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'malware/cnc' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_MALWARE_CNC_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'malware/cnc' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_CNC_TTL": {
+      "default": 90,
+      "description": "Time-to-live (in days) for indicators from the 'malware/cnc' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_MALWARE_CONFIG_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'malware/config' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_CONFIG_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'malware/config' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_MALWARE_CONFIG_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'malware/config' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_CONFIG_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'malware/config' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_MALWARE_MALWARE_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'malware/malware' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_MALWARE_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'malware/malware' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_MALWARE_MALWARE_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'malware/malware' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_MALWARE_TTL": {
+      "default": null,
+      "description": "Time-to-live (in days) for indicators from the 'malware/malware' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_MALWARE_SIGNATURE_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'malware/signature' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_SIGNATURE_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'malware/signature' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_MALWARE_SIGNATURE_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'malware/signature' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_SIGNATURE_TTL": {
+      "default": null,
+      "description": "Time-to-live (in days) for indicators from the 'malware/signature' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_MALWARE_YARA_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'malware/yara' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_YARA_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'malware/yara' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_MALWARE_YARA_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'malware/yara' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_MALWARE_YARA_TTL": {
+      "default": null,
+      "description": "Time-to-live (in days) for indicators from the 'malware/yara' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'osi/git_repository' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'osi/git_repository' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'osi/git_repository' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'osi/git_repository' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'osi/public_leak' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'osi/public_leak' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'osi/public_leak' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'osi/public_leak' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_OSI_VULNERABILITY_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'osi/vulnerability' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_OSI_VULNERABILITY_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'osi/vulnerability' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_OSI_VULNERABILITY_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'osi/vulnerability' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_OSI_VULNERABILITY_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'osi/vulnerability' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'suspicious_ip/open_proxy' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'suspicious_ip/open_proxy' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'suspicious_ip/open_proxy' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_TTL": {
+      "default": 15,
+      "description": "Time-to-live (in days) for indicators from the 'suspicious_ip/open_proxy' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'suspicious_ip/scanner' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'suspicious_ip/scanner' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'suspicious_ip/scanner' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_TTL": {
+      "default": 15,
+      "description": "Time-to-live (in days) for indicators from the 'suspicious_ip/scanner' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'suspicious_ip/socks_proxy' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'suspicious_ip/socks_proxy' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'suspicious_ip/socks_proxy' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_TTL": {
+      "default": 2,
+      "description": "Time-to-live (in days) for indicators from the 'suspicious_ip/socks_proxy' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'suspicious_ip/tor_node' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'suspicious_ip/tor_node' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'suspicious_ip/tor_node' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'suspicious_ip/tor_node' collection.",
+      "type": "integer"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_DEFAULT_DATE": {
+      "default": null,
+      "description": "Start date (YYYY-MM-DD) for the first import of the 'suspicious_ip/vpn' collection; empty means last 3 days.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_ENABLE": {
+      "default": false,
+      "description": "Enable ingestion of the 'suspicious_ip/vpn' collection.",
+      "type": "boolean"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_LOCAL_CUSTOM_TAG": {
+      "default": null,
+      "description": "Optional custom label added to objects from the 'suspicious_ip/vpn' collection.",
+      "type": "string"
+    },
+    "TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_TTL": {
+      "default": 30,
+      "description": "Time-to-live (in days) for indicators from the 'suspicious_ip/vpn' collection.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "TI_API_USERNAME",
+    "TI_API_TOKEN"
+  ],
+  "additionalProperties": true
+}

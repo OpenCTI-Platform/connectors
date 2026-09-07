@@ -4,14 +4,14 @@ from json import JSONDecodeError
 from pycti import OpenCTIConnectorHelper
 
 from .api_client import SumologicClient
-from .config_loader import ConfigConnector
+from .settings import ConnectorSettings
 from .utils import is_stix_indicator
 
 
 class SumologicIntelConnector:
     """ """
 
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """

@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-metras-stream:
+    image: opencti/connector-metras-stream:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Metras-Stream
+      - CONNECTOR_SCOPE=Metras
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - METRAS_API_BASE_URL=https://api.metras.sa/api
+      - METRAS_API_KEY=ChangeMe
+      - METRAS_VERIFY_SSL=true
+      - METRAS_BLOCKLIST_ACTION=ALERT
+      - METRAS_BLOCKLIST_PLATFORM=windows
+      - METRAS_BLOCKLIST_SEVERITY=Medium
+    restart: always

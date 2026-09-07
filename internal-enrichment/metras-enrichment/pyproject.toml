@@ -1,0 +1,5 @@
+[tool.coverage.run]
+source = ["connector", "metras_client"]
+
+[tool.coverage.report]
+show_missing = true

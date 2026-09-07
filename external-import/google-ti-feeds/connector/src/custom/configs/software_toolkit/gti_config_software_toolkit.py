@@ -6,8 +6,10 @@ This module defines configuration settings specific to GTI software toolkit impo
 from datetime import timedelta
 
 from connector.src.custom.configs.gti_config_common import (
+    ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES,
     GTIBaseConfig,
     validate_origins_list,
+    validate_subentities_list,
 )
 from connectors_sdk import ListFromString
 from pydantic import Field, field_validator
@@ -45,8 +47,27 @@ class GTISoftwareToolkitConfig(GTIBaseConfig):
         examples=["name:Cobalt Strike"],
     )
 
+    software_toolkit_subentities: ListFromString = Field(
+        default=[
+            "malware_families",
+            "attack_techniques",
+        ],
+        description="Comma-separated list of sub-entity types to fetch and link for each software toolkit. "
+        "An empty list disables sub-entity fetching entirely for software toolkits, which can help reduce API quota usage. "
+        f"Allowed values: {', '.join(ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES)}",
+        examples=["malware_families", ""],
+    )
+
     @field_validator("software_toolkit_origins", mode="after")
     @classmethod
     def validate_software_toolkit_origins(cls, v: list[str]) -> list[str]:
         """Validate software toolkit origins against allowed values."""
         return validate_origins_list(v, "software toolkit origin", ALLOWED_ORIGINS)
+
+    @field_validator("software_toolkit_subentities", mode="after")
+    @classmethod
+    def validate_software_toolkit_subentities(cls, v: list[str]) -> list[str]:
+        """Validate software toolkit sub-entities against allowed values."""
+        return validate_subentities_list(
+            v, "software toolkit subentity", ALLOWED_SOFTWARE_TOOLKIT_SUBENTITIES
+        )

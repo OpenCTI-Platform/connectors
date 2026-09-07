@@ -51,7 +51,7 @@ This connector fetches those notifications via the CrowdStrike Recon API and con
 | Malware            | Malware families detected in breach items                  |
 | Relationship       | `related-to` links between Incidents and observables       |
 
-Each Incident also includes an attached Markdown file (`alert.md`) with the full alert details.
+The full alert details (rule metadata, breach summary, typosquatting WHOIS data, dark web post/reply content, etc.) are rendered as Markdown directly in the Incident's `description` field.
 
 ## Installation
 
@@ -208,6 +208,12 @@ The connector persists its state between runs using OpenCTI's connector state me
 
 On first run (no existing state), the connector imports alerts from `now - IMPORT_START_DATE` (default: 10 days back).
 
+### Pagination limits
+
+CrowdStrike's Recon notification search enforces an undocumented ceiling on the combination of `offset` and `limit` used for pagination (exceeding it fails with a `PAGINATION_LIMIT_EXCEEDED` error). To stay safely under it, the connector fetches at most **9,900 notifications per run** (99 pages of 100).
+
+If the backlog since the last saved `last_alert_date` is larger than that, the connector does not fail: it processes the first 9,900, saves its state at the most recent notification fetched during that run, and the **next scheduled run** continues from there. A very large backlog — for example after extended downtime, or a first run with a long `CROWDSTRIKE_RECON_IMPORT_START_DATE` — is therefore caught up gradually over several runs rather than all at once. Keep this in mind when choosing `CONNECTOR_DURATION_PERIOD` if you expect a large initial backlog.
+
 ### FQL Filtering
 
 The connector builds CrowdStrike FQL (Falcon Query Language) filter strings from the configured filter parameters. Filters are combined with AND logic. For example, with `filter_topic=SA_BRAND` and `filter_priority=high,medium`, the FQL filter would be:
@@ -221,8 +227,7 @@ topic:['SA_BRAND']+priority:['high','medium']+created_date:>'2026-05-01T00:00:00
 Each Incident created in OpenCTI includes:
 
 - **Name**: `{rule_name} : {title}` (title derived from notification content)
-- **Description**: Alert metadata summary (Markdown)
-- **Attached file**: `alert.md` — Full Markdown report with detailed information per notification type
+- **Description**: Full Markdown report with detailed information per notification type (rule metadata, breach summary, typosquatting WHOIS data, dark web post/reply content, etc.) — not a summary, and not an attached file
 - **Severity**: Mapped from CrowdStrike `rule_priority`
 - **Incident type**: The CrowdStrike notification `item_type` (e.g. `typosquatting_domain`, `exposed_data`, `post`)
 
@@ -240,6 +245,7 @@ Log output includes:
 - Number of notifications retrieved per run
 - STIX bundle creation and sending progress
 - State updates with `last_alert_date`
+- Warning when the per-run pagination cap is reached (see [Pagination limits](#pagination-limits)) — the remaining backlog is picked up on the next scheduled run, not lost
 
 ## Additional information
 

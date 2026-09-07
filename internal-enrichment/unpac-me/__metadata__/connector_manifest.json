@@ -5,9 +5,13 @@
   "short_description": "UnpacMe connector submits packed malware samples for automated unpacking, returning extracted payloads, malware family identifications, and YARA matches.",
   "logo": "internal-enrichment/unpac-me/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis",
-    "Malware Analysis and Sandbox"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

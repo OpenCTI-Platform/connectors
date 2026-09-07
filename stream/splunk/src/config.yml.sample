@@ -3,27 +3,28 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'STREAM'
   id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'OpenCTI Splunk Connector'
+  scope: 'splunk'
+  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'error' # optional (default: 'error')
   live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
-  live_stream_listen_delete: true
-  live_stream_no_dependencies: true
-  name: 'Splunk'
-  scope: 'splunk' # Reserved
-  log_level: 'info'
-  consumer_count: 5 # number of consumer/worker used to push data to splunk
+  live_stream_listen_delete: true # optional (default: true)
+  live_stream_no_dependencies: true # optional (default: true)
+  consumer_count: 10 # optional (default: 10) - number of consumer/worker used to push data to splunk
 
 splunk:
-  url: 'https://splunk1.changeme.com:8089'
+  url: 'ChangeMe' # e.g. https://splunk1.changeme.com:8089
   token: 'ChangeMe'
-  auth_type: 'Bearer'
+  auth_type: 'Bearer' # optional (default: 'Bearer')
   owner: 'nobody'
-  ssl_verify: true
+  ssl_verify: true # optional (default: true)
   app: 'search'
   kv_store_name: 'opencti'
   ignore_types: 'attack-pattern,campaign,course-of-action,data-component,data-source,external-reference,identity,intrusion-set,kill-chain-phase,label,location,malware,marking-definition,relationship,threat-actor,tool,vocabulary,vulnerability'
 
 metrics:
-  enable: true # set to true to expose prometheus metrics
-  port: 9113 # port on which metrics should be exposed
-  addr: 0.0.0.0 # ip on which metrics should be exposed
+  enable: false # optional (default: false) - set to true to expose prometheus metrics
+  port: 9113 # optional (default: 9113) - port on which metrics should be exposed
+  addr: 0.0.0.0 # optional (default: '0.0.0.0') - ip on which metrics should be exposed

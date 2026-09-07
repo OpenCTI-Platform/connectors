@@ -19,10 +19,6 @@ class AttackPattern(BaseIdentifiedEntity):
         default=None,
         description="Description of the attack pattern.",
     )
-    labels: list[str] | None = Field(
-        default=None,
-        description="Labels of the attack pattern.",
-    )
     aliases: list[str] | None = Field(
         default=None,
         description="Vulnerability aliases",
@@ -57,7 +53,6 @@ class AttackPattern(BaseIdentifiedEntity):
             ),
             name=self.name,
             description=self.description,
-            labels=self.labels,
             aliases=self.aliases,
             kill_chain_phases=[
                 kill_chain_phase.to_stix2_object()

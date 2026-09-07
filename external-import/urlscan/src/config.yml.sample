@@ -6,19 +6,20 @@ opencti:
 
 connector:
   type: 'EXTERNAL_IMPORT'
-  id: "ChangeMe"
-  name: "Urlscan" # Optional (default: 'Urlscan')
-  scope: "urlscan" # Optional (default: 'urlscan')
-  log_level: "info" # Optional (default: 'error')
-  interval: 86400 # Optional (default: 86400) seconds, 1d
-  lookback: 3 # Optional (default: 3) days
+#   id: "0247889a-84b9-4210-a719-b1037358c491"
+#   name: "Urlscan" # Optional (default: 'Urlscan')
+#   scope: "urlscan" # Optional (default: 'urlscan')
+#   log_level: "error" # Optional (default: 'error')
+#   duration_period: P1D # Optional (default: 'P1D') ISO-8601 duration (e.g. P1D, PT5M)
+#   lookback: 3 # Optional (default: 3) days
 
 urlscan:
-  url: "https://urlscan.io/api/v1/pro/phishfeed?format=json" # Optional (default: 'https://urlscan.io/api/v1/pro/phishfeed?format=json')
+#   url: "https://urlscan.io/api/v1/pro/phishfeed?format=json" # Optional (default: 'https://urlscan.io/api/v1/pro/phishfeed?format=json')
   api_key: "ChangeMe"
-  create_indicators: true # Optional (default: true)
-  update_existing_data: true # Optional (default: true)
-  default_tlp: "white" # Optional (default: 'white')
-  default_x_opencti_score: 50 # Optional (default: 50)
-  # x_opencti_score_domain: 50 # Optional (default: null)
-  # x_opencti_score_url: 50 # Optional (default: null)
+#   create_indicators: true # Optional (default: true)
+#   update_existing_data: true # Optional (default: true)
+#   default_tlp: "white" # Optional (default: 'white')
+#   default_x_opencti_score: 50 # Optional (default: 50)
+#   x_opencti_score_domain: 50 # Optional (default: null)
+#   x_opencti_score_url: 50 # Optional (default: null)
+#   labels: Phishing, phishfeed # Optional (default: ["Phishing", "phishfeed"])

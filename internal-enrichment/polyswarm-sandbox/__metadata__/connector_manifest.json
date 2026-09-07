@@ -1,13 +1,17 @@
 {
   "title": "PolySwarm Scan & Sandbox",
   "slug": "polyswarm-sandbox",
-  "short_description": "Enrich file artifacts with PolySwarm multi-engine scanning and CAPE/Triage sandbox analysis.",
   "description": "Submits Artifact observables to PolySwarm for multi-engine scanning and sandbox analysis (CAPE, Triage, or both). Creates STIX Notes with scan verdicts, sandbox behavioral reports, LLM threat summaries, and network IOCs. Optionally enriches with malware family profiles (threat actors, CVEs, ATT&CK patterns) via polykg. Attaches JSON, PDF, and LLM reports as files to the observable.",
+  "short_description": "Enrich file artifacts with PolySwarm multi-engine scanning and CAPE/Triage sandbox analysis.",
   "logo": "internal-enrichment/polyswarm-sandbox/__metadata__/logo.png",
   "use_cases": [
-    "Malware Analysis and Sandbox",
-    "Enrichment & Analysis"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2026-06-23",
   "playbook_supported": true,

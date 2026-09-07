@@ -6,7 +6,7 @@
 
 ______________________________________________________________________
 
-# OpenCTI ANY.RUN Feed Connector
+# OpenCTI ANY.RUN Threat Intelligence Feeds Connector
 
 | Status           | Date | Comment |
 |------------------|------|---------|
@@ -16,7 +16,7 @@ ANY.RUN’s TI Feeds is a continuously updated source of fresh network-based Ind
 
 ## Table of Contents
 
-- [OpenCTI ANY.RUN Feed Connector](#opencti-anyrun-feed-connector)
+- [OpenCTI ANY.RUN Threat Intelligence Feeds Connector](#opencti-anyrun-feed-connector)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)

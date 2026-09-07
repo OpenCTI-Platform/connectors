@@ -1,12 +1,17 @@
 {
   "title": "NSFOCUS Threat Intelligence",
   "slug": "nti",
-  "description": "The OpenCTI NTI Connector can be used to import knowledge from NSFOCUS Threat Intelligence feed.",
-  "short_description": "The OpenCTI NTI Connector can be used to import knowledge from NSFOCUS Threat Intelligence feed.",
+  "description": "The NSFOCUS Threat Intelligence (NTI) connector imports threat intelligence from the NSFOCUS Threat Intelligence feed into OpenCTI. NSFOCUS NTI provides indicators and threat data covering malicious IPs, domains, URLs, and file hashes linked to campaigns and adversary infrastructure.",
+  "short_description": "Imports threat indicators and intelligence from the NSFOCUS Threat Intelligence (NTI) feed into OpenCTI.",
   "logo": "external-import/nti/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

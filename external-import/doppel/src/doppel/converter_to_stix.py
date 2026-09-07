@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timezone
 from typing import Literal
+from urllib.parse import urlsplit
 
 from doppel.constants import DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO
 from doppel.stix_helpers import (
@@ -26,7 +27,9 @@ from stix2 import (
     TLP_GREEN,
     TLP_RED,
     TLP_WHITE,
+    URL,
     DomainName,
+    EmailAddress,
     Grouping,
     Identity,
     Indicator,
@@ -402,38 +405,47 @@ class ConverterToStix:
 
     def _create_observable(self, obs_type: str, observable_value: str, alert: dict):
         """
-        Generic method to create STIX Cyber Observables (PhoneNumber, DomainName, IPv4Address).
+        Create a STIX Cyber Observable with the type appropriate for its value.
         """
         priority = calculate_priority(alert.get("score", 0))
         # Map types to their respective classes
-        type_map = {"phone": PhoneNumber, "domain": DomainName, "ipv4": IPv4Address}
+        type_map = {
+            "phone": PhoneNumber,
+            "domain": DomainName,
+            "email": EmailAddress,
+            "ipv4": IPv4Address,
+            "url": URL,
+        }
 
         observable_class = type_map.get(obs_type)
+        if observable_class is None:
+            raise ValueError(f"Unsupported observable type: {obs_type}")
 
         # Common properties
         custom_properties = build_custom_properties(alert, self.author.id)
+        custom_properties["x_opencti_labels"].append(f"priority:{priority}")
         params = {
             "value": observable_value,
             "object_marking_refs": [self.tlp_marking.id],
             "custom_properties": custom_properties,
         }
 
-        # Add extra properties for Domain and IP types
-        if obs_type in ["domain", "ipv4"]:
-            labels_flat = build_labels(alert)
-            labels_flat.append(f"priority:{priority}")
-            external_references = build_external_references(alert)
-
-            params.update(
-                {
-                    "labels": labels_flat or None,
-                    "external_references": external_references or None,
-                    "allow_custom": True,
-                }
-            )
         obj = observable_class(**params)
 
         return json.loads(obj.serialize())
+
+    @staticmethod
+    def _domain_value(entity: str) -> str:
+        """Return a domain value without a URL scheme, path, query, or fragment."""
+        if not entity:
+            return ""
+
+        candidate = entity.strip()
+        parsed = urlsplit(
+            candidate if "://" in candidate else f"//{candidate}",
+            allow_fragments=True,
+        )
+        return (parsed.hostname or "").rstrip(".").lower()
 
     def convert_alerts_to_stix(self, alerts: list):
         """
@@ -446,7 +458,8 @@ class ConverterToStix:
             a. Creation
                 - For telco product type - Create PhoneNumber observable
                 - For domain product type - Create Domain observable and if IP address is present in alert data then create IP observable as well.
-                - For other product types which doesn't fall in above 2 categories - Create Domain observable
+                - For email product type with an email entity - Create Email Address observable.
+                - For other supported product types - Create URL observable.
             b. Relationship between observables
                 - For domain product type - Create resolves-to relationship between Domain and IP observables
 
@@ -474,7 +487,7 @@ class ConverterToStix:
         stix_objects = [self.author, self.tlp_marking]
 
         for alert in alerts:
-            #######- --------- observables ------------#######
+            # Observables
             observables = self._handle_observable_creation(alert, stix_objects)
             if not observables:
                 self.helper.connector_logger.warning(
@@ -541,7 +554,16 @@ class ConverterToStix:
                 stix_objects.append(phone_number_observable)
                 observables.append(phone_number_observable)
             elif product_type == "domains":
-                domain = alert.get("entity")
+                domain = self._domain_value(alert.get("entity", ""))
+                if not domain:
+                    self.helper.connector_logger.warning(
+                        "[DoppelConverter] Invalid domain entity, skipping alert",
+                        meta={
+                            "alert_id": alert.get("id"),
+                            "entity": alert.get("entity"),
+                        },
+                    )
+                    return observables
                 domain_observable = self._create_observable("domain", domain, alert)
                 stix_objects.append(domain_observable)
                 observables.append(domain_observable)
@@ -560,12 +582,16 @@ class ConverterToStix:
                     ipv4_observable = self._create_observable("ipv4", ip_address, alert)
                     stix_objects.append(ipv4_observable)
                     observables.append(ipv4_observable)
-            # We may consider to change this in future.
             elif product_type in DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO:
-                domain = alert.get("entity")
-                domain_observable = self._create_observable("domain", domain, alert)
-                stix_objects.append(domain_observable)
-                observables.append(domain_observable)
+                entity = alert.get("entity", "")
+                observable_type = (
+                    "email"
+                    if product_type == "email" and "@" in entity and "://" not in entity
+                    else "url"
+                )
+                observable = self._create_observable(observable_type, entity, alert)
+                stix_objects.append(observable)
+                observables.append(observable)
             else:
                 self.helper.connector_logger.warning(
                     "[DoppelConverter] Unsupported product type, skipping alert",
@@ -645,7 +671,7 @@ class ConverterToStix:
         # First of all check do we've indicators already present or not
         # with given alert_id or alert_entity value (observable value)
         alert_id = alert.get("id")
-        entity_value = alert.get("entity", "")
+        entity_value = observables[0].get("value", alert.get("entity", ""))
 
         existing_indicators = self._find_indicators_by_alert_id_or_entity_value(
             alert_id, entity_value
@@ -742,13 +768,7 @@ class ConverterToStix:
             return []
         # else in_taken_down_state = actioned/taken_down
 
-        product_type = alert.get("product")
-
         alert_id = alert.get("id")
-        # Keep the raw entity for the indicator name (used by name-based lookups)
-        # and only escape the value embedded into the STIX pattern.
-        raw_entity_value = alert.get("entity", "")
-        entity_value = raw_entity_value.replace("\\", "\\\\").replace("'", "\\'")
 
         # Fall back to a timezone-aware "now" so STIX objects never receive a
         # None (or naive) created/modified timestamp.
@@ -758,58 +778,35 @@ class ConverterToStix:
 
         indicators = []
 
-        if product_type == "telco":
-            pattern = f"[tracking-number:value = '{entity_value}']"
-            name = raw_entity_value
-            phone_number_indicator = self._create_indicator(
-                alert, pattern, name, created_at, modified_at
-            )
-
-            stix_objects.append(phone_number_indicator)
-            indicators.append(phone_number_indicator)
-        elif product_type == "domains":
-            pattern = f"[domain-name:value = '{entity_value}']"
-            name = raw_entity_value
-
-            domain_indicator = self._create_indicator(
-                alert, pattern, name, created_at, modified_at
-            )
-
-            stix_objects.append(domain_indicator)
-            indicators.append(domain_indicator)
-
-            ip_address = (
-                alert.get("entity_content", {}).get("root_domain", {}).get("ip_address")
-            )
-
-            if ip_address:
-                raw_ip_address = ip_address
-                escaped_ip_address = raw_ip_address.replace("\\", "\\\\").replace(
-                    "'", "\\'"
+        pattern_types = {
+            "domain-name": "domain-name",
+            "email-addr": "email-addr",
+            "ipv4-addr": "ipv4-addr",
+            "phone-number": "tracking-number",
+            "url": "url",
+        }
+        for observable in observables:
+            observable_type = observable.get("type")
+            pattern_type = pattern_types.get(observable_type)
+            if not pattern_type:
+                self.helper.connector_logger.warning(
+                    "[DoppelConverter] Unsupported observable type for indicator",
+                    meta={
+                        "alert_id": alert_id,
+                        "observable_type": observable_type,
+                    },
                 )
-                pattern = f"[ipv4-addr:value = '{escaped_ip_address}']"
-                name = raw_ip_address
+                continue
 
-                ipv4_indicator = self._create_indicator(
-                    alert, pattern, name, created_at, modified_at
-                )
-
-                stix_objects.append(ipv4_indicator)
-                indicators.append(ipv4_indicator)
-        elif product_type in DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO:
-            pattern = f"[domain-name:value = '{entity_value}']"
-            name = raw_entity_value
-            domain_indicator = self._create_indicator(
-                alert, pattern, name, created_at, modified_at
+            raw_value = observable.get("value", "")
+            escaped_value = raw_value.replace("\\", "\\\\").replace("'", "\\'")
+            pattern = f"[{pattern_type}:value = '{escaped_value}']"
+            indicator = self._create_indicator(
+                alert, pattern, raw_value, created_at, modified_at
             )
+            stix_objects.append(indicator)
+            indicators.append(indicator)
 
-            stix_objects.append(domain_indicator)
-            indicators.append(domain_indicator)
-        else:
-            self.helper.connector_logger.warning(
-                "[DoppelConverter] Unsupported product type, skipping alert",
-                meta={"alert_id": alert_id, "product_type": product_type},
-            )
         return indicators
 
     def _handle_indicator_observable_relationship(

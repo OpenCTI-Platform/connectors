@@ -33,3 +33,6 @@ connector:
   # send_to_s3_bucket: '' # If empty, uses the OpenCTI bucket
   # send_to_s3_folder: 'connectors'
   # send_to_s3_retention: 7 # Days to keep objects before cleanup (0 = disable)
+
+# stream:
+#   default_applicant_id: null # optional (default: null)

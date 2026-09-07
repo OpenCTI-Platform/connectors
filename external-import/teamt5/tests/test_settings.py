@@ -13,7 +13,7 @@ at the first API call).
 
 import pytest
 from pydantic import SecretStr, ValidationError
-from teamt5_connector.settings import TeamT5Config
+from teamt5_connector.settings import ConnectorSettings, TeamT5Config
 
 
 class TestRequireSomeAuthentication:
@@ -108,3 +108,62 @@ class TestEmptySecretsAreTreatedAsMissing:
             client_secret=SecretStr(""),
         )
         assert cfg.api_key.get_secret_value() == "real-key"
+
+
+class TestConnectorSettingsValidInput:
+    """Pins VC325: settings must accept valid input."""
+
+    def test_full_valid_settings(self):
+        config_dict = {
+            "opencti": {
+                "url": "http://localhost:8080",
+                "token": "test-token-uuid",
+            },
+            "connector": {
+                "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                "name": "TeamT5 Test",
+                "scope": "teamt5",
+                "log_level": "info",
+                "duration_period": "PT6H",
+            },
+            "teamt5": {
+                "api_base_url": "https://api.threatvision.org/",
+                "client_id": "my-client-id",
+                "client_secret": "my-client-secret",
+                "tlp_level": "amber",
+                "first_run_retrieval_timestamp": 1700000000,
+            },
+        }
+
+        class FakeConnectorSettings(ConnectorSettings):
+            @classmethod
+            def _load_config_dict(cls, _, handler):
+                return handler(config_dict)
+
+        settings = FakeConnectorSettings()
+        helper_config = settings.to_helper_config()
+        assert isinstance(helper_config, dict)
+        assert settings.teamt5.api_base_url == "https://api.threatvision.org/"
+
+    def test_minimal_valid_settings(self):
+        config_dict = {
+            "opencti": {
+                "url": "http://localhost:8080",
+                "token": "test-token-uuid",
+            },
+            "connector": {
+                "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            },
+            "teamt5": {
+                "api_key": "my-api-key",
+            },
+        }
+
+        class FakeConnectorSettings(ConnectorSettings):
+            @classmethod
+            def _load_config_dict(cls, _, handler):
+                return handler(config_dict)
+
+        settings = FakeConnectorSettings()
+        helper_config = settings.to_helper_config()
+        assert isinstance(helper_config, dict)

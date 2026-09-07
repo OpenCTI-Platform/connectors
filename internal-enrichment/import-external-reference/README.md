@@ -10,9 +10,6 @@
 - [Installation](#installation)
   - [Requirements](#requirements)
 - [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [Import External Reference Configuration](#import-external-reference-configuration)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -47,38 +44,12 @@ This is useful for:
 
 ---
 
-## Configuration
+## Configuration variables
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
-
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | Yes | Option `ImportExternalReference` |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `External-Reference` |
-| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-import (recommended: `false`) |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
-
-### Import External Reference Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `import_as_pdf` | `IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF` | Yes | Import as PDF file |
-| `import_as_md` | `IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD` | Yes | Import as Markdown file |
-| `import_pdf_as_md` | `IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD` | No | Convert PDF to Markdown |
-| `timestamp_files` | `IMPORT_EXTERNAL_REFERENCE_TIMESTAMP_FILES` | No | Timestamp imported files to prevent overwriting |
-| `cache_size` | `IMPORT_EXTERNAL_REFERENCE_CACHE_SIZE` | No | Size of LRU URL cache (default: 32) |
-| `cache_ttl` | `IMPORT_EXTERNAL_REFERENCE_CACHE_TTL` | No | Cache TTL in seconds (default: 3600) |
-| `browser_worker_count` | `IMPORT_EXTERNAL_REFERENCE_BROWSER_WORKER_COUNT` | No | Number of browser workers (default: 4) |
-| `max_download_size` | `IMPORT_EXTERNAL_REFERENCE_MAX_DOWNLOAD_SIZE` | No | Maximum download size (default: 50MB) |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ---
 

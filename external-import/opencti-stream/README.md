@@ -33,6 +33,7 @@ written into the bundle file and remapped on the target instance via
     - [Base connector environment variables](#base-connector-environment-variables)
     - [Live stream parameters](#live-stream-parameters)
     - [Output mode parameters](#output-mode-parameters)
+    - [OpenCTI Stream parameters](#opencti-stream-parameters)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -120,6 +121,14 @@ toggling the matching flag(s).
 For S3 credentials and endpoint, the connector reuses the OpenCTI platform's S3
 configuration by default. To override, set the standard `S3_ENDPOINT`, `S3_PORT`,
 `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_USE_SSL` and `S3_BUCKET_REGION` variables.
+
+### OpenCTI Stream parameters
+
+These parameters live under the `stream:` section of `config.yml`.
+
+| Parameter            | config.yml           | Docker environment variable          | Default | Mandatory | Description                                                                                                                                                                                                 |
+|----------------------|----------------------|--------------------------------------|---------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Default Applicant ID | default_applicant_id | `STREAM_DEFAULT_APPLICANT_ID`        |         | No        | Fallback `applicant_id` (an OpenCTI user UUID) used when a stream event has no `origin.user_id`. Defaults to empty, which leaves `applicant_id` null. Set it to avoid emitting bundles with a null applicant, which the `diode-import` connector rejects. |
 
 ## Deployment
 
@@ -288,8 +297,12 @@ payload:
   target instance, [`diode-import`](../diode-import/) maps it through
   `DIODE_IMPORT_APPLICANT_MAPPINGS` to the matching local user.
 
-If `origin.user_id` is missing (e.g. system-generated events), the connector's
-registration user is used.
+If `origin.user_id` is missing (e.g. system-generated events such as bulk label
+updates), `applicant_id` is left empty by default, so the bundle is emitted with a null
+applicant. Set `STREAM_DEFAULT_APPLICANT_ID` (`stream.default_applicant_id`)
+to a user UUID to use as a fallback applicant in that case — useful because a null
+applicant otherwise causes the target `diode-import` connector to reject the bundle.
+When `origin.user_id` is present, it always takes precedence over the configured default.
 
 ## Debugging
 
