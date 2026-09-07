@@ -10,9 +10,22 @@ connector:
   auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
 
 doppel_alert_takedown:
+  api_base_url: 'https://api.doppel.com' # optional (default: 'https://api.doppel.com')
+
+  # Choose exactly one authentication block. Do not configure V1 and V2
+  # credentials together.
+  api_version: 'v1'
+
+  # V1 only
   api_key: 'ChangeMe'
   user_api_key: 'ChangeMe'
-  api_base_url: 'https://api.doppel.com' # optional (default: 'https://api.doppel.com')
+
+  # V2 only: set api_version to 'v2', remove the V1 fields above, and uncomment:
+  # client_id: 'ChangeMe'
+  # client_secret: 'ChangeMe'
+  # token_url: null # defaults to https://api.doppel.com/oauth/token
+  # token_audience: 'doppel-external'
+
   tags: [] # optional, list of tags added to created alerts (default: empty)
   takedown_comment: 'Confirmed by OpenCTI — requesting takedown.' # optional
   max_tlp: 'TLP:RED' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:RED')

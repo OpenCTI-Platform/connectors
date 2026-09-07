@@ -34,7 +34,7 @@ STIX 2.1 Observable object, enriched with metadata such as severity, entity stat
 ### Requirements
 
 - OpenCTI Platform version >= 6.x
-- Doppel API access (URL + API Key + User API Key (optional) + Organization Code (optional))
+- Doppel API access using either V1 API keys or V2 OAuth client credentials
 
 ## Configuration variables
 
@@ -65,10 +65,15 @@ Below are the parameters you'll need to set for running the connector properly:
 
 | Parameter               | config.yml                     | Docker environment variable      | Role |  Default | Mandatory | Description                           |
 |-------------------------|--------------------------------|----------------------------------|---------|---------|-----------|---------------------------------------|
-| API base URL            | doppel.api_base_url            | `DOPPEL_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.doppel.com/v1        | Yes       | Doppel API base URL                   |
-| API key                 | doppel.api_key                 | `DOPPEL_API_KEY`                 |    Authentication: Provides the primary security credentials for service access.      |         | Yes       | Doppel API key                        |
-| User API key                 | doppel.user_api_key       | `DOPPEL_USER_API_KEY`            |     Authorization: Used for user-specific identity.     |         | No        | Doppel User API key                   |
-| Organization Code       | doppel.organization_code       | `DOPPEL_ORGANIZATION_CODE`       |     Scope: Identifies the specific organizational workspace for multi-tenant keys.     |         | No        | Organization Code for Doppel API Keys |
+| API base URL            | doppel.api_base_url            | `DOPPEL_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.doppel.com        | No       | Doppel API base URL                   |
+| API version             | doppel.api_version             | `DOPPEL_API_VERSION`             | Authentication: Selects V1 API keys or V2 OAuth. | v1 | No | `v1` or `v2` |
+| API key                 | doppel.api_key                 | `DOPPEL_API_KEY`                 |    Authentication: Provides the primary V1 credential.      |         | V1 only       | Doppel V1 API key                        |
+| User API key            | doppel.user_api_key            | `DOPPEL_USER_API_KEY`            | Authorization: Provides optional V1 user identity. | | No | Doppel V1 user API key |
+| Organization Code       | doppel.organization_code       | `DOPPEL_ORGANIZATION_CODE`       | Scope: Selects a workspace for multi-tenant V1 keys. | | No | Doppel V1 organization code |
+| OAuth client ID         | doppel.client_id               | `DOPPEL_CLIENT_ID`               | Authentication: Identifies the V2 OAuth client. | | V2 only | Doppel V2 client ID |
+| OAuth client secret     | doppel.client_secret           | `DOPPEL_CLIENT_SECRET`           | Authentication: Authenticates the V2 OAuth client. | | V2 only | Doppel V2 client secret |
+| OAuth token URL         | doppel.token_url               | `DOPPEL_TOKEN_URL`               | Authentication: Overrides the V2 token endpoint. | API host + /oauth/token | No | Doppel OAuth token URL |
+| OAuth audience          | doppel.token_audience          | `DOPPEL_TOKEN_AUDIENCE`          | Authentication: Sets the V2 token audience. | doppel-external | No | Doppel OAuth audience |
 | Alerts endpoint         | doppel.alerts_endpoint         | `DOPPEL_ALERTS_ENDPOINT`         |     Routing: Specifies the API resource path for alert ingestion.     | /alerts | Yes       | API endpoint for fetching alerts      |
 | Historical polling days | doppel.historical_polling_days | `DOPPEL_HISTORICAL_POLLING_DAYS` |     Synchronization: Determines the time-window for initial data fetching.     | 30      | No        | Days of data to fetch on first run    |
 | Max retries             | doppel.max_retries             | `DOPPEL_MAX_RETRIES`             |     Resilience: Configures automated error recovery from transient failures.     | 3       | No        | Retry attempts on API errors          |
@@ -77,6 +82,17 @@ Below are the parameters you'll need to set for running the connector properly:
 | Page size               | doppel.page_size               | `DOPPEL_PAGE_SIZE`               |    Performance: Optimizes request volume and memory usage per fetch.      | 100                       | No        | Number of alerts to fetch per request |
 | Enable Grouping Case    | doppel.enable_grouping_case    | `DOPPEL_ENABLE_GROUPING_CASE`    |    Feature Control: Enables grouping case creation.     | false                     | No        | Enable grouping case processing      |
 | Enable RFT Case         | doppel.enable_rft_case         | `DOPPEL_ENABLE_RFT_CASE`         |    Feature Control: Enables RFT case creation.     | false                     | No        | Enable RFT case processing           |
+
+Configure exactly one authentication mode. V1 and V2 credential fields are
+mutually exclusive, and the connector rejects a configuration containing both.
+When changing versions, remove the inactive credential variables.
+
+For V2, create a client ID and client secret in Doppel Vision, set
+`DOPPEL_API_VERSION=v2`, and configure `DOPPEL_CLIENT_ID` and
+`DOPPEL_CLIENT_SECRET`. The connector exchanges those credentials at
+`/oauth/token`, caches the bearer token in memory, and refreshes it before expiry
+or once after a `401 Unauthorized` response. V1 remains the default for backward
+compatibility.
 
 ## Deployment
 
@@ -102,10 +118,10 @@ Example:
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
       - DOPPEL_API_BASE_URL=https://api.doppel.com
-      - DOPPEL_API_KEY=changeme
-      - DOPPEL_USER_API_KEY=changeme
-      - DOPPEL_ORGANIZATION_CODE=changeme
-      - DOPPEL_ALERTS_ENDPOINT=/v1/alerts
+      - DOPPEL_API_VERSION=v2
+      - DOPPEL_CLIENT_ID=changeme
+      - DOPPEL_CLIENT_SECRET=changeme
+      - DOPPEL_ALERTS_ENDPOINT=/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30
       - DOPPEL_MAX_RETRIES=3
       - DOPPEL_RETRY_DELAY=30
@@ -153,6 +169,9 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 ## Behavior
 
 - Fetches alerts from Doppel API paginated by `last_activity_timestamp`
+- Identifies every outbound Doppel API request, including V2 token minting, with
+  `x-doppel-client: opencti/7.260901.0` and
+  `User-Agent: doppel-opencti/7.260901.0` for usage attribution.
 - Converts each alert into a STIX 2.1 Observable with a value-appropriate type:
   - `domains` alerts become `Domain-Name` observables. URL schemes, paths,
     queries, and fragments added by the Doppel API are removed from the domain
