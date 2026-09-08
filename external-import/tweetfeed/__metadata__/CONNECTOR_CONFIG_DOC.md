@@ -21,3 +21,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | TWEETFEED_ORG_NAME | `string` |  | string | `"Tweetfeed"` | Name of the author organization created in OpenCTI. |
 | TWEETFEED_ORG_DESCRIPTION | `string` |  | string | `"Tweetfeed, a connector to import IOC from Twitter."` | Description of the author organization created in OpenCTI. |
 | TWEETFEED_DAYS_BACK_IN_TIME | `integer` |  | integer | `30` | Number of days to retrieve data back in time. |
+| TWEETFEED_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"clear"` | TLP marking applied to imported observables and indicators (clear, white, green, amber, amber+strict, red). |

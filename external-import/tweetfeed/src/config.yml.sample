@@ -18,3 +18,4 @@ connector:
 #   org_name: 'Tweetfeed'
 #   org_description: 'Tweetfeed, a connector to import IOC from Twitter.'
 #   days_back_in_time: 30
+#   tlp_level: 'clear' # Available values are: clear, white, green, amber, amber+strict, red - Default: "clear"

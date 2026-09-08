@@ -21,4 +21,5 @@ services:
       # - TWEETFEED_ORG_NAME=Tweetfeed
       # - "TWEETFEED_ORG_DESCRIPTION=Tweetfeed, a connector to import IOC from Twitter."
       # - TWEETFEED_DAYS_BACK_IN_TIME=30 # Number of days to retrieve data back in time
+      # - TWEETFEED_TLP_LEVEL=clear # Available values are: clear, white, green, amber, amber+strict, red
     restart: always
