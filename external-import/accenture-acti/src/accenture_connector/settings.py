@@ -8,6 +8,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -79,6 +80,13 @@ class AccentureActiConfig(BaseConfigModel):
     )
     s3_bucket_secret_key: SecretStr = Field(
         description="The AWS secret key used to read the Accenture ACTI S3 bucket.",
+    )
+    client_tlp_level: Literal[
+        "clear", "white", "green", "amber", "amber+strict", "red"
+    ] = DeprecatedField(
+        deprecated="Use 'ACCENTURE_ACTI_TLP_LEVEL' instead.",
+        new_namespaced_var="tlp_level",
+        removal_date="2027-06-30",
     )
     tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"] = (
         Field(

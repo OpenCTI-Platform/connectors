@@ -92,6 +92,20 @@
       "type": "string",
       "writeOnly": true
     },
+    "ACCENTURE_ACTI_CLIENT_TLP_LEVEL": {
+      "default": null,
+      "deprecated": true,
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "description": "Use ACCENTURE_ACTI_TLP_LEVEL instead. (removal scheduled for 2027-06-30)"
+    },
     "ACCENTURE_ACTI_TLP_LEVEL": {
       "default": "amber+strict",
       "description": "The TLP marking applied to the imported data.",

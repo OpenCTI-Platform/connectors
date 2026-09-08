@@ -155,6 +155,61 @@ def test_settings_should_default_connector_id():
     assert UUID(settings.connector.id).version == 4
 
 
+def test_settings_should_migrate_deprecated_client_tlp_level():
+    """The legacy `ACCENTURE_ACTI_CLIENT_TLP_LEVEL` variable MUST still feed `tlp_level`."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        """
+        Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
+        It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict.
+        """
+
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "accenture_acti": {
+                        **MINIMAL_VALID_SETTINGS_DICT["accenture_acti"],
+                        "client_tlp_level": "green",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="accenture_acti.client_tlp_level"):
+        settings = FakeConnectorSettings()
+
+    assert settings.accenture_acti.tlp_level == "green"
+
+
+def test_settings_should_prefer_tlp_level_over_deprecated_client_tlp_level():
+    """When both variables are set, the non-deprecated `tlp_level` MUST win."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        """
+        Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
+        It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict.
+        """
+
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "accenture_acti": {
+                        **MINIMAL_VALID_SETTINGS_DICT["accenture_acti"],
+                        "client_tlp_level": "green",
+                        "tlp_level": "red",
+                    },
+                }
+            )
+
+    with pytest.warns(UserWarning, match="accenture_acti.client_tlp_level"):
+        settings = FakeConnectorSettings()
+
+    assert settings.accenture_acti.tlp_level == "red"
+
+
 def test_settings_should_expose_taxonomy_mapping():
     """The taxonomy mapping bundled with the connector MUST be exposed through the settings."""
 
