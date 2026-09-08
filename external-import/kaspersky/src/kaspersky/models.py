@@ -10,6 +10,27 @@ from pydantic.v1.errors import DateError, DateTimeError
 
 log = logging.getLogger(__name__)
 
+# Additional Kaspersky-specific date formats not handled by pydantic parsers.
+_EXTRA_DATE_FORMATS = (
+    "%d-%m-%Y",  # 12-10-2018
+    "%d.%m.%Y",  # 12.10.2018
+    "%Y.%m.%d",  # 2018.10.12
+    "%Y-%m",  # 2018-10
+    "%b %d %Y",  # Oct 12 2018
+    "%b %d, %Y",  # Oct 12, 2018
+    "%B %d %Y",  # October 12 2018
+    "%B %d, %Y",  # October 12, 2018
+)
+
+
+def _clean_last_modified(value: str) -> str:
+    """Normalize list-string values such as ['2020-03-05'] to 2020-03-05."""
+    cleaned = value.strip()
+    if cleaned.startswith("[") and cleaned.endswith("]"):
+        cleaned = cleaned[1:-1].strip()
+        cleaned = cleaned.strip("\"'").strip()
+    return cleaned
+
 
 class Base(BaseModel):
     """Kaspersky base model."""
@@ -89,7 +110,9 @@ class YaraRule(Base):
         if not isinstance(value, str):
             raise ValueError("must be a string")
 
-        if value.strip() == "-":
+        value = _clean_last_modified(value)
+
+        if not value or value == "-":
             return None
 
         try:
@@ -107,8 +130,18 @@ class YaraRule(Base):
                 date_value, datetime.min.time(), tzinfo=timezone.utc
             )
         except DateError:
-            log.error("Unable to parse last_modified value: %s", value)
-            return None
+            # Ignore
+            pass
+
+        for date_format in _EXTRA_DATE_FORMATS:
+            try:
+                parsed_datetime = datetime.strptime(value, date_format)
+                return parsed_datetime.replace(tzinfo=timezone.utc)
+            except ValueError:
+                continue
+
+        log.error("Unable to parse last_modified value: %s", value)
+        return None
 
 
 class Yara(Base):
