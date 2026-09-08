@@ -15,7 +15,7 @@ services:
       - ALIENVAULT_TLP=White  # Optional (default: White)
       - ALIENVAULT_CREATE_OBSERVABLES=true  # Optional (default: true)
       - ALIENVAULT_CREATE_INDICATORS=true  # Optional (default: true)
-      - ALIENVAULT_PULSE_START_TIMESTAMP=2020-05-01T00:00:00  # Optional (default: 2020-05-01T00:00:00) - ISO 8601 format, UTC - BEWARE! Could be a lot of pulses!
+      - ALIENVAULT_PULSE_START_TIMESTAMP=2020-05-01T00:00:00Z  # Optional (default: 2020-05-01T00:00:00Z) - ISO 8601 format, UTC - BEWARE! Could be a lot of pulses!
       - ALIENVAULT_REPORT_TYPE=threat-report  # Optional (default: threat-report)
       - ALIENVAULT_REPORT_STATUS=New  # Optional (default: New) - New, In progress, Analyzed and Closed
       - ALIENVAULT_GUESS_MALWARE=false  # Optional (default: false) - Use tags to guess malware

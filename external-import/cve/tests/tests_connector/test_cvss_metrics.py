@@ -58,6 +58,7 @@ def test_vulnerability_to_stix2_maps_cvss_30_when_31_absent():
             {
                 "type": "Primary",
                 "cvssData": {
+                    "vectorString": "CVSS:3.0/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:L/A:N",
                     "baseScore": 5.2,
                     "baseSeverity": "MEDIUM",
                     "attackVector": "NETWORK",
@@ -79,6 +80,12 @@ def test_vulnerability_to_stix2_maps_cvss_30_when_31_absent():
     assert stix_dict["x_opencti_base_score"] == 5.2
     assert stix_dict["x_opencti_base_severity"] == "MEDIUM"
     assert stix_dict["x_opencti_cvss_scope"] == "UNCHANGED"
+    # The exact NVD vector string must be preserved so the CVSS:3.0/ prefix is
+    # kept and OpenCTI does not fall back to reconstructing it as CVSS:3.1/.
+    assert (
+        stix_dict["x_opencti_cvss_vector_string"]
+        == "CVSS:3.0/AV:N/AC:H/PR:L/UI:R/S:U/C:L/I:L/A:N"
+    )
 
 
 def test_vulnerability_to_stix2_prefers_cvss_31_over_30():
@@ -90,6 +97,7 @@ def test_vulnerability_to_stix2_prefers_cvss_31_over_30():
             {
                 "type": "Primary",
                 "cvssData": {
+                    "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
                     "baseScore": 9.8,
                     "baseSeverity": "CRITICAL",
                     "attackVector": "NETWORK",
@@ -107,6 +115,7 @@ def test_vulnerability_to_stix2_prefers_cvss_31_over_30():
             {
                 "type": "Primary",
                 "cvssData": {
+                    "vectorString": "CVSS:3.0/AV:L/AC:H/PR:L/UI:R/S:U/C:L/I:L/A:L",
                     "baseScore": 4.3,
                     "baseSeverity": "MEDIUM",
                     "attackVector": "LOCAL",
@@ -128,6 +137,10 @@ def test_vulnerability_to_stix2_prefers_cvss_31_over_30():
     assert stix_dict["x_opencti_base_score"] == 9.8
     assert stix_dict["x_opencti_base_severity"] == "CRITICAL"
     assert stix_dict["x_opencti_cvss_scope"] == "CHANGED"
+    assert (
+        stix_dict["x_opencti_cvss_vector_string"]
+        == "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"
+    )
 
 
 def test_vulnerability_to_stix2_cvss_30_secondary_selected_when_no_primary():

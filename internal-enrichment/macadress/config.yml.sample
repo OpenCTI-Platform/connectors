@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: '3dc00c31-f8f4-470b-bfb4-35a11ccd5c75'
+  name: 'macadress.com'
+  scope: 'mac-addr'
+  log_level: 'info'
+  auto: false
+
+macadress:
+  api_base_url: 'https://api.macadress.com'
+  api_key: 'ChangeMe'
+  max_tlp: 'TLP:AMBER'
+  default_score: 30
+  create_note: true
+  create_vendor_identity: true

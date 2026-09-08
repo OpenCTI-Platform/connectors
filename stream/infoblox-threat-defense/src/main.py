@@ -31,6 +31,12 @@ class InfobloxThreatDefenseConnector:
         self.infoblox_custom_list_id = get_config_variable(
             "INFOBLOX_CUSTOM_LIST_ID", ["infoblox", "custom_list_id"], config
         )
+        self.infoblox_url = get_config_variable(
+            "INFOBLOX_URL",
+            ["infoblox", "url"],
+            config,
+            default="https://csp.infoblox.com",
+        ).rstrip("/")
 
     def check_stream_id(self):
         """
@@ -75,7 +81,7 @@ class InfobloxThreatDefenseConnector:
 
     def get_custom_lists(self):
         """Retrieve all custom lists from the Infoblox portal."""
-        url = "https://csp.infoblox.com/api/atcfw/v1/named_lists"
+        url = f"{self.infoblox_url}/api/atcfw/v1/named_lists"
         response = self.make_request_with_retries(
             "GET", url, headers=self.get_headers()
         )
@@ -90,7 +96,7 @@ class InfobloxThreatDefenseConnector:
 
     def update_custom_list(self, list_id, updated_items, operation):
         """Update a custom list with the given items by adding or removing them."""
-        url = f"https://csp.infoblox.com/api/atcfw/v1/named_lists/{list_id}"
+        url = f"{self.infoblox_url}/api/atcfw/v1/named_lists/{list_id}"
         response = self.make_request_with_retries(
             "GET", url, headers=self.get_headers()
         )

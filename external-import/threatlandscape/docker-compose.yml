@@ -1,0 +1,28 @@
+version: '3'
+services:
+  connector-threatlandscape:
+    image: opencti/connector-threatlandscape:latest
+    environment:
+      # OpenCTI connection
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Connector settings
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Threat Landscape
+      - CONNECTOR_SCOPE=indicator,report,threat-actor,malware,campaign,intrusion-set,attack-pattern,vulnerability,identity,location
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      # Threat Landscape API settings
+      - THREATLANDSCAPE_API_BASE_URL=https://api.threatlandscape.io/rest/v1
+      - THREATLANDSCAPE_API_KEY=CHANGEME
+      - THREATLANDSCAPE_IMPORT_SINCE=P30D        # optional (default: P30D)
+      - THREATLANDSCAPE_FEED=intelligence         # intelligence | intelligence-osint | intelligence-darknet | ioc
+      - THREATLANDSCAPE_PAGE_SIZE=100            # optional (default: 100)
+    restart: unless-stopped
+    networks:
+      - default
+
+networks:
+  default:
+    external: true
+    name: docker_default

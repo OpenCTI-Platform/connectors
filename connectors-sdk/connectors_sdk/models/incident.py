@@ -38,13 +38,13 @@ class Incident(BaseIdentifiedEntity):
         default=None,
         description="The time that this Incident was last seen.",
     )
-    labels: list[str] | None = Field(
-        default=None,
-        description="Labels of the Incident.",
-    )
     objective: str | None = Field(
         default=None,
         description="The objective of this Incident.",
+    )
+    aliases: list[str] | None = Field(
+        default=None,
+        description="Alternative names used to identify this Incident.",
     )
 
     def to_stix2_object(self) -> Stix2Incident:
@@ -56,7 +56,6 @@ class Incident(BaseIdentifiedEntity):
             ),
             name=self.name,
             description=self.description,
-            labels=self.labels,
             allow_custom=True,
             source=self.source,
             severity=self.severity,
@@ -64,5 +63,6 @@ class Incident(BaseIdentifiedEntity):
             first_seen=self.first_seen,
             last_seen=self.last_seen,
             objective=self.objective,
+            aliases=self.aliases,
             **self._common_stix2_properties(),
         )

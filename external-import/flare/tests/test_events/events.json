@@ -10,7 +10,10 @@
         "flare_url": "https://app.flare.io/#/stealer_log/stealer_logs/123456789"
       },
       "tenant_metadata": {
-        "severity": 2,
+        "severity": {
+          "original": "medium",
+          "override": null
+        },
         "notes": "Some notes",
         "tags": []
       },
@@ -36,7 +39,10 @@
         "flare_url": "https://app.flare.io/#/leak\/groups\/email\/example@example.com\/url_login_pass\/1@1"
       },
       "tenant_metadata": {
-        "severity": 3,
+        "severity": {
+          "original": "high",
+          "override": null
+        },
         "notes": "Some more notes",
         "tags": []
       },
@@ -58,7 +64,10 @@
         "flare_url": "https:\/\/app.flare.io\/#\/domain\/flare\/examples.com"
       },
       "tenant_metadata": {
-        "severity": 1,
+        "severity": {
+          "original": "low",
+          "override": null
+        },
         "notes": null,
         "tags": []
       },
@@ -80,7 +89,10 @@
         "flare_url": "https:\/\/app.flare.io\/#\/document\/dark\/example.com"
       },
       "tenant_metadata": {
-        "severity": 3,
+        "severity": {
+          "original": "high",
+          "override": null
+        },
         "notes": null,
         "tags": []
       },

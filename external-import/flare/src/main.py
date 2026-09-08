@@ -18,6 +18,7 @@ def main() -> None:
         api_key=settings.flare.api_key,
         api_domain=settings.flare.api_domain,
         tenant_id=settings.flare.tenant_id,
+        identifier_group_id=settings.flare.identifier_group_id,
     )
 
     author_identity = stix2.Identity(

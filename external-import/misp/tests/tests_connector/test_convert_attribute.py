@@ -1,6 +1,6 @@
-"""Unit tests for ``AttributeConverter.create_stix2_ip_address``.
+"""Unit tests for ``AttributeConverter``.
 
-Pins the IPv4 / IPv6 type-tagging contract added in this PR:
+Pins the IPv4 / IPv6 type-tagging contract of ``create_stix2_ip_address``:
 
 * Single-host IPv4 (``1.2.3.4``) → ``stix2.IPv4Address`` (regression
   guard — pre-PR behaviour also handled this correctly).
@@ -21,12 +21,100 @@ Pins the IPv4 / IPv6 type-tagging contract added in this PR:
   anything that does not parse as IPv4 is type-tagged as IPv6 (the
   MISP source of truth gets to decide what is and is not a valid IP;
   the converter only chooses the STIX type).
+
+Also covers ``AttributeConverter.process()`` Sighting handling: the
+``Organisation`` payload may arrive as a dict or a list of dicts, and
+unexpected types are skipped without raising.
 """
 
+import pycti
 import pytest
 import stix2
+from api_client.models import ExtendedAttributeItem
 from connector.use_cases.common import ConverterConfig
 from connector.use_cases.convert_attribute import AttributeConverter
+
+
+def _make_author() -> stix2.Identity:
+    return stix2.Identity(
+        id=pycti.Identity.generate_id(name="Author Org", identity_class="organization"),
+        name="Author Org",
+        identity_class="organization",
+    )
+
+
+def _make_attribute_with_sighting(sighting_organisation):
+    """Build an `ExtendedAttributeItem` carrying a Sighting payload via Pydantic
+    extras (the model has `extra="allow"`)."""
+    return ExtendedAttributeItem.model_validate(
+        {
+            "type": "ip-dst",
+            "category": "Network activity",
+            "value": "1.2.3.4",
+            "to_ids": True,
+            "timestamp": "1700000000",
+            "comment": "test",
+            "Sighting": [
+                {
+                    "date_sighting": "1700000000",
+                    "Organisation": sighting_organisation,
+                }
+            ],
+        }
+    )
+
+
+def _process(attribute):
+    converter = AttributeConverter(
+        ConverterConfig(external_reference_base_url="http://dummy")
+    )
+    author = _make_author()
+    return converter.process(
+        attribute=attribute,
+        labels=[],
+        score=50,
+        author=author,
+        markings=[],
+        external_references=[],
+        include_relationships=True,
+    )
+
+
+def test_sighting_with_organisation_as_dict_creates_sighted_by():
+    # GIVEN MISP returns Organisation as a dict (the canonical shape)
+    attribute = _make_attribute_with_sighting({"name": "External Org"})
+
+    # WHEN processing the attribute
+    stix_objects = _process(attribute)
+
+    # THEN a sighted-by Identity is emitted using the dict's name
+    identities = [o for o in stix_objects if isinstance(o, stix2.Identity)]
+    assert any(i.name == "External Org" for i in identities)
+
+
+def test_sighting_with_organisation_as_list_does_not_raise():
+    # GIVEN MISP returns Organisation as a list of dicts (seen in some
+    # deployments / aggregated feeds; previously crashed with TypeError)
+    attribute = _make_attribute_with_sighting([{"name": "External Org"}])
+
+    # WHEN processing the attribute
+    stix_objects = _process(attribute)
+
+    # THEN processing succeeds and the sighted-by Identity is still emitted
+    identities = [o for o in stix_objects if isinstance(o, stix2.Identity)]
+    assert any(i.name == "External Org" for i in identities)
+
+
+def test_sighting_with_organisation_as_unexpected_type_is_skipped():
+    # GIVEN Organisation has an unexpected shape
+    attribute = _make_attribute_with_sighting("not-a-dict-or-list")
+
+    # WHEN processing the attribute
+    stix_objects = _process(attribute)
+
+    # THEN no sighted-by Identity is emitted, but processing does not raise
+    identities = [o for o in stix_objects if isinstance(o, stix2.Identity)]
+    assert identities == []
 
 
 @pytest.fixture

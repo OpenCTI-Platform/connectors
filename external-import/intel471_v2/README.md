@@ -24,6 +24,21 @@ The following table outlines the data availability across both platforms.
 
 > Each stream can be enabled or disabled and configured separately (see "Configuration" section for more details).
 
+### 🎯 Looking for threat hunt packages?
+
+This connector ingests **intelligence** from Titan and Verity471 on a schedule. It does not cover Intel 471's
+**detection content** — the curated hunt packages (sigma detections plus analyst runbooks, mitigation guidance and
+validation procedures) published on [Intel 471 Hunter](https://hunter.cyborgsecurity.io/), formerly Cyborg Security.
+
+For those, use the [Intel 471 Hunter connector](../../internal-enrichment/intel471-hunt/). It is an *internal
+enrichment* connector: an analyst triggers it on a Threat-Actor, Campaign, Attack-Pattern, Vulnerability, Malware,
+Tool, Sector or Location, and it attaches the matching hunt packages to that entity. The two connectors are
+complementary and can run side by side.
+
+> Hunter uses **separate credentials**: the Cyborg Security API is not yet integrated with the Verity471 API, so the
+> Hunter API key is obtained through a different process and is not interchangeable with your Verity471 Client ID and
+> Client Secret.
+
 ## 🚀 Migration Guide (Titan to Verity471)
 
 Migrating is a straightforward "drop-in" replacement. Because Verity471 provides full parity for existing features, your current data and dashboards will remain consistent.

@@ -1,7 +1,7 @@
 {
   "title": "Sublime Security",
   "slug": "sublime",
-  "description": "Sublime is an email security platform that detects and prevents phishing, malware delivery, BEC, and more. Each threat report imported by the connector is enriched with the URLs, domains, IP addresses, email addresses, file hashes, and more from the malicious message group.\nThe Sublime Security Connector brings email-based threat intelligence into OpenCTI by continuously importing threat reports from the Sublime platform, along with the network indicators and file observables associated with each detected attack.",
+  "description": "Sublime is an email security platform that detects and prevents phishing, malware delivery, BEC, and more. Each threat report imported by the connector is enriched with the URLs, domains, IP addresses, email addresses, file hashes, and more from the malicious message group.",
   "short_description": "The Sublime Security Connector brings email-based threat intelligence into OpenCTI by continuously importing threat reports from the Sublime platform, along with the network indicators and file observables associated with each detected attack.",
   "logo": "external-import/sublime/__metadata__/logo.png",
   "use_cases": [

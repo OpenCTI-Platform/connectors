@@ -51,6 +51,7 @@ def test_incident_to_stix2_object_returns_valid_stix_object(
         last_seen="2024-01-01T00:00:00Z",
         labels=["test-label"],
         objective="Test objective",
+        aliases=["Test alias"],
         author=fake_valid_organization_author,
         markings=fake_valid_tlp_markings,
         external_references=fake_valid_external_references,
@@ -65,6 +66,7 @@ def test_incident_to_stix2_object_returns_valid_stix_object(
     assert stix2_obj.description == "Test description"
     assert stix2_obj.labels == ["test-label"]
     assert stix2_obj.objective == "Test objective"
+    assert stix2_obj.aliases == ["Test alias"]
     assert stix2_obj.source == "Test source"
     assert stix2_obj.severity == incident.severity
     assert stix2_obj.incident_type == incident.incident_type

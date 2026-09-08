@@ -60,7 +60,7 @@ class AlienvaultConfig(BaseConfigModel):
     )
     pulse_start_timestamp: str = Field(
         description="The Pulses modified after this timestamp will be imported. Timestamp in ISO 8601 format, UTC.",
-        default="2020-05-01T00:00:00",
+        default="2020-05-01T00:00:00Z",
     )
     report_type: str = Field(
         description="The type of imported reports in the OpenCTI.",

@@ -1,6 +1,5 @@
 import datetime
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -8,31 +7,19 @@ from typing import Dict, List
 
 import plyara
 import stix2
-import yaml
 from plyara.utils import rebuild_yara_rule
-from pycti import Indicator, OpenCTIConnectorHelper, get_config_variable
+from pycti import Indicator, OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 class ImportFileYARA:
-
     def __init__(self):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
         # Extra config
-        self.yara_import_file_split_rules = get_config_variable(
-            "YARA_IMPORT_FILE_SPLIT_RULES",
-            ["yara_import_file", "split_rules"],
-            config,
-            isNumber=False,
-            default=True,
-        )
+        self.yara_import_file_split_rules = self.config.yara_import_file.split_rules
         self.parser = plyara.Plyara()
 
     def _convert_yara_rule_to_stix_indicator(
@@ -70,7 +57,6 @@ class ImportFileYARA:
             id=Indicator.generate_id(pattern),
             name=yara_name,
             description=rule_description,
-            confidence=self.helper.connect_confidence_level,
             pattern_type=pattern_type,
             pattern=pattern,
             labels=rule_labels,
