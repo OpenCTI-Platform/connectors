@@ -50,20 +50,15 @@ export $(grep -v '^#' .env | xargs -d '\n')
 
 or `docker-compose.yml` in the container `environment` section.
 
-with a config.yaml file (dev purposes):
+with a config.yml file (dev purposes):
 
-config.yaml should be composed of 2 levels keys/value such as
+`config.yml` must live next to `app.py` and be composed of 2 levels keys/value such as
 ```yaml
 connector: 
   id: "..."
 ```
-you can then alter the `app.py` file to load the config.yaml using the dedicated adapterr:
-
-```python 
-from tenable_security_center.adapters.config import ConfigLoaderYaml
-
-config = ConfigLoaderYaml("path/to/config.yaml")
-```
+It is loaded automatically by the connector settings, no code change is required.
+A ready-to-use template is available in `config.yml.sample`.
 
 ### OpenCTI environment variables
 
