@@ -81,9 +81,7 @@ def build_runtime(settings: ConnectorSettings | None = None):
             last_successful_scan_at=persisted_state.get("last_successful_scan_at"),
         )
     else:
-        state = ConnectorState.empty(
-            settings.trukno.initial_lookback_days, _utc_now_iso()
-        )
+        state = ConnectorState.empty(settings.trukno.initial_lookback, _utc_now_iso())
     return helper, client, state, settings
 
 

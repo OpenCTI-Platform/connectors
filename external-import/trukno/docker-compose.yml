@@ -13,5 +13,5 @@ services:
       #- CONNECTOR_SCOPE=report,attack-pattern,malware # optional (default: report,attack-pattern,malware)
       #- CONNECTOR_LOG_LEVEL=error # optional (default: error)
       #- TRUKNO_API_BASE_URL=https://api.trukno.com/v2 # optional (default: https://api.trukno.com/v2)
-      #- TRUKNO_INITIAL_LOOKBACK_DAYS=30 # optional (default: 30)
+      #- TRUKNO_INITIAL_LOOKBACK=P30D # optional (default: P30D)
     restart: always

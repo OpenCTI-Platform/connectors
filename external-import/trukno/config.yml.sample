@@ -12,4 +12,4 @@ connector:
 trukno:
   api_base_url: "https://api.trukno.com/v2"
   api_key: "ChangeMe"
-  initial_lookback_days: 30
+  initial_lookback: "P30D"

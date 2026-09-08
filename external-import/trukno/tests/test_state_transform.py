@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 
 from conftest import FIXTURES
 from trukno_connector.opencti_compat import cleanup_bundle_for_opencti
@@ -11,7 +12,7 @@ from trukno_connector.transform import (
 
 def test_first_run_uses_bootstrap_window():
     state = ConnectorState.empty(
-        initial_lookback_days=7, now_iso="2026-04-21T12:00:00Z"
+        initial_lookback=timedelta(days=7), now_iso="2026-04-21T12:00:00Z"
     )
     assert state.last_seen_updated_at == "2026-04-14T12:00:00Z"
 

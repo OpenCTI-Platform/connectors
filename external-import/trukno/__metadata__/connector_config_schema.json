@@ -70,11 +70,11 @@
       "type": "string",
       "writeOnly": true
     },
-    "TRUKNO_INITIAL_LOOKBACK_DAYS": {
-      "default": 30,
-      "description": "Number of days to look back on the first run.",
-      "exclusiveMinimum": 0,
-      "type": "integer"
+    "TRUKNO_INITIAL_LOOKBACK": {
+      "default": "P30D",
+      "description": "The period of time to look back on the first run.",
+      "format": "duration",
+      "type": "string"
     },
     "TRUKNO_INTERVAL_MINUTES": {
       "default": null,

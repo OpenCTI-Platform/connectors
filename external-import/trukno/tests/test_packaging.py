@@ -57,7 +57,13 @@ def test_manager_metadata_exposes_the_sdk_generated_settings_contract():
         "format": "duration",
         "type": "string",
     }
-    assert schema["properties"]["TRUKNO_INITIAL_LOOKBACK_DAYS"]["exclusiveMinimum"] == 0
+    assert schema["properties"]["TRUKNO_INITIAL_LOOKBACK"] == {
+        "default": "P30D",
+        "description": "The period of time to look back on the first run.",
+        "format": "duration",
+        "type": "string",
+    }
+    assert "TRUKNO_INITIAL_LOOKBACK_DAYS" not in schema["properties"]
     assert "CONNECTOR_ID" not in schema["properties"]
     assert "CONNECTOR_ID" not in schema["required"]
 
@@ -69,4 +75,5 @@ def test_root_config_sample_uses_canonical_sdk_namespaces_and_duration():
     assert '  duration_period: "PT1H"' in config_sample
     assert "trukno:" in config_sample
     assert '  api_key: "ChangeMe"' in config_sample
+    assert '  initial_lookback: "P30D"' in config_sample
     assert "interval_minutes" not in config_sample

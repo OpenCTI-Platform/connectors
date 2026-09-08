@@ -290,7 +290,7 @@ def test_build_runtime_uses_sdk_settings_and_unwraps_trukno_secret(monkeypatch):
     monkeypatch.setenv("CONNECTOR_NAME", "TruKno Runtime")
     monkeypatch.setenv("TRUKNO_API_BASE_URL", "https://api.trukno.test/v2")
     monkeypatch.setenv("TRUKNO_API_KEY", "secret")
-    monkeypatch.setenv("TRUKNO_INITIAL_LOOKBACK_DAYS", "7")
+    monkeypatch.setenv("TRUKNO_INITIAL_LOOKBACK", "P7D")
     settings = ConnectorSettings()
 
     monkeypatch.setattr(runtime, "ConnectorSettings", lambda: settings, raising=False)
@@ -301,7 +301,7 @@ def test_build_runtime_uses_sdk_settings_and_unwraps_trukno_secret(monkeypatch):
         runtime.ConnectorState,
         "empty",
         classmethod(
-            lambda cls, initial_lookback_days, now_iso: ConnectorState(
+            lambda cls, initial_lookback, now_iso: ConnectorState(
                 last_seen_updated_at="2026-04-24T12:00:00Z"
             )
         ),
@@ -359,7 +359,7 @@ def test_build_runtime_uses_provided_settings_instance(monkeypatch):
     monkeypatch.setenv("CONNECTOR_ID", "connector-id")
     monkeypatch.setenv("TRUKNO_API_BASE_URL", "https://api.trukno.test/v2")
     monkeypatch.setenv("TRUKNO_API_KEY", "secret")
-    monkeypatch.setenv("TRUKNO_INITIAL_LOOKBACK_DAYS", "7")
+    monkeypatch.setenv("TRUKNO_INITIAL_LOOKBACK", "P7D")
     settings = ConnectorSettings()
 
     monkeypatch.setattr(runtime, "OpenCTIConnectorHelper", DummyHelperWithState)

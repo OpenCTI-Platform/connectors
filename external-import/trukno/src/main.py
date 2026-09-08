@@ -3,11 +3,7 @@ import traceback
 
 from connectors_sdk import ConfigValidationError
 from trukno_connector.runtime import main
-from trukno_connector.settings import (
-    LEGACY_CONFIG_MESSAGE,
-    ConnectorSettings,
-    LegacyConfigPathError,
-)
+from trukno_connector.settings import ConnectorSettings
 
 __all__ = ["ConnectorSettings", "main", "entrypoint"]
 
@@ -16,9 +12,6 @@ def entrypoint() -> int:
     try:
         try:
             settings = ConnectorSettings()
-        except LegacyConfigPathError:
-            print(LEGACY_CONFIG_MESSAGE, file=sys.stderr)
-            return 1
         except (ConfigValidationError, ValueError):
             # SDK validation chains can contain raw inputs, including credentials.
             print(
@@ -26,8 +19,8 @@ def entrypoint() -> int:
                 "or environment variables against config.yml.sample. "
                 "OPENCTI_URL, OPENCTI_TOKEN, CONNECTOR_ID and TRUKNO_API_KEY are required. "
                 "CONNECTOR_DURATION_PERIOD must be a positive ISO 8601 duration; "
-                "TRUKNO_INTERVAL_MINUTES, if set, must be a positive integer "
-                "even when CONNECTOR_DURATION_PERIOD is set.",
+                "TRUKNO_INITIAL_LOOKBACK must be a positive ISO 8601 duration; "
+                "TRUKNO_INTERVAL_MINUTES, if used instead, must be a positive integer.",
                 file=sys.stderr,
             )
             return 1

@@ -8,8 +8,8 @@ class ConnectorState:
     last_successful_scan_at: str | None = None
 
     @classmethod
-    def empty(cls, initial_lookback_days: int, now_iso: str) -> "ConnectorState":
-        bootstrap = _parse_iso_datetime(now_iso) - timedelta(days=initial_lookback_days)
+    def empty(cls, initial_lookback: timedelta, now_iso: str) -> "ConnectorState":
+        bootstrap = _parse_iso_datetime(now_iso) - initial_lookback
         return cls(last_seen_updated_at=_format_utc(bootstrap))
 
     def scan_after(self) -> str:

@@ -22,8 +22,8 @@ It does not yet create threat actors, intrusion sets, indicators, vulnerabilitie
 
 | Dependency       | Version                                    |
 |------------------|--------------------------------------------|
-| OpenCTI Platform | >= 7.x (tested on 7.260904.0)              |
-| pycti            | == 7.260904.0                              |
+| OpenCTI Platform | >= 7.x (tested on 7.260907.0)              |
+| pycti            | == 7.260907.0                              |
 | connectors-sdk   | GitHub `master` (repository subdirectory) |
 | requests         | ~= 2.33.0                                  |
 | Python           | 3.12 (Docker image)                        |
@@ -56,7 +56,7 @@ The remaining variables are optional and fall back to the defaults documented in
 - `CONNECTOR_LOG_LEVEL` (default `error`)
 - `CONNECTOR_DURATION_PERIOD` (default `PT1H`, ISO 8601 duration)
 - `TRUKNO_API_BASE_URL` (default `https://api.trukno.com/v2`)
-- `TRUKNO_INITIAL_LOOKBACK_DAYS` (default `30`)
+- `TRUKNO_INITIAL_LOOKBACK` (default `P30D`, ISO 8601 duration)
 
 `TRUKNO_API_KEY` is a secret setting. The connector sends it as
 `Authorization: Bearer <key>`; an already-prefixed `Bearer <key>` value is
@@ -64,20 +64,11 @@ accepted without adding a second prefix.
 
 ### Configuration Migration
 
-`TRUKNO_CONNECTOR_CONFIG` is no longer supported. If this environment variable
-is non-empty, settings construction and startup fail explicitly without logging
-its configured path or configuration values. Unset it and move configuration to
-the connector-root `config.yml` using `config.yml.sample`, or use environment
-variables. The connector does not load configuration from the legacy custom path.
-
 `CONNECTOR_DURATION_PERIOD` is the canonical scheduling setting and should be
 used for all new deployments. `TRUKNO_INTERVAL_MINUTES` remains accepted only
 to migrate existing runtime configuration: its value is converted to the
 equivalent duration and emits a deprecation warning. When both are supplied,
 the canonical `CONNECTOR_DURATION_PERIOD` value takes precedence.
-The legacy interval must still be a positive integer even when the canonical
-duration is set. Boolean, floating-point, fractional, blank, and non-numeric
-values are rejected rather than coerced.
 
 Additional metadata for Connector Manager and operator documentation is available in:
 
@@ -142,7 +133,8 @@ cases requires an API update timestamp or stable change feed.
   processed batch.
 - `last_successful_scan_at` advances after every successful scan, including an
   empty scan, and bounds the next query with a one-day overlap.
-- On a first run without state, the connector backfills from `now - TRUKNO_INITIAL_LOOKBACK_DAYS`.
+- On a first run without state, the connector backfills from
+  `now - TRUKNO_INITIAL_LOOKBACK`.
 - Existing state containing only `last_seen_updated_at` remains compatible and
   uses that timestamp as the first scan boundary after upgrade.
 - A failed fetch, transform, or send advances neither watermark, so the batch is
@@ -154,7 +146,7 @@ cases requires an API update timestamp or stable change feed.
 |--------------|------------------------|-------|
 | breach | `report` | One report per TruKno breach |
 | `relatedTTPs` | `attack-pattern` | Linked from the report via `object_refs` |
-| `relatedMalwares` | `malware` | Linked from the report via `object_refs` |
+| `relatedMalware` | `malware` | Linked from the report via `object_refs` |
 
 ## Usage
 

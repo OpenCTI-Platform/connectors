@@ -1,8 +1,6 @@
-import json
 from datetime import timedelta
 
 import pytest
-from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.exceptions import ConfigValidationError
 from pydantic import HttpUrl, SecretStr
 from trukno_connector import ConnectorSettings
@@ -46,32 +44,24 @@ def test_settings_apply_trukno_defaults(required_environment):
     assert settings.connector.type == "EXTERNAL_IMPORT"
     assert settings.connector.duration_period == timedelta(hours=1)
     assert settings.trukno.api_base_url == HttpUrl("https://api.trukno.com/v2")
-    assert settings.trukno.initial_lookback_days == 30
+    assert settings.trukno.initial_lookback == timedelta(days=30)
 
 
-def test_settings_treat_blank_optional_environment_values_as_unset(
-    required_environment, monkeypatch
-):
-    for name in (
-        "CONNECTOR_NAME",
-        "CONNECTOR_SCOPE",
-        "CONNECTOR_TYPE",
-        "CONNECTOR_LOG_LEVEL",
+@pytest.mark.parametrize(
+    "name",
+    [
         "CONNECTOR_DURATION_PERIOD",
         "TRUKNO_API_BASE_URL",
-        "TRUKNO_INITIAL_LOOKBACK_DAYS",
-    ):
-        monkeypatch.setenv(name, "")
+        "TRUKNO_INITIAL_LOOKBACK",
+    ],
+)
+def test_settings_reject_blank_typed_optional_environment_values(
+    required_environment, monkeypatch, name
+):
+    monkeypatch.setenv(name, "")
 
-    settings = ConnectorSettings()
-
-    assert settings.connector.name == "TruKno"
-    assert settings.connector.scope == ["report", "attack-pattern", "malware"]
-    assert settings.connector.type == "EXTERNAL_IMPORT"
-    assert settings.connector.log_level == "error"
-    assert settings.connector.duration_period == timedelta(hours=1)
-    assert settings.trukno.api_base_url == HttpUrl("https://api.trukno.com/v2")
-    assert settings.trukno.initial_lookback_days == 30
+    with pytest.raises(ConfigValidationError):
+        ConnectorSettings()
 
 
 def test_settings_parse_scope_from_comma_separated_environment(
@@ -103,6 +93,7 @@ def test_settings_serialize_helper_config_without_exposing_trukno_secret(
     assert helper_config["connector"]["scope"] == "report,attack-pattern,malware"
     assert helper_config["connector"]["duration_period"] == "PT1H"
     assert helper_config["trukno"]["api_key"] == "**********"
+    assert helper_config["trukno"]["initial_lookback"] == "P30D"
 
 
 def test_settings_migrate_deprecated_interval_to_duration(
@@ -127,15 +118,17 @@ def test_settings_reject_non_positive_deprecated_interval(
             ConnectorSettings()
 
 
-@pytest.mark.parametrize("interval_minutes", ["0", "-1"])
-def test_settings_reject_invalid_deprecated_interval_with_canonical_duration(
+@pytest.mark.parametrize("interval_minutes", ["0", "-1", "abc", "1.5", ""])
+def test_settings_preserve_canonical_duration_over_invalid_deprecated_interval(
     required_environment, monkeypatch, interval_minutes
 ):
     monkeypatch.setenv("TRUKNO_INTERVAL_MINUTES", interval_minutes)
     monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT1H")
 
-    with pytest.raises(ConfigValidationError):
-        ConnectorSettings()
+    with pytest.warns(UserWarning, match="interval_minutes"):
+        settings = ConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(hours=1)
 
 
 def test_settings_preserve_canonical_duration_over_valid_deprecated_interval(
@@ -160,11 +153,11 @@ def test_settings_reject_non_positive_duration(
         ConnectorSettings()
 
 
-@pytest.mark.parametrize("lookback_days", ["0", "-1"])
+@pytest.mark.parametrize("initial_lookback", ["PT0S", "-PT1S"])
 def test_settings_reject_non_positive_initial_lookback(
-    required_environment, monkeypatch, lookback_days
+    required_environment, monkeypatch, initial_lookback
 ):
-    monkeypatch.setenv("TRUKNO_INITIAL_LOOKBACK_DAYS", lookback_days)
+    monkeypatch.setenv("TRUKNO_INITIAL_LOOKBACK", initial_lookback)
 
     with pytest.raises(ConfigValidationError):
         ConnectorSettings()
@@ -172,13 +165,12 @@ def test_settings_reject_non_positive_initial_lookback(
 
 def test_settings_schema_rejects_non_positive_initial_lookback():
     schema = ConnectorSettings.model_json_schema()
+    lookback_schema = schema["$defs"]["TruKnoConfig"]["properties"]["initial_lookback"]
 
-    assert (
-        schema["$defs"]["TruKnoConfig"]["properties"]["initial_lookback_days"][
-            "exclusiveMinimum"
-        ]
-        == 0
-    )
+    assert lookback_schema["default"] == "P30D"
+    assert lookback_schema["format"] == "duration"
+    assert lookback_schema["type"] == "string"
+    assert "initial_lookback_days" not in schema["$defs"]["TruKnoConfig"]["properties"]
 
 
 @pytest.mark.parametrize(
@@ -192,43 +184,3 @@ def test_minutes_to_duration_rejects_non_integer_or_non_positive_values(value):
 @pytest.mark.parametrize("value", [15, "15", "+15", "015", " 15 "])
 def test_minutes_to_duration_accepts_integer_values(value):
     assert _minutes_to_duration(value) == timedelta(minutes=15)
-
-
-@pytest.mark.parametrize("canonical", [False, True])
-@pytest.mark.parametrize("value", [True, 1.0, 1.5, "1.5", "", " ", "abc", "1_0"])
-def test_settings_validate_raw_legacy_interval_before_migration(
-    required_environment, monkeypatch, tmp_path, canonical, value
-):
-    config_path = tmp_path / "config.yml"
-    config_path.write_text(
-        "trukno:\n  interval_minutes: " + json.dumps(value) + "\n", encoding="utf-8"
-    )
-    monkeypatch.setattr(
-        _SettingsLoader, "_get_config_yml_file_path", lambda: config_path
-    )
-    if canonical:
-        monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT1H")
-    with pytest.raises((ConfigValidationError, ValueError)):
-        ConnectorSettings()
-
-
-@pytest.mark.parametrize("legacy_path", ["/private/PATH-SENTINEL/config.yml", " "])
-def test_settings_reject_legacy_config_path_without_disclosing_it(
-    required_environment, monkeypatch, legacy_path, capsys, caplog
-):
-    monkeypatch.setenv("TRUKNO_CONNECTOR_CONFIG", legacy_path)
-    with pytest.raises(ConfigValidationError) as error:
-        ConnectorSettings()
-    captured = capsys.readouterr()
-    output = str(error.value) + captured.out + captured.err + caplog.text
-    assert "TRUKNO_CONNECTOR_CONFIG" in output
-    assert "config.yml" in output
-    assert "environment variables" in output
-    assert "PATH-SENTINEL" not in output
-    assert "trukno-secret" not in output
-    assert "opencti-token" not in output
-
-
-def test_settings_allow_empty_legacy_config_path(required_environment, monkeypatch):
-    monkeypatch.setenv("TRUKNO_CONNECTOR_CONFIG", "")
-    assert ConnectorSettings().connector.duration_period == timedelta(hours=1)

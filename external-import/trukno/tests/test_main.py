@@ -15,16 +15,13 @@ def test_entrypoint_imports():
     assert ConnectorState is not None
 
 
-@pytest.mark.parametrize("canonical", [False, True])
 @pytest.mark.parametrize("interval", ["0", "-1", "abc", "1.5", ""])
 def test_startup_invalid_interval_does_not_disclose_credentials(
-    required_environment, monkeypatch, capsys, caplog, canonical, interval
+    required_environment, monkeypatch, capsys, caplog, interval
 ):
     monkeypatch.setenv("OPENCTI_TOKEN", "OTK-SENTINEL")
     monkeypatch.setenv("TRUKNO_API_KEY", "TKN-SENTINEL")
     monkeypatch.setenv("TRUKNO_INTERVAL_MINUTES", interval)
-    if canonical:
-        monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT1H")
 
     with pytest.raises(SystemExit) as error:
         runpy.run_path(main_module.__file__, run_name="__main__")
@@ -37,26 +34,6 @@ def test_startup_invalid_interval_does_not_disclose_credentials(
     assert "Traceback" not in output
     assert "TRUKNO_INTERVAL_MINUTES" in captured.err
     assert "positive integer" in captured.err
-
-
-def test_startup_legacy_config_path_is_rejected_with_redacted_guidance(
-    required_environment, monkeypatch, capsys, caplog
-):
-    monkeypatch.setenv("TRUKNO_CONNECTOR_CONFIG", "/private/PATH-SENTINEL/config.yml")
-    # Keep startup offline even before the legacy-path guard exists.
-    monkeypatch.setenv("TRUKNO_INTERVAL_MINUTES", "0")
-    with pytest.raises(SystemExit) as error:
-        runpy.run_path(main_module.__file__, run_name="__main__")
-    assert error.value.code == 1
-    captured = capsys.readouterr()
-    output = captured.out + captured.err + caplog.text
-    assert "PATH-SENTINEL" not in output
-    assert "trukno-secret" not in output
-    assert "opencti-token" not in output
-    assert "Traceback" not in output
-    assert "TRUKNO_CONNECTOR_CONFIG" in captured.err
-    assert "connector-root config.yml" in captured.err
-    assert "environment variables" in captured.err
 
 
 @pytest.mark.parametrize("error_type", [ConfigValidationError, ValueError])
