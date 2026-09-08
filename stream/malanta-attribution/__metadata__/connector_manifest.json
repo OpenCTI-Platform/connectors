@@ -1,0 +1,27 @@
+{
+  "title": "Malanta Attribution",
+  "slug": "malanta-attribution",
+  "description": "Malanta's TAXII feed delivers threat-actor attribution as flat, namespaced labels on indicators (for example `apt:APT44`) rather than as entities, because OpenCTI's built-in TAXII ingester applies no transformation. This stream connector listens to the OpenCTI event stream and, for every Malanta indicator carrying such a label, creates the corresponding Intrusion Set and an `indicates` relationship from the indicator to it. The result is a pivotable attribution graph instead of a set of opaque label strings. It is designed to run alongside OpenCTI's native TAXII ingestion, which handles the bulk import; the connector only reacts to the small share of indicators that carry attribution. Malanta's own infrastructure clusters are left untouched: a cluster may aggregate infrastructure from several actors, so attribution is applied to indicators only.",
+  "short_description": "Derives Intrusion Sets and `indicates` relationships from Malanta's `apt:` attribution labels on indicators.",
+  "logo": "stream/malanta-attribution/__metadata__/logo.png",
+  "use_cases": [
+    "Adversary & Campaign Insights",
+    "Infrastructure & Attack Surface Visibility"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": "support@malanta.ai",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/malanta-attribution",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-malanta-attribution",
+  "container_type": "STREAM"
+}
