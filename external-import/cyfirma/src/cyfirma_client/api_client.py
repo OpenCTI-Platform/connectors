@@ -47,8 +47,7 @@ class CyfirmaClient:
         self.api_key = api_key
         self.look_back_days = look_back_days
         self.tailored_vulnerabilities = tailored_vulnerabilities
-        self.alerts_look_back_days = alerts_look_back_days
-
+        
         self.session = requests.Session()
         # self.session.headers.update(self.headers)
 

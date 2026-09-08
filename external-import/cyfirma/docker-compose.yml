@@ -14,12 +14,12 @@ services:
       - CONNECTOR_DURATION_PERIOD=PT1H
       # Custom parameters for connector-cyfirma
       - CYFIRMA_API_BASE_URL=https://api.cyfirma.com
-      - CYFIRMA_API_KEY=LR6NGrHIRwbvE58qpote3AWj9DAIvw38
+      - CYFIRMA_API_KEY=
       - CYFIRMA_TLP_LEVEL=clear
       - CYFIRMA_TAILORED_IOCS=false
       - CYFIRMA_LOOK_BACK_DAYS=2
       - CYFIRMA_TAILORED_VULNERABILITIES=false
-      - CYFIRMA_ALERTS_LOOK_BACK_DAYS=90
+
     restart: always
     networks:
       - opencti_default

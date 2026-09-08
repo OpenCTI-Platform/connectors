@@ -34,7 +34,6 @@ class CyfirmaConnector:
             tailored_iocs=self.config.cyfirma.tailored_iocs,
             tailored_vulnerabilities=self.config.cyfirma.tailored_vulnerabilities,
             look_back_days=self.config.cyfirma.look_back_days,
-            alerts_look_back_days=self.config.cyfirma.alerts_look_back_days,
         )
         self.converter_to_stix = ConverterToStix(
             self.helper,
