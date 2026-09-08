@@ -3,7 +3,6 @@ name: "Update linked issues on PR merge"
 on:
   pull_request_target:
     types: [closed]
-    branches: [master]
 
 permissions:
   issues: write
@@ -21,6 +20,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const prNumber = context.payload.pull_request.number;
+            const isMaster = context.payload.pull_request.base.ref === "master";
 
             const query = `query($owner:String!, $repo:String!, $number:Int!) {
               repository(owner:$owner, name:$repo) {
@@ -76,7 +76,7 @@ jobs:
                 milestoneName = "1. Now";
               }
 
-              if (milestoneName && milestonesMap[milestoneName]) {
+              if (milestoneName && isMaster && milestonesMap[milestoneName]) {
                 core.info(`Setting milestone "${milestoneName}" on issue #${issue.number}`);
                 await github.rest.issues.update({
                   owner: context.repo.owner,
@@ -84,7 +84,7 @@ jobs:
                   issue_number: issue.number,
                   milestone: milestonesMap[milestoneName],
                 });
-              } else if (milestoneName) {
+              } else if (milestoneName && isMaster) {
                 core.warning(`Milestone "${milestoneName}" not found in repo`);
               }
             }
