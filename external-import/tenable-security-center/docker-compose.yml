@@ -3,22 +3,32 @@ services:
   connector-tenable-security-center:
     image: opencti/connector-tenable-security-center:latest
     environment:
+      # OpenCTI parameters - REQUIRED
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+
+      # Connector's definition parameters - REQUIRED
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=Tenable Security Center
-      - CONNECTOR_SCOPE=vulnerability
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT12H
+
+      # Connector's definition parameters - OPTIONAL
+      # - CONNECTOR_NAME=Tenable Security Center
+      # - CONNECTOR_SCOPE=vulnerability
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT12H
+
+      # Tenable Security Center parameters - REQUIRED
       - TSC_API_BASE_URL=ChangeMe
       - TSC_API_ACCESS_KEY=ChangeMe
       - TSC_API_SECRET_KEY=ChangeMe
+      # Overwritten by the connector state after the first successful run.
       - TSC_EXPORT_SINCE=2024-11-18T12:00:00Z
-      - TSC_SEVERITY_MIN_LEVEL=high
-      - TSC_PROCESS_SYSTEMS_WITHOUT_VULNERABILITIES=false
-      - TSC_MARKING_DEFINITION=TLP:CLEAR
+
+      # Tenable Security Center parameters - OPTIONAL
+      # - TSC_SEVERITY_MIN_LEVEL=high
+      # - TSC_PROCESS_SYSTEMS_WITHOUT_VULNERABILITIES=false
+      # - TSC_MARKING_DEFINITION=TLP:CLEAR
       # - TSC_API_TIMEOUT=30
       # - TSC_API_BACKOFF=5
       # - TSC_API_RETRIES=3
-      # - TSC_NUMBER_THREADS=4
+      # - TSC_NUMBER_THREADS=1
     restart: always

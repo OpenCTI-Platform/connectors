@@ -1,19 +1,24 @@
 opencti:
-    url: "http://opencti:8080"
-    token: "CHANGEME"
+  url: "http://opencti:8080"
+  token: "ChangeMe"
 
 connector:
-    id: "CHANGEME"
-    name: "Tenable Security Center"
-    scope: "vulnerability"
-    log_level: "warn"
-    duration_period: "PT12H"
-    
-tenable_security_center:
-    api_base_url: "CHANGEME"
-    api_access_key: "CHANGEME"
-    api_secret_key: "CHANGEME"
-    export_since: "2024-11-18T12:00:00Z"
-    severity_min_level: "high"
-    process_systems_without_vulnerabilities: false
-    marking_definition: "TLP:CLEAR"
+  id: "ChangeMe"
+  # name: "Tenable Security Center"
+  # scope: "vulnerability"
+  # log_level: "error"
+  # duration_period: "PT12H"
+
+tsc:
+  api_base_url: "ChangeMe"
+  api_access_key: "ChangeMe"
+  api_secret_key: "ChangeMe"
+  # Overwritten by the connector state after the first successful run.
+  export_since: "2024-11-18T12:00:00Z"
+  # severity_min_level: "high"
+  # process_systems_without_vulnerabilities: false
+  # marking_definition: "TLP:CLEAR"
+  # api_timeout: 30
+  # api_backoff: 5
+  # api_retries: 3
+  # number_threads: 1
