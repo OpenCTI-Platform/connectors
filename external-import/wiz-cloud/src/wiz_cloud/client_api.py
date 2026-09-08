@@ -105,8 +105,7 @@ class WizApiClient(BaseClientApi):
         payload = self._post("", json={"query": query, "variables": variables})
         if errors := payload.get("errors"):
             raise WizGraphQLError(f"Wiz GraphQL error: {errors}")
-        data = payload.get("data")
-        if data is None:
+        if (data := payload.get("data")) is None:
             raise WizGraphQLError("Wiz GraphQL response has no data")
         return data
 
