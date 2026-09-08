@@ -10,7 +10,6 @@ from connector.utils import (
     _IOC_TAILORED_PATH,
     _VUL_GENERIC_PATH,
     _VUL_TAILORED_PATH,
-    _ALERTS_API_PATH,
     CYFIRMA_EXTENSION_DEFINITION_ID,
     OPENCTI_EXTENSION_DEFINITION_ID,
     get_request_headers,
@@ -94,16 +93,15 @@ class CyfirmaClient:
         try:
             indicators = []  # self.get_indicators_feeds() or []
             vulnerabilities = []  # self.get_vulnerabilities_feeds() or []
-            as_alerts = self.get_asm() or []
+            
 
-            if indicators is None and vulnerabilities is None and as_alerts is None:
+            if indicators is None and vulnerabilities is None:
                 self.helper.connector_logger.error(
                     "[API] Error while fetching entities: No data returned from API"
                 )
                 return []
 
-            # return indicators + vulnerabilities + as_alerts
-            return as_alerts
+            return indicators + vulnerabilities 
         except Exception as err:
             self.helper.connector_logger.error(
                 "[API] Error while fetching entities: " + str(err)
@@ -282,42 +280,3 @@ class CyfirmaClient:
                 f"Error converting vulnerability {vuln.get('id')}: {ex}"
             )
             return vuln
-
-    def get_asm(self):
-        try:
-            self.headers = get_request_headers(self.api_key)
-            self.session.headers.update(self.headers)
-
-            params = get_request_params(self.alerts_look_back_days)
-
-            api_path = f"{self.base_url}{_ALERTS_API_PATH}"
-
-            return_data = []
-            while True:
-                data = self._request_data(api_path, params=params, headers=self.headers)
-
-                res_data = data.get("objects", [])
-                self.helper.connector_logger.info(
-                    f"CYFIRMA -- Fetched {len(res_data)} ASM alerts from API on page {params['page']}"
-                )
-
-                if res_data:
-                    return_data.extend(res_data)
-                    params["page"] += 1
-                else:
-                    break
-
-            self.helper.connector_logger.info(
-                f"CYFIRMA connector -- Successfully fetched {len(return_data)} ASM alerts from API"
-            )
-
-            for alert in return_data:
-                # Convert the alert to OpenCTI format if needed
-                if "incident" in alert.get("type", "").lower():
-                    alert["incident_type"] = "alert"
-
-            return return_data
-
-        except Exception as err:
-            self.helper.connector_logger.error(str(err))
-            return {}
