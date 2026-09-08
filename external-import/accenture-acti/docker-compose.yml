@@ -8,8 +8,8 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe
-      - "CONNECTOR_NAME=Accenture ACTI"
-      - CONNECTOR_SCOPE="accenture"
+      - CONNECTOR_NAME=Accenture ACTI
+      - CONNECTOR_SCOPE=accenture
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format in String, start with 'P...' for Period
 
