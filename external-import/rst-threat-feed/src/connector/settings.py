@@ -231,7 +231,7 @@ class RstThreatFeedConfig(BaseConfigModel):
             "are flushed in chunks to bound memory and avoid oversized works."
         ),
         default=200,
-        gt=0,
+        ge=2,
         examples=[100, 200, 500],
     )
 

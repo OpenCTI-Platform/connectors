@@ -13,7 +13,7 @@ __all__ = ["RSTThreatFeed"]
 
 def _patch_pycti_create_token_response() -> None:
     """
-    pycti 7.260817.0 auto-create service account assigns create_token()'s return
+    pycti auto-create service account assigns create_token()'s return
     value into user['api_tokens'], then looks up item['name'] / item['id'].
 
     userAdminTokenAdd returns {token_id, plaintext_token, expires_at} — no name/id —
