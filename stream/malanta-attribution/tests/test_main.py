@@ -2,7 +2,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from connector import ConnectorSettings, TemplateConnector
+from connector import ConnectorSettings, MalantaAttributionConnector
 from pycti import OpenCTIConnectorHelper
 
 
@@ -36,15 +36,16 @@ class StubConnectorSettings(ConnectorSettings):
                 },
                 "connector": {
                     "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "test, connector",
+                    "name": "Malanta Attribution",
+                    "scope": "indicator",
                     "log_level": "error",
-                    "duration_period": "PT5M",
+                    "live_stream_id": "live",
+                    "live_stream_listen_delete": False,
+                    "live_stream_no_dependencies": True,
                 },
-                "template": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
-                    "tlp_level": "clear",
+                "malanta_attribution": {
+                    "label_prefix": "apt:",
+                    "author_name": "Malanta.ai",
                 },
             }
         )
@@ -76,10 +77,12 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.opencti_url == "http://localhost:8080/"
     assert helper.opencti_token == "test-token"
     assert helper.connect_id == "connector-id"
-    assert helper.connect_name == "Test Connector"
-    assert helper.connect_scope == "test,connector"
+    assert helper.connect_name == "Malanta Attribution"
+    assert helper.connect_scope == "indicator"
     assert helper.log_level == "ERROR"
-    assert helper.connect_duration_period == "PT5M"
+    assert helper.connect_live_stream_id == "live"
+    assert helper.connect_live_stream_listen_delete == False
+    assert helper.connect_live_stream_no_dependencies == True
 
 
 def test_connector_is_instantiated(mock_opencti_connector_helper):
@@ -93,7 +96,7 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-    connector = TemplateConnector(config=settings, helper=helper)
+    connector = MalantaAttributionConnector(config=settings, helper=helper)
 
     assert connector.config == settings
     assert connector.helper == helper
