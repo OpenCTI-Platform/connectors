@@ -118,3 +118,9 @@ exclude = [
     '^__pypackages__',
     '^.venv',
 ]
+
+[[tool.mypy.overrides]]
+# `connectors-sdk` is fully typed but does not ship a `py.typed` marker yet.
+module = ["connectors_sdk.*"]
+ignore_missing_imports = true
+follow_untyped_imports = true
