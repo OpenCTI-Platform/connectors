@@ -128,7 +128,7 @@ class HatchingTriageSandboxConnector:
                     key = "Url"
                     relationship_type = (
                         "communicates-with"
-                        if entity_type == "artifact"
+                        if entity_type in ["artifact", "stixfile"]
                         else "related-to"
                     )
                     if self._is_ipv4_address(parsed):
@@ -307,7 +307,9 @@ class HatchingTriageSandboxConnector:
         # Attach domains
         if overview_dict.get("targets"):
             relationship_type = (
-                "communicates-with" if entity_type == "artifact" else "related-to"
+                "communicates-with"
+                if entity_type in ["artifact", "stixfile"]
+                else "related-to"
             )
 
             domains = [
@@ -385,7 +387,9 @@ class HatchingTriageSandboxConnector:
                     )
 
                     relationship_type = (
-                        "uses" if entity_type == "artifact" else "related-to"
+                        "uses"
+                        if entity_type in ["artifact", "stixfile"]
+                        else "related-to"
                     )
 
                     relationship = stix2.Relationship(
@@ -421,20 +425,33 @@ class HatchingTriageSandboxConnector:
         sample_id = None
         observable_value = observable["observable_value"]
 
-        if entity_type == "artifact":
-            if not observable["importFiles"]:
+        if entity_type in ["artifact", "stixfile"]:
+            import_files = observable.get("importFiles") or []
+            if import_files:
+                file_name = import_files[0]["name"]
+                file_id = import_files[0]["id"]
+                file_uri = f"{self.octi_api_url}/storage/get/{file_id}"
+                file_content = self.helper.api.fetch_opencti_file(file_uri, True)
+                sha256_hash = self._get_sha256(file_content)
+                search_query = f"sha256:{sha256_hash}"
+            elif entity_type == "stixfile":
+                sha256_hash = self._get_sha256_from_observable(observable)
+                if not sha256_hash:
+                    raise ValueError(
+                        f"No attached file or SHA-256 hash found for {observable_value}"
+                    )
+                search_query = f"sha256:{sha256_hash}"
+            else:
                 raise ValueError(f"No files found for {observable_value}")
 
-            file_name = observable["importFiles"][0]["name"]
-            file_id = observable["importFiles"][0]["id"]
-            file_uri = f"{self.octi_api_url}/storage/get/{file_id}"
-            file_content = self.helper.api.fetch_opencti_file(file_uri, True)
-            sha256_hash = self._get_sha256(file_content)
-
-            search_query = f"sha256:{sha256_hash}"
             sample_id = self._search_for_analysis(search_query)
 
             if sample_id is None:
+                if not import_files:
+                    raise ValueError(
+                        f"No attached file found for {observable_value}; "
+                        "cannot submit a hash-only File SCO to Hatching Triage"
+                    )
                 sample_id = self._submit_sample(
                     file_name=file_name, file_content=file_content
                 )
@@ -522,7 +539,7 @@ class HatchingTriageSandboxConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
-        if entity_type in ["artifact", "url"]:
+        if entity_type in ["artifact", "stixfile", "url"]:
             return self._process_observable(observable, entity_type)
         else:
             if not data.get("event_type"):
@@ -550,6 +567,16 @@ class HatchingTriageSandboxConnector:
         sha256obj = sha256()
         sha256obj.update(contents)
         return sha256obj.hexdigest()
+
+    def _get_sha256_from_observable(self, observable):
+        """Return the SHA-256 value from a File SCO, if present."""
+        hashes = observable.get("hashes") or []
+        if isinstance(hashes, dict):
+            return hashes.get("SHA-256") or hashes.get("sha256")
+        for file_hash in hashes:
+            if file_hash.get("algorithm", "").lower() == "sha-256":
+                return file_hash.get("hash")
+        return None
 
     def _is_ipv4_address(self, ip):
         m = re.match(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", ip)

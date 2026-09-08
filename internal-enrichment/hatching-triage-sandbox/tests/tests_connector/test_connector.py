@@ -75,6 +75,62 @@ class TestSearchForAnalysis:
         connector.triage_client.search.assert_not_called()
 
 
+class TestProcessMessage:
+    def test_processes_stix_file_like_an_artifact(self, connector):
+        observable = {
+            "entity_type": "StixFile",
+            "observable_value": "malware.exe",
+            "objectMarking": [],
+        }
+        data = {"enrichment_entity": observable, "stix_objects": []}
+        connector._process_observable = MagicMock(return_value="enriched")
+
+        result = connector._process_message(data)
+
+        assert result == "enriched"
+        connector._process_observable.assert_called_once_with(observable, "stixfile")
+
+    def test_processes_stix_file_content_like_an_artifact(self, connector):
+        observable = {
+            "entity_type": "StixFile",
+            "observable_value": "malware.exe",
+            "importFiles": [{"id": "file-id", "name": "malware.exe"}],
+        }
+        connector.helper.api.fetch_opencti_file.return_value = b"file-content"
+        connector._get_sha256 = MagicMock(return_value="file-hash")
+        connector._search_for_analysis = MagicMock(return_value="sample-123")
+        connector.triage_client.overview_report.return_value = {}
+        connector._process_overview_report = MagicMock(return_value="enriched")
+
+        result = connector._process_file(observable, "stixfile")
+
+        assert result == "enriched"
+        connector.helper.api.fetch_opencti_file.assert_called_once_with(
+            "http://localhost:8080/storage/get/file-id", True
+        )
+        connector._process_overview_report.assert_called_once_with(
+            observable, {}, "sample-123", "stixfile"
+        )
+
+    def test_reuses_analysis_for_hash_only_stix_file(self, connector):
+        observable = {
+            "entity_type": "StixFile",
+            "observable_value": "file-hash",
+            "hashes": [{"algorithm": "SHA-256", "hash": "file-hash"}],
+        }
+        connector._search_for_analysis = MagicMock(return_value="sample-123")
+        connector.triage_client.overview_report.return_value = {}
+        connector._process_overview_report = MagicMock(return_value="enriched")
+
+        result = connector._process_file(observable, "stixfile")
+
+        assert result == "enriched"
+        connector._search_for_analysis.assert_called_once_with("sha256:file-hash")
+        connector._process_overview_report.assert_called_once_with(
+            observable, {}, "sample-123", "stixfile"
+        )
+
+
 def _raise_server_error(http_error):
     """Generator that raises a ServerError when iterated."""
     raise ServerError(http_error)
