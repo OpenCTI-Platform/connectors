@@ -7,7 +7,8 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field
+from connectors_sdk.models.enums import TLPLevel
+from pydantic import Field, field_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -68,6 +69,16 @@ class TweetFeedConfig(BaseConfigModel):
         description="Number of days to retrieve data back in time.",
         default=30,
     )
+    tlp_level: TLPLevel = Field(
+        description="TLP marking applied to imported observables and indicators "
+        "(clear, white, green, amber, amber+strict, red).",
+        default=TLPLevel.CLEAR,
+    )
+
+    @field_validator("tlp_level", mode="before")
+    @classmethod
+    def _lowercase_tlp_level(cls, value: str) -> str:
+        return value.lower() if isinstance(value, str) else value
 
 
 class ConnectorSettings(BaseConnectorSettings):
