@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-xposedornot:
+    image: opencti/connector-xposedornot:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=XposedOrNot
+      - CONNECTOR_SCOPE=Email-Addr
+      - CONNECTOR_AUTO=false # keyless API is rate limited (25/hour); enable with care or configure an API key
+      - CONNECTOR_LOG_LEVEL=error
+      - XPOSEDORNOT_API_KEY= # optional; empty uses the free keyless community API
+      - XPOSEDORNOT_API_BASE_URL=https://api.xposedornot.com
+      - XPOSEDORNOT_MAX_TLP=TLP:AMBER # maximum TLP of observables the connector may enrich
+      - XPOSEDORNOT_TLP_LEVEL=amber # clear, green, amber, amber+strict, red
+    restart: always
