@@ -281,8 +281,7 @@ def _parse_yara_rule(yara_rule: str) -> Optional[Mapping[str, Any]]:
 
     description = _get_description(yara_rule)
     if description is None:
-        log.error("No description for rule: %s", yara_rule)
-        return None
+        log.debug("No description for rule: %s", name)
 
     report = _get_report(yara_rule)
     if report is None:

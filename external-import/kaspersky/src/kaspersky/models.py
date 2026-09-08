@@ -75,7 +75,7 @@ class YaraRule(Base):
     """Kaspersky YARA rule model."""
 
     name: str
-    description: str
+    description: Optional[str] = None
     report: Optional[str]
     last_modified: Optional[datetime]
     rule: str
