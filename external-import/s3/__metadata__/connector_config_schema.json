@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/s3_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "S3 Bucket",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "s3"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT30S",
+      "description": "The period of time to await between two runs of the connector. The S3 connector schedules its runs with `S3_INTERVAL` (in seconds).",
+      "format": "duration",
+      "type": "string"
+    },
+    "S3_ACCESS_KEY_ID": {
+      "description": "The AWS access key ID used to authenticate against the S3 bucket.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "S3_SECRET_ACCESS_KEY": {
+      "description": "The AWS secret access key used to authenticate against the S3 bucket.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "S3_BUCKET_NAME": {
+      "description": "The name of the S3 bucket to poll.",
+      "type": "string"
+    },
+    "S3_REGION": {
+      "default": "us-east-1",
+      "description": "The AWS region of the S3 bucket.",
+      "type": "string"
+    },
+    "S3_ENDPOINT_URL": {
+      "default": null,
+      "description": "A custom endpoint URL, for S3-compatible services. Leave empty to target Amazon S3.",
+      "type": "string"
+    },
+    "S3_BUCKET_PREFIXES": {
+      "default": [
+        "ACI_TI",
+        "ACI_Vuln"
+      ],
+      "description": "Comma-separated list of S3 bucket prefixes to process.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "S3_AUTHOR": {
+      "default": null,
+      "description": "The organization name used as `created_by_ref` when the ingested data does not define an author.",
+      "type": "string"
+    },
+    "S3_MARKING": {
+      "default": "TLP:GREEN",
+      "description": "The default TLP marking applied when the ingested data does not define one. Available values are: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED.",
+      "type": "string"
+    },
+    "S3_INTERVAL": {
+      "default": 30,
+      "description": "The interval, in seconds, between two polls of the S3 bucket.",
+      "type": "integer"
+    },
+    "S3_ATTACH_ORIGINAL_FILE": {
+      "default": false,
+      "description": "Whether to attach the original JSON file to the vulnerabilities.",
+      "type": "boolean"
+    },
+    "S3_DELETE_AFTER_IMPORT": {
+      "default": true,
+      "description": "Whether to delete the files from the S3 bucket once they are processed. Set to false to keep them for debugging purposes.",
+      "type": "boolean"
+    },
+    "S3_NO_SPLIT_BUNDLES": {
+      "default": true,
+      "description": "Whether to send the STIX bundles without splitting them.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "S3_ACCESS_KEY_ID",
+    "S3_SECRET_ACCESS_KEY",
+    "S3_BUCKET_NAME"
+  ],
+  "additionalProperties": true
+}
