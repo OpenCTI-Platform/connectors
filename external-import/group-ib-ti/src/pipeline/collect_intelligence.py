@@ -38,8 +38,10 @@ def collect_intelligence(
     json_ungrouped_obj = event.get("ungrouped", {})
     json_evaluation_obj = event.get("evaluation", {})
     json_mitre_matrix_obj = event.get("mitre_matrix", {})
-    json_date_obj = event.get("date", {})
-    json_date_obj["ttl"] = ttl
+    # A copy, so the collection TTL does not end up inside the caller's event.
+    json_date_obj = dict(event.get("date") or {})
+    if ttl is not None:
+        json_date_obj["ttl"] = ttl
 
     report_adapter = DataToSTIXAdapter(
         mitre_mapper=mitre_mapper,

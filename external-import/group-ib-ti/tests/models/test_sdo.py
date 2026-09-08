@@ -135,18 +135,25 @@ class TestMalware:
         m.generate_stix_objects()
         assert m.stix_main_object.malware_types == ["ransomware"]
 
-    def test_unknown_type_falls_through(self):
-        # The lookup returns ``None`` for types outside STIX 2.1 vocab.
+    def test_unknown_type_is_dropped(self):
+        # A category outside the STIX 2.1 vocabulary must not leak as the
+        # string "None"; with nothing left the SDO falls back to "unknown".
         m = Malware(
             name="x",
             c_type="malware",
             malware_types=["not-a-real-malware-type"],
         )
         m.generate_stix_objects()
-        # stix2 coerces ``None`` inside the malware_types list to the
-        # string ``"None"`` (Python repr) before serialisation. We assert
-        # against the actual serialised shape.
-        assert m.stix_main_object.malware_types == ["None"]
+        assert m.stix_main_object.malware_types == ["unknown"]
+
+    def test_unknown_type_dropped_next_to_known(self):
+        m = Malware(
+            name="x",
+            c_type="malware",
+            malware_types=["not-a-real-malware-type", "Ransomware"],
+        )
+        m.generate_stix_objects()
+        assert m.stix_main_object.malware_types == ["ransomware"]
 
     def test_aliases_and_last_seen(self):
         m = Malware(

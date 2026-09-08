@@ -392,3 +392,37 @@ class TestCollectIntelligenceDispatch:
             adapter_instance.generate_compromised_account_group.call_args.kwargs
         )
         assert call_kwargs["json_date_obj"]["ttl"] == 42
+
+    def test_no_ttl_leaves_date_obj_and_event_untouched(self, monkeypatch):
+        adapter_instance = MagicMock()
+        adapter_instance.generate_compromised_account_group.return_value = []
+        import sys as _sys
+
+        import pipeline.collect_intelligence  # noqa
+
+        ci_mod = _sys.modules["pipeline.collect_intelligence"]
+        monkeypatch.setattr(
+            ci_mod,
+            "DataToSTIXAdapter",
+            MagicMock(return_value=adapter_instance),
+        )
+
+        helper = _helper()
+        config = SimpleNamespace(
+            get_extra_settings_by_name=MagicMock(return_value=False)
+        )
+        event = {"evaluation": {}, "date": {"date-first-seen": "x"}}
+        collect_intelligence(
+            helper=helper,
+            collection="compromised/account_group",
+            ttl=None,
+            event=event,
+            mitre_mapper={},
+            config=config,
+        )
+        call_kwargs = (
+            adapter_instance.generate_compromised_account_group.call_args.kwargs
+        )
+        # No key at all, so downstream TTL resolution uses its defaults.
+        assert "ttl" not in call_kwargs["json_date_obj"]
+        assert event["date"] == {"date-first-seen": "x"}

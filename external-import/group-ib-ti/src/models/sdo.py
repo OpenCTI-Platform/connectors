@@ -156,11 +156,13 @@ class Malware(_BaseSDO):
     ):
         super().__init__(name, c_type, tlp_color, labels, risk_score)
 
-        self.malware_types = []
-        if malware_types:
-            self.malware_types = [
-                self._generate_malware_type(_t) for _t in malware_types
-            ]
+        # Categories outside the STIX vocabulary map to None; stix2 would
+        # coerce that to the literal string "None", so drop them here.
+        self.malware_types: list[str] = []
+        for _t in malware_types or []:
+            mapped = self._generate_malware_type(_t)
+            if mapped:
+                self.malware_types.append(mapped)
         self.aliases = aliases
         self.last_seen = last_seen
 
