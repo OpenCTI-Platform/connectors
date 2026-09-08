@@ -11,7 +11,9 @@ from kaspersky.utils import datetime_to_timestamp, decode_base64_gzip_to_string
 from pycti import OpenCTIConnectorHelper
 from pydantic.v1.tools import parse_obj_as
 from requests import RequestException, Response
+from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectTimeout, ReadTimeout
+from urllib3.util.retry import Retry
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +29,11 @@ class KasperskyClient:
     _TIMEOUT_READ_SEC = 30
 
     _TIMEOUTS = (_TIMEOUT_CONNECT_SEC, _TIMEOUT_READ_SEC)
+
+    # Retry transient errors (timeouts, rate limiting, 5xx) with exponential backoff.
+    _RETRY_TOTAL = 5
+    _RETRY_BACKOFF_FACTOR = 5
+    _RETRY_STATUS_FORCELIST = (429, 500, 502, 503, 504)
 
     _RESPONSE_FIELD_STATUS = "status"
     _RESPONSE_FIELD_STATUS_MSG = "status_msg"
@@ -67,6 +74,21 @@ class KasperskyClient:
         self.session = requests.Session()
         self.session.auth = (user, password)
         self.session.cert = certificate_path
+
+        self._mount_retry_adapter()
+
+    def _mount_retry_adapter(self) -> None:
+        retry_strategy = Retry(
+            total=self._RETRY_TOTAL,
+            backoff_factor=self._RETRY_BACKOFF_FACTOR,
+            status_forcelist=self._RETRY_STATUS_FORCELIST,
+            allowed_methods=frozenset({"GET", "POST"}),
+            respect_retry_after_header=True,
+            raise_on_status=False,
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     def close(self) -> None:
         """Close Kaspersky client."""
