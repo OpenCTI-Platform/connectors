@@ -19,6 +19,7 @@ dependencies = [
     "pycti==7.260910.0",
     "validators~=0.35.0",
     "pydantic>=2.8.2,<3.0.0",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
     "pytenable~=1.5.3", # for now we handle API from 5.13 to 6.4
     "restfly==1.5.1",
     "cvss~=3.3",
@@ -46,6 +47,9 @@ all = [
 
 [tool.setuptools.packages.find]
 where = ["."]
+# `src` is a thin re-export package used only by the config schema generator,
+# it must not be shipped as a top-level distribution package.
+include = ["tenable_security_center*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "tenable_security_center.__version__"}
