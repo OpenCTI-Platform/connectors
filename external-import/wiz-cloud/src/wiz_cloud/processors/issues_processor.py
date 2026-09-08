@@ -68,6 +68,7 @@ class WizIssuesProcessor(BaseDataProcessor):
             auth_url=str(self._config.auth_url),
             client_id=self._config.client_id.get_secret_value(),
             client_secret=self._config.client_secret.get_secret_value(),
+            logger=self.logger,
             timeout=60,
             max_retries=3,
             backoff_factor=2.0,

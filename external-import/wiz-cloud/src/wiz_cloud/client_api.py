@@ -24,6 +24,7 @@ from typing import Any
 
 import requests
 from connectors_sdk import ApiClientError, BaseClientApi
+from connectors_sdk.connectors.external_import.logger import ConnectorLogger
 
 
 class WizGraphQLError(ApiClientError):
@@ -38,6 +39,7 @@ class WizApiClient(BaseClientApi):
         auth_url: OAuth2 token endpoint, on a different host than base_url.
         client_id: Wiz service account client id.
         client_secret: Wiz service account client secret.
+        logger: Connector logger, used to report truncated pagination.
         **kwargs: Forwarded to BaseClientApi (timeout, max_retries, ...).
     """
 
@@ -47,12 +49,14 @@ class WizApiClient(BaseClientApi):
         auth_url: str,
         client_id: str,
         client_secret: str,
+        logger: ConnectorLogger,
         **kwargs: Any,
     ) -> None:
         super().__init__(base_url=base_url, **kwargs)
         self._auth_url = auth_url
         self._client_id = client_id
         self._client_secret = client_secret
+        self._logger = logger
         self._token: str | None = None
         self._token_expires_at: float = 0.0
 
@@ -141,8 +145,18 @@ class WizApiClient(BaseClientApi):
                 return
             cursor = page_info.get("endCursor")
             # Wiz can answer hasNextPage: true with a null or repeated cursor.
-            # Following it would re-request the same page forever.
+            # Following it would re-request the same page forever, so stop and
+            # keep what we already have rather than aborting the whole run.
             if not cursor or cursor == previous_cursor:
+                self._logger.warning(
+                    "[WIZ-CLOUD] Stopping pagination early on an unusable cursor, "
+                    "results may be incomplete",
+                    {
+                        "connection": connection_key,
+                        "cursor": cursor,
+                        "reason": "missing" if not cursor else "repeated",
+                    },
+                )
                 return
             previous_cursor = cursor
             variables["after"] = cursor
