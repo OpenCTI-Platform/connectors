@@ -3,25 +3,23 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'STREAM'
   id: 'ChangeMe'
-  live_stream_id: 'changeme' # ID of the live stream created in the OpenCTI UI
-  live_stream_listen_delete: true
-  live_stream_no_dependencies: true
-  name: 'TAXII POST'
-  scope: 'taxii' # Reserved
-  confidence_level: 80 # From 0 (Unknown) to 100 (Fully trusted)
-  log_level: 'info'
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  # live_stream_listen_delete: true # optional (default: true)
+  # live_stream_no_dependencies: true # optional (default: true)
+  # name: 'TAXII POST' # optional (default: 'TAXII POST')
+  # scope: 'taxii' # optional (default: 'taxii')
+  # log_level: 'error' # optional (default: 'error')
 
 taxii:
   url: 'https://taxii.changeme.com' # The URL of the TAXII Server
-  ssl_verify: true
-  api_root: 'root' # The TAXII API root (path segment between server URL and /collections/)
   collection_id: 'ChangeMe' # The collection ID
-  token: '' # Token for bearer auth (if set, will ignore basic auth params)
-  login: 'ChangeMe' # Login for basic auth
-  password: 'ChangeMe' # Password for basic auth
-  version: '2.1' # Version for TAXII
-  stix_version: '2.1' # Version for STIX
-  delete_created_by_ref: true # Strip created_by_ref from objects before posting
-  delete_marking_definition: true # Strip object_marking_refs from objects before posting
+  # ssl_verify: true # optional (default: true)
+  # api_root: 'root' # optional (default: 'root'), path segment between server URL and /collections/
+  # token: '' # optional, token for bearer auth (if set, will ignore basic auth params)
+  # login: '' # optional, login for basic auth
+  # password: '' # optional, password for basic auth
+  # version: '2.1' # optional (default: '2.1'), version for TAXII
+  # stix_version: '2.1' # optional (default: '2.1'), version for STIX
+  # delete_created_by_ref: true # optional (default: true), strip created_by_ref from objects before posting
+  # delete_marking_definition: true # optional (default: true), strip object_marking_refs from objects before posting

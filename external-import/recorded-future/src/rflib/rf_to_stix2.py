@@ -139,14 +139,15 @@ class Indicator(RFStixEntity):
 
     def _create_indicator(self):
         """Creates and returns STIX2 indicator object"""
+        pattern = self._create_pattern()
         return stix2.Indicator(
-            id=pycti.Indicator.generate_id(self._create_pattern()),
+            id=pycti.Indicator.generate_id(pattern),
             name=self.name,
             description=self.description,
             labels=self.labels,
             pattern_type="stix",
             valid_from=self.last_seen,
-            pattern=self._create_pattern(),
+            pattern=pattern,
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
             custom_properties={
@@ -154,7 +155,6 @@ class Indicator(RFStixEntity):
                 "x_opencti_main_observable_type": self._add_main_observable_type_to_indicators(),
             },
         )
-        pass
 
     def add_description(self, description):
         self.description = description
@@ -173,7 +173,11 @@ class Indicator(RFStixEntity):
             "url:value": "Url",
         }
 
-        pattern = self._create_pattern()
+        try:
+            pattern = self._create_pattern()
+        except ValueError:
+            return "Unknown"
+
         pattern_splited = pattern.split("=")
         observable_type = pattern_splited[0].strip("[").strip()
 
@@ -1304,14 +1308,25 @@ class StixNote:
 
         for attachment in self.attachments:
             if attachment["type"] != "pdf":
-                rule = DetectionRule(
-                    name=attachment["name"],
-                    _type=attachment["type"],
-                    content=attachment["content"],
-                    author=self.author,
-                    tlp=tlp,
-                )
-                self.objects.extend(rule.to_stix_objects())
+                try:
+                    rule = DetectionRule(
+                        name=attachment["name"],
+                        _type=attachment["type"],
+                        content=attachment["content"],
+                        author=self.author,
+                        tlp=tlp,
+                    )
+                    self.objects.extend(rule.to_stix_objects())
+                except ConversionError as e:
+                    self.helper.connector_logger.warning(
+                        f"{e} for attachment {attachment['name']}",
+                        {
+                            "attachment_name": attachment["name"],
+                            "attachment_type": attachment["type"],
+                            "error": f"{e!r}",
+                        },
+                    )
+                    continue
 
     def _create_rel(self, from_id, to_id, relation):
         """Creates Relationship object"""

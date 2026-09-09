@@ -1,6 +1,6 @@
-pycti==7.260901.0
+pycti==7.260907.0
 lxml==6.1.0
-crowdstrike-falconpy==1.6.0
+crowdstrike-falconpy==1.6.5
 pydantic>=2.10,<3
 pydantic-settings>=2.0
 ioc-finder>=9.0.0

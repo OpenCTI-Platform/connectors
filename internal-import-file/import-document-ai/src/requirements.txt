@@ -1,5 +1,5 @@
-pycti==7.260901.0
+pycti==7.260907.0
 antlr4-python3-runtime
 requests==2.33.0
-stix2==3.0.1
+stix2==3.0.2
 PyYAML==6.0.3

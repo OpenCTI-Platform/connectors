@@ -1,5 +1,4 @@
 import pytest
-from pydantic import ValidationError
 from src.models.configs.config_loader import (
     VALID_SCOPE_VALUES,
     ConfigLoaderConnector,
@@ -47,9 +46,9 @@ def test_scope_accepts_valid_values(scope):
         pytest.param(["not-a-stix-type"], id="unknown_stix_type"),
     ],
 )
-def test_scope_rejects_invalid_values(scope):
-    """CONNECTOR_SCOPE must only contain values from the supported STIX type list."""
-    with pytest.raises(ValidationError) as err:
-        ConfigLoaderConnector(**_minimal_kwargs(scope=scope))
+def test_scope_warns_on_invalid_values(scope):
+    """CONNECTOR_SCOPE should only warn, not raise, when it contains unsupported STIX types."""
+    with pytest.warns(UserWarning, match="Invalid scope value\\(s\\)"):
+        config = ConfigLoaderConnector(**_minimal_kwargs(scope=scope))
 
-    assert "Invalid scope value(s)" in str(err.value)
+    assert config.scope == (scope if isinstance(scope, list) else [scope])

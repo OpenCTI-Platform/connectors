@@ -8,12 +8,12 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
-import html2text
 import pytz
 import stix2
 from connector.settings import ConnectorSettings
 from connectors_sdk.models import OrganizationAuthor
 from dateutil.parser import parse
+from markdownify import markdownify
 from pycti import (
     AttackPattern,
     CustomObservableHostname,
@@ -157,17 +157,7 @@ class Silobreaker:
             )
 
     def _convert_to_markdown(self, content):
-        text_maker = html2text.HTML2Text()
-        text_maker.body_width = 0
-        text_maker.ignore_links = False
-        text_maker.ignore_images = False
-        text_maker.ignore_tables = False
-        text_maker.ignore_emphasis = False
-        text_maker.skip_internal_links = False
-        text_maker.inline_links = True
-        text_maker.protect_links = True
-        text_maker.mark_code = True
-        content_md = text_maker.handle(content)
+        content_md = markdownify(content, heading_style="ATX", table_infer_header=True)
         content_md = content_md.replace("hxxps", "https")
         content_md = content_md.replace("](//", "](https://")
         return content_md

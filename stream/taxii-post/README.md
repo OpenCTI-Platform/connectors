@@ -63,8 +63,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |            | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
 | Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true       | No        | Listen to delete events.                                                       |
 | Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| true       | No        | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            | 80         | No        | Default confidence level (0-100).                                              |
-| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info       | No        | Determines the verbosity of the logs.                                          |
+| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | error      | No        | Determines the verbosity of the logs.                                          |
 
 ### Connector extra parameters environment variables
 
@@ -103,7 +102,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=TAXII POST
       - CONNECTOR_SCOPE=taxii
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - TAXII_URL=https://taxii.example.com
       - TAXII_SSL_VERIFY=true

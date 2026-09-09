@@ -11,5 +11,6 @@ RUN apk --no-cache add git libmagic libffi-dev libxml2-dev libxslt-dev libffi-de
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git
 
+RUN chmod -R 0777 /opt/opencti-connector-import-document
 WORKDIR /opt/opencti-connector-import-document
 CMD ["python3", "main.py"]
