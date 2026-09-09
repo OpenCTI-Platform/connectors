@@ -16,7 +16,6 @@ from kaspersky.utils import (
     create_indicates_relationships,
     create_intrusion_set,
     create_object_refs,
-    create_organization,
     create_region,
     create_report,
     create_sector,
@@ -43,8 +42,6 @@ log = logging.getLogger(__name__)
 
 class PublicationBundleBuilder:
     """Kaspersky publication bundle builder."""
-
-    _DUMMY_OBJECT_NAME = "KASPERSKY EMPTY REPORT"
 
     def __init__(
         self,
@@ -144,13 +141,12 @@ class PublicationBundleBuilder:
             indicator_indicates_entities,
         )
 
-        # TODO: Ignore reports without any references or not?
-        # Hack, the report must have at least one object reference.
+        # A report requires at least one object reference. A publication without
+        # any reference carries no actionable intelligence (no IOCs, no YARA
+        # rules and no taggable metadata), so skip it instead of creating an
+        # empty report.
         if not object_refs:
-            dummy_object = self._create_dummy_object()
-
-            bundle_objects.append(dummy_object)
-            object_refs.append(dummy_object)
+            return None
 
         # Create report and add to bundle.
         report = self._create_report(object_refs)
@@ -246,11 +242,6 @@ class PublicationBundleBuilder:
         created_by = self.author
 
         return create_country(name, created_by=created_by)
-
-    def _create_dummy_object(self) -> Identity:
-        created_by = self.author
-
-        return create_organization(self._DUMMY_OBJECT_NAME, created_by=created_by)
 
     def _create_report(
         self, objects: List[Union[_DomainObject, _RelationshipObject]]
