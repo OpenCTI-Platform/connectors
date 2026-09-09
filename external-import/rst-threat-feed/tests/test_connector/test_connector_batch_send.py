@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-
 from connector.connector import RSTThreatFeed
 from connector.settings import ConnectorSettings
 

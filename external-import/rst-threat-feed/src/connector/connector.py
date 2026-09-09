@@ -8,11 +8,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
-from pycti import OpenCTIConnectorHelper
-
 from connector.converter_to_stix import ConverterToStix
 from connector.feed_converter import FeedType, feed_converter
 from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 from rst_threat_feed_client import MitreTtpDownloader, ThreatFeedClient
 
 _OPENCTI_RETRY_MIN_DELAY_S = 1

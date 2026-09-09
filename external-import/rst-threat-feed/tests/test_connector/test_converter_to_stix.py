@@ -1,9 +1,8 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
-from pycti import Identity, Indicator, Malware
-
 from connector.converter_to_stix import ConverterToStix
+from pycti import Identity, Indicator, Malware
 
 
 def _helper():
@@ -85,7 +84,7 @@ def test_create_stix_objects_orders_author_marking_entities_relationships():
     assert types[1] == "marking-definition"
     assert "indicator" in types
     assert "malware" in types
-    assert types.count("identity") == 2 
+    assert types.count("identity") == 2
     assert types.index("relationship") > types.index("indicator")
     assert types.index("relationship") > types.index("malware")
 

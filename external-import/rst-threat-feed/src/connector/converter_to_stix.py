@@ -4,9 +4,8 @@ from datetime import timedelta
 from typing import Any, Dict, List, Set, Tuple
 
 import stix2
-from pycti import Identity, OpenCTIConnectorHelper, StixCoreRelationship
-
 from connector.feed_converter import ThreatTypes
+from pycti import Identity, OpenCTIConnectorHelper, StixCoreRelationship
 
 
 class ConverterToStix:
@@ -147,7 +146,6 @@ class ConverterToStix:
         ]
 
         shared_parameters: Dict[str, Any] = {
-            "id": threat_key,
             "name": threat["name"],
             "created_by_ref": self.author.id,
             "object_marking_refs": [self.marking.id],
@@ -174,32 +172,40 @@ class ConverterToStix:
         malware_parameters["is_family"] = isfamily
 
         if threat_type == ThreatTypes.MALWARE:
-            return stix2.v21.Malware(**malware_parameters)
+            return stix2.v21.Malware(id=threat_key, **malware_parameters)
         if threat_type == ThreatTypes.RANSOMWARE:
-            return stix2.v21.Malware(malware_types=["ransomware"], **malware_parameters)
+            return stix2.v21.Malware(
+                id=threat_key, malware_types=["ransomware"], **malware_parameters
+            )
         if threat_type == ThreatTypes.BACKDOOR:
-            return stix2.v21.Malware(malware_types=["backdoor"], **malware_parameters)
+            return stix2.v21.Malware(
+                id=threat_key, malware_types=["backdoor"], **malware_parameters
+            )
         if threat_type == ThreatTypes.RAT:
             return stix2.v21.Malware(
-                malware_types=["remote-access-trojan"], **malware_parameters
+                id=threat_key,
+                malware_types=["remote-access-trojan"],
+                **malware_parameters,
             )
         if threat_type == ThreatTypes.EXPLOIT:
             return stix2.v21.Malware(
-                malware_types=["exploit-kit"], **malware_parameters
+                id=threat_key, malware_types=["exploit-kit"], **malware_parameters
             )
         if threat_type == ThreatTypes.CRYPTOMINER:
             return stix2.v21.Malware(
-                malware_types=["resource-exploitation"], **malware_parameters
+                id=threat_key,
+                malware_types=["resource-exploitation"],
+                **malware_parameters,
             )
         if threat_type == ThreatTypes.GROUP:
-            return stix2.v21.IntrusionSet(**shared_parameters)
+            return stix2.v21.IntrusionSet(id=threat_key, **shared_parameters)
         if threat_type == ThreatTypes.CAMPAIGN:
-            return stix2.v21.Campaign(**shared_parameters)
+            return stix2.v21.Campaign(id=threat_key, **shared_parameters)
         if threat_type == ThreatTypes.TOOL:
-            return stix2.v21.Tool(**shared_parameters)
+            return stix2.v21.Tool(id=threat_key, **shared_parameters)
         if threat_type == ThreatTypes.TTP:
             if "aliases" in threat and self.create_custom_ttps:
-                return stix2.v21.AttackPattern(**shared_parameters)
+                return stix2.v21.AttackPattern(id=threat_key, **shared_parameters)
             if "mitre_id" in threat and self.create_mitre_ttps:
                 return stix2.v21.AttackPattern(
                     id=threat_key,
@@ -227,7 +233,7 @@ class ConverterToStix:
                     )
                 ]
             vuln_params.pop("aliases", None)
-            return stix2.v21.Vulnerability(**vuln_params)
+            return stix2.v21.Vulnerability(id=threat_key, **vuln_params)
 
         return None
 

@@ -2,11 +2,10 @@ import sys
 import time
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-from pycti.entities.opencti_user import User
-
 from connector.connector import RSTThreatFeed
 from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
+from pycti.entities.opencti_user import User
 
 __all__ = ["RSTThreatFeed"]
 
