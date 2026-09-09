@@ -9,10 +9,17 @@ import pytest
 # Add src/ to path so we can import the connector package
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from connectors_sdk.models import OrganizationAuthor, System, TLPMarking  # noqa: E402
+from connectors_sdk.models import (  # noqa: E402
+    Incident,
+    OrganizationAuthor,
+    System,
+    TLPMarking,
+)
+from connectors_sdk.models.enums import IncidentSeverity, IncidentType  # noqa: E402
 from wiz_cloud.models import WizIssue  # noqa: E402
 from wiz_cloud.processors import (  # noqa: E402
     WizIssuesProcessor,
+    WizTtpsProcessor,
     WizVulnerabilitiesProcessor,
 )
 from wiz_cloud.state import WizConnectorState  # noqa: E402
@@ -248,6 +255,59 @@ def system() -> System:
     """The System an issue would have built for its cloud resource."""
     return System(
         name="tivan-eleonore-vm",
+        author=OrganizationAuthor(name="Wiz"),
+        markings=[TLPMarking(level="amber+strict")],
+    )
+
+
+@pytest.fixture
+def mitre_sub_category() -> dict:
+    """A MITRE ATT&CK entry, with the tactic-technique composite externalId."""
+    return {
+        "title": "Develop Capabilities: Malware",
+        "externalId": "TA0042-T1587.001",
+        "description": "Adversaries may develop malware.",
+        "category": {
+            "name": "Resource Development",
+            "description": "The adversary is trying to establish resources.",
+            "framework": {"name": "MITRE ATT&CK Matrix", "project": None},
+        },
+    }
+
+
+@pytest.fixture
+def wiz_sub_category() -> dict:
+    """A Wiz proprietary entry, whose externalId is not a MITRE id."""
+    return {
+        "title": "High-profile malware",
+        "externalId": "12.4",
+        "description": "A resource infected with malware.",
+        "category": {
+            "name": "High Profile Threats",
+            "description": "",
+            "framework": {"name": "Wiz for Risk Assessment", "project": None},
+        },
+    }
+
+
+@pytest.fixture
+def ttps_processor() -> WizTtpsProcessor:
+    """A WizTtpsProcessor with a stubbed logger and no I/O."""
+    return WizTtpsProcessor(
+        logger=MagicMock(),
+        author=OrganizationAuthor(name="Wiz"),
+        marking=TLPMarking(level="amber+strict"),
+    )
+
+
+@pytest.fixture
+def incident() -> Incident:
+    """The Incident an issue would have built."""
+    return Incident(
+        name="Wiz issue 22b081f9",
+        incident_type=IncidentType.ALERT,
+        severity=IncidentSeverity.HIGH,
+        source="Wiz",
         author=OrganizationAuthor(name="Wiz"),
         markings=[TLPMarking(level="amber+strict")],
     )
