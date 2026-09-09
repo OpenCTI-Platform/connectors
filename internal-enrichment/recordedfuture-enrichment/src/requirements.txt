@@ -3,6 +3,6 @@ pydantic==2.13.5
 pydantic-settings==2.15.0
 regex==2024.11.6
 requests==2.33.0
-stix2==3.0.1
+stix2==3.0.2
 stix2-patterns==2.1.2
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
