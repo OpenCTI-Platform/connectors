@@ -303,8 +303,8 @@ class WizIssuesProcessor(BaseDataProcessor):
         Args:
             issue: Parsed Wiz issue.
             systems_cache: Systems already built during this run, keyed by
-                entitySnapshot id, so a resource shared by several issues is
-                emitted once and targeted many times.
+                entitySnapshot id, so a resource shared by several issues
+                reuses the same object instead of being rebuilt for each one.
 
         Returns:
             A list holding the Incident, the AttackPatterns and their uses
@@ -336,9 +336,12 @@ class WizIssuesProcessor(BaseDataProcessor):
             objects.extend(self._ttps.objects_for_issue(issue, incident))
 
         if issue.entity_snapshot is not None:
-            system, is_new = self._system_for(issue.entity_snapshot, systems_cache)
-            if is_new:
-                objects.append(system)
+            # Appended to every bundle that references it, not just the first:
+            # bundles are split across workers and ingested in any order, so a
+            # relationship pointing at a System from an earlier bundle can
+            # fail to resolve. The id is deterministic, so the repeat upserts.
+            system = self._system_for(issue.entity_snapshot, systems_cache)
+            objects.append(system)
             objects.append(
                 Relationship(
                     type=RelationshipType.TARGETS,
@@ -382,9 +385,9 @@ class WizIssuesProcessor(BaseDataProcessor):
 
     def _system_for(
         self, snapshot: WizEntitySnapshot, cache: dict[str, System]
-    ) -> tuple[System, bool]:
+    ) -> System:
         if snapshot.id in cache:
-            return cache[snapshot.id], False
+            return cache[snapshot.id]
 
         description_parts = [
             part
@@ -418,4 +421,4 @@ class WizIssuesProcessor(BaseDataProcessor):
             markings=[self._marking],
         )
         cache[snapshot.id] = system
-        return system, True
+        return system
