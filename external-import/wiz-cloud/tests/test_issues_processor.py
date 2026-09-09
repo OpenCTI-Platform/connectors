@@ -13,8 +13,18 @@ the models are exercised here, no I/O.
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
-from connectors_sdk.models import OrganizationAuthor, TLPMarking, Vulnerability
+from connectors_sdk.models import (
+    AttackPattern,
+    Incident,
+    OrganizationAuthor,
+    TLPMarking,
+    Vulnerability,
+)
 from wiz_cloud.processors.issues_processor import _utc
+
+
+def _of_type(objects: list, kind: type) -> list:
+    return [item for item in objects if isinstance(item, kind)]
 
 
 class TestCursorFormatting:
@@ -282,3 +292,56 @@ class TestInterleavedVulnerabilities:
         # replaying is harmless because every id is deterministic.
         assert processor.state.issues_last_created_at is None
         assert processor.logger.warning.called
+
+
+class TestTtps:
+    """MITRE techniques travel in the bundle of the issue that maps to them."""
+
+    @staticmethod
+    def _enable(processor, objects_by_issue: dict[str, list]) -> MagicMock:
+        """Attach a TTPs processor stub returning canned objects per issue.
+
+        Args:
+            processor: The issues processor under test.
+            objects_by_issue: Objects to return for each issue id.
+
+        Returns:
+            The stub, so calls can be asserted.
+        """
+        ttps = MagicMock()
+        ttps.objects_for_issue.side_effect = (
+            lambda issue, incident: objects_by_issue.get(issue.id, [])
+        )
+        processor._ttps = ttps
+        return ttps
+
+    def test_attack_patterns_are_added_to_the_issue_objects(
+        self, processor, signin_issue_data
+    ):
+        pattern = AttackPattern(
+            name="Develop Capabilities: Malware", mitre_id="T1587.001"
+        )
+        self._enable(processor, {signin_issue_data["id"]: [pattern]})
+
+        bundles = list(processor.transform(iter([[signin_issue_data]])))
+
+        assert any(obj is pattern for obj in bundles[0])
+
+    def test_nothing_is_added_when_ttps_are_disabled(
+        self, processor, signin_issue_data
+    ):
+        processor._ttps = None
+
+        bundles = list(processor.transform(iter([[signin_issue_data]])))
+
+        assert not _of_type(bundles[0], AttackPattern)
+
+    def test_the_incident_is_passed_to_the_ttps_processor(
+        self, processor, signin_issue_data
+    ):
+        ttps = self._enable(processor, {})
+
+        bundles = list(processor.transform(iter([[signin_issue_data]])))
+
+        incident = _of_type(bundles[0], Incident)[0]
+        assert ttps.objects_for_issue.call_args[0][1] is incident

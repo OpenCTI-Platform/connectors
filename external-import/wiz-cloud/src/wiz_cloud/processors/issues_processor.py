@@ -25,6 +25,7 @@ from connectors_sdk.models.enums import IncidentSeverity, IncidentType, Relation
 from pydantic import ValidationError
 from wiz_cloud.client_api import WizApiClient
 from wiz_cloud.models import WizEntitySnapshot, WizIssue
+from wiz_cloud.processors.ttps_processor import WizTtpsProcessor
 from wiz_cloud.processors.vulnerabilities_processor import WizVulnerabilitiesProcessor
 
 ISSUES_QUERY = (
@@ -53,6 +54,8 @@ class WizIssuesProcessor(BaseDataProcessor):
     # Set in post_init() when vulnerability import is enabled. Declared here
     # so conversion works on a processor whose post_init() was skipped.
     _vulnerabilities: WizVulnerabilitiesProcessor | None = None
+    # Same for TTPs, which need no client and no state.
+    _ttps: WizTtpsProcessor | None = None
 
     # -- lifecycle -----------------------------------------------------------
 
@@ -82,6 +85,14 @@ class WizIssuesProcessor(BaseDataProcessor):
             self._vulnerabilities = WizVulnerabilitiesProcessor(
                 client=self._client,
                 config=self._config,
+                logger=self.logger,
+                author=self._author,
+                marking=self._marking,
+            )
+
+        self._ttps: WizTtpsProcessor | None = None
+        if self._config.import_ttps:
+            self._ttps = WizTtpsProcessor(
                 logger=self.logger,
                 author=self._author,
                 marking=self._marking,
@@ -290,10 +301,11 @@ class WizIssuesProcessor(BaseDataProcessor):
                 emitted once and targeted many times.
 
         Returns:
-            A list holding the Incident, plus the System and the targets
-            Relationship when the issue carries an entity snapshot. A list is
-            returned so further entities can be appended without changing the
-            signature.
+            A list holding the Incident, the AttackPatterns and their uses
+            Relationships for the issue's MITRE techniques when TTP import is
+            enabled, plus the System and the targets Relationship when the
+            issue carries an entity snapshot. A list is returned so further
+            entities can be appended without changing the signature.
         """
         objects: list = []
 
@@ -313,6 +325,9 @@ class WizIssuesProcessor(BaseDataProcessor):
             markings=[self._marking],
         )
         objects.append(incident)
+
+        if self._ttps is not None:
+            objects.extend(self._ttps.objects_for_issue(issue, incident))
 
         if issue.entity_snapshot is not None:
             system, is_new = self._system_for(issue.entity_snapshot, systems_cache)
