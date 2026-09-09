@@ -14,6 +14,7 @@ from importlib import resources
 
 from connectors_sdk import BaseDataProcessor
 from connectors_sdk.models import (
+    AttackPattern,
     BaseIdentifiedEntity,
     ExternalReference,
     Incident,
@@ -184,6 +185,7 @@ class WizIssuesProcessor(BaseDataProcessor):
         issues_converted = 0
         bundles_sent = 0
         vulnerabilities_sent = 0
+        ttps_sent = 0
 
         for page in data:
             page_objects: list = []
@@ -200,6 +202,8 @@ class WizIssuesProcessor(BaseDataProcessor):
 
                 objects = self._convert(issue, entities_cache)
                 issues_converted += 1
+                ttps = sum(1 for obj in objects if isinstance(obj, AttackPattern))
+                ttps_sent += ttps
                 if max_created is None or issue.created_at > max_created:
                     max_created = issue.created_at
 
@@ -237,6 +241,7 @@ class WizIssuesProcessor(BaseDataProcessor):
                         # Zero when the asset was already scanned this run:
                         # its vulnerabilities went out with an earlier issue.
                         "vulnerabilities": vulnerabilities,
+                        "ttps": ttps,
                     },
                 )
                 yield self._with_shared(objects, shared_sent)
@@ -263,6 +268,7 @@ class WizIssuesProcessor(BaseDataProcessor):
                 {
                     "incidents": issues_converted,
                     "vulnerabilities": vulnerabilities_sent,
+                    "ttps": ttps_sent,
                     "bundles": bundles_sent,
                 },
             )
