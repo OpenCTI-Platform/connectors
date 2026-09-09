@@ -67,6 +67,11 @@ jobs:
 
       - name: Generate config schema
         shell: bash
+        env:
+          # Release/LTS branches generate their schemas against their own
+          # connectors-sdk rather than master's. Tags have no branch to track,
+          # so the task falls back to master.
+          RELEASE_REF: ${{ github.ref_type == 'branch' && github.ref_name || '' }}
         run: |
           set -euo pipefail
           while IFS= read -r connector_path; do
