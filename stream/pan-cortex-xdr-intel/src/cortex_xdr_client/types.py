@@ -19,7 +19,9 @@ class IocPayload(TypedDict):
     rule_id: NotRequired[int | None]
 
     indicator: str
-    type: Literal["HASH", "IP", "PATH", "DOMAIN_NAME", "FILENAME", "MIXED"]
+    type: Literal[
+        "HASH", "IP", "PATH", "DOMAIN_NAME", "FILENAME", "MIXED", "EMAIL_ADDRESS", "URL"
+    ]
     severity: NotRequired[
         Literal["SEV_010_INFO", "SEV_020_LOW", "SEV_030_MEDIUM", "SEV_040_HIGH"] | None
     ]

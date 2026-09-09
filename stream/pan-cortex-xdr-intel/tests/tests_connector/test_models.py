@@ -132,6 +132,26 @@ class TestCortexXdrIoc:
         with pytest.raises(ValidationError):
             CortexXdrIoc(indicator="evil.com", type="INVALID")
 
+    @pytest.mark.parametrize(
+        "type_",
+        [
+            "HASH",
+            "IP",
+            "PATH",
+            "DOMAIN_NAME",
+            "FILENAME",
+            "MIXED",
+            "EMAIL_ADDRESS",
+            "URL",
+        ],
+    )
+    def test_accepts_supported_types(self, type_):
+        # Given: a Cortex XDR-supported `type` value
+        # When: constructing a CortexXdrIoc
+        ioc = CortexXdrIoc(indicator="evil.com", type=type_)
+        # Then: the IOC is constructed successfully with that type
+        assert ioc.type == type_
+
     def test_accepts_int_expiration_date(self):
         # Given: an `expiration_date` passed as an epoch-millisecond `int`
         # When: constructing a CortexXdrIoc

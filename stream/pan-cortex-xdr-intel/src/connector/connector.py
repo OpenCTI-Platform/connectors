@@ -24,9 +24,11 @@ _SUPPORTED_EVENTS = {"create", "update", "delete"}
 _SUPPORTED_ENTITY_TYPES = {"indicator"}
 _SUPPORTED_OBSERVABLE_TYPES = {
     "domain-name",
+    "email-addr",
     "ipv4-addr",
     "ipv6-addr",
     "stixfile",
+    "url",
 }
 
 
@@ -129,6 +131,12 @@ class Connector:
                 )
             elif observable.type.lower() in ("ipv4-addr", "ipv6-addr"):
                 xdr_iocs.append(CortexXdrIoc(type="IP", indicator=observable.value))  # type: ignore[union-attr]  # `value` is always set for IP observables
+            elif observable.type.lower() == "email-addr":
+                xdr_iocs.append(
+                    CortexXdrIoc(type="EMAIL_ADDRESS", indicator=observable.value)  # type: ignore[union-attr]  # `value` is always set for Email-Addr observables
+                )
+            elif observable.type.lower() == "url":
+                xdr_iocs.append(CortexXdrIoc(type="URL", indicator=observable.value))  # type: ignore[union-attr]  # `value` is always set for Url observables
 
         return xdr_iocs
 

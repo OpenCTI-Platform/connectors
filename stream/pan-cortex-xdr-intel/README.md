@@ -8,6 +8,7 @@
   - [Behavior](#behavior)
     - [Supported actions](#supported-actions)
     - [Data flow](#data-flow)
+      - [Score to severity mapping](#score-to-severity-mapping)
     - [Supported observable types](#supported-observable-types)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -64,6 +65,22 @@ delete events on the stream and this connector never removes IOCs from Cortex XD
 An indicator whose observables map to **no** supported Cortex XDR IOC at all is skipped (see
 [Unsupported observable handling](#unsupported-observable-handling)).
 
+#### Score to severity mapping
+
+On upsert, the OpenCTI indicator's `score` (0-100) is mapped to the Cortex XDR IOC `severity`
+as follows:
+
+| OpenCTI score | Cortex XDR severity |
+| ------------- | -------------------- |
+| `80` - `100` | `SEV_040_HIGH` |
+| `60` - `79` | `SEV_030_MEDIUM` |
+| `40` - `59` | `SEV_020_LOW` |
+| `20` - `39` | `SEV_010_INFO` |
+| `0` - `19` | *(no severity sent; Cortex XDR applies its own default)* |
+
+When the indicator has no `score` at all, no `severity` is sent either and Cortex XDR applies its
+own default.
+
 ### Supported observable types
 
 | STIX observable | Cortex XDR IOC type |
@@ -71,8 +88,10 @@ An indicator whose observables map to **no** supported Cortex XDR IOC at all is 
 | `Domain-Name` | `DOMAIN_NAME` |
 | `IPv4-Addr` / `IPv6-Addr` | `IP` |
 | `StixFile` (hashes only, e.g. `MD5`, `SHA-1`, `SHA-256`) | `HASH` |
+| `Email-Addr` | `EMAIL_ADDRESS` |
+| `Url` | `URL` |
 
-Any other observable type (e.g. `Hostname`, `Email-Addr`, `Url`) is out of scope for this
+Any other observable type (e.g. `Hostname`) is out of scope for this
 connector's MVP and is silently filtered out when building the indicator's observables. A
 `StixFile` observable is a supported type, but only its hash(es) are mapped to a Cortex XDR IOC:
 a `StixFile` with only a `name` and no hash passes the type filter but still yields no IOC (see
@@ -164,7 +183,7 @@ this points to an unexpected data shape rather than the normal type-filtering be
 | ------- | ------------ | --- |
 | Connector exits right after startup or after processing one event; logs show a 401/403 Cortex XDR error | Invalid, revoked, or **Standard** (non-Advanced) API key, or a key whose role lacks **Threat Management -> Detections -> Rules** (**View/Edit**) | Generate an **Advanced** API key/Key ID pair with a role granting **Threat Management -> Detections -> Rules** (**View/Edit**) (see [Getting the Cortex XDR API credentials](#getting-the-cortex-xdr-api-credentials)) and update `PAN_CORTEX_XDR_INTEL_API_KEY`/`PAN_CORTEX_XDR_INTEL_API_KEY_ID` |
 | Same as above but with a 429 error | Cortex XDR API rate limit exceeded (not currently configurable from the connector side) | Restart the connector; if the issue persists, contact Filigran support |
-| Logs repeatedly show `No supported observable(s) found in indicator, skipping it` | The indicator's observables are all of an unsupported type (e.g. `Hostname`, `Email-Addr`, `Url`) | Expected behavior for unspported observable types; no action needed unless those indicators are expected to be pushed to Cortex XDR |
+| Logs repeatedly show `No supported observable(s) found in indicator, skipping it` | The indicator's observables are all of an unsupported type (e.g. `Hostname`) | Expected behavior for unspported observable types; no action needed unless those indicators are expected to be pushed to Cortex XDR |
 | Logs repeatedly show `No Cortex XDR IOC could be extracted from any observable, skipping indicator` | The indicator only has `StixFile` observable(s) without any hash (e.g. only a `name`) | Expected behavior since only hashes are mapped for `StixFile`; no action needed unless those indicators are expected to be pushed to Cortex XDR |
 | `delete` events never reach Cortex XDR | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` is set to `false` | Set `CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true` (the default) |
 | Connector exits with `Failed to parse stream event's data payload as JSON` or `Failed to parse indicator and/or observables from stream event` | Unexpected OpenCTI/`pycti` stream payload shape (e.g. a breaking upstream change) | This should not happen; please report the issue with the connector's logs |

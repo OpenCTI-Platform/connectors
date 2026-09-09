@@ -83,7 +83,9 @@ class CortexXdrIoc(BaseModel):
     rule_id: int | None = Field(default=None)
 
     indicator: str
-    type: Literal["HASH", "IP", "PATH", "DOMAIN_NAME", "FILENAME", "MIXED"]
+    type: Literal[
+        "HASH", "IP", "PATH", "DOMAIN_NAME", "FILENAME", "MIXED", "EMAIL_ADDRESS", "URL"
+    ]
     severity: (
         Literal["SEV_010_INFO", "SEV_020_LOW", "SEV_030_MEDIUM", "SEV_040_HIGH"] | None
     ) = Field(default=None)

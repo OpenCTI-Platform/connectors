@@ -424,6 +424,30 @@ class TestExtractXdrIocs:
         # Then: the observable is mapped to a bare IP IOC
         assert xdr_iocs == [CortexXdrIoc(indicator="1.2.3.4", type="IP")]
 
+    def test_maps_email_observable_to_email_address_type(self, connector):
+        # Given: an indicator with a supported Email-Addr observable
+        indicator = OctiIndicator(
+            id="indicator--id",
+            observables=[{"type": "Email-Addr", "value": "evil@example.com"}],
+        )
+        # When: extracting Cortex XDR IOCs
+        xdr_iocs = connector._extract_xdr_iocs(indicator)
+        # Then: the observable is mapped to a bare EMAIL_ADDRESS IOC
+        assert xdr_iocs == [
+            CortexXdrIoc(indicator="evil@example.com", type="EMAIL_ADDRESS")
+        ]
+
+    def test_maps_url_observable_to_url_type(self, connector):
+        # Given: an indicator with a supported Url observable
+        indicator = OctiIndicator(
+            id="indicator--id",
+            observables=[{"type": "Url", "value": "http://evil.com/path"}],
+        )
+        # When: extracting Cortex XDR IOCs
+        xdr_iocs = connector._extract_xdr_iocs(indicator)
+        # Then: the observable is mapped to a bare URL IOC
+        assert xdr_iocs == [CortexXdrIoc(indicator="http://evil.com/path", type="URL")]
+
     def test_maps_stixfile_hash_observable_to_hash_type(self, connector):
         # Given: an indicator with a StixFile hash observable
         indicator = OctiIndicator(
