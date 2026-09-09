@@ -19,6 +19,13 @@ source "$SCRIPT_DIR/_helpers.sh"
 REPO_ROOT=$(jj root 2>/dev/null || git rev-parse --show-toplevel)
 CONNECTOR_METADATA_DIRECTORY="__metadata__"
 VENV_NAME=".temp_venv"
+# Pinned on purpose: some connectors require 3.12 (none require 3.11 strictly).
+# Without this, uv picks whatever interpreter it happens to discover, which
+# varies between the CI runner image and each developer's machine.
+PYTHON_VERSION="3.12"
+# Ref the connectors-sdk is installed from. Release/LTS builds set RELEASE_REF
+# so their schemas are generated against the matching SDK instead of master.
+SDK_REF="${RELEASE_REF:-master}"
 
 CONNECTOR_DIRECTORY="${1:-$(pwd)}"
 CONNECTOR_NAME=$(basename "$CONNECTOR_DIRECTORY")
@@ -32,7 +39,7 @@ activate_venv() {
     # activate it, and install the connector's dependencies.
     local connector_dir="$1"
 
-    uv venv -c "$VENV_PATH"
+    uv venv -c --python "$PYTHON_VERSION" "$VENV_PATH"
 
     # Activate — support both Unix and Windows layouts
     if [ -f "$VENV_PATH/bin/activate" ]; then
@@ -60,8 +67,8 @@ activate_venv() {
     fi
 
     # Ensure connectors-sdk is available for script generation
-    echo "🔄 Installing connectors-sdk for schema generation..."
-    uv pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk"
+    echo "🔄 Installing connectors-sdk ($SDK_REF) for schema generation..."
+    uv pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@${SDK_REF}#subdirectory=connectors-sdk"
 
     popd > /dev/null
 
