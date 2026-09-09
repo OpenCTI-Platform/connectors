@@ -24,8 +24,8 @@ def _patch_pycti_create_token_response() -> None:
 
     original = User.create_token
 
-    def create_token(self, **kwargs):
-        token = original(self, **kwargs)
+    def create_token(self, *args, **kwargs):
+        token = original(self, *args, **kwargs)
         if not isinstance(token, dict):
             return token
         if "name" not in token and kwargs.get("token_name"):
@@ -35,13 +35,14 @@ def _patch_pycti_create_token_response() -> None:
         return token
 
     create_token._rst_threat_feed_patched = True
-    User.create_token = create_token  
+    User.create_token = create_token
 
 
 if __name__ == "__main__":
     try:
-        _patch_pycti_create_token_response()
         settings = ConnectorSettings()
+        if settings.connector.auto_create_service_account:
+            _patch_pycti_create_token_response()
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
         connector = RSTThreatFeed(config=settings, helper=helper)
         connector.run()
