@@ -31,6 +31,7 @@ def discover_manager_supported_connectors() -> list:
         root
         for root in common.discover_connector_roots()
         if common.is_manager_supported(common.load_manifest(root))
+        and common.has_config_schema_deps(root)
     ]
 
 
