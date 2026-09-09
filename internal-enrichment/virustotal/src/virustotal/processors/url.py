@@ -34,7 +34,7 @@ class URLProcessor(EntityProcessor):
         # relationship holds no object, so the key is present and the `get`
         # default never applies: normalise with `or` rather than a default.
         url_related_object_data = (
-            related.get("data", {}) if isinstance(related, dict) else {}
+            (related.get("data") or {}) if isinstance(related, dict) else {}
         )
         return super()._make_builder(
             json_data, url_related_object_data=url_related_object_data, **kwargs
