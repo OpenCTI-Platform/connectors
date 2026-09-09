@@ -52,6 +52,15 @@ class WizCloudConfig(BaseConfigModel):
         ),
     )
 
+    import_ttps: bool = Field(
+        default=True,
+        description=(
+            "Whether to import the MITRE ATT&CK techniques mapped to the "
+            "source rules of the imported issues. They are returned by the "
+            "issues query itself, so importing them costs no extra API call."
+        ),
+    )
+
     import_vulnerabilities: bool = Field(
         default=False,
         description=(
