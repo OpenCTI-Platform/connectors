@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 class URLProcessor(EntityProcessor):
     """Enriches Url observables and Indicators."""
 
+    _GTI_ENDPOINT_TYPE = "urls"
+
     def _fetch_data(self) -> dict:
         url = self.opencti_entity["observable_value"]
         json_data = self.client.get_url_info(url)
@@ -32,7 +34,7 @@ class URLProcessor(EntityProcessor):
         # relationship holds no object, so the key is present and the `get`
         # default never applies: normalise with `or` rather than a default.
         url_related_object_data = (
-            (related.get("data") or {}) if isinstance(related, dict) else {}
+            related.get("data", {}) if isinstance(related, dict) else {}
         )
         return super()._make_builder(
             json_data, url_related_object_data=url_related_object_data, **kwargs
