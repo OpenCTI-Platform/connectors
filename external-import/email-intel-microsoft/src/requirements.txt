@@ -4,4 +4,4 @@ email_validator==2.3.0
 msgraph-sdk==1.58.0
 pycti==7.260907.0
 pydantic~=2.13.5
-pydantic-settings==2.9.1
+pydantic-settings==2.15.0
