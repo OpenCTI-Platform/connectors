@@ -328,8 +328,8 @@ class WizIssuesProcessor(BaseDataProcessor):
         Args:
             issue: Parsed Wiz issue.
             entities_cache: Entities already built during this run, keyed by
-                entitySnapshot id, so a resource shared by several issues is
-                emitted once and linked many times.
+                entitySnapshot id, so a resource shared by several issues
+                reuses the same object instead of being rebuilt for each one.
 
         Returns:
             A list holding the Incident, the AttackPatterns and their uses
@@ -364,11 +364,14 @@ class WizIssuesProcessor(BaseDataProcessor):
         if issue.entity_snapshot is None:
             return objects
 
-        entity, is_new = self._entity_for(issue.entity_snapshot, entities_cache)
+        # Appended to every bundle that references it, not just the first:
+        # bundles are split across workers and ingested in any order, so a
+        # relationship pointing at an entity from an earlier bundle can
+        # fail to resolve. The id is deterministic, so the repeat upserts.
+        entity = self._entity_for(issue.entity_snapshot, entities_cache)
         if entity is None:
             return objects
-        if is_new:
-            objects.append(entity)
+        objects.append(entity)
         objects.append(
             Relationship(
                 # OpenCTI only allows related-to between an Incident and an
@@ -444,7 +447,7 @@ class WizIssuesProcessor(BaseDataProcessor):
 
     def _entity_for(
         self, snapshot: WizEntitySnapshot, cache: dict[str, BaseIdentifiedEntity]
-    ) -> tuple[BaseIdentifiedEntity | None, bool]:
+    ) -> BaseIdentifiedEntity | None:
         """Return the entity for a snapshot, building it on first sight.
 
         Args:
@@ -453,14 +456,13 @@ class WizIssuesProcessor(BaseDataProcessor):
                 entitySnapshot id.
 
         Returns:
-            The entity, or None when the snapshot type is not mapped, and
-            whether it was built by this call and still has to be emitted.
+            The entity, or None when the snapshot type is not mapped.
         """
         if snapshot.id in cache:
-            return cache[snapshot.id], False
+            return cache[snapshot.id]
         if not snapshot.name:
             # Every mapped model requires a non-empty name or value.
-            return None, False
+            return None
 
         common = {
             "description": self._snapshot_context(snapshot),
@@ -493,10 +495,10 @@ class WizIssuesProcessor(BaseDataProcessor):
                 # Mapping every Wiz resource type costs a lot for little
                 # benefit: any other type (SUBSCRIPTION included) only appears
                 # in the incident description.
-                return None, False
+                return None
 
         cache[snapshot.id] = entity
-        return entity, True
+        return entity
 
     @staticmethod
     def _snapshot_context(snapshot: WizEntitySnapshot) -> str | None:
