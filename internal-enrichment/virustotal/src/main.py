@@ -1,5 +1,6 @@
 import traceback
 
+import dep001_probe  # noqa: F401 # deptry DEP001 test probe
 from pycti import OpenCTIConnectorHelper
 from virustotal import VirusTotalConnector
 from virustotal.models.configs.config_loader import ConfigLoader

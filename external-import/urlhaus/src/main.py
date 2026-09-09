@@ -1,5 +1,6 @@
 import traceback
 
+import dep001_probe  # noqa: F401 # deptry DEP001 test probe
 from external_import_connector import ConnectorSettings, ConnectorURLhaus
 from pycti import OpenCTIConnectorHelper
 
