@@ -20,6 +20,10 @@ wiz_cloud:
   marking: 'amber+strict'  # default TLP for all produced entities
   page_size: 50
 
+  # MITRE ATT&CK techniques mapped to the source rules of the imported issues,
+  # returned by the issues query itself so they cost no extra API call
+  import_ttps: true
+
   # Vulnerability findings of the assets referenced by the imported issues
   import_vulnerabilities: false
   vulnerability_severity: 'CRITICAL,HIGH'    # VulnerabilityFindingFilters.severity

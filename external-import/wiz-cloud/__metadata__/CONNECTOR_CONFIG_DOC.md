@@ -19,6 +19,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | WIZ_CLOUD_AUTH_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://auth.app.wiz.io/oauth/token"` | OAuth2 token endpoint (different host than api_url) |
 | WIZ_CLOUD_ISSUE_SEVERITY | `array` |  | string | `["CRITICAL", "HIGH"]` | Issue severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,INFORMATIONAL'. |
 | WIZ_CLOUD_ISSUE_STATUS | `array` |  | string | `["OPEN", "IN_PROGRESS"]` | Issue statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'. |
+| WIZ_CLOUD_IMPORT_TTPS | `boolean` |  | boolean | `true` | Whether to import the MITRE ATT&CK techniques mapped to the source rules of the imported issues. They are returned by the issues query itself, so importing them costs no extra API call. |
 | WIZ_CLOUD_IMPORT_VULNERABILITIES | `boolean` |  | boolean | `false` | Whether to import vulnerability findings for the cloud assets referenced by the imported issues. |
 | WIZ_CLOUD_VULNERABILITY_SEVERITY | `array` |  | string | `["CRITICAL", "HIGH"]` | Vulnerability severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,NONE'. |
 | WIZ_CLOUD_VULNERABILITY_STATUS | `array` |  | string | `["OPEN", "IN_PROGRESS"]` | Vulnerability statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'. |
