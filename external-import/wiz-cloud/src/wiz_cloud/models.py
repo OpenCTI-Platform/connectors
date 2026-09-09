@@ -9,6 +9,9 @@ established:
 - tags can be {} and keys can contain slashes ("Wiz/wz")
 - the same entitySnapshot recurs across issues (converter must dedup)
 - sourceRules answers a plain { name } selection, no inline fragments needed
+- sourceRules securitySubCategories is null rather than [] for empty
+  connections, and mixes MITRE ATT&CK entries with Wiz proprietary
+  taxonomies under the same shape
 
 extra="allow" keeps the connector alive across Wiz schema additions; the
 converter only reads declared fields.
@@ -39,10 +42,55 @@ class WizEntitySnapshot(_WizModel):
     tags: dict[str, str] = Field(default_factory=dict)
 
 
+class WizFrameworkProject(_WizModel):
+    """The project a framework belongs to, null for the built-in frameworks."""
+
+    name: str | None = None
+
+
+class WizFramework(_WizModel):
+    """The framework a security category belongs to.
+
+    Wiz ships the two MITRE matrices alongside its own risk taxonomies, so
+    the name is what tells adversary techniques apart from Wiz scoring.
+    """
+
+    name: str | None = None
+    project: WizFrameworkProject | None = None
+
+
+class WizSecurityCategory(_WizModel):
+    """The category of a sub-category, which is the tactic for MITRE."""
+
+    name: str | None = None
+    description: str | None = None
+    framework: WizFramework | None = None
+
+
+class WizSecuritySubCategory(_WizModel):
+    """A framework entry a detection rule maps to.
+
+    For the MITRE frameworks externalId is a tactic-technique composite such
+    as TA0042-T1587.001. Wiz proprietary frameworks number their entries
+    themselves ("3.1", "12.4"), which is why the framework has to be checked
+    before externalId is treated as a MITRE id.
+    """
+
+    title: str | None = None
+    external_id: str | None = Field(default=None, alias="externalId")
+    description: str | None = None
+    category: WizSecurityCategory | None = None
+
+
 class WizSourceRule(_WizModel):
     """The detection rule that raised an issue."""
 
     name: str | None = None
+    # Optional rather than a list default: Wiz answers null for empty
+    # connections, and MVP1 payloads selected only `name`.
+    security_sub_categories: list[WizSecuritySubCategory] | None = Field(
+        default=None, alias="securitySubCategories"
+    )
 
 
 class WizActor(_WizModel):
