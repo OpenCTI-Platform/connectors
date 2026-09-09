@@ -109,10 +109,22 @@ def is_eligible(manifest: dict[str, Any]) -> bool:
 
 _CONFIG_SCHEMA_DEPS_RE = re.compile(r"pydantic-settings|connectors-sdk")
 
+CONFIG_SCHEMA_FILENAME = "connector_config_schema.json"
+
 
 def _find_shallowest_file(root: Path, filename: str) -> Path | None:
     matches = sorted(root.rglob(filename), key=lambda p: len(p.parts))
     return matches[0] if matches else None
+
+
+def config_schema_path(connector_root: Path) -> Path:
+    """Path of the connector's generated config schema (may not exist)."""
+    return connector_root / "__metadata__" / CONFIG_SCHEMA_FILENAME
+
+
+def has_config_schema(connector_root: Path) -> bool:
+    """True if a generated config schema is committed for this connector."""
+    return config_schema_path(connector_root).exists()
 
 
 def has_config_schema_deps(connector_root: Path) -> bool:
@@ -214,3 +226,13 @@ def write_output(key: str, value: str) -> None:
             f.write(line)
     else:
         print(line, end="")
+
+
+def warn(message: str, file: Path | str | None = None) -> None:
+    """Emit a GitHub Actions warning annotation.
+
+    Outside Actions this is just a printed line. Newlines are escaped as
+    ``%0A`` since a workflow command must stay on a single line.
+    """
+    location = f" file={file}" if file is not None else ""
+    print(f"::warning{location}::{message.replace(chr(10), '%0A')}")
