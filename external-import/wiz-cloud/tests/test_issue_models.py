@@ -46,3 +46,16 @@ def test_source_rule_tolerates_null_sub_categories():
     )
 
     assert rule.security_sub_categories is None
+
+
+def test_import_ttps_defaults_to_true():
+    """TTPs ride along in the issues query, so they cost no extra call."""
+    from wiz_cloud.settings import WizCloudConfig
+
+    config = WizCloudConfig(
+        api_url="https://api.us17.app.wiz.io/graphql",
+        client_id="id",
+        client_secret="secret",
+    )
+
+    assert config.import_ttps is True
