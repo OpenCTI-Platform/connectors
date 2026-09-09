@@ -17,6 +17,7 @@ resolves without any packaging).
 import json
 import math
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Any, Callable, TypeVar
@@ -104,6 +105,35 @@ def is_manager_supported(manifest: dict[str, Any]) -> bool:
 def is_eligible(manifest: dict[str, Any]) -> bool:
     """True if verified-with-date or manager-supported."""
     return is_verified(manifest) or is_manager_supported(manifest)
+
+
+_CONFIG_SCHEMA_DEPS_RE = re.compile(r"pydantic-settings|connectors-sdk")
+
+
+def _find_shallowest_file(root: Path, filename: str) -> Path | None:
+    matches = sorted(root.rglob(filename), key=lambda p: len(p.parts))
+    return matches[0] if matches else None
+
+
+def has_config_schema_deps(connector_root: Path) -> bool:
+    """True if requirements.txt/pyproject.toml declares pydantic-settings or
+    connectors-sdk.
+
+    Mirrors the dependency check in generate_config_schema.sh: without it,
+    the mise task exits 1 even for a manager-supported connector, which
+    would otherwise leave its matrix job permanently red.
+    """
+    requirements_file = _find_shallowest_file(connector_root, "requirements.txt")
+    if requirements_file and _CONFIG_SCHEMA_DEPS_RE.search(
+        requirements_file.read_text()
+    ):
+        return True
+
+    pyproject_toml = _find_shallowest_file(connector_root, "pyproject.toml")
+    if pyproject_toml and "connectors-sdk" in pyproject_toml.read_text():
+        return True
+
+    return False
 
 
 # ---------------------------------------------------------------------------
