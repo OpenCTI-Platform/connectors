@@ -1,7 +1,8 @@
 import asyncio
 import datetime
 import logging
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 from azure.identity.aio import ClientSecretCredential
 from base_connector import BaseClient
@@ -30,8 +31,56 @@ from msgraph.generated.users.item.mail_folders.mail_folders_request_builder impo
 logger = logging.getLogger(__name__)
 
 
-class ConnectorClient(BaseClient):
+@contextmanager
+def _suspend_backed_model_lambdas(backed_item: Any) -> Iterator[None]:
+    """
+    Defensive workaround for a microsoft-kiota-abstractions InMemoryBackingStore
+    infinite-loop bug (see https://github.com/microsoftgraph/msgraph-sdk-python/issues/954,
+    open since 2024-11-16, no fixed release available at the time of writing).
 
+    `InMemoryBackingStore.set()` subscribes a *new* lambda on every item of a list-typed
+    property every time the property is set, with no guard against duplicate
+    subscriptions. Each subscribed lambda re-invokes `set()` on the parent store, so
+    mutating a single attribute on an item that lives inside an already-tracked
+    collection (e.g. `file_attachment.content_bytes = ...` where `file_attachment` is
+    part of `message.attachments`) re-triggers the parent's `set()`, which re-subscribes
+    yet more lambdas onto every item -> unbounded CPU spin, and the connector getting
+    stuck (last_run_datetime/next_run_datetime never updated, Work stuck in progress).
+
+    We temporarily unsubscribe the (private/name-mangled) lambda subscriptions from the
+    item's own backing store before mutating it, then restore them afterwards -
+    mirroring the community workaround documented in msgraph-sdk-python#954, so dirty
+    tracking keeps working normally for any code running after this block.
+
+    NOTE: relies on the private attribute `_InMemoryBackingStore__subscriptions`
+    (name-mangled), which is fragile across `microsoft-kiota-abstractions` versions.
+    Remove this workaround once the upstream bug is fixed.
+    """
+    backing_store = getattr(backed_item, "backing_store", None)
+    subscriptions = (
+        getattr(backing_store, "_InMemoryBackingStore__subscriptions", None)
+        if backing_store is not None
+        else None
+    )
+    if not subscriptions:
+        yield
+        return
+
+    suspended = [
+        (subscription_id, callback)
+        for subscription_id, callback in list(subscriptions.items())
+        if getattr(callback, "__name__", None) == "<lambda>"
+    ]
+    for subscription_id, _ in suspended:
+        backing_store.unsubscribe(subscription_id)
+    try:
+        yield
+    finally:
+        for subscription_id, callback in suspended:
+            backing_store.subscribe(callback, subscription_id)
+
+
+class ConnectorClient(BaseClient):
     def __init__(
         self,
         tenant_id: str,
@@ -113,7 +162,8 @@ class ConnectorClient(BaseClient):
                 .get()
             )
             if isinstance(attachment, FileAttachment):
-                file_attachment.content_bytes = attachment.content_bytes or b""
+                with _suspend_backed_model_lambdas(file_attachment):
+                    file_attachment.content_bytes = attachment.content_bytes or b""
 
         # * unpacks the generator so every coroutine becomes
         # a separate positional arg to asyncio.gather()

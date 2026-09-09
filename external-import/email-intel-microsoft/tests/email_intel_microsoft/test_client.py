@@ -1,10 +1,14 @@
 import datetime
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from types import SimpleNamespace
-from typing import Any, Callable
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from email_intel_microsoft.client import ConnectorClient
+from email_intel_microsoft.client import ConnectorClient, _suspend_backed_model_lambdas
+from kiota_abstractions.store.backed_model import BackedModel
+from kiota_abstractions.store.in_memory_backing_store import InMemoryBackingStore
 from msgraph.generated.models.file_attachment import (
     FileAttachment,
 )
@@ -172,3 +176,55 @@ def test_mime_type_filter(
     )
     assert result_msg.attachments[0].content_bytes == b"PRE"
     assert result_msg.attachments[1].content_bytes is None
+
+
+@dataclass
+class _FakeBackedItem(BackedModel):
+    """Minimal BackedModel used to reproduce the InMemoryBackingStore bug in isolation."""
+
+    content_bytes: bytes | None = field(default=None)
+
+
+def test_suspend_backed_model_lambdas_prevents_infinite_loop() -> None:
+    """
+    Reproduces the microsoft-kiota-abstractions InMemoryBackingStore infinite-loop bug
+    (https://github.com/microsoftgraph/msgraph-sdk-python/issues/954) and verifies that
+    `_suspend_backed_model_lambdas` prevents mutating an item inside a tracked collection
+    from re-triggering the parent store's `set()`.
+    """
+    parent_store = InMemoryBackingStore()
+    item = _FakeBackedItem(backing_store=InMemoryBackingStore())
+
+    set_call_count = 0
+    original_set = parent_store.set
+
+    def _counting_set(key: str, value: Any) -> None:
+        nonlocal set_call_count
+        set_call_count += 1
+        original_set(key, value)
+
+    parent_store.set = _counting_set  # type: ignore[method-assign]
+
+    # Simulate what InMemoryBackingStore.set() does when `message.attachments = [item]`:
+    # it subscribes a lambda on the item's backing store that re-invokes the parent's set().
+    item.backing_store.subscribe(
+        lambda prop_key, old_val, new_val: parent_store.set("attachments", [item])
+    )
+    parent_store.set("attachments", [item])
+    baseline_calls = set_call_count
+
+    # Without the workaround, mutating `item.content_bytes` re-triggers the parent's
+    # set() - this is the reported bug.
+    item.content_bytes = b"data"
+    assert set_call_count > baseline_calls
+
+    # The workaround must prevent the parent's set() from being retriggered.
+    set_call_count = 0
+    with _suspend_backed_model_lambdas(item):
+        item.content_bytes = b"more data"
+    assert set_call_count == 0
+    assert item.content_bytes == b"more data"
+
+    # Subscriptions must be restored once the context manager exits.
+    item.content_bytes = b"final"
+    assert set_call_count > 0
