@@ -7,7 +7,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
 )
 from connectors_sdk.settings.deprecations import migrate_deprecated_namespace
-from pydantic import Field, HttpUrl, model_validator
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -68,7 +68,7 @@ class RstThreatFeedConfig(BaseConfigModel):
         default="https://api.rstcloud.net/v1",
         examples=["https://api.rstcloud.net/v1"],
     )
-    apikey: str = Field(
+    apikey: SecretStr = Field(
         description="RST Cloud Threat Feed API key.",
         examples=["ChangeMe"],
     )
@@ -266,7 +266,7 @@ class ConnectorSettings(BaseConnectorSettings):
     @model_validator(mode="after")
     def _require_api_key(self) -> "ConnectorSettings":
         feed_cfg = getattr(self, "rst_threat_feed", None)
-        api_key = getattr(feed_cfg, "apikey", "")
-        if not api_key:
+        api_key = getattr(feed_cfg, "apikey", None)
+        if api_key is None or not api_key.get_secret_value():
             raise ValueError("rst_threat_feed.apikey is required.")
         return self

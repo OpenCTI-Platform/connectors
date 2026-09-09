@@ -28,7 +28,7 @@ class RSTThreatFeed:
         feed = self.config.rst_threat_feed
         self._downloader_config = {
             "baseurl": str(feed.baseurl).rstrip("/"),
-            "apikey": feed.apikey,
+            "apikey": feed.apikey.get_secret_value(),
             "contimeout": int(feed.contimeout),
             "readtimeout": int(feed.readtimeout),
             "retry": int(feed.retry),
@@ -57,7 +57,7 @@ class RSTThreatFeed:
         self._max_retries = int(feed.max_retries)
         self._retry_delay = int(feed.retry_delay)
         self._retry_backoff_multiplier = float(feed.retry_backoff_multiplier)
-        self._opencti_batch_size = max(1, int(feed.opencti_batch_size))
+        self._opencti_batch_size = max(2, int(feed.opencti_batch_size))
         self.update_existing_data = bool(self.config.connector.update_existing_data)
 
         self.mitre_downloader = MitreTtpDownloader(self._downloader_config)
