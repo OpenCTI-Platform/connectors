@@ -170,15 +170,15 @@ runs:
         #     site-packages via [tool.setuptools.package-data]
         #   - standard connectors: src/, carried by the `COPY src ...` that every
         #     Dockerfile already performs
-        STAMP_DIR=""
-        for main_module in "${CONNECTOR_PATH}"/*/__main__.py; do
-          [ -f "$main_module" ] || continue
-          candidate="$(dirname "$main_module")"
-          if [ "$(basename "$candidate")" != "src" ]; then
-            STAMP_DIR="$candidate"
-            break
-          fi
-        done
+        # `find` is used rather than a glob so this behaves the same in bash, zsh
+        # and sh — zsh aborts on a glob that matches nothing. `|| true` keeps the
+        # pipeline from tripping `set -o pipefail` when nothing matches, which is
+        # the common case (only packaged connectors have such a package).
+        STAMP_DIR="$(find "$CONNECTOR_PATH" -mindepth 2 -maxdepth 2 \
+                       -name '__main__.py' 2>/dev/null \
+                     | grep -v '/src/__main__\.py$' \
+                     | head -1 \
+                     | sed 's|/__main__\.py$||' || true)"
         if [ -z "$STAMP_DIR" ] && [ -d "${CONNECTOR_PATH}/src" ]; then
           STAMP_DIR="${CONNECTOR_PATH}/src"
         fi
@@ -195,6 +195,18 @@ runs:
         MANIFEST="${CONNECTOR_PATH}/__metadata__/connector_manifest.json"
         SLUG="$(jq -r '.slug // empty' "$MANIFEST" 2>/dev/null || true)"
 
+        # The manifest is patched unconditionally. It is the only carrier that
+        # survives connectors whose Dockerfile deletes src/ after `pip install`
+        # (dragos, proofpoint-tap, vulncheck) and connectors with no src/ at all
+        # (spycloud, tenable-security-center). It only reaches an image whose
+        # Dockerfile copies it, and is inert everywhere else.
+        if [ -f "$MANIFEST" ]; then
+          PATCHED="$(mktemp)"
+          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$PATCHED"
+          mv "$PATCHED" "$MANIFEST"
+          echo "🏷️ ${MANIFEST}: container_version=${VERSION}"
+        fi
+
         if [ -n "$STAMP_DIR" ]; then
           STAMP="${STAMP_DIR}/.connector_version.json"
           jq -nc --arg v "$VERSION" \
@@ -202,16 +214,9 @@ runs:
                  --arg m "$BUILD_MODE" \
                  '{version: $v, slug: $s, build_mode: $m}' > "$STAMP"
           echo "🏷️ ${STAMP}: $(cat "$STAMP")"
-        elif [ -f "$MANIFEST" ]; then
-          # Flat-layout connectors start their entry script straight from the image
-          # root, so no package directory can carry the stamp. They ship the
-          # manifest instead — the other source the resolver already reads — with
-          # container_version patched to the build version.
-          PATCHED="$(mktemp)"
-          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$PATCHED"
-          mv "$PATCHED" "$MANIFEST"
-          echo "🏷️ ${MANIFEST}: container_version=${VERSION}"
-        else
+        fi
+
+        if [ -z "$STAMP_DIR" ] && [ ! -f "$MANIFEST" ]; then
           echo "ℹ️ ${CONNECTOR_PATH}: no stamp target and no manifest — skipping"
         fi
 

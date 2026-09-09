@@ -22,6 +22,9 @@ RUN cd /opt/ && \
 FROM packages AS app
 # Copy the app
 COPY src/main.py /opt/main.py
+# src/ was removed above, taking the version stamp with it. The entry script runs
+# from /opt, so ship the manifest there instead — the other source pycti reads.
+COPY __metadata__/connector_manifest.json /opt/__metadata__/connector_manifest.json
 
 # Run the app
 CMD ["python3", "/opt/main.py"]
