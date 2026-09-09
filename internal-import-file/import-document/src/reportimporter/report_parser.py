@@ -85,6 +85,32 @@ class ReportParser(object):
             return True
         return False
 
+    def _drop_phone_numbers_overlapping_ip_addresses(
+        self, list_matches: Dict[str, Dict]
+    ) -> Dict[str, Dict]:
+        ip_ranges = [
+            info[RESULT_FORMAT_RANGE]
+            for info in list_matches.values()
+            if info[RESULT_FORMAT_CATEGORY] in ("IPv4-Addr.value", "IPv6-Addr.value")
+        ]
+        if not ip_ranges:
+            return list_matches
+
+        filtered_matches = {}
+        for match, info in list_matches.items():
+            if info[RESULT_FORMAT_CATEGORY] == "Phone-Number.value":
+                phone_start, phone_end = info[RESULT_FORMAT_RANGE]
+                if any(
+                    phone_start < ip_end and ip_start < phone_end
+                    for ip_start, ip_end in ip_ranges
+                ):
+                    self.helper.log_debug(
+                        f"Discarding phone number match '{match}' overlapping an IP address"
+                    )
+                    continue
+            filtered_matches[match] = info
+        return filtered_matches
+
     def _post_parse_observables(
         self, ind_match: str, observable: Observable, match_range: Tuple
     ) -> Dict:
@@ -114,6 +140,8 @@ class ReportParser(object):
 
         for observable in self.observable_list:
             list_matches.update(self._extract_observable(observable, data))
+
+        list_matches = self._drop_phone_numbers_overlapping_ip_addresses(list_matches)
 
         for entity in self.entity_list:
             list_matches = self._extract_entity(entity, list_matches, data)
