@@ -1,0 +1,13 @@
+# The CI test runner installs only this file, so the connector's own runtime
+# dependencies have to come with it or every test import fails.
+-r ../src/requirements.txt
+
+ruff==0.16.4
+mypy==2.3.1
+pre-commit==4.6.0
+pytest==9.1.1
+pytest-cov==7.1.0
+# Shuffles the order on every run: a suite that only passes in file order is
+# hiding a dependency between tests, and it also seeds `random` per test.
+pytest-randomly==4.1.0
+coverage==7.14.3
