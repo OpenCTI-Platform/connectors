@@ -434,27 +434,24 @@ class HatchingTriageSandboxConnector:
                 file_content = self.helper.api.fetch_opencti_file(file_uri, True)
                 sha256_hash = self._get_sha256(file_content)
                 search_query = f"sha256:{sha256_hash}"
-            elif entity_type == "stixfile":
-                sha256_hash = self._get_sha256_from_observable(observable)
-                if not sha256_hash:
-                    raise ValueError(
-                        f"No attached file or SHA-256 hash found for {observable_value}"
+                sample_id = self._search_for_analysis(search_query)
+                if sample_id is None:
+                    sample_id = self._submit_sample(
+                        file_name=file_name, file_content=file_content
                     )
-                search_query = f"sha256:{sha256_hash}"
-            else:
-                raise ValueError(f"No files found for {observable_value}")
+            elif entity_type == "stixfile":
+                hash_candidates = self._get_hash_candidates_from_observable(observable)
+                if not hash_candidates:
+                    raise ValueError(
+                        f"No attached file or supported hash found for {observable_value}"
+                    )
 
-            sample_id = self._search_for_analysis(search_query)
-
-            if sample_id is None:
-                if not import_files:
+                sample_id = self._search_for_analysis_by_hashes(observable)
+                if sample_id is None:
                     raise ValueError(
                         f"No attached file found for {observable_value}; "
                         "cannot submit a hash-only File SCO to Hatching Triage"
                     )
-                sample_id = self._submit_sample(
-                    file_name=file_name, file_content=file_content
-                )
 
         if entity_type == "url":
             search_query = f"url:{observable_value}"
@@ -568,14 +565,40 @@ class HatchingTriageSandboxConnector:
         sha256obj.update(contents)
         return sha256obj.hexdigest()
 
-    def _get_sha256_from_observable(self, observable):
-        """Return the SHA-256 value from a File SCO, if present."""
+    def _get_hash_candidates_from_observable(self, observable):
+        """Return supported hash candidates in a priority order for Hatching lookups."""
         hashes = observable.get("hashes") or []
+        candidates = []
+
         if isinstance(hashes, dict):
-            return hashes.get("SHA-256") or hashes.get("sha256")
+            hashes = [{"algorithm": key, "hash": value} for key, value in hashes.items()]
+
         for file_hash in hashes:
-            if file_hash.get("algorithm", "").lower() == "sha-256":
-                return file_hash.get("hash")
+            algorithm = (file_hash.get("algorithm") or "").lower()
+            value = file_hash.get("hash")
+            if not algorithm or not value:
+                continue
+
+            normalized_algorithm = algorithm.replace("-", "")
+            if normalized_algorithm in ["sha256", "sha1", "md5", "sha512"]:
+                candidates.append((normalized_algorithm, value))
+
+        ordered_algorithms = ["sha256", "sha1", "md5", "sha512"]
+        normalized = []
+        seen = set()
+        for algorithm in ordered_algorithms:
+            for candidate_algorithm, candidate_hash in candidates:
+                if candidate_algorithm == algorithm and candidate_hash not in seen:
+                    normalized.append((candidate_algorithm, candidate_hash))
+                    seen.add(candidate_hash)
+        return normalized
+
+    def _search_for_analysis_by_hashes(self, observable):
+        """Try the supported file hash values in priority order and return the first match."""
+        for algorithm, hash_value in self._get_hash_candidates_from_observable(observable):
+            sample_id = self._search_for_analysis(f"{algorithm}:{hash_value}")
+            if sample_id is not None:
+                return sample_id
         return None
 
     def _is_ipv4_address(self, ip):

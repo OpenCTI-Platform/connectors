@@ -130,6 +130,61 @@ class TestProcessMessage:
             observable, {}, "sample-123", "stixfile"
         )
 
+    @pytest.mark.parametrize(
+        "algorithm, expected_query",
+        [
+            ("SHA-256", "sha256:file-hash"),
+            ("SHA-1", "sha1:file-hash"),
+            ("MD5", "md5:file-hash"),
+            ("SHA-512", "sha512:file-hash"),
+        ],
+    )
+    def test_reuses_analysis_for_hash_only_stix_file_with_supported_hashes(
+        self, connector, algorithm, expected_query
+    ):
+        observable = {
+            "entity_type": "StixFile",
+            "observable_value": "file-hash",
+            "hashes": [{"algorithm": algorithm, "hash": "file-hash"}],
+        }
+        connector._search_for_analysis = MagicMock(return_value="sample-123")
+        connector.triage_client.overview_report.return_value = {}
+        connector._process_overview_report = MagicMock(return_value="enriched")
+
+        result = connector._process_file(observable, "stixfile")
+
+        assert result == "enriched"
+        connector._search_for_analysis.assert_called_once_with(expected_query)
+        connector._process_overview_report.assert_called_once_with(
+            observable, {}, "sample-123", "stixfile"
+        )
+
+    def test_reuses_analysis_for_hash_only_stix_file_with_multiple_hashes(self, connector):
+        observable = {
+            "entity_type": "StixFile",
+            "observable_value": "file-hash",
+            "hashes": [
+                {"algorithm": "SHA-256", "hash": "wrong-hash"},
+                {"algorithm": "SHA-1", "hash": "file-hash"},
+                {"algorithm": "MD5", "hash": "other-wrong-hash"},
+            ],
+        }
+        connector._search_for_analysis = MagicMock(
+            side_effect=[None, "sample-123"]
+        )
+        connector.triage_client.overview_report.return_value = {}
+        connector._process_overview_report = MagicMock(return_value="enriched")
+
+        result = connector._process_file(observable, "stixfile")
+
+        assert result == "enriched"
+        assert connector._search_for_analysis.call_count == 2
+        connector._search_for_analysis.assert_any_call("sha256:wrong-hash")
+        connector._search_for_analysis.assert_any_call("sha1:file-hash")
+        connector._process_overview_report.assert_called_once_with(
+            observable, {}, "sample-123", "stixfile"
+        )
+
 
 def _raise_server_error(http_error):
     """Generator that raises a ServerError when iterated."""
