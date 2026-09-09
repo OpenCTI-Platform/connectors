@@ -1,7 +1,7 @@
 version: '3'
 services:
   redis:
-    image: redis:8.4.0
+    image: redis:8.10.1
     volumes:
       - redisdata4:/data
     networks:
@@ -51,7 +51,7 @@ services:
       - dev-opencti
 
   rabbitmq:
-    image: rabbitmq:4.2-management
+    image: rabbitmq:4.3-management
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
