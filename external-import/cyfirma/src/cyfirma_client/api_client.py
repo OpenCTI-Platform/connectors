@@ -25,10 +25,9 @@ class CyfirmaClient:
         helper: OpenCTIConnectorHelper,
         base_url: HttpUrl,
         api_key: str,
-        tailored_iocs: bool,
+        tailored_iocs: bool =True,
         look_back_days: int = 7,
         tailored_vulnerabilities: bool = False,
-        alerts_look_back_days: int = 90,
     ):
         """
         Initialize the Cyfirma API client.
@@ -47,13 +46,13 @@ class CyfirmaClient:
         self.api_key = api_key
         self.look_back_days = look_back_days
         self.tailored_vulnerabilities = tailored_vulnerabilities
-        
+
         self.session = requests.Session()
         # self.session.headers.update(self.headers)
 
     def _request_data(
         self, api_url: str, params=None, headers=None
-    ) -> requests.Response:
+    ) -> dict[str, Any]:
         """
         Internal method to handle API requests.
 
@@ -81,7 +80,7 @@ class CyfirmaClient:
             self.helper.connector_logger.error(
                 error_msg, {"url_path": api_url, "error": str(err)}
             )
-            return None
+            return {}
 
     def get_entities(self):
         """

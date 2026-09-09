@@ -1,17 +1,17 @@
 {
-  "title": "Template Connector",
-  "slug": "template",
-  "description": "Template description of the connector",
-  "short_description": "Template short description (summary) of the connector",
+  "title": "CYFIRMA",
+  "slug": "cyfirma",
+  "description": "CYFIRMA connector for OpenCTI",
+  "short_description": "CYFIRMA provides External Threat Landscape Management and Threat intelligence feeds.",
   "logo": null,
   "use_cases": [
-    "Vulnerability & Exploit Awareness"
+    "Vulnerability & Exploit Awareness", "Threat Intelligence"
   ],
   "solution_categories": [
     "Threat Intelligence Feed"
   ],
   "license_type": "Free",
-  "contact": "support@example.com",
+  "contact": "integrations@cyfirma.com",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

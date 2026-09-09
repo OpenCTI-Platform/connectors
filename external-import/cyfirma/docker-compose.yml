@@ -4,17 +4,17 @@ services:
     container_name: connector-cyfirma
     environment:
       # Generic parameters (connection with OpenCTI)
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=flgrn_octi_tkn_G2rGu6uFRk23RGjDemy8o8O2qM8EO5NKos8NuUSUjReYjjtrVNlVa9v62AooY7Tb
+      - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN:-ChangeMe}
       # Common parameters for connectors of type EXTERNAL_IMPORT
-      - CONNECTOR_ID=a6c2f8e0-3f1b-4b6e-9c1a-8e2d5f3a1b7c
+      - CONNECTOR_ID=${CONNECTOR_ID:-ChangeMe}
       - CONNECTOR_NAME=CYFIRMA
       - CONNECTOR_SCOPE=cyfirma
       - CONNECTOR_LOG_LEVEL=debug
       - CONNECTOR_DURATION_PERIOD=PT1H
       # Custom parameters for connector-cyfirma
-      - CYFIRMA_API_BASE_URL=https://api.cyfirma.com
-      - CYFIRMA_API_KEY=
+      - CYFIRMA_API_BASE_URL=${CYFIRMA_API_BASE_URL:-https://api.cyfirma.com}
+      - CYFIRMA_API_KEY=${CYFIRMA_API_KEY:-ChangeMe}
       - CYFIRMA_TLP_LEVEL=clear
       - CYFIRMA_TAILORED_IOCS=false
       - CYFIRMA_LOOK_BACK_DAYS=2

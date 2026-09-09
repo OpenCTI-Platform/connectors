@@ -50,6 +50,11 @@ class ConverterToStix:
             id=Identity.generate_id(name="CYFIRMA", identity_class="organization"),
             name="CYFIRMA",
             identity_class="organization",
+            custom_properties={
+                "x_opencti_aliases": ["cyfirma"],
+                "x_opencti_description": "CYFIRMA is a leading provider of external threat landscape management and threat intelligence feeds.",
+            },
+            contact_information="https://www.cyfirma.com/contact-us",
         )
         return author
 
@@ -90,8 +95,9 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            created_by_ref=self.author,
+            created_by_ref=self.author.id,
         )
+        
         return relationship
 
     # ===========================#
