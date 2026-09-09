@@ -131,3 +131,73 @@ def test_returns_nothing_for_an_issue_without_source_rules(
     issue = WizIssue.model_validate({**signin_issue_data, "sourceRules": []})
 
     assert ttps_processor.objects_for_issue(issue, incident) == []
+
+
+def test_derives_the_kill_chain_phase_from_the_tactic(
+    ttps_processor, incident, signin_issue_data, mitre_sub_category
+):
+    issue = _issue(signin_issue_data, [mitre_sub_category])
+
+    pattern = _of_type(
+        ttps_processor.objects_for_issue(issue, incident), AttackPattern
+    )[0]
+
+    assert len(pattern.kill_chain_phases) == 1
+    assert pattern.kill_chain_phases[0].chain_name == "mitre-attack"
+    assert pattern.kill_chain_phases[0].phase_name == "resource-development"
+
+
+def test_one_technique_under_two_tactics_becomes_one_pattern(
+    ttps_processor, incident, signin_issue_data, mitre_sub_category
+):
+    """ATT&CK techniques legitimately belong to several tactics."""
+    second = {
+        **mitre_sub_category,
+        "externalId": "TA0002-T1587.001",
+        "category": {
+            **mitre_sub_category["category"],
+            "name": "Execution",
+        },
+    }
+    issue = _issue(signin_issue_data, [mitre_sub_category, second])
+
+    objects = ttps_processor.objects_for_issue(issue, incident)
+
+    patterns = _of_type(objects, AttackPattern)
+    assert len(patterns) == 1
+    assert [phase.phase_name for phase in patterns[0].kill_chain_phases] == [
+        "resource-development",
+        "execution",
+    ]
+    assert len(_of_type(objects, Relationship)) == 1
+
+
+def test_a_technique_repeated_across_rules_is_emitted_once(
+    ttps_processor, incident, signin_issue_data, mitre_sub_category
+):
+    issue = WizIssue.model_validate(
+        {
+            **signin_issue_data,
+            "sourceRules": [
+                {"name": "Rule A", "securitySubCategories": [mitre_sub_category]},
+                {"name": "Rule B", "securitySubCategories": [mitre_sub_category]},
+            ],
+        }
+    )
+
+    objects = ttps_processor.objects_for_issue(issue, incident)
+
+    assert len(_of_type(objects, AttackPattern)) == 1
+
+
+def test_a_category_without_a_name_yields_no_phase(
+    ttps_processor, incident, signin_issue_data, mitre_sub_category
+):
+    mitre_sub_category["category"]["name"] = ""
+    issue = _issue(signin_issue_data, [mitre_sub_category])
+
+    pattern = _of_type(
+        ttps_processor.objects_for_issue(issue, incident), AttackPattern
+    )[0]
+
+    assert pattern.kill_chain_phases is None
