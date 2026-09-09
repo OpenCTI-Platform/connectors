@@ -1,4 +1,4 @@
-FROM python:3.12-alpine AS builder
+FROM python:3.14-alpine AS builder
 
 # Install Python modules
 # hadolint ignore=DL3003
@@ -22,7 +22,7 @@ RUN --mount=type=bind,source=src/requirements.txt,target=/tmp/requirements.txt \
     uv pip install -r /tmp/requirements.txt
 
 
-FROM python:3.12-alpine AS runner
+FROM python:3.14-alpine AS runner
 WORKDIR /opt/opencti-connector-montysecurity-c2-tracker
 
 # Install runtime dependencies
