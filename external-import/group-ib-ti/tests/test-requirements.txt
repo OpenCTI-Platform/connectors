@@ -4,7 +4,7 @@
 
 ruff==0.16.4
 mypy==2.3.1
-pre-commit==4.6.0
+pre-commit==4.6.2
 pytest==9.1.1
 pytest-cov==7.1.0
 # Shuffles the order on every run: a suite that only passes in file order is
