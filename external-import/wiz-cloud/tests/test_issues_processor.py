@@ -269,7 +269,12 @@ class TestInterleavedVulnerabilities:
             for call in processor.logger.info.call_args_list
             if "Import finished" in call.args[0]
         )
-        assert summary == {"incidents": 2, "vulnerabilities": 1, "bundles": 2}
+        assert summary == {
+            "incidents": 2,
+            "vulnerabilities": 1,
+            "ttps": 0,
+            "bundles": 2,
+        }
 
     def test_the_cursor_advances_when_every_fetch_succeeded(
         self, processor, empty_description_issue_data
@@ -345,3 +350,20 @@ class TestTtps:
 
         incident = _of_type(bundles[0], Incident)[0]
         assert ttps.objects_for_issue.call_args[0][1] is incident
+
+    def test_the_run_total_counts_the_attack_patterns(
+        self, processor, signin_issue_data
+    ):
+        pattern = AttackPattern(
+            name="Develop Capabilities: Malware", mitre_id="T1587.001"
+        )
+        self._enable(processor, {signin_issue_data["id"]: [pattern]})
+
+        list(processor.transform(iter([[signin_issue_data]])))
+
+        finished = [
+            call
+            for call in processor.logger.info.call_args_list
+            if "Import finished" in call[0][0]
+        ]
+        assert finished[0][0][1]["ttps"] == 1
