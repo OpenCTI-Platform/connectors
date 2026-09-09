@@ -20,19 +20,44 @@ import _matrix_common as common
 # ---------------------------------------------------------------------------
 
 
-def discover_manager_supported_connectors() -> list:
-    """Return connector root dirs with manager_supported=true in their manifest.
+def discover_manager_supported_connectors() -> tuple[list, list]:
+    """Split manager-supported connectors into (eligible, skipped) roots.
 
-    Mirrors the eligibility check performed by the `generate_config_schema`
+    Eligibility mirrors the checks performed by the `generate_config_schema`
     mise task itself, so the matrix never schedules a job that the task
-    would immediately reject.
+    would immediately reject: the connector must be manager-supported *and*
+    declare pydantic-settings or connectors-sdk.
     """
-    return [
-        root
-        for root in common.discover_connector_roots()
-        if common.is_manager_supported(common.load_manifest(root))
-        and common.has_config_schema_deps(root)
-    ]
+    eligible: list = []
+    skipped: list = []
+    for root in common.discover_connector_roots():
+        if not common.is_manager_supported(common.load_manifest(root)):
+            continue
+        target = eligible if common.has_config_schema_deps(root) else skipped
+        target.append(root)
+    return eligible, skipped
+
+
+def warn_on_unmaintainable_schemas(skipped: list) -> None:
+    """Warn about committed schemas that CI can no longer refresh.
+
+    A connector skipped for missing dependencies but which already has a
+    committed config schema is the dangerous case: nothing fails, yet its
+    schema silently drifts as the connector's configuration evolves. Warn
+    loudly so it gets fixed rather than rotting unnoticed.
+    """
+    for root in skipped:
+        if common.has_config_schema(root):
+            common.warn(
+                f"{root} is manager_supported and has a committed "
+                f"{common.CONFIG_SCHEMA_FILENAME}, but declares neither "
+                "pydantic-settings nor connectors-sdk, so generate_config_schema "
+                "cannot regenerate it. The committed schema will drift out of "
+                "sync until one of these dependencies is declared.",
+                file=common.config_schema_path(root),
+            )
+        else:
+            print(f"Skipping {root}: no config-schema dependency declared")
 
 
 # ---------------------------------------------------------------------------
@@ -54,8 +79,9 @@ def make_entry(connector_roots: list) -> dict:
 
 
 def main() -> None:
-    connectors = discover_manager_supported_connectors()
-    print(f"Manager-supported connectors: {len(connectors)}")
+    connectors, skipped = discover_manager_supported_connectors()
+    warn_on_unmaintainable_schemas(skipped)
+    print(f"Manager-supported connectors: {len(connectors)} ({len(skipped)} skipped)")
 
     if not connectors:
         print("No manager-supported connectors, skipping.")
