@@ -1,5 +1,5 @@
 -r ../src/requirements.txt
-freezegun==1.5.1
+freezegun==1.5.5
 pytest==9.1.1
 pytest-asyncio==1.4.0
 pytest-mock==3.14.0
