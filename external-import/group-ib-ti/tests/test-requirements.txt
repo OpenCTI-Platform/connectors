@@ -2,7 +2,7 @@
 # dependencies have to come with it or every test import fails.
 -r ../src/requirements.txt
 
-ruff==0.16.4
+ruff==0.16.6
 mypy==2.3.1
 pre-commit==4.6.2
 pytest==9.1.1
