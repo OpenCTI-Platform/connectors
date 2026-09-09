@@ -2,7 +2,7 @@
 
 Covers the edge cases the sample proved real:
 - empty description
-- duplicated entitySnapshot across issues (System emitted once, targeted twice)
+- duplicated entitySnapshot across issues (System reused, emitted in both bundles)
 - actors: null inside threatDetectionDetails
 - tags with slashes in keys
 
@@ -17,6 +17,8 @@ from connectors_sdk.models import (
     AttackPattern,
     Incident,
     OrganizationAuthor,
+    Relationship,
+    System,
     TLPMarking,
     Vulnerability,
 )
@@ -83,16 +85,19 @@ class TestConversion:
         assert "wiz" not in incident.labels
         assert "threat-detection" in incident.labels
 
-    def test_duplicate_snapshot_yields_one_system_two_relationships(
+    def test_duplicate_snapshot_reuses_one_system_object(
         self, processor, empty_description_issue, duplicate_snapshot_issue
     ):
         cache = {}
         first = processor._convert(empty_description_issue, cache)
         second = processor._convert(duplicate_snapshot_issue, cache)
-        # System appears in the first conversion only; both carry a relationship.
+        # Both conversions carry a System, but the cache reuses one object.
         assert len(first) == 3  # incident, system, relationship
-        assert len(second) == 2  # incident, relationship
+        assert len(second) == 3  # incident, system, relationship
         assert len(cache) == 1
+        first_system = _of_type(first, System)[0]
+        second_system = _of_type(second, System)[0]
+        assert first_system is second_system
 
 
 class TestTransformLogging:
@@ -297,6 +302,29 @@ class TestInterleavedVulnerabilities:
         # replaying is harmless because every id is deterministic.
         assert processor.state.issues_last_created_at is None
         assert processor.logger.warning.called
+
+    def test_every_bundle_carries_the_system_it_references(
+        self, processor, empty_description_issue_data, duplicate_snapshot_issue_data
+    ):
+        """Bundles are ingested in any order, so refs must resolve locally."""
+        self._enable(processor, {})
+
+        bundles = list(
+            processor.transform(
+                iter([[empty_description_issue_data, duplicate_snapshot_issue_data]])
+            )
+        )
+
+        assert len(bundles) == 2
+        for bundle in bundles:
+            systems = _of_type(bundle, System)
+            targets = [
+                obj
+                for obj in bundle
+                if isinstance(obj, Relationship) and obj.type == "targets"
+            ]
+            assert len(systems) == 1
+            assert targets[0].target is systems[0]
 
 
 class TestTtps:
