@@ -327,11 +327,14 @@ class HygieneConnector:
             self.helper.send_stix2_bundle(serialized_bundle)
 
         entity_label = (
-            "indicator" if opencti_entity["entity_type"] == "Indicator" else "observable"
+            "indicator"
+            if opencti_entity["entity_type"] == "Indicator"
+            else "observable"
         )
         note_lines = [f"- **{wl.name}**: {wl.description}" for wl in warninglist_hits]
         note_content = (
-            f"This {entity_label} was found in the following MISP warning list(s):\n\n" + "\n".join(note_lines)
+            f"This {entity_label} was found in the following MISP warning list(s):\n\n"
+            + "\n".join(note_lines)
         )
         note = stix2.Note(
             type="note",
@@ -345,8 +348,7 @@ class HygieneConnector:
             created_by_ref=self.identity,
             custom_properties={"note_types": ["external"]},
         )
-        stix_objects.append(note)
-        serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
+        serialized_bundle = self.helper.stix2_create_bundle([note])
         self.helper.send_stix2_bundle(serialized_bundle)
 
         return score
