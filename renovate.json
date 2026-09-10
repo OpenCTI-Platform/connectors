@@ -27,6 +27,8 @@
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": [
+      "dependencies",
+      "filigran team",
       "security"
     ]
   },
