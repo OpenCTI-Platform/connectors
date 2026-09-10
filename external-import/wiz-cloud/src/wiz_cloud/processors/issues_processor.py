@@ -93,9 +93,10 @@ class WizIssuesProcessor(BaseDataProcessor):
         variables = {
             "first": self._config.page_size,
             "after": None,
-            # Most recent first. Safe with a createdAt cursor because
-            # createdAt is append-only; see state.py.
-            "orderBy": {"field": "CREATED_AT", "direction": "DESC"},
+            # Oldest first: incidents then reach the platform in the order
+            # they happened, and a run that dies halfway leaves a contiguous
+            # window behind. See state.py for why the cursor stays safe.
+            "orderBy": {"field": "CREATED_AT", "direction": "ASC"},
             "filterBy": {
                 "type": ["THREAT_DETECTION"],
                 "severity": list(self._config.issue_severity),
