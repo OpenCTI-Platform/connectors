@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/pan-cortex-xdr-intel_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Palo Alto Cortex XDR Intel",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "pan-cortex-xdr-intel"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "PAN_CORTEX_XDR_INTEL_API_BASE_URL": {
+      "description": "Cortex XDR API base URL (tenant FQDN), i.e. `https://api-<fqdn>`. ",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "PAN_CORTEX_XDR_INTEL_API_KEY_ID": {
+      "description": "Cortex XDR API key ID, sent as the `x-xdr-auth-id` header.",
+      "type": "string"
+    },
+    "PAN_CORTEX_XDR_INTEL_API_KEY": {
+      "description": "Cortex XDR API key (Advanced key) used to sign requests.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "PAN_CORTEX_XDR_INTEL_API_BASE_URL",
+    "PAN_CORTEX_XDR_INTEL_API_KEY_ID",
+    "PAN_CORTEX_XDR_INTEL_API_KEY"
+  ],
+  "additionalProperties": true
+}
