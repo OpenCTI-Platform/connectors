@@ -22,9 +22,10 @@ class WizConnectorState(ExternalImportConnectorState):
 
     # Highest createdAt seen across all successfully processed issues.
     # createdAt is the cursor, not statusChangedAt: each run imports issues
-    # created since the last run, ordered CREATED_AT DESC. Safe because
-    # createdAt is append-only: an issue created while a run is walking pages
-    # sorts above the pages already read and is picked up by the next run.
+    # created since the last run, ordered CREATED_AT ASC. Oldest first means
+    # a run that dies halfway has still ingested a contiguous window, and
+    # since createdAt is append-only, issues created while the run is walking
+    # pages land after the cursor and are picked up by the next run.
     issues_last_created_at: datetime | None = None
 
     # Reserved for vulnerability collection, declared now so the field exists
