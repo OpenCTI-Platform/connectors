@@ -395,3 +395,38 @@ class TestTtps:
             if "Import finished" in call[0][0]
         ]
         assert finished[0][0][1]["ttps"] == 1
+
+
+class TestBundleDeduplication:
+    """A bundle never carries the same object twice."""
+
+    def test_a_page_bundle_carries_a_shared_system_once(
+        self, processor, empty_description_issue_data, duplicate_snapshot_issue_data
+    ):
+        bundles = list(
+            processor.transform(
+                iter([[empty_description_issue_data, duplicate_snapshot_issue_data]])
+            )
+        )
+
+        assert len(bundles) == 1
+        assert len(_of_type(bundles[0], System)) == 1
+
+    def test_a_page_bundle_carries_a_shared_technique_once(
+        self, processor, empty_description_issue_data, duplicate_snapshot_issue_data
+    ):
+        # A distinct instance per issue, as the TTPs processor really builds
+        # them: only the deterministic id makes them the same object.
+        ttps = MagicMock()
+        ttps.objects_for_issue.side_effect = lambda issue, incident: [
+            AttackPattern(name="Develop Capabilities: Malware", mitre_id="T1587.001")
+        ]
+        processor._ttps = ttps
+
+        bundles = list(
+            processor.transform(
+                iter([[empty_description_issue_data, duplicate_snapshot_issue_data]])
+            )
+        )
+
+        assert len(_of_type(bundles[0], AttackPattern)) == 1
