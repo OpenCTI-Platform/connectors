@@ -7,11 +7,7 @@ COPY src /opt/opencti-connector-rst-threat-feed/src
 
 RUN apk --no-cache add --virtual .build-deps git build-base && \
     apk --no-cache add libmagic && \
-    grep -v '^connectors-sdk' src/requirements.txt | grep -v '^#' | grep -v '^$' > /tmp/reqs.txt && \
-    pip3 install --no-cache-dir -r /tmp/reqs.txt && \
-    SDK_SPEC=$(grep '^connectors-sdk' src/requirements.txt | sed 's/^connectors-sdk[[:space:]]*@[[:space:]]*//') && \
-    pip3 install --no-cache-dir --no-deps "$SDK_SPEC" && \
-    rm -f /tmp/reqs.txt && \
+    pip3 install --no-cache-dir -r src/requirements.txt && \
     apk del .build-deps
 
 COPY entrypoint.sh /

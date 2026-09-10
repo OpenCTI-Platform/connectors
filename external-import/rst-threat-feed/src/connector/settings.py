@@ -264,7 +264,7 @@ class ConnectorSettings(BaseConnectorSettings):
         schema = super().config_json_schema(
             connector_name=connector_name,
             by_alias=by_alias,
-            mode=mode, 
+            mode=mode,
         )
         properties = schema.setdefault("properties", {})
         if "CONNECTOR_ID" not in properties:
