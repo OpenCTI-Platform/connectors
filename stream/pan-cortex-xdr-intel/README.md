@@ -86,13 +86,15 @@ own default.
 | STIX observable | Cortex XDR IOC type |
 | --------------- | -------------------- |
 | `Domain-Name` | `DOMAIN_NAME` |
-| `IPv4-Addr` / `IPv6-Addr` | `IP` |
+| `IPv4-Addr` | `IP` |
 | `StixFile` (hashes only, e.g. `MD5`, `SHA-1`, `SHA-256`) | `HASH` |
 | `Email-Addr` | `EMAIL_ADDRESS` |
 | `Url` | `URL` |
 
-Any other observable type (e.g. `Hostname`) is out of scope for this
-connector's MVP and is silently filtered out when building the indicator's observables. A
+Any other observable type (e.g. `Hostname`, `IPv6-Addr`) is out of scope for this
+connector's MVP and is silently filtered out when building the indicator's observables.
+`IPv6-Addr` is intentionally excluded because Cortex XDR's `IP` IOC type only accepts IPv4
+values and rejects IPv6 ones. A
 `StixFile` observable is a supported type, but only its hash(es) are mapped to a Cortex XDR IOC:
 a `StixFile` with only a `name` and no hash passes the type filter but still yields no IOC (see
 [Unsupported observable handling](#unsupported-observable-handling)).

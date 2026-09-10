@@ -484,6 +484,18 @@ class TestExtractXdrIocs:
         # Then: no IOC is built
         assert xdr_iocs == []
 
+    def test_skips_ipv6_observable_type(self, connector):
+        # Given: an indicator with an IPv6-Addr observable (Cortex XDR's IP IOC
+        # type only accepts IPv4 and rejects IPv6 values)
+        indicator = OctiIndicator(
+            id="indicator--id",
+            observables=[{"type": "IPv6-Addr", "value": "2001:db8:dead:beef::1"}],
+        )
+        # When: extracting Cortex XDR IOCs
+        xdr_iocs = connector._extract_xdr_iocs(indicator)
+        # Then: no IOC is built
+        assert xdr_iocs == []
+
     def test_handles_indicator_without_any_observable(self, connector):
         # Given: an indicator with no observables at all
         indicator = OctiIndicator(id="indicator--id", observables=[])
