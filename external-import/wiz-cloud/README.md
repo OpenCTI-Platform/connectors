@@ -70,7 +70,7 @@ graph LR
 | System `labels` | `entitySnapshot.tags` as `key=value` |
 | Relationship | Incident `targets` System |
 
-Incremental behavior: on the first run, issues created within the `since` window are imported. On subsequent runs, only issues created after the highest `createdAt` previously seen are fetched (ordered `CREATED_AT DESC`). Entity IDs are deterministic, so re-runs never duplicate.
+Incremental behavior: on the first run, issues created within the `since` window are imported. On subsequent runs, only issues created after the highest `createdAt` previously seen are fetched (ordered `CREATED_AT ASC`, so incidents reach the platform in the order they happened). Entity IDs are deterministic, so re-runs never duplicate.
 
 ## Known limitations
 
