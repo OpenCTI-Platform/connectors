@@ -233,7 +233,10 @@ class WizIssuesProcessor(BaseDataProcessor):
         return f"{name} - Wiz issue {issue.id}" if name else f"Wiz issue {issue.id}"
 
     def _labels(self, issue: WizIssue) -> list[str]:
-        labels = ["wiz", issue.type.lower().replace("_", "-"), issue.status.lower()]
+        # No "wiz" label: the incident is already created-by the Wiz author
+        # and carries a Wiz external reference, so it would only add a label
+        # every analyst has to filter out.
+        labels = [issue.type.lower().replace("_", "-"), issue.status.lower()]
         if issue.rule_name:
             labels.append(issue.rule_name)
         return labels
