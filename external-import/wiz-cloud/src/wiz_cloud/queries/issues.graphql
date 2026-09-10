@@ -40,7 +40,6 @@ query IssuesV2($after: String, $first: Int, $orderBy: IssueOrder, $filterBy: Iss
             description
             framework {
               name    # only the MITRE matrices are converted
-              project { name }
             }
           }
         }
