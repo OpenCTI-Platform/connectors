@@ -33,6 +33,10 @@ class InternalImportFileConnectorConfig(BaseInternalImportFileConnectorConfig):
         description="Validate any bundle before import.",
         default=True,
     )
+    only_contextual: bool = Field(
+        description="If `true`, only extract data when an entity context is provided.",
+        default=False,
+    )
 
 
 class ImportDocumentConfig(BaseConfigModel):

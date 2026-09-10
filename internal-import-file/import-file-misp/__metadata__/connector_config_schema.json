@@ -53,11 +53,6 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
-    "MISP_IMPORT_FILE_IMPORT_FROM_DATE": {
-      "default": null,
-      "description": "Optional lower-bound date used when importing MISP events.",
-      "type": "string"
-    },
     "MISP_IMPORT_FILE_CREATE_REPORTS": {
       "default": true,
       "description": "Create a report for each imported MISP event.",

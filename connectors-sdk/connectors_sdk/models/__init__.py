@@ -42,6 +42,7 @@ from connectors_sdk.models.report import Report
 from connectors_sdk.models.sector import Sector
 from connectors_sdk.models.sighting import Sighting
 from connectors_sdk.models.software import Software
+from connectors_sdk.models.system import System
 from connectors_sdk.models.text import Text
 from connectors_sdk.models.threat_actor_group import ThreatActorGroup
 from connectors_sdk.models.tlp_marking import TLPMarking
@@ -96,6 +97,7 @@ __all__ = [
     "Sector",
     "Sighting",
     "Software",
+    "System",
     "Text",
     "ThreatActorGroup",
     "Tool",

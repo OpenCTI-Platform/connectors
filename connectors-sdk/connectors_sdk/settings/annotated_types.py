@@ -22,15 +22,17 @@ def parse_comma_separated_list(value: str | list[str]) -> list[str]:
     - value: Either a string (e.g., "a,b,c") or a list[str].
 
     Returns:
-    - A list of strings. For string inputs, the string is split on commas and each
-      token is stripped of leading/trailing whitespace.
+    - A list of strings. For string inputs, the string is split on commas, each
+      token is stripped of leading/trailing whitespace, and empty tokens are
+      discarded.
 
     Examples:
     - "a, b ,c" -> ["a", "b", "c"]
+    - "a, ,c" -> ["a", "c"]
     - ["a", "b"] -> ["a", "b"]
     """
     if isinstance(value, str):
-        return [string.strip() for string in value.split(",") if value]
+        return [stripped for string in value.split(",") if (stripped := string.strip())]
     return value
 
 
@@ -39,8 +41,8 @@ ListFromString = Annotated[
     BeforeValidator(parse_comma_separated_list),
     """Annotated list[str] that:
 - Validates: Accepts a comma-separated string (e.g., "a,b,c") or a list[str].
-  If a string is provided, it is split on commas and whitespace is trimmed for
-  each item.
+  If a string is provided, it is split on commas, whitespace is trimmed for
+  each item, and empty items are discarded.
 
 Components
 - BeforeValidator(parse_comma_separated_list): Converts input strings to list[str]

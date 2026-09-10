@@ -63,18 +63,33 @@ class RFStixEntity:
         self.last_seen = last_seen
 
     def to_stix_objects(self):
-        """Returns a list of STIX objects"""
+        """
+        Returns the STIX objects representing this entity.
+        """
         if not self.stix_obj:
             self.create_stix_objects()
-        return [self.author, self.stix_obj]
+        return [self.stix_obj]
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         pass
 
+    def _bundle_objects(self, objects):
+        """
+        Returns bundle-ready objects: the given objects plus the author identity
+        they reference through 'created_by_ref', deduplicated by id.
+        """
+        bundle_objects = {}
+        for stix_object in [*objects, self.author]:
+            if stix_object is not None:
+                bundle_objects[stix_object["id"]] = stix_object
+        return list(bundle_objects.values())
+
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
-        return stix2.Bundle(objects=self.to_stix_objects(), allow_custom=True)
+        return stix2.Bundle(
+            objects=self._bundle_objects(self.to_stix_objects()), allow_custom=True
+        )
 
     def to_json_bundle(self):
         """Returns STIX Bundle as JSON"""
@@ -193,7 +208,9 @@ class Indicator(RFStixEntity):
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
         return stix2.Bundle(
-            objects=self.objects if self.objects else self.to_stix_objects(),
+            objects=self._bundle_objects(
+                self.objects if self.objects else self.to_stix_objects()
+            ),
             allow_custom=True,
         )
 
@@ -308,7 +325,9 @@ class IPAddress(Indicator):
 
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
-        return stix2.Bundle(objects=self.objects, allow_custom=True)
+        return stix2.Bundle(
+            objects=self._bundle_objects(self.objects), allow_custom=True
+        )
 
 
 class Domain(Indicator):
@@ -480,7 +499,9 @@ class IntrusionSet(RFStixEntity):
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
         return stix2.Bundle(
-            objects=self.objects if self.objects else self.to_stix_objects(),
+            objects=self._bundle_objects(
+                self.objects if self.objects else self.to_stix_objects()
+            ),
             allow_custom=True,
         )
 
@@ -620,7 +641,9 @@ class Malware(RFStixEntity):
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
         return stix2.Bundle(
-            objects=self.objects if self.objects else self.to_stix_objects(),
+            objects=self._bundle_objects(
+                self.objects if self.objects else self.to_stix_objects()
+            ),
             allow_custom=True,
         )
 
@@ -906,7 +929,9 @@ class Vulnerability(RFStixEntity):
     def to_stix_bundle(self):
         """Returns STIX objects as a Bundle"""
         return stix2.Bundle(
-            objects=self.objects if self.objects else self.to_stix_objects(),
+            objects=self._bundle_objects(
+                self.objects if self.objects else self.to_stix_objects()
+            ),
             allow_custom=True,
         )
 
@@ -922,7 +947,6 @@ class DetectionRule(RFStixEntity):
         self.type = _type
         self.content = content
         self.stix_obj = None
-        self.author = author
 
         if self.type not in ("yara", "snort", "sigma"):
             msg = f"[ANALYST NOTES] Detection rule of type {self.type} is not supported"
@@ -1130,6 +1154,7 @@ class StixNote:
         "Validated Intelligence Event": "Observed-Data",
         "Weekly Threat Landscape": "Threat-Report",
         "YARA Rule": "Indicator",
+        "Vulnerability Intelligence": "Vulnerability",
     }
 
     def __init__(
@@ -1520,7 +1545,9 @@ class StixNote:
 
     def to_stix_objects(self):
         """Returns a list of STIX objects"""
-        report_object_refs = [obj.id for obj in self.objects]
+        # 'self.objects' only holds the note content: the author identity is added
+        # to the bundle below, but is never referenced in the Report 'object_refs'
+        report_object_refs = list(dict.fromkeys(obj.id for obj in self.objects))
 
         # Report in STIX lib must have at least one object_refs even if there is no object_refs
         # Use a subclass of Report to make the object_refs optional

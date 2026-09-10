@@ -13,7 +13,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_IMPORT_FILE` | `"INTERNAL_IMPORT_FILE"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
-| MISP_IMPORT_FILE_IMPORT_FROM_DATE | `string` |  | string | `null` | Optional lower-bound date used when importing MISP events. |
 | MISP_IMPORT_FILE_CREATE_REPORTS | `boolean` |  | boolean | `true` | Create a report for each imported MISP event. |
 | MISP_IMPORT_FILE_REPORT_TYPE | `string` |  | string | `"misp-event"` | Report type to use for imported MISP events. |
 | MISP_IMPORT_FILE_CREATE_INDICATORS | `boolean` |  | boolean | `true` | Create indicators from MISP attributes. |
