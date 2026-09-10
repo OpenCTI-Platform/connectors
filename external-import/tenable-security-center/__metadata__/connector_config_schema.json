@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/tenable-security-center_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Tenable Security Center",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "vulnerability"
+      ],
+      "description": "The scope of the connector, i.e. the type of STIX objects it imports.",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT12H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "TSC_API_BASE_URL": {
+      "description": "Base URL of the Tenable Security Center API instance.",
+      "type": "string"
+    },
+    "TSC_API_ACCESS_KEY": {
+      "description": "Access key used to authenticate against the Tenable Security Center API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TSC_API_SECRET_KEY": {
+      "description": "Secret key used to authenticate against the Tenable Security Center API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TSC_API_TIMEOUT": {
+      "default": 30,
+      "description": "Timeout, in seconds, of the Tenable Security Center API requests.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "TSC_API_BACKOFF": {
+      "default": 5,
+      "description": "Backoff duration, in seconds, between two Tenable Security Center API retries.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "TSC_API_RETRIES": {
+      "default": 3,
+      "description": "Number of retries of the Tenable Security Center API requests.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "TSC_EXPORT_SINCE": {
+      "description": "Datetime (ISO-8601) used as the starting point of the very first data retrieval. It is overwritten by the connector state after the first successful run.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "TSC_SEVERITY_MIN_LEVEL": {
+      "default": "high",
+      "description": "Minimum severity level of the findings to import.",
+      "enum": [
+        "info",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "type": "string"
+    },
+    "TSC_PROCESS_SYSTEMS_WITHOUT_VULNERABILITIES": {
+      "default": false,
+      "description": "Whether to import the systems that have no vulnerability attached.",
+      "type": "boolean"
+    },
+    "TSC_MARKING_DEFINITION": {
+      "default": "TLP:CLEAR",
+      "description": "TLP marking definition applied to all the imported entities.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "TSC_NUMBER_THREADS": {
+      "default": 1,
+      "description": "Number of threads used to retrieve data from Tenable Security Center.",
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "TSC_API_BASE_URL",
+    "TSC_API_ACCESS_KEY",
+    "TSC_API_SECRET_KEY",
+    "TSC_EXPORT_SINCE"
+  ],
+  "additionalProperties": true
+}
