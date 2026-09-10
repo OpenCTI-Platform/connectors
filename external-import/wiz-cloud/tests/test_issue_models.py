@@ -17,7 +17,6 @@ def test_source_rule_parses_its_security_sub_categories():
                         "description": "",
                         "framework": {
                             "name": "MITRE ATT&CK Matrix",
-                            "project": None,
                         },
                     },
                 }
@@ -29,7 +28,6 @@ def test_source_rule_parses_its_security_sub_categories():
     assert sub_category.external_id == "TA0042-T1587.001"
     assert sub_category.category.name == "Resource Development"
     assert sub_category.category.framework.name == "MITRE ATT&CK Matrix"
-    assert sub_category.category.framework.project is None
 
 
 def test_source_rule_without_sub_categories_still_parses():
