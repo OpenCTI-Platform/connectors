@@ -362,7 +362,7 @@
         200,
         500
       ],
-      "exclusiveMinimum": 0,
+      "minimum": 2,
       "type": "integer"
     }
   },

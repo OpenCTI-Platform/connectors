@@ -296,6 +296,11 @@ class ConnectorSettings(BaseConnectorSettings):
             apikey.setdefault("format", "password")
             apikey.setdefault("writeOnly", True)
 
+        batch_size = properties.get("RST_THREAT_FEED_OPENCTI_BATCH_SIZE")
+        if isinstance(batch_size, dict):
+            batch_size.pop("exclusiveMinimum", None)
+            batch_size["minimum"] = 2
+
         return schema
 
     @classmethod
