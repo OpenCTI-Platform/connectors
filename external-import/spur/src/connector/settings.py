@@ -14,6 +14,10 @@ class ExternalImportConnectorConfig(
     BaseExternalImportConnectorConfig
 ):  # pylint: disable=too-few-public-methods
     name: str = Field(default="Spur")
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["spur"],
+    )
     duration_period: timedelta = Field(
         description="Interval between feed runs (ISO-8601).",
         default=timedelta(hours=24),

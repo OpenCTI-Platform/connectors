@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'STREAM'
+  id: 'ChangeMe'
+  name: 'Malanta Attribution' # optional (default: 'Malanta Attribution')
+  scope: 'indicator' # optional (default: 'indicator')
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: false # optional (default: false)
+  live_stream_no_dependencies: true # optional (default: true)
+
+malanta_attribution:
+  label_prefix: 'apt:' # optional (default: 'apt:')
+  actor_separators: ',' # optional (default: ',')
+  author_name: 'Malanta.ai' # optional (default: 'Malanta.ai')
+  author_description: '' # optional
+  create_intrusion_sets: true # optional (default: true)
+  min_confidence: 0 # optional (default: 0)

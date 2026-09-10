@@ -50,6 +50,23 @@ def test_filtered_ipv4_address_is_not_reclassified_as_phone_number():
 
 
 @pytest.mark.parametrize(
+    "address",
+    [
+        "119.139.117.171",
+        "198.51.100.234",
+        "255.255.255.255",
+    ],
+)
+def test_ipv4_address_adjacent_to_number_is_not_reclassified_as_phone_number(address):
+    result = _build_parser().parse(f"Log line id 5 {address} host reported.")
+
+    assert result[address][RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value"
+    assert not any(
+        info[RESULT_FORMAT_CATEGORY] == "Phone-Number.value" for info in result.values()
+    )
+
+
+@pytest.mark.parametrize(
     "phone_number",
     [
         # ACMA fictional-use number

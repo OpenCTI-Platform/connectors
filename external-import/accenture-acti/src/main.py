@@ -1,7 +1,6 @@
 import traceback
 
-from accenture_connector import ConnectorAccenture
-from accenture_connector.config_loader import ConfigConnector
+from accenture_connector import ConnectorAccenture, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -15,8 +14,8 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConfigConnector()
-        helper = OpenCTIConnectorHelper(config=config.load)
+        config = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
 
         connector = ConnectorAccenture(config=config, helper=helper)
         connector.run()

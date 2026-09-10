@@ -357,13 +357,13 @@ class ConverterToStix:
         """
         name = (
             "Alert: "
-            + alert.get("alert_reason")
+            + str(alert.get("alert_reason") or "")
             + " - "
-            + alert.get("channel_type")
+            + str(alert.get("channel_type") or "")
             + " - "
-            + alert.get("channel_name")
+            + str(alert.get("channel_name") or "")
             + " - "
-            + alert.get("alert_id")
+            + str(alert.get("alert_id") or "")
         )
         return name
 

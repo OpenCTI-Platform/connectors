@@ -1,14 +1,14 @@
 version: '3'
 services:
   redis:
-    image: redis:8.4.0
+    image: redis:8.10.1
     volumes:
       - redisdata4:/data
     networks:
       - dev-opencti
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.3
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.21
     volumes:
       - esdata4:/usr/share/elasticsearch/data
       - essnapshots:/usr/share/elasticsearch/snapshots
@@ -51,7 +51,7 @@ services:
       - dev-opencti
 
   rabbitmq:
-    image: rabbitmq:4.2-management
+    image: rabbitmq:4.3-management
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
@@ -65,7 +65,7 @@ services:
       - dev-opencti
 
   opencti:
-    image: opencti/platform:7.260828.0
+    image: opencti/platform:7.260907.0
     environment:
       - NODE_OPTIONS=--max-old-space-size=8096
       - APP__PORT=8080
@@ -103,7 +103,7 @@ services:
     restart: always
 
   worker:
-    image: opencti/worker:7.260828.0
+    image: opencti/worker:7.260907.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}

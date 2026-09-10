@@ -3,4 +3,4 @@
 black==26.5.1
 isort==7.0.0
 mypy==1.20.2
-pylint==4.0.7
+pylint==4.0.8

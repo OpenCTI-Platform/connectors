@@ -42,36 +42,10 @@ This connector will upsert anonymizer/proxy context into existing observables or
 
 ## Configuration variables
 
-### OpenCTI environment variables
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter     | config.yml | Docker env var  | Mandatory | Description                           |
-|---------------|------------|-----------------|-----------|---------------------------------------|
-| OpenCTI URL   | `url`      | `OPENCTI_URL`   | Yes       | URL of the OpenCTI platform.          |
-| OpenCTI Token | `token`    | `OPENCTI_TOKEN` | Yes       | Admin token for the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter | config.yml | Docker env var | Default | Mandatory | Description |
-| --- | --- | --- | --- | --- | --- |
-| Connector ID | `id` | `CONNECTOR_ID` | — | Yes | A unique UUIDv4 identifier for this connector instance. |
-| Connector Type | `type` | `CONNECTOR_TYPE` | `EXTERNAL_IMPORT` | Yes | Must be `EXTERNAL_IMPORT`. |
-| Connector Name | `name` | `CONNECTOR_NAME` | `Spur` | No | Display name in the OpenCTI UI. |
-| Connector Scope | `scope` | `CONNECTOR_SCOPE` | — | Yes | Scope of imported data (e.g. `IPv4-Addr,IPv6-Addr`). |
-| Log Level | `log_level` | `CONNECTOR_LOG_LEVEL` | `info` | No | Verbosity: `debug`, `info`, `warn`, or `error`. |
-| Duration Period | `duration_period` | `CONNECTOR_DURATION_PERIOD` | `PT24H` | No | How often the feed runs (ISO-8601 duration). Default is 24 hours. |
-
-### Connector extra parameters environment variables
-
-| Parameter | config.yml | Docker env var | Default | Mandatory | Description |
-| --- | --- | --- | --- | --- | --- |
-| API Key | `spur.api_key` | `SPUR_API_KEY` | — | Yes | Your Spur API token. Must have feed download access. |
-| Feed URLs | `spur.feed_urls` | `SPUR_FEED_URLS` | See note | No | Comma-separated Spur feed URLs. Defaults to anonymous and residential feeds. Adjust to match your license. |
-| TLP Level | `spur.tlp_level` | `SPUR_TLP_LEVEL` | `amber` | No | TLP marking on all imported objects. Options: `clear`, `white`, `green`, `amber`, `amber+strict`, `red`. |
-| Create Indicators | `spur.create_indicators` | `SPUR_CREATE_INDICATORS` | `true` | No | Create STIX Indicators for flagged IPs. Only created for IPs with risks or tunnel data. |
-| Create ASNs | `spur.create_asns` | `SPUR_CREATE_ASNS` | `true` | No | Create `AutonomousSystem` objects with `belongs-to` relationships. |
-| Create Locations | `spur.create_locations` | `SPUR_CREATE_LOCATIONS` | `true` | No | Create `Location` objects with `located-at` relationships. |
-| Default Score | `spur.default_score` | `SPUR_DEFAULT_SCORE` | `70` | No | Base OpenCTI score (0–100). Each risk flag adds 5 points, capped at 100. |
-| Batch Size | `spur.batch_size` | `SPUR_BATCH_SIZE` | `5000` | No | IP records per STIX bundle sent to OpenCTI. Reduce if you encounter memory pressure. |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 Default feed URLs:
 

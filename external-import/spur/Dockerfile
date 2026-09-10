@@ -13,9 +13,8 @@ RUN cd /opt/opencti-connector-spur && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh && \
-    addgroup -S connector && adduser -S -G connector connector
+RUN addgroup -S connector && adduser -S -G connector connector
 USER connector
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-spur
+
+CMD ["python3", "main.py"]

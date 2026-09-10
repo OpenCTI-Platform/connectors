@@ -52,6 +52,11 @@
       "default": ";",
       "description": "The delimiter character used to separate the values in the exported CSV files.",
       "type": "string"
+    },
+    "EXPORT_FILE_CSV_ADD_BOM": {
+      "default": false,
+      "description": "Prepend a UTF-8 BOM (byte order mark) to exported CSV files. Required for Microsoft Excel to correctly auto-detect UTF-8 encoding Without it, Excel falls back to the system's local codepageand non-ASCII text (Arabic, Cyrillic, CJK, etc.) is rendered as garbled characters. Disabled by default.",
+      "type": "boolean"
     }
   },
   "required": [

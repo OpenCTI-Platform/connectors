@@ -72,7 +72,7 @@ def _make_taxii_config(**overrides):
         api_root="root",
         collection_id="col-1",
         token=None,
-        login=SecretStr("user"),
+        login="user",
         password=SecretStr("pass"),
         version="2.1",
         stix_version="2.1",
