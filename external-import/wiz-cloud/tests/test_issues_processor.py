@@ -62,6 +62,15 @@ class TestConversion:
             " - Wiz issue 15811dfb-9cdf-539a-951f-d7961526d74d"
         )
 
+    def test_labels_describe_the_issue_without_naming_the_source(
+        self, processor, signin_issue
+    ):
+        """The Wiz author and external reference already name the source."""
+        incident = processor._convert(signin_issue, systems_cache={})[0]
+
+        assert "wiz" not in incident.labels
+        assert "threat-detection" in incident.labels
+
     def test_duplicate_snapshot_yields_one_system_two_relationships(
         self, processor, empty_description_issue, duplicate_snapshot_issue
     ):
