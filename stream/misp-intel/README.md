@@ -79,7 +79,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |                                              | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
 | Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true                                         | No        | Listen to delete events.                                                       |
 | Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| false                                        | No        | Set to `false` to auto-resolve dependencies.                                   |
-| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            | 80                                           | No        | Confidence level (0-100).                                                      |
 | Container Types                | container_types           | `CONNECTOR_CONTAINER_TYPES`             | report,grouping,case-incident,case-rfi,case-rft | No     | Comma-separated list of container types to process.                            |
 | Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info                                         | No        | Determines the verbosity of the logs.                                          |
 
