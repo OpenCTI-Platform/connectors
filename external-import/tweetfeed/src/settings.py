@@ -72,7 +72,7 @@ class TweetFeedConfig(BaseConfigModel):
     tlp_level: TLPLevel = Field(
         description="TLP marking applied to imported observables and indicators "
         "(clear, white, green, amber, amber+strict, red).",
-        default=TLPLevel.CLEAR,
+        default=TLPLevel.GREEN,
     )
 
     @field_validator("tlp_level", mode="before")

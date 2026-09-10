@@ -103,7 +103,7 @@
         "red"
       ],
       "type": "string",
-      "default": "clear"
+      "default": "green"
     }
   },
   "required": [

@@ -151,11 +151,13 @@ class TestTweetFeedTLPMarking:
         "red": "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed",
     }
 
-    def test_defaults_to_tlp_clear(self, required_env, mocked_helper_class):
+    def test_defaults_to_tlp_green(self, required_env, mocked_helper_class):
+        """TLP:GREEN was the hardcoded marking before this setting existed, so it
+        stays the default to keep existing deployments unchanged."""
         connector = TweetFeed()
 
-        assert connector.config.tweetfeed.tlp_level == "clear"
-        assert connector.tlp_marking_id == self.MARKING_IDS["clear"]
+        assert connector.config.tweetfeed.tlp_level == "green"
+        assert connector.tlp_marking_id == self.MARKING_IDS["green"]
 
     @pytest.mark.parametrize("tlp_level", list(MARKING_IDS))
     def test_configured_level_is_mapped_to_its_marking_id(
