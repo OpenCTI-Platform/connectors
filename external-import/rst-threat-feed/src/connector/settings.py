@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Literal
+from typing import Any, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -71,6 +71,10 @@ class RstThreatFeedConfig(BaseConfigModel):
     apikey: SecretStr = Field(
         description="RST Cloud Threat Feed API key.",
         examples=["ChangeMe"],
+        json_schema_extra={
+            "format": "password",
+            "writeOnly": True,
+        },
     )
     contimeout: int = Field(
         description="HTTP connect timeout in seconds.",
@@ -243,6 +247,56 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     rst_threat_feed: RstThreatFeedConfig = Field(default_factory=RstThreatFeedConfig)
+
+    @classmethod
+    def config_json_schema(
+        cls,
+        *,
+        connector_name: str,
+        by_alias: bool = False,
+        mode: str = "validation",
+    ) -> dict[str, Any]:
+        """Generate env-var JSON schema, keeping CONNECTOR_ID (required at runtime).
+
+        connectors-sdk currently strips CONNECTOR_ID from the catalog schema
+        (filter_schema TODO upstream). Re-insert it so UI/docs match validation.
+        """
+        schema = super().config_json_schema(
+            connector_name=connector_name,
+            by_alias=by_alias,
+            mode=mode, 
+        )
+        properties = schema.setdefault("properties", {})
+        if "CONNECTOR_ID" not in properties:
+            connector_id_schema = {
+                "description": "A UUID v4 to identify the connector in OpenCTI.",
+                "type": "string",
+            }
+            ordered: dict[str, Any] = {}
+            inserted = False
+            for key, value in properties.items():
+                if not inserted and key.startswith("CONNECTOR_"):
+                    ordered["CONNECTOR_ID"] = connector_id_schema
+                    inserted = True
+                ordered[key] = value
+            if not inserted:
+                ordered["CONNECTOR_ID"] = connector_id_schema
+            schema["properties"] = ordered
+            properties = ordered
+
+        required = schema.setdefault("required", [])
+        if "CONNECTOR_ID" not in required:
+            if "OPENCTI_TOKEN" in required:
+                required.insert(required.index("OPENCTI_TOKEN") + 1, "CONNECTOR_ID")
+            else:
+                required.insert(0, "CONNECTOR_ID")
+
+        apikey = properties.get("RST_THREAT_FEED_APIKEY")
+        if isinstance(apikey, dict):
+            apikey.setdefault("format", "password")
+            apikey.setdefault("writeOnly", True)
+
+        return schema
 
     @classmethod
     def _migrate_deprecated_namespaces(cls, data: dict) -> dict:

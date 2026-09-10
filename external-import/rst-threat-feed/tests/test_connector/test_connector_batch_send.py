@@ -126,3 +126,32 @@ def test_batch_send_chunks_and_prefixes_foundation(connector):
         assert chunk[0].id == "identity--author"
         assert chunk[1].id == "marking--1"
         assert len(chunk) <= connector._opencti_batch_size
+
+
+def test_batch_send_sends_foundation_once_when_batch_size_too_small(connector):
+    author = MagicMock(
+        type="identity", id="identity--author", identity_class="organization"
+    )
+    marking = MagicMock(type="marking-definition", id="marking--1")
+    objects = [author, marking] + [
+        MagicMock(type="indicator", id=f"indicator--{i}") for i in range(5)
+    ]
+
+    connector._opencti_batch_size = 2
+    sent_chunks = []
+
+    def capture(chunk, timestamp, feed_type):
+        sent_chunks.append(chunk)
+        return True
+
+    connector._batch_send_one = capture
+    ok = connector._batch_send(objects, timestamp=1_700_000_000, feed_type="domain")
+
+    assert ok is True
+    assert sent_chunks[0][0].id == "identity--author"
+    assert sent_chunks[0][1].id == "marking--1"
+    assert len(sent_chunks[0]) == 2
+    for chunk in sent_chunks[1:]:
+        assert all(obj.type == "indicator" for obj in chunk)
+        assert len(chunk) <= connector._opencti_batch_size
+    assert sum(len(chunk) for chunk in sent_chunks[1:]) == 5

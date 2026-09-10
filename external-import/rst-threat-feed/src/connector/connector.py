@@ -207,12 +207,19 @@ class RSTThreatFeed:
         if not remainder:
             return self._batch_send_one(foundation, timestamp, feed_type)
 
-        foundation_budget = min(len(foundation), max(0, batch_size - 1))
-        foundation_prefix = foundation[:foundation_budget]
-        payload_budget = max(1, batch_size - len(foundation_prefix))
+        if batch_size <= len(foundation):
+            if not self._batch_send_one(foundation, timestamp, feed_type):
+                return False
+            foundation_prefix: List[Any] = []
+            payload_budget = batch_size
+        else:
+            foundation_prefix = foundation
+            payload_budget = batch_size - len(foundation_prefix)
 
-        if len(remainder) <= payload_budget and len(foundation) <= batch_size:
-            return self._batch_send_one(foundation + remainder, timestamp, feed_type)
+        if len(foundation_prefix) + len(remainder) <= batch_size:
+            return self._batch_send_one(
+                foundation_prefix + remainder, timestamp, feed_type
+            )
 
         total_chunks = (len(remainder) + payload_budget - 1) // payload_budget
         for chunk_idx, offset in enumerate(range(0, len(remainder), payload_budget)):

@@ -16,6 +16,10 @@
       "type": "string",
       "writeOnly": true
     },
+    "CONNECTOR_ID": {
+      "description": "A UUID v4 to identify the connector in OpenCTI.",
+      "type": "string"
+    },
     "CONNECTOR_NAME": {
       "default": "RST Threat Feed",
       "description": "The name of the connector.",
@@ -114,7 +118,9 @@
       "examples": [
         "ChangeMe"
       ],
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "RST_THREAT_FEED_CONTIMEOUT": {
       "default": 30,
@@ -363,6 +369,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
+    "CONNECTOR_ID",
     "CONNECTOR_SCOPE",
     "RST_THREAT_FEED_APIKEY"
   ],

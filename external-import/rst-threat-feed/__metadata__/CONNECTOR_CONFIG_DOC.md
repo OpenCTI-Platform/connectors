@@ -1,6 +1,6 @@
 # Connector Configurations
 
-Below is a list of the environment variables supported by the RST
+Below is an exhaustive list of the environment variables supported by the RST
 Threat Feed connector. Required values must be supplied before starting the
 connector.
 
@@ -10,6 +10,7 @@ connector.
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` (URL) | Yes | URL |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | Yes |  |  | The API token to connect to OpenCTI. |
+| CONNECTOR_ID | `string` | Yes |  |  | A UUID v4 to identify the connector in OpenCTI. |
 | CONNECTOR_NAME | `string` |  | `RST Threat Feed`, `RST Threat Feed - Domain` | `"RST Threat Feed"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` | Yes |  |  | The scope of the connector, e.g. 'indicator, vulnerability'. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug`, `info`, `warn`, `warning`, `error` | `"error"` | The minimum level of logs to display. |
