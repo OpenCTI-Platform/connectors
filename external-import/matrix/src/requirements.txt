@@ -8,4 +8,4 @@ matrix-nio==0.25.2
 atomicwrites~=1.4
 peewee~=3.14
 python-olm~=3.2
-stix2==3.0.1
+stix2==3.0.2
