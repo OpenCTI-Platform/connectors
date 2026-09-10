@@ -1,4 +1,4 @@
-name: Unused Dependencies (warning)
+name: Dependency Check (deptry)
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ on:
       - 'internal-import-file/**'
       - 'stream/**'
       - '.github/deptry-package-map.txt'
-      - '.github/workflows/unused-deps.yml'
+      - '.github/workflows/ci-unused-deps.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,7 +24,7 @@ env:
 
 jobs:
   deptry:
-    name: Check Unused Dependencies
+    name: Check Dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -34,83 +34,154 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install deptry
-        run: pip install deptry==0.25.1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
 
       - name: Run deptry on changed connectors
         id: deptry
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          pr_files=$(gh pr diff ${{ github.event.pull_request.number }} --name-only)
-          warnings=""
           config=".github/deptry-package-map.txt"
+          RESDIR="$(mktemp -d)"
 
-          # Build deptry CLI args from the config file
-          # NOTE: deptry's --package-module-name-map replaces the whole dict on each
-          # invocation (Click MAPPING type), so ALL mappings must be in ONE argument
-          # as comma-separated key=value pairs: --package-module-name-map "k1=v1,k2=v2"
+          # Build the package->module map (single MAPPING arg) and the DEP002
+          # ignore list from the shared config. deptry MAPPING options replace the
+          # whole dict on each flag, so everything must go in one argument.
           MAP_ENTRIES=""
           IGNORE_PKGS=""
           while IFS= read -r line || [ -n "$line" ]; do
-            # Strip inline comments and trim whitespace
             line=$(echo "$line" | sed 's/#.*//' | xargs)
             [ -z "$line" ] && continue
             if echo "$line" | grep -q "^ignore="; then
-              pkg="${line#ignore=}"
-              # Accumulate as pipe-separated list under a single DEP002= key
-              IGNORE_PKGS="${IGNORE_PKGS:+$IGNORE_PKGS|}$pkg"
+              IGNORE_PKGS="${IGNORE_PKGS:+$IGNORE_PKGS|}${line#ignore=}"
             else
-              # Accumulate as comma-separated key=value pairs for a single --package-module-name-map arg
               MAP_ENTRIES="${MAP_ENTRIES:+$MAP_ENTRIES,}$line"
             fi
           done < "$config"
-          MAP_ARGS="${MAP_ENTRIES:+--package-module-name-map $MAP_ENTRIES}"
+          export MAP_ENTRIES IGNORE_PKGS RESDIR
 
+          # Scan a single connector. deptry runs inside an isolated uv environment
+          # with the connector's own dependencies installed, so transitive imports
+          # (provided by pycti) are reported as DEP003 instead of false DEP001.
+          scan_one() {
+            req="$1"
+            src="$(dirname "$req")"
+            connector="$(dirname "$src")"
+            safe="$(echo "$connector" | tr '/' '_')"
+
+            # First-party = every local package/module name under src/, so
+            # intra-connector imports are never mistaken for missing dependencies.
+            kf_args=()
+            while IFS= read -r m; do
+              [ -n "$m" ] && kf_args+=(--known-first-party "$m")
+            done < <(
+              { find "$src" -type d -not -path '*/.*' -printf '%f\n'
+                find "$src" -name '*.py' -printf '%f\n' | sed 's/\.py$//'
+              } | sort -u
+            )
+            kf_args+=(--known-first-party src)
+
+            map_args=()
+            [ -n "${MAP_ENTRIES:-}" ] && map_args+=(--package-module-name-map "$MAP_ENTRIES")
+
+            # __main__ is a pydantic BaseSettings false positive; DEP002 ignores
+            # come from the shared config.
+            per_rule="DEP001=__main__"
+            [ -n "${IGNORE_PKGS:-}" ] && per_rule="$per_rule,DEP002=$IGNORE_PKGS"
+
+            out=$(uv run --isolated --no-project \
+              --with-requirements "$req" --with deptry==0.25.1 -- \
+              deptry "$src" --requirements-files "$req" --no-ansi \
+              --extend-exclude '.*/tests?/.*' --extend-exclude '.*_tests?/.*' \
+              "${kf_args[@]}" "${map_args[@]}" --per-rule-ignores "$per_rule" \
+              2>&1 | grep -E "DEP00[123] " || true)
+            [ -z "$out" ] && return 0
+
+            while IFS= read -r line; do
+              code=$(echo "$line" | grep -oE "DEP00[123]" | head -1)
+              [ -z "$code" ] && continue
+              pkg=$(echo "$line" | sed "s/.*DEP00[123] '\([^']*\)'.*/\1/")
+              case "$code" in
+                DEP001)
+                  loc=$(echo "$line" | grep -oE "^[^ ]+:[0-9]+:[0-9]+:" | head -1)
+                  file=$(echo "$loc" | cut -d: -f1); file=${file:-$req}
+                  ln=$(echo "$loc" | cut -d: -f2); ln=${ln:-1}
+                  echo "::error file=$file,line=$ln,title=Undeclared dependency::$pkg is imported but not declared in $req"
+                  echo "- \`${pkg}\` (DEP001) in \`${connector}\`: imported but not declared in \`${req}\`" >> "$RESDIR/$safe.err"
+                  ;;
+                DEP003)
+                  loc=$(echo "$line" | grep -oE "^[^ ]+:[0-9]+:[0-9]+:" | head -1)
+                  file=$(echo "$loc" | cut -d: -f1); file=${file:-$req}
+                  ln=$(echo "$loc" | cut -d: -f2); ln=${ln:-1}
+                  echo "::warning file=$file,line=$ln,title=Transitive dependency::$pkg is imported but only available transitively; add it to $req"
+                  echo "- \`${pkg}\` (DEP003, transitive) in \`${req}\`" >> "$RESDIR/$safe.warn"
+                  ;;
+                DEP002)
+                  escaped=$(printf '%s' "$pkg" | sed 's/[^a-zA-Z0-9]/\\&/g')
+                  ln=$(grep -n -iE "^${escaped}(\[[^]]+\])?([[:space:]]|[=<>~!]|$)" "$req" | head -1 | cut -d: -f1)
+                  ln=${ln:-1}
+                  echo "::warning file=$req,line=$ln,title=Unused dependency::$pkg is listed in $req but not imported in $src"
+                  echo "- \`${pkg}\` (DEP002, unused) in \`${req}\`" >> "$RESDIR/$safe.warn"
+                  ;;
+              esac
+            done <<< "$out"
+          }
+          export -f scan_one
+
+          # Collect the requirements files of the connectors changed in this PR.
+          pr_files=$(gh pr diff "$PR_NUMBER" --name-only)
+          targets="$(mktemp)"
           for dir in external-import internal-enrichment internal-import-file internal-export-file stream; do
             for req in $dir/*/src/requirements.txt; do
               [ -f "$req" ] || continue
               connector="$(dirname "$(dirname "$req")")"
-              src="$(dirname "$req")"
-
-              # Only scan connectors with files changed in this PR
-              changed=$(echo "$pr_files" | grep "^${connector}/" || true)
-              [ -z "$changed" ] && continue
-
-              while IFS= read -r line; do
-                # Extract package name from deptry output: DEP002 'pkg-name' defined ...
-                pkg=$(echo "$line" | sed "s/.*DEP002 '\([^']*\)'.*/\1/")
-                # Find the line number of the package in requirements.txt
-                escaped_pkg=$(printf '%s' "$pkg" | sed 's/[.[\'\''/^$*+?(){}|]/\\&/g')
-                lineno=$(grep -n -iE "^${escaped_pkg}(\[[^\]]+\])?([[:space:]]|[=<>~!]|$)" "$req" | head -1 | cut -d: -f1 || true)
-                lineno=${lineno:-1}
-                echo "::warning file=$req,line=$lineno,title=Unused dependency::$pkg is listed in $req but not imported in $src"
-                warnings="${warnings}- \`${pkg}\` in \`${req}\`\n"
-              done < <(deptry "$src" --requirements-files "$req" --no-ansi \
-                $MAP_ARGS \
-                ${IGNORE_PKGS:+--per-rule-ignores "DEP002=$IGNORE_PKGS"} \
-                2>&1 | grep "DEP002" || true)
+              echo "$pr_files" | grep -q "^${connector}/" && echo "$req" >> "$targets"
             done
           done
 
-          if [ -n "$warnings" ]; then
-            echo "::notice title=How to fix unused dependency warnings::For each warning: (1) if the package IS used but under a different import name (e.g. 'PyYAML' -> 'yaml'), add a mapping line to .github/deptry-package-map.txt. (2) if the package is truly unused, remove it from the connector's requirements.txt."
+          if [ -s "$targets" ]; then
+            # Scan up to 6 connectors concurrently.
+            xargs -P 6 -a "$targets" -I{} bash -c 'scan_one "$@"' _ {}
+          else
+            echo "No changed connectors to scan."
           fi
 
-          # Pass warnings to next step
+          errors=""
+          warnings=""
+          shopt -s nullglob
+          for f in "$RESDIR"/*.err; do errors="${errors}$(cat "$f")"$'\n'; done
+          for f in "$RESDIR"/*.warn; do warnings="${warnings}$(cat "$f")"$'\n'; done
+
+          if [ -n "$warnings" ]; then
+            echo "::notice title=How to fix dependency warnings::DEP002 = declared but unused (remove it or add a name mapping to .github/deptry-package-map.txt). DEP003 = used but only available transitively (declare it explicitly in the connector's requirements.txt)."
+          fi
+
           {
             echo "warnings<<EOF"
-            echo -e "$warnings"
+            printf '%s\n' "$warnings"
+            echo "EOF"
+            echo "errors<<EOF"
+            printf '%s\n' "$errors"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Comment on PR
-        if: steps.deptry.outputs.warnings != '' && github.event.pull_request.head.repo.full_name == github.repository
+        if: (steps.deptry.outputs.warnings != '' || steps.deptry.outputs.errors != '') && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |
             const marker = '<!-- unused-deps-bot -->';
-            const body = `${marker}\n⚠️ **Unused dependencies detected**\n\nThe following packages appear to be unused:\n\n${process.env.WARNINGS}\n> **How to fix:** (1) if the package is used but under a different import name (e.g. \`PyYAML\` → \`yaml\`), add a mapping line to \`.github/deptry-package-map.txt\`. (2) if truly unused, remove it from the connector's \`requirements.txt\`.`;
+            const errors = process.env.ERRORS.trim();
+            const warnings = process.env.WARNINGS.trim();
+            let body = `${marker}`;
+            if (errors) {
+              body += `\n❌ **Undeclared dependencies detected (blocking)**\n\nThe following packages are imported but not declared (\`DEP001\`):\n\n${errors}\n> **How to fix:** add the missing package to the connector's \`requirements.txt\`. If the import name differs from the PyPI package name, add a mapping line to \`.github/deptry-package-map.txt\`.`;
+            }
+            if (warnings) {
+              body += `\n\n⚠️ **Dependency warnings**\n\nThe following packages are unused (\`DEP002\`) or only available transitively (\`DEP003\`):\n\n${warnings}\n> **How to fix:** (1) if the package is used but under a different import name (e.g. \`PyYAML\` → \`yaml\`), add a mapping line to \`.github/deptry-package-map.txt\`. (2) if truly unused, remove it from the connector's \`requirements.txt\`. (3) if transitive, declare it explicitly in \`requirements.txt\`.`;
+            }
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -137,9 +208,10 @@ jobs:
             }
         env:
           WARNINGS: ${{ steps.deptry.outputs.warnings }}
+          ERRORS: ${{ steps.deptry.outputs.errors }}
 
-      - name: Remove comment if no warnings
-        if: steps.deptry.outputs.warnings == '' && github.event.pull_request.head.repo.full_name == github.repository
+      - name: Remove comment if no findings
+        if: steps.deptry.outputs.warnings == '' && steps.deptry.outputs.errors == '' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |
@@ -158,3 +230,10 @@ jobs:
                 comment_id: existing.id,
               });
             }
+
+      - name: Fail on undeclared dependencies
+        if: steps.deptry.outputs.errors != ''
+        run: |
+          echo "Undeclared (DEP001) dependencies detected. See annotations above."
+          exit 1
+
