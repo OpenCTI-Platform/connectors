@@ -270,7 +270,7 @@ def mitre_sub_category() -> dict:
         "category": {
             "name": "Resource Development",
             "description": "The adversary is trying to establish resources.",
-            "framework": {"name": "MITRE ATT&CK Matrix", "project": None},
+            "framework": {"name": "MITRE ATT&CK Matrix"},
         },
     }
 
@@ -285,7 +285,7 @@ def wiz_sub_category() -> dict:
         "category": {
             "name": "High Profile Threats",
             "description": "",
-            "framework": {"name": "Wiz for Risk Assessment", "project": None},
+            "framework": {"name": "Wiz for Risk Assessment"},
         },
     }
 

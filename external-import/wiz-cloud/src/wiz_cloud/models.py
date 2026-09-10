@@ -43,12 +43,6 @@ class WizEntitySnapshot(_WizModel):
     tags: dict[str, str] = Field(default_factory=dict)
 
 
-class WizFrameworkProject(_WizModel):
-    """The project a framework belongs to, null for the built-in frameworks."""
-
-    name: str | None = None
-
-
 class WizFramework(_WizModel):
     """The framework a security category belongs to.
 
@@ -57,7 +51,6 @@ class WizFramework(_WizModel):
     """
 
     name: str | None = None
-    project: WizFrameworkProject | None = None
 
 
 class WizSecurityCategory(_WizModel):
