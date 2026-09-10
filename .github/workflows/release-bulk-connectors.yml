@@ -258,7 +258,7 @@ jobs:
               failed=$((failed + 1))
             fi
             # Space out mutating API calls to stay clear of secondary rate limits.
-            sleep 2
+            sleep 1
           done < <(printf '%s' "$CONNECTORS_JSON" | jq -r '.[]')
 
           {
