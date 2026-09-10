@@ -8,6 +8,3 @@
 **/__pycache__
 **/__metadata__
 **/__docs__
-# The version stamp lives in src/, which the Dockerfile deletes after install,
-# so the manifest carries the version instead. Logo and schema stay excluded.
-!__metadata__/connector_manifest.json

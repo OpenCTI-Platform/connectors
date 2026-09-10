@@ -33,9 +33,10 @@ RUN python -m pip install --no-cache-dir . && \
 # copy it in explicitly; connector/ and vulncheck_client/ resolve from
 # site-packages.
 COPY src/main.py .
-# src/ was removed above, taking the version stamp with it. The entry script runs
-# from /app, so ship the manifest there instead — the other source pycti reads.
-COPY __metadata__/connector_manifest.json ./__metadata__/connector_manifest.json
+# src/ was removed above, taking its version stamp with it. The `[n]` makes this
+# copy optional: the stamp is written by the CI and is absent from local builds,
+# and a plain COPY would fail there. Do not "fix" it into a literal filename.
+COPY .connector_version.jso[n] ./
 
 # Execute the connector
 CMD [ "python", "main.py" ]

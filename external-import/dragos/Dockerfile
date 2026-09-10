@@ -22,9 +22,10 @@ RUN cd /opt/ && \
 FROM packages AS app
 # Copy the app
 COPY src/main.py /opt/main.py
-# src/ was removed above, taking the version stamp with it. The entry script runs
-# from /opt, so ship the manifest there instead — the other source pycti reads.
-COPY __metadata__/connector_manifest.json /opt/__metadata__/connector_manifest.json
+# src/ was removed above, taking its version stamp with it. The `[n]` makes this
+# copy optional: the stamp is written by the CI and is absent from local builds,
+# and a plain COPY would fail there. Do not "fix" it into a literal filename.
+COPY .connector_version.jso[n] /opt/
 
 # Run the app
 CMD ["python3", "/opt/main.py"]

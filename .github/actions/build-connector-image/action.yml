@@ -195,29 +195,23 @@ runs:
         MANIFEST="${CONNECTOR_PATH}/__metadata__/connector_manifest.json"
         SLUG="$(jq -r '.slug // empty' "$MANIFEST" 2>/dev/null || true)"
 
-        # The manifest is patched unconditionally. It is the only carrier that
-        # survives connectors whose Dockerfile deletes src/ after `pip install`
-        # (dragos, proofpoint-tap, vulncheck) and connectors with no src/ at all
-        # (spycloud, tenable-security-center). It only reaches an image whose
-        # Dockerfile copies it, and is inert everywhere else.
-        if [ -f "$MANIFEST" ]; then
-          PATCHED="$(mktemp)"
-          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$PATCHED"
-          mv "$PATCHED" "$MANIFEST"
-          echo "🏷️ ${MANIFEST}: container_version=${VERSION}"
-        fi
-
-        if [ -n "$STAMP_DIR" ]; then
-          STAMP="${STAMP_DIR}/.connector_version.json"
+        # The connector root always gets a stamp. Connectors whose code directory
+        # does not survive into the final image — no src/ at all, or a src/ that
+        # `pip install` consumes and then deletes — pick it up with an optional
+        # copy next to their entry script. It is inert for every other connector,
+        # since no Dockerfile copies the whole build context.
+        write_stamp() {
           jq -nc --arg v "$VERSION" \
                  --arg s "${SLUG:-${{ inputs.connector_name }}}" \
                  --arg m "$BUILD_MODE" \
-                 '{version: $v, slug: $s, build_mode: $m}' > "$STAMP"
-          echo "🏷️ ${STAMP}: $(cat "$STAMP")"
-        fi
+                 '{version: $v, slug: $s, build_mode: $m}' > "$1"
+          echo "🏷️ $1: $(cat "$1")"
+        }
 
-        if [ -z "$STAMP_DIR" ] && [ ! -f "$MANIFEST" ]; then
-          echo "ℹ️ ${CONNECTOR_PATH}: no stamp target and no manifest — skipping"
+        write_stamp "${CONNECTOR_PATH}/.connector_version.json"
+
+        if [ -n "$STAMP_DIR" ]; then
+          write_stamp "${STAMP_DIR}/.connector_version.json"
         fi
 
     - name: Resolve Dockerfile and build args
