@@ -1,6 +1,6 @@
 """Tests for the Wiz issue payload models."""
 
-from wiz_cloud.models import WizSourceRule
+from wiz_cloud.models import WizIssue, WizSourceRule
 
 
 def test_source_rule_parses_its_security_sub_categories():
@@ -46,6 +46,23 @@ def test_source_rule_tolerates_null_sub_categories():
     )
 
     assert rule.security_sub_categories is None
+
+
+def test_an_issue_with_null_source_rules_is_not_dropped():
+    """A null connection must not fail validation and lose the whole issue."""
+    issue = WizIssue.model_validate(
+        {
+            "id": "issue-1",
+            "type": "THREAT_DETECTION",
+            "severity": "HIGH",
+            "status": "IN_PROGRESS",
+            "createdAt": "2026-08-24T10:00:00Z",
+            "sourceRules": None,
+        }
+    )
+
+    assert issue.source_rules == []
+    assert issue.rule_name is None
 
 
 def test_import_ttps_defaults_to_true():

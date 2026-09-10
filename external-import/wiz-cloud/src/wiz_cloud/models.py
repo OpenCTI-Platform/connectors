@@ -9,17 +9,18 @@ established:
 - tags can be {} and keys can contain slashes ("Wiz/wz")
 - the same entitySnapshot recurs across issues (converter must dedup)
 - sourceRules answers a plain { name } selection, no inline fragments needed
-- sourceRules securitySubCategories is null rather than [] for empty
-  connections, and mixes MITRE ATT&CK entries with Wiz proprietary
-  taxonomies under the same shape
+- sourceRules, like its securitySubCategories, is null rather than [] for
+  empty connections, and the sub-categories mix MITRE ATT&CK entries with
+  Wiz proprietary taxonomies under the same shape
 
 extra="allow" keeps the connector alive across Wiz schema additions; the
 converter only reads declared fields.
 """
 
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class _WizModel(BaseModel):
@@ -133,6 +134,23 @@ class WizIssue(_WizModel):
     threat_detection_details: WizThreatDetectionDetails | None = Field(
         default=None, alias="threatDetectionDetails"
     )
+
+    @field_validator("source_rules", mode="before")
+    @classmethod
+    def _null_is_no_rule(cls, value: Any) -> Any:
+        """Read a null connection as no rule at all.
+
+        default_factory only fires when the key is absent, and Wiz answers
+        null rather than [] for empty connections. Without this an issue with
+        no rule would fail validation and be dropped whole.
+
+        Args:
+            value: The raw sourceRules value.
+
+        Returns:
+            An empty list when Wiz sent null, the value untouched otherwise.
+        """
+        return [] if value is None else value
 
     @property
     def rule_name(self) -> str | None:
