@@ -5,7 +5,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-accounts-unique
     env_file:
       - path: ./env/common.env
@@ -22,7 +22,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-accounts-combolist
     env_file:
       - path: ./env/common.env
@@ -39,7 +39,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-cards
     env_file:
       - path: ./env/common.env
@@ -56,7 +56,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-leaks
     env_file:
       - path: ./env/common.env
@@ -73,7 +73,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-compromised-access
     env_file:
       - path: ./env/common.env
@@ -90,7 +90,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-compromised-chat
     env_file:
       - path: ./env/common.env
@@ -107,7 +107,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-vulnerabilities
     env_file:
       - path: ./env/common.env
@@ -124,7 +124,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-apt-reports
     env_file:
       - path: ./env/common.env
@@ -141,7 +141,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-hi-reports
     env_file:
       - path: ./env/common.env
@@ -158,7 +158,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-malware-reports
     env_file:
       - path: ./env/common.env
@@ -175,7 +175,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-iocs
     env_file:
       - path: ./env/common.env
@@ -192,7 +192,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-spd
     env_file:
       - path: ./env/common.env
@@ -209,7 +209,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-suspicious-ip
     env_file:
       - path: ./env/common.env
@@ -226,7 +226,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-malware-cnc
     env_file:
       - path: ./env/common.env
@@ -243,7 +243,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-attacks
     env_file:
       - path: ./env/common.env
@@ -260,7 +260,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
-    image: opencti/connector-group-ib-ti:rolling
+    image: opencti/connector-group-ib-ti:7.260910.0
     container_name: gib-darkweb
     env_file:
       - path: ./env/common.env
