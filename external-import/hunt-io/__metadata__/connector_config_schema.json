@@ -63,6 +63,16 @@
       "type": "string",
       "deprecated": true
     },
+    "CONNECTOR_HUNT_UI_API_VERSION": {
+      "default": "v2",
+      "description": "Use HUNT_IO_API_VERSION instead.",
+      "enum": [
+        "v2",
+        "v3"
+      ],
+      "type": "string",
+      "deprecated": true
+    },
     "CONNECTOR_HUNT_UI_API_KEY": {
       "description": "Use HUNT_IO_API_KEY instead.",
       "format": "password",
@@ -93,6 +103,16 @@
       "type": "string",
       "deprecated": true
     },
+    "CONNECTOR_HUNT_IO_API_VERSION": {
+      "default": "v2",
+      "description": "Use HUNT_IO_API_VERSION instead.",
+      "enum": [
+        "v2",
+        "v3"
+      ],
+      "type": "string",
+      "deprecated": true
+    },
     "CONNECTOR_HUNT_IO_API_KEY": {
       "description": "Use HUNT_IO_API_KEY instead.",
       "format": "password",
@@ -120,6 +140,15 @@
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
+      "type": "string"
+    },
+    "HUNT_IO_API_VERSION": {
+      "default": "v2",
+      "description": "Which Hunt.io C2 feed API to target. 'v2' authenticates with a 'token' header against https://api.hunt.io/v1/feeds/c2. 'v3' authenticates with 'Authorization: Bearer' against https://a.hunt.io/feeds/c2 and requires an 'ak_'-prefixed key. The two APIs are mutually exclusive: set api_base_url to match the version, as changing one without the other returns HTTP 401",
+      "enum": [
+        "v2",
+        "v3"
+      ],
       "type": "string"
     },
     "HUNT_IO_API_KEY": {
