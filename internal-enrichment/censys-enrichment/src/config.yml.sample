@@ -13,3 +13,4 @@ censys_enrichment:
   organisation_id: "ChangeMe"
   token: "ChangeMe"
 #  max_tlp: "TLP:AMBER"
+#  nvd_api_key: ""  # Optional — increases NVD rate limit from 5 to 50 req/30s

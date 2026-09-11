@@ -12,9 +12,7 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "format": "password",
-      "type": "string",
-      "writeOnly": true
+      "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "Censys Enrichment",
@@ -28,7 +26,7 @@
         "X509-Certificate",
         "Domain-Name"
       ],
-      "description": "The scope of the connector. Must be a subset of: ['Domain-Name', 'IPv4-Addr', 'IPv6-Addr', 'X509-Certificate'].",
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
