@@ -47,6 +47,37 @@ require_cmd() {
 }
 
 # ---------------------------------------------------------------------------
+# Container runtime
+# ---------------------------------------------------------------------------
+container_runtime() {
+    # Print the container runtime to use: podman when available, docker
+    # otherwise.  Set CONTAINER_RUNTIME to force a specific one.
+    #
+    # Capture it without `local`, which would mask the exit status:
+    #   RUNTIME="$(container_runtime)"
+    local runtime
+
+    if [[ -n "${CONTAINER_RUNTIME:-}" ]]; then
+        if ! command -v "$CONTAINER_RUNTIME" &>/dev/null; then
+            log_error "Error: CONTAINER_RUNTIME is set to '$CONTAINER_RUNTIME' but it was not found on PATH."
+            return 1
+        fi
+        printf "%s" "$CONTAINER_RUNTIME"
+        return 0
+    fi
+
+    for runtime in podman docker; do
+        if command -v "$runtime" &>/dev/null; then
+            printf "%s" "$runtime"
+            return 0
+        fi
+    done
+
+    log_error "Error: no container runtime found. Install docker or podman."
+    return 1
+}
+
+# ---------------------------------------------------------------------------
 # File discovery
 # ---------------------------------------------------------------------------
 find_shallowest_file() {
@@ -97,6 +128,6 @@ docker_image_tag() {
     # Print the fully-qualified local-registry image tag.
     # Requires CONTAINER_IMAGE and CONTAINER_VERSION to be set (via
     # load_manifest).
-    local registry="${DOCKER_REGISTRY:-registry:5000}"
-    printf "%s/%s:%s" "$registry" "$CONTAINER_IMAGE" "$CONTAINER_VERSION"
+    local registry="${DOCKER_REGISTRY:+${DOCKER_REGISTRY%/}/}"
+    printf "%s%s:%s" "$registry" "$CONTAINER_IMAGE" "$CONTAINER_VERSION"
 }
