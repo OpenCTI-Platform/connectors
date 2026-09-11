@@ -29,7 +29,7 @@
 
 Hatching Triage is a malware analysis sandbox that automatically analyzes malicious files and URLs, extracting configuration data, network indicators, and behavioral information.
 
-This internal enrichment connector submits files (Artifacts) and URLs to Hatching Triage for dynamic analysis and enriches OpenCTI with the analysis results including:
+This internal enrichment connector submits files (Artifacts and File SCOs) and URLs to Hatching Triage for dynamic analysis and enriches OpenCTI with the analysis results including:
 - Malware family identification
 - C2 server addresses and URLs
 - Network indicators (domains, IPs)
@@ -76,7 +76,7 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Hatching Triage Sandbox
-      - CONNECTOR_SCOPE=Artifact,Url
+      - CONNECTOR_SCOPE=Artifact,StixFile,Url
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=error
       - HATCHING_TRIAGE_SANDBOX_TOKEN=ChangeMe
@@ -101,7 +101,7 @@ services:
 
 ## Usage
 
-The connector enriches Artifact and URL observables by:
+The connector enriches Artifact, File SCO, and URL observables by:
 1. Checking for existing analysis (if enabled)
 2. Submitting the sample to Hatching Triage
 3. Waiting for analysis completion
@@ -120,7 +120,7 @@ Trigger enrichment:
 
 ```mermaid
 flowchart LR
-    A[Artifact/URL] --> B[Hatching Triage Connector]
+    A[Artifact/File SCO/URL] --> B[Hatching Triage Connector]
     B --> C{Existing Analysis?}
     C -->|Yes| D[Fetch Report]
     C -->|No| E[Submit Sample]

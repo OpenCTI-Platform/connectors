@@ -14,7 +14,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
-                    "scope": "Artifact, Url",
+                    "scope": "Artifact, StixFile, Url",
                     "log_level": "error",
                     "auto": True,
                 },
@@ -68,7 +68,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "connector": {
                     "id": "connector-id",
                     "name": "Test Connector",
-                    "scope": "Artifact, Url",
+                    "scope": "Artifact, StixFile, Url",
                     "log_level": "error",
                 },
                 "hatching_triage_sandbox": {
@@ -84,7 +84,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "connector": {
                     "id": 123456,
                     "name": "Test Connector",
-                    "scope": "Artifact, Url",
+                    "scope": "Artifact, StixFile, Url",
                     "log_level": "error",
                 },
                 "hatching_triage_sandbox": {
