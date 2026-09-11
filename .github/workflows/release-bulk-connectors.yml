@@ -34,14 +34,13 @@ run-name: >-
 # Use cases: shared-dependency security fix, pycti bump, connectors-sdk breaking
 # change, LTS alignment.
 #
-# Transition trigger — platform CalVer tag push (e.g. `7.260706.0`):
-# automatically runs a manifest-only bulk release for every connector. Each
-# dispatched per-connector run still produces its full tag, GitHub Release,
-# manifest fragment, and container_version commit-back — only the Docker
-# build/push step is skipped, since image builds for the platform release are
-# still handled by CircleCI at this stage. This lets the platform release keep
-# flowing through the current CircleCI pipeline while per-connector tags,
-# releases, and manifest fragments are produced in parallel via GitHub Actions.
+# Platform CalVer tag push (e.g. `7.260706.0`): automatically runs a
+# manifest-only bulk release for every connector. Each dispatched
+# per-connector run still produces its full tag, GitHub Release, manifest
+# fragment, and container_version commit-back — only the Docker build/push
+# step is skipped, because build-all-connectors.yml already triggers on that
+# same tag and builds/pushes every connector image. Skipping it here avoids
+# building each image twice for a single platform release.
 
 on:
   push:
@@ -73,11 +72,11 @@ on:
       manifest_only:
         description: >
           Manifest-only — skip Docker build/push only for every dispatched
-          connector (still handled by CircleCI during the transition). Tag,
-          GitHub Release, manifest fragment, and container_version
-          commit-back are still fully produced for each connector. Always
-          forced to true when this workflow is triggered by a platform
-          CalVer tag push.
+          connector, for when the images are already built by another
+          workflow. Tag, GitHub Release, manifest fragment, and
+          container_version commit-back are still fully produced for each
+          connector. Always forced to true when this workflow is triggered
+          by a platform CalVer tag push.
         required: false
         type: boolean
         default: true
@@ -138,7 +137,8 @@ jobs:
           if [ "$EVENT_NAME" = "push" ]; then
             # Platform CalVer tag push: dispatch a full release (tag, GitHub
             # Release, manifest fragment, commit-back) for every connector at
-            # this exact version, but skip the Docker build — still on CircleCI.
+            # this exact version, but skip the Docker build — build-all-connectors.yml
+            # already builds and pushes every image for this same tag.
             echo "connectors=all" >> "$GITHUB_OUTPUT"
             echo "version=${TAG_NAME}" >> "$GITHUB_OUTPUT"
             echo "dry_run=false" >> "$GITHUB_OUTPUT"
@@ -221,7 +221,7 @@ jobs:
             echo "## Bulk release — version \`$VERSION\`"
             echo ""
             if [ "$MANIFEST_ONLY" = "true" ]; then
-              echo "🧩 **Manifest-only mode** — Docker build/push is skipped for every connector (still handled by CircleCI during the transition). Tag, GitHub Release, manifest fragment, and container_version commit-back are still fully produced for each connector."
+              echo "🧩 **Manifest-only mode** — Docker build/push is skipped for every connector (handled by the build workflow for this version). Tag, GitHub Release, manifest fragment, and container_version commit-back are still fully produced for each connector."
               echo ""
             fi
             if [ "$FORCE" = "true" ]; then

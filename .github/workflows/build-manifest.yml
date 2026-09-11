@@ -47,16 +47,17 @@ jobs:
         with:
           python-version: "3.12"
 
-      # The generation script was written for CircleCI: it compares against
-      # `$CIRCLE_BRANCH` / `$RELEASE_REF` to decide which connectors changed.
-      # Both are unset under GitHub Actions, which sends the script down its
-      # pull-request path (`git merge-base origin/master HEAD`). On a push to
-      # master that merge base *is* HEAD, so every connector is reported as
-      # unchanged and nothing is ever regenerated. Setting both to the current
-      # ref reproduces the CircleCI behaviour: diff the last commit (HEAD~1..HEAD).
+      # The generation script still uses the legacy `$CIRCLE_BRANCH` /
+      # `$RELEASE_REF` variable names to decide which connectors changed.
+      # Both are unset by default under GitHub Actions, which sends the script
+      # down its pull-request path (`git merge-base origin/master HEAD`). On a
+      # push to master that merge base *is* HEAD, so every connector is
+      # reported as unchanged and nothing is ever regenerated. Setting both to
+      # the current ref yields the intended behaviour: diff the last commit
+      # (HEAD~1..HEAD).
       #
-      # TODO: temporary shim. Once CircleCI is decommissioned, drop these two
-      # variables and rename them to CI-agnostic ones inside the script itself.
+      # TODO: rename these variables to CI-agnostic names inside the script
+      # itself (see #7677).
       - name: Build connectors schemas
         shell: bash
         env:
