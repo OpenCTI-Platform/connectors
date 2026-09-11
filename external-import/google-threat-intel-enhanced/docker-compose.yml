@@ -1,0 +1,63 @@
+services:
+  connector-google-ti-feeds:
+    image: opencti/connector-google-ti-feeds:6.6.11
+    environment:
+      # ==================== OpenCTI Platform Settings (Required) ====================
+      - OPENCTI_URL=http://localhost:PORT  # OpenCTI platform URL
+      - OPENCTI_TOKEN=ChangeMe  # OpenCTI API token
+
+      # ==================== Connector Settings ====================
+      - CONNECTOR_ID=ChangeMe  # Required: Valid UUIDv4 - unique identifier for this connector instance
+      # - CONNECTOR_NAME=Google Threat Intel Feeds  # Optional: Display name in OpenCTI (default: Google Threat Intel Feeds)
+      # - CONNECTOR_SCOPE=report,location,identity,attack_pattern,domain,file,ipv4,ipv6,malware,sector,intrusion_set,url,vulnerability  # Optional: STIX types this connector produces
+      # - CONNECTOR_LOG_LEVEL=error  # Optional: Options: debug, info, warn, error (default: error)
+      # - CONNECTOR_DURATION_PERIOD=PT2H  # Optional: ISO 8601 duration between runs (default: PT2H = 2 hours)
+      # - CONNECTOR_QUEUE_THRESHOLD=500  # Optional: Max items in queue before pausing (default: 500)
+      # - CONNECTOR_TLP_LEVEL=AMBER+STRICT  # Optional: TLP marking for all objects. Options: WHITE, GREEN, AMBER, RED, WHITE+STRICT, GREEN+STRICT, AMBER+STRICT, RED+STRICT (default: AMBER+STRICT)
+      # - CONNECTOR_RUN_AND_TERMINATE=false  # Optional: Run once and exit (default: false)
+      # - CONNECTOR_SEND_TO_QUEUE=true  # Optional: Send bundles to RabbitMQ queue (default: true)
+      # - CONNECTOR_SEND_TO_DIRECTORY=false  # Optional: Write bundles to directory instead of queue
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=/tmp/bundles  # Optional: Directory path if SEND_TO_DIRECTORY is true
+      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7  # Optional: Days to retain files in directory
+
+      # ==================== GTI API Settings ====================
+      - GTI_API_KEY=ChangeMe  # Required: Google Threat Intelligence API key
+      # - GTI_API_URL=https://www.virustotal.com/api/v3  # Optional: GTI API base URL (default)
+      # - GTI_X_TOOL=OpenCTI.GTIConnector.v1.0  # Optional: X-Tool header for API requests - required for gti_assessment in responses
+
+      # ==================== Import Date Range ====================
+      # - GTI_IMPORT_START_DATE=P1D  # Optional: ISO 8601 duration - how far back to fetch. Examples: P1D (1 day), P7D (1 week), P30D (1 month), P90D (3 months), P365D (1 year) (default: P1D)
+
+      # ==================== Entity Import Toggles ====================
+      # - GTI_IMPORT_REPORTS=true  # Optional: Import threat intelligence reports (default: true)
+      # - GTI_IMPORT_CAMPAIGNS=false  # Optional: Import campaigns - requires separate API calls (default: false)
+      # - GTI_IMPORT_THREAT_ACTORS=false  # Optional: Import standalone threat actors/intrusion sets (default: false)
+      # - GTI_IMPORT_MALWARE_FAMILIES=false  # Optional: Import standalone malware families (default: false)
+      # - GTI_IMPORT_VULNERABILITIES=false  # Optional: Import standalone vulnerabilities/CVEs (default: false)
+
+      # ==================== Origin Filters ====================
+      # Filter which sources to import from. Options: All, partner, crowdsourced, google threat intelligence
+      # - GTI_ORIGINS=All  # Optional: Origins for reports. Options: All, partner, crowdsourced, google threat intelligence (default: All)
+      # - GTI_CAMPAIGN_ORIGINS=google threat intelligence  # Optional: Origins for campaigns. Options: All, partner, crowdsourced, google threat intelligence (default: google threat intelligence)
+      # - GTI_THREAT_ACTOR_ORIGINS=google threat intelligence  # Optional: Origins for threat actors. Options: All, partner, crowdsourced, google threat intelligence (default: google threat intelligence)
+      # - GTI_MALWARE_FAMILY_ORIGINS=google threat intelligence  # Optional: Origins for malware families. Options: All, partner, crowdsourced, google threat intelligence (default: google threat intelligence)
+      # - GTI_VULNERABILITY_ORIGINS=google threat intelligence  # Optional: Origins for vulnerabilities. Options: All, partner, crowdsourced, google threat intelligence (default: google threat intelligence)
+
+      # ==================== Report Type Filter ====================
+      # - GTI_REPORT_TYPES=All  # Optional: Comma-separated list of report types to import. Options: All, Actor Profile, Country Profile, Cyber Physical Security Roundup, Event Coverage/Implication, Industry Reporting, Malware Profile, Net Assessment, Network Activity Reports, News Analysis, OSINT Article, Patch Report, Strategic Perspective, TTP Deep Dive, Threat Activity Alert, Threat Activity Report, Trends and Forecasting, Weekly Vulnerability Exploitation Report (default: All)
+
+      # ==================== Indicator Scoring ====================
+      # - GTI_INDICATOR_SCORING=gti_derived  # Optional: How to score indicators. Options: gti_derived (use GTI's threat score), average_detection (use AV detection ratio) (default: gti_derived)
+
+      # ==================== Enrichment Options ====================
+      # - GTI_ENRICH_IOCS_WITH_THREAT_ACTORS_AND_MALWARE=false  # Optional: Create relationships between IOCs and threat actors/malware - increases API calls significantly (default: false)
+      # - GTI_IOC_ENRICHMENT_THRESHOLD=250  # Optional: Skip IOC enrichment for reports with more IOCs than this threshold (default: 250). 0 to enrich everything
+
+    restart: unless-stopped
+#     networks:
+#       - docker_default
+
+# networks:
+#   default:
+#     external: true
+#     name: docker_default
