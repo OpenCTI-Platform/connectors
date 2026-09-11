@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 class URLProcessor(EntityProcessor):
     """Enriches Url observables and Indicators."""
 
+    _GTI_ENDPOINT_TYPE = "urls"
+
     def _fetch_data(self) -> dict:
         url = self.opencti_entity["observable_value"]
         json_data = self.client.get_url_info(url)
