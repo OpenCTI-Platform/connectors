@@ -1,5 +1,5 @@
 # Use lightweight Python Alpine image
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 
 # Connector type used by OpenCTI connector manager
 ENV CONNECTOR_TYPE=STREAM

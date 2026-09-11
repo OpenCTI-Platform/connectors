@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 
 WORKDIR /opt/opencti-connector-google-secops-siem 
 RUN apk update && \
