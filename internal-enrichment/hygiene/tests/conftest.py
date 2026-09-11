@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from pycti import Note
 
 TEST_DIR = Path(__file__).parent
 SRC_DIR = TEST_DIR.parent / "src"
@@ -35,7 +36,12 @@ def mock_config():
 
 @pytest.fixture
 def mock_helper():
-    return MagicMock()
+    helper = MagicMock()
+    helper.api.identity.create.return_value = {
+        "standard_id": f"identity--{uuid.uuid4()}"
+    }
+    helper.api.note.generate_id.side_effect = Note.generate_id
+    return helper
 
 
 @pytest.fixture(name="mock_opencti")
