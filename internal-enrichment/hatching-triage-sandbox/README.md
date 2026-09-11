@@ -27,7 +27,7 @@
 
 ## Introduction
 
-Hatching Triage is a malware analysis sandbox that automatically analyzes malicious files and URLs, extracting configuration data, network indicators, and behavioral information
+Hatching Triage is a malware analysis sandbox that automatically analyzes malicious files and URLs, extracting configuration data, network indicators, and behavioral information.
 
 This internal enrichment connector submits files (Artifacts and File SCOs) and URLs to Hatching Triage for dynamic analysis and enriches OpenCTI with the analysis results including:
 - Malware family identification
