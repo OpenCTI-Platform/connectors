@@ -1,0 +1,23 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Zetalytics DNS - Analyst Enrichment' # optional
+  scope: 'Domain-Name,Hostname,IPv4-Addr,IPv6-Addr' # optional
+  log_level: 'info' # optional (default: 'info')
+  auto: false # optional (default: false)
+
+zetalytics:
+  token: 'ChangeMe'
+  mode: 'manual' # optional (default: 'manual'), available values: 'light', 'playbook', 'manual', 'deep'
+  max_tlp: 'TLP:AMBER' # optional (default: 'TLP:AMBER')
+  max_results: 300 # optional (default: 300)
+  lookback_days: 365 # optional (default: 365)
+  include_live_dns: true # optional (default: true)
+  include_subdomains: true # optional (default: true)
+  include_d8s: true # optional (default: true)
+  include_historical_whois: false # optional (default: false)
+  confidence: 60 # optional (default: 60)
+  marking_definition: 'TLP:AMBER' # optional (default: 'TLP:AMBER')

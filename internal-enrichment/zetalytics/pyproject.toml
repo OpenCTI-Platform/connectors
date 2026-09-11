@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ZetalyticsDnsConnector"
+description = "Internal Enrichment connector for Zetalytics DNS and infrastructure intelligence."
+dynamic = ["version"]
+requires-python = ">=3.11"
+
+dependencies = [
+    "pycti==7.260811.0",
+    "pydantic~=2.12.0",
+    "pydantic-settings~=2.11.0",
+    "stix2~=3.0.1",
+    "validators==0.35.0",
+    "zetalytics-api>=1.0.0",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+]
+
+[project.scripts]
+zetalytics-dns-connector = "zetalytics_dns.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.2",
+    "pytest-mock>=3.14",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["./tests"]
+pythonpath = ["src"]
