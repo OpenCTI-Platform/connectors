@@ -571,7 +571,9 @@ class HatchingTriageSandboxConnector:
         candidates = []
 
         if isinstance(hashes, dict):
-            hashes = [{"algorithm": key, "hash": value} for key, value in hashes.items()]
+            hashes = [
+                {"algorithm": key, "hash": value} for key, value in hashes.items()
+            ]
 
         for file_hash in hashes:
             algorithm = (file_hash.get("algorithm") or "").lower()
@@ -595,7 +597,9 @@ class HatchingTriageSandboxConnector:
 
     def _search_for_analysis_by_hashes(self, observable):
         """Try the supported file hash values in priority order and return the first match."""
-        for algorithm, hash_value in self._get_hash_candidates_from_observable(observable):
+        for algorithm, hash_value in self._get_hash_candidates_from_observable(
+            observable
+        ):
             sample_id = self._search_for_analysis(f"{algorithm}:{hash_value}")
             if sample_id is not None:
                 return sample_id

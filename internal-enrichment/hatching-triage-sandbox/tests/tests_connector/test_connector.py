@@ -159,7 +159,9 @@ class TestProcessMessage:
             observable, {}, "sample-123", "stixfile"
         )
 
-    def test_reuses_analysis_for_hash_only_stix_file_with_multiple_hashes(self, connector):
+    def test_reuses_analysis_for_hash_only_stix_file_with_multiple_hashes(
+        self, connector
+    ):
         observable = {
             "entity_type": "StixFile",
             "observable_value": "file-hash",
@@ -169,9 +171,7 @@ class TestProcessMessage:
                 {"algorithm": "MD5", "hash": "other-wrong-hash"},
             ],
         }
-        connector._search_for_analysis = MagicMock(
-            side_effect=[None, "sample-123"]
-        )
+        connector._search_for_analysis = MagicMock(side_effect=[None, "sample-123"])
         connector.triage_client.overview_report.return_value = {}
         connector._process_overview_report = MagicMock(return_value="enriched")
 
