@@ -304,11 +304,11 @@ class OrklReportProcessor(BaseDataProcessor):
     # ------------------------------------------------------------------
 
     def _convert_entry(self, entry: OrklLibraryEntry) -> list[BaseIdentifiedEntity]:
-        """Return every object to bundle for one entry; the Report is first.
+        """Return every object to bundle for one entry.
 
-        Actors, tools and ``uses`` relationships follow the report and are also
-        referenced from ``Report.objects``. An empty list is the right answer
-        for an entry that yields nothing usable.
+        The author and TLP marking come first, then the Report, then the actors,
+        tools and ``uses`` relationships that are also referenced from
+        ``Report.objects``.
         """
         actors: list[BaseIdentifiedEntity] = []
         actor_pairs: list[tuple[BaseIdentifiedEntity, OrklThreatActor]] = []
@@ -326,7 +326,13 @@ class OrklReportProcessor(BaseDataProcessor):
 
         report_objects = _dedupe_by_id([*actors, *tools, *relationships])
         report = self._build_report(entry, report_objects)
-        return [report, *actors, *tools, *relationships]
+        # The author and marking SDOs must travel in the bundle themselves: the
+        # SDK serialises exactly the objects it is given, so referencing them
+        # via ``author=``/``markings=`` alone leaves ``created_by_ref`` and
+        # ``object_marking_refs`` dangling and the platform displays no author.
+        # They are deliberately kept out of ``report_objects`` so they do not
+        # end up in the Report's ``object_refs``.
+        return [ORKL_AUTHOR, self._marking, report, *actors, *tools, *relationships]
 
     # --- Report ---
 

@@ -92,6 +92,26 @@ def _reports(bundle: list[Any]) -> list[Any]:
     return [obj for obj in bundle if obj.id.startswith("report--")]
 
 
+def _report(bundle: list[Any]) -> Any:
+    """Return the single Report in a bundle.
+
+    The bundle also carries the author and marking SDOs, so the Report is not
+    at a fixed position.
+    """
+    reports = _reports(bundle)
+    assert len(reports) == 1
+    return reports[0]
+
+
+def _payload(bundle: list[Any]) -> list[Any]:
+    """Return the bundle without the author and marking SDOs."""
+    return [
+        obj
+        for obj in bundle
+        if obj is not ORKL_AUTHOR and not isinstance(obj, TLPMarking)
+    ]
+
+
 def _actors(result: list) -> list:
     return [obj for obj in result if isinstance(obj, (IntrusionSet, ThreatActorGroup))]
 
@@ -355,30 +375,30 @@ class TestStateOwnership:
 
 
 class TestReportBasics:
-    def test_report_is_first_and_has_non_empty_name(self, converter, full_entry):
-        result = converter._convert_entry(full_entry)
-        assert isinstance(result[0], Report)
-        assert result[0].name.strip()
+    def test_report_present_and_has_non_empty_name(self, converter, full_entry):
+        report = _report(converter._convert_entry(full_entry))
+        assert isinstance(report, Report)
+        assert report.name.strip()
 
     def test_empty_title_entry_still_yields_valid_name(self, converter, page_entries):
         entry = page_entries[1]  # title == "" upstream
         assert entry.title == ""
-        report = converter._convert_entry(entry)[0]
+        report = _report(converter._convert_entry(entry))
         assert report.name.strip()
 
     def test_report_objects_none_when_no_actors(self, converter, page_entries):
         entry = page_entries[1]  # no threat actors
         result = converter._convert_entry(entry)
-        assert len(result) == 1
-        assert result[0].objects is None
+        assert _payload(result) == [_report(result)]
+        assert _report(result).objects is None
 
     def test_deleted_entry_still_produces_report(
         self, converter, library_entry_deleted_response
     ):
         entry = OrklLibraryEntry.model_validate(library_entry_deleted_response["data"])
-        result = converter._convert_entry(entry)
-        assert isinstance(result[0], Report)
-        assert result[0].name.strip()
+        report = _report(converter._convert_entry(entry))
+        assert isinstance(report, Report)
+        assert report.name.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -406,7 +426,7 @@ class TestPublicationDate:
         self, converter, full_entry
     ):
         # file_creation_date is the year-1 sentinel; a date must still be produced.
-        report = converter._convert_entry(full_entry)[0]
+        report = _report(converter._convert_entry(full_entry))
         assert report.publication_date is not None
         assert report.publication_date.utcoffset() is not None
 
@@ -420,7 +440,7 @@ class TestPublicationDate:
         entry = OrklLibraryEntry.model_validate(full_entry_data)
         assert entry.publication_date is None  # precondition
         assert entry.updated_datetime is not None  # updated_at is genuinely present
-        report = converter._convert_entry(entry)[0]
+        report = _report(converter._convert_entry(entry))
         assert report.publication_date == _ID_STABILITY_SENTINEL_DATE
 
     def test_report_id_stable_when_only_updated_at_changes(
@@ -446,7 +466,7 @@ class TestPublicationDate:
         entry = OrklLibraryEntry.model_validate(full_entry_data)
         assert entry.publication_date is None
         assert entry.updated_datetime is None
-        report = converter._convert_entry(entry)[0]
+        report = _report(converter._convert_entry(entry))
         assert report.publication_date == _ID_STABILITY_SENTINEL_DATE
         assert report.publication_date.utcoffset() is not None
 
@@ -455,8 +475,8 @@ class TestPublicationDate:
     ):
         _blank_all_dates(full_entry_data)
         entry = OrklLibraryEntry.model_validate(full_entry_data)
-        first = converter._convert_entry(entry)[0]
-        second = converter._convert_entry(entry)[0]
+        first = _report(converter._convert_entry(entry))
+        second = _report(converter._convert_entry(entry))
         assert first.id == second.id
 
     def test_publication_date_uses_file_modification_date_before_sentinel(
@@ -466,7 +486,7 @@ class TestPublicationDate:
         full_entry_data["file_modification_date"] = "2026-08-19T00:00:00Z"
         entry = OrklLibraryEntry.model_validate(full_entry_data)
         assert entry.publication_date is None  # file_creation_date/created_at unusable
-        report = converter._convert_entry(entry)[0]
+        report = _report(converter._convert_entry(entry))
         assert report.publication_date == datetime(2026, 8, 19, tzinfo=timezone.utc)
         assert report.publication_date != _ID_STABILITY_SENTINEL_DATE
 
@@ -488,7 +508,7 @@ class TestExternalReferences:
         self, converter, page_entries
     ):
         entry = page_entries[0]  # APT28: sha1 + one reference + files present
-        report = converter._convert_entry(entry)[0]
+        report = _report(converter._convert_entry(entry))
         refs = report.external_references
 
         entry_ref = refs[0]
@@ -513,7 +533,7 @@ class TestExternalReferences:
         assert len({r.description for r in archive_refs}) == 3
 
     def test_reference_source_name_strips_www(self, converter, full_entry):
-        report = converter._convert_entry(full_entry)[0]
+        report = _report(converter._convert_entry(full_entry))
         ref = next(
             r for r in report.external_references if r.url == full_entry.references[0]
         )
@@ -522,7 +542,7 @@ class TestExternalReferences:
     def test_sha1_reference_skipped_when_absent(self, converter, full_entry_data):
         full_entry_data["sha1_hash"] = None
         entry = OrklLibraryEntry.model_validate(full_entry_data)
-        report = converter._convert_entry(entry)[0]
+        report = _report(converter._convert_entry(entry))
         # The SHA1 ref is the only ORKL-sourced ref without a URL.
         orkl_no_url = [
             r
@@ -538,7 +558,7 @@ class TestExternalReferences:
             "https://good.example.com/report",
         ]
         entry = OrklLibraryEntry.model_validate(full_entry_data)
-        report = converter._convert_entry(entry)[0]
+        report = _report(converter._convert_entry(entry))
         publisher_refs = [
             r
             for r in report.external_references
@@ -548,7 +568,7 @@ class TestExternalReferences:
         assert publisher_refs[0].source_name == "good.example.com"
 
     def test_report_has_no_associated_files(self, converter, page_entries):
-        report = converter._convert_entry(page_entries[0])[0]
+        report = _report(converter._convert_entry(page_entries[0]))
         assert report.files is None
 
     def test_every_external_reference_satisfies_at_least_one_property(
@@ -576,7 +596,7 @@ class TestExternalReferences:
 
 class TestLabels:
     def test_labels_merge_sources_and_origins(self, converter, full_entry):
-        report = converter._convert_entry(full_entry)[0]
+        report = _report(converter._convert_entry(full_entry))
         assert set(report.labels) == {"MISPGALAXY", "Malpedia", "web"}
 
 
@@ -654,7 +674,7 @@ class TestThreatActors:
 
     def test_every_actor_appears_in_report_objects(self, converter, page_entries):
         result = converter._convert_entry(page_entries[2])  # four actors
-        report = result[0]
+        report = _report(result)
         object_ids = {obj.id for obj in report.objects}
         for actor in _actors(result):
             assert actor.id in object_ids
@@ -695,7 +715,7 @@ class TestTools:
         result = converter._convert_entry(page_entries[2])  # actors carry tools
         assert not any(isinstance(obj, Tool) for obj in result)
         assert not any(isinstance(obj, Relationship) for obj in result)
-        report = result[0]
+        report = _report(result)
         assert all(
             not isinstance(obj, (Tool, Relationship)) for obj in (report.objects or [])
         )
@@ -725,9 +745,11 @@ class TestTools:
         assert len(relationships) == expected_pairs
         assert all(rel.type == RelationshipType.USES for rel in relationships)
 
-        report = result[0]
+        report = _report(result)
         object_ids = {obj.id for obj in report.objects}
-        for obj in result[1:]:
+        for obj in _payload(result):
+            if obj is report:
+                continue
             assert obj.id in object_ids
 
 
@@ -737,20 +759,30 @@ class TestTools:
 
 
 class TestAuthorAndMarkings:
-    def test_all_objects_have_orkl_author(self, full_entry):
+    def test_author_and_marking_are_in_the_bundle(self, converter, full_entry):
+        # Without the SDOs themselves, created_by_ref/object_marking_refs
+        # dangle and the platform shows no author on any entity.
+        result = converter._convert_entry(full_entry)
+        assert any(obj is ORKL_AUTHOR for obj in result)
+        assert any(obj is converter._marking for obj in result)
+
+    def test_all_payload_objects_have_orkl_author(self, full_entry):
         converter = _make_processor(ingest_tools=True)
         result = converter._convert_entry(full_entry)
-        assert result  # non-empty
-        assert all(obj.author is ORKL_AUTHOR for obj in result)
+        payload = _payload(result)
+        assert payload
+        assert all(obj.author is ORKL_AUTHOR for obj in payload)
 
     def test_marking_reflects_configured_tlp_level(self, full_entry):
         clear = _make_processor(tlp_level="clear")
         amber = _make_processor(tlp_level="amber")
         result_clear = clear._convert_entry(full_entry)
         result_amber = amber._convert_entry(full_entry)
-        assert all(obj.markings[0].level == "clear" for obj in result_clear)
-        assert all(obj.markings[0].level == "amber" for obj in result_amber)
-        assert result_clear[0].markings[0].id != result_amber[0].markings[0].id
+        assert all(obj.markings[0].level == "clear" for obj in _payload(result_clear))
+        assert all(obj.markings[0].level == "amber" for obj in _payload(result_amber))
+        assert (
+            _report(result_clear).markings[0].id != _report(result_amber).markings[0].id
+        )
 
 
 # ---------------------------------------------------------------------------
