@@ -266,6 +266,77 @@ def test_settings_should_convert_initial_history_given_in_seconds():
     assert settings.intel471.initial_history_reports == 0
 
 
+def test_settings_should_parse_alerts_filters():
+    """
+    The alerts stream's filter settings parse from comma-separated strings into lists
+    (`watcher_group_ids`, `watcher_ids`, `statuses`) and a bool (`is_trashed_included`),
+    and `initial_history_alerts` is normalised like the other initial-history fields.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                        "interval_alerts": 30,
+                        "initial_history_alerts": INITIAL_HISTORY_TIMESTAMP // 1000,
+                        "watcher_group_ids": "1,2,3",
+                        "watcher_ids": "10,20",
+                        "statuses": "generated,completed",
+                        "is_trashed_included": True,
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.intel471.interval_alerts == 30
+    assert settings.intel471.initial_history_alerts == INITIAL_HISTORY_TIMESTAMP
+    assert settings.intel471.watcher_group_ids == ["1", "2", "3"]
+    assert settings.intel471.watcher_ids == ["10", "20"]
+    assert settings.intel471.statuses == ["generated", "completed"]
+    assert settings.intel471.is_trashed_included is True
+
+
+def test_settings_alerts_defaults_are_disabled_and_empty():
+    """
+    With no alerts settings given, the stream is disabled (`interval_alerts == 0`), the
+    filters are empty lists, and trashed alerts are excluded.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {},
+                    "intel471": {
+                        "api_username": "test-username",
+                        "api_key": "test-api-key",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.intel471.interval_alerts == 0
+    assert settings.intel471.initial_history_alerts == 0
+    assert settings.intel471.watcher_group_ids == []
+    assert settings.intel471.watcher_ids == []
+    assert settings.intel471.statuses == []
+    assert settings.intel471.is_trashed_included is False
+
+
 def test_settings_should_raise_when_initial_history_is_not_an_epoch():
     """
     Test that an `initial_history_*` value that is plausible neither as epoch

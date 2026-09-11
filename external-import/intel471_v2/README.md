@@ -23,6 +23,7 @@ The following table outlines the data availability across both platforms.
 | **YARA** | ✅ | ❌ | `Indicator`, `Malware` | **Verity:** Merged into the **Indicators** stream for a unified experience. |
 | **Reports** | ✅ | ✅ | `Report`, `Malware`, Observables | **Titan:** Fintel, Info, Malware, Spot, Breach Alerts.<br>**Verity:** Adds Geopol intel reports. |
 | **Vulnerabilities** | ✅ | ✅ | `Vulnerability` | Full parity across both platforms. |
+| **Alerts** | ❌ | ✅ | `Incident` + the alert target's objects | **Verity only.** Watcher alerts; each alert's target (post, report, credential, indicator, …) is resolved and wrapped in an `Incident`. Disabled by default; filterable by watcher group/watcher/status. |
 
 > Each stream can be enabled or disabled and configured separately (see "Configuration" section for more details).
 
@@ -88,8 +89,11 @@ Verity471 credentials are the **Client ID** and **Client Secret** of an applicat
 | **Indicators** | `INTEL471_INTERVAL_INDICATORS` | Indicators, Malware |
 | **Reports** | `INTEL471_INTERVAL_REPORTS` | Reports |
 | **Vulnerabilities** (CVEs) | `INTEL471_INTERVAL_CVES` | Reports |
+| **Alerts** | `INTEL471_INTERVAL_ALERTS` | Watchers, plus the APIs of the content your watchers match (e.g. Indicators, Reports, Forums, Credentials) so each alert's target can be resolved |
 
 If an API is missing, the streams depending on it log an authorization error on every run while the remaining streams keep ingesting, as each stream runs as its own scheduled job.
+
+> **Alerts** is disabled by default. Set a non-zero `INTEL471_INTERVAL_ALERTS` to enable it, and optionally narrow it with `INTEL471_WATCHER_GROUP_IDS`, `INTEL471_WATCHER_IDS`, `INTEL471_STATUSES` (`generated`, `needs_action`, `in_progress`, `completed`, `false_positive`) and `INTEL471_IS_TRASHED_INCLUDED`. A Verity471 cursor is only valid for the filter set it was issued against, so changing any of these filters makes the connector discard the stored cursor and re-anchor to the last processed alert minus a small margin: expect a small overlapping re-ingest, and note that widening a filter backfills only that margin. To backfill further, reset the alerts stream's initial-history state (or set `INTEL471_INITIAL_HISTORY_ALERTS` to the desired start on a fresh state).
 
 > **YARA** needs no Verity471 API: it is a Titan-only stream, and on Verity471 that data arrives through the **Indicators** stream.
 
@@ -137,5 +141,7 @@ To see the malware objects created by Indicators stream and YARA stream, navigat
 To see the Reports created by Reports stream, navigate to **Analysis->Reports**.
 
 To see the CVEs created by Vulnerabilities stream, navigate to **Arsenal->Vulnerabilities**.
+
+To see the Incidents created by the Alerts stream, navigate to **Events->Incidents**.
 
 **Pro-tip**: Creating a new user and API token for the connector can help you more easily track which STIX2 objects were created by the connector.

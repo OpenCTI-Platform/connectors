@@ -98,6 +98,7 @@ def get_client(
                 verity471_streams.Verity471InfoReportsStream,
                 verity471_streams.Verity471MalwareReportsStream,
                 verity471_streams.Verity471SpotReportsStream,
+                verity471_streams.Verity471AlertsStream,
             ),
         )
     raise UnknownBackendError(f"Unknown backend: {backend_name}")
