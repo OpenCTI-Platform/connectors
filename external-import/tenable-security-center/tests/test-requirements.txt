@@ -1,2 +1,2 @@
-# hack to be detected as a tested module by connectors/run_tests.sh script used in circleCI 
+# hack to be detected as a tested module by the connectors/run_test.sh script used in CI
 ./external-import/tenable-security-center/.[all]
