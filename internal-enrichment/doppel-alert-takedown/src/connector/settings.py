@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseInternalEnrichmentConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -24,8 +24,25 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         default="Doppel Alert and Takedown",
     )
     scope: ListFromString = Field(
-        description="The scope of the connector (types of observables to enrich).",
+        description=(
+            "The OpenCTI entity types supported by the connector. Add Incident to "
+            "request takedown for existing Doppel alerts."
+        ),
         default=["Url", "Domain-Name"],
+    )
+    auto: bool = Field(
+        description=(
+            "Whether the connector should run automatically when an entity is "
+            "created or updated. Must be false when CONNECTOR_SCOPE includes Incident."
+        ),
+        default=False,
+    )
+    auto_update: bool = Field(
+        description=(
+            "Whether the connector should run automatically when an entity is "
+            "updated. Must be false when CONNECTOR_SCOPE includes Incident."
+        ),
+        default=False,
     )
 
 
@@ -43,6 +60,14 @@ class DoppelAlertTakedownConfig(BaseConfigModel):
     )
     user_api_key: SecretStr = Field(
         description="Doppel user API key, sent as the `x-user-api-key` header.",
+    )
+    organization_code: str | None = Field(
+        description=(
+            "Doppel organization workspace code, sent as the "
+            "`x-organization-code` header. Required for users that belong to "
+            "multiple organizations."
+        ),
+        default=None,
     )
     tags: ListFromString = Field(
         description="List of tags to attach to the alerts created in Doppel.",
@@ -76,3 +101,16 @@ class ConnectorSettings(BaseConnectorSettings):
     doppel_alert_takedown: DoppelAlertTakedownConfig = Field(
         default_factory=DoppelAlertTakedownConfig
     )
+
+    @model_validator(mode="after")
+    def prevent_automatic_incident_takedowns(self) -> "ConnectorSettings":
+        """Incident takedown must always be an explicit manual action."""
+        incident_enabled = any(
+            str(scope).lower() == "incident" for scope in self.connector.scope
+        )
+        if incident_enabled and (self.connector.auto or self.connector.auto_update):
+            raise ValueError(
+                "CONNECTOR_AUTO and CONNECTOR_AUTO_UPDATE must be false when "
+                "CONNECTOR_SCOPE includes Incident"
+            )
+        return self
