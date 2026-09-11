@@ -100,6 +100,38 @@
       },
       "type": "array"
     },
+    "WIZ_CLOUD_IMPORT_VULNERABILITIES": {
+      "default": false,
+      "description": "Whether to import vulnerability findings for the cloud assets referenced by the imported issues.",
+      "type": "boolean"
+    },
+    "WIZ_CLOUD_VULNERABILITY_SEVERITY": {
+      "default": [
+        "CRITICAL",
+        "HIGH"
+      ],
+      "description": "Vulnerability severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,NONE'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WIZ_CLOUD_VULNERABILITY_STATUS": {
+      "default": [
+        "OPEN",
+        "IN_PROGRESS"
+      ],
+      "description": "Vulnerability statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "WIZ_CLOUD_VULNERABILITY_HAS_EXPLOIT": {
+      "default": false,
+      "description": "Import only vulnerabilities with a known exploit. Severity alone barely reduces the volume, so this is the effective filter when an asset carries hundreds of findings.",
+      "type": "boolean"
+    },
     "WIZ_CLOUD_SINCE": {
       "default": "P30D",
       "description": "Relative import start on first run (ISO 8601 duration)",
