@@ -1,0 +1,26 @@
+{
+  "title": "Template Connector",
+  "slug": "censys-enrichmentapis",
+  "description": "Template description of the connector",
+  "short_description": "Template short description (summary) of the connector",
+  "logo": null,
+  "use_cases": [
+    "Cloud, SaaS & Platform Security"
+  ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Free",
+  "contact": "support@example.com",
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/censys-enrichmentapis",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-censys-enrichmentapis",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
