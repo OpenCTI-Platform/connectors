@@ -203,6 +203,12 @@ def paginate(func):
                         error_code = None
                     logger.error("Error: %s (code: %s)", error_message, error_code)
 
+                # An API error response is not a valid paginated result.
+                # FalconPy may return reduced metadata without a ``pagination``
+                # key, so stop here instead of trying to process the error
+                # response as a successful page.
+                return
+
             meta = response["meta"]
             if meta["pagination"] is not None:
                 pagination = meta["pagination"]
