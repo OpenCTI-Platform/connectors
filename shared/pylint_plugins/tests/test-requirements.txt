@@ -1,2 +1,2 @@
 -r ../check_stix_plugin/requirements.txt
-pytest~=8.4.2
+pytest~=9.0.3
