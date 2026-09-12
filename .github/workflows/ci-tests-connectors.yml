@@ -12,6 +12,11 @@ on:
       - 'shared/**'
       - 'templates/**'
       - 'run_test.sh'
+  merge_group:
+    branches:
+      - master
+      - lts/**
+    types: [checks_requested]
   workflow_call:
 
 concurrency:
@@ -35,7 +40,11 @@ jobs:
 
       - name: Resolve RELEASE_REF
         run: |
-          PR_BASE_REF="${{ github.base_ref }}"
+          if [ "${{ github.event_name }}" = "merge_group" ]; then
+            PR_BASE_REF="${{ github.event.merge_group.base_ref }}"
+          else
+            PR_BASE_REF="${{ github.base_ref }}"
+          fi
 
           if [ -n "${PR_BASE_REF:-}" ]; then
             case "${PR_BASE_REF}" in
@@ -75,7 +84,11 @@ jobs:
 
       - name: Resolve RELEASE_REF
         run: |
-          PR_BASE_REF="${{ github.base_ref }}"
+          if [ "${{ github.event_name }}" = "merge_group" ]; then
+            PR_BASE_REF="${{ github.event.merge_group.base_ref }}"
+          else
+            PR_BASE_REF="${{ github.base_ref }}"
+          fi
 
           if [ -n "${PR_BASE_REF:-}" ]; then
             case "${PR_BASE_REF}" in
