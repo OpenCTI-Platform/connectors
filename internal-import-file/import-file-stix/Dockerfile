@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
 # stixmarx (pulled in by stix2-elevator) builds a "~/.stixmarx" cache on first
 # import. Use a dedicated HOME (not /tmp, which may be shadowed by a mounted

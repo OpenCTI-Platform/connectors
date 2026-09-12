@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
 # Install Python modules
