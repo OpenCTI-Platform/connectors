@@ -10,7 +10,7 @@ STIX_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 # breach's publishedAt would emit the same STIX id with different timestamps,
 # making OpenCTI flip-flop the object on every ingest. Use a fixed reference
 # timestamp so a given id always produces an identical object.
-REFERENCE_OBJECT_TIMESTAMP = "1970-01-01T00:00:00Z"
+REFERENCE_OBJECT_TIMESTAMP = "1970-01-01T00:00:00.000Z"
 
 
 def deterministic_stix_id(stix_type: str, key: str) -> str:
@@ -22,7 +22,7 @@ def transform_breach_to_bundle(payload: dict) -> dict:
     objects = []
 
     for ttp in payload.get("relatedTTPs", []):
-        attack_pattern_id = deterministic_stix_id("attack-pattern", ttp["id"])
+        attack_pattern_id = deterministic_stix_id("attack-pattern", ttp["_id"])
         objects.append(
             {
                 "type": "attack-pattern",
@@ -30,13 +30,13 @@ def transform_breach_to_bundle(payload: dict) -> dict:
                 "id": attack_pattern_id,
                 "created": REFERENCE_OBJECT_TIMESTAMP,
                 "modified": REFERENCE_OBJECT_TIMESTAMP,
-                "name": ttp["title"],
+                "name": ttp["name"],
             }
         )
         object_refs.append(attack_pattern_id)
 
-    for malware in payload.get("relatedMalwares", []):
-        malware_id = deterministic_stix_id("malware", malware["id"])
+    for malware in payload.get("relatedMalware", []):
+        malware_id = deterministic_stix_id("malware", malware["_id"])
         objects.append(
             {
                 "type": "malware",
@@ -44,7 +44,7 @@ def transform_breach_to_bundle(payload: dict) -> dict:
                 "id": malware_id,
                 "created": REFERENCE_OBJECT_TIMESTAMP,
                 "modified": REFERENCE_OBJECT_TIMESTAMP,
-                "name": malware["title"],
+                "name": malware["name"],
                 "is_family": False,
                 "malware_types": ["unknown"],
             }
@@ -56,16 +56,16 @@ def transform_breach_to_bundle(payload: dict) -> dict:
     # attack-pattern/malware. Breaches with neither carry no graph value in this
     # connector's current scope; the caller skips the resulting empty bundle.
     if object_refs:
-        published_at = payload["publishedAt"]
+        published_at = payload["date"]
         report = {
             "type": "report",
             "spec_version": "2.1",
-            "id": deterministic_stix_id("report", payload["id"]),
+            "id": deterministic_stix_id("report", payload["_id"]),
             "name": payload["title"],
             "created": published_at,
             "modified": published_at,
             "published": published_at,
-            "description": payload.get("summary", ""),
+            "description": payload.get("description", ""),
             "report_types": ["threat-report"],
             "object_refs": object_refs,
         }
@@ -73,7 +73,7 @@ def transform_breach_to_bundle(payload: dict) -> dict:
 
     bundle = {
         "type": "bundle",
-        "id": deterministic_stix_id("bundle", payload["id"]),
+        "id": deterministic_stix_id("bundle", payload["_id"]),
         "objects": objects,
     }
     return cleanup_bundle_for_opencti(bundle)

@@ -1,8 +1,24 @@
 {
-  "items": [
+  "results": [
     {
-      "id": "b1",
-      "updatedAt": "2026-04-20T10:00:00Z"
+      "_id": "older-breach",
+      "title": "Older breach",
+      "description": "Already processed",
+      "date": "2026-04-20T00:00:00Z"
+    },
+    {
+      "_id": "b1",
+      "title": "Example breach",
+      "description": "Newly published",
+      "date": "2026-04-20T10:00:00Z"
     }
-  ]
+  ],
+  "metadata": {
+    "page": 1,
+    "totalCount": 2,
+    "totalPages": 1,
+    "limit": 100,
+    "start_date": "2026-04-20T00:00:00.000Z",
+    "end_date": "2026-04-20T23:59:59.999Z"
+  }
 }
