@@ -1,0 +1,21 @@
+{
+  "title": "Anthropic AI Enrichment",
+  "slug": "anthropic-ai-enrichment",
+  "description": "The Anthropic AI Enrichment connector helps analysts enrich OpenCTI reports, intrusion sets, threat actor groups, and malware objects with analyst-reviewable AI summaries and structured CTI relationships. It sends selected object text to the configured Anthropic model and asks for a strict JSON response containing a summary, threat actors, malware families, ATT&CK technique IDs, target sectors, target countries, and confidence.\n\nThe connector can create OpenCTI notes, link existing threat actors and malware, create or link ATT&CK attack patterns by technique ID, and update the OpenCTI score from the returned confidence value. AI output is intended to accelerate triage and enrichment, not to replace human validation; operators should review generated notes, relationships, ATT&CK mappings, and scores before using them for reporting, detection engineering, or attribution.",
+  "short_description": "Enriches OpenCTI reports, intrusion sets, threat actor groups, and malware objects with Anthropic-generated analyst-reviewable summaries, ATT&CK mappings, malware links, actor links, and confidence scores.",
+  "logo": null,
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.2.0",
+  "subscription_link": "https://www.anthropic.com/api",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/anthropic-ai-enrichment",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-anthropic-ai-enrichment",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
