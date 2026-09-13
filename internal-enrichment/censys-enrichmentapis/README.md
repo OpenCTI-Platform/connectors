@@ -109,18 +109,18 @@ docker compose up -d
 
 ### Manual Deployment
 
-1. Copy `.env.sample` to `.env` and configure with your credentials.
+1. Copy `src/.config.yaml.sample` to `src/.config.yml` and configure with your credentials.
 
 2. Install dependencies:
 
 ```bash
-pip3 install -r requirements.txt
+pip3 install -r src/requirements.txt
 ```
 
 3. Start the connector from the `src` directory:
 
 ```bash
-python3 main.py
+python3 src/main.py
 ```
 
 ## Usage
