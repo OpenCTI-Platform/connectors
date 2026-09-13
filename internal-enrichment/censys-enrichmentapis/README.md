@@ -4,7 +4,7 @@
 |--------|------|---------|
 | Community | -    | -       |
 
-The Censys EnrichmentAPIs connector enriches IP addresses, domains, and certificates with internet scanning data from the Censys Search platform, providing geolocation, ASN, services, software, and infrastructure information.
+The Censys EnrichmentAPIs connector enriches IP addresses, domains, and certificates with internet scanning data from the Censys Platform, providing geolocation, ASN, services, software, infrastructure information, host reputation score, host threat labels if present. 
 
 ## Table of Contents
 
@@ -31,7 +31,7 @@ The Censys EnrichmentAPIs connector enriches IP addresses, domains, and certific
 Censys is an internet intelligence platform that continuously scans the global IPv4 address space and provides comprehensive data about internet-connected devices, services, and certificates. The Censys Search API offers detailed host information including open ports, running services, TLS certificates, geolocation, and autonomous system data.
 
 This connector integrates Censys Search with OpenCTI to enrich:
-- **IP addresses** (IPv4/IPv6): Geolocation, ASN, services, software, hostnames, certificates
+- **IP addresses** (IPv4/IPv6): Geolocation, ASN, services, software, hostnames, certificates, reputation score, threat labels.
 - **Domain names**: Resolving hosts with all associated IP enrichment data
 - **X509 Certificates**: Certificate metadata from Censys certificate database
 

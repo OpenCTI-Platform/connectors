@@ -13,8 +13,13 @@ ENV PYTHONUNBUFFERED=1
 RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-# Copy the connector
-COPY src /opt/opencti-connector-censys-enrichmentapis
+# Copy the connector without local configuration or generated files
+COPY --exclude=config.yml \
+    --exclude=.DS_Store \
+    --exclude=**/.DS_Store \
+    --exclude=__pycache__ \
+    --exclude=**/__pycache__ \
+    src /opt/opencti-connector-censys-enrichmentapis
 WORKDIR /opt/opencti-connector-censys-enrichmentapis
 
 # Install Python dependencies and remove build dependencies

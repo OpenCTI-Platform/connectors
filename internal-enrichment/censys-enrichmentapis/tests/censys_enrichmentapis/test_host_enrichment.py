@@ -628,7 +628,12 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
     assert "| Name | ShellInABox |" in note.content
     assert "| Threat Types | webshell |" in note.content
     assert "| Tactics | Persistence |" in note.content
-    assert "censys" not in note.content
+    assert (
+        "[View this host 37.187.119.91 on Censys Platform]"
+        "(https://platform.censys.io/hosts/37.187.119.91)"
+        in note.content
+    )
+    assert "| Source | censys |" not in note.content
     assert "0.5" not in note.content
     assert "Shell In A Box" in note.content
     assert "2025-05-01" in note.content

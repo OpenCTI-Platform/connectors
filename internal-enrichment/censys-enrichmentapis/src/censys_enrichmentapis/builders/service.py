@@ -1,9 +1,9 @@
 import datetime
 from typing import Any
-from unicodedata import category
+from urllib.parse import quote
 
 from censys_enrichmentapis.builders.base import AreaStixBuilder
-from censys_platform import HostEnrichmentService, Reputation, ReputationEvidenceFeature
+from censys_platform import HostEnrichmentService, Reputation
 from connectors_sdk.models import (
     AttackPattern,
     ExternalReference,
@@ -192,13 +192,22 @@ class ServiceStixBuilder(AreaStixBuilder):
         )
 
     def add_reputation_note(
-        self, observable: Reference, reputation: Reputation | None
+        self,
+        observable: Reference,
+        observable_value: str,
+        reputation: Reputation | None,
     ) -> None:
         if not reputation:
             return
 
-        score_label = reputation.label
         content_parts = []
+        censys_url = ( "https://platform.censys.io/hosts/" f"{quote(observable_value, safe='')}" )
+        content_parts.append(
+            f"\n[View this host {observable_value} on Censys Platform]({censys_url})\n\n"
+        )
+
+
+        score_label = reputation.label
         if reputation.score is not None:
             value = int(reputation.score * 100)
             content_parts.append(f"- Score: {value}")
@@ -210,6 +219,7 @@ class ServiceStixBuilder(AreaStixBuilder):
         self._add_reputation_evidence_features(reputation, content_parts)
         if not content_parts:
             return
+
 
         self.bundle.append(
             Note(
@@ -236,16 +246,16 @@ class ServiceStixBuilder(AreaStixBuilder):
         ]
         for evidence in reputation.evidence:
             if evidence.feature:
-                feature = ReputationEvidenceFeature(evidence.feature)
-                name = (str(feature.name)) if feature.name else "Unknown" # Access the feature name to ensure it is loaded
-                value = (str(feature.value)) if feature.value else "Unknown"  # Access the feature value to ensure it is loaded
-                category = (str(feature.category)) if feature.category else "Unknown"  # Access the feature category to ensure it is loaded
+                feature = evidence.feature
+                name = str(feature.name) if feature.name else "Unknown"
+                value = str(feature.value) if feature.value else "Unknown"
+                category = str(feature.category) if feature.category else "Unknown"
                 contribution = "Unknown"
-                if (feature.contribution is not None):
-                        if isinstance(feature.contribution, (int, float)):
-                            contribution = f"{feature.contribution:+.2f}%"
-                        else:
-                            contribution = str(feature.contribution)
+                if feature.contribution is not None:
+                    if isinstance(feature.contribution, (int, float)):
+                        contribution = f"{feature.contribution:+.2f}%"
+                    else:
+                        contribution = str(feature.contribution)
                 rows.append(
                     f"| {name} | {value} | {contribution} | {category} |"
                 )
@@ -333,11 +343,13 @@ class ServiceStixBuilder(AreaStixBuilder):
     def add_service_threats(
         self,
         observable: Reference,
+        observable_value: str,
         services: list[HostEnrichmentService] | None,
     ) -> None:
         for service in services or []:
             self._add_threats(
                 observable=observable,
+                observable_value=observable_value,
                 threats=self._get_value(service, "threats"),
                 port=self._get_value(service, "port"),
                 protocol=self._get_value(service, "protocol"),
@@ -346,6 +358,7 @@ class ServiceStixBuilder(AreaStixBuilder):
     def _add_threats(
         self,
         observable: Reference,
+        observable_value: str,
         threats: object | None,
         port: int | None,
         protocol: str | None,
@@ -387,6 +400,7 @@ class ServiceStixBuilder(AreaStixBuilder):
 
             threat_note = self._build_threat_note(
                 observable=observable,
+                observable_value=observable_value,
                 threat=threat,
                 port=port,
                 protocol=protocol,
@@ -447,6 +461,7 @@ class ServiceStixBuilder(AreaStixBuilder):
     def _build_threat_note(
         self,
         observable: Reference,
+        observable_value: str,
         threat: object,
         port: int | None,
         protocol: str | None,
@@ -456,6 +471,12 @@ class ServiceStixBuilder(AreaStixBuilder):
         if not threat_name:
             return None
 
+        censys_url = ( "https://platform.censys.io/hosts/" f"{quote(observable_value, safe='')}" )
+        content_parts = [
+            f"\n[View this host {observable_value} on Censys Platform]({censys_url})\n\n"
+        ]
+
+        
         rows = [
             "| Key | Value |",
             "|---|---|",
@@ -481,7 +502,7 @@ class ServiceStixBuilder(AreaStixBuilder):
         if tactics_str:
             rows.append(f"| Tactics | {self._markdown_cell(tactics_str)} |")
 
-        content_parts = ["\n".join(rows)]
+        content_parts.append("\n".join(rows))
 
         if evidence := self._get_value(threat, "evidence"):
             if isinstance(evidence, list) and evidence:

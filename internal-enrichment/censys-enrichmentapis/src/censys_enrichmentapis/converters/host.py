@@ -83,6 +83,7 @@ class HostConverter(CensysConverter):
 
         self.builder.services.add_reputation_note(
             observable=observable,
+            observable_value=stix_entity.get("value"),
             reputation=data.reputation,
         )
         self.builder.services.add_service_vulnerabilities(
@@ -91,6 +92,7 @@ class HostConverter(CensysConverter):
         )
         self.builder.services.add_service_threats(
             observable=observable,
+            observable_value=stix_entity.get("value"),
             services=data.services,
         )
 
