@@ -236,7 +236,7 @@ class ServiceStixBuilder(AreaStixBuilder):
         ]
         for evidence in reputation.evidence:
             if evidence.feature:
-                feature = evidence.feature
+                feature = ReputationEvidenceFeature(evidence.feature)
                 name = (str(feature.name)) if feature.name else "Unknown" # Access the feature name to ensure it is loaded
                 value = (str(feature.value)) if feature.value else "Unknown"  # Access the feature value to ensure it is loaded
                 category = (str(feature.category)) if feature.category else "Unknown"  # Access the feature category to ensure it is loaded
@@ -253,8 +253,7 @@ class ServiceStixBuilder(AreaStixBuilder):
         if len(rows) > 2:
             content_parts.append("\n".join(rows))
 
-    @staticmethod
-    def _markdown_cell(value: Any) -> str:
+    def _markdown_cell(self, value: Any) -> str:
         """Make a value safe for use inside a Markdown table cell."""
         if value is None:
             return "—"
@@ -486,7 +485,7 @@ class ServiceStixBuilder(AreaStixBuilder):
 
         if evidence := self._get_value(threat, "evidence"):
             if isinstance(evidence, list) and evidence:
-                content_parts.append("\n**Evidence:**")
+                content_parts.append("\n\n**Evidence:**")
                 for item in evidence:
                     if isinstance(item, dict):
                         data_path = item.get("data_path", "unknown")
@@ -519,8 +518,7 @@ class ServiceStixBuilder(AreaStixBuilder):
             **self.common_props,
         )
 
-    @staticmethod
-    def _get_mitre_tactic_id(tactic: str) -> str | None:
+    def _get_mitre_tactic_id(self, tactic: str) -> str | None:
         mitre_map = {
             "persistence": "TA0003",
             "execution": "TA0002",
@@ -537,21 +535,18 @@ class ServiceStixBuilder(AreaStixBuilder):
         }
         return mitre_map.get(tactic.lower())
 
-    @staticmethod
-    def _get_value(value: object, field: str) -> object | None:
+    def _get_value(self, value: object, field: str) -> object | None:
         if isinstance(value, dict):
             return value.get(field)
         return getattr(value, field, None)
 
-    @staticmethod
-    def _string_values(value: object | None) -> list[str] | None:
+    def _string_values(self, value: object | None) -> list[str] | None:
         if not isinstance(value, list):
             return None
         values = [item for item in value if isinstance(item, str)]
         return values or None
 
-    @staticmethod
-    def _cvss_severity(value: object | None) -> CvssSeverity | None:
+    def _cvss_severity(self, value: object | None) -> CvssSeverity | None:
         if not isinstance(value, str):
             return None
         try:
