@@ -32,6 +32,7 @@ class CensysStixBuilder:
 
     def reset(self) -> None:
         self._context.reset()
+        self.services.reset()
 
     def add_author_and_marking(self) -> None:
         self._context.add_author_and_marking()

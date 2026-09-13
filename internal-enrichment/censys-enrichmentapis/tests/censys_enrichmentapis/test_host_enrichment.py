@@ -413,6 +413,52 @@ def test_converter_deduplicates_software_across_multiple_cves() -> None:
     ), "All CVEs should be linked to the same Software object"
 
 
+def test_converter_deduplicates_cve_with_multiple_cpe_evidence() -> None:
+    """One CVE object should be related to every software named by its evidence."""
+    sample = _get_host_245_52_sample()
+    vulnerability = sample["services"][0]["vulns"][0]
+    second_cpe = "cpe:2.3:a:example:second_product:2.0:*:*:*:*:*:*:*"
+    vulnerability["evidence"].append({"found_value": second_cpe})
+    sample["services"][0]["vulns"] = [vulnerability]
+    sample["services"][0]["software"].append(
+        {
+            "cpe": second_cpe,
+            "product": "second_product",
+            "vendor": "example",
+            "version": "2.0",
+        }
+    )
+
+    host = HostEnrichment.model_validate(sample)
+    Client._restore_service_fields(host, {"result": {"result": {"resource": sample}}})
+    host = HostEnrichment(services=host.services)
+
+    stix_objects = [
+        octi_object.to_stix2_object()
+        for octi_object in HostConverter().to_stix(
+            observable=stix2.IPv4Address(value="193.233.245.52"), data=host
+        )
+    ]
+
+    software_objects = [obj for obj in stix_objects if obj.type == "software"]
+    vulnerabilities = [obj for obj in stix_objects if obj.type == "vulnerability"]
+    has_relationships = [
+        obj
+        for obj in stix_objects
+        if obj.type == "relationship" and obj.relationship_type == "has"
+    ]
+
+    assert len(software_objects) == 2
+    assert len(vulnerabilities) == 1
+    assert len(has_relationships) == 2
+    assert {relationship.source_ref for relationship in has_relationships} == {
+        software.id for software in software_objects
+    }
+    assert {relationship.target_ref for relationship in has_relationships} == {
+        vulnerabilities[0].id
+    }
+
+
 def test_converter_creates_software_from_cpe_when_not_in_service() -> None:
     """Verify that Software can be created from CPE evidence when not in service.software."""
     # Create a service with CVE evidence but no pre-defined software

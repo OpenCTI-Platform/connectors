@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from typing import Any
 from urllib.parse import quote
 
-from censys_enrichmentapis.builders.base import AreaStixBuilder
+from censys_enrichmentapis.builders.base import AreaStixBuilder, StixBuildContext
 from censys_platform import HostEnrichmentService, Reputation, Service
 from connectors_sdk.models import (
     AttackPattern,
@@ -27,6 +27,15 @@ HostService = HostEnrichmentService | Service
 
 
 class ServiceStixBuilder(AreaStixBuilder):
+    def __init__(self, context: StixBuildContext) -> None:
+        super().__init__(context)
+        self._vulnerabilities_by_identifier: dict[str, Vulnerability] = {}
+        self._vulnerability_relationships: set[tuple[str, str]] = set()
+
+    def reset(self) -> None:
+        self._vulnerabilities_by_identifier.clear()
+        self._vulnerability_relationships.clear()
+
     def add_software(
         self,
         observable: Reference,
@@ -67,13 +76,38 @@ class ServiceStixBuilder(AreaStixBuilder):
         if not isinstance(identifier, str) or not identifier.startswith("CVE-"):
             return None
 
+        vulnerability_entity = self._vulnerabilities_by_identifier.get(identifier)
+        if vulnerability_entity is None:
+            vulnerability_entity = self._create_vulnerability(
+                identifier=identifier,
+                vulnerability=vulnerability,
+            )
+            self._vulnerabilities_by_identifier[identifier] = vulnerability_entity
+            self.bundle.append(vulnerability_entity)
+
+        relationship_key = (str(software.id), str(vulnerability_entity.id))
+        if relationship_key not in self._vulnerability_relationships:
+            self.bundle.append(
+                Relationship(
+                    source=software,
+                    target=vulnerability_entity,
+                    type=RelationshipType.HAS,
+                    **self.common_props,
+                )
+            )
+            self._vulnerability_relationships.add(relationship_key)
+        return vulnerability_entity
+
+    def _create_vulnerability(
+        self, identifier: str, vulnerability: object
+    ) -> Vulnerability:
         metrics = self._get_value(vulnerability, "metrics") or {}
         cvss = self._get_value(metrics, "cvss_v31") or {}
         epss = self._get_value(metrics, "epss") or {}
         components = self._get_value(cvss, "components") or {}
         severity = self._get_value(vulnerability, "severity")
 
-        vulnerability_entity = Vulnerability(
+        return Vulnerability(
             name=identifier,
             cwe_ids=self._string_values(self._get_value(vulnerability, "cwes")),
             epss_score=self._get_value(epss, "score"),
@@ -109,18 +143,6 @@ class ServiceStixBuilder(AreaStixBuilder):
             ],
             **self.common_props,
         )
-        self.bundle.extend(
-            [
-                vulnerability_entity,
-                Relationship(
-                    source=software,
-                    target=vulnerability_entity,
-                    type=RelationshipType.HAS,
-                    **self.common_props,
-                ),
-            ]
-        )
-        return vulnerability_entity
 
     def add_service_vulnerabilities(
         self,
@@ -188,7 +210,7 @@ class ServiceStixBuilder(AreaStixBuilder):
             Note(
                 abstract=f"Service banner on port {port}",
                 content=content,
-                publication_date=datetime.datetime.fromisoformat(publication_date),
+                created=datetime.datetime.fromisoformat(publication_date),
                 authors=[self._context.author.name],
                 objects=[observable],
                 **self.common_props,
@@ -344,7 +366,7 @@ class ServiceStixBuilder(AreaStixBuilder):
                     ),
                     content=content,
                     note_types=[NoteType.EXTERNAL],
-                    publication_date=datetime.datetime.fromisoformat(
+                    created=datetime.datetime.fromisoformat(
                         scan_time
                     ),
                     authors=[self._context.author.name],

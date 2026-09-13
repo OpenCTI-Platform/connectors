@@ -121,7 +121,6 @@ class Client:
         ) as sdk:
             query = f"host.dns.names = '{hostname}'"
             search_query = SearchQueryInputBody(query=query)
-            ## TODO: Use get certificate instead of search for hosts
             res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
                 search_query_input_body=search_query
             )

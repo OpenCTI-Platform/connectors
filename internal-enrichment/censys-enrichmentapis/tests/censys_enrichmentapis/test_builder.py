@@ -1,6 +1,6 @@
 from censys_enrichmentapis.builder import CensysStixBuilder
 from censys_platform import Certificate, CertificateParsed
-from connectors_sdk.models import City, IPV4Address, IPV6Address, Reference
+from connectors_sdk.models import City, IPV4Address, IPV6Address, Reference, Vulnerability
 from connectors_sdk.models.enums import HashAlgorithm
 
 SHA256 = "73b8ed5becf1ba6493d2e2215a42dfdc7877e91e311ff5e59fb43d094871e699"
@@ -56,6 +56,37 @@ def test_service_builder_skips_invalid_vulnerability() -> None:
 
     assert vulnerability is None
     assert len(builder.bundle) == bundle_size
+
+
+def test_builder_reset_clears_vulnerability_cache() -> None:
+    builder = CensysStixBuilder()
+    software = builder.services.add_software(
+        observable=OBSERVABLE,
+        name="nginx",
+        vendor="nginx",
+        cpe="cpe:2.3:a:nginx:nginx:1.0:*:*:*:*:*:*:*",
+    )
+    assert software is not None
+    first_vulnerability = builder.services.add_vulnerability(
+        software, {"id": "CVE-2026-12345"}
+    )
+
+    builder.reset()
+    software = builder.services.add_software(
+        observable=OBSERVABLE,
+        name="nginx",
+        vendor="nginx",
+        cpe="cpe:2.3:a:nginx:nginx:1.0:*:*:*:*:*:*:*",
+    )
+    assert software is not None
+    second_vulnerability = builder.services.add_vulnerability(
+        software, {"id": "CVE-2026-12345"}
+    )
+
+    assert second_vulnerability is not first_vulnerability
+    assert len(
+        [obj for obj in builder.bundle if isinstance(obj, Vulnerability)]
+    ) == 1
 
 
 def test_add_certificate_filters_missing_fingerprints() -> None:
