@@ -1,26 +1,27 @@
 {
-  "title": "Template Connector",
-  "slug": "censys-enrichmentapis",
-  "description": "Template description of the connector",
-  "short_description": "Template short description (summary) of the connector",
-  "logo": null,
+  "title": "Censys EnrichmentAPIs",
+  "slug": "censys-entichmentapis",
+  "description": "The Censys EnrichmentAPIs connector allows OpenCTI to enrich observables (such as domains, IP addresses, and certificates) using data from the Censys search and intelligence platform. It retrieves detailed information on hosts, certificates, services, and organizations to enhance context and visibility within investigations.",
+  "short_description": "Enriches domains, IP addresses, and certificates in OpenCTI with Censys data, including host services, open ports, and certificate details for infrastructure visibility.",
+  "logo": "internal-enrichment/censys-entichmentapis/__metadata__/logo.png",
   "use_cases": [
-    "Cloud, SaaS & Platform Security"
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
   ],
   "solution_categories": [
-    "Malware Analysis & Sandbox"
+    "Enrichment & Reputation"
   ],
-  "license_type": "Free",
-  "contact": "support@example.com",
-  "verified": true,
-  "last_verified_date": null,
-  "playbook_supported": false,
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": "2026-09-12",
+  "playbook_supported": true,
   "max_confidence_level": 50,
-  "support_version": ">=6.8.12",
-  "subscription_link": null,
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/censys-enrichmentapis",
-  "manager_supported": false,
+  "support_version": ">=6.8.11",
+  "subscription_link": "https://platform.censys.io/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/censys-entichmentapis",
+  "manager_supported": true,
   "container_version": "rolling",
-  "container_image": "opencti/connector-censys-enrichmentapis",
+  "container_image": "opencti/connector-censys-entichmentapis",
   "container_type": "INTERNAL_ENRICHMENT"
 }

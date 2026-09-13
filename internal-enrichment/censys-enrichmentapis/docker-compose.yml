@@ -1,19 +1,22 @@
 version: '3'
 services:
-  connector-censys-enrichmentapis:
-    image: opencti/connector-censys-enrichmentapis:latest # 'censys-enrichmentapis' being the name of connector's directory
+  connector-censys-entichmentapis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: connector-censys-entichmentapis:latest
     environment:
-      # Generic parameters (connection with OpenCTI)
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
-      # Common parameters for connectors of type INTERNAL_ENRICHMENT
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME # optional (default: 'Template Connector')
-      - CONNECTOR_SCOPE=CHANGEME
-      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
-      - CONNECTOR_AUTO=false # optional (default: false)
-      # Custom parameters for connector-censys-enrichmentapis
-      - CENSYS_ENRICHMENTAPIS_API_BASE_URL=CHANGEME
-      - CENSYS_ENRICHMENTAPIS_API_KEY=CHANGEME
-      - CENSYS_ENRICHMENTAPIS_MAX_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+      # OpenCTI configuration
+      - OPENCTI_URL=${OPENCTI_URL:-http://localhost:8080}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      # Common connector configuration
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_NAME=${CONNECTOR_NAME:-Censys EnrichmentAPIs}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-IPv4-Addr,IPv6-Addr,X509-Certificate,Domain-Name}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-error}
+      - CONNECTOR_AUTO=${CONNECTOR_AUTO:-false}
+      # Censys configuration
+      - CENSYS_ENRICHMENT_ORGANISATION_ID=${CENSYS_ENRICHMENT_ORGANISATION_ID}
+      - CENSYS_ENRICHMENT_TOKEN=${CENSYS_ENRICHMENT_TOKEN}
+      # - CENSYS_ENRICHMENT_MAX_TLP=${CENSYS_ENRICHMENT_MAX_TLP:-TLP:AMBER}
     restart: always

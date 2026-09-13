@@ -1,28 +1,38 @@
+"""
+Entry point of the script
+
+- traceback.print_exc(): This function prints the traceback of the exception to the standard error (stderr).
+The traceback includes information about the point in the program where the exception occurred,
+which is very useful for debugging purposes.
+- exit(1): effective way to terminate a Python program when an error is encountered.
+It signals to the operating system and any calling processes that the program did not complete successfully.
+"""
+
+import sys
 import traceback
 
-from connector import ConnectorSettings, CensysEnrichmentapisConnector
+from censys_enrichmentapis.client import Client
+from censys_enrichmentapis.connector import Connector
+from censys_enrichmentapis.settings import ConfigLoader
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
-    """
-    Entry point of the script
-
-    - traceback.print_exc(): This function prints the traceback of the exception to the standard error (stderr).
-    The traceback includes information about the point in the program where the exception occurred,
-    which is very useful for debugging purposes.
-    - exit(1): effective way to terminate a Python program when an error is encountered.
-    It signals to the operating system and any calling processes that the program did not complete successfully.
-    """
     try:
-        settings = ConnectorSettings()
-
+        config = ConfigLoader()
         helper = OpenCTIConnectorHelper(
-            config=settings.to_helper_config(),
-            playbook_compatible=True,  # ! `playbook_compatible=True` only if a bundle is sent
+            config=config.to_helper_config(),
+            playbook_compatible=True,
         )
-
-        connector = CensysEnrichmentapisConnector(config=settings, helper=helper)
+        client = Client(
+            organisation_id=config.censys_enrichment.organisation_id.get_secret_value(),
+            token=config.censys_enrichment.token.get_secret_value(),
+        )
+        connector = Connector(
+            config=config,
+            helper=helper,
+            client=client,
+        )
         connector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)
