@@ -253,6 +253,7 @@ class ServiceStixBuilder(AreaStixBuilder):
         if len(rows) > 2:
             content_parts.append("\n".join(rows))
 
+    @staticmethod
     def _markdown_cell(value: Any) -> str:
         """Make a value safe for use inside a Markdown table cell."""
         if value is None:
@@ -456,32 +457,32 @@ class ServiceStixBuilder(AreaStixBuilder):
         if not threat_name:
             return None
 
-        content_parts = [
-            f"- **Threat ID:** {threat_id}",
-            f"- **Name:** {threat_name}",
+        rows = [
+            "| Key | Value |",
+            "|---|---|",
+            f"| Threat ID | {self._markdown_cell(threat_id)} |",
+            f"| Name | {self._markdown_cell(threat_name)} |",
         ]
-        if source := self._get_value(threat, "source"):
-            content_parts.append(f"- **Source:** {source}")
-        if confidence := self._get_value(threat, "confidence"):
-            content_parts.append(f"- **Confidence:** {confidence}")
 
         threat_types = self._get_value(threat, "type") or []
-        if threat_types:
-            types_str = ", ".join(
-                item.replace("_", " ")
-                for item in threat_types
-                if isinstance(item, str)
-            )
-            content_parts.append(f"- **Threat Types:** {types_str}")
+        types_str = ", ".join(
+            item.replace("_", " ")
+            for item in threat_types
+            if isinstance(item, str)
+        )
+        if types_str:
+            rows.append(f"| Threat Types | {self._markdown_cell(types_str)} |")
 
         tactics = self._get_value(threat, "tactic") or []
-        if tactics:
-            tactics_str = ", ".join(
-                item.replace("_", " ").title()
-                for item in tactics
-                if isinstance(item, str)
-            )
-            content_parts.append(f"- **Tactics:** {tactics_str}")
+        tactics_str = ", ".join(
+            item.replace("_", " ").title()
+            for item in tactics
+            if isinstance(item, str)
+        )
+        if tactics_str:
+            rows.append(f"| Tactics | {self._markdown_cell(tactics_str)} |")
+
+        content_parts = ["\n".join(rows)]
 
         if evidence := self._get_value(threat, "evidence"):
             if isinstance(evidence, list) and evidence:

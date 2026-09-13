@@ -622,13 +622,14 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
     assert len(threat_notes) == 1
     note = threat_notes[0]
 
-    # Verify note content includes all threat data
-    assert "THREAT-0188" in note.content
-    assert "ShellInABox" in note.content
-    assert "censys" in note.content
-    assert "0.5" in note.content
-    assert "webshell" in note.content
-    assert "Persistence" in note.content
+    # Verify threat summary is rendered as a key/value table.
+    assert "| Key | Value |" in note.content
+    assert "| Threat ID | THREAT-0188 |" in note.content
+    assert "| Name | ShellInABox |" in note.content
+    assert "| Threat Types | webshell |" in note.content
+    assert "| Tactics | Persistence |" in note.content
+    assert "censys" not in note.content
+    assert "0.5" not in note.content
     assert "Shell In A Box" in note.content
     assert "2025-05-01" in note.content
 
