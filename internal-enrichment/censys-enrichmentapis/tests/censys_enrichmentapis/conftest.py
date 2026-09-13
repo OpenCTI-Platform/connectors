@@ -140,64 +140,33 @@ def ipv4_enrichment_message():
 @pytest.fixture
 def fetch_hosts():
     with patch("censys_platform.global_data.GlobalData.search") as mock_fetch_hosts:
-        hosts = [
-            HostEnrichment(
-                ip="192.0.2.1",
-                location=Location(
-                    city="San Francisco",
-                    continent="North America",
-                    coordinates=Coordinates(latitude=37.7749, longitude=-122.4194),
-                    country="United States",
-                    province="California",
+        hosts = HostFactory.create_batch(2)
+        result = V3GlobaldataSearchQueryResponse(
+            headers={},
+            result=ResponseEnvelopeSearchQueryResponse(
+                result=SearchQueryResponse(
+                    hits=[
+                        SearchQueryHit(
+                            host_v1=HostAssetWithMatchedServices(
+                                extensions={},
+                                resource=hosts[0],
+                            )
+                        ),
+                        SearchQueryHit(
+                            host_v1=HostAssetWithMatchedServices(
+                                extensions={},
+                                resource=hosts[1],
+                            )
+                        ),
+                    ],
+                    total_hits=2,
+                    next_page_token="",
+                    query_duration_millis=123,
+                    previous_page_token="",
                 ),
-                dns=HostDNS(names=["example.com"]),
-                autonomous_system=Routing(
-                    asn=12345,
-                    bgp_prefix="192.0.2.0/24",
-                    country_code="US",
-                    description="Example ASN",
-                    name="Example",
-                ),
-                services=[
-                    HostEnrichmentService(
-                        port=80,
-                        scan_time="2025-11-03T12:35:48Z",
-                        labels=[Label(value="WEB")],
-                    )
-                ],
             ),
-            HostEnrichment(
-                ip="192.0.2.2",
-                location=Location(
-                    city="New York",
-                    continent="North America",
-                    coordinates=Coordinates(latitude=40.7128, longitude=-74.0060),
-                    country="United States",
-                    province="New York",
-                ),
-                dns=HostDNS(names=["example.org"]),
-                autonomous_system=Routing(
-                    asn=54321,
-                    bgp_prefix="192.0.2.0/24",
-                    country_code="US",
-                    description="Another ASN",
-                    name="Another",
-                ),
-                services=[
-                    HostEnrichmentService(
-                        port=443,
-                        scan_time="2025-11-03T12:35:48Z",
-                        labels=[Label(value="HTTPS")],
-                    )
-                ],
-            ),
-        ]
-        mock_result = MagicMock()
-        mock_result.result.result.hits = [
-            MagicMock(host_v1=MagicMock(resource=hosts[0])),
-            MagicMock(host_v1=MagicMock(resource=hosts[1])),
-        ]
-        mock_fetch_hosts.return_value = mock_result
+        )
+        mock_fetch_hosts.return_value = result
         yield hosts
 
 

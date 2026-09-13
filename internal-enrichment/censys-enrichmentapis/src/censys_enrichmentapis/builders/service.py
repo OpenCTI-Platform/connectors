@@ -1,9 +1,10 @@
 import datetime
+from collections.abc import Sequence
 from typing import Any
 from urllib.parse import quote
 
 from censys_enrichmentapis.builders.base import AreaStixBuilder
-from censys_platform import HostEnrichmentService, Reputation
+from censys_platform import HostEnrichmentService, Reputation, Service
 from connectors_sdk.models import (
     AttackPattern,
     ExternalReference,
@@ -20,6 +21,9 @@ from connectors_sdk.models.enums import (
     NoteType,
     RelationshipType,
 )
+
+
+HostService = HostEnrichmentService | Service
 
 
 class ServiceStixBuilder(AreaStixBuilder):
@@ -121,7 +125,7 @@ class ServiceStixBuilder(AreaStixBuilder):
     def add_service_vulnerabilities(
         self,
         observable: Reference,
-        services: list[HostEnrichmentService] | None,
+        services: Sequence[HostService] | None,
     ) -> None:
         """Create the IP -> Software -> Vulnerability path for each service."""
         for service in services or []:
@@ -278,14 +282,20 @@ class ServiceStixBuilder(AreaStixBuilder):
     )
 
 
-    def _build_service_content(self, service: HostEnrichmentService) -> str:
+    def _build_service_content(self, service: HostService) -> str:
         content_parts = []
-        if service.protocol:
-            content_parts.append(f"- Protocol: {service.protocol}")
-        if service.scan_time:
-            content_parts.append(f"- Scan Time: {service.scan_time}")
+        protocol = self._get_value(service, "protocol")
+        scan_time = self._get_value(service, "scan_time")
+        if protocol:
+            content_parts.append(f"- Protocol: {protocol}")
+        if scan_time:
+            content_parts.append(f"- Scan Time: {scan_time}")
 
-        labels = [label.value for label in service.labels or [] if label.value]
+        labels = [
+            label_value
+            for label in self._get_value(service, "labels") or []
+            if (label_value := self._get_value(label, "value"))
+        ]
         if labels:
             if content_parts:
                 content_parts.append("")
@@ -293,7 +303,7 @@ class ServiceStixBuilder(AreaStixBuilder):
             content_parts.extend(f"  - {label}" for label in labels)
 
         threats_info = []
-        for threat in service.threats or []:
+        for threat in self._get_value(service, "threats") or []:
             threat_details = []
             if self._get_value(threat, "name"):
                 threat_details.append(self._get_value(threat, "name"))
@@ -314,10 +324,13 @@ class ServiceStixBuilder(AreaStixBuilder):
     def add_service_notes(
         self,
         observable: Reference,
-        services: list[HostEnrichmentService] | None,
+        services: Sequence[HostService] | None,
     ) -> None:
         for service in services or []:
-            if not (service.scan_time and service.port):
+            scan_time = self._get_value(service, "scan_time")
+            port = self._get_value(service, "port")
+            protocol = self._get_value(service, "protocol")
+            if not (scan_time and port):
                 continue
 
             content = self._build_service_content(service)
@@ -326,13 +339,13 @@ class ServiceStixBuilder(AreaStixBuilder):
             self.bundle.append(
                 Note(
                     abstract=(
-                        f"Service information on port {service.port} "
-                        f"({service.protocol or 'Unknown'})"
+                        f"Service information on port {port} "
+                        f"({protocol or 'Unknown'})"
                     ),
                     content=content,
                     note_types=[NoteType.EXTERNAL],
                     publication_date=datetime.datetime.fromisoformat(
-                        service.scan_time
+                        scan_time
                     ),
                     authors=[self._context.author.name],
                     objects=[observable],
@@ -344,7 +357,7 @@ class ServiceStixBuilder(AreaStixBuilder):
         self,
         observable: Reference,
         observable_value: str,
-        services: list[HostEnrichmentService] | None,
+        services: Sequence[HostService] | None,
     ) -> None:
         for service in services or []:
             self._add_threats(

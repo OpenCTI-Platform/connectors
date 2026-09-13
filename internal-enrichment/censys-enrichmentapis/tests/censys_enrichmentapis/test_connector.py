@@ -357,6 +357,9 @@ def test_domain_name_enrichment(
     mocker: MockerFixture, mocked_helper: Mock, fetch_hosts, domain_name_enrichment_message
 ):
     mocker.patch("censys_enrichmentapis.client.Client.fetch_certs_by_domain", return_value=[])
+    mock_get_host_enrichment = mocker.patch(
+        "censys_platform.global_data.GlobalData.get_host_enrichment"
+    )
     client = Client(
         organisation_id="test-org-id",
         token="test-token",
@@ -375,6 +378,7 @@ def test_domain_name_enrichment(
 
     connector.helper.send_stix2_bundle = capture_sent_bundle
     connector._message_callback(domain_name_enrichment_message)
+    mock_get_host_enrichment.assert_not_called()
 
     for host in fetch_hosts:
         ipv4_addresses = [
@@ -436,3 +440,12 @@ def test_domain_name_enrichment(
             )
         ]
         assert host.autonomous_system.description in autonomous_system_descriptions
+
+        service_notes = filter_by_key_value(sent_bundle["objects"], "type", "note")
+        for service in host.services:
+            assert any(
+                note["abstract"].startswith(
+                    f"Service information on port {service.port} "
+                )
+                for note in service_notes
+            )

@@ -1,7 +1,7 @@
 import re
 
 from censys_enrichmentapis.converters.base import CensysConverter, ObservableLike
-from censys_platform import HostEnrichment
+from censys_platform import Host, HostEnrichment, Reputation
 from connectors_sdk.models import Reference
 
 
@@ -9,21 +9,28 @@ class HostConverter(CensysConverter):
     def _fetch_data(self, observable: ObservableLike) -> HostEnrichment:
         return self._require_client().fetch_ip(observable["value"])
 
-    def _convert_labels(self, data: HostEnrichment) -> list[str]:
-        label_values = [label.value for label in data.labels or []]
+    def _convert_labels(self, data: Host | HostEnrichment) -> list[str]:
+        label_values = [
+            label_value
+            for label in self._value(data, "labels") or []
+            if isinstance((label_value := self._value(label, "value")), str)
+        ]
         label_values.extend(
-            label.value
-            for service in data.services or []
-            for label in service.labels or []
+            label_value
+            for service in self._value(data, "services") or []
+            for label in self._value(service, "labels") or []
+            if isinstance((label_value := self._value(label, "value")), str)
         )
         threat_names = [
             self._value(threat, "name")
-            for service in data.services or []
+            for service in self._value(data, "services") or []
             for threat in self._value(service, "threats") or []
         ]
-        label_values.extend(name for name in threat_names if name)
-        if data.reputation and data.reputation.label:
-            label_values.append(data.reputation.label)
+        label_values.extend(name for name in threat_names if isinstance(name, str))
+        reputation = self._value(data, "reputation")
+        reputation_label = self._value(reputation, "label")
+        if isinstance(reputation_label, str):
+            label_values.append(reputation_label)
         return list(
             dict.fromkeys(
                 f"Censys_{self._to_snake_case(label_value.strip())}"
@@ -32,7 +39,9 @@ class HostConverter(CensysConverter):
             )
         )
 
-    def _convert(self, observable: ObservableLike, data: HostEnrichment) -> None:
+    def _convert(
+        self, observable: ObservableLike, data: Host | HostEnrichment
+    ) -> None:
         stix_entity = observable
         observable = Reference(id=stix_entity.get("id"))
         self.primary_observable_labels = self._convert_labels(data)
@@ -81,10 +90,11 @@ class HostConverter(CensysConverter):
             services=data.services,
         )
 
+        reputation = self._value(data, "reputation")
         self.builder.services.add_reputation_note(
             observable=observable,
             observable_value=stix_entity.get("value"),
-            reputation=data.reputation,
+            reputation=reputation if isinstance(reputation, Reputation) else None,
         )
         self.builder.services.add_service_vulnerabilities(
             observable=observable,
