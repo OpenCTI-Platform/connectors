@@ -281,9 +281,13 @@ def test_converter_adds_reputation_note_with_evidence() -> None:
 
     # Verify evidence features are included with proper formatting
     assert "**Evidence Features:**" in note.content
-    assert "Max Port: value=49093, contribution=+8.71%, category=service_surface" in note.content
-    assert "High Port Ratio: value=0.875, contribution=+5.34%, category=service_surface" in note.content
-    assert "Avg EPSS Score: value=0.0937, contribution=-3.74%, category=vulnerability_exposure" in note.content
+    assert "| Feature | Value | Contribution | Category |" in note.content
+    assert "| Max Port | 49093 | +8.71% | service_surface |" in note.content
+    assert "| High Port Ratio | 0.875 | +5.34% | service_surface |" in note.content
+    assert (
+        "| Avg EPSS Score | 0.0937 | -3.74% | "
+        "vulnerability_exposure |" in note.content
+    )
 
     assert note.labels == ["SUSPICIOUS"]
     assert note.note_types == ["external"]

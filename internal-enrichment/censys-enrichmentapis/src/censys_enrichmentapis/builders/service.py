@@ -1,7 +1,9 @@
 import datetime
+from typing import Any
+from unicodedata import category
 
 from censys_enrichmentapis.builders.base import AreaStixBuilder
-from censys_platform import HostEnrichmentService, Reputation
+from censys_platform import HostEnrichmentService, Reputation, ReputationEvidenceFeature
 from connectors_sdk.models import (
     AttackPattern,
     ExternalReference,
@@ -228,41 +230,43 @@ class ServiceStixBuilder(AreaStixBuilder):
             return
 
         content_parts.append("\n**Evidence Features:**")
+        rows = [
+            "| Feature | Value | Contribution | Category |",
+            "|---|---:|---:|---|",
+        ]
         for evidence in reputation.evidence:
             if evidence.feature:
-                self._format_evidence_feature(evidence.feature, content_parts)
+                feature = evidence.feature
+                name = (str(feature.name)) if feature.name else "Unknown" # Access the feature name to ensure it is loaded
+                value = (str(feature.value)) if feature.value else "Unknown"  # Access the feature value to ensure it is loaded
+                category = (str(feature.category)) if feature.category else "Unknown"  # Access the feature category to ensure it is loaded
+                contribution = "Unknown"
+                if (feature.contribution is not None):
+                        if isinstance(feature.contribution, (int, float)):
+                            contribution = f"{feature.contribution:+.2f}%"
+                        else:
+                            contribution = str(feature.contribution)
+                rows.append(
+                    f"| {name} | {value} | {contribution} | {category} |"
+                )
 
-    def _format_evidence_feature(
-        self, feature: object, content_parts: list[str]
-    ) -> None:
-        name = self._get_value(feature, "name") or "Unknown"
-        value = self._get_value(feature, "value")
-        contribution = self._get_value(feature, "contribution")
-        category = self._get_value(feature, "category")
-        contribution_str = (
-            self._format_contribution(contribution)
-            if contribution is not None
-            else ""
-        )
+        if len(rows) > 2:
+            content_parts.append("\n".join(rows))
 
-        parts = [f"- {name}"]
-        if value:
-            parts.append(f"value={value}")
-        if contribution_str:
-            parts.append(f"contribution={contribution_str}")
-        if category:
-            parts.append(f"category={category}")
-        content_parts.append(
-            ": ".join([parts[0], ", ".join(parts[1:])])
-            if len(parts) > 1
-            else parts[0]
-        )
+    def _markdown_cell(value: Any) -> str:
+        """Make a value safe for use inside a Markdown table cell."""
+        if value is None:
+            return "—"
 
-    @staticmethod
-    def _format_contribution(contribution: object) -> str:
-        if isinstance(contribution, (int, float)):
-            return f"{contribution:+.2f}%"
-        return str(contribution)
+        if isinstance(value, bool):
+            value = str(value).lower()
+
+        return (
+            str(value)
+            .replace("|", r"\|")
+            .replace("\n", "<br>")
+    )
+
 
     def _build_service_content(self, service: HostEnrichmentService) -> str:
         content_parts = []
