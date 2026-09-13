@@ -9,4 +9,4 @@ class CertificateConverter(CensysConverter):
     def _convert(self, observable: ObservableLike, data: list[Certificate]) -> None:
         self.builder.add_author_and_marking()
         for cert in data:
-            self.builder.add_certificate(cert=cert)
+            self.builder.certificates.add_certificate(cert=cert)

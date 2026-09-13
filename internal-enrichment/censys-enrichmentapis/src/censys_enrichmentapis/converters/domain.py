@@ -3,8 +3,7 @@ from typing import Any
 from censys_enrichmentapis.converters.base import CensysConverter, ObservableLike
 from censys_enrichmentapis.converters.host import HostConverter
 from censys_platform import Certificate, Host
-from connectors_sdk.models import Reference, Relationship
-from connectors_sdk.models.enums import RelationshipType
+from connectors_sdk.models import Reference
 
 
 class DomainConverter(CensysConverter):
@@ -24,7 +23,7 @@ class DomainConverter(CensysConverter):
         host_converter.builder = self.builder
 
         for host in hosts:
-            ip_stix = self.builder.add_ip(
+            ip_stix = self.builder.network.add_ip(
                 observable=Reference(id=stix_entity.get("id")),
                 ip=host.ip,
             )
@@ -48,13 +47,7 @@ class DomainConverter(CensysConverter):
         self.builder.add_author_and_marking()
 
         for cert in certs:
-            certificate = self.builder.add_certificate(cert=cert)
-            if certificate:
-                self.builder.bundle.append(
-                    Relationship(
-                        source=certificate,
-                        target=observable,
-                        type=RelationshipType.RELATED_TO,
-                        **self.builder.common_props,
-                    )
-                )
+            self.builder.certificates.add_certificate(
+                cert=cert,
+                related_observable=observable,
+            )
