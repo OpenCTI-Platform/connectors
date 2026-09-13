@@ -26,7 +26,7 @@ SUPPORTED_SCOPE_ENTITY_TYPES: frozenset[str] = frozenset(
 
 class _ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     id: str = Field(
-        default="censys-entichmentapis--674403d0-4723-40cd-b03c-42fb959d5469",
+        default="censys-enrichmentapis--674403d0-4723-40cd-b03c-42fb959d5469",
         description="A UUID v4 to identify the connector in OpenCTI.",
     )
     name: str = Field(

@@ -20,7 +20,7 @@ def test_config() -> None:
 
     # Test defaults
     assert (
-        config.connector.id == "censys-entichmentapis--674403d0-4723-40cd-b03c-42fb959d5469"
+        config.connector.id == "censys-enrichmentapis--674403d0-4723-40cd-b03c-42fb959d5469"
     )
     assert config.connector.type == "INTERNAL_ENRICHMENT"
     assert config.connector.name == "Censys EnrichmentAPIs"

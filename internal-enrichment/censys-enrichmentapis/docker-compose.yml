@@ -1,10 +1,10 @@
 version: '3'
 services:
-  connector-censys-entichmentapis:
+  connector-censys-enrichmentapis:
     build:
       context: .
       dockerfile: Dockerfile
-    image: connector-censys-entichmentapis:latest
+    image: connector-censys-enrichmentapis:latest
     environment:
       # OpenCTI configuration
       - OPENCTI_URL=${OPENCTI_URL:-http://localhost:8080}

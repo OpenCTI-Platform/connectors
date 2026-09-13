@@ -57,7 +57,7 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter       | config.yml | Docker environment variable | Default                                 | Mandatory | Description                                                                  |
 |-----------------|------------|-----------------------------|-----------------------------------------|-----------|------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | censys-entichmentapis--674403d0-...         | No        | A unique `UUIDv4` identifier for this connector instance.                    |
+| Connector ID    | id         | `CONNECTOR_ID`              | censys-enrichmentapis--674403d0-...         | No        | A unique `UUIDv4` identifier for this connector instance.                    |
 | Connector Name  | name       | `CONNECTOR_NAME`            | Censys EnrichmentAPIs                       | No        | Name of the connector.                                                       |
 | Connector Scope | scope      | `CONNECTOR_SCOPE`           | IPv4-Addr,IPv6-Addr,X509-Certificate,Domain-Name | No | The scope of observables the connector will enrich.                          |
 | Connector Type  | type       | `CONNECTOR_TYPE`            | INTERNAL_ENRICHMENT                     | Yes       | Should always be `INTERNAL_ENRICHMENT` for this connector.                   |
@@ -79,14 +79,14 @@ There are a number of configuration options, which are set either in `docker-com
 Build the Docker image:
 
 ```bash
-docker build -t opencti/connector-censys-entichmentapis:latest .
+docker build -t opencti/connector-censys-enrichmentapis:latest .
 ```
 
 Configure the connector in `docker-compose.yml`:
 
 ```yaml
-  connector-censys-entichmentapis:
-    image: opencti/connector-censys-entichmentapis:latest
+  connector-censys-enrichmentapis:
+    image: opencti/connector-censys-enrichmentapis:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -109,7 +109,7 @@ docker compose up -d
 
 ### Manual Deployment
 
-1. Copy `src/.config.yaml.sample` to `src/.config.yml` and configure with your credentials.
+1. Copy `src/config.yaml.sample` to `src/config.yml` and configure with your credentials.
 
 2. Install dependencies:
 
@@ -120,7 +120,7 @@ pip3 install -r src/requirements.txt
 3. Start the connector from the `src` directory:
 
 ```bash
-python3 src/main.py
+python3 main.py
 ```
 
 ## Usage
@@ -295,9 +295,9 @@ Host reputation information is documented in external notes containing:
 
 *Note Format Example:*
 ```
-- Score: 0.42
+- Score: 42
 - Score level: MEDIUM_RISK
-- Model version: 0.1.0
+- Model version: 2.0.0
 ```
 
 ### Processing Details
