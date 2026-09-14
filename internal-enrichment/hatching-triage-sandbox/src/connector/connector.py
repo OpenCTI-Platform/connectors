@@ -128,7 +128,7 @@ class HatchingTriageSandboxConnector:
                     key = "Url"
                     relationship_type = (
                         "communicates-with"
-                        if entity_type == "artifact"
+                        if entity_type in ["artifact", "stixfile"]
                         else "related-to"
                     )
                     if self._is_ipv4_address(parsed):
@@ -307,7 +307,9 @@ class HatchingTriageSandboxConnector:
         # Attach domains
         if overview_dict.get("targets"):
             relationship_type = (
-                "communicates-with" if entity_type == "artifact" else "related-to"
+                "communicates-with"
+                if entity_type in ["artifact", "stixfile"]
+                else "related-to"
             )
 
             domains = [
@@ -385,7 +387,9 @@ class HatchingTriageSandboxConnector:
                     )
 
                     relationship_type = (
-                        "uses" if entity_type == "artifact" else "related-to"
+                        "uses"
+                        if entity_type in ["artifact", "stixfile"]
+                        else "related-to"
                     )
 
                     relationship = stix2.Relationship(
@@ -421,23 +425,33 @@ class HatchingTriageSandboxConnector:
         sample_id = None
         observable_value = observable["observable_value"]
 
-        if entity_type == "artifact":
-            if not observable["importFiles"]:
-                raise ValueError(f"No files found for {observable_value}")
+        if entity_type in ["artifact", "stixfile"]:
+            import_files = observable.get("importFiles") or []
+            if import_files:
+                file_name = import_files[0]["name"]
+                file_id = import_files[0]["id"]
+                file_uri = f"{self.octi_api_url}/storage/get/{file_id}"
+                file_content = self.helper.api.fetch_opencti_file(file_uri, True)
+                sha256_hash = self._get_sha256(file_content)
+                search_query = f"sha256:{sha256_hash}"
+                sample_id = self._search_for_analysis(search_query)
+                if sample_id is None:
+                    sample_id = self._submit_sample(
+                        file_name=file_name, file_content=file_content
+                    )
+            elif entity_type == "stixfile":
+                hash_candidates = self._get_hash_candidates_from_observable(observable)
+                if not hash_candidates:
+                    raise ValueError(
+                        f"No attached file or supported hash found for {observable_value}"
+                    )
 
-            file_name = observable["importFiles"][0]["name"]
-            file_id = observable["importFiles"][0]["id"]
-            file_uri = f"{self.octi_api_url}/storage/get/{file_id}"
-            file_content = self.helper.api.fetch_opencti_file(file_uri, True)
-            sha256_hash = self._get_sha256(file_content)
-
-            search_query = f"sha256:{sha256_hash}"
-            sample_id = self._search_for_analysis(search_query)
-
-            if sample_id is None:
-                sample_id = self._submit_sample(
-                    file_name=file_name, file_content=file_content
-                )
+                sample_id = self._search_for_analysis_by_hashes(observable)
+                if sample_id is None:
+                    raise ValueError(
+                        f"No attached file found for {observable_value}; "
+                        "cannot submit a hash-only File SCO to Hatching Triage"
+                    )
 
         if entity_type == "url":
             search_query = f"url:{observable_value}"
@@ -522,7 +536,7 @@ class HatchingTriageSandboxConnector:
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
 
-        if entity_type in ["artifact", "url"]:
+        if entity_type in ["artifact", "stixfile", "url"]:
             return self._process_observable(observable, entity_type)
         else:
             if not data.get("event_type"):
@@ -550,6 +564,46 @@ class HatchingTriageSandboxConnector:
         sha256obj = sha256()
         sha256obj.update(contents)
         return sha256obj.hexdigest()
+
+    def _get_hash_candidates_from_observable(self, observable):
+        """Return supported hash candidates in a priority order for Hatching lookups."""
+        hashes = observable.get("hashes") or []
+        candidates = []
+
+        if isinstance(hashes, dict):
+            hashes = [
+                {"algorithm": key, "hash": value} for key, value in hashes.items()
+            ]
+
+        for file_hash in hashes:
+            algorithm = (file_hash.get("algorithm") or "").lower()
+            value = file_hash.get("hash")
+            if not algorithm or not value:
+                continue
+
+            normalized_algorithm = algorithm.replace("-", "")
+            if normalized_algorithm in ["sha256", "sha1", "md5", "sha512"]:
+                candidates.append((normalized_algorithm, value))
+
+        ordered_algorithms = ["sha256", "sha1", "md5", "sha512"]
+        normalized = []
+        seen = set()
+        for algorithm in ordered_algorithms:
+            for candidate_algorithm, candidate_hash in candidates:
+                if candidate_algorithm == algorithm and candidate_hash not in seen:
+                    normalized.append((candidate_algorithm, candidate_hash))
+                    seen.add(candidate_hash)
+        return normalized
+
+    def _search_for_analysis_by_hashes(self, observable):
+        """Try the supported file hash values in priority order and return the first match."""
+        for algorithm, hash_value in self._get_hash_candidates_from_observable(
+            observable
+        ):
+            sample_id = self._search_for_analysis(f"{algorithm}:{hash_value}")
+            if sample_id is not None:
+                return sample_id
+        return None
 
     def _is_ipv4_address(self, ip):
         m = re.match(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$", ip)
