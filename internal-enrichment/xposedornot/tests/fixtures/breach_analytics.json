@@ -1,0 +1,35 @@
+{
+  "BreachMetrics": {"risk": [{"risk_label": "Critical", "risk_score": 100}]},
+  "ExposedBreaches": {
+    "breaches_details": [
+      {
+        "breach": "Sysco",
+        "details": "Sysco, a food distribution company, was targeted...",
+        "domain": "sysco.com",
+        "industry": "Food",
+        "logo": "https://xposedornot.com/static/logos/Sysco.png",
+        "password_risk": "unknown",
+        "references": "",
+        "searchable": "Yes",
+        "verified": "Yes",
+        "xposed_data": "Email addresses;Names;Phone numbers",
+        "xposed_date": "2026",
+        "xposed_records": "2699339"
+      },
+      {
+        "breach": "Yahoo",
+        "domain": "yahoo.com",
+        "industry": "Tech",
+        "password_risk": "plaintextpassword",
+        "verified": "Yes",
+        "xposed_data": "Email addresses;Passwords",
+        "xposed_date": "2013",
+        "xposed_records": "3000000000"
+      }
+    ]
+  },
+  "BreachesSummary": {"site": "Sysco;Yahoo"},
+  "ExposedPastes": {},
+  "PasteMetrics": {},
+  "PastesSummary": {}
+}
