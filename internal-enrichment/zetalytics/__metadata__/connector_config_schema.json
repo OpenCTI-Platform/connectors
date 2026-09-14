@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/zetalytics-dns_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_ID": {
+      "default": "00000000-0000-4000-8000-000000000101",
+      "description": "A UUID v4 identifying this connector instance in OpenCTI. Must be overridden with a unique value per deployed profile.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Zetalytics DNS - Analyst Enrichment",
+      "description": "Display name for this connector in OpenCTI. The configured ZETALYTICS_LOOKBACK_DAYS is automatically appended, e.g. 'Zetalytics DNS - Deep Investigation (2 years)'.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": ["Domain-Name", "Hostname", "IPv4-Addr", "IPv6-Addr"],
+      "description": "Observable types this connector will enrich.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": ["debug", "info", "warn", "warning", "error"],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "ZETALYTICS_TOKEN": {
+      "description": "Zetalytics API token.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ZETALYTICS_REQUEST_TIMEOUT": {
+      "default": 30,
+      "description": "HTTP request timeout in seconds for all Zetalytics API calls.",
+      "minimum": 5,
+      "type": "integer"
+    },
+    "ZETALYTICS_MODE": {
+      "default": "manual",
+      "description": "Enrichment profile controlling which endpoints are called by default. Endpoint flags below override mode defaults.",
+      "enum": ["light", "playbook", "manual", "deep"],
+      "type": "string"
+    },
+    "ZETALYTICS_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Maximum TLP level of observables this connector will enrich.",
+      "enum": ["TLP:WHITE", "TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED"],
+      "type": "string"
+    },
+    "ZETALYTICS_MAX_RESULTS": {
+      "default": 300,
+      "description": "Maximum passive DNS records to retrieve per query.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "ZETALYTICS_MAX_SUBDOMAINS": {
+      "default": 300,
+      "description": "Maximum subdomains to retrieve.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ZETALYTICS_MAX_WHOIS_RESULTS": {
+      "default": 5,
+      "description": "Maximum historical WHOIS records to retrieve.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ZETALYTICS_MAX_NS_PIVOT_RESULTS": {
+      "default": 100,
+      "description": "Maximum results for nameserver pivot queries.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ZETALYTICS_LOOKBACK_DAYS": {
+      "default": 365,
+      "description": "How many days back to query passive DNS records.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "ZETALYTICS_TSFIELD": {
+      "default": "all",
+      "description": "Zetalytics timestamp field to filter on.",
+      "enum": ["all", "last_seen", "first_seen"],
+      "type": "string"
+    },
+    "ZETALYTICS_INCLUDE_LIVE_DNS": {
+      "default": true,
+      "description": "Perform a live DNS lookup in addition to passive DNS.",
+      "type": "boolean"
+    },
+    "ZETALYTICS_INCLUDE_SUBDOMAINS": {
+      "default": true,
+      "description": "Retrieve known subdomains for domain enrichment.",
+      "type": "boolean"
+    },
+    "ZETALYTICS_INCLUDE_D8S": {
+      "default": true,
+      "description": "Retrieve structured D8S registration context for domains.",
+      "type": "boolean"
+    },
+    "ZETALYTICS_INCLUDE_HISTORICAL_WHOIS": {
+      "default": false,
+      "description": "Retrieve historical raw WHOIS data (disabled by default due to volume).",
+      "type": "boolean"
+    },
+    "ZETALYTICS_INCLUDE_NS_GLUE": {
+      "default": true,
+      "description": "Retrieve nameserver glue records.",
+      "type": "boolean"
+    },
+    "ZETALYTICS_INCLUDE_NS2DOMAIN": {
+      "default": false,
+      "description": "Pivot from nameserver to hosted domains (deep mode only).",
+      "type": "boolean"
+    },
+    "ZETALYTICS_INCLUDE_MX2DOMAIN": {
+      "default": false,
+      "description": "Pivot from MX domain to hosted domains (deep mode only).",
+      "type": "boolean"
+    },
+    "ZETALYTICS_INCLUDE_EMAIL_PIVOTS": {
+      "default": false,
+      "description": "Enrich via registration email pivots (disabled by default).",
+      "type": "boolean"
+    },
+    "ZETALYTICS_CONFIDENCE": {
+      "default": 60,
+      "description": "Confidence score applied to created STIX objects.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "ZETALYTICS_MARKING_DEFINITION": {
+      "default": "TLP:AMBER",
+      "description": "TLP marking definition to apply to created objects.",
+      "type": "string"
+    },
+    "ZETALYTICS_CREATE_NOTE_WHEN_NO_RESULTS": {
+      "default": false,
+      "description": "Create an OpenCTI note on the observable when no results are found.",
+      "type": "boolean"
+    },
+    "ZETALYTICS_INCLUDE_PORTAL_LINK": {
+      "default": true,
+      "description": "Add an external reference linking to the observable in the ZoneCruncher web portal. The link includes the API token as part of the URL path, which is visible to OpenCTI users who can view the observable. Set to false to omit.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ZETALYTICS_TOKEN"
+  ],
+  "additionalProperties": true
+}

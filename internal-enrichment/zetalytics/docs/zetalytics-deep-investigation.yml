@@ -1,0 +1,48 @@
+opencti:
+  url: "${OPENCTI_URL}"
+  token: "${OPENCTI_TOKEN_ZETALYTICS_DEEP}"
+
+connector:
+  id: "00000000-0000-4000-8000-000000000104"
+  name: "Zetalytics DNS - Deep Investigation"
+  type: "INTERNAL_ENRICHMENT"
+  scope: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr,Email-Addr"
+  auto: false
+  log_level: "info"
+  queue_threshold: 500
+
+zetalytics:
+  token: "${ZETALYTICS_TOKEN}"
+  mode: "deep"
+  result_limits:
+    max_results: 500
+    max_subdomains: 1000
+    max_whois_results: 10
+    max_ns_pivot_results: 250
+    max_mx_pivot_results: 250
+    max_email_pivot_results: 100
+  time_window:
+    lookback_days: 730
+    tsfield: "all"
+  endpoints:
+    live_dns: true
+    subdomains: true
+    d8s: true
+    historical_whois: true
+    ns_glue: true
+    zone_activity: true
+    ns2domain: true
+    mx2domain: true
+    email_pivots: false
+  stix:
+    create_indicators: false
+    create_infrastructure: true
+    create_observations: true
+    confidence: 60
+    marking_definition: "TLP:AMBER"
+  safeguards:
+    deduplicate_observables: true
+    deduplicate_relationships: true
+    skip_invalid_values: true
+    create_note_when_no_results: false
+    require_manual_trigger: true

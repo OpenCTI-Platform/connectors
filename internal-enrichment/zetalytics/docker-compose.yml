@@ -1,0 +1,27 @@
+version: '3'
+services:
+  connector-zetalytics-dns:
+    image: opencti/connector-zetalytics-dns:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=Zetalytics DNS - Analyst Enrichment # optional
+      - CONNECTOR_SCOPE=Domain-Name,Hostname,IPv4-Addr,IPv6-Addr # optional
+      - CONNECTOR_LOG_LEVEL=info # optional (default: 'info')
+      - CONNECTOR_AUTO=false # optional (default: false)
+      # Zetalytics-specific parameters
+      - ZETALYTICS_TOKEN=CHANGEME
+      - ZETALYTICS_MODE=manual # optional (default: 'manual'), available values: 'light', 'playbook', 'manual', 'deep'
+      - ZETALYTICS_MAX_TLP=TLP:AMBER # optional (default: 'TLP:AMBER')
+      - ZETALYTICS_MAX_RESULTS=300 # optional (default: 300)
+      - ZETALYTICS_LOOKBACK_DAYS=365 # optional (default: 365)
+      - ZETALYTICS_INCLUDE_LIVE_DNS=true # optional (default: true)
+      - ZETALYTICS_INCLUDE_SUBDOMAINS=true # optional (default: true)
+      - ZETALYTICS_INCLUDE_D8S=true # optional (default: true)
+      - ZETALYTICS_INCLUDE_HISTORICAL_WHOIS=false # optional (default: false)
+      - ZETALYTICS_CONFIDENCE=60 # optional (default: 60)
+      - ZETALYTICS_MARKING_DEFINITION=TLP:AMBER # optional (default: 'TLP:AMBER')
+    restart: always

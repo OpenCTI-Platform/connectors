@@ -1,0 +1,19 @@
+{
+  "title": "Zetalytics DNS",
+  "slug": "zetalytics-dns",
+  "description": "The Zetalytics DNS connector enriches Domain-Name, Hostname, IPv4-Addr, and IPv6-Addr observables using the Zetalytics ZoneCruncher API. It retrieves passive DNS, live DNS, ASN/ownership context, subdomains, registration (D8S), and nameserver glue records, and converts them into STIX 2.1 objects. The connector is designed to be deployed multiple times from the same image with different configuration profiles (manual, playbook, light/auto, deep) to support different enrichment workflows without duplicating code.",
+  "short_description": "Enriches domains, hostnames, and IP addresses with passive DNS, live DNS, ASN, subdomain, and registration context from the Zetalytics ZoneCruncher API.",
+  "logo": "internal-enrichment/zetalytics-dns/__metadata__/logo.png",
+  "use_cases": ["Enrichment & Analysis"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 100,
+  "support_version": ">=6.8.11",
+  "subscription_link": "https://zetalytics.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/zetalytics-dns",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-zetalytics-dns",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
