@@ -1,0 +1,27 @@
+{
+  "title": "Stairwell Import",
+  "slug": "stairwell-import",
+  "description": "The Stairwell external-import connector periodically pulls high-confidence malicious indicators from Stairwell's global file corpus into OpenCTI. On a configurable schedule it queries Stairwell MalEval verdicts for newly-seen malicious files and emits STIX Indicators together with their related observables (file hashes, IP addresses, domain names, and URLs), wrapped in a Grouping or Report so every run is auditable. Filtering by MalEval probability bucket, time window, and environment/global scope is configurable, enabling proactive threat hunting against fresh, vendor-attributed intelligence.",
+  "short_description": "Periodically imports high-confidence malicious file, IP, domain, and URL indicators from Stairwell's global corpus (MalEval verdicts) into OpenCTI for proactive threat hunting.",
+  "logo": "external-import/stairwell/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": "support@stairwell.com",
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://stairwell.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/stairwell",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-stairwell-import",
+  "container_type": "EXTERNAL_IMPORT"
+}
