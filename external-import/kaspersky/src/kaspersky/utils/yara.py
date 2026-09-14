@@ -140,7 +140,7 @@ class YaraRuleUpdater:
             return False
 
     def _needs_updating(self, current_rule: YaraRule, new_rule: YaraRule) -> bool:
-        if current_rule.name != new_rule.name:
+        if current_rule.name.lower() != new_rule.name.lower():
             self._error(
                 "Current ({0}) and new ({1}) YARA rules names do not match",
                 current_rule.name,
