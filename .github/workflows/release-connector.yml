@@ -755,90 +755,12 @@ jobs:
           git push origin --delete "$TAG" 2>/dev/null || true
 
   # ──────────────────────────────────────────────────────────
-  # 5. Commit manifest version back to default branch
-  # ──────────────────────────────────────────────────────────
-  update-manifest:
-    name: Update manifest version
-    runs-on: ubuntu-latest
-    needs: [resolve, release]
-    if: |
-      always() &&
-      needs.resolve.outputs.dry_run != 'true'
-    # Non-blocking: a failure here must not prevent the release from succeeding
-    continue-on-error: true
-    # Scoped by target branch, not connector: bulk releases dispatch one run
-    # per connector in parallel, and each one's commit here lands on the same
-    # branch. Serializing just this job (builds/releases above stay parallel)
-    # avoids racing ghcommit-action's branch-HEAD check across runs.
-    concurrency:
-      group: release-connector-manifest-${{ needs.resolve.outputs.is_tag_push == 'true' && github.event.repository.default_branch || github.ref_name }}
-      cancel-in-progress: false
-    permissions:
-      contents: write
-    steps:
-      # Tag push always targets the default branch; workflow_dispatch commits
-      # back to whichever branch it was run on instead (github.ref_name is a
-      # tag name on tag push, so it can't be used unconditionally here).
-      - name: Resolve target branch
-        id: target
-        run: |
-          if [ "${{ needs.resolve.outputs.is_tag_push }}" = "true" ]; then
-            BRANCH="${{ github.event.repository.default_branch }}"
-          else
-            BRANCH="${{ github.ref_name }}"
-          fi
-          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
-          echo "🎯 Target branch: $BRANCH"
-
-      - name: Checkout target branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ steps.target.outputs.branch }}
-
-      - name: Patch container_version
-        id: patch
-        run: |
-          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
-          VERSION="${{ needs.resolve.outputs.version }}"
-          MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
-
-          if [ ! -f "$MANIFEST" ]; then
-            echo "::error::Manifest not found: $MANIFEST — cannot patch version"
-            exit 1
-          fi
-
-          # Patch container_version
-          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$RUNNER_TEMP/manifest.json" \
-            && mv "$RUNNER_TEMP/manifest.json" "$MANIFEST"
-
-          # Validate the patched JSON
-          jq empty "$MANIFEST"
-
-          echo "manifest=$MANIFEST" >> "$GITHUB_OUTPUT"
-
-      # Commits via GitHub's GraphQL API instead of raw `git commit`, so the
-      # commit is GPG-signed by GitHub (required by this repo's branch
-      # protection) without managing signing keys in CI. No local git
-      # add/commit/push: it's a no-op when container_version is unchanged,
-      # and it re-resolves the branch head through the API so it isn't
-      # affected by non-fast-forward races from concurrent connector releases.
-      - name: Commit container_version
-        uses: planetscale/ghcommit-action@a6b150b81dca5dd027baa898604418eec9e11465 # v0.2.22
-        with:
-          commit_message: "chore(manifest): update ${{ needs.resolve.outputs.connector_name }} container_version to ${{ needs.resolve.outputs.version }} [skip ci]"
-          repo: ${{ github.repository }}
-          branch: ${{ steps.target.outputs.branch }}
-          file_pattern: ${{ steps.patch.outputs.manifest }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ──────────────────────────────────────────────────────────
-  # 6. Summary
+  # 5. Summary
   # ──────────────────────────────────────────────────────────
   summary:
     name: Release summary
     runs-on: ubuntu-latest
-    needs: [resolve, release-notes, build, release, update-manifest]
+    needs: [resolve, release-notes, build, release]
     if: always()
     steps:
       - name: Print summary
@@ -886,5 +808,4 @@ jobs:
             echo "| Release Notes | ${{ needs.release-notes.result }} |"
             echo "| Build | ${{ needs.build.result }} |"
             echo "| Release | ${{ needs.release.result }} |"
-            echo "| Update Manifest | ${{ needs.update-manifest.result }} |"
           } >> "$GITHUB_STEP_SUMMARY"

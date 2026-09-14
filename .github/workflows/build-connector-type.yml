@@ -62,6 +62,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
+    # Scoped per connector (path) + variant + ref + build_mode: overlapping
+    # runs of build-all-connectors.yml only dedupe/cancel each other here for
+    # the SAME connector, so unrelated connectors changed by different
+    # commits always build in full instead of one run silently losing to
+    # another (see build-all-connectors.yml for the full rationale).
+    concurrency:
+      group: build-image-${{ github.ref_name }}-${{ inputs.variant }}-${{ matrix.path }}-${{ inputs.build_mode }}-amd64
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -139,6 +147,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
+    concurrency:
+      group: build-image-${{ github.ref_name }}-${{ inputs.variant }}-${{ matrix.path }}-${{ inputs.build_mode }}-arm64
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -205,6 +216,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_json) }}
+    # No arch suffix here: this is the job that actually pushes the final
+    # multi-arch tag, so it must serialize against itself across overlapping
+    # runs for the same connector to avoid two runs racing to push the same
+    # tag (see build-amd64's concurrency comment above).
+    concurrency:
+      group: build-image-${{ github.ref_name }}-${{ inputs.variant }}-${{ matrix.path }}-${{ inputs.build_mode }}-merge
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
