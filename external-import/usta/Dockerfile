@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 RUN apk add --no-cache git build-base libffi-dev openssl-dev libmagic
