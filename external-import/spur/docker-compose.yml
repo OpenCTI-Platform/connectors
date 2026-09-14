@@ -9,7 +9,7 @@ services:
       # Connector settings
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=Spur
-      - CONNECTOR_SCOPE=CHANGEME
+      # - CONNECTOR_SCOPE=spur
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT24H
       # Spur feed settings
