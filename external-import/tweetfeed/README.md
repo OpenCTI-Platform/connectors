@@ -33,6 +33,7 @@ There are a number of configuration options, which are set either in `docker-com
 | TWEETFEED_UPDATE_EXISTING_DATA | update_existing_data |      |True or False , updates the data
 | TWEETFEED_ORG_DESCRIPTION      | org_description      | X    |Organization description, which will be refered to data injected
 | TWEETFEED_ORG_NAME             | org_name             | X    |Organization name, which will be refered to data injected
+| TWEETFEED_TLP_LEVEL            | tlp_level            |      |TLP marking applied to the imported observables and indicators. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red` - default is `green`
 
 The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as any other Connector. You should consult the OpenCTI Connector documentation for questions about these values here: [https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8)._
 
