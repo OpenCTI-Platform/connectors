@@ -45,6 +45,7 @@ jobs:
           else
             PR_BASE_REF="${{ github.base_ref }}"
           fi
+          PR_BASE_REF="${PR_BASE_REF#refs/heads/}"
 
           if [ -n "${PR_BASE_REF:-}" ]; then
             case "${PR_BASE_REF}" in
@@ -89,6 +90,7 @@ jobs:
           else
             PR_BASE_REF="${{ github.base_ref }}"
           fi
+          PR_BASE_REF="${PR_BASE_REF#refs/heads/}"
 
           if [ -n "${PR_BASE_REF:-}" ]; then
             case "${PR_BASE_REF}" in
