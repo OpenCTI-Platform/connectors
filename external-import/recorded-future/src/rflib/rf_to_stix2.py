@@ -1545,6 +1545,18 @@ class StixNote:
                     if len(adversary_list) > 0:
                         adversary = adversary_list[0]
 
+                        # An adversary is only converted to a Threat-Actor/Intrusion-Set
+                        # when its RF id belongs to the Threat Actor list; otherwise it
+                        # stays an Identity, which cannot be the source of uses/targets/
+                        # indicates relationships and would be rejected by OpenCTI.
+                        if adversary.get("type") == "identity":
+                            self.helper.connector_logger.info(
+                                "[ANALYST NOTES] Skipping event relations: adversary "
+                                f"'{event_adversary}' resolved to an Identity, not a threat actor",
+                                {"adversary_name": event_adversary},
+                            )
+                            continue
+
                         if event_attr.get("target"):
                             event_objects += self.create_adversary_targets_relations(
                                 adversary=adversary, event_attr=event_attr
