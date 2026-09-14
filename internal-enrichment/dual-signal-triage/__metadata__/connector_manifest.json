@@ -1,0 +1,27 @@
+{
+  "title": "Dual Signal Triage",
+  "slug": "dual-signal-triage",
+  "description": "Encodes dual-signal triage for OpenCTI case and detection entities so machine-learning-only confidence is never treated as equivalent to a classic rule or signature true positive. The connector classifies entities as ml_only, signature, or corroborated, applies Gate/Prove labels (escalate, fix-now, accept, deny-auto-contain), and optionally attaches a Note summarizing the remediation disposition for playbooks and analysts.",
+  "short_description": "Gate/Prove dual-signal triage: ML-only escalate and deny auto-contain; signature/corroborated get HITL-gated fix-now labels.",
+  "logo": null,
+  "use_cases": [
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation",
+    "Incident Response & Case Management"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 80,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/dual-signal-triage",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-dual-signal-triage",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
