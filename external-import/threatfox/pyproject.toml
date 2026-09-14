@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ThreatFoxConnector"
+description = "External Import connector for ThreatFox threat intelligence."
+dynamic = ["version"]
+requires-python = ">=3.11"
+
+dependencies = [
+    "pycti==7.260811.0",
+    "urllib3>=2.5.0",
+    "validators==0.35.0",
+    "pydantic>=2.10,<3",
+    "pydantic-settings==2.9.1",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+]
+
+[project.scripts]
+threatfox-connector = "src.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["./tests"]
