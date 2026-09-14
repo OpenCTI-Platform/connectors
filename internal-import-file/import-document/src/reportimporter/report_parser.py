@@ -85,13 +85,27 @@ class ReportParser(object):
             return True
         return False
 
+    def _ipv4_address_spans(self, data: str) -> List[Tuple[int, int]]:
+        spans = []
+        for match in self._IPV4_CANDIDATE_REGEX.finditer(data):
+            try:
+                ipaddress.IPv4Address(match.group())
+            except ValueError:
+                continue
+            spans.append(match.span())
+        return spans
+
     def _drop_phone_numbers_overlapping_ip_addresses(
-        self, list_matches: Dict[str, Dict]
+        self, list_matches: Dict[str, Dict], data: str
     ) -> Dict[str, Dict]:
-        ip_ranges = [
+        # Compute IPv4 spans from the text so every occurrence is covered; a
+        # value keyed in list_matches only retains a single span. IPv6 spans
+        # come from list_matches since IPv6 never overlaps a digit-only match.
+        ip_ranges = self._ipv4_address_spans(data)
+        ip_ranges += [
             info[RESULT_FORMAT_RANGE]
             for info in list_matches.values()
-            if info[RESULT_FORMAT_CATEGORY] in ("IPv4-Addr.value", "IPv6-Addr.value")
+            if info[RESULT_FORMAT_CATEGORY] == "IPv6-Addr.value"
         ]
         if not ip_ranges:
             return list_matches
@@ -141,7 +155,9 @@ class ReportParser(object):
         for observable in self.observable_list:
             list_matches.update(self._extract_observable(observable, data))
 
-        list_matches = self._drop_phone_numbers_overlapping_ip_addresses(list_matches)
+        list_matches = self._drop_phone_numbers_overlapping_ip_addresses(
+            list_matches, data
+        )
 
         for entity in self.entity_list:
             list_matches = self._extract_entity(entity, list_matches, data)
