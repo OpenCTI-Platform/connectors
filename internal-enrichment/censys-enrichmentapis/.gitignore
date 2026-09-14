@@ -1,0 +1,18 @@
+# Ignore Visual Studio Code settings and workspace files
+.vscode
+.claude
+.venv
+
+
+# folders to ignore
+docs/
+src/censys_enrichmentapis/__pycache__
+src/censys_enrichmentapis/converters/__pycache__
+tests/censys_enrichmentapis/__pycache__
+tests/__pycache__
+.pytest_cache/
+
+# configuration file
+config.yml
+src/config.yml
+Taskfile.yml

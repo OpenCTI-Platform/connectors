@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-censys-enrichmentapis:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: connector-censys-enrichmentapis:latest
+    environment:
+      # OpenCTI configuration
+      - OPENCTI_URL=${OPENCTI_URL:-http://localhost:8080}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      # Common connector configuration
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_NAME=${CONNECTOR_NAME:-Censys EnrichmentAPIs}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-IPv4-Addr,IPv6-Addr,X509-Certificate,Domain-Name}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-error}
+      - CONNECTOR_AUTO=${CONNECTOR_AUTO:-false}
+      # Censys configuration
+      - CENSYS_ENRICHMENT_ORGANISATION_ID=${CENSYS_ENRICHMENT_ORGANISATION_ID}
+      - CENSYS_ENRICHMENT_TOKEN=${CENSYS_ENRICHMENT_TOKEN}
+      - CENSYS_ENRICHMENT_MAX_TLP=${CENSYS_ENRICHMENT_MAX_TLP:-TLP:AMBER}
+    restart: always
