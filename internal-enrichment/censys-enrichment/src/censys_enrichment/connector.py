@@ -1,15 +1,23 @@
-from typing import Any, Iterator
+from typing import Any, Generator
 
-from censys_enrichment.client import Client
-from censys_enrichment.converters import get_converter
-from censys_enrichment.converters.base import CensysConverter
-from censys_enrichment.errors import (
-    EntityNotInScopeError,
-    MaxTlpError,
-)
+from censys_enrichment.client import Client, NVDData
+from censys_enrichment.converter import Converter
 from censys_enrichment.settings import ConfigLoader
+from censys_platform import Host, Service
 from connectors_sdk.models import BaseObject
 from pycti import OpenCTIConnectorHelper
+
+
+class EntityNotInScopeError(Exception):
+    """Custom exception for entity not in scope"""
+
+
+class MaxTlpError(Exception):
+    """Custom exception for exceeding maximum TLP level"""
+
+
+class EntityTypeNotSupportedError(Exception):
+    """Custom exception for unsupported entity type"""
 
 
 class Connector:
@@ -20,10 +28,12 @@ class Connector:
         config: ConfigLoader,
         helper: OpenCTIConnectorHelper,
         client: Client,
+        converter: Converter,
     ) -> None:
         self.config = config
         self.helper = helper
         self.client = client
+        self.converter = converter
 
     def _send_bundle(self, stix_objects: list[dict[str, Any]]) -> str:
         bundle = self.helper.stix2_create_bundle(items=stix_objects)
@@ -52,28 +62,92 @@ class Connector:
             max_tlp=self.config.censys_enrichment.max_tlp,
         )
 
+    def _build_nvd_data_map(self, data: Host) -> dict[str, NVDData]:
+        """Return a CVE-ID → NVDData mapping for use during enrichment.
+
+        For each CVE referenced by the host's services, we fetch full NVD data
+        (description, CVSS v2, v3 severity, external references).  If OpenCTI
+        already holds a non-empty description for a given CVE, we clear the
+        ``description`` field on the returned :class:`NVDData` to avoid
+        overwriting it — all other enrichment fields are still applied.
+        """
+        cve_ids: set[str] = set()
+        for service in data.services if isinstance(data.services, list) else []:
+            if not isinstance(service, Service):
+                continue
+            for vuln in service.vulns if isinstance(service.vulns, list) else []:
+                if vuln.id:
+                    cve_ids.add(vuln.id)
+
+        nvd_data_map: dict[str, NVDData] = {}
+        for cve_id in cve_ids:
+            nvd_data = self.client.fetch_nvd_data(cve_id)
+            if nvd_data is None:
+                continue
+            try:
+                existing = self.helper.api.vulnerability.read(
+                    filters={
+                        "mode": "and",
+                        "filters": [{"key": "name", "values": [cve_id]}],
+                        "filterGroups": [],
+                    }
+                )
+                if existing and existing.get("description"):
+                    # OpenCTI already has a description — leave it untouched.
+                    nvd_data.description = None
+            except Exception:
+                pass
+            nvd_data_map[cve_id] = nvd_data
+
+        return nvd_data_map
+
     def _generate_octi_objects(
         self, stix_entity: dict[str, Any]
-    ) -> Iterator[BaseObject]:
-        # Annotate ``Iterator`` (not ``Generator``) so the type
-        # matches the ``list_iterator`` returned by
-        # ``iter(converter.to_stix(...))``. Keeping ``return
-        # iter(...)`` instead of rewriting as a real ``yield from``
-        # generator is deliberate: the converter dispatch
-        # (``_get_converter`` → ``get_converter`` →
-        # ``EntityTypeNotSupportedError``) must run eagerly so
-        # misconfigured entity types surface at call time rather
-        # than only when something starts iterating the returned
-        # object — the test suite (and the ``_message_callback``
-        # error path that wraps this) both rely on the eager
-        # behaviour.
-        converter = self._get_converter(entity_type=stix_entity["type"])
-        return iter(converter.to_stix(observable=stix_entity))
+    ) -> Generator[BaseObject, None, None]:
+        match stix_entity["type"]:
+            case "ipv4-addr" | "ipv6-addr":
+                data = self.client.fetch_ip(stix_entity["value"])
+                nvd_data_map = (
+                    self._build_nvd_data_map(data)
+                    if self.config.censys_enrichment.nvd_enabled
+                    else None
+                )
+                return self.converter.generate_octi_objects(
+                    stix_entity=stix_entity,
+                    data=data,
+                    nvd_data_map=nvd_data_map,
+                )
+            case "x509-certificate":
+                return self.converter.generate_octi_objects_from_certs(
+                    certs=list(self.client.fetch_certs(hashes=stix_entity["hashes"])),
+                )
+            case "domain-name":
 
-    def _get_converter(self, entity_type: str) -> CensysConverter:
-        converter = get_converter(entity_type=entity_type)
-        converter.client = self.client
-        return converter
+                def _generate_domain_objects():
+                    # yield objects from associated hosts
+                    yield from self.converter.generate_octi_objects_from_hosts(
+                        stix_entity=stix_entity,
+                        hosts=list(self.client.fetch_hosts(stix_entity["value"])),
+                        nvd_data_provider=(
+                            self._build_nvd_data_map
+                            if self.config.censys_enrichment.nvd_enabled
+                            else None
+                        ),
+                    )
+                    # yield certificates associated with the domain
+                    yield from self.converter.generate_octi_objects_from_domain_certs(
+                        stix_entity=stix_entity,
+                        certs=list(
+                            self.client.fetch_certs_by_domain(stix_entity["value"])
+                        ),
+                    )
+
+                return _generate_domain_objects()
+
+            case _:
+                raise EntityTypeNotSupportedError(
+                    f"Observable type {stix_entity['type']} not supported"
+                )
 
     def _process(
         self,
