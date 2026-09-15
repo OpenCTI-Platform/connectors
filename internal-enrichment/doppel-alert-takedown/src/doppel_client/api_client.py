@@ -1,4 +1,5 @@
 import requests
+from doppel_client.constants import DOPPEL_ATTRIBUTION_HEADERS
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
 
@@ -32,6 +33,7 @@ class DoppelClient:
         self.session = requests.Session()
         self.session.headers.update(
             {
+                **DOPPEL_ATTRIBUTION_HEADERS,
                 "Content-Type": "application/json",
                 "x-api-key": api_key,
                 "x-user-api-key": user_api_key,
