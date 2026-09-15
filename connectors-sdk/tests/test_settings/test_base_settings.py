@@ -8,10 +8,11 @@ from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
+    BaseStreamConnectorConfig,
 )
 from connectors_sdk.settings.deprecations import Deprecate, DeprecatedField
 from connectors_sdk.settings.exceptions import ConfigValidationError
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, ValidationError
 
 
 def test_base_config_model_should_retrieve_deprecated_fields():
@@ -465,3 +466,89 @@ def test_base_connector_settings_config_json_schema():
 
     # Then: CONNECTOR_ID is intentionally excluded from generated properties
     assert "CONNECTOR_ID" not in schema["properties"]
+
+
+def test_base_stream_connector_config_recovery_fields_default_to_none():
+    """Test that `BaseStreamConnectorConfig` recovery fields are optional and default to None."""
+
+    # Given: A stream connector config with only the mandatory live stream id
+    config = BaseStreamConnectorConfig(
+        id="connector--uid", name="Test", scope=["scope1"], live_stream_id="stream--uid"
+    )
+
+    # When/Then: Recovery fields are optional with sensible defaults
+    assert config.live_stream_start_timestamp is None
+    assert config.live_stream_recover is True
+    assert config.live_stream_recover_iso_date is None
+
+
+def test_base_stream_connector_config_accepts_recovery_values():
+    """Test that `BaseStreamConnectorConfig` casts and keeps provided recovery values."""
+
+    # Given: A stream connector config with recovery values provided
+    config = BaseStreamConnectorConfig(
+        id="connector--uid",
+        name="Test",
+        scope=["scope1"],
+        live_stream_id="stream--uid",
+        live_stream_start_timestamp=1788426304677,
+        live_stream_recover_iso_date="2026-09-07T00:00:00Z",
+    )
+
+    # When/Then: Values are validated and the recover date serializes to an ISO string for pycti
+    assert config.live_stream_start_timestamp == 1788426304677
+    dumped = config.model_dump(mode="json")
+    assert dumped["live_stream_recover_iso_date"] == "2026-09-07T00:00:00Z"
+
+
+def test_base_stream_connector_config_rejects_start_timestamp_in_seconds():
+    """Test that `BaseStreamConnectorConfig` rejects an epoch start timestamp given in seconds."""
+
+    # Given/When/Then: A 10-digit (seconds) timestamp is rejected to avoid a silent full replay
+    with pytest.raises(ValidationError):
+        BaseStreamConnectorConfig(
+            id="connector--uid",
+            name="Test",
+            scope=["scope1"],
+            live_stream_id="stream--uid",
+            live_stream_start_timestamp=1788426304,
+        )
+
+
+def test_base_stream_connector_config_recover_false_disables_recovery_for_pycti():
+    """Test that `live_stream_recover=False` serializes the recover date to "none" for pycti."""
+
+    # Given: A stream connector config disabling recovery via the boolean toggle
+    config = BaseStreamConnectorConfig(
+        id="connector--uid",
+        name="Test",
+        scope=["scope1"],
+        live_stream_id="stream--uid",
+        live_stream_recover=False,
+    )
+
+    # When: The config is serialized for the pycti helper
+    pycti_value = config.model_dump(mode="json", context={"mode": "pycti"})[
+        "live_stream_recover_iso_date"
+    ]
+
+    # Then: The recover date is converted to the "none" keyword understood by pycti
+    assert pycti_value == "none"
+
+
+def test_base_stream_connector_config_json_schema_exposes_recovery_vars():
+    """Test that the generated config JSON schema exposes the recovery env vars for stream connectors."""
+
+    # Given: A stream connector settings class
+    class _StreamSettings(BaseConnectorSettings):
+        connector: BaseStreamConnectorConfig = Field(
+            default_factory=BaseStreamConnectorConfig  # type: ignore[arg-type]
+        )
+
+    # When: The config JSON schema is generated
+    schema = _StreamSettings.config_json_schema(connector_name="test-stream")
+
+    # Then: The recovery env vars are exposed as properties
+    assert "CONNECTOR_LIVE_STREAM_START_TIMESTAMP" in schema["properties"]
+    assert "CONNECTOR_LIVE_STREAM_RECOVER" in schema["properties"]
+    assert "CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE" in schema["properties"]
