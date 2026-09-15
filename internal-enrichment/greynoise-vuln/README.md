@@ -75,7 +75,7 @@ This internal enrichment connector queries the GreyNoise API for CVE (Vulnerabil
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
 | `greynoise_vuln_key` | `GREYNOISE_VULN_KEY` | Yes | The GreyNoise API key |
-| `greynoise_vuln_max_tlp` | `GREYNOISE_VULN_MAX_TLP` | Yes | Maximum TLP level for data processing |
+| `greynoise_vuln_max_tlp` | `GREYNOISE_VULN_MAX_TLP` | No | Maximum TLP level for data processing |
 | `greynoise_vuln_name` | `GREYNOISE_VULN_NAME` | No | The GreyNoise organization name |
 | `greynoise_vuln_description` | `GREYNOISE_VULN_DESCRIPTION` | No | The GreyNoise organization description |
 
