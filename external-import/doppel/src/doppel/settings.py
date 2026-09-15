@@ -85,6 +85,10 @@ class DoppelConfig(BaseConfigModel):
         description="Optimizes request volume and memory usage per fetch", default=100
     )
 
+    enable_incidents: bool = Field(
+        description="Enables creation of Incidents for Doppel alerts", default=False
+    )
+
     enable_grouping_case: bool = Field(
         description="Enables creation of grouping cases", default=False
     )
