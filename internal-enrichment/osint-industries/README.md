@@ -46,7 +46,7 @@ Configuration parameters can be provided in either `config.yml` (see `config.yml
 
 | Parameter       | config.yml | Docker environment variable | Default | Mandatory | Description                                                                 |
 | --------------- | ---------- | --------------------------- | ------- | --------- | --------------------------------------------------------------------------- |
-| Connector ID    | id         | `CONNECTOR_ID`              | /       | Yes       | A unique `UUIDv4` identifier for this connector instance.                    |
+| Connector ID    | id         | `CONNECTOR_ID`              | cef186b0-eb77-41d4-8fc5-cc8739eafa2a | No | A unique `UUIDv4` identifier for this connector instance.        |
 | Connector Name  | name       | `CONNECTOR_NAME`            | OSINT Industries | No | Name of the connector.                                                       |
 | Connector Scope | scope      | `CONNECTOR_SCOPE`           | Email-Addr,Phone-Number,User-Account,Cryptocurrency-Wallet | No | The types of observables that trigger the connector. |
 | Auto            | auto       | `CONNECTOR_AUTO`            | false   | No        | Enable automatic enrichment. Keep `false` for this quota-based paid source.  |
@@ -58,8 +58,11 @@ Configuration parameters can be provided in either `config.yml` (see `config.yml
 | --------- | ---------- | --------------------------- | ---------------------------- | --------- | ---------------------------------------------------------------------------------- |
 | API key   | api_key    | `OSINT_INDUSTRIES_API_KEY`  | /                            | Yes       | API key to authenticate to OSINT Industries.                                       |
 | Base URL  | base_url   | `OSINT_INDUSTRIES_BASE_URL` | https://api.osint.industries | No        | Base URL of the OSINT Industries API.                                              |
-| TLP level | tlp_level  | `OSINT_INDUSTRIES_TLP_LEVEL`| amber+strict                 | No        | TLP applied to imported objects: `clear`, `green`, `amber`, `amber+strict`, `red`. |
+| TLP level | tlp_level  | `OSINT_INDUSTRIES_TLP_LEVEL`| amber+strict                 | No        | TLP applied to imported objects: `clear`, `white`, `green`, `amber`, `amber+strict`, `red`. |
 | Premium   | premium    | `OSINT_INDUSTRIES_PREMIUM`  | false                        | No        | Query additional premium modules (consumes more credits).                          |
+
+> An exhaustive, auto-generated reference of every environment variable is available in
+> [`__metadata__/CONNECTOR_CONFIG_DOC.md`](__metadata__/CONNECTOR_CONFIG_DOC.md).
 
 ## Deployment
 
