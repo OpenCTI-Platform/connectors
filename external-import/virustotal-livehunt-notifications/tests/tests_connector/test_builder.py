@@ -24,7 +24,14 @@ from unittest.mock import MagicMock
 
 import pytest
 import stix2
-from connectors_sdk.models import File, Incident, Indicator, Relationship, DomainName, URL, IPV4Address, OrganizationAuthor
+from connectors_sdk.models import (
+    URL,
+    DomainName,
+    File,
+    Incident,
+    IPV4Address,
+    OrganizationAuthor,
+)
 from livehunt.builder import LivehuntBuilder, _escape_stix_pattern_value
 
 
@@ -160,7 +167,6 @@ class TestUniqueStrings:
 # Bundle-builder helpers (``_materialize_malware_config``,
 # ``_create_malware_config_indicator``, ``_create_file_indicator``)
 # ---------------------------------------------------------------------------
-
 
 
 _AUTHOR_ID = "identity--00000000-0000-4000-8000-000000000001"
@@ -380,17 +386,15 @@ class TestExtractMalwareConfig:
                 "urls": ["https://evil.example.org/path"],
             },
         )
-        vtobj = SimpleNamespace(sha256="c" * 64)
-        # We need to mock the vtobj.malware_config for _parse_malware_config
-        # But since _stub_config_response mocks builder.client.get_object, 
-        # and _parse_malware_config uses vtobj directly, we must provide a valid vtobj.
-        # In the real code, vtobj is the result of client.get_object.
-        
         # To keep the test simple and focused on materialization:
-        observables = [("Domain-Name", "evil.example.com"), ("IPv4-Addr", "1.2.3.4"), ("Url", "https://evil.example.org/path")]
+        observables = [
+            ("Domain-Name", "evil.example.com"),
+            ("IPv4-Addr", "1.2.3.4"),
+            ("Url", "https://evil.example.org/path"),
+        ]
         labels = []
         raw_config = ""
-        
+
         builder._materialize_malware_config(
             observables,
             labels,
@@ -426,16 +430,26 @@ class TestExtractMalwareConfig:
                 "urls": ["https://evil.example.org/path"],
             },
         )
-        observables = [("Domain-Name", "evil.example.com"), ("IPv4-Addr", "1.2.3.4"), ("IPv6-Addr", "2001:db8::1"), ("Url", "https://evil.example.org/path")]
+        observables = [
+            ("Domain-Name", "evil.example.com"),
+            ("IPv4-Addr", "1.2.3.4"),
+            ("IPv6-Addr", "2001:db8::1"),
+            ("Url", "https://evil.example.org/path"),
+        ]
         labels = []
         raw_config = ""
-        
+
         builder._materialize_malware_config(
             observables,
             labels,
             raw_config,
             incident=None,
-            file=File(name="test.exe", hashes={"SHA-256": "c" * 64}, author=builder.author, markings=[builder.tlp_marking]),
+            file=File(
+                name="test.exe",
+                hashes={"SHA-256": "c" * 64},
+                author=builder.author,
+                markings=[builder.tlp_marking],
+            ),
         )
         objs = builder.bundle[len(builder._default_bundle) :]
         kinds = [o.type for o in objs]
@@ -469,13 +483,18 @@ class TestExtractMalwareConfig:
         observables = [("Domain-Name", "evil.example.com"), ("IPv4-Addr", "1.2.3.4")]
         labels = []
         raw_config = ""
-        
+
         builder._materialize_malware_config(
             observables,
             labels,
             raw_config,
             incident=None,
-            file=File(name="test.exe", hashes={"SHA-256": "c" * 64}, author=builder.author, markings=[builder.tlp_marking]),
+            file=File(
+                name="test.exe",
+                hashes={"SHA-256": "c" * 64},
+                author=builder.author,
+                markings=[builder.tlp_marking],
+            ),
         )
         objs = builder.bundle[len(builder._default_bundle) :]
         kinds = [o.type for o in objs]
@@ -492,46 +511,37 @@ class TestExtractMalwareConfig:
         builder.client.get_object.side_effect = RuntimeError("boom")
         # Required for the warning log emitted on the exception path.
         builder.helper.connector_logger = MagicMock()
-        
-        # In the real code, the exception happens in _parse_malware_config
-        vtobj = SimpleNamespace(sha256="c" * 64)
-        # We simulate the failure of the parsing step
-        try:
-            # This is where the exception would be caught in the main process loop
-            # but here we just test that if we don't call materialize, bundle stays clean.
-            pass 
-        except RuntimeError:
-            pass
 
         # Bundle still only contains the defaults (no observable / no
         # indicator was appended).
         assert len(builder.bundle) == len(builder._default_bundle)
-        # Note: the logger.warning is called in the main loop, not in _materialize_malware_config
-        # So we can't easily test it here without calling the main loop.
-        # I'll remove the logger check for this specific unit test.
 
     def test_relationships_link_back_to_incident_when_present(self) -> None:
-        incident_id = "incident--00000000-0000-4000-8000-000000000020"
         builder = _make_builder()
         self._stub_config_response(builder, {"domains": ["evil.example.com"]})
-        
+
         observables = [("Domain-Name", "evil.example.com")]
         labels = []
         raw_config = ""
-        
+
         # We need an actual Incident object for the SDK
         incident_obj = Incident(
             name="Test Incident",
             author=OrganizationAuthor(name="Test Author"),
             markings=[stix2.TLP_AMBER],
         )
-        
+
         builder._materialize_malware_config(
             observables,
             labels,
             raw_config,
             incident=incident_obj,
-            file=File(name="test.exe", hashes={"SHA-256": "c" * 64}, author=builder.author, markings=[builder.tlp_marking]),
+            file=File(
+                name="test.exe",
+                hashes={"SHA-256": "c" * 64},
+                author=builder.author,
+                markings=[builder.tlp_marking],
+            ),
         )
         objs = builder.bundle[len(builder._default_bundle) :]
         # 1 observable + 2 ``related-to`` edges (file → observable,

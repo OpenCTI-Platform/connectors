@@ -452,7 +452,7 @@ class LivehuntBuilder:
         # Optionally surface a File Indicator carrying the canonical SHA-256
         # pattern so OpenCTI detection rules pick the verdict up.
         if self.create_file_indicators:
-            self._create_file_indicator(vtobj, incident, file)
+            self._create_file_indicator(vtobj, file, incident)
 
         # Materialize the malware config observables and relations
         if self.get_malware_config and malware_config_data:
