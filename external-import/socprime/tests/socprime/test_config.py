@@ -1,7 +1,9 @@
+from datetime import timedelta
+
 import pytest
 from pydantic import HttpUrl
 from socprime import SocprimeConnector
-from socprime.config import ConnectorSettings
+from socprime.settings import ConnectorSettings
 
 pytestmark = pytest.mark.usefixtures(
     "mocked_opencti_helper",
@@ -34,11 +36,14 @@ def test_config_settings() -> None:
     assert config["connector"]["type"] == "EXTERNAL_IMPORT"
     assert config["connector"]["scope"] == ["socprime"]
     assert config["connector"]["log_level"] == "error"
+    # The deprecated SOCPRIME_INTERVAL_SEC=2000 is migrated to CONNECTOR_DURATION_PERIOD.
+    assert config["connector"]["duration_period"] == timedelta(seconds=2000)
 
-    assert len(config["socprime"]) == 6
-    assert config["socprime"]["api_key"] == "api-key"
+    assert config["socprime"]["api_key"].get_secret_value() == "api-key"
     assert config["socprime"]["content_list_name"] == ["name1", "name2"]
     assert config["socprime"]["job_ids"] == ["job1", "job2"]
     assert config["socprime"]["siem_type"] == ["devo", "snowflake"]
-    assert config["socprime"]["indicator_siem_type"] == "ChangeMe"
+    assert config["socprime"]["indicator_siem_type"] == "sigma"
     assert config["socprime"]["tlp_level"] == "amber+strict"
+    # `interval_sec` is deprecated: it is kept in the model but nulled after migration.
+    assert config["socprime"]["interval_sec"] is None

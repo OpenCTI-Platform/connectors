@@ -30,7 +30,7 @@ def fixture_socprime_config_dict() -> dict[str, dict[str, Any]]:
             "content_list_name": "name1,name2",
             "job_ids": "job1,job2",
             "siem_type": "devo,snowflake",
-            "indicator_siem_type": "ChangeMe",
+            "indicator_siem_type": "sigma",
             "interval_sec": 2000,
         },
     }

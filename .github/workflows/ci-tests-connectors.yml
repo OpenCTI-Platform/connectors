@@ -1,21 +1,6 @@
 name: Tests Connectors
 
 on:
-  push:
-    branches-ignore:
-      - master
-      - 'release/*'
-      - 'lts/*'
-    paths:
-      - 'connectors-sdk/**'
-      - 'external-import/**'
-      - 'internal-enrichment/**'
-      - 'internal-export-file/**'
-      - 'internal-import-file/**'
-      - 'stream/**'
-      - 'shared/**'
-      - 'templates/**'
-      - 'run_test.sh'
   pull_request:
     paths:
       - 'connectors-sdk/**'

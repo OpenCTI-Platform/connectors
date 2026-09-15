@@ -3,14 +3,16 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
-  name: 'SOC Prime'
-  scope: 'socprime'
-  log_level: 'info'
-  duration_period: 'PT1H'
+  # name: 'SOC Prime'
+  # scope: 'socprime'
+  # log_level: 'error'
+  # duration_period: 'PT1H'
 
 socprime:
   api_key: 'ChangeMe'
   content_list_name: 'ChangeMe'
-  tlp_level: 'amber+strict'
+  # job_ids: 'ChangeMe'
+  # siem_type: ''
+  # indicator_siem_type: 'sigma'
+  # tlp_level: 'amber+strict'
