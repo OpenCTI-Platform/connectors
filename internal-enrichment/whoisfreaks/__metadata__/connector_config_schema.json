@@ -14,10 +14,6 @@
       "description": "The API token to connect to OpenCTI.",
       "type": "string"
     },
-    "CONNECTOR_ID": {
-      "description": "A stable UUID for this connector instance.",
-      "type": "string"
-    },
     "CONNECTOR_NAME": {
       "default": "WhoisFreaks",
       "description": "The name of the connector.",
@@ -26,18 +22,12 @@
     "CONNECTOR_SCOPE": {
       "default": "Domain-Name,IPv4-Addr,IPv6-Addr",
       "description": "The scope of the connector.",
-      "type": "string"
+      "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
       "default": "info",
       "description": "The minimum level of logs to display.",
-      "enum": [
-        "debug",
-        "info",
-        "warn",
-        "warning",
-        "error"
-      ],
+      "enum": ["debug", "info", "warn", "warning", "error"],
       "type": "string"
     },
     "CONNECTOR_TYPE": {
@@ -67,22 +57,10 @@
     "WHOISFREAKS_TLP_LEVEL": {
       "default": "amber+strict",
       "description": "Maximum TLP level this connector is allowed to process and marking applied to created STIX entities.",
-      "enum": [
-        "clear",
-        "white",
-        "green",
-        "amber",
-        "amber+strict",
-        "red"
-      ],
+      "enum": ["clear", "white", "green", "amber", "amber+strict", "red"],
       "type": "string"
     }
   },
-  "required": [
-    "OPENCTI_URL",
-    "OPENCTI_TOKEN",
-    "WHOISFREAKS_API_KEY",
-    "CONNECTOR_ID"
-  ],
+  "required": ["OPENCTI_URL", "OPENCTI_TOKEN", "WHOISFREAKS_API_KEY"],
   "additionalProperties": true
 }
