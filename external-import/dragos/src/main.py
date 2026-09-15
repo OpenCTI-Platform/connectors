@@ -4,6 +4,7 @@ import traceback
 from datetime import timedelta
 from logging import getLogger
 
+import dep001_probe  # noqa: F401 # deptry DEP001 test probe
 from dragos.adapters.geocoding.octi import OctiGeocoding
 from dragos.adapters.report.dragos_v1 import ReportsAPIV1
 from dragos.connector import Connector

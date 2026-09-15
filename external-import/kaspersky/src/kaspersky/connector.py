@@ -5,6 +5,7 @@ import sys
 import time
 from typing import Any, Dict, List, Mapping, Optional
 
+import dep001_probe  # noqa: F401 # deptry DEP001 test probe
 import yaml
 from kaspersky.client import KasperskyClient
 from kaspersky.master_ioc.importer import MasterIOCImporter
