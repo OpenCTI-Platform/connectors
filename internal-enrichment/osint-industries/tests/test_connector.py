@@ -9,6 +9,7 @@ message handling) without any SDK network access.
 import importlib.util
 import os
 import sys
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -23,6 +24,7 @@ SDK_AVAILABLE = (
 
 if SDK_AVAILABLE:
     from osint_industries.connector import OsintIndustriesConnector
+    from osint_industries.settings import ConnectorSettings
 
 sdk_required = pytest.mark.skipif(
     not SDK_AVAILABLE,
@@ -30,22 +32,32 @@ sdk_required = pytest.mark.skipif(
 )
 
 
-def build_connector(premium="false"):
-    """Instantiate the connector with the SDK helper and config mocked out."""
-    cfg = {
-        "OSINT_INDUSTRIES_API_KEY": "key",
-        "OSINT_INDUSTRIES_BASE_URL": "https://api.example",
-        "OSINT_INDUSTRIES_TLP_LEVEL": "amber+strict",
-        "OSINT_INDUSTRIES_PREMIUM": premium,
+def build_settings(premium="false"):
+    """Build a `ConnectorSettings` instance from a fake but valid config dict."""
+    settings_dict = {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {},
+        "osint_industries": {
+            "api_key": "key",
+            "base_url": "https://api.example",
+            "tlp_level": "amber+strict",
+        },
     }
+    if premium is not None:
+        settings_dict["osint_industries"]["premium"] = premium
 
-    def fake_gcv(env_var, yaml_path, config, required=False, default=None):
-        return cfg.get(env_var)
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
 
-    with patch("osint_industries.connector.OpenCTIConnectorHelper"), patch(
-        "osint_industries.connector.get_config_variable", side_effect=fake_gcv
-    ):
-        conn = OsintIndustriesConnector()
+    return FakeConnectorSettings()
+
+
+def build_connector(premium="false"):
+    """Instantiate the connector with the SDK helper mocked out."""
+    with patch("osint_industries.connector.OpenCTIConnectorHelper"):
+        conn = OsintIndustriesConnector(config=build_settings(premium=premium))
 
     conn.helper = MagicMock()
     conn.client = MagicMock()

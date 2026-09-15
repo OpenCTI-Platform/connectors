@@ -7,65 +7,33 @@ Operational note: to be used only for lawful, authorised investigations
 
 from __future__ import annotations
 
-import os
 import traceback
 
-import yaml
 from connectors_sdk.models import TLPMarking
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import OpenCTIConnectorHelper
 
 from .client_api import OsintIndustriesClient
 from .converter_to_stix import ConverterToStix
+from .settings import ConnectorSettings
 
 
 class OsintIndustriesConnector:
     SCOPES = ["Email-Addr", "Phone-Number", "User-Account", "Cryptocurrency-Wallet"]
 
-    def __init__(self):
-        config = self._load_config()
-        self.helper = OpenCTIConnectorHelper(config)
+    def __init__(self, config: ConnectorSettings | None = None):
+        self.config = config or ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
-        api_key = get_config_variable(
-            "OSINT_INDUSTRIES_API_KEY",
-            ["osint_industries", "api_key"],
-            config,
-            required=True,
-        )
-        base_url = get_config_variable(
-            "OSINT_INDUSTRIES_BASE_URL",
-            ["osint_industries", "base_url"],
-            config,
-        )
-        tlp_level = (
-            get_config_variable(
-                "OSINT_INDUSTRIES_TLP_LEVEL",
-                ["osint_industries", "tlp_level"],
-                config,
-            )
-            or "amber+strict"
-        )
+        api_key = self.config.osint_industries.api_key.get_secret_value()
+        base_url = str(self.config.osint_industries.base_url)
+        tlp_level = self.config.osint_industries.tlp_level
         # Premium mode: queries additional modules; consumes more API credits.
-        # Parse the value by hand because bool("false") would be True.
-        self.premium = str(
-            get_config_variable(
-                "OSINT_INDUSTRIES_PREMIUM",
-                ["osint_industries", "premium"],
-                config,
-            )
-        ).strip().lower() in ("true", "1", "yes")
+        self.premium = self.config.osint_industries.premium
 
         self.tlp = TLPMarking(level=tlp_level)
         self.client = OsintIndustriesClient(self.helper, api_key, base_url)
         author = ConverterToStix.make_author()
         self.converter = ConverterToStix(author=author, tlp=self.tlp)
-
-    @staticmethod
-    def _load_config() -> dict:
-        config_file = os.path.join(os.path.dirname(__file__), "..", "..", "config.yml")
-        if os.path.isfile(config_file):
-            with open(config_file, "r", encoding="utf-8") as fh:
-                return yaml.safe_load(fh) or {}
-        return {}
 
     def _extract_value(self, observable: dict) -> str | None:
         otype = observable.get("entity_type")
