@@ -78,18 +78,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
             initial_state: Initial state for the orchestrator
 
         """
-        subentity_types = [
-            "malware_families",
-            "attack_techniques",
-            "vulnerabilities",
-            # "campaigns",
-            # "reports",
-            # "domains",
-            # "files",
-            # "urls",
-            # "ip_addresses",
-            "software_toolkits",
-        ]
+        subentity_types = list(self.config.threat_actor_subentities)
         try:
             async for gti_threat_actors in self.client_api.fetch_threat_actors(
                 initial_state

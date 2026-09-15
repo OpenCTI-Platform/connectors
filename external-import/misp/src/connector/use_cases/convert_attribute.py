@@ -649,16 +649,34 @@ class AttributeConverter:
         if indicator:
             # ? The for loop below seems to never be reached
             for misp_sighting in getattr(attribute, "Sighting", []):
-                if (
-                    "Organisation" in misp_sighting
-                    and misp_sighting["Organisation"]["name"] != author.name
-                ):
+                # MISP usually returns Sighting.Organisation as a single dict, but
+                # some deployments / aggregated feeds emit it as a list of dicts.
+                # Normalize to a list to handle both shapes; ignore other types.
+                misp_sighting_org = misp_sighting.get("Organisation")
+                if isinstance(misp_sighting_org, dict):
+                    org_entries = [misp_sighting_org]
+                elif isinstance(misp_sighting_org, list):
+                    org_entries = [
+                        org for org in misp_sighting_org if isinstance(org, dict)
+                    ]
+                else:
+                    org_entries = []
+
+                org_name = next(
+                    (
+                        org.get("name")
+                        for org in org_entries
+                        if org.get("name") and org.get("name") != author.name
+                    ),
+                    None,
+                )
+                if org_name:
                     sighted_by = stix2.Identity(
                         id=pycti.Identity.generate_id(
-                            name=misp_sighting["Organisation"]["name"],
+                            name=org_name,
                             identity_class="organization",
                         ),
-                        name=misp_sighting["Organisation"]["name"],
+                        name=org_name,
                         identity_class="organization",
                     )
                     stix_objects.append(sighted_by)

@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 import pytest
-from pydantic import HttpUrl
+from pydantic import HttpUrl, SecretStr
 from socprime import SocprimeConnector
 from socprime.settings import ConnectorSettings
 
@@ -29,7 +29,7 @@ def test_config_settings() -> None:
     config = ConnectorSettings().model_dump()
 
     assert config["opencti"]["url"] == HttpUrl("http://test-opencti-url/")
-    assert config["opencti"]["token"] == "test-opencti-token"
+    assert config["opencti"]["token"] == SecretStr("test-opencti-token")
 
     assert config["connector"]["id"] == "test-connector-id"
     assert config["connector"]["name"] == "Soc Prime"

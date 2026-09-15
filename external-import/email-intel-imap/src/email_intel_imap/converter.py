@@ -1,4 +1,5 @@
 import base64
+import html
 import logging
 from typing import Generator, Literal
 
@@ -36,6 +37,26 @@ class ConnectorConverter(BaseConverter):
         )
         self.attachments_mime_types = attachments_mime_types
 
+    @staticmethod
+    def _get_html_body(entity: MailMessage) -> str:
+        """
+        Return the email body as HTML, ready to be stored in the Report content.
+
+        `imap_tools` only fills `entity.html` when the message has a `text/html` part.
+        For `text/plain` messages we fall back to `entity.text`, which is a raw string:
+        its line breaks would be collapsed by the HTML renderer of the Report content
+        field. Escape the body and materialize its newlines as `<br>` so that it is
+        rendered the way it was sent.
+        """
+        if entity.html:
+            return entity.html
+        if not entity.text:
+            # `x_opencti_content` is a required string: never return None, otherwise the
+            # whole Report would be skipped for an email with an empty body.
+            return ""
+        normalized_text = entity.text.replace("\r\n", "\n").replace("\r", "\n")
+        return html.escape(normalized_text, quote=False).replace("\n", "<br>\n")
+
     def to_stix_objects(
         self, entity: MailMessage
     ) -> Generator[stix2.Report, None, None]:
@@ -64,7 +85,7 @@ class ConnectorConverter(BaseConverter):
                 name=name,
                 published=entity.date,
                 report_types=[REPORT_TYPE_THREAT_REPORT],
-                x_opencti_content=entity.html or entity.text,
+                x_opencti_content=self._get_html_body(entity),
                 x_opencti_files=[
                     OpenCTIFile(
                         name=attachment.filename,

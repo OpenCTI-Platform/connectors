@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Literal
+from urllib.parse import quote
 
 import requests
 from microsoft_defender_intel_connector.utils import (
@@ -89,13 +90,10 @@ class DefenderApiHandler:
             )
         except (requests.exceptions.HTTPError, KeyError) as e:
             error_description = response_json.get("error_description", "Unknown error")
-            error_message = (
-                f"[ERROR] Failed generating oauth token: {error_description}"
-            )
-            self.helper.connector_logger.error(
-                error_message, {"response": response_json}
-            )
-            raise e
+            raise DefenderApiHandlerError(
+                f"Failed to generate OAuth token: {error_description}",
+                {"response": response_json},
+            ) from e
 
     def retries_builder(self) -> None:
         """
@@ -203,7 +201,13 @@ class DefenderApiHandler:
         :param value: Value of the indicator
         :return: List of Threat Intelligence Indicators if request is successful, None otherwise
         """
-        params = f"$filter=indicatorValue eq '{value}'"
+        # OData string literals escape single quotes by doubling them; then
+        # percent-encode the whole expression so reserved characters (?, &, =,
+        # spaces, quotes) inside a URL indicator value can't leak into the
+        # query-string structure and truncate the $filter (which otherwise
+        # yields a 400 "unterminated string literal"). Keep "$filter=" literal.
+        odata_value = value.replace("'", "''")
+        params = "$filter=" + quote(f"indicatorValue eq '{odata_value}'", safe="")
         data = self._send_request(
             "get", f"{self.base_url}/{self.resource_path.lstrip('/')}", params=params
         )

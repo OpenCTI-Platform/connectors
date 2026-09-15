@@ -8,7 +8,9 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
+
+SEVERITIES = ("info", "low", "medium", "high", "critical")
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -49,12 +51,20 @@ class FlareConfig(BaseConfigModel):
         description="Flare tenant ID.",
         default=None,
     )
+    identifier_group_id: int | None = Field(
+        description="Flare identifier group ID. If set, events are fetched from this group's feed instead of the tenant feed.",
+        default=None,
+    )
     event_types: ListFromString = Field(
         description="Comma-separated list of Flare event types to import.",
         default=["stealer_log", "domain", "ransomleak", "leak"],
     )
     event_actions: ListFromString = Field(
         description="Comma-separated list of event actions to filter by. If not set, all actions are imported.",
+        default=[],
+    )
+    severities: ListFromString = Field(
+        description="Comma-separated list of severities to filter by: 'info', 'low', 'medium', 'high', 'critical'. If not set, all severities are imported.",
         default=[],
     )
     lookback_days: int = Field(
@@ -72,6 +82,16 @@ class FlareConfig(BaseConfigModel):
         description="Default TLP level of the imported entities.",
         default="white",
     )
+
+    @field_validator("severities")
+    @classmethod
+    def validate_severities(cls, value: list[str]) -> list[str]:
+        unknown = [severity for severity in value if severity not in SEVERITIES]
+        if unknown:
+            raise ValueError(
+                f"Unknown severities {unknown}. Available values: {', '.join(SEVERITIES)}."
+            )
+        return value
 
 
 class ConnectorSettings(BaseConnectorSettings):

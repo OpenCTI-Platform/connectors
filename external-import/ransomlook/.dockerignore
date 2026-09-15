@@ -1,0 +1,15 @@
+**/.env
+**/.pytest_cache/
+**/.venv/
+**/.coverage
+**/coverage.xml
+**/htmlcov/
+**/__docs__/
+**/__metadata__/
+**/__pycache__/
+**/*.egg-info/
+**/*.gql
+**/*.pyc
+**/logs/
+**/tests/
+config.yml

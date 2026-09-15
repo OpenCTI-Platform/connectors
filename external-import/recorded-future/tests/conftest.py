@@ -20,7 +20,7 @@ def fixture_full_settings_dict() -> dict[str, dict[str, Any]]:
             "name": "Test Connector",
             "scope": "test, connector",
             "log_level": "error",
-            "duration_period": "PT1D",
+            "duration_period": "P1D",
         },
         "rf": {
             "token": "test-token",

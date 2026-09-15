@@ -215,18 +215,122 @@ def _domains_alert(alert_id="alert_x", queue_state="actioned", **extra):
     return alert
 
 
-def test_other_product_type_creates_domain_observable_and_indicator(converter):
-    """Covers the DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO branch (observable + indicator)."""
+@pytest.mark.parametrize(
+    ("observable_type", "value", "expected_stix_type"),
+    [
+        ("domain", "malicious.example", "domain-name"),
+        ("email", "attacker@example.com", "email-addr"),
+        ("ipv4", "192.0.2.10", "ipv4-addr"),
+        ("url", "http://social.example/profile/fake", "url"),
+    ],
+)
+def test_standard_observables_use_opencti_custom_metadata(
+    converter, observable_type, value, expected_stix_type
+):
+    alert = _domains_alert(alert_id=f"alert_{observable_type}")
+
+    observable = converter._create_observable(observable_type, value, alert)
+
+    assert observable["type"] == expected_stix_type
+    assert "labels" not in observable
+    assert "external_references" not in observable
+    assert "queue_state:actioned" in observable["x_opencti_labels"]
+    assert "priority:P2" in observable["x_opencti_labels"]
+    assert observable["x_opencti_external_references"][0]["external_id"] == alert["id"]
+
+
+@pytest.mark.parametrize(
+    "product",
+    [
+        "social_media",
+        "mobile_apps",
+        "ecommerce",
+        "crypto",
+        "email",
+        "paid_ads",
+        "darkweb",
+    ],
+)
+def test_other_product_type_creates_url_observable_and_indicator(converter, product):
+    """URL-centric products must create URL objects, not invalid Domain Names."""
     alert = _domains_alert(alert_id="alert_social_1")
-    alert["product"] = "social_media"
+    alert["product"] = product
+    alert["entity"] = "http://social.example/profile/fake"
     converter.helper.api.stix_cyber_observable.read.return_value = None
     converter.helper.api.indicator.list.return_value = []
 
     result = converter.convert_alerts_to_stix([alert])
 
-    bundle = str(result)
-    assert "domain-name" in bundle
-    assert "indicator" in bundle
+    observables = [
+        obj for obj in result if isinstance(obj, dict) and obj.get("type") == "url"
+    ]
+    indicators = [
+        obj
+        for obj in result
+        if isinstance(obj, dict) and obj.get("type") == "indicator"
+    ]
+    assert observables[0]["value"] == "http://social.example/profile/fake"
+    assert indicators[0]["pattern"] == (
+        "[url:value = 'http://social.example/profile/fake']"
+    )
+
+
+@pytest.mark.parametrize(
+    ("entity", "expected_domain"),
+    [
+        ("http://malicious.example", "malicious.example"),
+        ("https://Malicious.Example/login?target=user#form", "malicious.example"),
+        ("malicious.example", "malicious.example"),
+        ("malicious.example.", "malicious.example"),
+    ],
+)
+def test_domains_product_normalizes_api_url_to_domain(
+    converter, entity, expected_domain
+):
+    """The API's fabricated scheme must not become part of a Domain Name value."""
+    alert = _domains_alert(alert_id="alert_domain_normalized")
+    alert["entity"] = entity
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    observables = [
+        obj
+        for obj in result
+        if isinstance(obj, dict) and obj.get("type") == "domain-name"
+    ]
+    indicators = [
+        obj
+        for obj in result
+        if isinstance(obj, dict) and obj.get("type") == "indicator"
+    ]
+    assert observables[0]["value"] == expected_domain
+    assert indicators[0]["name"] == expected_domain
+    assert indicators[0]["pattern"] == (f"[domain-name:value = '{expected_domain}']")
+
+
+def test_email_product_creates_email_address_observable_and_indicator(converter):
+    alert = _domains_alert(alert_id="alert_email")
+    alert["product"] = "email"
+    alert["entity"] = "attacker@example.com"
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    observables = [
+        obj
+        for obj in result
+        if isinstance(obj, dict) and obj.get("type") == "email-addr"
+    ]
+    indicators = [
+        obj
+        for obj in result
+        if isinstance(obj, dict) and obj.get("type") == "indicator"
+    ]
+    assert observables[0]["value"] == "attacker@example.com"
+    assert indicators[0]["pattern"] == ("[email-addr:value = 'attacker@example.com']")
 
 
 def test_unsupported_product_type_skips_alert(converter):

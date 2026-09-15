@@ -232,6 +232,57 @@ class VirusTotalBuilderTest(unittest.TestCase):
             "url--94a2e4e9-bb9a-544a-b379-44923d37ca82" in builder.bundle[3].object_refs
         )
 
+    def test_create_notes_with_attributes_and_empty_serving_ip(self):
+        """An empty last_serving_ip_address relationship must not break the note.
+
+        VirusTotal returns {"data": null} for an empty to-one relationship, so
+        the processor hands over an empty mapping — the note must still be
+        produced, with N/A for the missing value.
+        """
+        observable = {
+            "standard_id": "url--94a2e4e9-bb9a-544a-b379-44923d37ca82",
+            "id": "94a2e4e9-bb9a-544a-b379-44923d37ca82",
+            "entity_type": "Url",
+            "observable_value": "http://soclosebutyetqq.com/69.exe",
+        }
+        stix_entity = {"id": "url--94a2e4e9-bb9a-544a-b379-44923d37ca82"}
+        builder = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            stix_objects=[stix_entity],
+            stix_entity=stix_entity,
+            opencti_entity=observable,
+            data=self.load_file("vt_test_url.json")["data"],
+            include_attributes_in_note=True,
+            url_related_object_data={},
+        )
+        builder.create_notes()
+        self.assertIn("| Serving IP Address | N/A |", builder.bundle[2].content)
+
+    def test_create_notes_with_attributes_and_serving_ip(self):
+        """When the relationship is populated, the IP is rendered in the note."""
+        observable = {
+            "standard_id": "url--94a2e4e9-bb9a-544a-b379-44923d37ca82",
+            "id": "94a2e4e9-bb9a-544a-b379-44923d37ca82",
+            "entity_type": "Url",
+            "observable_value": "http://soclosebutyetqq.com/69.exe",
+        }
+        stix_entity = {"id": "url--94a2e4e9-bb9a-544a-b379-44923d37ca82"}
+        builder = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            stix_objects=[stix_entity],
+            stix_entity=stix_entity,
+            opencti_entity=observable,
+            data=self.load_file("vt_test_url.json")["data"],
+            include_attributes_in_note=True,
+            url_related_object_data={"id": "1.2.3.4", "type": "ip_address"},
+        )
+        builder.create_notes()
+        self.assertIn("| Serving IP Address | 1.2.3.4 |", builder.bundle[2].content)
+
     def test_create_yara(self):
         observable = {
             "standard_id": "file--3a30a5ed-003e-5ef9-9ede-10823a9fb17f",

@@ -58,7 +58,7 @@ class OctiIndicatorModel:
 
         """
         custom_properties = kwargs.pop("custom_properties", {})
-        if score:
+        if score is not None:
             custom_properties["x_opencti_score"] = score
         if platforms:
             custom_properties["x_mitre_platforms"] = platforms

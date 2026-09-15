@@ -3,9 +3,9 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_IMPORT_FILE'
   id: 'ChangeMe'
   name: 'ImportFileMISP'
+  validate_before_import: false # Validate any bundle before import
   scope: 'application/json'
   log_level: 'info'
 
@@ -18,6 +18,7 @@ misp_import_file:
   create_tags_as_labels: true # Optional, create tags as labels (sanitize MISP tag to OpenCTI labels)
   guess_threats_from_tags: false # Optional, try to guess threats (threat actor, intrusion set, malware, etc.) from MISP tags when they are present in OpenCTI
   author_from_tags: false # Optional, map creator:XX=YY (author of event will be YY instead of the author of the event)
+  markings_from_tags: false # Optional, derive markings from MISP tags
   import_to_ids_no_score: 40 # Optional, use as a score for the indicator/observable if the attribute to_ids is no
   import_unsupported_observables_as_text: false # Optional, import unsupported observable as x_opencti_text
   import_unsupported_observables_as_text_transparent: true # Optional, import unsupported observable as x_opencti_text just with the value

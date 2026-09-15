@@ -163,6 +163,59 @@ def test_query_notifications_raises_on_api_error():
         client.query_notifications(from_date="2026-05-01T00:00:00Z")
 
 
+def test_query_notifications_stops_gracefully_on_pagination_limit_exceeded():
+    """PAGINATION_LIMIT_EXCEEDED must not raise: it is an expected outcome
+    once a run's backlog is larger than the per-run cap, so whatever has
+    already been collected is returned and the run still saves progress
+    (issue #7190)."""
+    client = _client()
+    page1 = {
+        "status_code": 200,
+        "body": {
+            "resources": [f"id-{i}" for i in range(100)],
+            "meta": {"pagination": {"total": 50000}},
+        },
+    }
+    limit_exceeded = {
+        "status_code": 400,
+        "body": {
+            "errors": [
+                {
+                    "code": 400,
+                    "message": (
+                        "The provided limit and offset exceed the " "pagination limit"
+                    ),
+                    "message_key": "PAGINATION_LIMIT_EXCEEDED",
+                }
+            ]
+        },
+    }
+    client.cs.query_notifications.side_effect = [page1, limit_exceeded]
+
+    ids = client.query_notifications(from_date="2026-05-01T00:00:00Z")
+
+    assert len(ids) == 100
+    assert client.cs.query_notifications.call_count == 2
+    client.helper.connector_logger.warning.assert_called()
+
+
+def test_query_notifications_caps_pages_per_run():
+    """Without a per-run cap, a large backlog with an unreliable ``total``
+    would paginate until CrowdStrike itself rejects the request. We stop
+    comfortably before that instead (issue #7190)."""
+    client = _client()
+    client.cs.query_notifications.return_value = {
+        "status_code": 200,
+        "body": {"resources": [f"id-{i}" for i in range(100)], "meta": {}},
+    }
+
+    ids = client.query_notifications(from_date="2026-05-01T00:00:00Z")
+
+    assert client.cs.query_notifications.call_count == client._MAX_PAGES_PER_RUN
+    assert len(ids) == client._MAX_PAGES_PER_RUN * 100
+    client.helper.connector_logger.warning.assert_called()
+
+
 def test_get_notifications_details_batches_requests():
     client = _client()
     client.cs.get_notifications_detailed.return_value = {

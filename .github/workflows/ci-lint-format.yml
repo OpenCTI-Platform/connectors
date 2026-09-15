@@ -27,7 +27,7 @@ jobs:
     name: Ensure Formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: "Set up Python"
         uses: actions/setup-python@v6
@@ -53,7 +53,7 @@ jobs:
     name: Base Linter (flake8)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # - run: sudo apt-get update -qq && sudo apt-get install -y curl gettext
 
@@ -75,7 +75,7 @@ jobs:
     name: STIX ID Linter
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # - run: sudo apt-get update -qq && sudo apt-get install -y curl gettext
       - name: "Set up Python"

@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Deprecated | Default | Description |
 | -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
 | THEHIVE_URL | `string` | ✅ | string |  |  | The URL of the TheHive instance. |
 | THEHIVE_API_KEY | `string` | ✅ | string |  |  | The API key to authenticate to TheHive. |
 | THEHIVE_ORGANIZATION_NAME | `string` | ✅ | string |  |  | The name of the organization in TheHive, used to create the identity in OpenCTI. |

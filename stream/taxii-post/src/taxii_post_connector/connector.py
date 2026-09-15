@@ -98,7 +98,7 @@ class TaxiiPostConnector:
                 "id": "bundle--" + str(uuid.uuid4()),
                 "objects": [data_object],
             }
-            if self.config.token is not None:
+            if self.config.token is not None and self.config.token.get_secret_value():
                 self.helper.log_info("Posting to TAXII URL (using token): " + url)
                 self.helper.log_info(str(bundle))
                 headers["Authorization"] = (
@@ -118,11 +118,7 @@ class TaxiiPostConnector:
                     url,
                     headers=headers,
                     auth=(
-                        (
-                            self.config.login.get_secret_value()
-                            if self.config.login is not None
-                            else None
-                        ),
+                        (self.config.login if self.config.login is not None else None),
                         (
                             self.config.password.get_secret_value()
                             if self.config.password

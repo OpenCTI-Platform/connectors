@@ -51,6 +51,64 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             "attack_techniques": self._create_relation_attack_technique,
         }
 
+    def _is_below_min_score(self, entry: IOCDeltaEntry) -> bool:
+        """Check whether an IOC entry's GTI score is below the configured minimum.
+
+        The filter is disabled entirely (nothing is discarded) when
+        indicator_min_score is None or set to 100. Entries without a GTI score
+        are never filtered out, since there is no score to compare against the
+        threshold.
+        """
+        min_score = self.config.indicator_min_score
+        if min_score is None or min_score >= 100:
+            return False
+
+        attrs = entry.attributes
+        if (
+            attrs is None
+            or attrs.gti_assessment is None
+            or attrs.gti_assessment.threat_score is None
+            or attrs.gti_assessment.threat_score.value is None
+        ):
+            return False
+
+        return attrs.gti_assessment.threat_score.value < min_score
+
+    def _has_required_association(self, entry: IOCDeltaEntry) -> bool:
+        """Check whether an IOC entry has the required malware/threat actor associations.
+
+        The filter is disabled when both indicator_require_malware_family and
+        indicator_require_threat_actor are False (default), in which case this
+        always returns True. When one or both are enabled, the indicator must
+        have at least one matching association (OR logic between the two). This
+        filter is combined with the score filter using AND logic.
+        """
+        require_malware = self.config.indicator_require_malware_family
+        require_threat_actor = self.config.indicator_require_threat_actor
+
+        if not require_malware and not require_threat_actor:
+            return True
+
+        rels = entry.relationships
+
+        has_malware = (
+            rels is not None
+            and rels.malware_families is not None
+            and len(rels.malware_families.data) > 0
+        )
+        has_threat_actor = (
+            rels is not None
+            and rels.threat_actors is not None
+            and len(rels.threat_actors.data) > 0
+        )
+
+        if require_malware and not require_threat_actor:
+            return has_malware
+        if require_threat_actor and not require_malware:
+            return has_threat_actor
+        # Both required: OR logic — at least one must be present
+        return has_malware or has_threat_actor
+
     def convert(self, ioc_data: dict[str, Any]) -> list[Any]:
         """Convert a single IOC delta entry to STIX objects."""
         try:
@@ -59,6 +117,29 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             self.logger.warning(
                 "Failed to parse IOC delta entry",
                 {"prefix": LOG_PREFIX, "error": str(e), "data": str(ioc_data)[:200]},
+            )
+            return []
+
+        if self._is_below_min_score(entry):
+            self.logger.debug(
+                "IOC entry below minimum GTI score, skipping",
+                {
+                    "prefix": LOG_PREFIX,
+                    "type": entry.type,
+                    "id": entry.id,
+                    "min_score": self.config.indicator_min_score,
+                },
+            )
+            return []
+
+        if not self._has_required_association(entry):
+            self.logger.debug(
+                "IOC entry lacks required malware/threat actor association, skipping",
+                {
+                    "prefix": LOG_PREFIX,
+                    "type": entry.type,
+                    "id": entry.id,
+                },
             )
             return []
 

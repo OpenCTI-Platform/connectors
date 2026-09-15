@@ -91,6 +91,49 @@ class DummyConfig:
         self.report_download_pdf = False
         self.import_software_toolkits = False
         self.software_toolkit_import_start_date = timedelta(days=1)
+        self.report_subentities = [
+            "malware_families",
+            "threat_actors",
+            "attack_techniques",
+            "vulnerabilities",
+            "campaigns",
+            "domains",
+            "files",
+            "urls",
+            "ip_addresses",
+            "software_toolkits",
+        ]
+        self.campaign_subentities = [
+            "malware_families",
+            "attack_techniques",
+            "vulnerabilities",
+            "threat_actors",
+            # "domains",
+            # "files",
+            # "urls",
+            # "ip_addresses",
+            "software_toolkits",
+        ]
+        self.threat_actor_subentities = [
+            "malware_families",
+            "attack_techniques",
+            "vulnerabilities",
+            "software_toolkits",
+        ]
+        self.malware_family_subentities = [
+            "threat_actors",
+            "attack_techniques",
+            "vulnerabilities",
+        ]
+        self.vulnerability_subentities = [
+            "malware_families",
+            "attack_techniques",
+            "threat_actors",
+        ]
+        self.software_toolkit_subentities = [
+            "malware_families",
+            "attack_techniques",
+        ]
 
 
 # =====================

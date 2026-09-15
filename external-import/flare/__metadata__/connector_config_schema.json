@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Flare",
@@ -74,6 +76,11 @@
       "description": "Flare tenant ID.",
       "type": "integer"
     },
+    "FLARE_IDENTIFIER_GROUP_ID": {
+      "default": null,
+      "description": "Flare identifier group ID. If set, events are fetched from this group's feed instead of the tenant feed.",
+      "type": "integer"
+    },
     "FLARE_EVENT_TYPES": {
       "default": [
         "stealer_log",
@@ -90,6 +97,14 @@
     "FLARE_EVENT_ACTIONS": {
       "default": [],
       "description": "Comma-separated list of event actions to filter by. If not set, all actions are imported.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "FLARE_SEVERITIES": {
+      "default": [],
+      "description": "Comma-separated list of severities to filter by: 'info', 'low', 'medium', 'high', 'critical'. If not set, all severities are imported.",
       "items": {
         "type": "string"
       },

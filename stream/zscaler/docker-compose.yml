@@ -3,6 +3,7 @@ services:
   connector-zscaler:
     image: opencti/connector-zscaler:latest
     environment:
+      # --- OpenCTI ---
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
@@ -12,8 +13,10 @@ services:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
-      - ZSCALER_API_KEY=ChangeMe
+      # --- Zscaler ---
       - ZSCALER_USERNAME=ChangeMe
       - ZSCALER_PASSWORD=ChangeMe
-      - ZSCALER_BLACKLIST_NAME=ChangeMe # Name of your Zscaler blacklist
+      - ZSCALER_API_KEY=ChangeMe
+      # - ZSCALER_BLACKLIST_NAME=BLACK_LIST_DYNDNS # optional (default: BLACK_LIST_DYNDNS)
+      # - ZSCALER_SSL_VERIFY=false # optional (default: false)
     restart: always

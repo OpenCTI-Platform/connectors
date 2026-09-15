@@ -2,12 +2,7 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
-from pydantic import (
-    Field,
-    HttpUrl,
-    PlainSerializer,
-    field_validator,
-)
+from pydantic import Field, HttpUrl, PlainSerializer
 from src.connector.models.configs import ConfigBaseSettings
 
 LogLevelToLower = Annotated[
@@ -38,7 +33,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: ListFromString
 
-    type: str = Field(
+    type: Literal["EXTERNAL_IMPORT"] = Field(
         default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )
@@ -50,7 +45,3 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default="PT60S",
         description="Duration between two scheduled runs of the connector (ISO 8601 format).",
     )
-
-    @field_validator("type")
-    def force_value_for_type_to_be_internal_enrichment(cls, value):
-        return "EXTERNAL_IMPORT"

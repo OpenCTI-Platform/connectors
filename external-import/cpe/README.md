@@ -2,7 +2,7 @@
 
 | Status | Date | Comment |
 |--------|------|---------|
-| Community | -    | -       |
+| Filigran Verified | -    | -       |
 
 The CPE (Common Platform Enumeration) connector imports software and product information from the NIST National Vulnerability Database (NVD) into OpenCTI as Software entities.
 

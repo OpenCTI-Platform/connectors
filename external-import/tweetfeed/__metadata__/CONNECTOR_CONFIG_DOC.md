@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | CONNECTOR_NAME | `string` |  | string | `"TweetFeed"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `[]` | The scope of the connector |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
@@ -21,3 +21,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | TWEETFEED_ORG_NAME | `string` |  | string | `"Tweetfeed"` | Name of the author organization created in OpenCTI. |
 | TWEETFEED_ORG_DESCRIPTION | `string` |  | string | `"Tweetfeed, a connector to import IOC from Twitter."` | Description of the author organization created in OpenCTI. |
 | TWEETFEED_DAYS_BACK_IN_TIME | `integer` |  | integer | `30` | Number of days to retrieve data back in time. |
+| TWEETFEED_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"green"` | TLP marking applied to imported observables and indicators (clear, white, green, amber, amber+strict, red). |

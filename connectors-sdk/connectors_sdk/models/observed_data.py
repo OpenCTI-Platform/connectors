@@ -24,10 +24,6 @@ class ObservedData(BaseIdentifiedEntity):
         min_length=1,
         description="List of OpenCTI identified entities observed.",
     )
-    labels: list[str] | None = Field(
-        default=None,
-        description="Labels of the observed data",
-    )
     associated_files: list[AssociatedFile] | None = Field(
         default=None,
         description="Files to upload with the observed data, e.g. observed data as a PDF.",
@@ -42,7 +38,6 @@ class ObservedData(BaseIdentifiedEntity):
             last_observed=self.last_observed,
             number_observed=self.number_observed,
             object_refs=object_refs,
-            labels=self.labels,
             x_opencti_files=[
                 file.to_stix2_object() for file in self.associated_files or []
             ],

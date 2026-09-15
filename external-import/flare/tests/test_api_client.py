@@ -28,6 +28,7 @@ def client(mock_helper: MagicMock, mock_api: MagicMock) -> FlareClient:
     c = FlareClient.__new__(FlareClient)
     c.helper = mock_helper
     c._api = mock_api
+    c._search_url = "/firework/v4/events/tenant/_search"
     return c
 
 
