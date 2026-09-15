@@ -8,8 +8,6 @@ on:
       - 'internal-export-file/**'
       - 'internal-import-file/**'
       - 'stream/**'
-      - '.github/deptry-package-map.txt'
-      - '.github/workflows/ci-unused-deps.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,153 +21,123 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  deptry:
-    name: Check Dependencies
+  discover:
+    name: Discover changed connectors
     runs-on: ubuntu-latest
+    outputs:
+      connectors: ${{ steps.set.outputs.connectors }}
+      has_changes: ${{ steps.set.outputs.has_changes }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
-
-      - name: Run deptry on changed connectors
-        id: deptry
+      - name: Build the list of changed connectors
+        id: set
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          config=".github/deptry-package-map.txt"
-          RESDIR="$(mktemp -d)"
-
-          # Build the package->module map (single MAPPING arg) and the DEP002
-          # ignore list from the shared config. deptry MAPPING options replace the
-          # whole dict on each flag, so everything must go in one argument.
-          MAP_ENTRIES=""
-          IGNORE_PKGS=""
-          while IFS= read -r line || [ -n "$line" ]; do
-            line=$(echo "$line" | sed 's/#.*//' | xargs)
-            [ -z "$line" ] && continue
-            if echo "$line" | grep -q "^ignore="; then
-              IGNORE_PKGS="${IGNORE_PKGS:+$IGNORE_PKGS|}${line#ignore=}"
-            else
-              MAP_ENTRIES="${MAP_ENTRIES:+$MAP_ENTRIES,}$line"
-            fi
-          done < "$config"
-          export MAP_ENTRIES IGNORE_PKGS RESDIR
-
-          # Scan a single connector. deptry runs inside an isolated uv environment
-          # with the connector's own dependencies installed, so transitive imports
-          # (provided by pycti) are reported as DEP003 instead of false DEP001.
-          scan_one() {
-            req="$1"
-            src="$(dirname "$req")"
-            connector="$(dirname "$src")"
-            safe="$(echo "$connector" | tr '/' '_')"
-
-            # First-party = every local package/module name under src/, so
-            # intra-connector imports are never mistaken for missing dependencies.
-            kf_args=()
-            while IFS= read -r m; do
-              [ -n "$m" ] && kf_args+=(--known-first-party "$m")
-            done < <(
-              { find "$src" -type d -not -path '*/.*' -printf '%f\n'
-                find "$src" -name '*.py' -printf '%f\n' | sed 's/\.py$//'
-              } | sort -u
-            )
-            kf_args+=(--known-first-party src)
-
-            map_args=()
-            [ -n "${MAP_ENTRIES:-}" ] && map_args+=(--package-module-name-map "$MAP_ENTRIES")
-
-            # __main__ is a pydantic BaseSettings false positive; DEP002 ignores
-            # come from the shared config.
-            per_rule="DEP001=__main__"
-            [ -n "${IGNORE_PKGS:-}" ] && per_rule="$per_rule,DEP002=$IGNORE_PKGS"
-
-            out=$(uv run --isolated --no-project \
-              --with-requirements "$req" --with deptry==0.25.1 -- \
-              deptry "$src" --requirements-files "$req" --no-ansi \
-              --extend-exclude '.*/tests?/.*' --extend-exclude '.*_tests?/.*' \
-              "${kf_args[@]}" "${map_args[@]}" --per-rule-ignores "$per_rule" \
-              2>&1 | grep -E "DEP00[123] " || true)
-            [ -z "$out" ] && return 0
-
-            while IFS= read -r line; do
-              code=$(echo "$line" | grep -oE "DEP00[123]" | head -1)
-              [ -z "$code" ] && continue
-              pkg=$(echo "$line" | sed "s/.*DEP00[123] '\([^']*\)'.*/\1/")
-              case "$code" in
-                DEP001)
-                  loc=$(echo "$line" | grep -oE "^[^ ]+:[0-9]+:[0-9]+:" | head -1)
-                  file=$(echo "$loc" | cut -d: -f1); file=${file:-$req}
-                  ln=$(echo "$loc" | cut -d: -f2); ln=${ln:-1}
-                  echo "::error file=$file,line=$ln,title=Undeclared dependency::$pkg is imported but not declared in $req"
-                  echo "- \`${pkg}\` (DEP001) in \`${connector}\`: imported but not declared in \`${req}\`" >> "$RESDIR/$safe.err"
-                  ;;
-                DEP003)
-                  loc=$(echo "$line" | grep -oE "^[^ ]+:[0-9]+:[0-9]+:" | head -1)
-                  file=$(echo "$loc" | cut -d: -f1); file=${file:-$req}
-                  ln=$(echo "$loc" | cut -d: -f2); ln=${ln:-1}
-                  echo "::warning file=$file,line=$ln,title=Transitive dependency::$pkg is imported but only available transitively; add it to $req"
-                  echo "- \`${pkg}\` (DEP003, transitive) in \`${req}\`" >> "$RESDIR/$safe.warn"
-                  ;;
-                DEP002)
-                  escaped=$(printf '%s' "$pkg" | sed 's/[^a-zA-Z0-9]/\\&/g')
-                  ln=$(grep -n -iE "^${escaped}(\[[^]]+\])?([[:space:]]|[=<>~!]|$)" "$req" | head -1 | cut -d: -f1)
-                  ln=${ln:-1}
-                  echo "::warning file=$req,line=$ln,title=Unused dependency::$pkg is listed in $req but not imported in $src"
-                  echo "- \`${pkg}\` (DEP002, unused) in \`${req}\`" >> "$RESDIR/$safe.warn"
-                  ;;
-              esac
-            done <<< "$out"
-          }
-          export -f scan_one
-
-          # Collect the requirements files of the connectors changed in this PR.
           pr_files=$(gh pr diff "$PR_NUMBER" --name-only)
-          targets="$(mktemp)"
+          conns=()
           for dir in external-import internal-enrichment internal-import-file internal-export-file stream; do
-            for req in $dir/*/src/requirements.txt; do
-              [ -f "$req" ] || continue
-              connector="$(dirname "$(dirname "$req")")"
-              echo "$pr_files" | grep -q "^${connector}/" && echo "$req" >> "$targets"
+            for connector in "$dir"/*/; do
+              connector="${connector%/}"
+              # A connector is scannable if it declares dependencies via a
+              # requirements.txt or a pyproject.toml (root or src/).
+              [ -f "$connector/src/requirements.txt" ] \
+                || [ -f "$connector/requirements.txt" ] \
+                || [ -f "$connector/pyproject.toml" ] \
+                || [ -f "$connector/src/pyproject.toml" ] \
+                || continue
+              echo "$pr_files" | grep -q "^${connector}/" && conns+=("$connector")
             done
           done
 
-          if [ -s "$targets" ]; then
-            # Scan up to 6 connectors concurrently.
-            xargs -P 6 -a "$targets" -I{} bash -c 'scan_one "$@"' _ {}
+          if [ "${#conns[@]}" -eq 0 ]; then
+            echo "connectors=[]" >> "$GITHUB_OUTPUT"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
           else
-            echo "No changed connectors to scan."
+            json=$(printf '%s\n' "${conns[@]}" \
+              | jq -R -s -c 'split("\n") | map(select(length > 0)) | map({path: ., name: gsub("/"; "_")})')
+            echo "connectors=$json" >> "$GITHUB_OUTPUT"
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           fi
 
+  deptry:
+    name: Scan ${{ matrix.conn.path }}
+    needs: discover
+    if: needs.discover.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        conn: ${{ fromJson(needs.discover.outputs.connectors) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Run deptry
+        id: scan
+        env:
+          DEPTRY_RESULTS_DIR: ${{ runner.temp }}/deptry-results
+        run: |
+          set +e
+          python3 .github/scripts/deptry_scan.py "${{ matrix.conn.path }}"
+          echo "rc=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deptry-${{ matrix.conn.name }}
+          path: ${{ runner.temp }}/deptry-results
+          if-no-files-found: ignore
+          retention-days: 1
+
+      - name: Enforce result
+        if: always()
+        run: exit ${{ steps.scan.outputs.rc }}
+
+  report:
+    name: Report dependency findings
+    needs: [discover, deptry]
+    if: always() && needs.discover.outputs.has_changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download findings
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: deptry-results
+          pattern: deptry-*
+          merge-multiple: true
+
+      - name: Aggregate findings
+        id: agg
+        run: |
+          mkdir -p deptry-results
           errors=""
           warnings=""
           shopt -s nullglob
-          for f in "$RESDIR"/*.err; do errors="${errors}$(cat "$f")"$'\n'; done
-          for f in "$RESDIR"/*.warn; do warnings="${warnings}$(cat "$f")"$'\n'; done
-
-          if [ -n "$warnings" ]; then
-            echo "::notice title=How to fix dependency warnings::DEP002 = declared but unused (remove it or add a name mapping to .github/deptry-package-map.txt). DEP003 = used but only available transitively (declare it explicitly in the connector's requirements.txt)."
-          fi
+          for f in deptry-results/*.err; do errors="${errors}$(cat "$f")"$'\n'; done
+          for f in deptry-results/*.warn; do warnings="${warnings}$(cat "$f")"$'\n'; done
 
           {
-            echo "warnings<<EOF"
-            printf '%s\n' "$warnings"
-            echo "EOF"
-            echo "errors<<EOF"
-            printf '%s\n' "$errors"
-            echo "EOF"
+            echo "errors<<DEPTRY_EOF"
+            [ -n "$errors" ] && printf '%s' "$errors"
+            echo "DEPTRY_EOF"
+            echo "warnings<<DEPTRY_EOF"
+            [ -n "$warnings" ] && printf '%s' "$warnings"
+            echo "DEPTRY_EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Comment on PR
-        if: (steps.deptry.outputs.warnings != '' || steps.deptry.outputs.errors != '') && github.event.pull_request.head.repo.full_name == github.repository
+        if: steps.agg.outputs.warnings != '' || steps.agg.outputs.errors != ''
         uses: actions/github-script@v7
+        env:
+          WARNINGS: ${{ steps.agg.outputs.warnings }}
+          ERRORS: ${{ steps.agg.outputs.errors }}
         with:
           script: |
             const marker = '<!-- unused-deps-bot -->';
@@ -206,12 +174,9 @@ jobs:
                 body,
               });
             }
-        env:
-          WARNINGS: ${{ steps.deptry.outputs.warnings }}
-          ERRORS: ${{ steps.deptry.outputs.errors }}
 
       - name: Remove comment if no findings
-        if: steps.deptry.outputs.warnings == '' && steps.deptry.outputs.errors == '' && github.event.pull_request.head.repo.full_name == github.repository
+        if: steps.agg.outputs.warnings == '' && steps.agg.outputs.errors == ''
         uses: actions/github-script@v7
         with:
           script: |
@@ -230,10 +195,4 @@ jobs:
                 comment_id: existing.id,
               });
             }
-
-      - name: Fail on undeclared dependencies
-        if: steps.deptry.outputs.errors != ''
-        run: |
-          echo "Undeclared (DEP001) dependencies detected. See annotations above."
-          exit 1
 
