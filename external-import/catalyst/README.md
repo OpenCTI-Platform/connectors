@@ -92,17 +92,18 @@ Configure the connector in `docker-compose.yml`:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=CATALYST
-      - CONNECTOR_SCOPE=catalyst
-      - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=PT60M
-      - CATALYST_BASE_URL=https://prod.blindspot.prodaft.com/api
-      - CATALYST_API_KEY=ChangeMe
-      - CATALYST_TLP_FILTER=ALL
-      - CATALYST_CATEGORY_FILTER=ALL
-      - CATALYST_SYNC_DAYS_BACK=730
-      - CATALYST_CREATE_OBSERVABLES=true
-      - CATALYST_CREATE_INDICATORS=false
+      # - CONNECTOR_NAME=CATALYST
+      # - CONNECTOR_SCOPE=catalyst
+      # - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_DURATION_PERIOD=PT60M
+      # - CATALYST_BASE_URL=https://prod.blindspot.prodaft.com/api
+      # - CATALYST_API_KEY=ChangeMe
+      # - CATALYST_TLP_LEVEL=white
+      # - CATALYST_TLP_FILTER=ALL
+      # - CATALYST_CATEGORY_FILTER=ALL
+      # - CATALYST_SYNC_DAYS_BACK=730
+      # - CATALYST_CREATE_OBSERVABLES=true
+      # - CATALYST_CREATE_INDICATORS=false
     restart: always
 ```
 
