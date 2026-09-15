@@ -103,6 +103,18 @@ class VirusTotalConnector:
             self.config.virustotal.include_attributes_in_note
         )
 
+        # GTI collection enrichment settings
+        self.gti_enrichment_enabled = self.config.virustotal.gti_enrichment_enabled
+        self.gti_include_malware_families = (
+            self.config.virustotal.gti_include_malware_families
+        )
+        self.gti_include_threat_actors = (
+            self.config.virustotal.gti_include_threat_actors
+        )
+        self.gti_include_campaigns = self.config.virustotal.gti_include_campaigns
+        self.gti_include_reports = self.config.virustotal.gti_include_reports
+        self.gti_relationship_limit = self.config.virustotal.gti_relationship_limit
+
     # ------------------------------------------------------------------
     # YARA cache (shared across processor instances)
     # ------------------------------------------------------------------

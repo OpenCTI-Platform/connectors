@@ -89,6 +89,12 @@ Key features:
 | `virustotal_domain_add_relationships` | `VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS` | No | Add IP resolution relationships |
 | `virustotal_url_upload_unseen` | `VIRUSTOTAL_URL_UPLOAD_UNSEEN` | No | Upload unknown URLs for analysis |
 | `virustotal_url_indicator_create_positives` | `VIRUSTOTAL_URL_INDICATOR_CREATE_POSITIVES` | No | URL indicator creation threshold |
+| `virustotal_gti_enrichment_enabled` | `VIRUSTOTAL_GTI_ENRICHMENT_ENABLED` | No | Master switch for all GTI-driven behavior: score/verdict logic and the `gti_include_*` relationships below. Requires GTI access (default: false) |
+| `virustotal_gti_include_malware_families` | `VIRUSTOTAL_GTI_INCLUDE_MALWARE_FAMILIES` | No | Enrich with related GTI malware families, as Malware entities (default: false) |
+| `virustotal_gti_include_threat_actors` | `VIRUSTOTAL_GTI_INCLUDE_THREAT_ACTORS` | No | Enrich with related GTI threat actors, as Intrusion-Set entities (default: false) |
+| `virustotal_gti_include_campaigns` | `VIRUSTOTAL_GTI_INCLUDE_CAMPAIGNS` | No | Enrich with related GTI campaigns, as Campaign entities (default: false) |
+| `virustotal_gti_include_reports` | `VIRUSTOTAL_GTI_INCLUDE_REPORTS` | No | Enrich with related GTI reports, as Report entities (default: false) |
+| `virustotal_gti_relationship_limit` | `VIRUSTOTAL_GTI_RELATIONSHIP_LIMIT` | No | Max related objects pulled per GTI relationship, per observable (default: 10) |
 
 ---
 
@@ -165,6 +171,25 @@ flowchart LR
 | URL | Detection count | Indicator based-on |
 | Hostname | Detection count | Similar to domain |
 
+GTI (Google Threat Intelligence) collection enrichment requires
+`gti_enrichment_enabled: true` (master switch, default `false`). With that
+set, the `gti_include_*` settings below control the four relationships
+individually, applying uniformly across all five observable types above.
+The GTI-driven score/verdict logic (using `gti_assessment` in place of the
+legacy multi-engine score, and letting a malicious GTI verdict trigger
+Indicator creation) is also gated by `gti_enrichment_enabled` alone.
+
+| GTI Relationship | Entity Created | Relationship |
+|-------------------|-----------------|---------------|
+| `malware_families` | Malware (`is_family=true`) | related-to (from the observable), plus indicates (from the Indicator, if one was created - see below) |
+| `threat_actors` | Intrusion-Set | related-to (from the observable), plus indicates (from the Indicator, if one was created - see below) |
+| `campaigns` | Campaign | related-to (from the observable), plus indicates (from the Indicator, if one was created - see below) |
+| `reports` | Report | observable added to the Report's `object_refs`, plus the Indicator's id (if one was created - see below) |
+
+When enriching an Indicator directly rather than an Observable, the link
+to Malware/Intrusion-Set/Campaign is `indicates` only (the correct STIX
+relationship type for an Indicator source), not `related-to`.
+
 ### Indicator Creation
 
 | Observable Type | Default Threshold | Detection Flag |
@@ -173,6 +198,14 @@ flowchart LR
 | IPv4-Addr | 10 positives | TRUE |
 | Domain-Name | 10 positives | TRUE |
 | URL | 10 positives | TRUE |
+
+An Indicator is created once the multi-engine positive count meets the
+threshold above, **or**, when `gti_enrichment_enabled` is `true`, as soon as
+GTI's own assessment already calls the observable malicious
+(`gti_assessment.verdict.value == "VERDICT_MALICIOUS"`), whichever comes
+first — this catches samples GTI has scored as malicious before traditional
+AV engines have caught up. Setting a threshold to `0` still fully disables
+indicator creation for that observable type, regardless of the GTI verdict.
 
 ### Generated STIX Objects
 
@@ -183,6 +216,10 @@ flowchart LR
 | YARA Indicator | Crowdsourced YARA rules (for files) |
 | Autonomous System | ASN for IP addresses |
 | Location | Geolocation for IPs |
+| Malware | GTI malware family, when `gti_include_malware_families` is enabled |
+| Intrusion-Set | GTI threat actor, when `gti_include_threat_actors` is enabled |
+| Campaign | GTI campaign, when `gti_include_campaigns` is enabled |
+| Report | GTI report, when `gti_include_reports` is enabled |
 | Relationship | Various entity links |
 
 ---
