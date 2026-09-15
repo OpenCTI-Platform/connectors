@@ -32,6 +32,48 @@ def correct_config():
 
 
 @pytest.fixture
+def v3_config():
+    with patch(
+        "os.environ",
+        {
+            "OPENCTI_URL": "http://url",
+            "OPENCTI_TOKEN": "token",
+            "CONNECTOR_ID": "connector_id",
+            "CONNECTOR_NAME": "connector_name",
+            "CONNECTOR_TYPE": "EXTERNAL_IMPORT",
+            "CONNECTOR_LOG_LEVEL": "error",
+            "CONNECTOR_SCOPE": "scope",
+            "CONNECTOR_DURATION_PERIOD": "PT5M",
+            "HUNT_IO_API_VERSION": "v3",
+            "HUNT_IO_API_BASE_URL": "https://a.hunt.io/feeds/c2",
+            "HUNT_IO_API_KEY": "ak_api_key_value",
+        },
+    ):
+        yield
+
+
+@pytest.fixture
+def deprecated_v3_config():
+    with patch(
+        "os.environ",
+        {
+            "OPENCTI_URL": "http://url",
+            "OPENCTI_TOKEN": "token",
+            "CONNECTOR_ID": "connector_id",
+            "CONNECTOR_NAME": "connector_name",
+            "CONNECTOR_TYPE": "EXTERNAL_IMPORT",
+            "CONNECTOR_LOG_LEVEL": "error",
+            "CONNECTOR_SCOPE": "scope",
+            "CONNECTOR_DURATION_PERIOD": "PT5M",
+            "CONNECTOR_HUNT_IO_API_VERSION": "v3",
+            "CONNECTOR_HUNT_IO_API_BASE_URL": "https://a.hunt.io/feeds/c2",
+            "CONNECTOR_HUNT_IO_API_KEY": "ak_api_key_value",
+        },
+    ):
+        yield
+
+
+@pytest.fixture
 def deprecated_config():
     with patch(
         "os.environ",
