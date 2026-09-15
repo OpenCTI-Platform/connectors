@@ -16,8 +16,9 @@ class DoppelConnector:
     Doppel Alert and Takedown internal enrichment connector.
 
     On enrichment of a suspicious observable (URL or Domain-Name), this connector:
-      1. Creates an alert in Doppel (POST /v1/alert).
-      2. Requests a takedown for that alert (PUT /v1/alert?entity=...).
+      1. Creates an alert in Doppel (POST /v1/alert or /v2/alert).
+      2. Requests a takedown for that alert (PUT /v1/alert or /v2/alert with
+         the observable value in the entity query parameter).
       3. Enriches the observable in OpenCTI with an external reference to the Doppel
          alert and a Note summarizing the alert and takedown request.
 
@@ -29,11 +30,29 @@ class DoppelConnector:
         self.config = config
         self.helper = helper
 
+        doppel_config = self.config.doppel_alert_takedown
         self.client = DoppelClient(
             self.helper,
-            base_url=self.config.doppel_alert_takedown.api_base_url,
-            api_key=self.config.doppel_alert_takedown.api_key.get_secret_value(),
-            user_api_key=self.config.doppel_alert_takedown.user_api_key.get_secret_value(),
+            base_url=doppel_config.api_base_url,
+            api_version=doppel_config.api_version,
+            api_key=(
+                doppel_config.api_key.get_secret_value()
+                if doppel_config.api_key
+                else None
+            ),
+            user_api_key=(
+                doppel_config.user_api_key.get_secret_value()
+                if doppel_config.user_api_key
+                else None
+            ),
+            client_id=doppel_config.client_id,
+            client_secret=(
+                doppel_config.client_secret.get_secret_value()
+                if doppel_config.client_secret
+                else None
+            ),
+            token_url=doppel_config.token_url,
+            token_audience=doppel_config.token_audience,
         )
         self.converter_to_stix = ConverterToStix(self.helper)
 
@@ -62,7 +81,9 @@ class DoppelConnector:
             if marking_definition["definition_type"] == "TLP":
                 self.tlp = marking_definition["definition"]
 
-        return self.helper.check_max_tlp(self.tlp, self.config.doppel_alert_takedown.max_tlp)  # type: ignore[arg-type]
+        return self.helper.check_max_tlp(
+            self.tlp, self.config.doppel_alert_takedown.max_tlp
+        )  # type: ignore[arg-type]
 
     def _collect_intelligence(self, obs_type: str, obs_value: str, obs_id: str) -> list:
         """

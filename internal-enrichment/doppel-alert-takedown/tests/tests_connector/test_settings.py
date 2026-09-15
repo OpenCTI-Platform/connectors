@@ -3,6 +3,7 @@ from typing import Any
 import pytest
 from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+from pydantic import ValidationError
 
 
 @pytest.mark.parametrize(
@@ -48,6 +49,24 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 },
             },
             id="minimal_valid_settings_dict",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Url,Domain-Name",
+                },
+                "doppel_alert_takedown": {
+                    "api_version": "v2",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                },
+            },
+            id="valid_v2_settings_dict",
         ),
     ],
 )
@@ -97,11 +116,11 @@ def test_settings_should_split_comma_separated_tags():
 
 
 @pytest.mark.parametrize(
-    "settings_dict, field_name",
+    "settings_dict, expected_error",
     [
         pytest.param(
             {},
-            "settings",
+            "url\n  Field required",
             id="empty_settings_dict",
         ),
         pytest.param(
@@ -118,12 +137,72 @@ def test_settings_should_split_comma_separated_tags():
                     "api_key": "test-api-key",
                 },
             },
-            "doppel_alert_takedown.user_api_key",
+            "user_api_key is required",
             id="missing_user_api_key",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Url,Domain-Name",
+                },
+                "doppel_alert_takedown": {
+                    "api_version": "v2",
+                    "client_id": "test-client-id",
+                },
+            },
+            "client_secret is required",
+            id="missing_v2_client_secret",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Url,Domain-Name",
+                },
+                "doppel_alert_takedown": {
+                    "api_version": "v1",
+                    "api_key": "test-api-key",
+                    "user_api_key": "test-user-api-key",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                },
+            },
+            "V2 OAuth settings must be unset",
+            id="mixed_v1_and_v2_credentials_in_v1_mode",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "Url,Domain-Name",
+                },
+                "doppel_alert_takedown": {
+                    "api_version": "v2",
+                    "api_key": "test-api-key",
+                    "user_api_key": "test-user-api-key",
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                },
+            },
+            "V1 API key settings must be unset",
+            id="mixed_v1_and_v2_credentials_in_v2_mode",
         ),
     ],
 )
-def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
+def test_settings_should_raise_when_invalid_input(settings_dict, expected_error):
     """
     Test that `ConnectorSettings` (implementation of `BaseConnectorSettings` from `connectors-sdk`) raises on invalid input.
     """
@@ -135,4 +214,8 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+    assert "Error validating configuration" in str(err.value)
+
+    validation_error = err.value.__cause__
+    assert isinstance(validation_error, ValidationError)
+    assert expected_error in str(validation_error)
