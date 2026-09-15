@@ -1,25 +1,20 @@
 {
   "title": "VirusTotal Livehunt Notifications",
   "slug": "virustotal-livehunt-notifications",
-  "description": "VirusTotal Livehunt is a YARA-based real-time scanning service that alerts users when new files matching their rules are submitted to VirusTotal. This connector fetches Livehunt notifications and creates corresponding incidents, file objects, and YARA indicators in OpenCTI.\n\nKey features:\n\n- Real-time import of malware samples matching custom YARA rules\n- Incident/alert creation for each notification\n- File observable and artifact creation with hash metadata\n- YARA indicator generation from matching rules\n- Configurable filters: file extensions, size, age, and minimum AV detections",
-  "short_description": "VirusTotal Livehunt connector imports malware samples matching custom YARA rules in real time, creating incidents, file observables, and YARA indicators in OpenCTI.",
+  "description": "This connector automatically imports notifications from VirusTotal Livehunt. It retrieves matched files, extracts their metadata, and creates corresponding indicators and observables in OpenCTI. It also supports the extraction of malware configurations (C2 infrastructure) and the upload of files as artifacts.",
+  "short_description": "Import of VirusTotal Livehunt notifications and associated observables.",
   "logo": "external-import/virustotal-livehunt-notifications/__metadata__/logo.png",
   "use_cases": [
-    "Detection & Response Enablement"
+    "Threat Intelligence"
   ],
-  "solution_categories": [
-    "Malware Analysis & Sandbox"
-  ],
-  "license_type": "Commercial",
-  "contact": null,
-  "verified": true,
+  "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=5.5.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/virustotal-livehunt-notifications",
-  "manager_supported": true,
+  "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-virustotal-livehunt-notifications",
   "container_type": "EXTERNAL_IMPORT"
