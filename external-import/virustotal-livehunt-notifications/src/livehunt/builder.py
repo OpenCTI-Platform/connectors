@@ -4,16 +4,32 @@ import datetime
 import io
 import ipaddress
 import itertools
+import json
 import logging
 import re
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import magic
 import plyara
 import plyara.utils
 import stix2
 import vt
-from pycti import Incident, Indicator, OpenCTIConnectorHelper, StixCoreRelationship
+from connectors_sdk.models import (
+    URL,
+    DomainName,
+    ExternalReference,
+    File,
+    Incident,
+    Indicator,
+    IPV4Address,
+    IPV6Address,
+    Note,
+    OrganizationAuthor,
+    Relationship,
+    TLPMarking,
+)
+from connectors_sdk.models.octi import based_on, related_to
+from pycti import OpenCTIConnectorHelper
 
 logging.getLogger("plyara").setLevel(logging.ERROR)
 
@@ -71,8 +87,8 @@ class LivehuntBuilder:
         self,
         client: vt.Client,
         helper: OpenCTIConnectorHelper,
-        author: stix2.Identity,
-        tlp_marking: stix2.MarkingDefinition,
+        author: OrganizationAuthor,
+        tlp_marking: TLPMarking,
         tag: str | None,
         create_alert: bool,
         max_age_days: int,
@@ -142,16 +158,11 @@ class LivehuntBuilder:
             "descriptors_only": "False",
             "filter": filter,
         }
-        if self.limit is not None:
-            # The VT iterator honours ``limit`` as a server-side cap so a small
-            # API quota is respected even when the upstream stream is much
-            # bigger than what the connector should process in a single run.
-            params["limit"] = str(self.limit)
         self.helper.connector_logger.info(
             f"Url for notifications: {url} / params: {params}"
         )
 
-        files_iterator = self.client.iterator(url, params=params)
+        files_iterator = self.client.iterator(url, params=params, limit=self.limit)
         if self.limit is not None:
             # Belt-and-braces client-side cap: ``itertools.islice`` stops
             # the iterator after exactly ``self.limit`` items, so no extra
@@ -234,22 +245,24 @@ class LivehuntBuilder:
                 f"https://www.virustotal.com/gui/file/{vtobj.sha256}",
                 "Virustotal Analysis",
             )
-            incident_id = None
-            file_id = None
 
             if self.with_alert:
-                incident_id = self.create_alert(vtobj, external_reference)
+                incident = self.create_alert(vtobj, external_reference)
+            else:
+                incident = None
 
             if self.with_file:
-                file_id = self.create_file(vtobj, incident_id)
+                file = self.create_file(vtobj, incident)
+            else:
+                file = None
 
             if self.with_yara_rule:
                 for source in vtobj._context_attributes["sources"]:
                     self.create_rule(
                         source["id"],
                         source["label"],
-                        incident_id,
-                        file_id,
+                        incident,
+                        file,
                     )
 
             # ``self.bundle`` is initialised with ``[author, tlp_marking]``
@@ -298,7 +311,7 @@ class LivehuntBuilder:
             return True
         return False
 
-    def create_alert(self, vtobj, external_reference) -> str:
+    def create_alert(self, vtobj, external_reference) -> Incident:
         """
         Create the alert from the livehunt notifications.
 
@@ -306,13 +319,13 @@ class LivehuntBuilder:
         ----------
         vtobj
             Virustotal object with the notification and its related file.
-        external_reference : stix2.ExternalReference
+        external_reference : ExternalReference
             External reference to the file on VirusTotal.
 
         Returns
         -------
-        str
-            Id of the created incident.
+        Incident
+            The created incident SDK object.
         """
         # Create the alert
         name = f"""{self.alert_prefix} {vtobj._context_attributes["hunting_info"]["rule_name"]} file={vtobj.sha256}"""
@@ -325,65 +338,34 @@ class LivehuntBuilder:
                 f"Alert {alert['id']} already exists, skipping"
             )
             return None
-        incident = stix2.Incident(
+        incident = Incident(
             id=incident_id,
             incident_type="alert",
             name=name,
             description=f"Date of the alert on VirusTotal: {datetime.datetime.fromtimestamp(vtobj._context_attributes['notification_date'])}",
             source=self._SOURCE,
-            created_by_ref=self.author.id,
+            author=self.author,
             labels=self.retrieve_labels(vtobj),
             external_references=[external_reference],
-            allow_custom=True,
-            object_marking_refs=[self.tlp_marking],
+            markings=[self.tlp_marking],
         )
         self.helper.connector_logger.debug(f"Adding alert: {incident}")
-        self.bundle.append(incident)
-        return incident["id"]
+        self.bundle.append(incident.to_stix2_object())
+        return incident
 
     def create_external_reference(self, url: str, description: str):
         """
         Create an external reference.
-
-        Used to have a link to the file on VirusTotal.
-
-        Parameters
-        ----------
-        url : str
-            Url for the external reference.
-        description : str
-            Description fot the external reference.
-
-        Returns
-        -------
-        stix2.ExternalReference
-            The external reference object.
         """
-        external_reference = stix2.ExternalReference(
+        return ExternalReference(
             source_name=self.author.name,
             url=url,
             description=description,
-            custom_properties={
-                "created_by_ref": self.author.id,
-            },
         )
-        return external_reference
 
-    def create_file(self, vtobj, incident_id: Optional[str] = None) -> str:
+    def create_file(self, vtobj, incident: Optional[Incident] = None) -> File:
         """
         Create a file and link it to the created incident, if any.
-
-        Parameters
-        ----------
-        vtobj
-            Virustotal object with the notification and its related file.
-        incident_id : str, optional
-            Id of the incident to be linked to the file using a `related-to` relationship.
-
-        Returns
-        -------
-        str
-            Id of the created file.
         """
         vt_score = None
         try:
@@ -394,6 +376,16 @@ class LivehuntBuilder:
             self.helper.connector_logger.error(
                 f"Unable to compute score of file, err = {e}"
             )
+
+        # Extract malware config early to get labels for the file object
+        malware_config_data = None
+        if self.get_malware_config:
+            try:
+                malware_config_data = self._parse_malware_config(vtobj)
+            except Exception as exc:
+                self.helper.connector_logger.warning(
+                    f"Failed to parse malware config for {vtobj.sha256}: {exc}"
+                )
 
         external_reference = self.create_external_reference(
             f"https://www.virustotal.com/gui/file/{vtobj.sha256}",
@@ -413,7 +405,6 @@ class LivehuntBuilder:
             description += f"- **{av}**: {av_result}\n"
 
         # Add the score to the description
-        # if score is not None:
         description += f"\nVirusTotal's score: {vt_score}%.\n"
 
         # add labels from common tags:
@@ -423,8 +414,13 @@ class LivehuntBuilder:
         for tag in vtobj.tags:
             labels.append(f"{self.livehunt_tag_prefix}{self._normalize_label(tag)}")
 
-        file = stix2.File(
-            type="file",
+        # Add labels extracted from malware config
+        if malware_config_data:
+            _, config_labels, _ = malware_config_data
+            labels.extend(config_labels)
+
+        # Create the file using the SDK model
+        file = File(
             name=f"{vtobj.meaningful_name if hasattr(vtobj, 'meaningful_name') else 'unknown'}",
             description=description,
             hashes={
@@ -434,294 +430,281 @@ class LivehuntBuilder:
             },
             size=vtobj.size,
             external_references=[external_reference],
-            custom_properties={
-                "x_opencti_score": vt_score,
-                # ``stix2.File`` is a SCO (Stix Cyber Observable); its
-                # author must be carried via the OpenCTI-specific
-                # ``x_opencti_created_by_ref`` custom property rather
-                # than ``created_by_ref`` (which is an SDO-only field
-                # and would land as an inert custom attribute on a
-                # SCO). The malware-config observables below
-                # (Domain-Name / IPv4-Addr / IPv6-Addr / URL) already
-                # use the same shape, and the connectors-sdk
-                # ``BaseObservableEntity`` sets author this way too.
-                "x_opencti_created_by_ref": self.author.id,
-                "x_opencti_additional_names": x_opencti_additional_names,
-            },
-            allow_custom=True,
             labels=labels,
-            object_marking_refs=[self.tlp_marking],
+            author=self.author,
+            markings=[self.tlp_marking],
+            additional_names=x_opencti_additional_names,
+            score=vt_score,
         )
-        self.bundle.append(file)
+
+        self.bundle.append(file.to_stix2_object())
         # Link to the incident if any.
-        if incident_id is not None:
-            relationship = stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "related-to",
-                    incident_id,
-                    file["id"],
-                ),
-                relationship_type="related-to",
-                created_by_ref=self.author.id,
-                source_ref=incident_id,
-                target_ref=file["id"],
-                allow_custom=True,
-                object_marking_refs=[self.tlp_marking],
+        if incident is not None:
+            rel = Relationship(
+                type=related_to.relationship_type,
+                source=incident,
+                target=file,
+                author=self.author,
+                markings=[self.tlp_marking],
             )
-            self.bundle.append(relationship)
+            self.bundle.append(rel.to_stix2_object())
 
         # Optionally surface a File Indicator carrying the canonical SHA-256
         # pattern so OpenCTI detection rules pick the verdict up.
         if self.create_file_indicators:
-            self._create_file_indicator(vtobj, incident_id, file["id"])
+            self._create_file_indicator(vtobj, file, incident)
 
-        # Optionally extract C2 infrastructure (domains, IPs, URLs) from the
-        # VirusTotal malware configuration analysis and add the resulting
-        # observables (and, when configured, indicators) to the bundle.
-        if self.get_malware_config:
-            self._extract_malware_config(vtobj, incident_id, file["id"])
+        # Materialize the malware config observables and relations
+        if self.get_malware_config and malware_config_data:
+            observables, config_labels, raw_config = malware_config_data
 
-        return file["id"]
+            # Add the raw config as a Note linked to the file
+            if raw_config:
+                note = Note(
+                    abstract=f"Malware config extracted from file {vtobj.sha256}",
+                    content=raw_config,
+                    author=self.author,
+                    markings=[self.tlp_marking],
+                    objects=[file],
+                )
+                note_stix = note.to_stix2_object()
+                self.bundle.append(note_stix)
+
+            self._materialize_malware_config(
+                observables, config_labels, raw_config, incident, file
+            )
+
+        return file
 
     def _create_file_indicator(
         self,
         vtobj,
-        incident_id: Optional[str],
-        file_id: str,
+        file: File,
+        incident: Optional[Incident] = None,
     ) -> None:
         """Create a File Indicator for ``vtobj`` and link it back to incident / file."""
         sha256 = vtobj.sha256
         escaped = _escape_stix_pattern_value(sha256)
         pattern = f"[file:hashes.'SHA-256' = '{escaped}']"
-        indicator = stix2.Indicator(
-            id=Indicator.generate_id(pattern),
-            created_by_ref=self.author.id,
+        # Create the indicator using the SDK model
+        indicator = Indicator(
+            pattern=pattern,
             name=f"VT Livehunt file {sha256}",
             description=(f"File flagged by VirusTotal Livehunt (SHA-256 {sha256})."),
-            pattern=pattern,
             pattern_type="stix",
-            valid_from=self.helper.api.stix2.format_date(
-                datetime.datetime.now(datetime.timezone.utc)
-            ),
-            object_marking_refs=[self.tlp_marking],
-            custom_properties={
-                "x_opencti_main_observable_type": "StixFile",
-            },
-            allow_custom=True,
+            main_observable_type="StixFile",
+            author=self.author,
+            markings=[self.tlp_marking],
         )
-        self.bundle.append(indicator)
+
+        self.bundle.append(indicator.to_stix2_object())
         # based-on between the indicator and the observable, plus a related-to
         # back to the incident so the alert page surfaces the indicator.
-        self.bundle.append(
-            stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "based-on", indicator["id"], file_id
-                ),
-                relationship_type="based-on",
-                created_by_ref=self.author.id,
-                source_ref=indicator["id"],
-                target_ref=file_id,
-                allow_custom=True,
-                object_marking_refs=[self.tlp_marking],
-            )
+        rel_based_on = Relationship(
+            type=based_on.relationship_type,
+            source=indicator,
+            target=file,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
-        if incident_id is not None:
-            self.bundle.append(
-                stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", incident_id, indicator["id"]
-                    ),
-                    relationship_type="related-to",
-                    created_by_ref=self.author.id,
-                    source_ref=incident_id,
-                    target_ref=indicator["id"],
-                    allow_custom=True,
-                    object_marking_refs=[self.tlp_marking],
-                )
+        self.bundle.append(rel_based_on.to_stix2_object())
+        if incident is not None:
+            rel_related = Relationship(
+                type=related_to.relationship_type,
+                source=incident,
+                target=indicator,
+                author=self.author,
+                markings=[self.tlp_marking],
             )
+            self.bundle.append(rel_related.to_stix2_object())
 
-    def _extract_malware_config(
-        self,
-        vtobj,
-        incident_id: Optional[str],
-        file_id: str,
-    ) -> None:
-        """Extract domain / IP / URL C2 infrastructure from VirusTotal's malware config analysis.
-
-        VirusTotal's ``behaviour_mitre_trees`` endpoint exposes a
-        ``malware_configurations`` block on the file object. The exact
-        shape depends on the malware family, but each network IOC ends
-        up in one of three top-level lists: ``domains``, ``ips``,
-        ``urls``. We surface them as STIX observables (and, when the
-        ``create_*_indicators`` flags are set, matching Indicators) so
-        OpenCTI users can pivot on them without manually re-running the
-        analysis.
+    def _parse_malware_config(
+        self, vtobj
+    ) -> Tuple[List[Tuple[str, str]], List[str], str]:
         """
-        try:
-            config = self.client.get_object(
-                f"/files/{vtobj.sha256}/behaviour_mitre_trees"
-            )
-        except Exception as exc:
-            self.helper.connector_logger.warning(
-                f"Failed to fetch malware configuration for {vtobj.sha256}: {exc}"
-            )
-            return
-
-        configs = getattr(config, "malware_configurations", None) or {}
-
-        for domain in self._unique_strings(configs.get("domains")):
-            if not self._is_valid_domain_name(domain):
-                self.helper.connector_logger.debug(
-                    f"Skipping invalid malware-config domain {domain!r}"
+        Extract malware config from the file object and returns it in a tuple containing:
+        - a list of observable data (type/value tuples),
+        - a list of labels strings,
+        - the raw config as a string.
+        """
+        observables = []
+        labels = []
+        raw_config = ""
+        if hasattr(vtobj, "malware_config") and vtobj.malware_config is not None:
+            try:
+                raw_config = (
+                    f"```\\n{json.dumps(dict(vtobj.malware_config), indent=2)}\\n```"
                 )
-                continue
-            observable = stix2.DomainName(
-                value=domain,
-                object_marking_refs=[self.tlp_marking],
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author.id,
-                },
-                allow_custom=True,
+            except TypeError as e:
+                raise ValueError("Failed to serialize malware config") from e
+
+            families = vtobj.malware_config.get("families", None)
+            if families is not None:
+                for family in families:
+                    family_name = family.get("family", None)
+                    if family_name is not None:
+                        labels.append(f"{family_name}")
+                    alt_names = family.get("alt_names", None)
+                    if alt_names is not None:
+                        labels.extend(alt_names)
+                    configs = family.get("configs", None)
+                    if configs is not None:
+                        for config in configs:
+                            net_info = config.get("net_info", None)
+                            if net_info is not None:
+                                connections = net_info.get("connections", None)
+                                if connections is not None:
+                                    for connection in connections:
+                                        host = connection.get("host", None)
+                                        url = connection.get("url", None)
+                                        categories = connection.get("categories", [])
+                                        protocols = connection.get("protocol_tags", [])
+                                        if categories:
+                                            labels.extend(categories)
+                                        if protocols:
+                                            labels.extend(protocols)
+                                        if host is not None:
+                                            self.helper.connector_logger.debug(
+                                                f"Found host: {host}"
+                                            )
+                                            if self._ip_version(host) == 4:
+                                                observables.append(("IPv4-Addr", host))
+                                            elif self._ip_version(host) == 6:
+                                                observables.append(("IPv6-Addr", host))
+                                            elif self._is_valid_domain_name(host):
+                                                observables.append(
+                                                    ("Domain-Name", host)
+                                                )
+                                            else:
+                                                observables.append(("Hostname", host))
+                                        if url is not None:
+                                            observables.append(("Url", url))
+        return (list(set(observables)), list(set(labels)), raw_config)
+
+    def _materialize_malware_config(
+        self,
+        observables: List[Tuple[str, str]],
+        labels: List[str],
+        raw_config: str,
+        incident: Optional[Incident],
+        file: File,
+    ) -> None:
+        """Materialize the parsed malware config into STIX objects and relationships."""
+        for obs_type, value in observables:
+            if obs_type == "IPv4-Addr":
+                sdk_class = IPV4Address
+                stix_type = "ipv4-addr"
+                octi_type = "IPv4-Addr"
+            elif obs_type == "IPv6-Addr":
+                sdk_class = IPV6Address
+                stix_type = "ipv6-addr"
+                octi_type = "IPv6-Addr"
+            elif obs_type == "Url":
+                sdk_class = URL
+                stix_type = "url"
+                octi_type = "Url"
+            elif obs_type == "Domain-Name":
+                sdk_class = DomainName
+                stix_type = "domain-name"
+                octi_type = "Domain-Name"
+            else:
+                # Fallback for Hostname or others
+                sdk_class = DomainName  # Best approximation for Hostname in STIX2
+                stix_type = "domain-name"
+                octi_type = "Hostname"
+
+            observable = sdk_class(
+                value=value,
+                author=self.author,
+                labels=labels,
+                markings=[self.tlp_marking],
             )
-            self.bundle.append(observable)
-            self._link_malware_config_object(observable, incident_id, file_id)
-            if self.create_domain_name_indicators:
+            self.bundle.append(observable.to_stix2_object())
+
+            # Link to file and incident
+            self._link_malware_config_object(observable, incident, file)
+
+            # Create indicators if enabled
+            if (
+                (stix_type == "domain-name" and self.create_domain_name_indicators)
+                or (stix_type == "ipv4-addr" and self.create_ip_indicators)
+                or (stix_type == "ipv6-addr" and self.create_ip_indicators)
+                or (stix_type == "url" and self.create_url_indicators)
+            ):
                 self._create_malware_config_indicator(
-                    observable, "domain-name", "Domain-Name", incident_id
-                )
-
-        for ip in self._unique_strings(configs.get("ips")):
-            ip_version = self._ip_version(ip)
-            if ip_version is None:
-                self.helper.connector_logger.debug(
-                    f"Skipping invalid malware-config IP {ip!r}"
-                )
-                continue
-            observable_type = "ipv6-addr" if ip_version == 6 else "ipv4-addr"
-            stix_class = stix2.IPv6Address if ip_version == 6 else stix2.IPv4Address
-            observable = stix_class(
-                value=ip,
-                object_marking_refs=[self.tlp_marking],
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author.id,
-                },
-                allow_custom=True,
-            )
-            self.bundle.append(observable)
-            self._link_malware_config_object(observable, incident_id, file_id)
-            if self.create_ip_indicators:
-                octi_type = "IPv6-Addr" if ip_version == 6 else "IPv4-Addr"
-                self._create_malware_config_indicator(
-                    observable, observable_type, octi_type, incident_id
-                )
-
-        for url in self._unique_strings(configs.get("urls")):
-            observable = stix2.URL(
-                value=url,
-                object_marking_refs=[self.tlp_marking],
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author.id,
-                },
-                allow_custom=True,
-            )
-            self.bundle.append(observable)
-            self._link_malware_config_object(observable, incident_id, file_id)
-            if self.create_url_indicators:
-                self._create_malware_config_indicator(
-                    observable, "url", "Url", incident_id
+                    observable, stix_type, octi_type, incident
                 )
 
     def _link_malware_config_object(
         self,
         observable,
-        incident_id: Optional[str],
-        file_id: str,
+        incident: Optional[Incident],
+        file: File,
     ) -> None:
         # The observable was contacted by the file => related-to the file,
         # and (when present) to the incident that surfaced the file.
-        self.bundle.append(
-            stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "related-to", file_id, observable.id
-                ),
-                relationship_type="related-to",
-                created_by_ref=self.author.id,
-                source_ref=file_id,
-                target_ref=observable.id,
-                allow_custom=True,
-                object_marking_refs=[self.tlp_marking],
-            )
+        rel_file = Relationship(
+            type=related_to.relationship_type,
+            source=file,
+            target=observable,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
-        if incident_id is not None:
-            self.bundle.append(
-                stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", incident_id, observable.id
-                    ),
-                    relationship_type="related-to",
-                    created_by_ref=self.author.id,
-                    source_ref=incident_id,
-                    target_ref=observable.id,
-                    allow_custom=True,
-                    object_marking_refs=[self.tlp_marking],
-                )
+        self.bundle.append(rel_file.to_stix2_object())
+        if incident is not None:
+            rel_incident = Relationship(
+                type=related_to.relationship_type,
+                source=incident,
+                target=observable,
+                author=self.author,
+                markings=[self.tlp_marking],
             )
+            self.bundle.append(rel_incident.to_stix2_object())
 
     def _create_malware_config_indicator(
         self,
         observable,
         stix_observable_type: str,
         opencti_observable_type: str,
-        incident_id: Optional[str],
+        incident: Optional[Incident] = None,
     ) -> None:
         escaped = _escape_stix_pattern_value(observable.value)
         pattern = f"[{stix_observable_type}:value = '{escaped}']"
-        indicator = stix2.Indicator(
-            id=Indicator.generate_id(pattern),
-            created_by_ref=self.author.id,
+
+        # Use SDK model for the indicator
+        indicator = Indicator(
+            pattern=pattern,
             name=observable.value,
             description=(
                 f"Observable {observable.value} extracted from malware configuration."
             ),
-            pattern=pattern,
             pattern_type="stix",
-            valid_from=self.helper.api.stix2.format_date(
-                datetime.datetime.now(datetime.timezone.utc)
-            ),
-            object_marking_refs=[self.tlp_marking],
-            custom_properties={
-                "x_opencti_main_observable_type": opencti_observable_type,
-            },
-            allow_custom=True,
+            main_observable_type=opencti_observable_type,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
-        self.bundle.append(indicator)
-        self.bundle.append(
-            stix2.Relationship(
-                id=StixCoreRelationship.generate_id(
-                    "based-on", indicator["id"], observable.id
-                ),
-                relationship_type="based-on",
-                created_by_ref=self.author.id,
-                source_ref=indicator["id"],
-                target_ref=observable.id,
-                allow_custom=True,
-                object_marking_refs=[self.tlp_marking],
-            )
+        self.bundle.append(indicator.to_stix2_object())
+
+        # based-on between the indicator and the observable, plus a related-to
+        # back to the incident so the alert page surfaces the indicator.
+        rel_based_on = Relationship(
+            type=based_on.relationship_type,
+            source=indicator,
+            target=observable,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
-        if incident_id is not None:
-            self.bundle.append(
-                stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", incident_id, indicator["id"]
-                    ),
-                    relationship_type="related-to",
-                    created_by_ref=self.author.id,
-                    source_ref=incident_id,
-                    target_ref=indicator["id"],
-                    allow_custom=True,
-                    object_marking_refs=[self.tlp_marking],
-                )
+        self.bundle.append(rel_based_on.to_stix2_object())
+
+        if incident is not None:
+            rel_related = Relationship(
+                type=related_to.relationship_type,
+                source=incident,
+                target=indicator,
+                author=self.author,
+                markings=[self.tlp_marking],
             )
+            self.bundle.append(rel_related.to_stix2_object())
 
     @staticmethod
     def _unique_strings(values) -> list[str]:
@@ -757,8 +740,8 @@ class LivehuntBuilder:
         self,
         ruleset_id: str,
         rule_name: str,
-        incident_id: Optional[str] = None,
-        file_id: Optional[str] = None,
+        incident: Optional[Incident] = None,
+        file: Optional[File] = None,
     ):
         """
         Get the rule from VirusTotal, parse the yara rules and create the wanted rule.
@@ -772,10 +755,10 @@ class LivehuntBuilder:
             Ruleset id of the notification to retrieve.
         rule_name : str
             Name of the rule that matched.
-        incident_id : str, optional
-            Id of the incident to be linked to the file using a `related-to` relationship.
-        file_id : str, optional
-            Id of the file to be linked to the file using a `related-to` relationship.
+        incident : Incident, optional
+            The incident to be linked to the file using a `related-to` relationship.
+        file : File, optional
+            The file to be linked to the file using a `related-to` relationship.
         """
         ruleset = self.client.get_object(f"/intelligence/hunting_rulesets/{ruleset_id}")
 
@@ -805,58 +788,43 @@ class LivehuntBuilder:
                         f"Date not valid, setting to {valid_from}, err: {e}"
                     )
 
-                indicator = stix2.Indicator(
-                    id=Indicator.generate_id(plyara.utils.rebuild_yara_rule(rule)),
-                    created_by_ref=self.author.id,
+                # Use SDK model for the indicator
+                indicator = Indicator(
+                    pattern=plyara.utils.rebuild_yara_rule(rule),
                     name=rule["rule_name"],
                     description=next(
                         (i["date"] for i in rule.get("metadata", {}) if "date" in i),
                         "No description",
                     ),
-                    pattern=plyara.utils.rebuild_yara_rule(rule),
                     pattern_type="yara",
-                    valid_from=valid_from,
-                    custom_properties={
-                        "x_opencti_main_observable_type": "StixFile",
-                    },
-                    object_marking_refs=[self.tlp_marking],
+                    main_observable_type="StixFile",
+                    author=self.author,
+                    markings=[self.tlp_marking],
                 )
                 self.helper.connector_logger.debug(
-                    f"[VirusTotal Livehunt Notifications] yara indicator created: {indicator}"
+                    f"[VirusTotal Livehunt Notifications] yara indicator created: {indicator.id}"
                 )
-                self.bundle.append(indicator)
+                self.bundle.append(indicator.to_stix2_object())
 
-                if incident_id is not None:
-                    relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to",
-                            incident_id,
-                            indicator["id"],
-                        ),
-                        relationship_type="related-to",
-                        created_by_ref=self.author.id,
-                        source_ref=incident_id,
-                        target_ref=indicator["id"],
-                        allow_custom=True,
-                        object_marking_refs=[self.tlp_marking],
+                if incident is not None:
+                    rel = Relationship(
+                        type=related_to.relationship_type,
+                        source=incident,
+                        target=indicator,
+                        author=self.author,
+                        markings=[self.tlp_marking],
                     )
-                    self.bundle.append(relationship)
+                    self.bundle.append(rel.to_stix2_object())
 
-                if file_id is not None:
-                    relationship = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to",
-                            file_id,
-                            indicator["id"],
-                        ),
-                        relationship_type="related-to",
-                        created_by_ref=self.author.id,
-                        source_ref=file_id,
-                        target_ref=indicator["id"],
-                        allow_custom=True,
-                        object_marking_refs=[self.tlp_marking],
+                if file is not None:
+                    rel = Relationship(
+                        type=related_to.relationship_type,
+                        source=file,
+                        target=indicator,
+                        author=self.author,
+                        markings=[self.tlp_marking],
                     )
-                    self.bundle.append(relationship)
+                    self.bundle.append(rel.to_stix2_object())
 
     def delete_livehunt_notification(self, notification_id):
         """
