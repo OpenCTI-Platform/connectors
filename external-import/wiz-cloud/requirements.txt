@@ -1,0 +1,3 @@
+# Pin a tag or commit rather than master: an SDK change on master can break
+# the image without any commit in this connector.
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
