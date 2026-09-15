@@ -369,6 +369,50 @@ def test_from_json_skips_invalid_attachment_and_keeps_processing_valid_ones():
     assert len(detection_rule_indicators) == 1
 
 
+# Scenario: An event adversary resolving to an Identity must not create relationships (issue OCTI2-2428)
+def test_create_event_relations_skips_adversary_resolved_as_identity():
+    # Given an analyst note whose adversary Organization is NOT in the Threat Actor list
+    note = _given_stix_note()
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["note_entities"] = [
+        {
+            "id": "org-1",
+            "type": "Organization",
+            "name": "Government of Republic of Hungary",
+        },
+        {"id": "ap-1", "type": "MitreAttackIdentifier", "name": "T1566.002"},
+    ]
+    _when_note_converted_from_json(note, note_json)
+    # And the Organization was therefore converted to a STIX Identity
+    adversary = [obj for obj in note.objects if obj["type"] == "identity"]
+    assert any(obj["name"] == "Government of Republic of Hungary" for obj in adversary)
+    objects_before = list(note.objects)
+
+    # When events referencing that Organization as the adversary are processed
+    events = [
+        {
+            "type": "CyberAttack",
+            "attributes": {
+                "adversary": [
+                    {
+                        "type": "Organization",
+                        "name": "Government of Republic of Hungary",
+                    }
+                ],
+                "capabilities": [
+                    {"type": "MitreAttackIdentifier", "name": "T1566.002"}
+                ],
+            },
+        }
+    ]
+    note.create_event_relations(events=events)
+
+    # Then no relationship is created (Identity -> uses -> Attack-Pattern is invalid)
+    assert note.objects == objects_before
+    relationships = [obj for obj in note.objects if obj["type"] == "relationship"]
+    assert len(relationships) == 0
+
+
 # ── Given helpers ────────────────────────────────────────────────────────────
 
 
