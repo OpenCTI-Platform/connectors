@@ -28,7 +28,6 @@ from connectors_sdk.models import (
     Relationship,
     TLPMarking,
 )
-from connectors_sdk.models.octi import based_on, related_to
 from pycti import OpenCTIConnectorHelper
 
 logging.getLogger("plyara").setLevel(logging.ERROR)
@@ -441,7 +440,7 @@ class LivehuntBuilder:
         # Link to the incident if any.
         if incident is not None:
             rel = Relationship(
-                type=related_to.relationship_type,
+                type="related_to",
                 source=incident,
                 target=file,
                 author=self.author,
@@ -501,7 +500,7 @@ class LivehuntBuilder:
         # based-on between the indicator and the observable, plus a related-to
         # back to the incident so the alert page surfaces the indicator.
         rel_based_on = Relationship(
-            type=based_on.relationship_type,
+            type="based-on",
             source=indicator,
             target=file,
             author=self.author,
@@ -510,7 +509,7 @@ class LivehuntBuilder:
         self.bundle.append(rel_based_on.to_stix2_object())
         if incident is not None:
             rel_related = Relationship(
-                type=related_to.relationship_type,
+                type="related-to",
                 source=incident,
                 target=indicator,
                 author=self.author,
@@ -644,7 +643,7 @@ class LivehuntBuilder:
         # The observable was contacted by the file => related-to the file,
         # and (when present) to the incident that surfaced the file.
         rel_file = Relationship(
-            type=related_to.relationship_type,
+            type="related-to",
             source=file,
             target=observable,
             author=self.author,
@@ -653,7 +652,7 @@ class LivehuntBuilder:
         self.bundle.append(rel_file.to_stix2_object())
         if incident is not None:
             rel_incident = Relationship(
-                type=related_to.relationship_type,
+                type="related-to",
                 source=incident,
                 target=observable,
                 author=self.author,
@@ -688,7 +687,7 @@ class LivehuntBuilder:
         # based-on between the indicator and the observable, plus a related-to
         # back to the incident so the alert page surfaces the indicator.
         rel_based_on = Relationship(
-            type=based_on.relationship_type,
+            type="based-on",
             source=indicator,
             target=observable,
             author=self.author,
@@ -698,7 +697,7 @@ class LivehuntBuilder:
 
         if incident is not None:
             rel_related = Relationship(
-                type=related_to.relationship_type,
+                type="related-to",
                 source=incident,
                 target=indicator,
                 author=self.author,
@@ -808,7 +807,7 @@ class LivehuntBuilder:
 
                 if incident is not None:
                     rel = Relationship(
-                        type=related_to.relationship_type,
+                        type="related-to",
                         source=incident,
                         target=indicator,
                         author=self.author,
@@ -818,7 +817,7 @@ class LivehuntBuilder:
 
                 if file is not None:
                     rel = Relationship(
-                        type=related_to.relationship_type,
+                        type="related-to",
                         source=file,
                         target=indicator,
                         author=self.author,
