@@ -2,16 +2,6 @@ name: Tests Connectors
 
 on:
   pull_request:
-    paths:
-      - 'connectors-sdk/**'
-      - 'external-import/**'
-      - 'internal-enrichment/**'
-      - 'internal-export-file/**'
-      - 'internal-import-file/**'
-      - 'stream/**'
-      - 'shared/**'
-      - 'templates/**'
-      - 'run_test.sh'
   merge_group:
     branches:
       - master
