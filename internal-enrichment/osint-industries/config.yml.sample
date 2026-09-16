@@ -13,4 +13,5 @@ osint_industries:
   api_key: 'ChangeMe'
 #  base_url: 'https://api.osint.industries'
 #  tlp_level: 'amber+strict'   # TLP applied to the produced objects
+#  max_tlp: 'TLP:AMBER'        # observables above this TLP are never sent to the API
 #  premium: false              # true queries more modules and consumes more credits

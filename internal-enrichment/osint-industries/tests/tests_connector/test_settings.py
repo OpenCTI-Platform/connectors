@@ -40,6 +40,7 @@ MINIMAL_VALID_SETTINGS_DICT: dict[str, Any] = {
                     "api_key": "test-api-key",
                     "base_url": "https://api.osint.industries",
                     "tlp_level": "amber+strict",
+                    "max_tlp": "TLP:RED",
                     "premium": True,
                 },
             },
@@ -137,6 +138,21 @@ def test_settings_should_accept_valid_input(settings_dict):
             "osint_industries.tlp_level",
             id="invalid_osint_industries_tlp_level",
         ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {},
+                "osint_industries": {
+                    "api_key": "test-api-key",
+                    "max_tlp": "TLP:PURPLE",
+                },
+            },
+            "osint_industries.max_tlp",
+            id="invalid_osint_industries_max_tlp",
+        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
@@ -206,6 +222,7 @@ def test_settings_should_default_osint_industries_section():
 
     assert str(settings.osint_industries.base_url) == "https://api.osint.industries/"
     assert settings.osint_industries.tlp_level == "amber+strict"
+    assert settings.osint_industries.max_tlp == "TLP:AMBER"
     assert settings.osint_industries.premium is False
 
 

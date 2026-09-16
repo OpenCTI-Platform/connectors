@@ -83,6 +83,19 @@
       ],
       "type": "string"
     },
+    "OSINT_INDUSTRIES_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "The maximum TLP level of an observable the connector is allowed to enrich. Observables marked above this level are skipped and their value is never sent to the OSINT Industries API.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
     "OSINT_INDUSTRIES_PREMIUM": {
       "default": false,
       "description": "Whether to query the premium modules. Enabling it returns more results but consumes more API credits.",

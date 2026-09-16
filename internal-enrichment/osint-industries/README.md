@@ -59,6 +59,7 @@ Configuration parameters can be provided in either `config.yml` (see `config.yml
 | API key   | api_key    | `OSINT_INDUSTRIES_API_KEY`  | /                            | Yes       | API key to authenticate to OSINT Industries.                                       |
 | Base URL  | base_url   | `OSINT_INDUSTRIES_BASE_URL` | https://api.osint.industries | No        | Base URL of the OSINT Industries API.                                              |
 | TLP level | tlp_level  | `OSINT_INDUSTRIES_TLP_LEVEL`| amber+strict                 | No        | TLP applied to imported objects: `clear`, `white`, `green`, `amber`, `amber+strict`, `red`. |
+| Max TLP   | max_tlp    | `OSINT_INDUSTRIES_MAX_TLP`  | TLP:AMBER                    | No        | Highest TLP the connector may enrich. Observables marked above it are skipped and their value is never sent to the OSINT Industries API. One of `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`. |
 | Premium   | premium    | `OSINT_INDUSTRIES_PREMIUM`  | false                        | No        | Query additional premium modules (consumes more credits).                          |
 
 > An exhaustive, auto-generated reference of every environment variable is available in

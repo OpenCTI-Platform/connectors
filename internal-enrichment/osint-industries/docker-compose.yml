@@ -13,5 +13,6 @@ services:
       - OSINT_INDUSTRIES_API_KEY=ChangeMe
 #      - OSINT_INDUSTRIES_BASE_URL=https://api.osint.industries
 #      - OSINT_INDUSTRIES_TLP_LEVEL=amber+strict # clear, white, green, amber, amber+strict, red
+#      - OSINT_INDUSTRIES_MAX_TLP=TLP:AMBER # Observables above this TLP are skipped, never sent to the API
 #      - OSINT_INDUSTRIES_PREMIUM=false # true queries more modules, consumes more credits
     restart: always

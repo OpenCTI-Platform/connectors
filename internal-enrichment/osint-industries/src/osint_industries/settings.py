@@ -62,6 +62,21 @@ class OsintIndustriesConfig(BaseConfigModel):
         description="The TLP marking applied to the objects produced by the connector.",
         default="amber+strict",
     )
+    max_tlp: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
+        description=(
+            "The maximum TLP level of an observable the connector is allowed to "
+            "enrich. Observables marked above this level are skipped and their "
+            "value is never sent to the OSINT Industries API."
+        ),
+        default="TLP:AMBER",
+    )
     premium: bool = Field(
         description=(
             "Whether to query the premium modules. "

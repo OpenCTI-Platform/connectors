@@ -16,4 +16,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | OSINT_INDUSTRIES_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.osint.industries/"` | The base URL of the OSINT Industries API. |
 | OSINT_INDUSTRIES_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber+strict"` | The TLP marking applied to the objects produced by the connector. |
+| OSINT_INDUSTRIES_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | The maximum TLP level of an observable the connector is allowed to enrich. Observables marked above this level are skipped and their value is never sent to the OSINT Industries API. |
 | OSINT_INDUSTRIES_PREMIUM | `boolean` |  | boolean | `false` | Whether to query the premium modules. Enabling it returns more results but consumes more API credits. |
