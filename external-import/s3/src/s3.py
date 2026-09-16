@@ -1,27 +1,28 @@
 import base64
 import datetime
 import json
-import os
 import re
 import time
+from typing import ClassVar
 
 import boto3
 import pytz
 import stix2
-import yaml
+from connectors_sdk.models.enums import TLPLevel
 from pycti import (
     CourseOfAction,
     Identity,
     Indicator,
     Infrastructure,
     Malware,
+    MarkingDefinition,
     Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     Vulnerability,
-    get_config_variable,
     resolve_aliases_field,
 )
+from settings import ConnectorSettings
 
 mapped_keys = [
     "x_severity",
@@ -67,83 +68,57 @@ def sanitize_url(url):
 
 
 class S3Connector:
+    S3_MARKINGS: ClassVar[dict[TLPLevel, stix2.MarkingDefinition]] = {
+        TLPLevel.CLEAR: stix2.MarkingDefinition(
+            id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+            definition_type="statement",
+            definition={"statement": "custom"},
+            custom_properties={
+                "x_opencti_definition_type": "TLP",
+                "x_opencti_definition": "TLP:CLEAR",
+            },
+        ),
+        TLPLevel.WHITE: stix2.TLP_WHITE,
+        TLPLevel.GREEN: stix2.TLP_GREEN,
+        TLPLevel.AMBER: stix2.TLP_AMBER,
+        TLPLevel.AMBER_STRICT: stix2.MarkingDefinition(
+            id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+            definition_type="statement",
+            definition={"statement": "custom"},
+            custom_properties={
+                "x_opencti_definition_type": "TLP",
+                "x_opencti_definition": "TLP:AMBER+STRICT",
+            },
+        ),
+        TLPLevel.RED: stix2.TLP_RED,
+    }
+
     def __init__(self):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         # Extra config
-        self.s3_region = get_config_variable(
-            "S3_REGION", ["s3", "region"], config, default="us-east-1"
-        )
-        self.s3_endpoint_url = get_config_variable(
-            "S3_ENDPOINT_URL", ["s3", "endpoint_url"], config
-        )
-        self.s3_access_key_id = get_config_variable(
-            "S3_ACCESS_KEY_ID", ["s3", "access_key_id"], config
-        )
-        self.s3_secret_access_key = get_config_variable(
-            "S3_SECRET_ACCESS_KEY", ["s3", "secret_access_key"], config
-        )
-        self.s3_bucket_name = get_config_variable(
-            "S3_BUCKET_NAME", ["s3", "bucket_name"], config
-        )
-        self.s3_author = get_config_variable("S3_AUTHOR", ["s3", "author"], config)
-        s3_marking = get_config_variable(
-            "S3_MARKING",
-            ["s3", "marking"],
-            config,
-            default="TLP:GREEN",
-        ).lower()
-        # Only change to new marking definition if it matches the naming convention
-        self.s3_marking = stix2.TLP_GREEN
-        if s3_marking == "tlp:clear" or s3_marking == "tlp:white":
-            self.s3_marking = stix2.TLP_WHITE
-        elif s3_marking == "tlp:green":
-            self.s3_marking = stix2.TLP_GREEN
-        elif s3_marking == "tlp:amber":
-            self.s3_marking = stix2.TLP_AMBER
-        elif s3_marking == "tlp:red":
-            self.s3_marking = stix2.TLP_RED
-        else:
-            self.helper.log_warning(
-                "Unrecognized marking definition {m}, defaulting to TLP:GREEN".format(
-                    m=s3_marking
-                )
+        self.s3_region = self.config.s3.region
+        self.s3_endpoint_url = self.config.s3.endpoint_url or None
+        self.s3_access_key_id = self.config.s3.access_key_id.get_secret_value()
+        self.s3_secret_access_key = self.config.s3.secret_access_key.get_secret_value()
+        self.s3_bucket_name = self.config.s3.bucket_name
+        self.s3_author = self.config.s3.author or None
+        try:
+            marking_level = TLPLevel(
+                self.config.s3.marking.strip().lower().removeprefix("tlp:")
             )
-        self.s3_interval = get_config_variable(
-            "S3_INTERVAL", ["s3", "interval"], config, isNumber=True, default=30
-        )
-        self.s3_attach_original_file = get_config_variable(
-            "S3_ATTACH_ORIGINAL_FILE",
-            ["s3", "attach_original_file"],
-            config,
-            default=False,
-        )
-        self.s3_delete_after_import = get_config_variable(
-            "S3_DELETE_AFTER_IMPORT",
-            ["s3", "delete_after_import"],
-            config,
-            default=True,
-        )
-        self.s3_no_split_bundles = get_config_variable(
-            "S3_NO_SPLIT_BUNDLES",
-            ["s3", "no_split_bundles"],
-            config,
-            default=True,
-        )
-        bucket_prefixes = get_config_variable(
-            "S3_BUCKET_PREFIXES",
-            ["s3", "bucket_prefixes"],
-            config,
-            isNumber=False,
-            default="ACI_TI,ACI_Vuln",
-        )
-        self.s3_bucket_prefixes = [x.strip() for x in bucket_prefixes.split(",")]
+            self.s3_marking = self.S3_MARKINGS[marking_level]
+        except (KeyError, ValueError):
+            self.helper.log_warning(
+                f"Unrecognized marking definition {self.config.s3.marking}, defaulting to TLP:GREEN"
+            )
+            self.s3_marking = stix2.TLP_GREEN
+        self.s3_interval = self.config.s3.interval
+        self.s3_attach_original_file = self.config.s3.attach_original_file
+        self.s3_delete_after_import = self.config.s3.delete_after_import
+        self.s3_no_split_bundles = self.config.s3.no_split_bundles
+        self.s3_bucket_prefixes = self.config.s3.bucket_prefixes
 
         # Create the identity
         self.identity = None
