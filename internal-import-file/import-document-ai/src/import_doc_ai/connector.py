@@ -40,7 +40,9 @@ class Connector:
     It basically uses the same functions and principle than the internal enrichment connector type.
     """
 
-    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper) -> None:
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
         """
         Initialize the Connector with necessary configurations
         """
