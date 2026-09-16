@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 
 # Install dependencies
 RUN apk --no-cache add git build-base libmagic libffi-dev
