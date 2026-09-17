@@ -176,6 +176,36 @@
       "default": false,
       "description": "Whether or not to include the attributes info in Note.",
       "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_ENRICHMENT_ENABLED": {
+      "default": false,
+      "description": "Whether to use GTI assessment data (score/verdict) and enable GTI relationship enrichment. Requires a VirusTotal account with GTI access.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_INCLUDE_MALWARE_FAMILIES": {
+      "default": false,
+      "description": "Whether or not to enrich with related GTI malware families (created as Malware entities).",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_INCLUDE_THREAT_ACTORS": {
+      "default": false,
+      "description": "Whether or not to enrich with related GTI threat actors (created as Intrusion-Set entities).",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_INCLUDE_CAMPAIGNS": {
+      "default": false,
+      "description": "Whether or not to enrich with related GTI campaigns (created as Campaign entities).",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_INCLUDE_REPORTS": {
+      "default": false,
+      "description": "Whether or not to enrich with related GTI reports (created as Report entities).",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_RELATIONSHIP_LIMIT": {
+      "default": 10,
+      "description": "Maximum number of related objects to pull per GTI relationship, per observable.",
+      "type": "integer"
     }
   },
   "required": [
