@@ -9,6 +9,11 @@ on:
       - 'internal-export-file/**'
       - 'internal-import-file/**'
       - 'stream/**'
+  merge_group:
+    branches:
+      - master
+      - lts/**
+    types: [checks_requested]
   workflow_call:
 
 env:
