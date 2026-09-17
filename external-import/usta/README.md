@@ -108,8 +108,10 @@ Report ──contains──▸ ThreatActor (per threat actor entry)
 |---------------------------------------|---|---|---|---|
 | `opencti.url`                         | `OPENCTI_URL` | **Yes** | — | OpenCTI platform URL |
 | `opencti.token`                       | `OPENCTI_TOKEN` | **Yes** | — | OpenCTI API token |
-| `connector.id`                        | `CONNECTOR_ID` | **Yes** | — | Unique UUIDv4 for this connector |
+| `connector.id`                        | `CONNECTOR_ID` | No | `8188b707-0b74-49e0-ba39-59b0c77f85da` | UUIDv4 identifying the connector in OpenCTI. Override it to run several instances |
 | `connector.name`                      | `CONNECTOR_NAME` | No | `USTA` | Display name |
+| `connector.scope`                     | `CONNECTOR_SCOPE` | No | `indicator,observable,malware,identity,incident,user-account,report,threat-actor` | Supported scope (comma-separated) |
+| `connector.log_level`                 | `CONNECTOR_LOG_LEVEL` | No | `error` | One of `debug`, `info`, `warn`, `warning`, `error` |
 | `connector.duration_period`           | `CONNECTOR_DURATION_PERIOD` | No | `PT30M` | Interval between runs (ISO 8601) |
 | `usta.api_key`                        | `USTA_API_KEY` | **Yes** | — | USTA API bearer token |
 | `usta.api_base_url`                   | `USTA_API_BASE_URL` | No | `https://usta.prodaft.com` | API base URL |
@@ -124,6 +126,13 @@ Report ──contains──▸ ThreatActor (per threat actor entry)
 | `usta.store_credential_password`      | `USTA_STORE_CREDENTIAL_PASSWORD` | No | `false` | Store raw password in User-Account STIX object (disabled by default) |
 | `usta.tlp_level`                      | `USTA_TLP_LEVEL` | No | `red` | TLP marking for all objects |
 | `usta.confidence_level`               | `USTA_CONFIDENCE_LEVEL` | No | `99` | Confidence score (0–100) |
+
+Configuration is loaded and validated by Pydantic models built on top of the
+[`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors/tree/master/connectors-sdk) base settings
+(`src/connector/settings.py`). Variables can be provided as environment variables, through a `.env` file
+(see `.env.sample`) or a `config.yml` file. The generated, machine-readable contract used by the OpenCTI
+connector manager lives in [`__metadata__/connector_config_schema.json`](__metadata__/connector_config_schema.json)
+and is documented in [`__metadata__/CONNECTOR_CONFIG_DOC.md`](__metadata__/CONNECTOR_CONFIG_DOC.md).
 
 ---
 
@@ -170,9 +179,12 @@ pytest --cov --cov-report=term-missing
 usta/
 ├── __metadata__
 |   ├── connector_manifest.json
+|   ├── connector_config_schema.json     # Generated config contract (manager-supported)
+|   ├── CONNECTOR_CONFIG_DOC.md          # Generated config documentation
 |   └── logo.png
 ├── src/
 |   ├── requirements.txt
+│   ├── __init__.py                      # Exposes ConnectorSettings for schema generation
 │   ├── main.py                          # Entry point
 │   ├── connector/
 │   │   ├── __init__.py
@@ -196,6 +208,7 @@ usta/
 ├── entrypoint.sh                        # Docker entrypoint
 ├── Dockerfile
 ├── pytest.ini 
+├── .env.sample                          # Sample environment variables
 └── docker-compose.yml
 ```
 
