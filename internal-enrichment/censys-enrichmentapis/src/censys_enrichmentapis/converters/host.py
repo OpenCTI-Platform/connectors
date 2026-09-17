@@ -1,5 +1,3 @@
-import re
-
 from censys_enrichmentapis.converters.base import CensysConverter, ObservableLike
 from censys_platform import Host, HostEnrichment, Reputation
 from connectors_sdk.models import Reference
@@ -26,18 +24,15 @@ class HostConverter(CensysConverter):
             for service in self._value(data, "services") or []
             for threat in self._value(service, "threats") or []
         ]
-        label_values.extend(name for name in threat_names if isinstance(name, str))
+        labels = self._format_censys_labels(label_values)
+        labels.extend(
+            self._format_censys_labels(threat_names, category="Threat")
+        )
         reputation = self._value(data, "reputation")
         reputation_label = self._value(reputation, "label")
         if isinstance(reputation_label, str):
-            label_values.append(reputation_label)
-        return list(
-            dict.fromkeys(
-                f"Censys_{self._to_snake_case(label_value.strip())}"
-                for label_value in label_values
-                if label_value and label_value.strip()
-            )
-        )
+            labels.extend(self._format_censys_labels([reputation_label]))
+        return list(dict.fromkeys(labels))
 
     def _convert(
         self, observable: ObservableLike, data: Host | HostEnrichment
@@ -105,16 +100,3 @@ class HostConverter(CensysConverter):
             observable_value=stix_entity.get("value"),
             services=data.services,
         )
-
-    @staticmethod
-    def _to_snake_case(text: str) -> str:
-        """Convert text to snake_case format."""
-        # Replace spaces and hyphens with underscores
-        text = re.sub(r'[\s\-]+', '_', text)
-        return text
-
-    @staticmethod
-    def _value(value: object, field: str) -> object | None:
-        if isinstance(value, dict):
-            return value.get(field)
-        return getattr(value, field, None)

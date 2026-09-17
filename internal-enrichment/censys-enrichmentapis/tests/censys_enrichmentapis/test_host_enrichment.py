@@ -127,7 +127,7 @@ def _get_host_245_52_sample() -> dict:
 
 
 def test_converter_adds_threat_names_to_primary_observable_labels() -> None:
-    """Verify that threat names are added to primary observable labels with Censys_ prefix in snake_case."""
+    """Verify host threat-name labels use the Censys_Threat_ prefix."""
     service = HostEnrichmentService(
         port=22,
         protocol="SSH",
@@ -166,9 +166,10 @@ def test_converter_adds_threat_names_to_primary_observable_labels() -> None:
         )
     ]
 
-    # Verify threat names are in primary observable labels with Censys_ prefix
-    assert "Censys_Exposed_SSH_Service" in converter.primary_observable_labels
-    assert "Censys_Weak_Credentials" in converter.primary_observable_labels
+    assert "Censys_Threat_Exposed_SSH_Service" in converter.primary_observable_labels
+    assert "Censys_Threat_Weak_Credentials" in converter.primary_observable_labels
+    assert "Censys_Exposed_SSH_Service" not in converter.primary_observable_labels
+    assert "Censys_Weak_Credentials" not in converter.primary_observable_labels
 
 
 def test_converter_host_enrichment_adds_service_labels_as_note() -> None:
@@ -740,16 +741,9 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
     assert "**Evidence:**" in note.content
     assert "| http.html_title | Shell In A Box |" in note.content
     assert "- http.html_title: Shell In A Box" not in note.content
-    assert "**Actors:**" in note.content
-    assert (
-        "| Primary Name | All Names | MITRE Group ID | Malpedia Group ID |"
-        in note.content
-    )
-    assert "| Anunak | Anunak | — | anunak |" in note.content
-    assert (
-        "| Cobalt Group | COBALT SPIDER, Cobalt Group | G0080 | cobalt |"
-        in note.content
-    )
+    assert "**Actors:**" not in note.content
+    assert "Anunak" not in note.content
+    assert "Cobalt Group" not in note.content
     assert "ACTOR-1" not in note.content
     assert "ACTOR-11" not in note.content
     assert "2025-05-01" in note.content

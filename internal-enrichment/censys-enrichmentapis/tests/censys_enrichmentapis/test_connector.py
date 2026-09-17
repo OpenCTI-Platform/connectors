@@ -354,12 +354,27 @@ def test_enrichment(mocked_helper: Mock, get_host, ipv4_enrichment_message):
 
 @pytest.mark.usefixtures("mock_config")
 def test_domain_name_enrichment(
-    mocker: MockerFixture, mocked_helper: Mock, fetch_hosts, domain_name_enrichment_message
+    mocker: MockerFixture, mocked_helper: Mock, domain_name_enrichment_message
 ):
-    mocker.patch("censys_enrichmentapis.client.Client.fetch_certs_by_domain", return_value=[])
-    mock_get_host_enrichment = mocker.patch(
-        "censys_platform.global_data.GlobalData.get_host_enrichment"
+    web_properties = [
+        {
+            "hostname": "example.com",
+            "port": 80,
+            "scan_time": "2026-09-17T12:00:00Z",
+            "labels": [{"value": "WEB"}],
+        },
+        {
+            "hostname": "example.com",
+            "port": 443,
+            "scan_time": "2026-09-17T12:01:00Z",
+            "threats": [{"name": "Fake Captcha"}],
+        },
+    ]
+    mock_fetch_web_properties = mocker.patch(
+        "censys_enrichmentapis.client.Client.fetch_web_properties",
+        return_value=web_properties,
     )
+    mocker.patch("censys_enrichmentapis.client.Client.fetch_certs_by_domain", return_value=[])
     client = Client(
         organisation_id="test-org-id",
         token="test-token",
@@ -378,74 +393,38 @@ def test_domain_name_enrichment(
 
     connector.helper.send_stix2_bundle = capture_sent_bundle
     connector._message_callback(domain_name_enrichment_message)
-    mock_get_host_enrichment.assert_not_called()
+    mock_fetch_web_properties.assert_called_once_with(
+        domain_name_enrichment_message["stix_entity"]["value"], ports=(80, 443)
+    )
 
-    for host in fetch_hosts:
-        ipv4_addresses = [
-            addr["value"]
-            for addr in filter_by_key_value(sent_bundle["objects"], "type", "ipv4-addr")
-        ]
-        assert host.ip in ipv4_addresses
-        city_names = [
-            city["name"]
-            for city in filter_by_key_value(
-                sent_bundle["objects"], "x_opencti_location_type", "City"
-            )
-        ]
-        assert host.location.city in city_names
-        region_names = [
-            region["name"]
-            for region in filter_by_key_value(
-                sent_bundle["objects"], "x_opencti_location_type", "Region"
-            )
-        ]
-        assert host.location.continent in region_names
-        administrative_area_names = [
-            area["name"]
-            for area in filter_by_key_value(
-                sent_bundle["objects"], "x_opencti_location_type", "Administrative-Area"
-            )
-        ]
-        assert host.location.province in administrative_area_names
-        country_names = [
-            country["name"]
-            for country in filter_by_key_value(
-                sent_bundle["objects"], "x_opencti_location_type", "Country"
-            )
-        ]
-        assert host.location.country in country_names
+    notes = filter_by_key_value(sent_bundle["objects"], "type", "note")
+    assert {note["abstract"] for note in notes} == {
+        "Censys web property `example.com`:80",
+        "Censys web property `example.com`:443",
+    }
+    assert any("| web.labels.value | `WEB` |" in note["content"] for note in notes)
+    assert any(
+        "| web.threats.name | `Fake Captcha` |" in note["content"]
+        for note in notes
+    )
+    assert any(
+        note["content"].startswith(
+            "[https://platform.censys.io/web/example.com:80]"
+            "(https://platform.censys.io/web/example.com:80)"
+        )
+        for note in notes
+    )
 
-        hostnames = filter_by_key_value(sent_bundle["objects"], "type", "hostname")
-        for url in host.dns.names:
-            assert any(hostname_obj["value"] == url for hostname_obj in hostnames)
+    domain = next(
+        object_
+        for object_ in sent_bundle["objects"]
+        if object_["id"] == domain_name_enrichment_message["stix_entity"]["id"]
+    )
+    assert "Censys_Threat_Fake_Captcha" in domain["x_opencti_labels"]
 
-        autonomous_system_numbers = [
-            asys["number"]
-            for asys in filter_by_key_value(
-                sent_bundle["objects"], "type", "autonomous-system"
-            )
-        ]
-        assert host.autonomous_system.asn in autonomous_system_numbers
-        autonomous_system_names = [
-            asys["name"]
-            for asys in filter_by_key_value(
-                sent_bundle["objects"], "type", "autonomous-system"
-            )
-        ]
-        assert host.autonomous_system.name in autonomous_system_names
-        autonomous_system_descriptions = [
-            asys["x_opencti_description"]
-            for asys in filter_by_key_value(
-                sent_bundle["objects"], "type", "autonomous-system"
-            )
-        ]
-        assert host.autonomous_system.description in autonomous_system_descriptions
-
-        service_notes = filter_by_key_value(sent_bundle["objects"], "type", "note")
-        for service in host.services:
-            assert any(
-                note["abstract"].startswith(
-                    f"Service information on port {service.port} "
-                )
-                for note in service_notes
-            )
+    threat_note = next(
+        note
+        for note in notes
+        if note["abstract"] == "Censys web property `example.com`:443"
+    )
+    assert threat_note["labels"] == ["Censys_Threat_Fake_Captcha"]

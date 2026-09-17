@@ -1,6 +1,20 @@
 import stix2
+from censys_enrichmentapis.converters.domain import DomainConverter
 from censys_enrichmentapis.converters.host import HostConverter
-from censys_platform import HostEnrichment
+from censys_platform import (
+    Attribute,
+    Certificate,
+    CertificateParsed,
+    DistinguishedName,
+    EndpointScanState,
+    HostEnrichment,
+    Label,
+    Signature,
+    Threat,
+    ValidityPeriod,
+    Vuln,
+    Webproperty,
+)
 
 
 def test_converter_ipv4(host_ipv4: HostEnrichment) -> None:
@@ -111,3 +125,81 @@ def test_converter_ipv4(host_ipv4: HostEnrichment) -> None:
     assert "| Last Scan Time | 2025-11-03T12:35:48Z |" in note.content
     assert "| Label 1 | REMOTE_ACCESS |" in note.content
     assert note.object_refs == [ip_id]
+
+
+def test_converter_domain_adds_web_property_markdown_note() -> None:
+    domain = stix2.DomainName(value="example.com")
+    web_property = Webproperty(
+        hostname="example.com",
+        port=443,
+        endpoints=[EndpointScanState(endpoint_type="PLEX_MEDIA_SERVER")],
+        scan_time="2026-04-09T06:26:02.631Z",
+        labels=[Label(value="IOT")],
+        threats=[Threat(name="Fake Captcha")],
+        vulns=[Vuln(name="CVE-2025-1695")],
+        software=[
+            Attribute(vendor="imperva", product="securesphere", version="1.27.1.1")
+        ],
+        cert=Certificate(
+            fingerprint_sha256="cd44421bee6d84a57373f36853175cc3ce0c2437c8a3957a55318d483e90f0ed",
+            names=["www.example.com"],
+            parsed=CertificateParsed(
+                subject_dn="C=US, CN=example.com",
+                issuer_dn="C=US, O=Example CA",
+                subject=DistinguishedName(common_name=["example.com"]),
+                validity_period=ValidityPeriod(
+                    not_before="2025-12-01T06:47:51.000Z",
+                    not_after="2029-08-09T06:47:51.000Z",
+                ),
+                signature=Signature(self_signed=True),
+            ),
+        ),
+    )
+
+    converter = DomainConverter()
+    stix_objects = [
+        object_.to_stix2_object()
+        for object_ in converter.to_stix(
+            observable=domain,
+            data={"web_properties": [web_property], "certs": []},
+        )
+    ]
+
+    assert converter.primary_observable_labels == ["Censys_Threat_Fake_Captcha"]
+    note = next(object_ for object_ in stix_objects if object_.type == "note")
+    assert note.abstract == "Censys web property `example.com`:443"
+    assert note.object_refs == [domain.id]
+    assert note.labels == ["Censys_Threat_Fake_Captcha"]
+    assert note.content.startswith(
+        "[https://platform.censys.io/web/example.com:443]"
+        "(https://platform.censys.io/web/example.com:443)\n\n"
+    )
+    assert "| Key | Value |" in note.content
+    assert "| web.hostname | `example.com` |" in note.content
+    assert "| web.port | `443` |" in note.content
+    assert "| web.endpoints.endpoint_type | `PLEX_MEDIA_SERVER` |" in note.content
+    assert "| web.scan_time | `2026-04-09T06:26:02.631Z` |" in note.content
+    assert "| web.labels.value | `IOT` |" in note.content
+    assert "| web.threats.name | `Fake Captcha` |" in note.content
+    assert "| web.vulns.name | `CVE-2025-1695` |" in note.content
+    assert "| web.software.vendor | `imperva` |" in note.content
+    assert "| web.software.product | `securesphere` |" in note.content
+    assert "| web.software.version | `1.27.1.1` |" in note.content
+    assert (
+        "| web.cert.fingerprint_sha256 | "
+        "`cd44421bee6d84a57373f36853175cc3ce0c2437c8a3957a55318d483e90f0ed` |"
+        in note.content
+    )
+    assert "| web.cert.parsed.subject_dn | `C=US, CN=example.com` |" in note.content
+    assert "| web.cert.parsed.issuer_dn | `C=US, O=Example CA` |" in note.content
+    assert "| web.cert.parsed.subject.common_name | `example.com` |" in note.content
+    assert (
+        "| web.cert.parsed.validity_period.not_before | "
+        "`2025-12-01T06:47:51.000Z` |" in note.content
+    )
+    assert (
+        "| web.cert.parsed.validity_period.not_after | "
+        "`2029-08-09T06:47:51.000Z` |" in note.content
+    )
+    assert "| web.cert.parsed.signature.self_signed | `true` |" in note.content
+    assert "| web.cert.names | `www.example.com` |" in note.content
