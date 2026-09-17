@@ -89,8 +89,8 @@ class CyfirmaClient:
         :return: List of entities or an empty list if an error occurs
         """
         try:
-            indicators = []  # self.get_indicators_feeds() or []
-            vulnerabilities = []  # self.get_vulnerabilities_feeds() or []
+            indicators = self.get_indicators_feeds() or []
+            vulnerabilities = self.get_vulnerabilities_feeds() or []
             
 
             if indicators is None and vulnerabilities is None:
