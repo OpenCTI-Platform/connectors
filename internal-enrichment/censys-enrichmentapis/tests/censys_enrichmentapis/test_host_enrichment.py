@@ -1,7 +1,13 @@
 import stix2
 from censys_enrichmentapis.client import Client
 from censys_enrichmentapis.converters.host import HostConverter
-from censys_platform import HostEnrichment, HostEnrichmentService, Label, Reputation
+from censys_platform import (
+    Evidence,
+    HostEnrichment,
+    HostEnrichmentService,
+    Label,
+    Reputation,
+)
 from censys_platform.models.reputation_evidence import ReputationEvidence, ReputationEvidenceFeature
 
 
@@ -173,9 +179,31 @@ def test_converter_host_enrichment_adds_service_labels_as_note() -> None:
             data=HostEnrichment(
                 services=[
                     HostEnrichmentService(
-                        port=22,
+                        port=80,
+                        protocol="HTTP",
                         scan_time="2025-11-03T12:35:48Z",
-                        labels=[Label(value="REMOTE_ACCESS")],
+                        labels=[
+                            Label(
+                                source="censys",
+                                confidence=0.75,
+                                value="PROXY_SERVER",
+                                evidence=[
+                                    Evidence(
+                                        data_path="http.body",
+                                        found_value="Nginx Proxy Manager",
+                                    ),
+                                    Evidence(
+                                        data_path="http.html_title",
+                                        found_value="Default Site",
+                                    ),
+                                ],
+                            ),
+                            Label(
+                                source="censys",
+                                confidence=0.75,
+                                value="DEFAULT_LANDING_PAGE",
+                            ),
+                        ],
                     )
                 ]
             ),
@@ -184,10 +212,22 @@ def test_converter_host_enrichment_adds_service_labels_as_note() -> None:
 
     notes = [stix_object for stix_object in stix_objects if stix_object.type == "note"]
     assert len(notes) == 1
-    assert notes[0].abstract == "Service information on port 22 (Unknown)"
-    assert "- Scan Time: 2025-11-03T12:35:48Z" in notes[0].content
-    assert "- Labels" in notes[0].content
-    assert " - REMOTE_ACCESS" in notes[0].content
+    assert notes[0].abstract == "Service information on port 80 (HTTP)"
+    assert "| Key | Value |" in notes[0].content
+    assert "| Protocol | HTTP |" in notes[0].content
+    assert "| Last Scan Time | 2025-11-03T12:35:48Z |" in notes[0].content
+    assert "| Label 1 | PROXY_SERVER |" in notes[0].content
+    assert (
+        "| Label 1 Evidence — http.body | Nginx Proxy Manager |"
+        in notes[0].content
+    )
+    assert (
+        "| Label 1 Evidence — http.html_title | Default Site |"
+        in notes[0].content
+    )
+    assert "| Label 2 | DEFAULT_LANDING_PAGE |" in notes[0].content
+    assert "Source" not in notes[0].content
+    assert "Confidence" not in notes[0].content
 
 
 def test_converter_adds_external_reputation_note() -> None:
@@ -644,6 +684,21 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
                     "found_value": "Shell In A Box"
                 }
             ],
+            "actors": [
+                {
+                    "id": "ACTOR-1",
+                    "primary_name": "Anunak",
+                    "all_names": ["Anunak"],
+                    "malpedia_group_id": "anunak",
+                },
+                {
+                    "id": "ACTOR-11",
+                    "primary_name": "Cobalt Group",
+                    "all_names": ["COBALT SPIDER", "Cobalt Group"],
+                    "mitre_group_id": "G0080",
+                    "malpedia_group_id": "cobalt",
+                },
+            ],
             "malware": {
                 "primary_name": "ShellInABox",
                 "all_names": ["ShellInABox"],
@@ -670,7 +725,8 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
 
     # Verify threat summary is rendered as a key/value table.
     assert "| Key | Value |" in note.content
-    assert "| Threat ID | THREAT-0188 |" in note.content
+    assert "Threat ID" not in note.content
+    assert "THREAT-0188" not in note.content
     assert "| Name | ShellInABox |" in note.content
     assert "| Threat Types | webshell |" in note.content
     assert "| Tactics | Persistence |" in note.content
@@ -681,7 +737,21 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
     )
     assert "| Source | censys |" not in note.content
     assert "0.5" not in note.content
-    assert "Shell In A Box" in note.content
+    assert "**Evidence:**" in note.content
+    assert "| http.html_title | Shell In A Box |" in note.content
+    assert "- http.html_title: Shell In A Box" not in note.content
+    assert "**Actors:**" in note.content
+    assert (
+        "| Primary Name | All Names | MITRE Group ID | Malpedia Group ID |"
+        in note.content
+    )
+    assert "| Anunak | Anunak | — | anunak |" in note.content
+    assert (
+        "| Cobalt Group | COBALT SPIDER, Cobalt Group | G0080 | cobalt |"
+        in note.content
+    )
+    assert "ACTOR-1" not in note.content
+    assert "ACTOR-11" not in note.content
     assert "2025-05-01" in note.content
 
     # Verify note labels
@@ -704,6 +774,7 @@ def test_converter_handles_multiple_threats_per_service() -> None:
             "type": ["security_tool"],
             "tactic": ["command_and_control"],
             "evidence": [],
+            "actors": [{"id": "ACTOR-ONLY"}],
             "malware": {}
         },
         {
@@ -735,6 +806,8 @@ def test_converter_handles_multiple_threats_per_service() -> None:
         if obj.type == "note" and "Threat" in obj.abstract
     ]
     assert len(threat_notes) == 2
+    assert all("**Evidence:**" not in note.content for note in threat_notes)
+    assert all("**Actors:**" not in note.content for note in threat_notes)
 
     # Verify 1 malware (only second threat has malware)
     malware = [obj for obj in stix_objects if obj.type == "malware"]
@@ -789,3 +862,4 @@ def test_converter_handles_service_with_both_vulns_and_threats() -> None:
 
     assert len(threat_notes) == 1
     assert "Exposed SSH" in threat_notes[0].content
+    assert "| protocol | SSH |" in threat_notes[0].content

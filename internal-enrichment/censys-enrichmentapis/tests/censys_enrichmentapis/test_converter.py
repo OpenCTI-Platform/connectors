@@ -107,7 +107,7 @@ def test_converter_ipv4(host_ipv4: HostEnrichment) -> None:
     note = next(object_ for object_ in stix_objects if object_.type == "note")
     assert note.abstract == "Service information on port 443 (Unknown)"
     assert note.authors == ["Censys EnrichmentAPIs Connector"]
-    assert "- Scan Time: 2025-11-03T12:35:48Z" in note.content
-    assert "- Labels" in note.content
-    assert " - REMOTE_ACCESS" in note.content
+    assert "| Key | Value |" in note.content
+    assert "| Last Scan Time | 2025-11-03T12:35:48Z |" in note.content
+    assert "| Label 1 | REMOTE_ACCESS |" in note.content
     assert note.object_refs == [ip_id]

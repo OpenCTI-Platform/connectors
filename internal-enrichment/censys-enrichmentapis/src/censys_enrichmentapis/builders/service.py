@@ -305,24 +305,42 @@ class ServiceStixBuilder(AreaStixBuilder):
 
 
     def _build_service_content(self, service: HostService) -> str:
-        content_parts = []
         protocol = self._get_value(service, "protocol")
         scan_time = self._get_value(service, "scan_time")
+        rows = [
+            "| Key | Value |",
+            "|---|---|",
+        ]
         if protocol:
-            content_parts.append(f"- Protocol: {protocol}")
+            rows.append(f"| Protocol | {self._markdown_cell(protocol)} |")
         if scan_time:
-            content_parts.append(f"- Scan Time: {scan_time}")
+            rows.append(
+                f"| Last Scan Time | {self._markdown_cell(scan_time)} |"
+            )
 
         labels = [
-            label_value
+            label
             for label in self._get_value(service, "labels") or []
-            if (label_value := self._get_value(label, "value"))
+            if self._get_value(label, "value")
         ]
-        if labels:
-            if content_parts:
-                content_parts.append("")
-            content_parts.append("- Labels")
-            content_parts.extend(f"  - {label}" for label in labels)
+        for label_number, label in enumerate(labels, start=1):
+            label_key = f"Label {label_number}"
+            rows.append(
+                f"| {label_key} | "
+                f"{self._markdown_cell(self._get_value(label, 'value'))} |"
+            )
+            for evidence in self._get_value(label, "evidence") or []:
+                data_path = self._get_value(evidence, "data_path")
+                found_value = self._get_value(evidence, "found_value")
+                evidence_key = f"{label_key} Evidence"
+                if data_path:
+                    evidence_key += f" — {data_path}"
+                rows.append(
+                    f"| {self._markdown_cell(evidence_key)} | "
+                    f"{self._markdown_cell(found_value)} |"
+                )
+
+        content_parts = ["\n".join(rows)]
 
         threats_info = []
         for threat in self._get_value(service, "threats") or []:
@@ -400,8 +418,7 @@ class ServiceStixBuilder(AreaStixBuilder):
     ) -> None:
         for threat in threats or []:
             threat_name = self._get_value(threat, "name")
-            threat_id = self._get_value(threat, "id")
-            if not threat_name or not threat_id:
+            if not threat_name:
                 continue
 
             malware = self._add_threat_malware(threat)
@@ -502,7 +519,6 @@ class ServiceStixBuilder(AreaStixBuilder):
         protocol: str | None,
     ) -> Note | None:
         threat_name = self._get_value(threat, "name")
-        threat_id = self._get_value(threat, "id")
         if not threat_name:
             return None
 
@@ -515,7 +531,6 @@ class ServiceStixBuilder(AreaStixBuilder):
         rows = [
             "| Key | Value |",
             "|---|---|",
-            f"| Threat ID | {self._markdown_cell(threat_id)} |",
             f"| Name | {self._markdown_cell(threat_name)} |",
         ]
 
@@ -539,14 +554,60 @@ class ServiceStixBuilder(AreaStixBuilder):
 
         content_parts.append("\n".join(rows))
 
-        if evidence := self._get_value(threat, "evidence"):
-            if isinstance(evidence, list) and evidence:
-                content_parts.append("\n\n**Evidence:**")
-                for item in evidence:
-                    if isinstance(item, dict):
-                        data_path = item.get("data_path", "unknown")
-                        found_value = item.get("found_value", "")
-                        content_parts.append(f"- {data_path}: {found_value}")
+        evidence_rows = [
+            "| Key | Value |",
+            "|---|---|",
+        ]
+        if isinstance(evidence := self._get_value(threat, "evidence"), list):
+            for item in evidence:
+                data_path = self._get_value(item, "data_path")
+                found_value = self._get_value(item, "found_value")
+                if not data_path or found_value is None or found_value == "":
+                    continue
+                evidence_rows.append(
+                    f"| {self._markdown_cell(data_path)} | "
+                    f"{self._markdown_cell(found_value)} |"
+                )
+
+        if len(evidence_rows) > 2:
+            content_parts.append("\n\n**Evidence:**")
+            content_parts.append("\n".join(evidence_rows))
+
+        actor_rows = [
+            "| Primary Name | All Names | MITRE Group ID | Malpedia Group ID |",
+            "|---|---|---|---|",
+        ]
+        if isinstance(actors := self._get_value(threat, "actors"), list):
+            for actor in actors:
+                primary_name = self._get_value(actor, "primary_name")
+                all_names = self._get_value(actor, "all_names")
+                if isinstance(all_names, list):
+                    all_names = ", ".join(
+                        str(name) for name in all_names if name is not None
+                    )
+                mitre_group_id = self._get_value(actor, "mitre_group_id")
+                malpedia_group_id = self._get_value(actor, "malpedia_group_id")
+                actor_values = (
+                    primary_name,
+                    all_names,
+                    mitre_group_id,
+                    malpedia_group_id,
+                )
+                if not any(
+                    value is not None and value != "" for value in actor_values
+                ):
+                    continue
+                actor_rows.append(
+                    "| "
+                    + " | ".join(
+                        self._markdown_cell(value or None) for value in actor_values
+                    )
+                    + " |"
+                )
+
+        if len(actor_rows) > 2:
+            content_parts.append("\n\n**Actors:**")
+            content_parts.append("\n".join(actor_rows))
 
         if malware_data := self._get_value(threat, "malware"):
             if isinstance(malware_data, dict) and malware_data.get("primary_name"):
