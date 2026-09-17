@@ -130,6 +130,18 @@ class TestProcessMessage:
             observable, {}, "sample-123", "stixfile"
         )
 
+    def test_raises_for_artifact_without_files(self, connector):
+        observable = {
+            "entity_type": "Artifact",
+            "observable_value": "example.bin",
+            "objectMarking": [],
+        }
+
+        with pytest.raises(ValueError, match="No files found"):
+            connector._process_file(observable, "artifact")
+
+        connector.triage_client.overview_report.assert_not_called()
+
     @pytest.mark.parametrize(
         "algorithm, expected_query",
         [

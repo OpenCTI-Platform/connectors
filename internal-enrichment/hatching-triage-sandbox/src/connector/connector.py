@@ -452,6 +452,8 @@ class HatchingTriageSandboxConnector:
                         f"No attached file found for {observable_value}; "
                         "cannot submit a hash-only File SCO to Hatching Triage"
                     )
+            else:
+                raise ValueError(f"No files found for {observable_value}")
 
         if entity_type == "url":
             search_query = f"url:{observable_value}"
