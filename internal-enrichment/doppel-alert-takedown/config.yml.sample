@@ -5,13 +5,15 @@ opencti:
 connector:
   id: 'ChangeMe'
   name: 'Doppel Alert and Takedown' # optional (default: 'Doppel Alert and Takedown')
-  scope: 'Url,Domain-Name' # optional (default: 'Url,Domain-Name')
+  scope: 'Url,Domain-Name' # add ',Incident' to enable existing-alert takedown actions
   log_level: 'error' # optional (default: 'error')
-  auto: false # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+  auto: false # must remain false when scope includes Incident
+  auto_update: false # must remain false when scope includes Incident
 
 doppel_alert_takedown:
   api_key: 'ChangeMe'
   user_api_key: 'ChangeMe'
+  organization_code: '' # optional; required when the API user belongs to multiple Doppel organizations
   api_base_url: 'https://api.doppel.com' # optional (default: 'https://api.doppel.com')
   tags: [] # optional, list of tags added to created alerts (default: empty)
   takedown_comment: 'Confirmed by OpenCTI — requesting takedown.' # optional
