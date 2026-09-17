@@ -58,9 +58,9 @@ class CyfirmaConnector:
             stix_objects = entities
 
         # Ensure consistent bundle by adding the author and TLP marking
-        if len(stix_objects):
-            stix_objects.append(self.converter_to_stix.author)
-            stix_objects.append(self.converter_to_stix.tlp_marking)
+        # if len(stix_objects):
+        #     stix_objects.append(self.converter_to_stix.author)
+        #     stix_objects.append(self.converter_to_stix.tlp_marking)
 
         return stix_objects
 

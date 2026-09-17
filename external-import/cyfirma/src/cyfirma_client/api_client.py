@@ -41,7 +41,7 @@ class CyfirmaClient:
             tailored_vulnerabilities (bool): Whether to fetch tailored vulnerabilities.
         """
         self.helper = helper
-        self.base_url = str(base_url)
+        self.base_url = str(base_url).rstrip("/")
         self.tailored_iocs = tailored_iocs
         self.api_key = api_key
         self.look_back_days = look_back_days

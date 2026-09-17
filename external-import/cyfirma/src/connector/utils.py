@@ -34,7 +34,7 @@ def get_request_headers(api_key: str) -> dict:
     """
     return {
         "X-Api-Key": api_key,
-        "X-App-Name": "OPEN_CTI_CONNECTOR_V1_1",
+        "X-App-Name": "OPEN_CTI_CONNECTOR_V1",
         "X-Request-Id": str(uuid.uuid4()),
     }
 
