@@ -4,8 +4,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pycti import Identity as PyctiIdentity
 from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER
+from rflib.rf_to_stix2 import IntrusionSet as RFIntrusionSet
 from rflib.rf_to_stix2 import IPAddress as RFIPAddress
 from rflib.rf_to_stix2 import StixNote
+from rflib.rf_to_stix2 import ThreatActor as RFThreatActor
 from rflib.rf_to_stix2 import Vulnerability as RFVulnerability
 from stix2 import (
     URL,
@@ -367,6 +369,90 @@ def test_from_json_skips_invalid_attachment_and_keeps_processing_valid_ones():
         obj for obj in note.objects if getattr(obj, "pattern_type", None) == "yara"
     ]
     assert len(detection_rule_indicators) == 1
+
+
+# Scenario: A Recorded Future Threat Actor carries its "AKA" aliases (issue #7118)
+def test_threat_actor_maps_recorded_future_aliases():
+    # Given a valid author identity and TLP marking
+    author = _given_author()
+    tlp = _given_tlp()
+
+    # And a Threat Actor with Recorded Future alias data (including its own name)
+    threat_actor = RFThreatActor(
+        "APT28",
+        "Organization",
+        author,
+        tlp,
+        aliases=["Fancy Bear", "APT28", "Fancy Bear", "Sofacy"],
+    )
+
+    # When the entity is converted to a STIX object
+    stix_obj = threat_actor.to_stix_objects()[0]
+
+    # Then the STIX aliases exclude the primary name and duplicates
+    assert stix_obj.aliases == ["Fancy Bear", "Sofacy"]
+
+
+# Scenario: A Recorded Future Intrusion Set carries its "AKA" aliases (issue #7118)
+def test_intrusion_set_maps_recorded_future_aliases():
+    # Given a valid author identity and TLP marking
+    author = _given_author()
+    tlp = _given_tlp()
+
+    # And an Intrusion Set with Recorded Future alias data
+    intrusion_set = RFIntrusionSet(
+        "Everest Ransomware Group",
+        "Organization",
+        author,
+        tlp,
+        aliases=["Everest", "Everest Locker"],
+    )
+
+    # When the entity is converted to a STIX object
+    stix_obj = intrusion_set.to_stix_objects()[0]
+
+    # Then the STIX aliases carry the bridging short names
+    assert stix_obj.aliases == ["Everest", "Everest Locker"]
+
+
+# Scenario: A Threat Actor without alias data omits the STIX aliases property (issue #7118)
+def test_threat_actor_without_aliases_omits_property():
+    # Given a valid author identity and TLP marking
+    author = _given_author()
+    tlp = _given_tlp()
+
+    # And a Threat Actor with no alias data
+    threat_actor = RFThreatActor("Lone Wolf", "Organization", author, tlp)
+
+    # When the entity is converted to a STIX object
+    stix_obj = threat_actor.to_stix_objects()[0]
+
+    # Then no aliases property is emitted
+    assert "aliases" not in stix_obj
+
+
+# Scenario: Analyst note Threat Actor entities are enriched with their aliases (issue #7118)
+def test_analyst_note_threat_actor_is_enriched_with_aliases():
+    # Given a StixNote whose RF client resolves aliases for the threat actor entity
+    rfapi = MagicMock()
+    rfapi.get_entity_aliases.return_value = ["Fancy Bear", "Sofacy"]
+    note = StixNote(opencti_helper=MagicMock(), tas=["ta-entity"], rfapi=rfapi)
+
+    # And an analyst note referencing a known Threat Actor entity
+    note_json = _given_analyst_note_json()
+    note_json["attributes"]["note_entities"] = [
+        {"id": "ta-entity", "type": "Organization", "name": "APT28"},
+    ]
+
+    # When the note is converted from JSON
+    _when_note_converted_from_json(note, note_json)
+
+    # Then the RF aliases were requested for the threat actor entity
+    rfapi.get_entity_aliases.assert_called_once_with("ta-entity")
+    # And the resulting Threat Actor carries those aliases
+    threat_actors = [obj for obj in note.objects if obj["type"] == "threat-actor"]
+    assert len(threat_actors) == 1
+    assert threat_actors[0].aliases == ["Fancy Bear", "Sofacy"]
 
 
 # ── Given helpers ────────────────────────────────────────────────────────────

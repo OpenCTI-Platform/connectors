@@ -42,6 +42,15 @@ class ConversionError(Exception):
     pass
 
 
+def _clean_aliases(name, aliases):
+    """Returns aliases without empty values, duplicates or the primary name."""
+    cleaned = []
+    for alias in aliases or []:
+        if alias and alias != name and alias not in cleaned:
+            cleaned.append(alias)
+    return cleaned
+
+
 class RFStixEntity:
     """Parent class"""
 
@@ -481,6 +490,10 @@ class ThreatActor(RFStixEntity):
         "Person": "individual",
     }
 
+    def __init__(self, name, _type, author=None, tlp=None, aliases=None):
+        super().__init__(name, _type, author, tlp)
+        self.aliases = _clean_aliases(name, aliases)
+
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
         self.stix_obj = stix2.ThreatActor(
@@ -493,6 +506,7 @@ class ThreatActor(RFStixEntity):
                 ),
             ),
             name=self.name,
+            aliases=self.aliases or None,
             resource_level="individual" if self.type == "Person" else None,
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
@@ -506,8 +520,9 @@ class ThreatActor(RFStixEntity):
 class IntrusionSet(RFStixEntity):
     """Converts Threat Actor to Intrusion Set SDO"""
 
-    def __init__(self, name, _type, author=None, tlp=None):
+    def __init__(self, name, _type, author=None, tlp=None, aliases=None):
         super().__init__(name, _type, author, tlp)
+        self.aliases = _clean_aliases(name, aliases)
         self.related_entities = []
         self.objects = []
 
@@ -516,6 +531,7 @@ class IntrusionSet(RFStixEntity):
         self.stix_obj = stix2.IntrusionSet(
             id=pycti.IntrusionSet.generate_id(self.name),
             name=self.name,
+            aliases=self.aliases or None,
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
         )
@@ -1257,15 +1273,19 @@ class StixNote:
             type_ = entity["type"]
             name = entity["name"]
             if self.person_to_ta and type_ == "Person":
-                stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
+                aliases = self.rfapi.get_entity_aliases(entity["id"])
+                stix_objs = ThreatActor(
+                    name, type_, self.author, tlp, aliases=aliases
+                ).to_stix_objects()
             elif entity["id"] in self.tas:
+                aliases = self.rfapi.get_entity_aliases(entity["id"])
                 if self.ta_to_intrusion_set and type_ != "Person":
                     stix_objs = IntrusionSet(
-                        name, type_, self.author, tlp
+                        name, type_, self.author, tlp, aliases=aliases
                     ).to_stix_objects()
                 else:
                     stix_objs = ThreatActor(
-                        name, type_, self.author, tlp
+                        name, type_, self.author, tlp, aliases=aliases
                     ).to_stix_objects()
             elif type_ == "Source":
                 external_reference = {"source_name": name, "url": name}
