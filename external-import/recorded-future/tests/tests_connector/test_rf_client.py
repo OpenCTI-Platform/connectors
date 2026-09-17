@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
-from rflib.rf_client import LINKS_PATH, RFClient
+import requests
+from rflib.rf_client import ENTITY_MATCH_PATH, LINKS_PATH, RFClient
 
 
 def _build_client():
@@ -54,3 +55,54 @@ def test_get_entities_links_single_batch_below_limit():
         LINKS_PATH, json={"entities": entities_id}
     )
     assert result == [{"entity": {"id": "id-0"}}]
+
+
+# Scenario: aliases combine well-known common names and the full alias list (issue #7118)
+def test_get_entity_aliases_combines_common_names_and_aliases():
+    client = _build_client()
+    client.session.get.return_value = _response(
+        {
+            "id": "entity-1",
+            "type": "Organization",
+            "attributes": {
+                "name": "APT28",
+                "common_names": ["Fancy Bear"],
+                "alias": ["Fancy Bear", "Sofacy", ""],
+                "is_threat_actor": True,
+            },
+        }
+    )
+
+    aliases = client.get_entity_aliases("entity-1")
+
+    client.session.get.assert_called_once_with(f"{ENTITY_MATCH_PATH}/entity-1")
+    # Common names first, deduplicated, empty values removed
+    assert aliases == ["Fancy Bear", "Sofacy"]
+
+
+# Scenario: an entity without alias data returns an empty list (issue #7118)
+def test_get_entity_aliases_returns_empty_list_when_no_alias():
+    client = _build_client()
+    client.session.get.return_value = _response(
+        {
+            "id": "entity-2",
+            "type": "Person",
+            "attributes": {
+                "name": "Lone Wolf",
+                "common_names": [],
+                "alias": [],
+                "is_threat_actor": True,
+            },
+        }
+    )
+
+    assert client.get_entity_aliases("entity-2") == []
+
+
+# Scenario: an API error is swallowed and yields no aliases (issue #7118)
+def test_get_entity_aliases_returns_empty_list_on_error():
+    client = _build_client()
+    client.session.get.side_effect = requests.RequestException("boom")
+
+    assert client.get_entity_aliases("entity-3") == []
+    client.helper.connector_logger.warning.assert_called_once()

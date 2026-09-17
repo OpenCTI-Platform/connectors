@@ -29,6 +29,7 @@ THREAT_ACTOR_PATH = "/public/opencti/threat_actors.json"
 INSIKT_SOURCE = "VKz42X"
 THREAT_MAPS_PATH = API_BASE + "/threat/maps"
 LINKS_PATH = API_BASE + "/links/search"
+ENTITY_MATCH_PATH = API_BASE + "/entity-match/entity"
 
 ANALYST_NOTES_ENDPOINT = API_BASE + "/analyst-note"
 ANALYST_NOTES_SEARCH_ENDPOINT = API_BASE + "/analyst-note/search"
@@ -291,6 +292,40 @@ class RFClient:
                 )
                 return None
         return entity_links
+
+    def get_entity_aliases(self, entity_id: str) -> list:
+        """Fetches known alternate names ("AKA") for a Recorded Future entity.
+
+        Uses the Entity Match API, which exposes the entity's well-known
+        alternative names and full alias list. These are mapped to the STIX
+        `aliases` property so OpenCTI can deduplicate Threat Actors and
+        Intrusion Sets coming from other feeds using short group names.
+
+        Args:
+            * entity_id: Recorded Future entity ID
+        Returns:
+            A deduplicated list of alias names, excluding empty values.
+            Returns an empty list when no alias is found or on API error.
+        """
+        try:
+            value_entity_id = parse.quote(entity_id, safe="")
+            res = self.session.get(f"{ENTITY_MATCH_PATH}/{value_entity_id}")
+            res.raise_for_status()
+            attributes = res.json().get("data", {}).get("attributes", {})
+        except requests.RequestException as err:
+            self.helper.connector_logger.warning(
+                "[API] Unable to fetch aliases for entity",
+                {"entity_id": entity_id, "error": str(err)},
+            )
+            return []
+
+        aliases = []
+        for alias in (attributes.get("common_names") or []) + (
+            attributes.get("alias") or []
+        ):
+            if alias and alias not in aliases:
+                aliases.append(alias)
+        return aliases
 
     def check_vul_entitlement(self):
         try:
