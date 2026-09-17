@@ -158,7 +158,6 @@ OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT = ObservationFactory(
 )
 
 
-
 class CrowdStrikeAPIError(RuntimeError):
     """CrowdStrike API failure surfaced during pagination."""
 
