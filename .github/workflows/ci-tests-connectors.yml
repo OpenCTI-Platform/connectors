@@ -130,3 +130,41 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           report_type: test_results
+
+  # Single, stable job name to set as a required status check. The `test`
+  # job above runs as a dynamic matrix, so individual matrix entries can't be
+  # marked required (their names change with the matrix content) and the
+  # whole job is skipped when has_tests == 'false'. This job always runs
+  # (if: always()) so it reports a status even when `test` is skipped,
+  # and gives a single go/no-go based on the actual matrix outcome.
+  tests-summary:
+    name: Tests Summary
+    needs:
+      - detect-test-files
+      - test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check matrix result
+        run: |
+          result="${{ needs.test.result }}"
+          has_tests="${{ needs.detect-test-files.outputs.has_tests }}"
+
+          if [ "$has_tests" != "true" ]; then
+            echo "No relevant test files changed, nothing to run."
+            exit 0
+          fi
+
+          case "$result" in
+            success)
+              echo "All connector tests passed."
+              ;;
+            skipped)
+              echo "::error::Test matrix was skipped unexpectedly while tests were expected to run."
+              exit 1
+              ;;
+            *)
+              echo "::error::One or more connector tests failed (result: $result)."
+              exit 1
+              ;;
+          esac
