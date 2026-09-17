@@ -116,7 +116,7 @@
     },
     "THEHIVE_CASE_STATUS_MAPPING": {
       "default": [],
-      "description": "Comma-separated mapping of TheHive case extended status to OpenCTI workflow status IDs (e.g. Resolved:status-id-1).",
+      "description": "Comma-separated mapping of TheHive case status to OpenCTI workflow status IDs (e.g. Resolved:status-id-1).",
       "items": {
         "type": "string"
       },
