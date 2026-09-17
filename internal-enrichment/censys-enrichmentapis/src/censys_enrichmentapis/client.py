@@ -6,10 +6,11 @@ from censys_enrichmentapis.errors import EntityHasNoUsableHashError
 from censys_platform import (
     SDK,
     Certificate,
-    Host,
+    ErrorModel,
     HostEnrichment,
     SearchQueryInputBody,
     V3GlobaldataSearchQueryResponse,
+    Webproperty,
 )
 
 
@@ -108,26 +109,36 @@ class Client:
                     if hit.certificate_v1:
                         yield hit.certificate_v1.resource
 
-    def fetch_hosts(self, hostname: str) -> Generator[Host, None, None]:
-        """Fetch hosts by hostname
+    def fetch_web_properties(
+        self, hostname: str, ports: tuple[int, ...] = (80, 443)
+    ) -> Generator[Webproperty, None, None]:
+        """Fetch the web properties exposed by a hostname on selected ports.
+
         Args:
             hostname (str): The hostname to search for.
+            ports: Ports used to construct Censys web-property identifiers.
+
         Yields:
-            Generator[Host, None, None]: Yields Host objects matching the hostname.
+            Webproperty: Each web property found by Censys.
         """
         with SDK(
             organization_id=self.organisation_id,
             personal_access_token=self.token,
         ) as sdk:
-            query = f"host.dns.names = '{hostname}'"
-            search_query = SearchQueryInputBody(query=query)
-            res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
-                search_query_input_body=search_query
-            )
-            if res.result.result:
-                for hit in res.result.result.hits:
-                    if hit.host_v1:
-                        yield hit.host_v1.resource
+            for port in ports:
+                webproperty_id = f"{hostname}:{port}"
+                try:
+                    response = sdk.global_data.get_web_property(
+                        webproperty_id=webproperty_id
+                    )
+                except ErrorModel as error:
+                    # It is normal for a domain to expose only HTTP or HTTPS.
+                    if error.status_code == 404:
+                        continue
+                    raise
+
+                if webproperty_asset := response.result.result:
+                    yield webproperty_asset.resource
 
     def fetch_certs_by_domain(self, domain: str) -> Generator[Certificate, None, None]:
         """Fetch certificates that reference a domain in their names

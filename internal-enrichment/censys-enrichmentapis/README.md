@@ -32,7 +32,7 @@ Censys is an internet intelligence platform that continuously scans the global I
 
 This connector integrates Censys Search with OpenCTI to enrich:
 - **IP addresses** (IPv4/IPv6): Geolocation, ASN, services, software, hostnames, certificates, reputation score, threat labels.
-- **Domain names**: Resolving hosts with all associated IP enrichment data
+- **Domain names**: Web properties on ports 80 and 443, plus related certificates
 - **X509 Certificates**: Certificate metadata from Censys certificate database
 
 ## Installation
@@ -149,8 +149,8 @@ Select an IPv4-Addr, IPv6-Addr, Domain-Name, or X509-Certificate observable, the
     - Model version information
 
   ### Domain Names
-  - Searches for hosts with the domain in their DNS records
-  - Creates IP address observables for discovered hosts
+  - Retrieves the Censys web properties identified by `<domain>:80` and `<domain>:443`
+  - Creates one domain-linked Markdown note per property with web, threat, vulnerability, software, and certificate details
   - **Discovers X.509 certificates** that reference the domain in their Subject Alternative Names (SANs) or Common Name (CN)
   - Creates certificate entities with full metadata (issuer, validity, extensions)
   - Links certificates to the domain for infrastructure mapping
@@ -167,7 +167,7 @@ Select an IPv4-Addr, IPv6-Addr, Domain-Name, or X509-Certificate observable, the
 
   **Note**: Certificate discovery for domains adds an additional API call per domain enrichment. Be mindful of Censys API rate limits.
 
-The connector queries the Censys Search API and creates related entities based on the data returned.
+The connector queries the Censys Platform APIs and creates related entities based on the data returned.
 
 ### Data Flow
 
@@ -181,6 +181,7 @@ graph LR
 
     subgraph Censys API
         hostEnrichmentAPI[Host Enrichment API]
+        WebPropertyAPI[Web Property API]
         CertAPI[Certificate API]
     end
 
@@ -196,11 +197,13 @@ graph LR
         Org[Organization Identity]
         ServiceNote[Service Information Note]
         ReputationNote[Host Reputation Note]
+        WebPropertyNote[Web Property Note]
         IPOut[IPv4/IPv6 Observable]
     end
 
     IP --> hostEnrichmentAPI
-    Domain --> hostEnrichmentAPI
+    Domain --> WebPropertyAPI
+    Domain --> CertAPI
     Cert --> CertAPI
     hostEnrichmentAPI --> City
     hostEnrichmentAPI --> Country
@@ -214,6 +217,7 @@ graph LR
     hostEnrichmentAPI --> ServiceNote
     hostEnrichmentAPI --> ReputationNote
     hostEnrichmentAPI --> IPOut
+    WebPropertyAPI --> WebPropertyNote
     CertAPI --> Certificate
 ```
 
@@ -239,6 +243,7 @@ graph LR
 | autonomous_system.name    | Organization (Identity)  | Organization operating the AS                               |
 | Certificate fingerprints  | X509-Certificate         | Certificate with SHA-1, SHA-256, MD5 hashes                 |
 | Certificate parsed data   | X509-Certificate         | Subject, issuer, validity, key info, extensions             |
+| Web property fields       | Note                     | Key/value Markdown table for ports 80 and 443               |
 
 ### Entity Mapping by Observable Type
 
@@ -246,7 +251,7 @@ graph LR
 |------------------|---------------------------------------------------------------------------------|
 | IPv4-Addr        | Locations, Hostnames, Software, Certificates, ASN, Organization, Notes          |
 | IPv6-Addr        | Locations, Hostnames, Software, Certificates, ASN, Organization, Notes          |
-| Domain-Name      | Related IPs + all enrichment data for each resolved IP                          |
+| Domain-Name      | Web-property notes for ports 80/443 and related certificate entities            |
 | X509-Certificate | Certificate entity with full parsed metadata                                    |
 
 ### Relationships Created

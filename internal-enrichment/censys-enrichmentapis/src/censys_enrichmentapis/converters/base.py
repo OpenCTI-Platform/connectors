@@ -1,4 +1,6 @@
+import re
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from typing import Any, Mapping
 
 from censys_enrichmentapis.builder import CensysStixBuilder
@@ -7,10 +9,8 @@ from connectors_sdk.models import BaseObject
 
 # ``observable`` arrives at the converters in two shapes: a plain
 # ``dict`` from the OpenCTI enrichment payload (see
-# ``Connector._process``) AND a ``stix2`` object (e.g.
-# ``stix2.IPv4Address``) when ``DomainConverter._append_hosts``
-# composes ``HostConverter._convert(observable=ip_stix.to_stix2_object(), ...)``
-# or when a test passes a ``stix2`` instance directly. Both shapes
+# ``Connector._process``) or a ``stix2`` object when a caller already
+# has one (as in converter unit tests). Both shapes
 # expose the read-only ``observable["..."]`` / ``.get(...)`` access
 # pattern the converters rely on, so the contract is "any
 # string-keyed mapping" rather than ``dict`` specifically — using
@@ -45,6 +45,26 @@ class CensysConverter(ABC):
         if self.client is None:
             raise ValueError("Client is required")
         return self.client
+
+    @staticmethod
+    def _value(value: object, field: str) -> object | None:
+        if isinstance(value, dict):
+            return value.get(field)
+        return getattr(value, field, None)
+
+    @classmethod
+    def _format_censys_labels(
+        cls, values: Iterable[object], category: str | None = None
+    ) -> list[str]:
+        """Format and deduplicate Censys values as observable labels."""
+        prefix = f"Censys_{category}_" if category else "Censys_"
+        return list(
+            dict.fromkeys(
+                f"{prefix}{re.sub(r'[\s\-]+', '_', value.strip())}"
+                for value in values
+                if isinstance(value, str) and value.strip()
+            )
+        )
 
     @abstractmethod
     def _fetch_data(self, observable: ObservableLike) -> Any:

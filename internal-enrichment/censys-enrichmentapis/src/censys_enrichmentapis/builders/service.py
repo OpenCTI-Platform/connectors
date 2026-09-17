@@ -4,7 +4,7 @@ from typing import Any
 from urllib.parse import quote
 
 from censys_enrichmentapis.builders.base import AreaStixBuilder, StixBuildContext
-from censys_platform import HostEnrichmentService, Reputation, Service
+from censys_platform import HostEnrichmentService, Reputation, Service, Webproperty
 from connectors_sdk.models import (
     AttackPattern,
     ExternalReference,
@@ -217,6 +217,111 @@ class ServiceStixBuilder(AreaStixBuilder):
             )
         )
 
+    def add_web_property_note(
+        self,
+        observable: Reference,
+        web_property: Webproperty,
+        labels: list[str] | None = None,
+    ) -> None:
+        """Add the selected Censys web-property fields as a Markdown table."""
+        rows = ["| Key | Value |", "|---|---|"]
+
+        def add_row(key: str, value: object | None) -> None:
+            if value is None or value == "":
+                return
+            rows.append(
+                f"| {self._markdown_cell(key)} | "
+                f"{self._markdown_inline_code(value)} |"
+            )
+
+        hostname_value = self._get_value(web_property, "hostname")
+        port_value = self._get_value(web_property, "port")
+        add_row("web.hostname", hostname_value)
+        add_row("web.port", port_value)
+        for endpoint in self._get_value(web_property, "endpoints") or []:
+            add_row(
+                "web.endpoints.endpoint_type",
+                self._get_value(endpoint, "endpoint_type"),
+            )
+        add_row("web.scan_time", self._get_value(web_property, "scan_time"))
+        for label in self._get_value(web_property, "labels") or []:
+            add_row("web.labels.value", self._get_value(label, "value"))
+        for threat in self._get_value(web_property, "threats") or []:
+            add_row("web.threats.name", self._get_value(threat, "name"))
+        for vulnerability in self._get_value(web_property, "vulns") or []:
+            add_row("web.vulns.name", self._get_value(vulnerability, "name"))
+        for software in self._get_value(web_property, "software") or []:
+            add_row("web.software.vendor", self._get_value(software, "vendor"))
+            add_row("web.software.product", self._get_value(software, "product"))
+            add_row("web.software.version", self._get_value(software, "version"))
+
+        certificate = self._get_value(web_property, "cert")
+        add_row(
+            "web.cert.fingerprint_sha256",
+            self._get_value(certificate, "fingerprint_sha256"),
+        )
+        parsed = self._get_value(certificate, "parsed")
+        add_row(
+            "web.cert.parsed.subject_dn",
+            self._get_value(parsed, "subject_dn"),
+        )
+        add_row(
+            "web.cert.parsed.issuer_dn",
+            self._get_value(parsed, "issuer_dn"),
+        )
+        subject = self._get_value(parsed, "subject")
+        for common_name in self._get_value(subject, "common_name") or []:
+            add_row("web.cert.parsed.subject.common_name", common_name)
+        validity_period = self._get_value(parsed, "validity_period")
+        add_row(
+            "web.cert.parsed.validity_period.not_before",
+            self._get_value(validity_period, "not_before"),
+        )
+        add_row(
+            "web.cert.parsed.validity_period.not_after",
+            self._get_value(validity_period, "not_after"),
+        )
+        signature = self._get_value(parsed, "signature")
+        add_row(
+            "web.cert.parsed.signature.self_signed",
+            self._get_value(signature, "self_signed"),
+        )
+        for name in self._get_value(certificate, "names") or []:
+            add_row("web.cert.names", name)
+
+        if len(rows) == 2:
+            return
+
+        hostname = hostname_value or "unknown host"
+        port = port_value or "unknown port"
+        title_hostname = self._markdown_inline_code(hostname)
+        content_parts = []
+        if isinstance(hostname_value, str) and isinstance(port_value, int):
+            webproperty_id = quote(f"{hostname_value}:{port_value}", safe=":")
+            censys_url = f"https://platform.censys.io/web/{webproperty_id}"
+            content_parts.append(f"[{censys_url}]({censys_url})")
+        content_parts.append("\n".join(rows))
+        note_args: dict[str, Any] = {}
+        scan_time = self._get_value(web_property, "scan_time")
+        if isinstance(scan_time, str):
+            try:
+                note_args["created"] = datetime.datetime.fromisoformat(scan_time)
+            except ValueError:
+                pass
+
+        self.bundle.append(
+            Note(
+                abstract=f"Censys web property {title_hostname}:{port}",
+                content="\n\n".join(content_parts),
+                note_types=[NoteType.EXTERNAL],
+                labels=labels or None,
+                authors=[self._context.author.name],
+                objects=[observable],
+                **note_args,
+                **self.common_props,
+            )
+        )
+
     def add_reputation_note(
         self,
         observable: Reference,
@@ -302,6 +407,14 @@ class ServiceStixBuilder(AreaStixBuilder):
             .replace("|", r"\|")
             .replace("\n", "<br>")
     )
+
+    def _markdown_inline_code(self, value: Any) -> str:
+        """Render a table value as non-linkable Markdown inline code."""
+        text = self._markdown_cell(value)
+        delimiter = "`"
+        while delimiter in text:
+            delimiter += "`"
+        return f"{delimiter}{text}{delimiter}"
 
 
     def _build_service_content(self, service: HostService) -> str:
@@ -572,42 +685,6 @@ class ServiceStixBuilder(AreaStixBuilder):
         if len(evidence_rows) > 2:
             content_parts.append("\n\n**Evidence:**")
             content_parts.append("\n".join(evidence_rows))
-
-        actor_rows = [
-            "| Primary Name | All Names | MITRE Group ID | Malpedia Group ID |",
-            "|---|---|---|---|",
-        ]
-        if isinstance(actors := self._get_value(threat, "actors"), list):
-            for actor in actors:
-                primary_name = self._get_value(actor, "primary_name")
-                all_names = self._get_value(actor, "all_names")
-                if isinstance(all_names, list):
-                    all_names = ", ".join(
-                        str(name) for name in all_names if name is not None
-                    )
-                mitre_group_id = self._get_value(actor, "mitre_group_id")
-                malpedia_group_id = self._get_value(actor, "malpedia_group_id")
-                actor_values = (
-                    primary_name,
-                    all_names,
-                    mitre_group_id,
-                    malpedia_group_id,
-                )
-                if not any(
-                    value is not None and value != "" for value in actor_values
-                ):
-                    continue
-                actor_rows.append(
-                    "| "
-                    + " | ".join(
-                        self._markdown_cell(value or None) for value in actor_values
-                    )
-                    + " |"
-                )
-
-        if len(actor_rows) > 2:
-            content_parts.append("\n\n**Actors:**")
-            content_parts.append("\n".join(actor_rows))
 
         if malware_data := self._get_value(threat, "malware"):
             if isinstance(malware_data, dict) and malware_data.get("primary_name"):
