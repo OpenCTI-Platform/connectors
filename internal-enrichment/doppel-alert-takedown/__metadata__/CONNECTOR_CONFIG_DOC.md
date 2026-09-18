@@ -11,11 +11,13 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | DOPPEL_ALERT_TAKEDOWN_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Doppel API key, sent as the `x-api-key` header. |
 | DOPPEL_ALERT_TAKEDOWN_USER_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Doppel user API key, sent as the `x-user-api-key` header. |
 | CONNECTOR_NAME | `string` |  | string | `"Doppel Alert and Takedown"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["Url", "Domain-Name"]` | The scope of the connector (types of observables to enrich). |
+| CONNECTOR_SCOPE | `array` |  | string | `["Url", "Domain-Name"]` | The OpenCTI entity types supported by the connector. Add Incident to request takedown for existing Doppel alerts. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
-| CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
+| CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. Must be false when CONNECTOR_SCOPE includes Incident. |
+| CONNECTOR_AUTO_UPDATE | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is updated. Must be false when CONNECTOR_SCOPE includes Incident. |
 | DOPPEL_ALERT_TAKEDOWN_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.doppel.com/"` | Doppel API base URL. |
+| DOPPEL_ALERT_TAKEDOWN_ORGANIZATION_CODE | `string` |  | string | `null` | Doppel organization workspace code, sent as the `x-organization-code` header. Required for users that belong to multiple organizations. |
 | DOPPEL_ALERT_TAKEDOWN_TAGS | `array` |  | string | `[]` | List of tags to attach to the alerts created in Doppel. |
 | DOPPEL_ALERT_TAKEDOWN_TAKEDOWN_COMMENT | `string` |  | string | `"Confirmed by OpenCTI — requesting takedown."` | Comment sent to Doppel when requesting a takedown. |
 | DOPPEL_ALERT_TAKEDOWN_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:RED"` | Max TLP level of entities to enrich. |
