@@ -33,12 +33,13 @@ run-name: >-
 #   5. Create GitHub Release with changelog + manifest/schema/fragment assets
 #   6. Update container_version in manifest and commit back to default branch
 #
-# Transition mode — `manifest_only` (workflow_dispatch only, never on tag push):
-# skips step 4 (Docker build/push) only — everything else (release notes, tag,
-# GitHub Release, manifest fragment, container_version commit-back) still runs
-# normally. Used while image builds are still handled by CircleCI (see
-# release-bulk-connectors.yml, which forces this mode when triggered by a
-# platform CalVer tag push).
+# Manifest-only mode — `manifest_only` (workflow_dispatch only, never on tag
+# push): skips step 4 (Docker build/push) only — everything else (release
+# notes, tag, GitHub Release, manifest fragment, container_version
+# commit-back) still runs normally. Used when the images for this version are
+# already built elsewhere — see release-bulk-connectors.yml, which forces this
+# mode on a platform CalVer tag push because build-all-connectors.yml builds
+# and pushes every connector image for that same tag.
 
 on:
   push:
@@ -69,8 +70,8 @@ on:
         default: false
       manifest_only:
         description: >
-          Manifest-only — skip Docker build/push only (still handled by
-          CircleCI during the transition). Release notes, tag, GitHub
+          Manifest-only — skip Docker build/push only, for when the image
+          is already built by another workflow. Release notes, tag, GitHub
           Release, manifest fragment, and container_version commit-back are
           still fully produced.
         required: false
@@ -663,7 +664,7 @@ jobs:
 
           NOTES="$CHANGELOG"
           if [ "$MANIFEST_ONLY" = "true" ]; then
-            NOTICE="> 🧩 **Manifest-only release** — Docker build/push is still handled by CircleCI during the CircleCI→GitHub Actions transition; no image was built by this workflow run for this tag."
+            NOTICE="> 🧩 **Manifest-only release** — no image was built by this workflow run for this tag; the Docker build/push is handled by the build workflow for this version."
             NOTES="${NOTICE}"$'\n\n'"${NOTES}"
           fi
 
@@ -858,7 +859,7 @@ jobs:
             echo "## 🚀 Release Connector — Summary"
             echo ""
             if [ "$MANIFEST_ONLY" = "true" ]; then
-              echo "> 🧩 **MANIFEST-ONLY** — Docker build/push was skipped (still handled by CircleCI during the transition); tag, GitHub Release, manifest fragment, and container_version commit-back were still produced normally."
+              echo "> 🧩 **MANIFEST-ONLY** — Docker build/push was skipped (handled by the build workflow for this version); tag, GitHub Release, manifest fragment, and container_version commit-back were still produced normally."
               echo ""
             elif [ "$DRY_RUN" = "true" ]; then
               echo "> ⚠️ **DRY RUN** — no images were pushed and no release was created."
