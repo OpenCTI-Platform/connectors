@@ -68,9 +68,9 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter       | config.yml                         | Docker environment variable            | Default    | Mandatory | Description                                                        |
 |-----------------|------------------------------------|-----------------------------------------|------------|-----------|--------------------------------------------------------------------|
-| Organisation ID | censys_enrichment.organisation_id  | `CENSYS_ENRICHMENT_ORGANISATION_ID`     |            | Yes       | Your Censys organisation ID for API authentication.                |
-| API Token       | censys_enrichment.token            | `CENSYS_ENRICHMENT_TOKEN`               |            | Yes       | Your Censys API token for authentication.                          |
-| Max TLP         | censys_enrichment.max_tlp          | `CENSYS_ENRICHMENT_MAX_TLP`             | TLP:AMBER  | No        | Maximum TLP level for observables to be enriched.                  |
+| Organisation ID | censys_enrichmentapis.organisation_id  | `CENSYS_ENRICHMENTAPIS_ORGANISATION_ID`     |            | Yes       | Your Censys organisation ID for API authentication.                |
+| API Token       | censys_enrichmentapis.token            | `CENSYS_ENRICHMENTAPIS_TOKEN`               |            | Yes       | Your Censys API token for authentication.                          |
+| Max TLP         | censys_enrichmentapis.max_tlp          | `CENSYS_ENRICHMENTAPIS_MAX_TLP`             | TLP:AMBER  | No        | Maximum TLP level for observables to be enriched.                  |
 
 ## Deployment
 
@@ -95,9 +95,9 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,X509-Certificate,Domain-Name
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_AUTO=false
-      - CENSYS_ENRICHMENT_ORGANISATION_ID=ChangeMe
-      - CENSYS_ENRICHMENT_TOKEN=ChangeMe
-      - CENSYS_ENRICHMENT_MAX_TLP=TLP:AMBER
+      - CENSYS_ENRICHMENTAPIS_ORGANISATION_ID=ChangeMe
+      - CENSYS_ENRICHMENTAPIS_TOKEN=ChangeMe
+      - CENSYS_ENRICHMENTAPIS_MAX_TLP=TLP:AMBER
     restart: always
 ```
 
@@ -109,7 +109,7 @@ docker compose up -d
 
 ### Manual Deployment
 
-1. Copy `src/config.yaml.sample` to `src/config.yml` and configure with your credentials.
+1. Copy `config.yml.sample` to `src/config.yml` and configure with your credentials.
 
 2. Install dependencies:
 

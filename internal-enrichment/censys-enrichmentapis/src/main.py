@@ -24,8 +24,8 @@ if __name__ == "__main__":
             playbook_compatible=True,
         )
         client = Client(
-            organisation_id=config.censys_enrichment.organisation_id.get_secret_value(),
-            token=config.censys_enrichment.token.get_secret_value(),
+            organisation_id=config.censys_enrichmentapis.organisation_id.get_secret_value(),
+            token=config.censys_enrichmentapis.token.get_secret_value(),
         )
         connector = Connector(
             config=config,

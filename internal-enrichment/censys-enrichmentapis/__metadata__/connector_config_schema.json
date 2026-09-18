@@ -56,7 +56,7 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
-    "CENSYS_ENRICHMENT_MAX_TLP": {
+    "CENSYS_ENRICHMENTAPIS_MAX_TLP": {
       "default": "TLP:AMBER",
       "description": "The maximum TLP level allowed for enrichment.",
       "enum": [
@@ -69,13 +69,13 @@
       ],
       "type": "string"
     },
-    "CENSYS_ENRICHMENT_ORGANISATION_ID": {
+    "CENSYS_ENRICHMENTAPIS_ORGANISATION_ID": {
       "description": "Censys organisation ID.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
-    "CENSYS_ENRICHMENT_TOKEN": {
+    "CENSYS_ENRICHMENTAPIS_TOKEN": {
       "description": "Censys API token.",
       "format": "password",
       "type": "string",
@@ -85,8 +85,8 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CENSYS_ENRICHMENT_ORGANISATION_ID",
-    "CENSYS_ENRICHMENT_TOKEN"
+    "CENSYS_ENRICHMENTAPIS_ORGANISATION_ID",
+    "CENSYS_ENRICHMENTAPIS_TOKEN"
   ],
   "additionalProperties": true
 }

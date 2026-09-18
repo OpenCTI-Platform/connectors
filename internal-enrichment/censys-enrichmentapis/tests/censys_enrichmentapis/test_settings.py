@@ -13,10 +13,10 @@ def test_config() -> None:
     assert config.opencti.token.get_secret_value() == "opencti-token"
 
     assert (
-        config.censys_enrichment.organisation_id.get_secret_value()
+        config.censys_enrichmentapis.organisation_id.get_secret_value()
         == "censys-organisation_id"
     )
-    assert config.censys_enrichment.token.get_secret_value() == "censys-token"
+    assert config.censys_enrichmentapis.token.get_secret_value() == "censys-token"
 
     # Test defaults
     assert (
@@ -34,7 +34,7 @@ def test_config() -> None:
     assert config.connector.log_level == "error"
     assert config.connector.auto is False
 
-    assert config.censys_enrichment.max_tlp == "TLP:AMBER"
+    assert config.censys_enrichmentapis.max_tlp == "TLP:AMBER"
 
 
 @pytest.mark.usefixtures("mock_config")

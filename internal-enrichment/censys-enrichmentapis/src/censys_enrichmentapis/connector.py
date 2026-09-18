@@ -27,7 +27,9 @@ class Connector:
 
     def _send_bundle(self, stix_objects: list[dict[str, Any]]) -> str:
         bundle = self.helper.stix2_create_bundle(items=stix_objects)
-        bundles_sent = self.helper.send_stix2_bundle(bundle=bundle)
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle=bundle, cleanup_inconsistent_bundle=True
+        )
         return f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
 
     def _is_entity_in_scope(self, entity_type: str) -> bool:
@@ -49,7 +51,7 @@ class Connector:
         """Return True if the entity's TLP is <= configured max TLP."""
         return self.helper.check_max_tlp(
             tlp=self._extract_tlp(markings=markings),
-            max_tlp=self.config.censys_enrichment.max_tlp,
+            max_tlp=self.config.censys_enrichmentapis.max_tlp,
         )
 
     def _generate_octi_objects(

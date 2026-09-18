@@ -2,6 +2,8 @@
 .vscode
 .claude
 .venv
+.ai_plans
+.sample_responses
 
 
 # folders to ignore

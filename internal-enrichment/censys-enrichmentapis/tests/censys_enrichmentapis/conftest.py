@@ -25,8 +25,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 def fixture_mock_config(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPENCTI_URL", "http://test")
     monkeypatch.setenv("OPENCTI_TOKEN", "opencti-token")
-    monkeypatch.setenv("CENSYS_ENRICHMENT_ORGANISATION_ID", "censys-organisation_id")
-    monkeypatch.setenv("CENSYS_ENRICHMENT_TOKEN", "censys-token")
+    monkeypatch.setenv(
+        "CENSYS_ENRICHMENTAPIS_ORGANISATION_ID", "censys-organisation_id"
+    )
+    monkeypatch.setenv("CENSYS_ENRICHMENTAPIS_TOKEN", "censys-token")
 
 
 @pytest.fixture(name="mocked_helper")

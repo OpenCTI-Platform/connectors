@@ -4,7 +4,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: connector-censys-enrichmentapis:latest
+    image: opencti/connector-censys-enrichmentapis:latest
     environment:
       # OpenCTI configuration
       - OPENCTI_URL=${OPENCTI_URL:-http://localhost:8080}
@@ -16,7 +16,7 @@ services:
       - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-error}
       - CONNECTOR_AUTO=${CONNECTOR_AUTO:-false}
       # Censys configuration
-      - CENSYS_ENRICHMENT_ORGANISATION_ID=${CENSYS_ENRICHMENT_ORGANISATION_ID}
-      - CENSYS_ENRICHMENT_TOKEN=${CENSYS_ENRICHMENT_TOKEN}
-      - CENSYS_ENRICHMENT_MAX_TLP=${CENSYS_ENRICHMENT_MAX_TLP:-TLP:AMBER}
+      - CENSYS_ENRICHMENTAPIS_ORGANISATION_ID=${CENSYS_ENRICHMENTAPIS_ORGANISATION_ID}
+      - CENSYS_ENRICHMENTAPIS_TOKEN=${CENSYS_ENRICHMENTAPIS_TOKEN}
+      - CENSYS_ENRICHMENTAPIS_MAX_TLP=${CENSYS_ENRICHMENTAPIS_MAX_TLP:-TLP:AMBER}
     restart: always

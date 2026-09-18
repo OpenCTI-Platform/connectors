@@ -71,7 +71,7 @@ class _ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         return value
 
 
-class _CensysEnrichmentConfig(BaseConfigModel):
+class _CensysEnrichmentApisConfig(BaseConfigModel):
     max_tlp: Literal[
         "TLP:WHITE",
         "TLP:CLEAR",
@@ -97,7 +97,7 @@ class ConfigLoader(BaseConnectorSettings):
         default_factory=_ConnectorConfig,
         description="Internal Enrichment Connector configurations.",
     )
-    censys_enrichment: _CensysEnrichmentConfig = Field(
-        default_factory=_CensysEnrichmentConfig,
+    censys_enrichmentapis: _CensysEnrichmentApisConfig = Field(
+        default_factory=_CensysEnrichmentApisConfig,
         description="Censys EnrichmentAPIs configurations.",
     )
