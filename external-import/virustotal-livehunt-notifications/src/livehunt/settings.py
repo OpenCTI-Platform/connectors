@@ -218,5 +218,7 @@ class ConnectorSettings(BaseConnectorSettings):
                 )
                 connector_data["duration_period"] = timedelta(seconds=int(interval))
         data["connector"] = connector_data
-        data["virustotal_livehunt_notifications"] = virustotal_livehunt_notifications_data
+        data["virustotal_livehunt_notifications"] = (
+            virustotal_livehunt_notifications_data
+        )
         return data

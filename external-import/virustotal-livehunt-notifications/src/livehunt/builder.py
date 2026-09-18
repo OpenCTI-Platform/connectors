@@ -625,7 +625,7 @@ class LivehuntBuilder:
                 sdk_class = Hostname
                 stix_type = "x-opencti-hostname"
                 octi_type = "Hostname"
-            
+
             observable = sdk_class(
                 value=value,
                 author=self.author,
