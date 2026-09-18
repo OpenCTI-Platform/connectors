@@ -1,7 +1,7 @@
-from typing import Any, Dict, Generator
+import re
+from typing import Any, Generator
 
 import httpx
-
 from censys_enrichmentapis.errors import EntityHasNoUsableHashError
 from censys_platform import (
     SDK,
@@ -13,9 +13,11 @@ from censys_platform import (
     Webproperty,
 )
 
+_HEX_DIGITS_RE = re.compile(r"^[0-9a-fA-F]+$")
+
 
 class Client:
-    def __init__(self, organisation_id: str, token: str):
+    def __init__(self, organisation_id: str, token: str) -> None:
         self.organisation_id = organisation_id
         self.token = token
 
@@ -54,13 +56,15 @@ class Client:
             raise ValueError(f"No data found for IP {ip}")
 
     @staticmethod
-    def _restore_service_fields(
-        host: HostEnrichment, response: dict[str, Any]
-    ) -> None:
+    def _restore_service_fields(host: HostEnrichment, response: dict[str, Any]) -> None:
         """Restore service fields not yet represented by censys-platform 0.16."""
         resource = response.get("result", {}).get("result", {}).get("resource", {})
-        raw_services = resource.get("services", []) if isinstance(resource, dict) else []
-        for service, raw_service in zip(host.services or [], raw_services, strict=False):
+        raw_services = (
+            resource.get("services", []) if isinstance(resource, dict) else []
+        )
+        for service, raw_service in zip(
+            host.services or [], raw_services, strict=False
+        ):
             if not isinstance(raw_service, dict):
                 continue
             for field in ("software", "vulns"):
@@ -69,11 +73,25 @@ class Client:
                     # their instances remain safely extensible for conversion.
                     service.__dict__[field] = raw_service[field]
 
-    def fetch_certs(self, hashes: Dict[str, str]) -> Generator[Certificate, None, None]:
+    def _search_certificates(self, query: str) -> Generator[Certificate, None, None]:
+        """Run a Censys search query and yield the matching certificates."""
+        with SDK(
+            organization_id=self.organisation_id,
+            personal_access_token=self.token,
+        ) as sdk:
+            res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
+                search_query_input_body=SearchQueryInputBody(query=query)
+            )
+            if res.result.result:
+                for hit in res.result.result.hits:
+                    if hit.certificate_v1:
+                        yield hit.certificate_v1.resource
+
+    def fetch_certs(self, hashes: dict[str, str]) -> Generator[Certificate, None, None]:
         """Fetch certificates by their hashes
 
         Args:
-            hashes (Dict[str, str]): A dictionary containing one or more of the following keys
+            hashes (dict[str, str]): A dictionary containing one or more of the following keys
                 with their corresponding hash values:
                     - "MD5"
                     - "SHA-1"
@@ -81,33 +99,23 @@ class Client:
         Yields:
             Certificate: Censys Certificate objects matching the provided hashes.
         Raises:
-            EntityHasNoUsableHashError: If none of the required hashes are provided.
+            EntityHasNoUsableHashError: If none of the provided hashes are usable
+                (missing, or not a hexadecimal fingerprint).
         """
-        if not any(h in hashes for h in ("MD5", "SHA-1", "SHA-256")):
+        parts = []
+        for field, key in (
+            ("cert.fingerprint_md5", "MD5"),
+            ("cert.fingerprint_sha1", "SHA-1"),
+            ("cert.fingerprint_sha256", "SHA-256"),
+        ):
+            value = hashes.get(key)
+            if value and _HEX_DIGITS_RE.match(value):
+                parts.append(f'{field} = "{value}"')
+        if not parts:
             raise EntityHasNoUsableHashError(
                 "At least one hash (MD5, SHA1, SHA256) must be provided."
             )
-        parts = []
-        if "MD5" in hashes:
-            parts.append(f'cert.fingerprint_md5 = "{hashes["MD5"]}"')
-        if "SHA-1" in hashes:
-            parts.append(f'cert.fingerprint_sha1 = "{hashes["SHA-1"]}"')
-        if "SHA-256" in hashes:
-            parts.append(f'cert.fingerprint_sha256 = "{hashes["SHA-256"]}"')
-        query = " or ".join(parts)
-        search_query = SearchQueryInputBody(query=query)
-        with SDK(
-            organization_id=self.organisation_id,
-            personal_access_token=self.token,
-        ) as sdk:
-            ## TODO: change to use get_property instead of search on port 443
-            res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
-                search_query_input_body=search_query
-            )
-            if res.result.result:
-                for hit in res.result.result.hits:
-                    if hit.certificate_v1:
-                        yield hit.certificate_v1.resource
+        yield from self._search_certificates(" or ".join(parts))
 
     def fetch_web_properties(
         self, hostname: str, ports: tuple[int, ...] = (80, 443)
@@ -149,16 +157,8 @@ class Client:
         Yields:
             Generator[Certificate, None, None]: Yields Certificate objects matching the domain.
         """
-        with SDK(
-            organization_id=self.organisation_id,
-            personal_access_token=self.token,
-        ) as sdk:
-            query = f"cert.names = '{domain}'"
-            search_query = SearchQueryInputBody(query=query)
-            res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
-                search_query_input_body=search_query
-            )
-            if res.result.result:
-                for hit in res.result.result.hits:
-                    if hit.certificate_v1:
-                        yield hit.certificate_v1.resource
+        if any(c in domain for c in "'\"\\"):
+            # A domain can't legally contain a quote; a value that does would
+            # break out of the Censys search-query string literal below.
+            return
+        yield from self._search_certificates(f"cert.names = '{domain}'")

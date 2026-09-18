@@ -1,6 +1,11 @@
+from unittest.mock import Mock
+
+import pytest
 import stix2
+from censys_enrichmentapis.converters.certificate import CertificateConverter
 from censys_enrichmentapis.converters.domain import DomainConverter
 from censys_enrichmentapis.converters.host import HostConverter
+from censys_enrichmentapis.errors import EntityHasNoUsableHashError
 from censys_platform import (
     Attribute,
     Certificate,
@@ -15,6 +20,10 @@ from censys_platform import (
     Vuln,
     Webproperty,
 )
+from connectors_sdk.models import X509Certificate
+from connectors_sdk.models.enums import HashAlgorithm
+
+from .factories import CertificateFactory
 
 
 def test_converter_ipv4(host_ipv4: HostEnrichment) -> None:
@@ -60,12 +69,22 @@ def test_converter_ipv4(host_ipv4: HostEnrichment) -> None:
         "location--50b4cef5-9f48-5ae6-9777-8e1217b8f83d",
         "location--6004efb1-d850-551c-af0d-4717244377a8",
     }
-    assert locations["location--718026de-1217-54e3-9915-ebddd72ffc2b"].city == "Brisbane"
-    assert locations["location--834c5189-3715-561b-b68a-e835372d05ff"].region == "Oceania"
+    assert (
+        locations["location--718026de-1217-54e3-9915-ebddd72ffc2b"].city == "Brisbane"
+    )
+    assert (
+        locations["location--834c5189-3715-561b-b68a-e835372d05ff"].region == "Oceania"
+    )
     administrative_area = locations["location--50b4cef5-9f48-5ae6-9777-8e1217b8f83d"]
     assert administrative_area.administrative_area == "Queensland"
-    assert (administrative_area.latitude, administrative_area.longitude) == (-27.47, 153.02)
-    assert locations["location--6004efb1-d850-551c-af0d-4717244377a8"].country == "Australia"
+    assert (administrative_area.latitude, administrative_area.longitude) == (
+        -27.47,
+        153.02,
+    )
+    assert (
+        locations["location--6004efb1-d850-551c-af0d-4717244377a8"].country
+        == "Australia"
+    )
 
     hostnames = {
         object_.id: object_ for object_ in stix_objects if object_.type == "hostname"
@@ -105,7 +124,11 @@ def test_converter_ipv4(host_ipv4: HostEnrichment) -> None:
         ("resolves-to", "hostname--2aa1a527-f7f9-59c6-aa42-716270bccb27", ip_id),
         ("resolves-to", "hostname--21f6b21c-7cae-55af-b29b-54628a2c56f4", ip_id),
         ("related-to", ip_id, "identity--a7d63be9-7173-560e-9723-a5040d771c2c"),
-        ("belongs-to", ip_id, "autonomous-system--0204c07d-e4dd-5f14-a3d5-c93cb1c5a9fc"),
+        (
+            "belongs-to",
+            ip_id,
+            "autonomous-system--0204c07d-e4dd-5f14-a3d5-c93cb1c5a9fc",
+        ),
         (
             "related-to",
             "autonomous-system--0204c07d-e4dd-5f14-a3d5-c93cb1c5a9fc",
@@ -203,3 +226,60 @@ def test_converter_domain_adds_web_property_markdown_note() -> None:
     )
     assert "| web.cert.parsed.signature.self_signed | `true` |" in note.content
     assert "| web.cert.names | `www.example.com` |" in note.content
+
+
+def test_converter_domain_links_discovered_certificate() -> None:
+    domain = stix2.DomainName(value="example.com")
+    cert = CertificateFactory()
+
+    converter = DomainConverter()
+    stix_objects = [
+        object_.to_stix2_object()
+        for object_ in converter.to_stix(
+            observable=domain,
+            data={"web_properties": [], "certs": [cert]},
+        )
+    ]
+
+    certificate = next(
+        object_ for object_ in stix_objects if object_.type == "x509-certificate"
+    )
+    assert certificate.hashes["SHA-256"] == cert.fingerprint_sha256
+
+    relationship = next(
+        object_ for object_ in stix_objects if object_.type == "relationship"
+    )
+    assert relationship.relationship_type == "related-to"
+    assert str(relationship.source_ref) == certificate.id
+    assert str(relationship.target_ref) == domain.id
+
+
+def test_certificate_converter_converts_client_certificates() -> None:
+    cert = CertificateFactory()
+    client = Mock()
+    client.fetch_certs.return_value = [cert]
+    converter = CertificateConverter()
+    converter.client = client
+
+    objects = converter.to_stix(
+        observable={"hashes": {"SHA-256": cert.fingerprint_sha256}}
+    )
+
+    client.fetch_certs.assert_called_once_with(
+        hashes={"SHA-256": cert.fingerprint_sha256}
+    )
+    certificates = [obj for obj in objects if isinstance(obj, X509Certificate)]
+    assert len(certificates) == 1
+    assert certificates[0].hashes[HashAlgorithm.SHA256] == cert.fingerprint_sha256
+
+
+def test_certificate_converter_propagates_no_usable_hash_error() -> None:
+    # A malformed/observable-only X509 entity with no recognized fingerprint
+    # must surface as an error rather than silently producing an empty bundle.
+    client = Mock()
+    client.fetch_certs.side_effect = EntityHasNoUsableHashError("no hash")
+    converter = CertificateConverter()
+    converter.client = client
+
+    with pytest.raises(EntityHasNoUsableHashError):
+        converter.to_stix(observable={"hashes": {}})

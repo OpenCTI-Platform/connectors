@@ -1,7 +1,17 @@
+import datetime
+
 from censys_enrichmentapis.builder import CensysStixBuilder
 from censys_platform import Certificate, CertificateParsed
-from connectors_sdk.models import City, IPV4Address, IPV6Address, Reference, Vulnerability
+from connectors_sdk.models import (
+    City,
+    IPV4Address,
+    IPV6Address,
+    Reference,
+    Vulnerability,
+)
 from connectors_sdk.models.enums import HashAlgorithm
+
+from .factories import CertificateFactory
 
 SHA256 = "73b8ed5becf1ba6493d2e2215a42dfdc7877e91e311ff5e59fb43d094871e699"
 OBSERVABLE = Reference(id="ipv4-addr--cbd67181-b9f8-595b-8bc3-3971e34fa1cc")
@@ -50,9 +60,7 @@ def test_service_builder_skips_invalid_vulnerability() -> None:
     assert software is not None
     bundle_size = len(builder.bundle)
 
-    vulnerability = builder.services.add_vulnerability(
-        software, {"id": "not-a-cve"}
-    )
+    vulnerability = builder.services.add_vulnerability(software, {"id": "not-a-cve"})
 
     assert vulnerability is None
     assert len(builder.bundle) == bundle_size
@@ -84,9 +92,7 @@ def test_builder_reset_clears_vulnerability_cache() -> None:
     )
 
     assert second_vulnerability is not first_vulnerability
-    assert len(
-        [obj for obj in builder.bundle if isinstance(obj, Vulnerability)]
-    ) == 1
+    assert len([obj for obj in builder.bundle if isinstance(obj, Vulnerability)]) == 1
 
 
 def test_add_certificate_filters_missing_fingerprints() -> None:
@@ -129,3 +135,44 @@ def test_add_certificate_returns_none_for_empty_certificate() -> None:
 
     assert builder.certificates.add_certificate(cert=Certificate()) is None
     assert builder.certificates.add_certificate(cert=None) is None
+
+
+def test_add_certificate_maps_parsed_fields_and_extensions() -> None:
+    # ``CertificateFactory`` builds a fingerprinted certificate with a full
+    # ``parsed`` payload (signature, validity, key info, extensions) — the
+    # part of ``add_certificate`` no other test exercises.
+    builder = CensysStixBuilder()
+    cert = CertificateFactory()
+    parsed = cert.parsed
+
+    certificate = builder.certificates.add_certificate(cert=cert)
+
+    assert certificate is not None
+    assert certificate.serial_number == parsed.serial_number
+    assert certificate.issuer == parsed.issuer_dn
+    assert certificate.subject == parsed.subject_dn
+    assert certificate.signature_algorithm == parsed.signature.signature_algorithm.name
+    assert certificate.validity_not_before == datetime.datetime.fromisoformat(
+        parsed.validity_period.not_before
+    )
+    assert certificate.validity_not_after == datetime.datetime.fromisoformat(
+        parsed.validity_period.not_after
+    )
+    assert (
+        certificate.subject_public_key_algorithm
+        == parsed.subject_key_info.key_algorithm.name
+    )
+    assert certificate.authority_key_identifier == parsed.extensions.authority_key_id
+    assert certificate.crl_distribution_points == str(
+        parsed.extensions.crl_distribution_points
+    )
+    assert certificate.certificate_policies == str(
+        parsed.extensions.certificate_policies
+    )
+    assert certificate.key_usage == parsed.extensions.key_usage.model_dump_json()
+    assert (
+        certificate.extended_key_usage
+        == parsed.extensions.extended_key_usage.model_dump_json()
+    )
+    # Would raise if a mapped field held a value stix2 rejects.
+    certificate.to_stix2_object()

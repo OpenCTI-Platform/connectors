@@ -5,20 +5,13 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from censys_platform import (
-    BasicConstraints,
     Coordinates,
-    ExtendedKeyUsage,
     HostDNS,
     HostEnrichment,
     HostEnrichmentService,
-    KeyAlgorithm,
-    KeyUsage,
     Label,
     Location,
     Routing,
-    Signature,
-    SubjectKeyInfo,
-    ValidityPeriod,
 )
 from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
@@ -84,7 +77,9 @@ def fixture_host_ipv4() -> HostEnrichment:
 
 @pytest.fixture
 def get_host():
-    with patch("censys_platform.global_data.GlobalData.get_host_enrichment") as mock_get_host_enrichment:
+    with patch(
+        "censys_platform.global_data.GlobalData.get_host_enrichment"
+    ) as mock_get_host_enrichment:
         host = HostEnrichment(
             ip="1.1.1.1",
             location=Location(

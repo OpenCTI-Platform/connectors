@@ -3,7 +3,6 @@ from typing import Any
 from unittest.mock import Mock
 
 import pytest
-from pytest_mock import MockerFixture
 from censys_enrichmentapis.client import Client
 from censys_enrichmentapis.connector import Connector
 from censys_enrichmentapis.errors import (
@@ -12,6 +11,7 @@ from censys_enrichmentapis.errors import (
     MaxTlpError,
 )
 from censys_enrichmentapis.settings import ConfigLoader
+from pytest_mock import MockerFixture
 
 
 def filter_by_key_value(items: list[dict], key: str, value: Any) -> list[dict]:
@@ -122,35 +122,6 @@ def test__process_entity_not_in_scope_error(mocked_helper: Mock) -> None:
     assert exc_info.typename == "EntityNotInScopeError"
     assert exc_info.value.args == ("Unsupported entity type: wrong-type",)
 
-    with pytest.raises(MaxTlpError) as exc_info:
-        connector._process(
-            observable={
-                "entity_type": "IPv4-Addr",
-                "objectMarking": [{"definition_type": "TLP", "definition": "TLP:RED"}],
-            },
-            stix_entity={},
-            original_stix_objects=[],
-        )
-    assert exc_info.typename == "MaxTlpError"
-    assert exc_info.value.args == (
-        "TLP [{'definition_type': 'TLP', 'definition': 'TLP:RED'}] of observable exceeds MAX TLP",
-    )
-
-    with pytest.raises(EntityTypeNotSupportedError) as exc_info:
-        connector._process(
-            observable={
-                "entity_type": "IPv4-Addr",
-                "objectMarking": [
-                    {"definition_type": "TLP", "definition": "TLP:AMBER"}
-                ],
-            },
-            stix_entity={"type": "wrong-type"},
-            original_stix_objects=[],
-        )
-
-    assert exc_info.typename == "EntityTypeNotSupportedError"
-    assert exc_info.value.args == ("Observable type wrong-type not supported",)
-
 
 @pytest.mark.usefixtures("mock_config")
 def test__process_max_tlp_error(mocked_helper: Mock) -> None:
@@ -257,7 +228,7 @@ def test__message_callback_not_in_playbook(mocked_helper: Mock) -> None:
     with pytest.raises(KeyError) as exc_info:
         connector._message_callback(
             {
-                "event_type": "INTERNAL_ENRICHMENT",  # Mean not in playbook
+                "event_type": "INTERNAL_ENRICHMENT",  # Present => not in playbook
                 "stix_objects": [],
                 "enrichment_entity": {
                     "entity_type": "wrong-type",
@@ -374,7 +345,9 @@ def test_domain_name_enrichment(
         "censys_enrichmentapis.client.Client.fetch_web_properties",
         return_value=web_properties,
     )
-    mocker.patch("censys_enrichmentapis.client.Client.fetch_certs_by_domain", return_value=[])
+    mocker.patch(
+        "censys_enrichmentapis.client.Client.fetch_certs_by_domain", return_value=[]
+    )
     client = Client(
         organisation_id="test-org-id",
         token="test-token",
@@ -404,8 +377,7 @@ def test_domain_name_enrichment(
     }
     assert any("| web.labels.value | `WEB` |" in note["content"] for note in notes)
     assert any(
-        "| web.threats.name | `Fake Captcha` |" in note["content"]
-        for note in notes
+        "| web.threats.name | `Fake Captcha` |" in note["content"] for note in notes
     )
     assert any(
         note["content"].startswith(

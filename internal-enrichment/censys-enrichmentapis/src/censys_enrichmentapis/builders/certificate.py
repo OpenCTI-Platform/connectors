@@ -5,51 +5,55 @@ from connectors_sdk.models.enums import HashAlgorithm, RelationshipType
 
 
 class CertificateStixBuilder(AreaStixBuilder):
-    def _add_parsed_fields(
-        self, certificate: X509Certificate, cert: Certificate
-    ) -> None:
-        certificate.serial_number = cert.parsed.serial_number
-        certificate.issuer = cert.parsed.issuer_dn
-        certificate.subject = cert.parsed.subject_dn
-        if cert.parsed.signature:
-            certificate.signature_algorithm = (
-                cert.parsed.signature.signature_algorithm.name
+    def _parsed_field_kwargs(self, cert: Certificate) -> dict[str, object]:
+        # ``serial_number``, ``issuer``, ``subject``, and the subject public
+        # key fields are STIX id-contributing properties. Returning them as
+        # constructor kwargs (rather than assigning them onto an
+        # already-built ``X509Certificate``) means the object's id is
+        # computed once, from its final field values — assigning them
+        # afterward would recompute (and change) the id on every field
+        # already read/used it.
+        parsed = cert.parsed
+        kwargs: dict[str, object] = {
+            "serial_number": parsed.serial_number,
+            "issuer": parsed.issuer_dn,
+            "subject": parsed.subject_dn,
+        }
+        if parsed.signature:
+            kwargs["signature_algorithm"] = parsed.signature.signature_algorithm.name
+        if parsed.validity_period:
+            kwargs["validity_not_before"] = parsed.validity_period.not_before
+            kwargs["validity_not_after"] = parsed.validity_period.not_after
+        if parsed.subject_key_info:
+            kwargs["subject_public_key_algorithm"] = (
+                parsed.subject_key_info.key_algorithm.name
             )
-        if cert.parsed.validity_period:
-            certificate.validity_not_before = cert.parsed.validity_period.not_before
-            certificate.validity_not_after = cert.parsed.validity_period.not_after
-        if cert.parsed.subject_key_info:
-            certificate.subject_public_key_algorithm = (
-                cert.parsed.subject_key_info.key_algorithm.name
-            )
-            if cert.parsed.subject_key_info.rsa:
-                certificate.subject_public_key_modulus = (
-                    cert.parsed.subject_key_info.rsa.modulus
+            if parsed.subject_key_info.rsa:
+                kwargs["subject_public_key_modulus"] = (
+                    parsed.subject_key_info.rsa.modulus
                 )
-                certificate.subject_public_key_exponent = (
-                    cert.parsed.subject_key_info.rsa.exponent
+                kwargs["subject_public_key_exponent"] = (
+                    parsed.subject_key_info.rsa.exponent
                 )
+        if parsed.extensions:
+            kwargs.update(self._extension_kwargs(parsed.extensions))
+        return kwargs
 
-    def _add_extensions(
-        self, certificate: X509Certificate, cert: Certificate
-    ) -> None:
-        if cert.parsed.extensions.key_usage:
-            certificate.key_usage = cert.parsed.extensions.key_usage.model_dump_json()
-        if cert.parsed.extensions.basic_constraints:
-            certificate.basic_constraints = (
-                cert.parsed.extensions.basic_constraints.model_dump_json()
+    def _extension_kwargs(self, extensions: object) -> dict[str, object]:
+        kwargs: dict[str, object] = {
+            "crl_distribution_points": str(extensions.crl_distribution_points),
+            "authority_key_identifier": extensions.authority_key_id,
+            "certificate_policies": str(extensions.certificate_policies),
+        }
+        if extensions.key_usage:
+            kwargs["key_usage"] = extensions.key_usage.model_dump_json()
+        if extensions.basic_constraints:
+            kwargs["basic_constraints"] = extensions.basic_constraints.model_dump_json()
+        if extensions.extended_key_usage:
+            kwargs["extended_key_usage"] = (
+                extensions.extended_key_usage.model_dump_json()
             )
-        certificate.crl_distribution_points = str(
-            cert.parsed.extensions.crl_distribution_points
-        )
-        certificate.authority_key_identifier = cert.parsed.extensions.authority_key_id
-        if cert.parsed.extensions.extended_key_usage:
-            certificate.extended_key_usage = (
-                cert.parsed.extensions.extended_key_usage.model_dump_json()
-            )
-        certificate.certificate_policies = str(
-            cert.parsed.extensions.certificate_policies
-        )
+        return kwargs
 
     def add_certificate(
         self,
@@ -71,11 +75,10 @@ class CertificateStixBuilder(AreaStixBuilder):
             )
             if fingerprint
         }
-        certificate = X509Certificate(hashes=hashes or None, **self.common_props)
-        if cert.parsed:
-            self._add_parsed_fields(certificate=certificate, cert=cert)
-            if cert.parsed.extensions:
-                self._add_extensions(certificate=certificate, cert=cert)
+        parsed_kwargs = self._parsed_field_kwargs(cert) if cert.parsed else {}
+        certificate = X509Certificate(
+            hashes=hashes or None, **parsed_kwargs, **self.common_props
+        )
         self.bundle.append(certificate)
         if related_observable:
             self.add_relationship(

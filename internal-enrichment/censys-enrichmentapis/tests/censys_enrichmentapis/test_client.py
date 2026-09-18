@@ -1,8 +1,15 @@
 from unittest.mock import MagicMock
 
 import httpx
+import pytest
 from censys_enrichmentapis.client import Client
-from censys_platform import ErrorModel, ErrorModelData
+from censys_enrichmentapis.errors import EntityHasNoUsableHashError
+from censys_platform import (
+    ErrorModel,
+    ErrorModelData,
+    HostEnrichment,
+    HostEnrichmentService,
+)
 
 
 def test_fetch_web_properties_uses_hostname_and_ports(mocker) -> None:
@@ -48,12 +55,155 @@ def test_fetch_web_properties_skips_ports_not_found(mocker) -> None:
     sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
     sdk_context.return_value.__enter__.return_value = sdk
 
-    result = list(
-        Client("test-org", "test-token").fetch_web_properties("example.com")
-    )
+    result = list(Client("test-org", "test-token").fetch_web_properties("example.com"))
 
     assert result == [web_property]
     assert sdk.global_data.get_web_property.call_args_list == [
         mocker.call(webproperty_id="example.com:80"),
         mocker.call(webproperty_id="example.com:443"),
     ]
+
+
+def test_fetch_web_properties_reraises_non_404_error(mocker) -> None:
+    server_error = ErrorModel(
+        data=ErrorModelData(status=500, title="Internal Server Error"),
+        raw_response=httpx.Response(
+            500,
+            request=httpx.Request("GET", "https://api.platform.censys.io"),
+        ),
+    )
+    sdk = MagicMock()
+    sdk.global_data.get_web_property.side_effect = server_error
+    sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
+    sdk_context.return_value.__enter__.return_value = sdk
+
+    with pytest.raises(ErrorModel):
+        list(
+            Client("test-org", "test-token").fetch_web_properties(
+                "example.com", ports=(443,)
+            )
+        )
+
+
+def test_fetch_ip_raises_when_no_result(mocker) -> None:
+    response = MagicMock()
+    response.result.result = None
+    sdk = MagicMock()
+    sdk.global_data.get_host_enrichment.return_value = response
+    sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
+    sdk_context.return_value.__enter__.return_value = sdk
+
+    with pytest.raises(ValueError, match="No data found for IP 203.0.113.5"):
+        Client("test-org", "test-token").fetch_ip("203.0.113.5")
+
+
+def test_restore_service_fields_skips_non_dict_raw_service() -> None:
+    # A real Censys response could return a malformed/partial entry for a
+    # given service; the merge must skip it rather than crash the whole
+    # enrichment, while still restoring fields for well-formed siblings.
+    good_service = HostEnrichmentService(port=443)
+    bad_service = HostEnrichmentService(port=80)
+    host = HostEnrichment(services=[good_service, bad_service])
+    raw_response = {
+        "result": {
+            "result": {
+                "resource": {
+                    "services": [
+                        {"port": 443, "software": [{"product": "nginx"}]},
+                        "not-a-dict",
+                    ]
+                }
+            }
+        }
+    }
+
+    Client._restore_service_fields(host, raw_response)
+
+    assert good_service.__dict__["software"] == [{"product": "nginx"}]
+    assert "software" not in bad_service.__dict__
+
+
+def test_search_certificates_yields_nothing_when_no_match(mocker) -> None:
+    response = MagicMock()
+    response.result.result = None
+    sdk = MagicMock()
+    sdk.global_data.search.return_value = response
+    sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
+    sdk_context.return_value.__enter__.return_value = sdk
+
+    result = list(
+        Client("test-org", "test-token")._search_certificates(
+            "cert.names = 'example.com'"
+        )
+    )
+
+    assert result == []
+
+
+def test_search_certificates_skips_hits_without_certificate(mocker) -> None:
+    matching_cert = MagicMock()
+    response = MagicMock()
+    response.result.result.hits = [
+        MagicMock(certificate_v1=None),
+        MagicMock(certificate_v1=MagicMock(resource=matching_cert)),
+    ]
+    sdk = MagicMock()
+    sdk.global_data.search.return_value = response
+    sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
+    sdk_context.return_value.__enter__.return_value = sdk
+
+    result = list(Client("test-org", "test-token")._search_certificates("some query"))
+
+    assert result == [matching_cert]
+    query_arg = sdk.global_data.search.call_args.kwargs["search_query_input_body"]
+    assert query_arg.query == "some query"
+
+
+def test_fetch_certs_drops_invalid_hash_but_keeps_valid_one(mocker) -> None:
+    # A hash that isn't hexadecimal (e.g. containing a stray quote) must not
+    # reach the Censys search-query string literal unescaped.
+    sdk = MagicMock()
+    sdk.global_data.search.return_value.result.result = None
+    sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
+    sdk_context.return_value.__enter__.return_value = sdk
+
+    list(
+        Client("test-org", "test-token").fetch_certs(
+            {"MD5": "deadbeef", "SHA-256": '" or cert.names="anything'}
+        )
+    )
+
+    query = sdk.global_data.search.call_args.kwargs["search_query_input_body"].query
+    assert query == 'cert.fingerprint_md5 = "deadbeef"'
+
+
+def test_fetch_certs_raises_when_no_hash_is_usable() -> None:
+    with pytest.raises(EntityHasNoUsableHashError):
+        list(
+            Client("test-org", "test-token").fetch_certs({"SHA-1": '"; or 1=1 or x="'})
+        )
+
+
+def test_fetch_certs_by_domain_rejects_quote_without_calling_api(mocker) -> None:
+    sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
+
+    result = list(
+        Client("test-org", "test-token").fetch_certs_by_domain(
+            "example.com' or cert.names='anything"
+        )
+    )
+
+    assert result == []
+    sdk_context.assert_not_called()
+
+
+def test_fetch_certs_by_domain_builds_query(mocker) -> None:
+    sdk = MagicMock()
+    sdk.global_data.search.return_value.result.result = None
+    sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
+    sdk_context.return_value.__enter__.return_value = sdk
+
+    list(Client("test-org", "test-token").fetch_certs_by_domain("example.com"))
+
+    query = sdk.global_data.search.call_args.kwargs["search_query_input_body"].query
+    assert query == "cert.names = 'example.com'"

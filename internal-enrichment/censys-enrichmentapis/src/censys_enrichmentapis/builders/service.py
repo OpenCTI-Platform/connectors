@@ -22,8 +22,15 @@ from connectors_sdk.models.enums import (
     RelationshipType,
 )
 
-
 HostService = HostEnrichmentService | Service
+
+# ``MalwareType`` is a permissive STIX open-vocabulary enum: constructing it
+# from a value outside this set still succeeds, but emits a ``UserWarning``
+# (it never raises). Checking membership here keeps the intent of only
+# tagging ``Malware.types`` with recognized STIX malware types, without
+# triggering that warning for every Censys threat ``type`` value (e.g.
+# ``"proxy"``) that isn't one.
+_KNOWN_MALWARE_TYPES = frozenset(member.value for member in MalwareType)
 
 
 class ServiceStixBuilder(AreaStixBuilder):
@@ -117,23 +124,17 @@ class ServiceStixBuilder(AreaStixBuilder):
             cvss_v3_base_score=self._get_value(cvss, "score"),
             cvss_v3_base_severity=self._cvss_severity(severity),
             cvss_v3_attack_vector=self._get_value(components, "attack_vector"),
-            cvss_v3_attack_complexity=self._get_value(
-                components, "attack_complexity"
-            ),
+            cvss_v3_attack_complexity=self._get_value(components, "attack_complexity"),
             cvss_v3_privileges_required=self._get_value(
                 components, "privileges_required"
             ),
-            cvss_v3_user_interaction=self._get_value(
-                components, "user_interaction"
-            ),
+            cvss_v3_user_interaction=self._get_value(components, "user_interaction"),
             cvss_v3_scope=self._get_value(components, "scope"),
             cvss_v3_confidentiality_impact=self._get_value(
                 components, "confidentiality"
             ),
             cvss_v3_integrity_impact=self._get_value(components, "integrity"),
-            cvss_v3_availability_impact=self._get_value(
-                components, "availability"
-            ),
+            cvss_v3_availability_impact=self._get_value(components, "availability"),
             external_references=[
                 ExternalReference(
                     source_name="CVE",
@@ -332,11 +333,12 @@ class ServiceStixBuilder(AreaStixBuilder):
             return
 
         content_parts = []
-        censys_url = ( "https://platform.censys.io/hosts/" f"{quote(observable_value, safe='')}" )
+        censys_url = (
+            "https://platform.censys.io/hosts/" f"{quote(observable_value, safe='')}"
+        )
         content_parts.append(
             f"\n[View this host {observable_value} on Censys Platform]({censys_url})\n\n"
         )
-
 
         score_label = reputation.label
         if reputation.score is not None:
@@ -350,7 +352,6 @@ class ServiceStixBuilder(AreaStixBuilder):
         self._add_reputation_evidence_features(reputation, content_parts)
         if not content_parts:
             return
-
 
         self.bundle.append(
             Note(
@@ -387,9 +388,7 @@ class ServiceStixBuilder(AreaStixBuilder):
                         contribution = f"{feature.contribution:+.2f}%"
                     else:
                         contribution = str(feature.contribution)
-                rows.append(
-                    f"| {name} | {value} | {contribution} | {category} |"
-                )
+                rows.append(f"| {name} | {value} | {contribution} | {category} |")
 
         if len(rows) > 2:
             content_parts.append("\n".join(rows))
@@ -402,11 +401,7 @@ class ServiceStixBuilder(AreaStixBuilder):
         if isinstance(value, bool):
             value = str(value).lower()
 
-        return (
-            str(value)
-            .replace("|", r"\|")
-            .replace("\n", "<br>")
-    )
+        return str(value).replace("|", r"\|").replace("\n", "<br>")
 
     def _markdown_inline_code(self, value: Any) -> str:
         """Render a table value as non-linkable Markdown inline code."""
@@ -415,7 +410,6 @@ class ServiceStixBuilder(AreaStixBuilder):
         while delimiter in text:
             delimiter += "`"
         return f"{delimiter}{text}{delimiter}"
-
 
     def _build_service_content(self, service: HostService) -> str:
         protocol = self._get_value(service, "protocol")
@@ -427,9 +421,7 @@ class ServiceStixBuilder(AreaStixBuilder):
         if protocol:
             rows.append(f"| Protocol | {self._markdown_cell(protocol)} |")
         if scan_time:
-            rows.append(
-                f"| Last Scan Time | {self._markdown_cell(scan_time)} |"
-            )
+            rows.append(f"| Last Scan Time | {self._markdown_cell(scan_time)} |")
 
         labels = [
             label
@@ -497,9 +489,7 @@ class ServiceStixBuilder(AreaStixBuilder):
                     ),
                     content=content,
                     note_types=[NoteType.EXTERNAL],
-                    created=datetime.datetime.fromisoformat(
-                        scan_time
-                    ),
+                    created=datetime.datetime.fromisoformat(scan_time),
                     authors=[self._context.author.name],
                     objects=[observable],
                     **self.common_props,
@@ -584,11 +574,9 @@ class ServiceStixBuilder(AreaStixBuilder):
         malware_type_enums = []
         for threat_type in self._get_value(threat, "type") or []:
             if isinstance(threat_type, str):
-                try:
-                    normalized = threat_type.lower().replace("_", "-")
+                normalized = threat_type.lower().replace("_", "-")
+                if normalized in _KNOWN_MALWARE_TYPES:
                     malware_type_enums.append(MalwareType(normalized))
-                except (ValueError, KeyError):
-                    pass
 
         return Malware(
             name=primary_name,
@@ -635,12 +623,13 @@ class ServiceStixBuilder(AreaStixBuilder):
         if not threat_name:
             return None
 
-        censys_url = ( "https://platform.censys.io/hosts/" f"{quote(observable_value, safe='')}" )
+        censys_url = (
+            "https://platform.censys.io/hosts/" f"{quote(observable_value, safe='')}"
+        )
         content_parts = [
             f"\n[View this host {observable_value} on Censys Platform]({censys_url})\n\n"
         ]
 
-        
         rows = [
             "| Key | Value |",
             "|---|---|",
@@ -649,18 +638,14 @@ class ServiceStixBuilder(AreaStixBuilder):
 
         threat_types = self._get_value(threat, "type") or []
         types_str = ", ".join(
-            item.replace("_", " ")
-            for item in threat_types
-            if isinstance(item, str)
+            item.replace("_", " ") for item in threat_types if isinstance(item, str)
         )
         if types_str:
             rows.append(f"| Threat Types | {self._markdown_cell(types_str)} |")
 
         tactics = self._get_value(threat, "tactic") or []
         tactics_str = ", ".join(
-            item.replace("_", " ").title()
-            for item in tactics
-            if isinstance(item, str)
+            item.replace("_", " ").title() for item in tactics if isinstance(item, str)
         )
         if tactics_str:
             rows.append(f"| Tactics | {self._markdown_cell(tactics_str)} |")
@@ -688,9 +673,7 @@ class ServiceStixBuilder(AreaStixBuilder):
 
         if malware_data := self._get_value(threat, "malware"):
             if isinstance(malware_data, dict) and malware_data.get("primary_name"):
-                content_parts.append(
-                    f"\n- **Malware:** {malware_data['primary_name']}"
-                )
+                content_parts.append(f"\n- **Malware:** {malware_data['primary_name']}")
                 if aliases := malware_data.get("all_names"):
                     content_parts.append(f"- **Aliases:** {', '.join(aliases)}")
                 if updated := malware_data.get("last_updated_at"):

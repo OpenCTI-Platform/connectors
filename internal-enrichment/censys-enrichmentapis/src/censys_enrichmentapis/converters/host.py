@@ -25,18 +25,14 @@ class HostConverter(CensysConverter):
             for threat in self._value(service, "threats") or []
         ]
         labels = self._format_censys_labels(label_values)
-        labels.extend(
-            self._format_censys_labels(threat_names, category="Threat")
-        )
+        labels.extend(self._format_censys_labels(threat_names, category="Threat"))
         reputation = self._value(data, "reputation")
         reputation_label = self._value(reputation, "label")
         if isinstance(reputation_label, str):
             labels.extend(self._format_censys_labels([reputation_label]))
         return list(dict.fromkeys(labels))
 
-    def _convert(
-        self, observable: ObservableLike, data: Host | HostEnrichment
-    ) -> None:
+    def _convert(self, observable: ObservableLike, data: Host | HostEnrichment) -> None:
         stix_entity = observable
         observable = Reference(id=stix_entity.get("id"))
         self.primary_observable_labels = self._convert_labels(data)

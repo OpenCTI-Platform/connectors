@@ -211,7 +211,6 @@ graph LR
     hostEnrichmentAPI --> AdminArea
     hostEnrichmentAPI --> Hostname
     hostEnrichmentAPI --> Software
-    hostEnrichmentAPI --> Certificate
     hostEnrichmentAPI --> AS
     hostEnrichmentAPI --> Org
     hostEnrichmentAPI --> ServiceNote
@@ -236,7 +235,6 @@ graph LR
 | services.threats          | Note                     | Associated threats and security information                 |
 | services.software         | Software                 | Running software with vendor and CPE                        |
 | services.vulns            | Vulnerability            | CVEs detected for the service, with CVSS/EPSS/CWE data      |
-| services.cert             | X509-Certificate         | TLS certificates from services                              |
 | reputation.score          | Note                     | Host reputation score and risk level                        |
 | reputation.model_version  | Note                     | Reputation model version used                               |
 | autonomous_system.asn     | Autonomous System        | ASN number                                                  |
@@ -249,8 +247,8 @@ graph LR
 
 | Input Type       | Generated Entities                                                              |
 |------------------|---------------------------------------------------------------------------------|
-| IPv4-Addr        | Locations, Hostnames, Software, Certificates, ASN, Organization, Notes          |
-| IPv6-Addr        | Locations, Hostnames, Software, Certificates, ASN, Organization, Notes          |
+| IPv4-Addr        | Locations, Hostnames, Software, Vulnerabilities, ASN, Organization, Notes       |
+| IPv6-Addr        | Locations, Hostnames, Software, Vulnerabilities, ASN, Organization, Notes       |
 | Domain-Name      | Web-property notes for ports 80/443 and related certificate entities            |
 | X509-Certificate | Certificate entity with full parsed metadata                                    |
 
@@ -265,10 +263,9 @@ graph LR
 | `belongs-to`       | IP Observable       | Autonomous System   | ASN membership                        |
 | `related-to`       | IP Observable       | Software            | Running software                      |
 | `has`              | Software            | Vulnerability       | CVE affecting the detected service   |
-| `related-to`       | IP Observable       | X509-Certificate    | Associated TLS certificates           |
 | `related-to`       | Autonomous System   | Organization        | AS operator                           |
 | `related-to`       | Autonomous System   | Country             | AS country location                   |
-| `related-to`       | Domain-Name         | IPv4/IPv6 Address   | Resolved IP addresses                 |
+| `related-to`       | X509-Certificate    | Domain-Name         | Certificate discovered for the domain |
 
 ### Note Types
 
@@ -283,25 +280,27 @@ Each detected service generates a comprehensive note containing:
 
 *Note Format Example:*
 ```
-- Scan Time: 2025-11-03T12:35:48Z
+| Key             | Value                     |
+|------------------|---------------------------|
+| Protocol         | SSH                       |
+| Last Scan Time   | 2025-11-03T12:35:48Z      |
+| Label 1          | REMOTE_ACCESS             |
 
-- Labels
- - REMOTE_ACCESS
-
-## Threats
-- [Threat details if any]
+### Threats
+- Exposed SSH Service | Severity: HIGH
 ```
 
 #### Reputation Notes
 Host reputation information is documented in external notes containing:
-- **Score**: Numeric reputation score (0-1 range)
-- **Score Level**: Risk classification (LOW, MEDIUM_RISK, HIGH, CRITICAL)
-- **Model Version**: Version of the reputation model used
+- **Score**: Reputation score as an integer percentage (0-100)
+- **Label**: Risk classification (e.g. LOW, MEDIUM_RISK, HIGH, CRITICAL)
+- **Model version**: Version of the reputation model used
+- An evidence-feature table, when Censys returns contributing features
 
 *Note Format Example:*
 ```
 - Score: 42
-- Score level: MEDIUM_RISK
+- Label: MEDIUM_RISK
 - Model version: 2.0.0
 ```
 

@@ -8,7 +8,10 @@ from censys_platform import (
     Label,
     Reputation,
 )
-from censys_platform.models.reputation_evidence import ReputationEvidence, ReputationEvidenceFeature
+from censys_platform.models.reputation_evidence import (
+    ReputationEvidence,
+    ReputationEvidenceFeature,
+)
 
 
 def _get_host_245_52_sample() -> dict:
@@ -38,19 +41,16 @@ def _get_host_245_52_sample() -> dict:
                                     "scope": "UNCHANGED",
                                     "confidentiality": "HIGH",
                                     "integrity": "HIGH",
-                                    "availability": "HIGH"
-                                }
+                                    "availability": "HIGH",
+                                },
                             },
-                            "epss": {
-                                "score": 0.006,
-                                "percentile": 0.466
-                            }
+                            "epss": {"score": 0.006, "percentile": 0.466},
                         },
                         "evidence": [
                             {
                                 "found_value": "cpe:2.3:a:openbsd:openssh:10.2p1:*:*:*:*:*:*:*"
                             }
-                        ]
+                        ],
                     },
                     {
                         "id": "CVE-2026-35386",
@@ -68,19 +68,16 @@ def _get_host_245_52_sample() -> dict:
                                     "scope": "UNCHANGED",
                                     "confidentiality": "LOW",
                                     "integrity": "LOW",
-                                    "availability": "NONE"
-                                }
+                                    "availability": "NONE",
+                                },
                             },
-                            "epss": {
-                                "score": 0.003,
-                                "percentile": 0.242
-                            }
+                            "epss": {"score": 0.003, "percentile": 0.242},
                         },
                         "evidence": [
                             {
                                 "found_value": "cpe:2.3:a:openbsd:openssh:10.2p1:*:*:*:*:*:*:*"
                             }
-                        ]
+                        ],
                     },
                     {
                         "id": "CVE-2026-35387",
@@ -98,31 +95,28 @@ def _get_host_245_52_sample() -> dict:
                                     "scope": "UNCHANGED",
                                     "confidentiality": "NONE",
                                     "integrity": "LOW",
-                                    "availability": "NONE"
-                                }
+                                    "availability": "NONE",
+                                },
                             },
-                            "epss": {
-                                "score": 0.002,
-                                "percentile": 0.146
-                            }
+                            "epss": {"score": 0.002, "percentile": 0.146},
                         },
                         "evidence": [
                             {
                                 "found_value": "cpe:2.3:a:openbsd:openssh:10.2p1:*:*:*:*:*:*:*"
                             }
-                        ]
-                    }
+                        ],
+                    },
                 ],
                 "software": [
                     {
                         "cpe": "cpe:2.3:a:openbsd:openssh:10.2p1:*:*:*:*:*:*:*",
                         "product": "openssh",
                         "vendor": "openbsd",
-                        "version": "10.2p1"
+                        "version": "10.2p1",
                     }
-                ]
+                ],
             }
-        ]
+        ],
     }
 
 
@@ -142,7 +136,7 @@ def test_converter_adds_threat_names_to_primary_observable_labels() -> None:
             "type": ["remote_access"],
             "tactic": ["initial_access"],
             "evidence": [],
-            "malware": {}
+            "malware": {},
         },
         {
             "id": "THREAT-WEAK-CREDS",
@@ -152,19 +146,16 @@ def test_converter_adds_threat_names_to_primary_observable_labels() -> None:
             "type": ["credential_access"],
             "tactic": ["credential_access"],
             "evidence": [],
-            "malware": {}
-        }
+            "malware": {},
+        },
     ]
 
     host = HostEnrichment(services=[service])
     converter = HostConverter()
-    stix_objects = [
+    for octi_object in converter.to_stix(
+        observable=stix2.IPv4Address(value="1.1.1.1"), data=host
+    ):
         octi_object.to_stix2_object()
-        for octi_object in converter.to_stix(
-            observable=stix2.IPv4Address(value="1.1.1.1"),
-            data=host
-        )
-    ]
 
     assert "Censys_Threat_Exposed_SSH_Service" in converter.primary_observable_labels
     assert "Censys_Threat_Weak_Credentials" in converter.primary_observable_labels
@@ -218,14 +209,8 @@ def test_converter_host_enrichment_adds_service_labels_as_note() -> None:
     assert "| Protocol | HTTP |" in notes[0].content
     assert "| Last Scan Time | 2025-11-03T12:35:48Z |" in notes[0].content
     assert "| Label 1 | PROXY_SERVER |" in notes[0].content
-    assert (
-        "| Label 1 Evidence — http.body | Nginx Proxy Manager |"
-        in notes[0].content
-    )
-    assert (
-        "| Label 1 Evidence — http.html_title | Default Site |"
-        in notes[0].content
-    )
+    assert "| Label 1 Evidence — http.body | Nginx Proxy Manager |" in notes[0].content
+    assert "| Label 1 Evidence — http.html_title | Default Site |" in notes[0].content
     assert "| Label 2 | DEFAULT_LANDING_PAGE |" in notes[0].content
     assert "Source" not in notes[0].content
     assert "Confidence" not in notes[0].content
@@ -246,7 +231,9 @@ def test_converter_adds_external_reputation_note() -> None:
         )
     ]
 
-    note = next(stix_object for stix_object in stix_objects if stix_object.type == "note")
+    note = next(
+        stix_object for stix_object in stix_objects if stix_object.type == "note"
+    )
     assert note.abstract == "Censys host reputation"
     # Check the content contains the expected parts (no evidence features since none provided)
     assert "- Score: 42" in note.content
@@ -281,7 +268,7 @@ def test_converter_adds_reputation_note_with_evidence() -> None:
                 name="Max Port",
                 value="49093",
                 contribution=8.708259985239051,
-                category="service_surface"
+                category="service_surface",
             )
         ),
         ReputationEvidence(
@@ -290,7 +277,7 @@ def test_converter_adds_reputation_note_with_evidence() -> None:
                 name="High Port Ratio",
                 value="0.875",
                 contribution=5.341544169693149,
-                category="service_surface"
+                category="service_surface",
             )
         ),
         ReputationEvidence(
@@ -299,7 +286,7 @@ def test_converter_adds_reputation_note_with_evidence() -> None:
                 name="Avg EPSS Score",
                 value="0.0937",
                 contribution=-3.738838369305972,
-                category="vulnerability_exposure"
+                category="vulnerability_exposure",
             )
         ),
     ]
@@ -312,7 +299,9 @@ def test_converter_adds_reputation_note_with_evidence() -> None:
         )
     ]
 
-    note = next(stix_object for stix_object in stix_objects if stix_object.type == "note")
+    note = next(
+        stix_object for stix_object in stix_objects if stix_object.type == "note"
+    )
     assert note.abstract == "Censys host reputation"
 
     # Verify score information
@@ -366,7 +355,9 @@ def test_converter_links_service_cves_through_software() -> None:
         "CVE-2026-35385",
         "CVE-2026-35386",
     ]
-    assert all(relationship.source_ref == software.id for relationship in has_relationships)
+    assert all(
+        relationship.source_ref == software.id for relationship in has_relationships
+    )
     assert {relationship.target_ref for relationship in has_relationships} == {
         vulnerability.id for vulnerability in vulnerabilities
     }
@@ -388,20 +379,7 @@ def test_converter_creates_complete_vulnerability_chain() -> None:
         for octi_object in HostConverter().to_stix(observable=observable, data=host)
     ]
 
-    # Verify that relationships from IP to Software exist
-    ip_to_software_relationships = [
-        obj
-        for obj in stix_objects
-        if obj.type == "relationship"
-        and obj.relationship_type == "related-to"
-        and any(
-            obj_id in str(obj.source_ref) and "software" in str(obj.target_ref)
-            for obj_id in [observable.id]
-        )
-    ]
-
     software = next(obj for obj in stix_objects if obj.type == "software")
-    vulnerabilities = [obj for obj in stix_objects if obj.type == "vulnerability"]
 
     # Verify complete chain: source (IP reference) -> Software
     assert any(
@@ -416,7 +394,9 @@ def test_converter_creates_complete_vulnerability_chain() -> None:
         for obj in stix_objects
         if obj.type == "relationship" and obj.relationship_type == "has"
     ]
-    assert len(has_relationships) == 2, f"Expected 2 HAS relationships, got {len(has_relationships)}"
+    assert (
+        len(has_relationships) == 2
+    ), f"Expected 2 HAS relationships, got {len(has_relationships)}"
     assert all(
         rel.source_ref == software.id for rel in has_relationships
     ), "Not all CVE relationships originate from the same Software"
@@ -440,7 +420,9 @@ def test_converter_deduplicates_software_across_multiple_cves() -> None:
 
     # Should have exactly one Software object for all 3 CVEs
     software_objects = [obj for obj in stix_objects if obj.type == "software"]
-    assert len(software_objects) == 1, f"Expected 1 Software object, got {len(software_objects)}"
+    assert (
+        len(software_objects) == 1
+    ), f"Expected 1 Software object, got {len(software_objects)}"
 
     # All HAS relationships should point to the same Software
     has_relationships = [
@@ -448,7 +430,9 @@ def test_converter_deduplicates_software_across_multiple_cves() -> None:
         for obj in stix_objects
         if obj.type == "relationship" and obj.relationship_type == "has"
     ]
-    assert len(has_relationships) == 3, f"Expected 3 HAS relationships, got {len(has_relationships)}"
+    assert (
+        len(has_relationships) == 3
+    ), f"Expected 3 HAS relationships, got {len(has_relationships)}"
     assert all(
         rel.source_ref == software_objects[0].id for rel in has_relationships
     ), "All CVEs should be linked to the same Software object"
@@ -515,11 +499,7 @@ def test_converter_creates_software_from_cpe_when_not_in_service() -> None:
             "id": "CVE-2026-12345",
             "name": "CVE-2026-12345",
             "severity": "MEDIUM",
-            "evidence": [
-                {
-                    "found_value": "cpe:2.3:a:vendor:product:1.0:*:*:*:*:*:*:*"
-                }
-            ],
+            "evidence": [{"found_value": "cpe:2.3:a:vendor:product:1.0:*:*:*:*:*:*:*"}],
             "metrics": {
                 "cvss_v31": {"score": 5.5},
                 "epss": {"score": 0.05},
@@ -539,7 +519,9 @@ def test_converter_creates_software_from_cpe_when_not_in_service() -> None:
 
     # Should create Software from CPE evidence
     software_objects = [obj for obj in stix_objects if obj.type == "software"]
-    assert len(software_objects) == 1, f"Expected 1 Software created from CPE, got {len(software_objects)}"
+    assert (
+        len(software_objects) == 1
+    ), f"Expected 1 Software created from CPE, got {len(software_objects)}"
     assert software_objects[0].vendor == "vendor"
     assert software_objects[0].name == "product"
     assert software_objects[0].version == "1.0"
@@ -573,17 +555,14 @@ def test_converter_creates_malware_from_threats() -> None:
             "type": ["webshell"],
             "tactic": ["persistence"],
             "evidence": [
-                {
-                    "data_path": "http.html_title",
-                    "found_value": "Shell In A Box"
-                }
+                {"data_path": "http.html_title", "found_value": "Shell In A Box"}
             ],
             "malware": {
                 "id": "MALWARE-188",
                 "primary_name": "ShellInABox",
                 "all_names": ["ShellInABox"],
-                "last_updated_at": "2025-05-01T00:00:00Z"
-            }
+                "last_updated_at": "2025-05-01T00:00:00Z",
+            },
         }
     ]
 
@@ -627,13 +606,8 @@ def test_converter_creates_attack_patterns_from_threat_tactics() -> None:
             "confidence": 0.75,
             "type": ["security_tool"],
             "tactic": ["command_and_control"],
-            "evidence": [
-                {
-                    "data_path": "protocol",
-                    "found_value": "FRPS"
-                }
-            ],
-            "malware": {}
+            "evidence": [{"data_path": "protocol", "found_value": "FRPS"}],
+            "malware": {},
         }
     ]
 
@@ -680,10 +654,7 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
             "type": ["webshell"],
             "tactic": ["persistence"],
             "evidence": [
-                {
-                    "data_path": "http.html_title",
-                    "found_value": "Shell In A Box"
-                }
+                {"data_path": "http.html_title", "found_value": "Shell In A Box"}
             ],
             "actors": [
                 {
@@ -703,8 +674,8 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
             "malware": {
                 "primary_name": "ShellInABox",
                 "all_names": ["ShellInABox"],
-                "last_updated_at": "2025-05-01T00:00:00Z"
-            }
+                "last_updated_at": "2025-05-01T00:00:00Z",
+            },
         }
     ]
 
@@ -718,8 +689,7 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
 
     # Verify Threat Note is created
     threat_notes = [
-        obj for obj in stix_objects
-        if obj.type == "note" and "Threat" in obj.abstract
+        obj for obj in stix_objects if obj.type == "note" and "Threat" in obj.abstract
     ]
     assert len(threat_notes) == 1
     note = threat_notes[0]
@@ -733,8 +703,7 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
     assert "| Tactics | Persistence |" in note.content
     assert (
         "[View this host 37.187.119.91 on Censys Platform]"
-        "(https://platform.censys.io/hosts/37.187.119.91)"
-        in note.content
+        "(https://platform.censys.io/hosts/37.187.119.91)" in note.content
     )
     assert "| Source | censys |" not in note.content
     assert "0.5" not in note.content
@@ -769,7 +738,7 @@ def test_converter_handles_multiple_threats_per_service() -> None:
             "tactic": ["command_and_control"],
             "evidence": [],
             "actors": [{"id": "ACTOR-ONLY"}],
-            "malware": {}
+            "malware": {},
         },
         {
             "id": "THREAT-520",
@@ -781,9 +750,9 @@ def test_converter_handles_multiple_threats_per_service() -> None:
             "evidence": [],
             "malware": {
                 "primary_name": "Reverse Shell",
-                "all_names": ["Reverse Shell", "RevShell"]
-            }
-        }
+                "all_names": ["Reverse Shell", "RevShell"],
+            },
+        },
     ]
 
     host = HostEnrichment(services=[service])
@@ -796,8 +765,7 @@ def test_converter_handles_multiple_threats_per_service() -> None:
 
     # Verify 2 threat notes
     threat_notes = [
-        obj for obj in stix_objects
-        if obj.type == "note" and "Threat" in obj.abstract
+        obj for obj in stix_objects if obj.type == "note" and "Threat" in obj.abstract
     ]
     assert len(threat_notes) == 2
     assert all("**Evidence:**" not in note.content for note in threat_notes)
@@ -830,7 +798,7 @@ def test_converter_handles_service_with_both_vulns_and_threats() -> None:
             "type": ["remote_access"],
             "tactic": ["initial_access"],
             "evidence": [{"data_path": "protocol", "found_value": "SSH"}],
-            "malware": {}
+            "malware": {},
         }
     ]
 
@@ -847,8 +815,7 @@ def test_converter_handles_service_with_both_vulns_and_threats() -> None:
     # Verify both CVE and threat are present
     vulnerabilities = [obj for obj in stix_objects if obj.type == "vulnerability"]
     threat_notes = [
-        obj for obj in stix_objects
-        if obj.type == "note" and "Threat" in obj.abstract
+        obj for obj in stix_objects if obj.type == "note" and "Threat" in obj.abstract
     ]
 
     assert len(vulnerabilities) == 1
