@@ -1,0 +1,47 @@
+opencti:
+  url: "http://localhost:8080"
+  token: "ChangeMe"
+
+connector:
+  id: "ChangeMe"  # UUIDv4
+  type: "INTERNAL_ENRICHMENT"
+  name: "IPGeolocation.io"
+  scope: "IPv4-Addr,IPv6-Addr"
+  auto: false
+  confidence_level: 80
+  log_level: "info"
+  update_existing_data: true
+
+ipgeolocation:
+  api_key: "ChangeMe"
+  base_url: "https://api.ipgeolocation.io"
+  timeout: 30
+  max_retries: 3
+  retry_delay: 2
+
+  # API modules
+  use_geo_api: true
+  use_security_api: true
+  use_asn_api: true
+  use_abuse_api: true
+
+  # Credit optimization
+  # true  = single /v3/ipgeo?include=security,abuse call (fewer HTTP requests)
+  # false = call /v3/security, /v3/asn, /v3/abuse separately
+  single_call_mode: true
+
+  # Enrichment features
+  create_labels: true
+  create_indicators: true
+  create_relationships: true
+  create_notes: true
+  create_opinions: false
+  create_summary: true
+
+  # Thresholds
+  min_threat_score: 0              # Skip IPs below this
+  indicator_threat_threshold: 50   # Create indicator only above this
+
+  # TLP
+  max_tlp: "TLP:AMBER"
+  default_marking: "TLP:WHITE"
