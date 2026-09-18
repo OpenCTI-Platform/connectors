@@ -54,17 +54,24 @@ def mock_config():
     mock_config.api_base_url = "https://test.catalyst.api"
     mock_config.api_key = "test-api-key"
     mock_config.tlp_level = "amber"
-    mock_config.update_existing_data = False
     mock_config.tlp_filter = "AMBER,RED"
     mock_config.category_filter = "RESEARCH"
     mock_config.sync_days_back = 7
     mock_config.create_observables = True
     mock_config.create_indicators = True
 
-    mock_config.load = {
+    mock_config.to_helper_config.return_value = {
+        "opencti": {
+            "url": "http://localhost:8080",
+            "token": "test-opencti-token",
+        },
         "connector": {
+            "id": "d2107025-9f07-40c0-ae3d-373e01643256",
+            "name": "CATALYST",
+            "scope": "catalyst",
+            "type": "EXTERNAL_IMPORT",
+            "log_level": "info",
             "duration_period": mock_config.duration_period,
-            "update_existing_data": mock_config.update_existing_data,
         },
         "catalyst": {
             "base_url": mock_config.api_base_url,

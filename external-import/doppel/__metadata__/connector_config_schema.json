@@ -114,6 +114,11 @@
       "description": "Optimizes request volume and memory usage per fetch",
       "type": "integer"
     },
+    "DOPPEL_ENABLE_INCIDENTS": {
+      "default": false,
+      "description": "Enables creation of Incidents for Doppel alerts",
+      "type": "boolean"
+    },
     "DOPPEL_ENABLE_GROUPING_CASE": {
       "default": false,
       "description": "Enables creation of grouping cases",

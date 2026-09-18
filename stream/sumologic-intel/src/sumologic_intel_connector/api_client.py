@@ -30,6 +30,11 @@ class SumologicClient:
         :param stix_indicator:
         :return:
         """
+        # Send OpenCTI's score in the confidence field so analysts can filter on it in Sumologic
+        score = self.helper.get_attribute_in_extension("score", stix_indicator)
+        if score is not None:
+            stix_indicator["confidence"] = score
+
         # STIX extensions not supported by sumologic
         del stix_indicator["extensions"]
 

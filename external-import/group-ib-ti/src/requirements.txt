@@ -1,4 +1,4 @@
-pycti==7.260914.0
+pycti==7.260917.0
 ciaops==1.1.0
 python-dotenv==1.2.2
 stix2==3.0.2

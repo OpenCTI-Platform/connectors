@@ -51,6 +51,14 @@
       "enabled": false
     },
     {
+      "description": "Disable updates to pinned Python interpreter versions",
+      "matchPackageNames": [
+        "python",
+        "cimg/python"
+      ],
+      "enabled": false
+    },
+    {
       "description": "Prioritize PyPI minor updates and cap concurrent PRs to limit noise, without affecting minor updates from other datasources (Docker, GitHub Actions, etc.)",
       "matchDatasources": [
         "pypi"
