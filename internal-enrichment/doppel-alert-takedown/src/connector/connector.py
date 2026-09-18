@@ -18,9 +18,13 @@ class DoppelConnector:
     """
     Doppel Alert and Takedown internal enrichment connector.
 
-    On enrichment of a suspicious URL or Domain-Name, this connector creates a Doppel
-    alert and requests its takedown. On enrichment of a Doppel Incident, it requests
-    takedown for the already-correlated alert without creating a duplicate.
+    On enrichment of a suspicious URL or Domain-Name, this connector:
+      1. Creates an alert in Doppel through the configured API version.
+      2. Requests a takedown for that alert.
+      3. Enriches the observable with an external reference and a result Note.
+
+    On enrichment of a Doppel Incident, it requests takedown for the already-correlated
+    alert without creating a duplicate.
 
     Observable enrichment is playbook compatible. Incident takedown is manual-only;
     playbook attempts return the input bundle unchanged without calling Doppel.
@@ -30,12 +34,30 @@ class DoppelConnector:
         self.config = config
         self.helper = helper
 
+        doppel_config = self.config.doppel_alert_takedown
         self.client = DoppelClient(
             self.helper,
-            base_url=self.config.doppel_alert_takedown.api_base_url,
-            api_key=self.config.doppel_alert_takedown.api_key.get_secret_value(),
-            user_api_key=self.config.doppel_alert_takedown.user_api_key.get_secret_value(),
-            organization_code=self.config.doppel_alert_takedown.organization_code,
+            base_url=doppel_config.api_base_url,
+            api_version=doppel_config.api_version,
+            api_key=(
+                doppel_config.api_key.get_secret_value()
+                if doppel_config.api_key
+                else None
+            ),
+            user_api_key=(
+                doppel_config.user_api_key.get_secret_value()
+                if doppel_config.user_api_key
+                else None
+            ),
+            organization_code=doppel_config.organization_code,
+            client_id=doppel_config.client_id,
+            client_secret=(
+                doppel_config.client_secret.get_secret_value()
+                if doppel_config.client_secret
+                else None
+            ),
+            token_url=doppel_config.token_url,
+            token_audience=doppel_config.token_audience,
         )
         self.converter_to_stix = ConverterToStix(self.helper)
 
