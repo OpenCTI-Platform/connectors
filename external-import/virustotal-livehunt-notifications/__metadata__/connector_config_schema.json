@@ -14,7 +14,7 @@
       "description": "The API token to connect to OpenCTI.",
       "format": "password",
       "type": "string",
-      "writeOnly": true
+      "writeOnly":true
     },
     "CONNECTOR_NAME": {
       "default": "VirusTotal Livehunt Notifications",
@@ -200,12 +200,6 @@
       "description": "Maximum number of notifications to process per run. Useful when the VirusTotal API quota is small. Leave unset to process every available notification.",
       "minimum": 1,
       "type": "integer"
-    },
-    "VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC": {
-      "default": null,
-      "deprecated": true,
-      "type": "integer",
-      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     }
   },
   "required": [

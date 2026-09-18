@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -227,3 +228,64 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+class TestMigrateDeprecatedInterval:
+    """Tests for the `migrate_deprecated_interval` model validator."""
+
+    @pytest.fixture
+    def base_config(self):
+        """Return a minimal valid config dict for reuse."""
+        return {
+            "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+            "connector": {
+                "id": "connector-id",
+                "name": "Test Connector",
+                "scope": "test,connector",
+                "log_level": "error",
+            },
+            "virustotal_livehunt_notifications": {"api_key": "test-api-key"},
+        }
+
+    def test_migrate_interval_sec_to_duration_period(self, base_config):
+        """When only `interval_sec` is set, it should be migrated to `duration_period`."""
+        base_config["virustotal_livehunt_notifications"]["interval_sec"] = 300
+
+        class FakeConnectorSettings(ConnectorSettings):
+            @classmethod
+            def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+                return handler(base_config)
+
+        settings = FakeConnectorSettings()
+        assert settings.connector.duration_period == timedelta(seconds=300)
+
+    def test_interval_sec_with_existing_duration_period_warns(self, base_config):
+        """When both `interval_sec` and `duration_period` are set, `duration_period` takes precedence."""
+        base_config["virustotal_livehunt_notifications"]["interval_sec"] = 300
+        base_config["connector"]["duration_period"] = "PT10M"
+
+        class FakeConnectorSettings(ConnectorSettings):
+            @classmethod
+            def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+                return handler(base_config)
+
+        with pytest.warns(
+            UserWarning,
+            match="Both 'VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC' and 'CONNECTOR_DURATION_PERIOD'",
+        ):
+            settings = FakeConnectorSettings()
+
+        # duration_period should remain PT10M, not be overwritten by interval_sec
+        assert settings.connector.duration_period == timedelta(minutes=10)
+
+    def test_no_interval_sec_does_nothing(self, base_config):
+        """When `interval_sec` is absent, the validator should not modify anything."""
+
+        class FakeConnectorSettings(ConnectorSettings):
+            @classmethod
+            def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+                return handler(base_config)
+
+        settings = FakeConnectorSettings()
+        # duration_period should be the default (5 minutes)
+        assert settings.connector.duration_period == timedelta(minutes=5)
