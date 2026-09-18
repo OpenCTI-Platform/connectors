@@ -77,7 +77,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Filter with Tag     | virustotal.filter_with_tag     | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG`     |          | No        | Only process notifications with this tag.                                                    |
 | Get Malware Config  | virustotal.get_malware_config  | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_GET_MALWARE_CONFIG`  | false    | No        | Extract C2 infrastructure from malware configuration.                                           |
 | Create File Indicators | virustotal.create_file_indicators | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE_INDICATORS` | false    | No        | Create a File Indicator (SHA-256) for each matched file.                                    |
-| Create Domain Indicators | virustotal.create_domain_indicators | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_DOMAIN_NAME_INDICATORS` | false    | No        | Create Domain-Name Indicators from malware configuration.                                     |
+| Create Domain Indicators | virustotal.create_domain_name_indicators | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_DOMAIN_NAME_INDICATORS` | false    | No        | Create Domain-Name Indicators from malware configuration.                                     |
 | Create IP Indicators | virustotal.create_ip_indicators | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_IP_INDICATORS` | false    | No        | Create IPv4/IPv6 Indicators from malware configuration.                                    |
 | Create URL Indicators | virustotal.create_url_indicators | `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_URL_INDICATORS` | false    | No        | Create URL Indicators from malware configuration.                                       |
 

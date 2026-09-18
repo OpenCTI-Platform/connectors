@@ -19,6 +19,7 @@ from connectors_sdk.models import (
     DomainName,
     ExternalReference,
     File,
+    Hostname,
     Incident,
     Indicator,
     IPV4Address,
@@ -310,7 +311,7 @@ class LivehuntBuilder:
             return True
         return False
 
-    def create_alert(self, vtobj, external_reference) -> Incident:
+    def create_alert(self, vtobj, external_reference) -> Optional[Incident]:
         """
         Create the alert from the livehunt notifications.
 
@@ -452,7 +453,7 @@ class LivehuntBuilder:
         # Link to the incident if any.
         if incident is not None:
             rel = Relationship(
-                type="related_to",
+                type="related-to",
                 source=incident,
                 target=file,
                 author=self.author,
@@ -590,7 +591,9 @@ class LivehuntBuilder:
                                                 observables.append(("Hostname", host))
                                         if url is not None:
                                             observables.append(("Url", url))
-        return (list(set(observables)), list(set(labels)), raw_config)
+        observables = sorted(set(observables))
+        labels = sorted(set(labels))
+        return (observables, labels, raw_config)
 
     def _materialize_malware_config(
         self,
@@ -619,11 +622,10 @@ class LivehuntBuilder:
                 stix_type = "domain-name"
                 octi_type = "Domain-Name"
             else:
-                # Fallback for Hostname or others
-                sdk_class = DomainName  # Best approximation for Hostname in STIX2
-                stix_type = "domain-name"
+                sdk_class = Hostname
+                stix_type = "x-opencti-hostname"
                 octi_type = "Hostname"
-
+            
             observable = sdk_class(
                 value=value,
                 author=self.author,

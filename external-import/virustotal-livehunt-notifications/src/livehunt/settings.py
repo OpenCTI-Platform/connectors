@@ -199,6 +199,8 @@ class ConnectorSettings(BaseConnectorSettings):
         Env var `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC` is deprecated.
         This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
         """
+        if not isinstance(data, dict):
+            return data
         connector_data: dict = data.get("connector", {})
         virustotal_livehunt_notifications_data: dict = data.get(
             "virustotal_livehunt_notifications", {}
@@ -215,5 +217,6 @@ class ConnectorSettings(BaseConnectorSettings):
                     "Use 'CONNECTOR_DURATION_PERIOD' instead."
                 )
                 connector_data["duration_period"] = timedelta(seconds=int(interval))
-
+        data["connector"] = connector_data
+        data["virustotal_livehunt_notifications"] = virustotal_livehunt_notifications_data
         return data
