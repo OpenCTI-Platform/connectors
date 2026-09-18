@@ -51,10 +51,27 @@
       "enabled": false
     },
     {
+      "description": "Disable dependency updates for specific connectors; deps still show on the Dependency Dashboard but no PRs are raised (vulnerabilityAlerts still bypass this)",
+      "matchFileNames": [
+        "external-import/group-ib/**"
+      ],
+      "enabled": false
+    },
+    {
       "description": "Disable updates to pinned Python interpreter versions",
       "matchPackageNames": [
         "python",
         "cimg/python"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Disable python-version bumps for actions/setup-python 'uses-with' steps in GitHub Actions workflows; packageName differs from depName here so matchPackageNames alone doesn't catch it (see PR #7721)",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDepNames": [
+        "python"
       ],
       "enabled": false
     },
