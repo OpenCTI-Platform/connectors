@@ -36,12 +36,12 @@ run-name: >-
 #
 # Transition trigger — platform CalVer tag push (e.g. `7.260706.0`):
 # automatically runs a manifest-only bulk release for every connector. Each
-# dispatched per-connector run still produces its full tag, GitHub Release,
-# manifest fragment, and container_version commit-back — only the Docker
-# build/push step is skipped, since image builds for the platform release are
-# still handled by CircleCI at this stage. This lets the platform release keep
-# flowing through the current CircleCI pipeline while per-connector tags,
-# releases, and manifest fragments are produced in parallel via GitHub Actions.
+# dispatched per-connector run still produces its full tag, GitHub Release and
+# manifest fragment — only the Docker build/push step is skipped, since image
+# builds for the platform release are still handled by CircleCI at this stage.
+# This lets the platform release keep flowing through the current CircleCI
+# pipeline while per-connector tags, releases, and manifest fragments are
+# produced in parallel via GitHub Actions.
 
 on:
   push:
@@ -74,10 +74,9 @@ on:
         description: >
           Manifest-only — skip Docker build/push only for every dispatched
           connector (still handled by CircleCI during the transition). Tag,
-          GitHub Release, manifest fragment, and container_version
-          commit-back are still fully produced for each connector. Always
-          forced to true when this workflow is triggered by a platform
-          CalVer tag push.
+          GitHub Release and manifest fragment are still fully produced for
+          each connector. Always forced to true when this workflow is
+          triggered by a platform CalVer tag push.
         required: false
         type: boolean
         default: true
@@ -137,7 +136,7 @@ jobs:
 
           if [ "$EVENT_NAME" = "push" ]; then
             # Platform CalVer tag push: dispatch a full release (tag, GitHub
-            # Release, manifest fragment, commit-back) for every connector at
+            # Release, manifest fragment) for every connector at
             # this exact version, but skip the Docker build — still on CircleCI.
             echo "connectors=all" >> "$GITHUB_OUTPUT"
             echo "version=${TAG_NAME}" >> "$GITHUB_OUTPUT"
@@ -221,7 +220,7 @@ jobs:
             echo "## Bulk release — version \`$VERSION\`"
             echo ""
             if [ "$MANIFEST_ONLY" = "true" ]; then
-              echo "🧩 **Manifest-only mode** — Docker build/push is skipped for every connector (still handled by CircleCI during the transition). Tag, GitHub Release, manifest fragment, and container_version commit-back are still fully produced for each connector."
+              echo "🧩 **Manifest-only mode** — Docker build/push is skipped for every connector (still handled by CircleCI during the transition). Tag, GitHub Release and manifest fragment are still fully produced for each connector."
               echo ""
             fi
             if [ "$FORCE" = "true" ]; then
@@ -258,7 +257,7 @@ jobs:
               failed=$((failed + 1))
             fi
             # Space out mutating API calls to stay clear of secondary rate limits.
-            sleep 2
+            sleep 1
           done < <(printf '%s' "$CONNECTORS_JSON" | jq -r '.[]')
 
           {
