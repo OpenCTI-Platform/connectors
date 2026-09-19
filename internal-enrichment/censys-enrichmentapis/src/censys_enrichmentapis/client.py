@@ -113,7 +113,7 @@ class Client:
                 parts.append(f'{field} = "{value}"')
         if not parts:
             raise EntityHasNoUsableHashError(
-                "At least one hash (MD5, SHA1, SHA256) must be provided."
+                "At least one hash (MD5, SHA-1, SHA-256) must be provided."
             )
         yield from self._search_certificates(" or ".join(parts))
 

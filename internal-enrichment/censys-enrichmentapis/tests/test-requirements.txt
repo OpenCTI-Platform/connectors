@@ -1,4 +1,4 @@
-# Main dependencies needs to be installed
+# Main dependencies need to be installed
 -r ../src/requirements.txt
 pytest==9.0.3
 pytest-mock==3.15.1

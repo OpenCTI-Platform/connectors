@@ -36,23 +36,24 @@ class CertificateStixBuilder(AreaStixBuilder):
                     parsed.subject_key_info.rsa.exponent
                 )
         if parsed.extensions:
-            kwargs.update(self._extension_kwargs(parsed.extensions))
-        return kwargs
-
-    def _extension_kwargs(self, extensions: object) -> dict[str, object]:
-        kwargs: dict[str, object] = {
+            extensions = parsed.extensions
+            kwargs.update(
+                {
             "crl_distribution_points": str(extensions.crl_distribution_points),
             "authority_key_identifier": extensions.authority_key_id,
             "certificate_policies": str(extensions.certificate_policies),
-        }
-        if extensions.key_usage:
-            kwargs["key_usage"] = extensions.key_usage.model_dump_json()
-        if extensions.basic_constraints:
-            kwargs["basic_constraints"] = extensions.basic_constraints.model_dump_json()
-        if extensions.extended_key_usage:
-            kwargs["extended_key_usage"] = (
-                extensions.extended_key_usage.model_dump_json()
+                }
             )
+            if extensions.key_usage:
+                kwargs["key_usage"] = extensions.key_usage.model_dump_json()
+            if extensions.basic_constraints:
+                kwargs["basic_constraints"] = (
+                    extensions.basic_constraints.model_dump_json()
+                )
+            if extensions.extended_key_usage:
+                kwargs["extended_key_usage"] = (
+                    extensions.extended_key_usage.model_dump_json()
+                )
         return kwargs
 
     def add_certificate(
