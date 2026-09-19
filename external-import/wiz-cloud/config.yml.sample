@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Wiz Cloud'
+  scope: 'wiz-cloud'
+  duration_period: 'PT6H'   # poll every 6 hours
+  log_level: 'info'
+
+wiz_cloud:
+  api_url: 'https://api.us17.app.wiz.io/graphql'   # tenant region endpoint
+  auth_url: 'https://auth.app.wiz.io/oauth/token'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  issue_severity: 'CRITICAL,HIGH'   # IssueFilters.severity
+  issue_status: 'OPEN,IN_PROGRESS'         # IssueFilters.status
+  since: 'P30D'            # relative import start on first run (ISO 8601)
+  marking: 'amber+strict'  # default TLP for all produced entities
+  page_size: 50
