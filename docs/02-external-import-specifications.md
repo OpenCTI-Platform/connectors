@@ -48,72 +48,131 @@ External Import connectors fetch data from external sources (APIs, feeds, databa
 
 ## Connector Architecture
 
-### Class Structure
+Since the release of the `connectors-sdk`, external import connectors are built on top of the
+`ExternalImportConnector` base class. **You no longer write the run loop, the state
+persistence, the work management or the bundle sending yourself** — the base class does
+all of that for you. Your job is to describe *what* to import, not *how* the connector
+runs.
+
+An external import connector is made of four pieces:
+
+| Piece                             | Base class (from `connectors-sdk`)         | Responsibility                                                        |
+| --------------------------------- | ------------------------------------------ | -------------------------------------------------------------------- |
+| `ConnectorSettings`               | `BaseConnectorSettings`                    | Validate configuration (env vars / `config.yml`) with Pydantic       |
+| `ConnectorState`                  | `ExternalImportConnectorState`             | Persist lightweight checkpoints between runs (cursors, timestamps)   |
+| One or more `...Processor`        | `BaseDataProcessor`                        | Fetch (`collect`) and convert (`transform`) **one data type** to STIX |
+| The connector itself              | `ExternalImportConnector`                  | Orchestrate everything: schedule, state, work, bundle sending        |
+
+> [!TIP]
+> A ready-to-use, fully documented template implementing this architecture is available at
+> [templates/external-import](../templates/external-import). Copy it as a starting point rather
+> than writing everything from scratch (see the [CONTRIBUTING guidelines](../CONTRIBUTING.md)).
+
+### The data processor: `collect()` + `transform()`
+
+A **processor** is a self-contained unit responsible for a single data type. You subclass
+`BaseDataProcessor` and implement only two methods (plus an optional `post_init()`):
 
 ```python
-from connector.converter_to_stix import ConverterToStix
-from connector.settings import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
+from __future__ import annotations
+
+from connectors_sdk import BaseDataProcessor
+from connectors_sdk.models import BaseIdentifiedObject, OrganizationAuthor, TLPMarking, Report
 from my_client import MyClient
 
 
-class MyConnector:
-    """
-    External Import connector for fetching threat intelligence.
-    """
+class ReportsProcessor(BaseDataProcessor):
+    """Fetches and converts one data type (here, reports) to STIX."""
 
-    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
-        """Initialize the connector."""
-        self.config = config
-        self.helper = helper
+    work_name = "Reports import"  # human-readable name of the work created in OpenCTI
 
-        # Initialize API client
-        self.client = MyClient(
-            self.helper,
-            base_url=self.config.my_connector.api_base_url,
-            api_key=self.config.my_connector.api_key,
-        )
+    def post_init(self) -> None:
+        """Build anything the processor needs once dependencies are injected.
 
-        # Initialize STIX converter
-        self.converter_to_stix = ConverterToStix(
-            self.helper,
-            author_name="My Threat Feed",
-            tlp_level=self.config.my_connector.tlp_level,
-        )
+        `settings`, `state`, `logger` and `work_manager` are injected by the base
+        connector *before* this hook runs, so they are safe to use here.
+        """
+        self.client = MyClient(api_key=self.settings.my_connector.api_key.get_secret_value())
+        self.author = OrganizationAuthor(name="My Threat Feed")
+        self.tlp_marking = TLPMarking(level=self.settings.my_connector.tlp_level)
 
-    def _collect_intelligence(self) -> list:
-        """
-        Collect intelligence from the source.
-        Returns list of STIX objects.
-        """
-        # Implementation here
-        pass
+    def collect(self) -> list:
+        """Fetch raw data from the external source. No STIX conversion here."""
+        since = self.state.last_run or self.settings.my_connector.import_since
+        return self.client.get_reports(since=since)
 
-    def process_message(self) -> None:
-        """
-        Main processing method called by scheduler.
-        """
-        # Implementation here
-        pass
-
-    def run(self) -> None:
-        """
-        Start the connector and schedule execution.
-        """
-        self.helper.schedule_process(
-            message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period.total_seconds(),
-        )
+    def transform(self, reports: list) -> list[BaseIdentifiedObject]:
+        """Convert raw data into STIX objects. Never call `send()` yourself."""
+        stix_objects: list[BaseIdentifiedObject] = []
+        for report in reports:
+            stix_objects.append(Report(
+                name=report.title,
+                publication_date=report.published_at,
+                author=self.author,
+                markings=[self.tlp_marking],
+            ))
+        if stix_objects:
+            return [self.author, self.tlp_marking] + stix_objects
+        return []
 ```
 
-### Recommended Methods and Purpose
+The base class calls these methods for you, in order, on every run:
 
-| Method                    | Purpose                                     |
-| ------------------------- | ------------------------------------------- |
-| `__init__`                | Initialize connector, client, and converter |
-| `_collect_intelligence()` | Fetch and convert external data to STIX     |
-| `process_message()`       | Main processing logic, work management      |
-| `run()`                   | Start scheduler and begin execution         |
+```text
+process():
+    with work_manager:          # opens a work, closes it automatically
+        send(transform(collect()))
+```
+
+- `collect()` fetches raw data (and may **yield** pages for large/paginated sources).
+- `transform()` converts raw data into STIX / `connectors-sdk` model objects (and may
+  **yield** one list per bundle for streaming).
+- `send()` is **inherited** — it builds the bundle and delivers it to OpenCTI. You never
+  override it.
+
+### Wiring it together: `main.py`
+
+The entry point loads the settings and state, builds the list of processors, and starts the
+connector. That's it — no scheduler loop, no `while True`, no `time.sleep()`.
+
+```python
+import traceback
+
+from connector import ConnectorSettings, ConnectorState
+from connector.data_processors import ReportsProcessor
+from connectors_sdk import ExternalImportConnector
+
+if __name__ == "__main__":
+    try:
+        settings = ConnectorSettings()
+        state = ConnectorState()
+
+        # One processor per data type / feature flag you support.
+        data_processors = []
+        if settings.my_connector.import_reports:
+            data_processors.append(ReportsProcessor())
+
+        connector = ExternalImportConnector(
+            settings=settings,
+            state=state,
+            data_processors=data_processors,
+        )
+        connector.start()
+    except Exception:
+        traceback.print_exc()
+        exit(1)
+```
+
+### What each method is for
+
+| Method / attribute            | Where          | Purpose                                                           |
+| ----------------------------- | -------------- | ----------------------------------------------------------------- |
+| `post_init()`                 | processor      | Build the API client and shared STIX objects (author, marking)    |
+| `collect()`                   | processor      | Fetch raw data from the external source (return a list or yield)  |
+| `transform(data)`             | processor      | Convert raw data to STIX objects (return a list or yield)         |
+| `work_name`                   | processor      | Name of the work displayed in the OpenCTI UI                      |
+| `send()` / `process()`        | `BaseDataProcessor` | **Inherited** — bundle creation and sending, never overridden |
+| `callback()` / `start()`      | `ExternalImportConnector` | **Inherited** — scheduling, state, error handling      |
 
 ---
 
@@ -139,16 +198,21 @@ connector:
 
 ### Scheduler Implementation
 
+You do **not** implement scheduling yourself. `ExternalImportConnector.start()` (inherited)
+wires the connector's `callback` to `schedule_process` using the configured
+`duration_period`:
+
 ```python
-def run(self) -> None:
-    """
-    Start the connector and schedule periodic execution.
-    """
-    self.helper.schedule_process(
-        message_callback=self.process_message,
-        duration_period=self.config.connector.duration_period.total_seconds(),
+# Inherited from connectors_sdk.ExternalImportConnector — shown for reference only.
+def start(self) -> None:
+    self._init_dependencies()
+    self._helper.schedule_process(
+        message_callback=self.callback,
+        duration_period=self.settings.connector.duration_period.total_seconds(),
     )
 ```
+
+Your `main.py` only calls `connector.start()`.
 
 ### Queue Threshold
 
@@ -172,92 +236,62 @@ More details on our Filigran blog: [Auto backpressure Control Article](https://f
 
 ### First Run
 
-The connector runs immediately on startup, then follows the schedule:
+The connector runs immediately on startup, then follows the schedule. The base class exposes
+the previous run via `self.state.last_run` (managed for you). Inside a processor you branch on
+it to decide what to fetch:
 
 ```python
-def process_message(self) -> None:
-    current_state = self.helper.get_state()
-
-    if current_state is None or "last_run" not in current_state:
-        self.helper.connector_logger.info("First run of connector")
+def collect(self) -> list:
+    if self.state.last_run is None:
+        self.logger.info("First run of connector")
+        since = self.settings.my_connector.import_since
     else:
-        self.helper.connector_logger.info(
-            "Connector last run",
-            {"last_run": current_state["last_run"]}
-        )
+        self.logger.info("Connector last run", {"last_run": str(self.state.last_run)})
+        since = self.state.last_run
 
-    # Continue processing...
+    return self.client.get_reports(since=since)
 ```
 
 ---
 
 ## Work Management
 
-Work management tracks individual connector runs in OpenCTI.
+Work management tracks individual connector runs in OpenCTI. With `ExternalImportConnector`,
+**work is fully automatic**: each `BaseDataProcessor` opens a work when its `process()` runs
+and closes it on exit (success, failure, or deletion), through the inherited `WorkManager`
+context manager. You never call `initiate_work()` or `to_processed()` yourself.
 
-### Initiating Work
+### Naming the work
 
-```python
-def process_message(self) -> None:
-    # Perform data collection
-    stix_objects = self._collect_intelligence()
-
-    # Send bundle
-    if len(stix_objects) > 0:
-
-        # Create friendly name for this work
-        friendly_name = f"{self.helper.connect_name} - {datetime.now().isoformat()}"
-
-        # Initiate work
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id,
-            friendly_name
-        )
-        self.helper.connector_logger.info(
-            "Work initiated",
-            {"work_id": work_id}
-        )
-    
-        bundle = self.helper.stix2_create_bundle(stix_objects)
-        self.helper.send_stix2_bundle(
-            bundle,
-            work_id=work_id,
-            cleanup_inconsistent_bundle=True,
-        )
-```
-
-### Work Status
-
-Work can have different statuses:
-- **In Progress**: Work is being processed
-- **Completed**: Work finished successfully
-- **Failed**: Work encountered an error
-
-### Error Handling in Work
+The only thing you control is the work's friendly name, via the processor's `work_name`
+attribute:
 
 ```python
-try:
-    # Processing logic
-    stix_objects = self._collect_intelligence()
-
-    # Send bundle
-    bundle = self.helper.stix2_create_bundle(stix_objects)
-    self.helper.send_stix2_bundle(bundle, work_id=work_id)
-
-    # Mark as completed
-    self.helper.api.work.to_processed(
-        work_id,
-        f"Successfully imported {len(stix_objects)} objects"
-    )
-
-except Exception as e:
-    self.helper.connector_logger.error(
-        "Import failed",
-        {"error": str(e)}
-    )
-    # Work will remain in "In Progress" or be marked as failed
-    raise
+class ReportsProcessor(BaseDataProcessor):
+    work_name = "Reports import"  # shown in the OpenCTI UI
 ```
+
+### Splitting a run into several works
+
+Changing `work_name` between two `send()` calls (or between two iterations of a
+generator-based `transform()`) closes the current work and opens a new one. This lets a
+paginated import expose progress in the UI. The base class handles the bookkeeping — you only
+`yield` bundles from `transform()`:
+
+```python
+def transform(self, pages):
+    for page_number, page in enumerate(pages, start=1):
+        self.work_name = f"Reports import - page {page_number}"
+        yield [self.author, self.tlp_marking] + [self._convert(item) for item in page]
+```
+
+### Error handling
+
+If `collect()` or `transform()` raises, the `WorkManager` closes the work in an error state
+and the exception propagates to the base connector's `callback()`, which logs it. On the next
+scheduled run the processor resumes from the checkpoint stored in `self.state` (see
+[State Management](#state-management)). Because state is only updated after a successful
+`transform()`, a failed run does not advance the checkpoint.
 
 Here a reminder for work management on [Common Implementation](./01-common-implementation.md#work-management)
 
@@ -265,161 +299,136 @@ Here a reminder for work management on [Common Implementation](./01-common-imple
 
 ## State Management
 
-State management enables incremental imports and tracks connector progress.
+State management enables incremental imports and tracks connector progress. With the SDK,
+state is a **typed Pydantic model** subclassing `ExternalImportConnectorState`. The base class
+already provides a `last_run` timestamp (loaded before each run and saved after a successful
+run); you add one field per checkpoint your processors need.
 
-### State Structure
+### Defining the state
+
+**File:** `src/connector/state.py`
 
 ```python
-state = {
-    "last_run": "2026-01-14 10:30:00",
-    "last_timestamp": 1705229400,
-    "cursor": "abc123xyz",
-    "items_processed": 1542,
-}
+from datetime import datetime
+
+from connectors_sdk import ExternalImportConnectorState
+
+
+class ConnectorState(ExternalImportConnectorState):
+    """Checkpoints used to resume imports across runs.
+
+    `last_run` is inherited and managed by the base connector. Add one field
+    per processor that needs a more precise resume marker.
+    """
+
+    # Timestamp of the last successfully processed report (used by ReportsProcessor).
+    last_report_update: datetime | None = None
+    # Page to resume from if a paginated import was interrupted.
+    vulnerabilities_current_page: int | None = None
 ```
 
-### Reading State
+> Keep field types simple (`str`, `int`, `datetime`, `None`) — the state is serialized to
+> JSON — and give each field a default of `None` so a first run starts clean.
+
+### Reading and updating state
+
+Inside a processor, the state is available as `self.state`. Read and write it via plain
+attribute access — **do not** call `self.state.load()` or `self.state.save()`, the base
+connector does that for you:
 
 ```python
-def process_message(self) -> None:
-    # Get current state
-    current_state = self.helper.get_state()
+def collect(self) -> list:
+    # Read a checkpoint (fall back to the connector-wide last_run, then to config)
+    since = self.state.last_report_update or self.state.last_run or self.settings.my_connector.import_since
+    return self.client.get_reports(since=since)
 
-    # Initialize state if first run
-    if current_state is None:
-        current_state = {
-            "last_run": None,
-            "last_timestamp": None,
-        }
-
-    # Use state to determine what to fetch
-    if current_state["last_timestamp"]:
-        start_time = current_state["last_timestamp"]
-    else:
-        # First run - use configured start date
-        start_time = self.config.my_connector.import_from_date
-```
-
-### Updating State
-
-```python
-def process_message(self) -> None:
-    # ... processing logic ...
-
-    # Update state after successful import
-    now = datetime.now(timezone.utc)
-    new_state = {
-        "last_run": now.strftime("%Y-%m-%d %H:%M:%S"),
-        "last_timestamp": int(now.timestamp()),
-        "items_processed": len(stix_objects),
-    }
-
-    self.helper.set_state(new_state)
-    self.helper.connector_logger.info(
-        "State updated",
-        {"state": new_state}
-    )
+def transform(self, reports: list) -> list:
+    stix_objects = []
+    last = None
+    for report in reports:
+        stix_objects.append(self._convert_report(report))
+        last = report
+    if stix_objects and last:
+        # Update the checkpoint only from a successfully converted item.
+        self.state.last_report_update = last.updated_at
+    return stix_objects
 ```
 
 ### State Best Practices
 
-1. **Update after successful processing** - Don't update state if processing fails
-2. **Include enough context** - Store what you need to resume
-3. **Use timestamps for time-based imports or ISO strings** - Timestamps is more reliable than dates but should be convert into human-readable format when setting state or when use ISO strings, add explicit timezone everywhere
-4. **Store cursors for paginated APIs** - Resume exactly where you left off
-5. **Keep state minimal** - Don't store large objects
+1. **Update after successful processing** - Only advance a checkpoint from items that were converted successfully; a failed run must not skip data.
+2. **Let the base class own `last_run`** - Do not set `last_run` yourself; add your own fields for finer-grained checkpoints.
+3. **Use timezone-aware datetimes** - Store `datetime` objects with explicit timezone; the model serializes them to ISO strings.
+4. **Store cursors/pages for paginated APIs** - Resume exactly where you left off after an interruption.
+5. **Keep state minimal** - It is a checkpoint, not a cache or a database.
 
---- 
+---
 
 ## Data Collection
 
-### Collection Example Method
+Data collection lives in the processor's `collect()` (fetch raw data) and `transform()`
+(convert to STIX) methods. Keep the two responsibilities separate: `collect()` must not
+produce STIX, and `transform()` must not fetch from the network.
+
+### Collection Example (single call)
 
 ```python
-def _collect_intelligence(self) -> list:
-    """
-    Collect intelligence from external source and convert to STIX.
+def collect(self) -> list:
+    """Fetch raw data from the external source. No STIX conversion here."""
+    since = self.state.last_run or self.settings.my_connector.import_since
+    self.logger.info("Collecting intelligence", {"since": str(since)})
+    return self.client.get_threat_data(since=since)
 
-    Returns:
-        List of STIX objects
-    """
-    stix_objects = []
 
-    # Get current state to determine what to fetch
-    current_state = self.helper.get_state()
-    start_date = self._get_start_date(current_state)
-
-    self.helper.connector_logger.info(
-        "Collecting intelligence",
-        {"start_date": start_date}
-    )
-
-    # Fetch data from external source
-    try:
-        data = self.client.get_threat_data(since=start_date)
-    except Exception as e:
-        self.helper.connector_logger.error(
-            "Failed to fetch data",
-            {"error": str(e)}
-        )
-        raise
-
-    # Convert each item to STIX objects
+def transform(self, data: list) -> list[BaseIdentifiedObject]:
+    """Convert raw data to STIX. Skip individual items that fail to convert."""
+    stix_objects: list[BaseIdentifiedObject] = []
     for item in data:
         try:
-            # Convert to STIX
-            converted_objects = self.converter_to_stix.convert_item(item)
-            stix_objects.extend(converted_objects)
-
+            stix_objects.extend(self._convert_item(item))
         except Exception as e:
-            self.helper.connector_logger.warning(
+            self.logger.warning(
                 "Failed to convert item, skipping",
-                {"item_id": item.get("id"), "error": str(e)}
+                {"item_id": item.get("id"), "error": str(e)},
             )
-            continue
-
-    # Add author and marking
-    if len(stix_objects) > 0:
-        stix_objects.append(self.converter_to_stix.author)
-        stix_objects.append(self.converter_to_stix.tlp_marking)
-
-    self.helper.connector_logger.info(
-        "Intelligence collected",
-        {"objects_count": len(stix_objects)}
-    )
-
-    return stix_objects
+    if stix_objects:
+        # Author and marking must be part of every bundle.
+        return [self.author, self.tlp_marking] + stix_objects
+    return []
 ```
 
-### Pagination Handling Example
+### Pagination Handling (streaming with generators)
+
+For large or unbounded sources, `collect()` can **yield** pages and `transform()` can **yield**
+one list of STIX objects per page. The inherited `send()` detects the generator and sends each
+yielded list as its own bundle, so a very large import never has to be held entirely in
+memory:
 
 ```python
-def _collect_intelligence(self) -> list:
-    """Collect with pagination support."""
-    stix_objects = []
-    page = 1
-    has_more = True
+from typing import Generator
 
-    while has_more:
-        self.helper.connector_logger.debug(
-            "Fetching page",
-            {"page": page}
-        )
 
-        # Fetch page
-        response = self.client.get_data(page=page, per_page=100)
-        items = response["items"]
+def collect(self) -> Generator[list, None, None]:
+    """Yield raw data page by page."""
+    start_page = self.state.vulnerabilities_current_page or 1
+    return self.client.iter_pages(start_page=start_page, per_page=100)
 
-        # Convert items
-        for item in items:
-            converted = self.converter_to_stix.convert_item(item)
-            stix_objects.extend(converted)
 
-        # Check if more pages
-        has_more = len(items) == 100
-        page += 1
-
-    return stix_objects
+def transform(self, pages: Generator[list, None, None]) -> Generator[list, None, None]:
+    """Convert each page and checkpoint progress."""
+    current_page = self.state.vulnerabilities_current_page or 1
+    try:
+        for page in pages:
+            stix_objects = [self._convert_item(item) for item in page]
+            if stix_objects:
+                yield [self.author, self.tlp_marking] + stix_objects
+            current_page += 1
+        # Import finished cleanly — clear the resume marker.
+        self.state.vulnerabilities_current_page = None
+    except Exception as e:
+        # Keep the last completed page so the next run resumes here.
+        self.logger.error("Pagination interrupted", {"error": str(e)})
+        self.state.vulnerabilities_current_page = current_page
 ```
 
 ---
@@ -436,29 +445,23 @@ A STIX bundle must include:
 
 ### Creating the Bundle
 
+You **do not** build or send the bundle yourself. Whatever `transform()` returns (a list) or
+yields (one list per bundle) is passed to the inherited `send()`, which builds the STIX bundle
+and delivers it to OpenCTI with `cleanup_inconsistent_bundle=True`. All you do is return the
+objects — including the author and marking — from `transform()`:
+
 ```python
-def process_message(self) -> None:
-    # Collect STIX objects
-    stix_objects = self._collect_intelligence()
-
-    if len(stix_objects) > 0:
-        # Create bundle
-        bundle = self.helper.stix2_create_bundle(stix_objects)
-
-        # Send to OpenCTI
-        bundles_sent = self.helper.send_stix2_bundle(
-            bundle,
-            work_id=work_id,
-            cleanup_inconsistent_bundle=True,
-        )
-
-        self.helper.connector_logger.info(
-            "Bundle sent",
-            {"bundles_count": len(bundles_sent), "objects_count": len(stix_objects)}
-        )
-    else:
-        self.helper.connector_logger.info("No new data to import")
+def transform(self, data: list) -> list[BaseIdentifiedObject]:
+    stix_objects = [self._convert_item(item) for item in data]
+    if not stix_objects:
+        # Returning an empty list simply sends nothing this run.
+        return []
+    # Author and marking must be part of every bundle.
+    return [self.author, self.tlp_marking] + stix_objects
 ```
+
+Empty results are handled gracefully: `send()` skips empty lists, so returning `[]` (or
+yielding no page) means "no new data to import" without any special-casing.
 
 ### Bundle Best Practices
 
@@ -471,70 +474,52 @@ Reminder about cleanup_inconsistent_bundle: [Caution Clean Up Inconsistent Bundl
 
 ### Large Dataset Handling
 
-When handling large datasets (e.g., 200k+ entities), batch processing is essential to avoid memory issues and provide progress visibility.
+When handling large datasets (e.g., 200k+ entities), stream the import instead of building one
+huge bundle. With the SDK you achieve this by making `collect()` and `transform()`
+**generators**: `send()` delivers one bundle per yielded page, and each page can get its own
+work in the UI by updating `work_name` between iterations.
 
 **Use case:** Importing a large MISP instance with hundreds of thousands of indicators.
 
-Example of implementation
-
 ```python
-def process_message(self) -> None:
-    """Process large datasets in batches with individual work tracking."""
-    stix_objects = self._collect_intelligence()
+from typing import Generator
 
-    batch_size = 500
-    total_batches = (len(stix_objects) + batch_size - 1) // batch_size
 
-    self.helper.connector_logger.info(
-        "Processing large dataset",
-        {"total_objects": len(stix_objects), "batch_size": batch_size, "total_batches": total_batches}
-    )
+def collect(self) -> Generator[list, None, None]:
+    """Yield raw items page by page — nothing is held fully in memory."""
+    start_page = self.state.import_current_page or 1
+    return self.client.iter_pages(start_page=start_page, per_page=500)
 
-    for batch_num, i in enumerate(range(0, len(stix_objects), batch_size), start=1):
-        batch = stix_objects[i:i + batch_size]
 
-        # Each batch gets its own work for progress tracking
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id,
-            f"Import - Batch {batch_num}/{total_batches}"
-        )
+def transform(self, pages: Generator[list, None, None]) -> Generator[list, None, None]:
+    """Convert and send one page (bundle) at a time, checkpointing progress."""
+    current_page = self.state.import_current_page or 1
+    try:
+        for page in pages:
+            # A new work_name opens a new work in the UI for this page.
+            self.work_name = f"Import - page {current_page}"
 
-        # Include author and marking in each batch
-        batch_with_meta = batch + [
-            self.converter_to_stix.author,
-            self.converter_to_stix.tlp_marking
-        ]
+            stix_objects = [self._convert_item(item) for item in page]
+            if stix_objects:
+                yield [self.author, self.tlp_marking] + stix_objects
 
-        bundle = self.helper.stix2_create_bundle(batch_with_meta)
-        self.helper.send_stix2_bundle(
-            bundle,
-            work_id=work_id,
-            cleanup_inconsistent_bundle=True,
-        )
+            # Checkpoint after each successful page so an interrupted run resumes here.
+            self.state.import_current_page = current_page
+            current_page += 1
 
-        # Mark batch as complete
-        self.helper.api.work.to_processed(
-            work_id,
-            f"Batch {batch_num}/{total_batches} - {len(batch)} objects"
-        )
-
-        # Update state after each batch to avoid data loss on failure
-        self.helper.set_state({
-            "last_batch": batch_num,
-            "last_run": datetime.now(timezone.utc).isoformat()
-        })
-
-        self.helper.connector_logger.info(
-            "Batch processed",
-            {"batch": batch_num, "total": total_batches, "objects": len(batch)}
-        )
+        # Import finished cleanly — clear the resume marker.
+        self.state.import_current_page = None
+    except Exception as e:
+        self.logger.error("Import interrupted", {"page": current_page, "error": str(e)})
+        raise
 ```
 
 **Key points:**
-- **One work per batch** - Allows progress tracking in OpenCTI UI
-- **Include metadata in each batch** - Author and markings must be in every bundle when using `cleanup_inconsistent_bundle=True`
-- **Update state after each batch** - If the connector fails mid-import, the next run can resume from the last successful batch instead of restarting from scratch
-- **Log progress** - Essential for monitoring long-running imports
+- **Stream with generators** - `collect()`/`transform()` yield pages so memory stays flat regardless of dataset size.
+- **One work per page** - Update `work_name` between yields to expose progress in the OpenCTI UI.
+- **Include metadata in each bundle** - Author and markings must be in every yielded list (required with `cleanup_inconsistent_bundle=True`).
+- **Checkpoint after each page** - Store the page number in `self.state` so an interrupted run resumes instead of restarting.
+- **Let the base class send** - You never call `initiate_work()`, `stix2_create_bundle()` or `send_stix2_bundle()` yourself.
 
 ---
 
@@ -706,8 +691,8 @@ from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 
 
 class MyClient:
-    def __init__(self, helper, base_url: str, api_key: str):
-        self.helper = helper
+    def __init__(self, logger, base_url: str, api_key: str):
+        self.logger = logger
         self.base_url = base_url
         self.api_key = api_key
 
@@ -748,96 +733,75 @@ See also: [Retry Logic in Common Implementation](./01-common-implementation.md#r
 
 ### Time-Based Incremental Import
 
+Add a `datetime` checkpoint to your `ConnectorState`, then read it in `collect()` and update
+it in `transform()`:
+
 ```python
-def _collect_intelligence(self) -> list:
+def collect(self) -> list:
     """Collect only new/updated data since last run."""
-    current_state = self.helper.get_state()
+    since = self.state.last_run or self.settings.my_connector.import_since
+    return self.client.get_data(modified_since=since)
 
-    # Determine start time
-    if current_state and "last_timestamp" in current_state:
-        start_time = current_state["last_timestamp"]
-    else:
-        # First run - use configured start date
-        start_time = self._parse_date(
-            self.config.my_connector.import_from_date
-        )
 
-    # Fetch only data modified after start_time
-    data = self.client.get_data(modified_since=start_time)
-
-    # Convert to STIX
-    stix_objects = []
-    for item in data:
-        converted = self.converter_to_stix.convert_item(item)
-        stix_objects.extend(converted)
-
-    return stix_objects
+def transform(self, data: list) -> list[BaseIdentifiedObject]:
+    stix_objects = [self._convert_item(item) for item in data]
+    return [self.author, self.tlp_marking] + stix_objects if stix_objects else []
 ```
 
 ### Cursor-Based Incremental Import
 
+Store the opaque cursor on the state (e.g. `cursor: str | None = None`). Stream pages with a
+generator so each page is sent as its own bundle and the cursor is checkpointed as you go:
+
 ```python
-def _collect_intelligence(self) -> list:
-    """Collect using cursor pagination."""
-    current_state = self.helper.get_state()
-    cursor = current_state.get("cursor") if current_state else None
+from typing import Generator
 
-    stix_objects = []
-    has_more = True
 
-    while has_more:
-        # Fetch data with cursor
+def collect(self) -> Generator[dict, None, None]:
+    """Yield API responses page by page, following the cursor."""
+    cursor = self.state.cursor
+    while True:
         response = self.client.get_data(cursor=cursor)
-
-        # Convert items
-        for item in response["items"]:
-            converted = self.converter_to_stix.convert_item(item)
-            stix_objects.extend(converted)
-
-        # Update cursor for next run
+        yield response
         cursor = response.get("next_cursor")
-        has_more = cursor is not None
+        if cursor is None:
+            break
 
-        # Save state periodically
-        if cursor:
-            self.helper.set_state({"cursor": cursor})
 
-    return stix_objects
+def transform(self, responses: Generator[dict, None, None]) -> Generator[list, None, None]:
+    for response in responses:
+        stix_objects = [self._convert_item(item) for item in response["items"]]
+        if stix_objects:
+            yield [self.author, self.tlp_marking] + stix_objects
+        # Checkpoint the cursor after each successfully processed page.
+        self.state.cursor = response.get("next_cursor")
 ```
 
 ### ID-Based Tracking
 
+Store the set of processed ids on the state (e.g. `processed_ids: list[str] = []`) and skip
+items you have already imported:
+
 ```python
-def _collect_intelligence(self) -> list:
-    """Track processed items by ID."""
-    current_state = self.helper.get_state()
-    processed_ids = set(current_state.get("processed_ids", []))
+def collect(self) -> list:
+    return self.client.get_data()
 
-    # Fetch all data
-    data = self.client.get_data()
 
-    stix_objects = []
-    new_ids = []
+def transform(self, data: list) -> list[BaseIdentifiedObject]:
+    processed_ids = set(self.state.processed_ids or [])
 
+    stix_objects: list[BaseIdentifiedObject] = []
+    new_ids: list[str] = []
     for item in data:
-        item_id = item["id"]
+        if item["id"] in processed_ids:
+            continue  # already imported on a previous run
+        stix_objects.append(self._convert_item(item))
+        new_ids.append(item["id"])
 
-        # Skip if already processed
-        if item_id in processed_ids:
-            continue
+    # Keep the list bounded (last 10000 ids) and update the checkpoint.
+    self.state.processed_ids = (list(processed_ids) + new_ids)[-10000:]
 
-        # Convert to STIX
-        converted = self.converter_to_stix.convert_item(item)
-        stix_objects.extend(converted)
-        new_ids.append(item_id)
-
-    # Update state with new IDs (keep last 10000)
-    all_ids = list(processed_ids) + new_ids
-    self.helper.set_state({
-        "processed_ids": all_ids[-10000:]
-    })
-
-    return stix_objects
+    return [self.author, self.tlp_marking] + stix_objects if stix_objects else []
 ```
 
 
@@ -887,36 +851,37 @@ If `CONNECTOR_DURATION_PERIOD` is set to a zero value, the Scheduler treats it a
 
 This is a convenience for operators who want to drive execution purely from an external scheduler without setting the explicit boolean flag.
 
-Since OpenCTI 6.2.12, all new External Import connectors **must** use `schedule_process()` instead of a manual loop. The Scheduler handles both the periodic and run-and-terminate cases transparently.
+Since OpenCTI 6.2.12, all new External Import connectors **must** delegate scheduling to the
+Scheduler instead of a manual loop. When you build on `ExternalImportConnector`, this is done
+for you: its `start()` method calls `schedule_process()` internally, which handles both the
+periodic and run-and-terminate cases transparently.
 
-### Recommended pattern (`schedule_process`)
+### Recommended pattern (`ExternalImportConnector.start()`)
 
 ```python
-from connector import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
+from connector import ConnectorSettings, ConnectorState
+from connector.data_processors import ReportsProcessor
+from connectors_sdk import ExternalImportConnector
 
-class MyConnector:
-    def __init__(self):
-        self.settings = ConnectorSettings()
-        self.helper = OpenCTIConnectorHelper(config=self.settings.to_helper_config())
-
-    def _process(self) -> str:
-        """Core logic: fetch data, build and send STIX bundle."""
-        # ... your data fetching and bundle sending logic ...
-
-        return "Work complete"
-
-    def run(self):
-        # schedule_process handles both scheduled and run-and-terminate modes
-        self.helper.schedule_process(
-            message_callback=self._process,
-            duration_period=self.settings.connector.duration_period.total_seconds(),
-        )
+settings = ConnectorSettings()
+connector = ExternalImportConnector(
+    settings=settings,
+    state=ConnectorState(),
+    data_processors=[ReportsProcessor()],
+)
+# start() schedules the connector; the Scheduler handles both scheduled
+# and run-and-terminate modes based on duration_period / run_and_terminate.
+connector.start()
 ```
 
-> `duration_period` is passed as a number of **seconds** (via `.total_seconds()` on a `timedelta`). This means your config loader must parse the ISO 8601 duration string into a `timedelta` object before passing it here.
+> Internally, `start()` reads `settings.connector.duration_period` (a `timedelta`) and passes
+> `duration_period.total_seconds()` to `schedule_process()`. Because `duration_period` is
+> validated by Pydantic in `ConnectorSettings`, the ISO 8601 string is already parsed into a
+> `timedelta` for you.
 
-> `message_callback` is the function that contains your connector's core logic. It will be called by the Scheduler according to the configured interval or just once in Run & Terminate mode. 
+> The connector's core logic is the `callback()` method (inherited), which runs every
+> processor's `collect()`/`transform()`. It is called by the Scheduler according to the
+> configured interval, or just once in Run & Terminate mode.
 
 ### Legacy pattern (to avoid / migrate away from)
 
@@ -977,66 +942,55 @@ Organizations that choose this mode typically manage execution intervals using e
 
 ### 1. Error Recovery Example
 
+Work opening/closing and state saving are handled by the base connector. To make a run
+recoverable, only advance your checkpoint from successfully processed items and let exceptions
+propagate — the base class logs them and the next run resumes from the last saved checkpoint:
+
 ```python
-def process_message(self) -> None:
-    work_id = self.helper.api.work.initiate_work(
-        self.helper.connect_id,
-        friendly_name
-    )
+def transform(self, data: list) -> list[BaseIdentifiedObject]:
+    stix_objects: list[BaseIdentifiedObject] = []
+    last_processed = None
+    for item in data:
+        try:
+            stix_objects.append(self._convert_item(item))
+            last_processed = item
+        except Exception as e:
+            # One bad item must not fail the whole run.
+            self.logger.warning("Failed to convert item, skipping", {"error": str(e)})
 
-    try:
-        stix_objects = self._collect_intelligence()
-
-        if len(stix_objects) > 0:
-            bundle = self.helper.stix2_create_bundle(stix_objects)
-            self.helper.send_stix2_bundle(bundle, work_id=work_id)
-
-        self.helper.api.work.to_processed(
-            work_id,
-            f"Successfully imported {len(stix_objects)} objects"
-        )
-
-        # Only update state after successful completion
-        self.helper.set_state({"last_run": datetime.now().isoformat()})
-
-    except Exception as e:
-        self.helper.connector_logger.error(
-            "Import failed",
-            {"error": str(e)}
-        )
-        # Don't update state - will retry with same parameters next run
-        raise
+    if stix_objects and last_processed:
+        # Checkpoint only from the last successfully converted item, so a failure
+        # mid-run does not skip unprocessed data on the next run.
+        self.state.last_item_update = last_processed.updated_at
+        return [self.author, self.tlp_marking] + stix_objects
+    return []
 ```
 
 ### 2. Graceful Degradation Example
 
 ```python
-def _collect_intelligence(self) -> list:
+def collect(self) -> dict:
     """Collect from multiple sources, continue on partial failure."""
-    stix_objects = []
+    data = {"primary": [], "secondary": []}
 
-    # Try primary source
     try:
-        primary_data = self.client.get_primary_feed()
-        stix_objects.extend(self._convert_data(primary_data))
+        data["primary"] = self.client.get_primary_feed()
     except Exception as e:
-        self.helper.connector_logger.error(
-            "Primary feed failed",
-            {"error": str(e)}
-        )
-        # Continue with other sources
+        self.logger.error("Primary feed failed", {"error": str(e)})  # continue
 
-    # Try secondary source
     try:
-        secondary_data = self.client.get_secondary_feed()
-        stix_objects.extend(self._convert_data(secondary_data))
+        data["secondary"] = self.client.get_secondary_feed()
     except Exception as e:
-        self.helper.connector_logger.error(
-            "Secondary feed failed",
-            {"error": str(e)}
-        )
+        self.logger.error("Secondary feed failed", {"error": str(e)})
 
-    return stix_objects
+    return data
+
+
+def transform(self, data: dict) -> list[BaseIdentifiedObject]:
+    stix_objects: list[BaseIdentifiedObject] = []
+    for item in data["primary"] + data["secondary"]:
+        stix_objects.append(self._convert_item(item))
+    return [self.author, self.tlp_marking] + stix_objects if stix_objects else []
 ```
 
 Use case: A connector fetches from 3 different API endpoints. If one endpoint is down,
@@ -1055,55 +1009,45 @@ When NOT to use it:
 ### 3. Deduplication Example
 
 ```python
-def _collect_intelligence(self) -> list:
-    """Collect with deduplication."""
-    data = self.client.get_data()
+def collect(self) -> list:
+    return self.client.get_data()
 
-    # Deduplicate by ID
+
+def transform(self, data: list) -> list[BaseIdentifiedObject]:
+    """Convert with in-run deduplication by source id."""
     seen_ids = set()
-    unique_items = []
-
+    stix_objects: list[BaseIdentifiedObject] = []
     for item in data:
-        item_id = item["id"]
-        if item_id not in seen_ids:
-            seen_ids.add(item_id)
-            unique_items.append(item)
-
-    # Convert to STIX
-    stix_objects = []
-    for item in unique_items:
-        converted = self.converter_to_stix.convert_item(item)
-        stix_objects.extend(converted)
-
-    return stix_objects
+        if item["id"] in seen_ids:
+            continue
+        seen_ids.add(item["id"])
+        stix_objects.append(self._convert_item(item))
+    return [self.author, self.tlp_marking] + stix_objects if stix_objects else []
 ```
 
 ### 4. Logging Example
 
+Use `self.logger` (the injected `ConnectorLogger`) inside processors — no direct `pycti`
+dependency:
+
 ```python
-def process_message(self) -> None:
-    self.helper.connector_logger.info("Starting import run")
+import time
 
-    work_id = self.helper.api.work.initiate_work(
-        self.helper.connect_id,
-        friendly_name
-    )
 
+def transform(self, data: list) -> list[BaseIdentifiedObject]:
+    self.logger.info("Starting conversion", {"items": len(data)})
     start_time = time.time()
 
-    stix_objects = self._collect_intelligence()
+    stix_objects = [self._convert_item(item) for item in data]
 
-    elapsed = time.time() - start_time
-
-    self.helper.connector_logger.info(
-        "Import completed",
+    self.logger.info(
+        "Conversion completed",
         {
             "objects_collected": len(stix_objects),
-            "duration_seconds": round(elapsed, 2)
-        }
+            "duration_seconds": round(time.time() - start_time, 2),
+        },
     )
-
-    # Send bundle and complete work...
+    return [self.author, self.tlp_marking] + stix_objects if stix_objects else []
 ```
 
 ---
@@ -1144,138 +1088,160 @@ class MyClient:
             return self._request("threats", params={"since": since})
 ```
 
-### Connector (src/connector/connector.py)
+### Configuration (src/connector/settings.py)
 
 ```python
-import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from connector.converter_to_stix import ConverterToStix
-from connector.settings import ConnectorSettings
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseConnectorSettings,
+    BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
+    ListFromString,
+)
+from connectors_sdk.models.enums import TLPLevel
+from pydantic import Field, HttpUrl, SecretStr
+
+
+class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
+    """Connector-level config, common to every EXTERNAL_IMPORT connector."""
+
+    id: str = Field(description="Unique identifier of the connector.")
+    name: str = Field(description="Name of the connector.", default="My Threat Feed")
+    scope: ListFromString = Field(
+        description="Entity types the connector imports.",
+        default=["Report", "Indicator"],
+    )
+    duration_period: timedelta = Field(
+        description="Time to wait between two runs (ISO 8601 duration, e.g. `PT1H`).",
+        default=timedelta(hours=1),
+    )
+
+
+class MyConnectorConfig(BaseConfigModel):
+    """Config specific to this connector."""
+
+    api_base_url: HttpUrl = Field(description="Base URL of the external service.")
+    api_key: SecretStr = Field(description="API key for the external service.")
+    import_since: DatetimeFromIsoString = Field(
+        description="Initial import start date (absolute like '2023-01-01T00:00:00Z' "
+        "or relative like 'P30D').",
+        default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=30),
+    )
+    tlp_level: TLPLevel = Field(
+        description="Default TLP marking applied to created objects.",
+        default=TLPLevel.CLEAR,
+    )
+
+
+class ConnectorSettings(BaseConnectorSettings):
+    """Aggregates all configuration sections."""
+
+    connector: ExternalImportConnectorConfig = Field(
+        default_factory=ExternalImportConnectorConfig
+    )
+    my_connector: MyConnectorConfig = Field(default_factory=MyConnectorConfig)
+```
+
+### State (src/connector/state.py)
+
+```python
+from datetime import datetime
+
+from connectors_sdk import ExternalImportConnectorState
+
+
+class ConnectorState(ExternalImportConnectorState):
+    """`last_run` is inherited; add checkpoints specific to this connector."""
+
+    last_threat_update: datetime | None = None
+```
+
+### Data processor (src/connector/data_processors/threats_processor.py)
+
+```python
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from connectors_sdk import BaseDataProcessor
+from connectors_sdk.models import (
+    BaseIdentifiedObject,
+    Indicator,
+    OrganizationAuthor,
+    TLPMarking,
+)
 from my_client import MyClient
-from pycti import OpenCTIConnectorHelper
+
+if TYPE_CHECKING:
+    from connector.settings import ConnectorSettings
+    from connector.state import ConnectorState
 
 
-class MyThreatFeedConnector:
-    """External Import connector for My Threat Feed."""
+class ThreatConversionError(Exception):
+    """Raised when a single raw item cannot be converted to STIX."""
 
-    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
-        self.config = config
-        self.helper = helper
-        self.work_id = None
 
+class ThreatsProcessor(BaseDataProcessor):
+    """Fetches threats from the external API and converts them to STIX."""
+
+    settings: ConnectorSettings
+    state: ConnectorState
+
+    work_name = "My Threat Feed - Threats import"
+
+    def post_init(self) -> None:
+        """Build the client and the STIX objects shared by every item."""
         self.client = MyClient(
-            base_url=str(self.config.my_connector.api_base_url),
-            api_key=self.config.my_connector.api_key,
+            base_url=str(self.settings.my_connector.api_base_url),
+            api_key=self.settings.my_connector.api_key.get_secret_value(),
         )
+        self.author = OrganizationAuthor(name="My Threat Feed")
+        self.tlp_marking = TLPMarking(level=self.settings.my_connector.tlp_level)
 
-        self.converter_to_stix = ConverterToStix(
-            self.helper,
-            author_name="My Threat Feed",
-            tlp_level=self.config.my_connector.tlp_level,
+    def collect(self) -> list:
+        """Fetch raw data since the last checkpoint."""
+        since = (
+            self.state.last_threat_update
+            or self.state.last_run
+            or self.settings.my_connector.import_since
         )
+        self.logger.info("Collecting intelligence", {"since": str(since)})
+        return self.client.get_threat_data(since=since)
 
-    def _initiate_work(self, name: str) -> str:
-        self.work_id = self.helper.api.work.initiate_work(self.helper.connect_id, name)
-        return self.work_id
-
-    def _complete_work(self, message: str) -> None:
-        if self.work_id:
-            self.helper.api.work.to_processed(self.work_id, message)
-            self.work_id = None
-
-    def _collect_intelligence(self, since: str) -> list:
-        """Collect intelligence from external source."""
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Collecting intelligence", {"since": since}
-        )
-
-        data = self.client.get_threat_data(since=since)
-
-        stix_objects = []
+    def transform(self, data: list) -> list[BaseIdentifiedObject]:
+        """Convert raw data to STIX and checkpoint progress."""
+        stix_objects: list[BaseIdentifiedObject] = []
+        last = None
         for item in data:
             try:
-                converted = self.converter_to_stix.convert_item(item)
-                stix_objects.extend(converted)
-            except Exception as e:
-                self.helper.connector_logger.warning(
-                    "[CONNECTOR] Failed to convert item",
+                stix_objects.append(self._convert_item(item))
+                last = item
+            except ThreatConversionError as e:
+                self.logger.warning(
+                    "Failed to convert item, skipping",
                     {"item_id": item.get("id"), "error": str(e)},
                 )
-                continue
 
-        return stix_objects
+        if stix_objects and last:
+            self.state.last_threat_update = last["updated_at"]
+            # Author and marking must be part of every bundle.
+            return [self.author, self.tlp_marking] + stix_objects
+        return []
 
-    def _send_bundle(self, stix_objects: list) -> None:
-        """Send STIX bundle to OpenCTI."""
-        # Add author and marking to bundle
-        stix_objects.append(self.converter_to_stix.author)
-        stix_objects.append(self.converter_to_stix.tlp_marking)
-
-        bundle = self.helper.stix2_create_bundle(stix_objects)
-        self.helper.send_stix2_bundle(
-            bundle,
-            work_id=self.work_id,
-            cleanup_inconsistent_bundle=True,
-        )
-
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Bundle sent", {"objects_count": len(stix_objects)}
-        )
-
-    def process_message(self) -> None:
-        """Main processing method."""
+    def _convert_item(self, item: dict) -> Indicator:
+        """Convert a single raw item into a STIX object."""
         try:
-            current_start_time = datetime.now(timezone.utc).isoformat()
-            current_state = self.helper.get_state()
-
-            # Retrieve previous run information
-            last_run_start = current_state.get("last_run_start") if current_state else None
-            last_run_with_data = current_state.get("last_run_with_data") if current_state else None
-
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Starting connector...",
-                {
-                    "connector_name": self.config.connector.name,
-                    "last_run_start": last_run_start or "Never run",
-                    "last_run_with_data": last_run_with_data or "Never ingested data",
-                },
+            return Indicator(
+                name=item["name"],
+                pattern=item["pattern"],
+                pattern_type="stix",
+                author=self.author,
+                markings=[self.tlp_marking],
             )
-
-            # Determine start date for fetching
-            since = last_run_with_data or self.config.my_connector.import_from_date
-
-            # Collect intelligence
-            stix_objects = self._collect_intelligence(since)
-
-            if stix_objects:
-                # Initiate work and send data
-                self._initiate_work(f"My Threat Feed - {current_start_time}")
-                self._send_bundle(stix_objects)
-                self._complete_work(f"Imported {len(stix_objects)} objects")
-                last_run_with_data = datetime.now(timezone.utc).isoformat()
-            else:
-                self.helper.connector_logger.info("[CONNECTOR] No new data to import")
-
-            # Update state
-            new_state = {"last_run_start": current_start_time}
-            if last_run_with_data:
-                new_state["last_run_with_data"] = last_run_with_data
-
-            self.helper.set_state(new_state)
-
-        except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
-            sys.exit(0)
-        except Exception as err:
-            self.helper.connector_logger.error(str(err))
-
-    def run(self) -> None:
-        """Start the connector with scheduled execution."""
-        self.helper.schedule_process(
-            message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period.total_seconds(),
-        )
+        except Exception as e:
+            raise ThreatConversionError(str(e)) from e
 ```
 
 ### Entry Point (src/main.py)
@@ -1283,16 +1249,20 @@ class MyThreatFeedConnector:
 ```python
 import traceback
 
-from connector import ConnectorSettings, MyThreatFeedConnector
-from pycti import OpenCTIConnectorHelper
+from connector import ConnectorSettings, ConnectorState
+from connector.data_processors import ThreatsProcessor
+from connectors_sdk import ExternalImportConnector
 
 if __name__ == "__main__":
     try:
         settings = ConnectorSettings()
-        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-        connector = MyThreatFeedConnector(config=settings, helper=helper)
-        connector.run()
+        connector = ExternalImportConnector(
+            settings=settings,
+            state=ConnectorState(),
+            data_processors=[ThreatsProcessor()],
+        )
+        connector.start()
     except Exception:
         traceback.print_exc()
         exit(1)
