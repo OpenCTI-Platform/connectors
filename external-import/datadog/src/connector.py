@@ -2,43 +2,14 @@
 
 import time
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any
 
-import yaml
 from lib.client import DataDogClient
 from lib.converter import StixConverter
 from lib.importer import DataImporter
 from lib.utils import normalize_csv_list
-from pycti import OpenCTIConnectorHelper, get_config_variable
-
-
-def _load_config() -> dict:
-    """Load the connector configuration from ``config.yml`` if present.
-
-    Mirrors the canonical pattern used by every other external-import
-    connector in this repo: when ``src/config.yml`` exists alongside
-    this module, parse it with ``yaml.safe_load`` and pass the
-    resulting mapping into ``OpenCTIConnectorHelper`` / every
-    ``get_config_variable`` call below. When the file is missing
-    (Docker / Kubernetes deployments that use env vars exclusively),
-    fall back to an empty mapping and let ``get_config_variable``
-    resolve every key from the process environment instead.
-
-    The earlier shape hard-coded ``config: dict = {}`` and never
-    loaded the YAML file even when one was shipped — contradicting
-    the README's "create config.yml then run python connector.py"
-    instructions and ``src/config.yml.sample`` which advertised the
-    YAML configuration shape.
-    """
-    config_path = Path(__file__).parent / "config.yml"
-    if config_path.is_file():
-        with config_path.open("r", encoding="utf-8") as fh:
-            return yaml.safe_load(fh) or {}
-    return {}
-
-
-config: dict = _load_config()
+from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 class DataDogConnector:
@@ -46,20 +17,22 @@ class DataDogConnector:
 
     def __init__(self):
         """Initialize the connector with configuration"""
-        self.helper = OpenCTIConnectorHelper(config)
+        # ``ConnectorSettings`` (``connectors-sdk``) resolves every
+        # ``OPENCTI_*`` / ``CONNECTOR_*`` / ``DATADOG_*`` variable from the
+        # environment, ``src/config.yml`` or ``.env`` — the same precedence
+        # the legacy YAML + pycti config-helper pair implemented, but
+        # validated by Pydantic and exposed to the connector manager
+        # through the generated config schema.
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
-        # Load connector configuration
-        self.api_token = get_config_variable(
-            "DATADOG_TOKEN",
-            ["datadog", "token"],
-            config,
-        )
+        # Load connector configuration. ``token`` / ``app_key`` are
+        # ``SecretStr`` in the settings model (so they are redacted from any
+        # log / dump); the DataDog client sends them as raw HTTP headers, so
+        # the secret value is unwrapped here.
+        self.api_token = self.config.datadog.token.get_secret_value()
 
-        self.app_key = get_config_variable(
-            "DATADOG_APP_KEY",
-            ["datadog", "app_key"],
-            config,
-        )
+        self.app_key = self.config.datadog.app_key.get_secret_value()
 
         # DataDog's canonical API endpoint is ``api.datadoghq.com``
         # (note the trailing ``hq.com``). The previous default
@@ -67,42 +40,18 @@ class DataDogConnector:
         # returns 301 / 308 for API calls — every shipped sample
         # (``config.yml.sample`` / ``docker-compose.yml.sample`` /
         # ``.env.sample``) already points at the correct hostname.
-        self.api_base_url = get_config_variable(
-            "DATADOG_API_BASE_URL",
-            ["datadog", "api_base_url"],
-            config,
-            False,
-            "https://api.datadoghq.com",
-        )
+        self.api_base_url = self.config.datadog.api_base_url
 
-        self.app_base_url = get_config_variable(
-            "DATADOG_APP_BASE_URL",
-            ["datadog", "app_base_url"],
-            config,
-            False,
-            "https://app.datadoghq.com",
-        )
+        self.app_base_url = self.config.datadog.app_base_url
 
-        self.import_interval = get_config_variable(
-            "DATADOG_IMPORT_INTERVAL", ["datadog", "import_interval"], config, True, 60
-        )
+        self.import_interval = self.config.datadog.import_interval
 
-        self.import_start_date = get_config_variable(
-            "DATADOG_IMPORT_START_DATE",
-            ["datadog", "import_start_date"],
-            config,
-            False,
-            None,
-        )
+        self.import_start_date = self.config.datadog.import_start_date
 
-        self.max_tlp = get_config_variable(
-            "DATADOG_MAX_TLP", ["datadog", "max_tlp"], config, False, "TLP:AMBER"
-        )
+        self.max_tlp = self.config.datadog.max_tlp
 
         # Alert Configuration
-        self.import_alerts = get_config_variable(
-            "DATADOG_IMPORT_ALERTS", ["datadog", "import_alerts"], config, False, True
-        )
+        self.import_alerts = self.config.datadog.import_alerts
 
         # Default to ``False`` so the connector's default bundle stays
         # minimal — every shipped sample (``config.yml.sample`` /
@@ -111,21 +60,11 @@ class DataDogConnector:
         # with the documented sample avoids the "documented default vs
         # runtime default" mismatch that would otherwise create case
         # objects in production deployments that copy the sample
-        # verbatim and never override the flag.
-        # ``get_config_variable`` already normalises ``"true"`` /
-        # ``"false"`` / ``"yes"`` / ``"no"`` strings to a Python
-        # bool, so the manual coercion the previous shape applied to
-        # this one knob (and to no other boolean knob) was dead code
-        # — and the accompanying startup ``log_info`` line was a
-        # repeated config-dump that did not belong in steady-state
-        # logs. Documented bool toggles flow through the helper
-        # uniformly now.
-        self.create_incident_response_cases = get_config_variable(
-            "DATADOG_CREATE_INCIDENT_RESPONSE_CASES",
-            ["datadog", "create_incident_response_cases"],
-            config,
-            False,
-            False,
+        # verbatim and never override the flag. Pydantic normalises
+        # ``"true"`` / ``"false"`` strings to a Python bool, so every
+        # documented bool toggle flows through the settings uniformly.
+        self.create_incident_response_cases = (
+            self.config.datadog.create_incident_response_cases
         )
 
         # Alert filtering.
@@ -134,8 +73,8 @@ class DataDogConnector:
         # (``DATADOG_ALERT_PRIORITIES="P1,P2"`` /
         # ``DATADOG_ALERT_TAGS_FILTER="env:prod,team:secops"``) AND
         # as YAML lists in ``config.yml.sample`` — so the value can
-        # arrive here as either a Python ``list`` (YAML path) or a
-        # raw ``str`` (env path). Without normalisation the env path
+        # arrive as either a Python ``list`` (YAML path) or a raw
+        # ``str`` (env path). Without normalisation the env path
         # would silently break both downstream consumers: the
         # ``signal_priority not in priorities`` membership check in
         # ``lib/client.py`` would devolve into a substring match
@@ -144,59 +83,32 @@ class DataDogConnector:
         # ``[f"@tags:{tag}" for tag in tags_filter]`` comprehension
         # would iterate the string character-by-character and emit a
         # garbage ``filter[query]=@tags:e @tags:n @tags:v …`` URL.
-        # ``normalize_csv_list`` collapses both shapes (plus
-        # ``None`` / blank inputs) into a clean ``list[str]`` so
-        # the consumers can treat the value uniformly.
+        # The settings model declares both fields as
+        # ``ListFromString`` so Pydantic already collapses both shapes
+        # into a clean ``list[str]``; ``normalize_csv_list`` is kept as
+        # a cheap, idempotent pass-through guard for the consumers.
         self.alert_priorities = normalize_csv_list(
-            get_config_variable(
-                "DATADOG_ALERT_PRIORITIES",
-                ["datadog", "alert_priorities"],
-                config,
-                False,
-                ["P1", "P2", "P3", "P4"],
-            )
+            self.config.datadog.alert_priorities
         )
 
         self.alert_tags_filter = normalize_csv_list(
-            get_config_variable(
-                "DATADOG_ALERT_TAGS_FILTER",
-                ["datadog", "alert_tags_filter"],
-                config,
-                False,
-                [],
-            )
+            self.config.datadog.alert_tags_filter
         )
 
         # Observable extraction settings
-        self.extract_observables_from_alerts = get_config_variable(
-            "DATADOG_EXTRACT_OBSERVABLES_FROM_ALERTS",
-            ["datadog", "extract_observables_from_alerts"],
-            config,
-            False,
-            True,
+        self.extract_observables_from_alerts = (
+            self.config.datadog.extract_observables_from_alerts
         )
 
         # Context settings
-        self.include_alert_context = get_config_variable(
-            "DATADOG_INCLUDE_ALERT_CONTEXT",
-            ["datadog", "include_alert_context"],
-            config,
-            False,
-            True,
-        )
+        self.include_alert_context = self.config.datadog.include_alert_context
 
         # Page-size used when paginating the DataDog Security
         # Monitoring API. Surfaced as a configurable to match the
         # documented ``DATADOG_BATCH_SIZE`` env var; the client uses
         # it for the ``page[limit]`` query parameter (DataDog's docs
         # cap this at 1000 for the v2 endpoint).
-        self.batch_size = get_config_variable(
-            "DATADOG_BATCH_SIZE",
-            ["datadog", "batch_size"],
-            config,
-            True,
-            100,
-        )
+        self.batch_size = self.config.datadog.batch_size
 
         # Initialize client and services. The converter receives the
         # configured ``max_tlp`` so every emitted STIX object carries
