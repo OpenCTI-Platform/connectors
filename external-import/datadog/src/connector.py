@@ -87,9 +87,7 @@ class DataDogConnector:
         # ``ListFromString`` so Pydantic already collapses both shapes
         # into a clean ``list[str]``; ``normalize_csv_list`` is kept as
         # a cheap, idempotent pass-through guard for the consumers.
-        self.alert_priorities = normalize_csv_list(
-            self.config.datadog.alert_priorities
-        )
+        self.alert_priorities = normalize_csv_list(self.config.datadog.alert_priorities)
 
         self.alert_tags_filter = normalize_csv_list(
             self.config.datadog.alert_tags_filter
