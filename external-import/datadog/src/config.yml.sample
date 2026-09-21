@@ -4,22 +4,23 @@ opencti:
 
 connector:
   id: 'ChangeMe'
-  name: 'DataDog'
-  scope: 'stix2'
-  log_level: 'info'
+  # name: 'DataDog'
+  # scope: 'stix2'
+  # log_level: 'error'
+  # duration_period: 'PT1H' # Not used for scheduling, see datadog.import_interval
 
 datadog:
   token: 'ChangeMe'
   app_key: 'ChangeMe'
-  api_base_url: 'https://api.datadoghq.com'
-  app_base_url: 'https://app.datadoghq.com'
-  import_interval: 60
+  # api_base_url: 'https://api.datadoghq.com'
+  # app_base_url: 'https://app.datadoghq.com'
+  # import_interval: 60
   # import_start_date: '2024-01-01T00:00:00Z'
-  max_tlp: 'TLP:AMBER'
-  batch_size: 100
-  import_alerts: true
-  create_incident_response_cases: false
+  # max_tlp: 'TLP:AMBER'
+  # batch_size: 100
+  # import_alerts: true
+  # create_incident_response_cases: false
   # alert_priorities: ['P1', 'P2', 'P3', 'P4']
   # alert_tags_filter: []
-  extract_observables_from_alerts: true
-  include_alert_context: true
+  # extract_observables_from_alerts: true
+  # include_alert_context: true
