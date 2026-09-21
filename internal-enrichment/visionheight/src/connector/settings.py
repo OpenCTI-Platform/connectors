@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
 
@@ -11,16 +12,20 @@ from pydantic import Field, HttpUrl, SecretStr
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     """
     Connector-level configuration for the VisionHeight internal enrichment connector.
-    Overrides the base class to set our defaults for `name` and `scope`.
+    Overrides the base class to set our defaults for `id`, `name` and `scope`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="72de5a27-4619-4189-a66b-ad89819b200a",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="VisionHeight",
     )
-    scope: str = Field(
+    scope: ListFromString = Field(
         description="Comma-separated list of OpenCTI entity types this connector enriches.",
-        default="IPv4-Addr,Domain-Name",
+        default=["IPv4-Addr", "Domain-Name"],
     )
 
 
