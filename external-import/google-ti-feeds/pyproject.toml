@@ -18,7 +18,7 @@ classifiers = [
 requires-python = ">=3.11, <3.13"
 
 dependencies = [
-    "pycti==7.260910.0",
+    "pycti==7.260921.0",
     "aiohttp~=3.14.1",
     "Markdown~=3.10.0",
     "markdownify~=1.2.0",
@@ -55,6 +55,13 @@ GoogleTIFeeds = "connector.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[tool.setuptools.package-data]
+# Version stamp generated at build time by the CI (see
+# .github/actions/build-connector-image). Shipped inside the installed package so
+# pycti can resolve the running version — the connector is started with
+# `python -m connector`, which anchors the lookup on this directory.
+connector = [".connector_version.json"]
 
 
 [tool.pytest.ini_options]

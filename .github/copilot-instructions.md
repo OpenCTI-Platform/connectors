@@ -7,7 +7,7 @@ This is the **OpenCTI connectors** monorepo, containing 200+ Python-based connec
 **Key Statistics:**
 - **Language:** Python 3.11-3.12 (Alpine-based Docker images)
 - **Connector Types:** 128 external-import, 53 internal-enrichment, 28 stream, 6 internal-export-file, 6 internal-import-file
-- **Build System:** CircleCI with dynamic pipeline generation
+- **Build System:** GitHub Actions (reusable workflows with dynamically generated build matrices)
 - **Testing:** pytest with isolated virtual environments per connector
 
 ## Critical Build & Validation Requirements
@@ -81,11 +81,10 @@ connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#s
 ### Top-Level Directories
 
 ```
-├── .circleci/               # CI/CD configuration
-│   ├── config.yml          # Main CircleCI workflow
-│   ├── scripts/            # Dynamic pipeline generation (generate_ci.py)
-│   └── vars.yml            # Connector-specific build configurations
-├── .github/                 # GitHub workflows & templates
+├── .github/                 # CI/CD configuration, workflows & templates
+│   ├── workflows/          # GitHub Actions workflows (lint, test, build, release)
+│   ├── actions/            # Composite actions (e.g. build-connector-image)
+│   └── scripts/            # Build matrix generation (build_alpine_matrix.py, ...)
 ├── connectors-sdk/          # Shared SDK for connector development (Python 3.11+)
 ├── external-import/         # 128 connectors for importing external threat intel
 ├── internal-enrichment/     # 53 connectors for enriching existing data
@@ -148,15 +147,17 @@ sh create_connector_dir.sh -t <TYPE> -n <NAME>
 - **`Makefile`** - Manifest/schema generation commands
 - **`run_test.sh`** - Test execution (checks changes, runs pytest)
 
-### CircleCI Pipeline
+### GitHub Actions Pipeline
 
-**Workflow Steps:**
-1. **ensure_formatting** - isort and black checks (Python 3.12)
-2. **base_linter** - flake8 with `--ignore=E,W`
-3. **linter** - Custom pylint plugin for STIX ID validation
-4. **test** - pytest for changed connectors (parallelism: 4, Python 3.11)
-5. **build_manifest** - Generates manifest.json and config schemas
-6. **build** - Builds Docker images for changed connectors
+**Workflows (`.github/workflows/`):**
+1. **`ci-lint-format.yml`** - `ensure_formatting` (isort + black), `base_linter` (flake8 `--ignore=E,W`), `linter` (STIX ID pylint plugin) — Python 3.12
+2. **`ci-tests-connectors.yml`** - pytest via `run_test.sh`, matrix built from the `test-requirements.txt` files of changed connectors
+3. **`build-manifest.yml`** - Generates `manifest.json` + config schemas and commits them back (signed, via GitHub App)
+4. **`build-alpine.yml`** / **`build-ubi9.yml`** - Build and push connector images through `build-connector-type.yml` (native multi-arch amd64 + arm64, then manifest merge)
+5. **`build-all-connectors.yml`** - Orchestrator on push to `master`, `release/*`, `lts/*` and on platform CalVer tags
+6. **`release-connector.yml`** / **`release-bulk-connectors.yml`** - Per-connector and bulk releases (tag, GitHub Release, manifest fragment, `container_version` commit-back)
+
+Build variants are derived from the connector directory itself: a **FIPS** image is built when a `Dockerfile_fips` exists alongside the `Dockerfile`, and the Python version comes from the connector's own `Dockerfile`.
 
 Tests and builds only run for connectors with changes (unless on master or connectors-sdk changed).
 
@@ -199,12 +200,12 @@ RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 ```
 
-**Note:** Some connectors use Python 3.11 (see `.circleci/vars.yml` for exceptions).
+**Note:** Some connectors use Python 3.11 — the version is set in each connector's own `Dockerfile`.
 
 ## Common Issues & Workarounds
 
 - **Test script fails "fatal: Not a valid object name origin/master"** - Script expects origin/master ref; fetch master branch first in shallow clones
-- **Tests not running** - Only runs for changed code; set `CIRCLE_BRANCH=master` to force all tests
+- **Tests not running** - Only runs for changed code; set `CIRCLE_BRANCH=master` to force all tests (legacy variable name still read by `run_test.sh`)
 - **Pylint plugin fails** - Use pycti's `generate_id()` or connectors-sdk models for deterministic STIX IDs
 - **Import/dependency errors in tests** - Tests install latest pycti from GitHub; pin version if needed
 
@@ -224,8 +225,8 @@ Scripts scan `__metadata__/connector_manifest.json` files and consolidate them.
 
 - **Connectors SDK:** Python >=3.11, <3.13
 - **Most Connectors:** Python 3.12 (Alpine)
-- **Some Stream Connectors:** Python 3.11 (see `.circleci/vars.yml`)
-- **CI Environment:** Python 3.11 for tests, Python 3.12 for linting
+- **Some Stream Connectors:** Python 3.11 (set in the connector's `Dockerfile`)
+- **CI Environment:** Python 3.12 for tests and linting
 
 ## Important Notes
 
@@ -257,7 +258,7 @@ Scripts scan `__metadata__/connector_manifest.json` files and consolidate them.
 - [ ] Commits signed with GPG
 - [ ] Metadata and docs updated
 
-**CircleCI pipeline:** formatting checks → linting → custom pylint → tests (parallel) → manifest build → Docker builds (only for changed connectors).
+**GitHub Actions pipeline:** formatting checks → linting → custom pylint → tests (matrix) → manifest build → Docker builds (only for changed connectors).
 
 ## Trust These Instructions
 

@@ -23,7 +23,7 @@ It does not yet create threat actors, intrusion sets, indicators, vulnerabilitie
 | Dependency       | Version                                    |
 |------------------|--------------------------------------------|
 | OpenCTI Platform | >= 7.x (tested on 7.260910.0)              |
-| pycti            | == 7.260910.0                              |
+| pycti            | == 7.260921.0                              |
 | connectors-sdk   | GitHub `master` (repository subdirectory) |
 | requests         | ~= 2.33.0                                  |
 | Python           | 3.12 (Docker image)                        |
