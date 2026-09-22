@@ -11,9 +11,6 @@
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -49,47 +46,18 @@ This connector allows **Enterprise Edition** organizations to extract threat int
 - OpenCTI Platform >= 6.6.0
 - Filigran Enterprise Edition license certificate (PEM format)
 - Network access to the Ariane web service (`https://importdoc.ariane.filigran.io`)
-
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
-Below are the parameters you'll need to set for OpenCTI:
+### Extra Base connector environment variables
 
-| Parameter     | config.yml `opencti` | Docker environment variable | Default | Mandatory | Description                                          |
-|---------------|----------------------|-----------------------------|---------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `url`                | `OPENCTI_URL`               | /       | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `token`              | `OPENCTI_TOKEN`             | /       | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter                | config.yml `connector`   | Docker environment variable        | Default                                        | Mandatory | Description                                                                                          |
 |--------------------------|--------------------------|------------------------------------|------------------------------------------------|-----------|------------------------------------------------------------------------------------------------------|
-| Connector ID             | `id`                     | `CONNECTOR_ID`                     | /                                              | Yes       | A unique `UUIDv4` identifier for this connector instance.                                            |
-| Connector Name           | `name`                   | `CONNECTOR_NAME`                   | ImportDocumentAI                               | No        | Name of the connector.                                                                               |
-| Connector Scope          | `scope`                  | `CONNECTOR_SCOPE`                  | application/pdf,text/plain,text/html,text/markdown | Yes   | Comma-separated list of supported MIME types.                                                        |
-| Connector Auto           | `auto`                   | `CONNECTOR_AUTO`                   | false                                          | No        | Enable/disable automatic import of files matching the scope.                                         |
-| Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false                                          | No        | If enabled, bundles are sent for validation before import.                                           |
 | XTM One Intent           | `xtm_one_intent`         | `CONNECTOR_XTM_ONE_INTENT`         | cti.stix_harvester                             | No        | Intent used by XTM One to bind this connector to specific AI agents. (default to cti.stix_harvester) |
-| Log Level                | `log_level`              | `CONNECTOR_LOG_LEVEL`              | info                                           | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.               |
 
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the Import Document AI connector:
-
-| Parameter              | config.yml `import_document_ai` | Docker environment variable                | Default                              | Mandatory | Description                                                                              |
-|------------------------|---------------------------------|--------------------------------------------|--------------------------------------|-----------|------------------------------------------------------------------------------------------|
-| API Base URL           | `api_base_url`                  | `IMPORT_DOCUMENT_AI_API_BASE_URL`          | https://importdoc.ariane.filigran.io | No        | **[DEPRECATED]** The URL of the Ariane extraction service running the AI model. |
-| API Key PEM            | `api_key`                       | `IMPORT_DOCUMENT_AI_API_KEY`               | /                                    | No        | **[DEPRECATED]** The Enterprise Edition license certificate in PEM format. |
-| Create Indicator       | `create_indicator`              | `IMPORT_DOCUMENT_AI_CREATE_INDICATOR`      | false                                | No        | If `true`, creates an Indicator for each extracted observable.                           |
-| Include Relationships  | `include_relationships`         | `IMPORT_DOCUMENT_AI_INCLUDE_RELATIONSHIPS` | true                                 | No        | If `false`, removes all ML-predicted relationships from the imported bundle.             |
-
-> **⚠️ DEPRECATION NOTICE**: The `api_base_url` and `api_key` configuration parameters are now deprecated. The promoted and recommended approach is to configure the connector via **XTM One** using the `xtm_one_intent` variable defined in the base connector settings. Note that if XTM One is configured and available in your OpenCTI platform, it will automatically take precedence and be used for AI extraction, entirely bypassing any `api_base_url` or `api_key` you may have specified here.
-> Legacy `connector.web_service_url`, `connector.licence_key_pem`, and `import_document.*` config keys are still accepted for backward compatibility, as are `CONNECTOR_WEB_SERVICE_URL`, `CONNECTOR_LICENCE_KEY_PEM`, `IMPORT_DOCUMENT_CREATE_INDICATOR`, and `IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS`. Deprecation warnings are emitted when those legacy names are used.
 
 ## Deployment
 

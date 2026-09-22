@@ -36,7 +36,7 @@ services:
       - dev-opencti
 
   minio:
-    image: minio/minio:latest
+    image: pgsty/silo:latest
     volumes:
       - s3data4:/data
     ports:
@@ -46,7 +46,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}    
-    command: server /data
+    command: server /data --console-address ":9001"
     networks:
       - dev-opencti
 
@@ -65,7 +65,7 @@ services:
       - dev-opencti
 
   opencti:
-    image: opencti/platform:7.260907.0
+    image: opencti/platform:7.260921.0
     environment:
       - NODE_OPTIONS=--max-old-space-size=8096
       - APP__PORT=8080
@@ -103,7 +103,7 @@ services:
     restart: always
 
   worker:
-    image: opencti/worker:7.260907.0
+    image: opencti/worker:7.260921.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}

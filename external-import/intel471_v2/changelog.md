@@ -2,7 +2,7 @@
 
   + Add a Verity471 watcher **alerts** stream that ingests alerts from `/watchers/v1/alerts/stream` and maps them to STIX (each alert target wrapped in an `Incident`). Disabled by default; enable it with a non-zero `INTEL471_INTERVAL_ALERTS`. Restrict what is ingested with the optional `INTEL471_WATCHER_GROUP_IDS`, `INTEL471_WATCHER_IDS`, `INTEL471_STATUSES` and `INTEL471_IS_TRASHED_INCLUDED` filters. Because a Verity471 cursor is only valid for the filter set it was issued against, changing any of these filters discards the cursor and re-anchors the from-date to the last processed alert minus a small margin (a filter change re-ingests a small overlapping window; widening a filter backfills only the margin)
   + Upgrade `verity471[stix]` to version [1.2.1](https://github.com/intel471/verity471-python/releases/tag/v1.2.1) to pick up the alerts STIX mappings, a report inline-images fix, and quieter (non-error) handling of alert targets that no longer exist
-  + Upgrade `pycti` to version [7.260910.0](https://pypi.org/project/pycti/7.260910.0/) to match the version pinned by `connectors-sdk`
+  + Upgrade `pycti` to version [7.260921.0](https://pypi.org/project/pycti/7.260921.0/) to match the version pinned by `connectors-sdk`
 
 # v2.2.2
 

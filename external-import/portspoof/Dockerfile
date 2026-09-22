@@ -6,9 +6,10 @@ COPY src /opt/opencti-connector-portspoof
 
 # Install system + Python dependencies. ``libmagic`` is required at
 # runtime by ``pycti``; ``git`` + ``build-base`` are required *at
-# install time* because the repository's CircleCI dynamic templates
-# rewrite the pinned ``pycti==X.Y.Z`` line to ``pycti @ git+https://...``
-# for rolling / prerelease builds (see ``.circleci/templates/dynamic.yml.j2``),
+# install time* because the repository's image build action rewrites
+# the pinned ``pycti==X.Y.Z`` line to ``pycti @ git+https://...``
+# for rolling / prerelease builds (see
+# ``.github/actions/build-connector-image/action.yml``),
 # and pip needs the ``git`` binary on ``PATH`` to install VCS
 # dependencies plus a C toolchain for any wheels that have to build
 # from source. The build deps are removed in the same layer so the
