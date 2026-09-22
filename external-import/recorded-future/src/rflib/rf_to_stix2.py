@@ -1004,11 +1004,43 @@ def _strip_detection_rule_extension(file_name):
     return name
 
 
+#: Rule actions accepted by OpenCTI's bundled Snort parser
+#: (``python/runtime/snort/snort_parser.py``), i.e. the Snort 2 set.
+_SNORT2_ACTIONS = (
+    "activate",
+    "alert",
+    "drop",
+    "dynamic",
+    "log",
+    "pass",
+    "reject",
+    "sdrop",
+)
+
+#: Actions Snort 3 adds on top of the Snort 2 set. OpenCTI's parser rejects
+#: these, but they still delimit a rule, so the splitter must recognise them:
+#: otherwise a single unsupported rule keeps its `alert` siblings glued to it and
+#: the whole document is discarded instead of just that one rule.
+_SNORT3_ONLY_ACTIONS = ("block", "react", "rewrite")
+
+#: Suricata's reject variants. Same reasoning as the Snort 3 actions above.
+#: ``bypass`` is deliberately absent -- it is a rule *option* (``bypass;``), not
+#: an action, so treating it as one would split mid-rule.
+_SURICATA_ONLY_ACTIONS = ("rejectboth", "rejectdst", "rejectsrc")
+
+#: Every action that can legally begin a snort or suricata rule.
+SNORT_SURICATA_ACTIONS = tuple(
+    sorted(_SNORT2_ACTIONS + _SNORT3_ONLY_ACTIONS + _SURICATA_ONLY_ACTIONS)
+)
+
 #: Matches the start of a new snort/suricata rule (an action keyword at the
 #: beginning of a line). Used to split a multi-rule pattern into individual
-#: rules before validation.
+#: rules before validation. Longest alternatives are tried first so that
+#: ``rejectsrc`` is not partially matched as ``reject``.
 _SNORT_SURICATA_ACTION_RE = re.compile(
-    r"^[ \t]*(?:alert|drop|pass|reject|sdrop|log|activate|dynamic)[ \t]+",
+    r"^[ \t]*(?:"
+    + "|".join(sorted(SNORT_SURICATA_ACTIONS, key=len, reverse=True))
+    + r")[ \t]+",
     re.MULTILINE,
 )
 
@@ -1028,6 +1060,11 @@ def split_snort_suricata_rules(content):
     272 of 273 individual rules (99.6%) parse cleanly -- recovering 87 of the 88
     documents, including rules for CVE-2021-44228 (Log4Shell) and
     CVE-2022-30190 (Follina).
+
+    Rule boundaries are detected using the full action vocabulary of Snort 2,
+    Snort 3 and Suricata (``SNORT_SURICATA_ACTIONS``), not just the subset
+    OpenCTI's parser accepts. Recognising an action OpenCTI rejects is still
+    worthwhile: it isolates that rule so its siblings survive.
 
     Comment-only leading lines are dropped rather than emitted as an empty
     "rule". A single-rule pattern is returned unchanged.
@@ -1057,55 +1094,39 @@ def split_snort_suricata_rules(content):
 class DetectionRule(RFStixEntity):
     """Represents a Yara, Sigma, Snort, Suricata or Nuclei rule."""
 
-    def __init__(
-        self,
-        name,
-        _type,
-        content,
-        author,
-        tlp=None,
-        first_seen=None,
-        description=None,
-        labels=None,
-        kill_chain_phases=None,
-        external_references=None,
-    ):
+    def __init__(self, name, _type, content, author, tlp=None, first_seen=None):
         super().__init__(name, _type, author, tlp, first_seen)
-        # TODO: possibly need to accomodate multi-rule. Right now just shoving everything in one
 
         self.name = _strip_detection_rule_extension(name) or name
         self.type = _type
         self.content = content
         self.stix_obj = None
-        self.description = description
-        self.labels = list(labels or [])
-        self.kill_chain_phases = list(kill_chain_phases or [])
-        self.external_references = list(external_references or [])
 
         if self.type not in SUPPORTED_DETECTION_RULE_TYPES:
             msg = f"[ANALYST NOTES] Detection rule of type {self.type} is not supported"
             raise ConversionError(msg)
+        if not (self.content or "").strip():
+            # An Indicator with an empty pattern is rejected by OpenCTI's syntax
+            # validator, and pycti.Indicator.generate_id("") would collapse every
+            # such rule onto one deterministic id. Refuse it here so the caller
+            # logs and skips the attachment instead.
+            msg = (
+                f"[ANALYST NOTES] Detection rule {self.name!r} of type "
+                f"{self.type} has no content"
+            )
+            raise ConversionError(msg)
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        kwargs = {
-            "id": pycti.Indicator.generate_id(self.content),
-            "name": self.name,
-            "pattern_type": self.type,
-            "pattern": self.content,
-            "valid_from": self.first_seen,
-            "created_by_ref": self.author.id,
-            "object_marking_refs": self.tlp,
-        }
-        if self.description:
-            kwargs["description"] = self.description
-        if self.labels:
-            kwargs["labels"] = self.labels
-        if self.kill_chain_phases:
-            kwargs["kill_chain_phases"] = self.kill_chain_phases
-        if self.external_references:
-            kwargs["external_references"] = self.external_references
-        self.stix_obj = stix2.Indicator(**kwargs)
+        self.stix_obj = stix2.Indicator(
+            id=pycti.Indicator.generate_id(self.content),
+            name=self.name,
+            pattern_type=self.type,
+            pattern=self.content,
+            valid_from=self.first_seen,
+            created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
+        )
 
 
 class Software(RFStixEntity):

@@ -500,6 +500,109 @@ def test_from_json_splits_multi_rule_snort_attachment_into_multiple_indicators()
     assert patterns == {rule_a, rule_b}
 
 
+@pytest.mark.parametrize(
+    "action",
+    [
+        # Snort 2 -- the only actions OpenCTI's bundled parser accepts
+        "alert",
+        "log",
+        "pass",
+        "activate",
+        "dynamic",
+        "drop",
+        "reject",
+        "sdrop",
+        # Snort 3 additions
+        "block",
+        "react",
+        "rewrite",
+        # Suricata reject variants
+        "rejectsrc",
+        "rejectdst",
+        "rejectboth",
+    ],
+)
+def test_split_snort_suricata_rules_recognises_every_documented_action(action):
+    from rflib.rf_to_stix2 import split_snort_suricata_rules
+
+    # Given an `alert` rule followed by a rule using ACTION
+    rule_a = 'alert tcp any any -> any any (msg:"one"; sid:1;)'
+    rule_b = f'{action} tcp any any -> any any (msg:"two"; sid:2;)'
+
+    # When the concatenated document is split
+    result = split_snort_suricata_rules(f"{rule_a}\n{rule_b}")
+
+    # Then both rules are separated.
+    #
+    # OpenCTI's parser rejects the Snort 3 and Suricata-only actions, but the
+    # splitter must still recognise them: if it does not, the unsupported rule
+    # stays glued to `rule_a` and the whole document is discarded rather than
+    # just the one rule. The `reject` variants also matter because a naive
+    # `reject` alternative cannot match `rejectsrc`.
+    assert result == [rule_a, rule_b]
+
+
+def test_snort_suricata_action_vocabulary_excludes_rule_options():
+    from rflib.rf_to_stix2 import SNORT_SURICATA_ACTIONS
+
+    # `bypass` and `config` are frequently mistaken for actions. `bypass` is a
+    # rule OPTION in Suricata; treating either as an action risks splitting a
+    # rule mid-body.
+    assert "bypass" not in SNORT_SURICATA_ACTIONS
+    assert "config" not in SNORT_SURICATA_ACTIONS
+    # And the set is exactly the union of the three documented vocabularies.
+    assert set(SNORT_SURICATA_ACTIONS) == {
+        "activate",
+        "alert",
+        "block",
+        "drop",
+        "dynamic",
+        "log",
+        "pass",
+        "react",
+        "reject",
+        "rejectboth",
+        "rejectdst",
+        "rejectsrc",
+        "rewrite",
+        "sdrop",
+    }
+
+
+def test_detection_rule_rejects_empty_content():
+    from rflib.rf_to_stix2 import ConversionError, DetectionRule
+
+    # Given an attachment whose content is blank
+    # When a DetectionRule is constructed
+    # Then it is refused rather than producing an Indicator with an empty
+    # pattern, which OpenCTI's validator rejects and which would collapse every
+    # such rule onto a single deterministic id.
+    for blank in ("", "   \n\t "):
+        with pytest.raises(ConversionError):
+            DetectionRule(
+                name="empty.yar",
+                _type="yara",
+                content=blank,
+                author=_given_author(),
+                tlp=_given_tlp(),
+            )
+
+
+def test_from_json_skips_empty_attachment_and_logs():
+    # Given a note with a blank snort attachment
+    note = _given_stix_note()
+    note_json = _given_analyst_note_json_with_attachments(
+        [{"name": "empty.rules", "type": "snort", "content": ""}]
+    )
+
+    # When the note is converted from JSON
+    _when_note_converted_from_json(note, note_json)
+
+    # Then no indicator is produced and the skip is logged
+    assert not [obj for obj in note.objects if getattr(obj, "pattern_type", None)]
+    note.helper.connector_logger.warning.assert_called()
+
+
 # ── Given helpers ────────────────────────────────────────────────────────────
 
 
