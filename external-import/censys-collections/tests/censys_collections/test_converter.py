@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from censys_collections.converter import Converter, _parse_rfc3339
 from censys_platform import (
     Certificate,
     CertificateParsed,
@@ -20,8 +21,11 @@ from censys_platform import (
     Vuln,
     Webproperty,
 )
-from censys_platform.models import CertificateAsset, HostAssetWithMatchedServices, WebpropertyAsset
-from censys_collections.converter import Converter, _parse_rfc3339
+from censys_platform.models import (
+    CertificateAsset,
+    HostAssetWithMatchedServices,
+    WebpropertyAsset,
+)
 from connectors_sdk.models import (
     DomainName,
     IPV4Address,
@@ -34,10 +38,10 @@ from connectors_sdk.models import (
 )
 from connectors_sdk.models.enums import HashAlgorithm, RelationshipType
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_collection(
     name: str = "Test Collection",
@@ -221,7 +225,9 @@ def test_auto_indicator_by_score_disabled_always_creates_indicator() -> None:
 
 
 def test_auto_indicator_by_score_enabled_creates_indicator_above_threshold() -> None:
-    converter = _make_converter(auto_indicator_by_score=True, indicator_score_threshold=60)
+    converter = _make_converter(
+        auto_indicator_by_score=True, indicator_score_threshold=60
+    )
     collection = _make_collection()
     host = Host(ip="1.2.3.5", reputation=Reputation(score=75.0))
     hit = SearchQueryHit(
@@ -234,7 +240,9 @@ def test_auto_indicator_by_score_enabled_creates_indicator_above_threshold() -> 
 
 
 def test_auto_indicator_by_score_enabled_skips_indicator_below_threshold() -> None:
-    converter = _make_converter(auto_indicator_by_score=True, indicator_score_threshold=60)
+    converter = _make_converter(
+        auto_indicator_by_score=True, indicator_score_threshold=60
+    )
     collection = _make_collection()
     host = Host(ip="1.2.3.6", reputation=Reputation(score=40.0))
     hit = SearchQueryHit(
@@ -247,8 +255,12 @@ def test_auto_indicator_by_score_enabled_skips_indicator_below_threshold() -> No
     assert ip_obs.create_indicator is False
 
 
-def test_auto_indicator_by_score_enabled_score_equal_to_threshold_creates_indicator() -> None:
-    converter = _make_converter(auto_indicator_by_score=True, indicator_score_threshold=60)
+def test_auto_indicator_by_score_enabled_score_equal_to_threshold_creates_indicator() -> (
+    None
+):
+    converter = _make_converter(
+        auto_indicator_by_score=True, indicator_score_threshold=60
+    )
     collection = _make_collection()
     host = Host(ip="1.2.3.7", reputation=Reputation(score=60.0))
     hit = SearchQueryHit(
@@ -261,7 +273,9 @@ def test_auto_indicator_by_score_enabled_score_equal_to_threshold_creates_indica
 
 
 def test_auto_indicator_by_score_applies_to_certificate() -> None:
-    converter = _make_converter(auto_indicator_by_score=True, indicator_score_threshold=60)
+    converter = _make_converter(
+        auto_indicator_by_score=True, indicator_score_threshold=60
+    )
     # Converter's fallback score is 50, below the 60 threshold.
     collection = _make_collection()
     cert = Certificate(fingerprint_sha256="a" * 64)
@@ -273,7 +287,9 @@ def test_auto_indicator_by_score_applies_to_certificate() -> None:
 
 
 def test_auto_indicator_by_score_applies_to_webproperty() -> None:
-    converter = _make_converter(auto_indicator_by_score=True, indicator_score_threshold=40)
+    converter = _make_converter(
+        auto_indicator_by_score=True, indicator_score_threshold=40
+    )
     # Converter's fallback score is 50, above the 40 threshold.
     collection = _make_collection()
     wp = Webproperty(hostname="example.com")
@@ -311,7 +327,11 @@ def test_from_hit_ipv6_creates_observable() -> None:
 def test_from_hit_host_with_malware_creates_malware_and_relationship() -> None:
     converter = _make_converter()
     collection = _make_collection()
-    threat = Threat(malware=ThreatMalware(primary_name="CobaltStrike", all_names=["CobaltStrike", "CS"]))
+    threat = Threat(
+        malware=ThreatMalware(
+            primary_name="CobaltStrike", all_names=["CobaltStrike", "CS"]
+        )
+    )
     service = Service(threats=[threat])
     host = Host(ip="10.0.0.1", services=[service])
     hit = SearchQueryHit(
@@ -324,7 +344,8 @@ def test_from_hit_host_with_malware_creates_malware_and_relationship() -> None:
     assert malware_objs[0].name == "CobaltStrike"
 
     rel_objs = [
-        o for o in objects
+        o
+        for o in objects
         if isinstance(o, Relationship) and o.type == RelationshipType.RELATED_TO
     ]
     assert len(rel_objs) == 1
@@ -368,7 +389,8 @@ def test_from_hit_host_with_actor_creates_actor_and_relationship() -> None:
     assert actor_objs[0].name == "APT28"
 
     rel_objs = [
-        o for o in objects
+        o
+        for o in objects
         if isinstance(o, Relationship) and o.type == RelationshipType.ATTRIBUTED_TO
     ]
     assert len(rel_objs) == 1
@@ -395,7 +417,8 @@ def test_from_hit_host_with_vuln_creates_vulnerability_and_relationship() -> Non
     assert vuln_objs[0].name == "CVE-2021-44228"
 
     rel_objs = [
-        o for o in objects
+        o
+        for o in objects
         if isinstance(o, Relationship) and o.type == RelationshipType.RELATED_TO
     ]
     assert len(rel_objs) == 1
@@ -414,9 +437,7 @@ def test_from_hit_certificate_creates_x509() -> None:
         fingerprint_sha1="b" * 40,
         fingerprint_md5="c" * 32,
     )
-    hit = SearchQueryHit(
-        certificate_v1=CertificateAsset(extensions={}, resource=cert)
-    )
+    hit = SearchQueryHit(certificate_v1=CertificateAsset(extensions={}, resource=cert))
     objects = converter.from_hit(hit, collection)
 
     x509_objs = [o for o in objects if isinstance(o, X509Certificate)]
@@ -429,9 +450,7 @@ def test_from_hit_certificate_no_hashes_returns_empty() -> None:
     converter = _make_converter()
     collection = _make_collection()
     cert = Certificate()  # no fingerprints
-    hit = SearchQueryHit(
-        certificate_v1=CertificateAsset(extensions={}, resource=cert)
-    )
+    hit = SearchQueryHit(certificate_v1=CertificateAsset(extensions={}, resource=cert))
     assert converter.from_hit(hit, collection) == []
 
 
@@ -448,9 +467,7 @@ def test_from_hit_certificate_extracts_parsed_metadata() -> None:
         ),
     )
     cert = Certificate(fingerprint_sha256="a" * 64, parsed=parsed)
-    hit = SearchQueryHit(
-        certificate_v1=CertificateAsset(extensions={}, resource=cert)
-    )
+    hit = SearchQueryHit(certificate_v1=CertificateAsset(extensions={}, resource=cert))
     objects = converter.from_hit(hit, collection)
 
     x509 = next(o for o in objects if isinstance(o, X509Certificate))
@@ -470,9 +487,7 @@ def test_from_hit_webproperty_creates_domain_observable() -> None:
     converter = _make_converter()
     collection = _make_collection()
     wp = Webproperty(hostname="evil.example.com")
-    hit = SearchQueryHit(
-        webproperty_v1=WebpropertyAsset(extensions={}, resource=wp)
-    )
+    hit = SearchQueryHit(webproperty_v1=WebpropertyAsset(extensions={}, resource=wp))
     objects = converter.from_hit(hit, collection)
 
     domain_objs = [o for o in objects if isinstance(o, DomainName)]
@@ -485,9 +500,7 @@ def test_from_hit_webproperty_no_hostname_returns_empty() -> None:
     converter = _make_converter()
     collection = _make_collection()
     wp = Webproperty()
-    hit = SearchQueryHit(
-        webproperty_v1=WebpropertyAsset(extensions={}, resource=wp)
-    )
+    hit = SearchQueryHit(webproperty_v1=WebpropertyAsset(extensions={}, resource=wp))
     assert converter.from_hit(hit, collection) == []
 
 
@@ -496,9 +509,7 @@ def test_from_hit_webproperty_with_malware() -> None:
     collection = _make_collection()
     threat = Threat(malware=ThreatMalware(primary_name="AgentTesla"))
     wp = Webproperty(hostname="phishing.example.com", threats=[threat])
-    hit = SearchQueryHit(
-        webproperty_v1=WebpropertyAsset(extensions={}, resource=wp)
-    )
+    hit = SearchQueryHit(webproperty_v1=WebpropertyAsset(extensions={}, resource=wp))
     objects = converter.from_hit(hit, collection)
 
     assert any(isinstance(o, Malware) for o in objects)
@@ -513,9 +524,7 @@ def test_from_hit_webproperty_with_vuln() -> None:
     collection = _make_collection()
     vuln = Vuln(id="CVE-2023-12345")
     wp = Webproperty(hostname="vuln.example.com", vulns=[vuln])
-    hit = SearchQueryHit(
-        webproperty_v1=WebpropertyAsset(extensions={}, resource=wp)
-    )
+    hit = SearchQueryHit(webproperty_v1=WebpropertyAsset(extensions={}, resource=wp))
     objects = converter.from_hit(hit, collection)
 
     assert any(isinstance(o, Vulnerability) for o in objects)

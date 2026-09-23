@@ -7,7 +7,9 @@ from censys_collections.settings import ConfigLoader
 @pytest.mark.usefixtures("mock_config")
 def test_config_loads_required_fields() -> None:
     config = ConfigLoader()
-    assert config.censys_collections.organisation_id.get_secret_value() == "censys-org-id"
+    assert (
+        config.censys_collections.organisation_id.get_secret_value() == "censys-org-id"
+    )
     assert config.censys_collections.token.get_secret_value() == "censys-token"
 
 

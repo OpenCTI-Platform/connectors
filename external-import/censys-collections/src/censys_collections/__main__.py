@@ -6,12 +6,11 @@ import traceback
 
 def main() -> None:
     try:
-        from connectors_sdk import ExternalImportConnector
-
         from censys_collections.client import Client
         from censys_collections.converter import Converter
         from censys_collections.processor import CollectionsProcessor
         from censys_collections.settings import ConfigLoader
+        from connectors_sdk import ExternalImportConnector
 
         settings = ConfigLoader()
         client = Client(

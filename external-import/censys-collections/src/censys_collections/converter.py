@@ -25,8 +25,8 @@ from connectors_sdk.models import (
     Malware,
     OrganizationAuthor,
     Relationship,
-    TLPMarking,
     ThreatActorGroup,
+    TLPMarking,
     Vulnerability,
     X509Certificate,
 )
@@ -110,9 +110,7 @@ class Converter:
             allow_custom=True,
         )
 
-    def from_hit(
-        self, hit: SearchQueryHit, collection: Collection
-    ) -> list[BaseObject]:
+    def from_hit(self, hit: SearchQueryHit, collection: Collection) -> list[BaseObject]:
         """Return all OpenCTI objects derived from a single collection hit."""
         objects: list[BaseObject] = []
         if hit.host_v1 is not None:
@@ -313,9 +311,7 @@ class Converter:
             seen.add(name)
 
             aliases = [
-                n
-                for n in (actor.all_names or [])
-                if isinstance(n, str) and n != name
+                n for n in (actor.all_names or []) if isinstance(n, str) and n != name
             ]
 
             actor_obj = ThreatActorGroup(
