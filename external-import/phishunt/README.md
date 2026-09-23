@@ -14,7 +14,7 @@ This connector retrieves urls of active websites that are suspicious of being ph
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260914.0
+- OpenCTI Platform >= 7.260921.0
 
 ## Configuration variables
 
