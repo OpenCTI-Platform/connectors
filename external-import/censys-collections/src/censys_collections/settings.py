@@ -12,7 +12,7 @@ from pydantic import Field, SecretStr
 
 class _ConnectorConfig(BaseExternalImportConnectorConfig):
     id: str = Field(
-        default="censys-collections--00000000-0000-0000-0000-000000000000",
+        default="censys-collections--123bea30-6b2a-4df9-8bbd-bc8883a19f48",
         description="A UUID v4 to identify the connector in OpenCTI.",
     )
     name: str = Field(
