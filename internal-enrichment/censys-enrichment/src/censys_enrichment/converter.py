@@ -2,7 +2,10 @@ import datetime
 import ipaddress
 from typing import Any, Callable, Generator
 
+from censys_enrichment.client import NVDData
 from censys_platform import (
+    SMTP,
+    SSH,
     Attribute,
     Certificate,
     CobaltStrike,
@@ -21,11 +24,9 @@ from censys_platform import (
     Redis,
     Redline,
     Risk,
-    Smb,
-    SMTP,
-    Snmp,
-    SSH,
     Service,
+    Smb,
+    Snmp,
     Telnet,
     Threat,
     Vnc,
@@ -63,8 +64,6 @@ from connectors_sdk.models.enums import (
     TLPLevel,
 )
 
-from censys_enrichment.client import NVDData
-
 # Maps common lowercase severity strings (from Censys or NVD) to the SDK enum.
 _SEVERITY_MAP: dict[str, CvssSeverity] = {
     "critical": CvssSeverity.CRITICAL,
@@ -89,7 +88,6 @@ class Converter:
     def __init__(self) -> None:
         self.author = OrganizationAuthor(name="Censys Enrichment Connector")  # type: ignore[call-arg]
         self.marking = TLPMarking(level=TLPLevel.CLEAR)
-        self._common_props = {"author": self.author, "markings": [self.marking]}
 
     def _generate_city(
         self, observable: Reference, name: str | None
@@ -99,7 +97,8 @@ class Converter:
 
         city = City(
             name=name,
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         yield from [
             city,
@@ -107,7 +106,8 @@ class Converter:
                 source=observable,
                 target=city,
                 type=RelationshipType.LOCATED_AT,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             ),
         ]
 
@@ -119,7 +119,8 @@ class Converter:
 
         country = Country(
             name=name,
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         yield from [
             country,
@@ -127,7 +128,8 @@ class Converter:
                 source=observable,
                 target=country,
                 type=RelationshipType.LOCATED_AT,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             ),
         ]
         return country
@@ -140,7 +142,8 @@ class Converter:
 
         region = Region(
             name=name,
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         yield from [
             region,
@@ -148,7 +151,8 @@ class Converter:
                 source=observable,
                 target=region,
                 type=RelationshipType.LOCATED_AT,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             ),
         ]
 
@@ -166,12 +170,14 @@ class Converter:
                 name=name,
                 latitude=coordinates.latitude,
                 longitude=coordinates.longitude,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             )
             if coordinates
             else AdministrativeArea(
                 name=name,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             )
         )
 
@@ -181,7 +187,8 @@ class Converter:
                 source=observable,
                 target=administrative_area,
                 type=RelationshipType.LOCATED_AT,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             ),
         ]
 
@@ -197,9 +204,7 @@ class Converter:
         all_names = list(dns.names if isinstance(dns.names, list) else [])
         if dns.reverse_dns:
             all_names.extend(
-                dns.reverse_dns.names
-                if isinstance(dns.reverse_dns.names, list)
-                else []
+                dns.reverse_dns.names if isinstance(dns.reverse_dns.names, list) else []
             )
 
         for name in all_names:
@@ -208,7 +213,8 @@ class Converter:
             seen.add(name)
             host_name = Hostname(
                 value=name,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             )
             yield from [
                 host_name,
@@ -216,7 +222,8 @@ class Converter:
                     source=host_name,
                     target=observable,
                     type=RelationshipType.RESOLVES_TO,
-                    **self._common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 ),
             ]
 
@@ -230,7 +237,8 @@ class Converter:
 
         organization = Organization(
             name=name,
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         yield from [
             organization,
@@ -238,7 +246,8 @@ class Converter:
                 source=observable,
                 target=organization,
                 type=RelationshipType.RELATED_TO,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             ),
         ]
         return organization
@@ -257,7 +266,8 @@ class Converter:
             name=name,
             description=description,
             number=number,
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         yield from [
             autonomous_system,
@@ -265,7 +275,8 @@ class Converter:
                 source=observable,
                 target=autonomous_system,
                 type=RelationshipType.BELONGS_TO,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             ),
         ]
         return autonomous_system
@@ -286,7 +297,8 @@ class Converter:
             vendor=vendor,
             cpe=cpe,
             version=version,
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         yield from [
             software,
@@ -294,7 +306,8 @@ class Converter:
                 source=observable,
                 target=software,
                 type=RelationshipType.RELATED_TO,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             ),
         ]
         return software
@@ -376,38 +389,73 @@ class Converter:
             "cvss_v3_vector_string": cvss3.vector if cvss3 else None,
             "cvss_v3_base_severity": cvss3_severity,
             "cvss_v3_attack_vector": _cvss_component(cvss3_comps, "attack_vector"),
-            "cvss_v3_attack_complexity": _cvss_component(cvss3_comps, "attack_complexity"),
-            "cvss_v3_privileges_required": _cvss_component(cvss3_comps, "privileges_required"),
-            "cvss_v3_user_interaction": _cvss_component(cvss3_comps, "user_interaction"),
+            "cvss_v3_attack_complexity": _cvss_component(
+                cvss3_comps, "attack_complexity"
+            ),
+            "cvss_v3_privileges_required": _cvss_component(
+                cvss3_comps, "privileges_required"
+            ),
+            "cvss_v3_user_interaction": _cvss_component(
+                cvss3_comps, "user_interaction"
+            ),
             "cvss_v3_scope": _cvss_component(cvss3_comps, "scope"),
-            "cvss_v3_confidentiality_impact": _cvss_component(cvss3_comps, "confidentiality"),
+            "cvss_v3_confidentiality_impact": _cvss_component(
+                cvss3_comps, "confidentiality"
+            ),
             "cvss_v3_integrity_impact": _cvss_component(cvss3_comps, "integrity"),
             "cvss_v3_availability_impact": _cvss_component(cvss3_comps, "availability"),
             # CVSS v4
             "cvss_v4_base_score": cvss4_score,
             "cvss_v4_vector_string": None,
             "cvss_v4_attack_vector": _cvss_component(cvss4_comps, "attack_vector"),
-            "cvss_v4_attack_complexity": _cvss_component(cvss4_comps, "attack_complexity"),
-            "cvss_v4_attack_requirements": _cvss_component(cvss4_comps, "attack_requirements"),
-            "cvss_v4_privileges_required": _cvss_component(cvss4_comps, "privileges_required"),
-            "cvss_v4_user_interaction": _cvss_component(cvss4_comps, "user_interaction"),
-            "cvss_v4_vs_confidentiality_impact": _cvss_component(cvss4_comps, "confidentiality"),
+            "cvss_v4_attack_complexity": _cvss_component(
+                cvss4_comps, "attack_complexity"
+            ),
+            "cvss_v4_attack_requirements": _cvss_component(
+                cvss4_comps, "attack_requirements"
+            ),
+            "cvss_v4_privileges_required": _cvss_component(
+                cvss4_comps, "privileges_required"
+            ),
+            "cvss_v4_user_interaction": _cvss_component(
+                cvss4_comps, "user_interaction"
+            ),
+            "cvss_v4_vs_confidentiality_impact": _cvss_component(
+                cvss4_comps, "confidentiality"
+            ),
             "cvss_v4_vs_integrity_impact": _cvss_component(cvss4_comps, "integrity"),
-            "cvss_v4_vs_availability_impact": _cvss_component(cvss4_comps, "availability"),
+            "cvss_v4_vs_availability_impact": _cvss_component(
+                cvss4_comps, "availability"
+            ),
             # CVSS v2 (from NVD)
             "cvss_v2_base_score": nvd_data.cvss_v2_base_score if nvd_data else None,
-            "cvss_v2_vector_string": nvd_data.cvss_v2_vector_string if nvd_data else None,
-            "cvss_v2_access_vector": nvd_data.cvss_v2_access_vector if nvd_data else None,
-            "cvss_v2_access_complexity": nvd_data.cvss_v2_access_complexity if nvd_data else None,
-            "cvss_v2_authentication": nvd_data.cvss_v2_authentication if nvd_data else None,
-            "cvss_v2_confidentiality_impact": nvd_data.cvss_v2_confidentiality_impact if nvd_data else None,
-            "cvss_v2_integrity_impact": nvd_data.cvss_v2_integrity_impact if nvd_data else None,
-            "cvss_v2_availability_impact": nvd_data.cvss_v2_availability_impact if nvd_data else None,
+            "cvss_v2_vector_string": (
+                nvd_data.cvss_v2_vector_string if nvd_data else None
+            ),
+            "cvss_v2_access_vector": (
+                nvd_data.cvss_v2_access_vector if nvd_data else None
+            ),
+            "cvss_v2_access_complexity": (
+                nvd_data.cvss_v2_access_complexity if nvd_data else None
+            ),
+            "cvss_v2_authentication": (
+                nvd_data.cvss_v2_authentication if nvd_data else None
+            ),
+            "cvss_v2_confidentiality_impact": (
+                nvd_data.cvss_v2_confidentiality_impact if nvd_data else None
+            ),
+            "cvss_v2_integrity_impact": (
+                nvd_data.cvss_v2_integrity_impact if nvd_data else None
+            ),
+            "cvss_v2_availability_impact": (
+                nvd_data.cvss_v2_availability_impact if nvd_data else None
+            ),
             # EPSS + CISA KEV
             "epss_score": epss_score,
             "epss_percentile": epss_percentile,
             "is_cisa_kev": True if is_kev else None,
-            **self._common_props,
+            "author": self.author,
+            "markings": [self.marking],
         }
         vulnerability = Vulnerability(**vuln_kwargs)  # type: ignore[call-arg]
         yield vulnerability
@@ -415,7 +463,8 @@ class Converter:
             source=observable,
             target=vulnerability,
             type=RelationshipType.RELATED_TO,
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         # Software observables for each NVD-listed affected package.
         # Linked via RELATED_TO rather than HAS: Software→HAS→Vulnerability is
@@ -427,14 +476,16 @@ class Converter:
                 vendor=sw_entry.vendor,
                 cpe=sw_entry.cpe,
                 version=sw_entry.version_info,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             )
             yield software
             yield Relationship(
                 source=software,
                 target=vulnerability,
                 type=RelationshipType.RELATED_TO,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             )
 
     def _generate_malware(
@@ -487,7 +538,8 @@ class Converter:
             aliases=aliases,
             description="\n".join(desc_parts) if desc_parts else None,
             external_references=ext_refs if ext_refs else None,  # type: ignore[call-arg]
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         yield from [
             malware,
@@ -495,7 +547,8 @@ class Converter:
                 source=observable,
                 target=malware,
                 type=RelationshipType.RELATED_TO,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             ),
         ]
 
@@ -505,7 +558,9 @@ class Converter:
             return None
         return f"### Banner\n\n```\n{service.banner.strip()}\n```", []
 
-    def _build_fingerprints_section(self, service: Service) -> tuple[str, list[str]] | None:
+    def _build_fingerprints_section(
+        self, service: Service
+    ) -> tuple[str, list[str]] | None:
         """Return a Fingerprints section with TLS/JARM/JA4TScan data."""
         sub_sections: list[str] = []
         if service.tls:
@@ -596,13 +651,17 @@ class Converter:
                         f"**GET** `{cfg.http_get.verb or 'GET'} {cfg.http_get.uri or ''}`"
                     )
                     if cfg.http_get.client:
-                        section.append(f"**Headers (bytes):** `{_escape_header(cfg.http_get.client)}`")
+                        section.append(
+                            f"**Headers (bytes):** `{_escape_header(cfg.http_get.client)}`"
+                        )
                 if cfg.http_post:
                     section.append(
                         f"**POST** `{cfg.http_post.verb or 'POST'} {cfg.http_post.uri or ''}`"
                     )
                     if cfg.http_post.client:
-                        section.append(f"**Headers (bytes):** `{_escape_header(cfg.http_post.client)}`")
+                        section.append(
+                            f"**Headers (bytes):** `{_escape_header(cfg.http_post.client)}`"
+                        )
                 if cfg.post_ex:
                     if cfg.post_ex.x64:
                         section.append(f"**Post-Ex x64:** `{cfg.post_ex.x64}`")
@@ -630,7 +689,8 @@ class Converter:
                 authors=[self.author.name],
                 objects=[observable],
                 labels=["cobalt-strike", "malware", f"port:{port}"],
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             )
 
     def _build_dcerpc_section(self, service: Service) -> tuple[str, list[str]] | None:
@@ -687,12 +747,18 @@ class Converter:
         if ssh.hassh_fingerprint:
             lines.append(f"**HASSH:** `{ssh.hassh_fingerprint}`")
         if ssh.server_host_key and ssh.server_host_key.fingerprint_sha256:
-            lines.append(f"**Host Key SHA256:** `{ssh.server_host_key.fingerprint_sha256}`")
+            lines.append(
+                f"**Host Key SHA256:** `{ssh.server_host_key.fingerprint_sha256}`"
+            )
         if ssh.algorithm_selection:
             if ssh.algorithm_selection.kex_algorithm:
-                lines.append(f"**KEX Algorithm:** {ssh.algorithm_selection.kex_algorithm}")
+                lines.append(
+                    f"**KEX Algorithm:** {ssh.algorithm_selection.kex_algorithm}"
+                )
             if ssh.algorithm_selection.host_key_algorithm:
-                lines.append(f"**Host Key Algorithm:** {ssh.algorithm_selection.host_key_algorithm}")
+                lines.append(
+                    f"**Host Key Algorithm:** {ssh.algorithm_selection.host_key_algorithm}"
+                )
         if not lines:
             return None
         return "### SSH\n\n" + "\n\n".join(lines), ["ssh"]
@@ -734,13 +800,19 @@ class Converter:
             lines.append(f"**Desktop:** {vnc.desktop_name}")
         if vnc.connection_failed_reason:
             lines.append(f"**Connection Failed:** {vnc.connection_failed_reason}")
-        security_types = vnc.security_types if isinstance(vnc.security_types, list) else []
+        security_types = (
+            vnc.security_types if isinstance(vnc.security_types, list) else []
+        )
         if security_types:
-            types_str = ", ".join(f"{st.name}={st.value}" for st in security_types if st.name)
+            types_str = ", ".join(
+                f"{st.name}={st.value}" for st in security_types if st.name
+            )
             if types_str:
                 lines.append(f"**Security Types:** {types_str}")
         if vnc.screen_info:
-            lines.append(f"**Screen:** {vnc.screen_info.width}x{vnc.screen_info.height}")
+            lines.append(
+                f"**Screen:** {vnc.screen_info.width}x{vnc.screen_info.height}"
+            )
         if not lines:
             return None
         return "### VNC\n\n" + "\n\n".join(lines), ["vnc", "remote-desktop"]
@@ -756,8 +828,12 @@ class Converter:
         if ldap.result_code is not None:
             lines.append(f"**Result Code:** {ldap.result_code}")
         _INTERESTING_ATTRS = {
-            "defaultNamingContext", "rootDomainNamingContext", "dnsHostName",
-            "ldapServiceName", "serverName", "supportedSASLMechanisms",
+            "defaultNamingContext",
+            "rootDomainNamingContext",
+            "dnsHostName",
+            "ldapServiceName",
+            "serverName",
+            "supportedSASLMechanisms",
         }
         for attr in ldap.attributes or []:
             if attr.name in _INTERESTING_ATTRS:
@@ -815,7 +891,9 @@ class Converter:
             return None
         return "### SNMP\n\n" + "\n\n".join(lines), ["snmp"]
 
-    def _build_darkcomet_section(self, service: Service) -> tuple[str, list[str]] | None:
+    def _build_darkcomet_section(
+        self, service: Service
+    ) -> tuple[str, list[str]] | None:
         """Return a DarkComet section if this service shows RAT beacon activity."""
         if not service.darkcomet:
             return None
@@ -824,7 +902,11 @@ class Converter:
         if dc.version:
             lines.append(f"**Version:** {dc.version}")
         content = "\n\n".join(lines) if lines else "DarkComet RAT beacon detected."
-        return f"### DarkComet\n\n{content}", ["darkcomet", "remote-access-trojan", "malware"]
+        return f"### DarkComet\n\n{content}", [
+            "darkcomet",
+            "remote-access-trojan",
+            "malware",
+        ]
 
     def _build_darkgate_section(self, service: Service) -> tuple[str, list[str]] | None:
         """Return a DarkGate section if this service shows malware beacon activity."""
@@ -857,7 +939,11 @@ class Converter:
         if rl.settings_response:
             lines.append(f"**Settings Response:** {rl.settings_response}")
         content = "\n\n".join(lines) if lines else "RedLine stealer beacon detected."
-        return f"### RedLine\n\n{content}", ["redline", "information-stealer", "malware"]
+        return f"### RedLine\n\n{content}", [
+            "redline",
+            "information-stealer",
+            "malware",
+        ]
 
     def _build_risks_section(self, service: Service) -> tuple[str, list[str]] | None:
         """Return a Security Risks section summarising exposures, misconfigs, and compromises."""
@@ -915,7 +1001,10 @@ class Converter:
                 device_blocks.append("\n\n".join(lines))
         if not device_blocks:
             return None
-        return "### UPnP Devices\n\n" + "\n\n---\n\n".join(device_blocks), ["upnp", "iot"]
+        return "### UPnP Devices\n\n" + "\n\n---\n\n".join(device_blocks), [
+            "upnp",
+            "iot",
+        ]
 
     def _generate_observable_update(
         self,
@@ -942,7 +1031,8 @@ class Converter:
                 )
             ],
             labels=labels or None,
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
 
     def _generate_certificate(
@@ -979,7 +1069,10 @@ class Converter:
             if cert.parsed.validity_period:
                 kwargs["validity_not_before"] = cert.parsed.validity_period.not_before
                 kwargs["validity_not_after"] = cert.parsed.validity_period.not_after
-            if cert.parsed.subject_key_info and cert.parsed.subject_key_info.key_algorithm:
+            if (
+                cert.parsed.subject_key_info
+                and cert.parsed.subject_key_info.key_algorithm
+            ):
                 kwargs["subject_public_key_algorithm"] = (
                     cert.parsed.subject_key_info.key_algorithm.name
                 )
@@ -1056,7 +1149,9 @@ class Converter:
                 )
             ]
 
-        certificate = X509Certificate(**kwargs, **self._common_props)
+        certificate = X509Certificate(
+            **kwargs, author=self.author, markings=[self.marking]
+        )
         yield certificate
 
         # Emit Hostname observables for each domain name covered by this cert.
@@ -1073,13 +1168,16 @@ class Converter:
                 continue  # SAN is an IP address — skip, not a Hostname
             except ValueError:
                 pass
-            hostname_obs = Hostname(value=name, **self._common_props)
+            hostname_obs = Hostname(
+                value=name, author=self.author, markings=[self.marking]
+            )
             yield hostname_obs
             yield Relationship(
                 source=certificate,
                 target=hostname_obs,
                 type=RelationshipType.RELATED_TO,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             )
 
         return certificate
@@ -1137,7 +1235,9 @@ class Converter:
             return None
         redis: Redis = service.redis
         lines: list[str] = []
-        parts = [p for p in [redis.major, redis.minor, redis.patch_level] if p is not None]
+        parts = [
+            p for p in [redis.major, redis.minor, redis.patch_level] if p is not None
+        ]
         if parts:
             lines.append(f"**Version:** {'.'.join(str(p) for p in parts)}")
         if redis.mode:
@@ -1233,9 +1333,15 @@ class Converter:
             return
 
         _secondary = {
-            "malware", "remote-access-trojan", "information-stealer",
-            "compromise", "exposure", "misconfiguration", "windows",
-            "remote-desktop", "rpc",
+            "malware",
+            "remote-access-trojan",
+            "information-stealer",
+            "compromise",
+            "exposure",
+            "misconfiguration",
+            "windows",
+            "remote-desktop",
+            "rpc",
         }
         protocol_labels = [lbl for lbl in extra_labels if lbl not in _secondary]
         abstract = (
@@ -1251,7 +1357,8 @@ class Converter:
             authors=[self.author.name],
             objects=[observable],
             labels=[f"port:{service.port}"] + extra_labels,
-            **self._common_props,
+            author=self.author,
+            markings=[self.marking],
         )
 
     def _generate_services(
@@ -1278,7 +1385,8 @@ class Converter:
                         source=observable,
                         target=certificate,
                         type=RelationshipType.RELATED_TO,
-                        **self._common_props,
+                        author=self.author,
+                        markings=[self.marking],
                     )
             for vuln in service.vulns or []:
                 yield from self._generate_vulnerability(
@@ -1307,16 +1415,21 @@ class Converter:
     ) -> Generator[BaseObject, None, None | IPV4Address | IPV6Address]:
         ip_version = ipaddress.ip_network(ip, strict=False).version
         if ip_version == 4:
-            ip_address = IPV4Address(value=ip, **self._common_props)
+            ip_address = IPV4Address(
+                value=ip, author=self.author, markings=[self.marking]
+            )
         else:
-            ip_address = IPV6Address(value=ip, **self._common_props)
+            ip_address = IPV6Address(
+                value=ip, author=self.author, markings=[self.marking]
+            )
         yield from [
             ip_address,
             Relationship(
                 source=observable,
                 target=ip_address,
                 type=RelationshipType.RELATED_TO,
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             ),
         ]
         return ip_address
@@ -1378,14 +1491,16 @@ class Converter:
                     source=autonomous_system,
                     target=organization,
                     type=RelationshipType.RELATED_TO,
-                    **self._common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 )
             if country:
                 yield Relationship(
                     source=autonomous_system,
                     target=country,
                     type=RelationshipType.RELATED_TO,
-                    **self._common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 )
         # Map host-level OS to a Software observable (product, vendor, CPE, version)
         if data.operating_system:
@@ -1426,13 +1541,18 @@ class Converter:
                 _local, _sep, _domain = contact.email.strip().partition("@")
                 if not (_sep and _local and _domain and "." in _domain):
                     continue
-                email_obs = EmailAddress(value=contact.email.strip(), **self._common_props)
+                email_obs = EmailAddress(
+                    value=contact.email.strip(),
+                    author=self.author,
+                    markings=[self.marking],
+                )
                 yield email_obs
                 yield Relationship(
                     source=observable,
                     target=email_obs,
                     type=RelationshipType.RELATED_TO,
-                    **self._common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 )
 
         # Re-emit the IP with the Censys Platform pivot URL and enriched labels/score;
@@ -1454,7 +1574,9 @@ class Converter:
                 if priv.anonymous:
                     all_labels.append("anonymous")
                 for provider_name in (
-                    priv.service_provider if isinstance(priv.service_provider, list) else []
+                    priv.service_provider
+                    if isinstance(priv.service_provider, list)
+                    else []
                 ):
                     if provider_name:
                         all_labels.append(
@@ -1469,9 +1591,7 @@ class Converter:
                     data.greynoise.tags if isinstance(data.greynoise.tags, list) else []
                 )[:10]:
                     if gn_tag.name:
-                        all_labels.append(
-                            f"gn-{gn_tag.name.lower().replace(' ', '-')}"
-                        )
+                        all_labels.append(f"gn-{gn_tag.name.lower().replace(' ', '-')}")
 
             # Network type (hosting provider, mobile, satellite)
             for nc in data.network if isinstance(data.network, list) else []:
@@ -1484,7 +1604,9 @@ class Converter:
 
             # Hardware / device type for IoT and embedded-device detection
             if data.hardware and data.hardware.product:
-                hw_parts = [p for p in [data.hardware.vendor, data.hardware.product] if p]
+                hw_parts = [
+                    p for p in [data.hardware.vendor, data.hardware.product] if p
+                ]
                 all_labels.append(f"device:{' '.join(hw_parts).lower()}")
 
             # Threat type labels from reputation evidence (e.g. threat:c2, threat:botnet)
@@ -1558,9 +1680,7 @@ class Converter:
             )
             if ip_stix:
                 ip_refs.append(ip_stix)
-                nvd_data_map = (
-                    nvd_data_provider(host) if nvd_data_provider else None
-                )
+                nvd_data_map = nvd_data_provider(host) if nvd_data_provider else None
                 yield from self.generate_octi_objects(
                     stix_entity=ip_stix.to_stix2_object(),
                     data=host,
@@ -1580,7 +1700,8 @@ class Converter:
                         description=f"Censys host intelligence for {domain_value}",
                     )
                 ],
-                **self._common_props,
+                author=self.author,
+                markings=[self.marking],
             )
 
     def generate_octi_objects_from_domain_certs(
@@ -1609,5 +1730,6 @@ class Converter:
                     source=certificate,
                     target=observable,
                     type=RelationshipType.RELATED_TO,
-                    **self._common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 )

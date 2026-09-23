@@ -1,4 +1,3 @@
-import time
 from dataclasses import dataclass, field
 from typing import Generator
 from urllib.parse import urlparse
@@ -62,7 +61,9 @@ class EntityHasNoUsableHashError(Exception):
 
 
 class Client:
-    def __init__(self, organisation_id: str, token: str, nvd_api_key: str | None = None):
+    def __init__(
+        self, organisation_id: str, token: str, nvd_api_key: str | None = None
+    ):
         self.organisation_id = organisation_id
         self.token = token
         self._nvd_api_key = nvd_api_key
@@ -120,7 +121,11 @@ class Client:
                 search_query_input_body=search_query
             )
             if res.result.result:
-                for hit in res.result.result.hits if isinstance(res.result.result.hits, list) else []:
+                for hit in (
+                    res.result.result.hits
+                    if isinstance(res.result.result.hits, list)
+                    else []
+                ):
                     if hit.certificate_v1:
                         yield hit.certificate_v1.resource
 
@@ -141,7 +146,11 @@ class Client:
                 search_query_input_body=search_query
             )
             if res.result.result:
-                for hit in res.result.result.hits if isinstance(res.result.result.hits, list) else []:
+                for hit in (
+                    res.result.result.hits
+                    if isinstance(res.result.result.hits, list)
+                    else []
+                ):
                     if hit.host_v1:
                         yield hit.host_v1.resource
 
@@ -164,7 +173,11 @@ class Client:
                 search_query_input_body=search_query
             )
             if res.result.result:
-                for hit in res.result.result.hits if isinstance(res.result.result.hits, list) else []:
+                for hit in (
+                    res.result.result.hits
+                    if isinstance(res.result.result.hits, list)
+                    else []
+                ):
                     if hit.certificate_v1:
                         yield hit.certificate_v1.resource
 
@@ -180,23 +193,19 @@ class Client:
         """
         try:
             headers = {"apiKey": self._nvd_api_key} if self._nvd_api_key else {}
-            response = None
-            for attempt in range(2):
-                response = requests.get(
-                    _NVD_CVE_API,
-                    params={"cveId": cve_id},
-                    headers=headers,
-                    timeout=10,
-                )
-                if response.status_code == 403 and attempt == 0:
-                    # NVD returns 403 when the rate limit is exhausted.
-                    # Wait for the 30-second rolling window to reset and retry once.
-                    time.sleep(30)
-                    continue
-                response.raise_for_status()
-                break
-            if response is None:
+            response = requests.get(
+                _NVD_CVE_API,
+                params={"cveId": cve_id},
+                headers=headers,
+                timeout=10,
+            )
+            if response.status_code == 403:
+                # NVD returns 403 when the rate limit is exhausted. Skip NVD
+                # enrichment for this CVE rather than blocking the worker
+                # thread with a hard sleep; enrichment continues without
+                # NVD-sourced data for this pass.
                 return None
+            response.raise_for_status()
             data = response.json()
             vulns = data.get("vulnerabilities", [])
             if not vulns:

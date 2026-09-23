@@ -2,6 +2,8 @@ import stix2
 from censys_enrichment.client import NVDAffectedSoftware, NVDData, NVDReference
 from censys_enrichment.converter import Converter
 from censys_platform import (
+    SSH,
+    TLS,
     Attribute,
     CobaltStrike,
     CobaltStrikeConfig,
@@ -16,8 +18,8 @@ from censys_platform import (
     HostDNSReverseResolution,
     Ja4TScanScan,
     JarmScan,
-    KEVSource,
     Kev,
+    KEVSource,
     Label,
     Metrics,
     NtlmInfo,
@@ -26,10 +28,8 @@ from censys_platform import (
     Severity,
     Smb,
     SmbNegotiationLog,
-    SSH,
     SSHEndpointID,
     SSHServerHostKey,
-    TLS,
     Threat,
     ThreatMalware,
     VersionSelected,
@@ -207,7 +207,7 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
 
     entity = stix_objects[14]
     assert entity.authority_key_identifier == "748580c066c7df37decfbd2937aa031dbeedcd17"
-    assert entity.basic_constraints in ('{"is_ca":null,"max_path_len":null}', '{}')
+    assert entity.basic_constraints in ('{"is_ca":null,"max_path_len":null}', "{}")
     assert (
         entity.certificate_policies
         == "[CertificatePolicy(cps=['http://cps.digicert.com/example-cps'], id='2.23.140.1.2.2', user_notice=Unset())]"
@@ -227,7 +227,7 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
     )
     assert entity.key_usage in (
         '{"certificate_sign":null,"content_commitment":null,"crl_sign":null,"data_encipherment":null,"decipher_only":null,"digital_signature":null,"encipher_only":null,"key_agreement":null,"key_encipherment":null,"value":null}',
-        '{}',
+        "{}",
     )
     assert entity.object_marking_refs == [
         "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
@@ -495,7 +495,9 @@ def test_converter_jarm_note() -> None:
     assert len(notes) == 1
     note = notes[0]
     assert note.abstract == "Service on port 443"
-    assert "27d40d40d29d40d1dc42d43d00041d4689ee210389f4f6b4b5b1b93f92252d" in note.content
+    assert (
+        "27d40d40d29d40d1dc42d43d00041d4689ee210389f4f6b4b5b1b93f92252d" in note.content
+    )
 
 
 def test_converter_operating_system_enrichment() -> None:
@@ -599,9 +601,7 @@ def test_converter_service_fingerprints_note() -> None:
                     ja3s="f75082535b4a79c07b31bdd0e2b7eb87",
                     ja4s="t120100_009d_bc98f8e001b5",
                 ),
-                ja4tscan=Ja4TScanScan(
-                    fingerprint="64000_2-1-3-4-8_1460_0_1-2-4"
-                ),
+                ja4tscan=Ja4TScanScan(fingerprint="64000_2-1-3-4-8_1460_0_1-2-4"),
                 jarm=JarmScan(
                     fingerprint="14d14d16d14d14d08c14d14d14d14dfd9c9d14e4f4f67f94f0359f8b28f532",
                 ),
@@ -700,8 +700,12 @@ def test_converter_cobalt_strike_note() -> None:
                                 cookie_beacon=1,
                                 killdate=0,
                                 watermark=987654321,
-                                http_get=CobaltStrikeHTTPConfig(verb="GET", uri="/j.ad"),
-                                http_post=CobaltStrikeHTTPConfig(verb="POST", uri="/submit.php"),
+                                http_get=CobaltStrikeHTTPConfig(
+                                    verb="GET", uri="/j.ad"
+                                ),
+                                http_post=CobaltStrikeHTTPConfig(
+                                    verb="POST", uri="/submit.php"
+                                ),
                                 post_ex=CobaltStrikePostEx(
                                     x64="%windir%\\sysnative\\rundll32.exe",
                                     x86="%windir%\\syswow64\\rundll32.exe",
@@ -1337,7 +1341,9 @@ def test_converter_cvss4_score_is_preserved() -> None:
                 vulns=[
                     Vuln(
                         id="CVE-2024-99998",
-                        metrics=Metrics(cvss_v40=CVSSv4(score=9.3, vector=valid_vector)),
+                        metrics=Metrics(
+                            cvss_v40=CVSSv4(score=9.3, vector=valid_vector)
+                        ),
                     )
                 ],
             )
@@ -1448,7 +1454,9 @@ def test_converter_vulnerability_cwe_labels() -> None:
 
     vuln_obj = next(o for o in stix_objects if o.type == "vulnerability")
     assert vuln_obj.name == "CVE-2021-44228"
-    labels = getattr(vuln_obj, "labels", None) or getattr(vuln_obj, "x_opencti_labels", None)
+    labels = getattr(vuln_obj, "labels", None) or getattr(
+        vuln_obj, "x_opencti_labels", None
+    )
     assert labels is not None
     assert "CWE-502" in labels
     assert "CWE-20" in labels
@@ -1462,11 +1470,11 @@ def test_converter_vulnerability_cvss3_components() -> None:
         AttackVector,
         Availability,
         Confidentiality,
+        CVSSComponents,
         Integrity,
         PrivilegesRequired,
         Scope,
         UserInteraction,
-        CVSSComponents,
     )
 
     converter = Converter()
@@ -1678,7 +1686,9 @@ def test_converter_vulnerability_nvd_external_references() -> None:
     assert "Patch, Release Notes" in source_names
 
 
-def test_converter_vulnerability_affected_software_yields_software_and_has_rel() -> None:
+def test_converter_vulnerability_affected_software_yields_software_and_has_rel() -> (
+    None
+):
     """Software observables are created for each NVD affected_software entry and
     linked to the Vulnerability via a HAS relationship."""
     converter = Converter()
@@ -1720,8 +1730,10 @@ def test_converter_vulnerability_affected_software_yields_software_and_has_rel()
     assert sw.version == ">= 2.0, < 2.15.0"
 
     has_rels = [
-        o for o in stix_objects
-        if o.type == "relationship" and o.relationship_type == "related-to"
+        o
+        for o in stix_objects
+        if o.type == "relationship"
+        and o.relationship_type == "related-to"
         and o.source_ref == sw.id
     ]
     assert len(has_rels) == 1
@@ -1835,13 +1847,13 @@ def test_converter_whois_abuse_email_invalid_values_are_dropped() -> None:
         whois=Whois(
             organization=CensysOrg(
                 abuse_contacts=[
-                    Contact(email="abuse@example.com"),   # valid — should be kept
-                    Contact(email="N/A"),                 # no @
-                    Contact(email="abuse@"),              # no domain
-                    Contact(email="postmaster"),          # no @
-                    Contact(email=""),                    # empty
-                    Contact(email=None),                  # None
-                    Contact(email="noc@provider.net"),   # valid — should be kept
+                    Contact(email="abuse@example.com"),  # valid — should be kept
+                    Contact(email="N/A"),  # no @
+                    Contact(email="abuse@"),  # no domain
+                    Contact(email="postmaster"),  # no @
+                    Contact(email=""),  # empty
+                    Contact(email=None),  # None
+                    Contact(email="noc@provider.net"),  # valid — should be kept
                 ]
             )
         ),
@@ -1870,11 +1882,11 @@ def test_converter_cert_san_ip_addresses_not_emitted_as_hostnames() -> None:
 
     cert = CertificateFactory(
         names=[
-            "example.com",           # valid hostname — should produce Hostname
-            "*.example.com",         # wildcard — must be skipped
-            "192.0.2.1",             # IPv4 SAN — must NOT produce Hostname
-            "2400:c620:2f:6e::a",    # IPv6 SAN — must NOT produce Hostname
-            "sub.example.org",       # valid hostname — should produce Hostname
+            "example.com",  # valid hostname — should produce Hostname
+            "*.example.com",  # wildcard — must be skipped
+            "192.0.2.1",  # IPv4 SAN — must NOT produce Hostname
+            "2400:c620:2f:6e::a",  # IPv6 SAN — must NOT produce Hostname
+            "sub.example.org",  # valid hostname — should produce Hostname
         ]
     )
     converter = Converter()
@@ -1890,3 +1902,94 @@ def test_converter_cert_san_ip_addresses_not_emitted_as_hostnames() -> None:
     assert "192.0.2.1" not in hostname_values
     assert "2400:c620:2f:6e::a" not in hostname_values
     assert not any(v.startswith("*") for v in hostname_values)
+
+
+def test_generate_service_note_covers_all_protocol_sections() -> None:
+    """_generate_service_note builds a combined Note covering every protocol section
+    when the underlying service data is present (VNC, LDAP, WinRM, SNMP, DarkComet,
+    DarkGate, RedLine, security risks, and UPnP devices)."""
+    from uuid import uuid4
+
+    from censys_platform import (
+        Darkcomet,
+        Darkgate,
+        DarkgateFile,
+        Ldap,
+        NtlmInfo,
+        Redline,
+        Risk,
+        Snmp,
+        Upnp,
+        Vnc,
+        Winrm,
+    )
+    from censys_platform.models.snmp import SnmpSystem
+    from censys_platform.models.upnp_device import UpnpDevice
+    from connectors_sdk.models import Reference
+
+    from .factories import ServiceFactory
+
+    service = ServiceFactory(
+        vnc=Vnc(version="3.8", desktop_name="office-pc"),
+        ldap=Ldap(allows_anonymous_bind=True, result_code=0),
+        winrm=Winrm(
+            ntlm_info=NtlmInfo(
+                dns_domain_name="corp.example.com",
+                netbios_computer_name="WIN-ABC123",
+            )
+        ),
+        snmp=Snmp(oid_system=SnmpSystem(name="switch-1", desc="core switch")),
+        darkcomet=Darkcomet(version="5.3.1"),
+        darkgate=Darkgate(files=[DarkgateFile(name="payload.bin", length=1024)]),
+        redline=Redline(transport="tcp", action_response="ok"),
+        compromises=[Risk(name="Known Compromise")],
+        exposures=[Risk(name="Open Admin Panel")],
+        misconfigs=[Risk(name="Default Credentials")],
+        upnp=Upnp(
+            devices=[
+                UpnpDevice(
+                    friendly_name="Smart Camera",
+                    manufacturer="Acme",
+                    model_name="CamX",
+                )
+            ]
+        ),
+    )
+
+    converter = Converter()
+    observable = Reference(id=f"ipv4-addr--{uuid4()}")
+    notes = list(converter._generate_service_note(observable, service))
+
+    assert len(notes) == 1
+    note = notes[0]
+    assert "### VNC" in note.content
+    assert "### LDAP" in note.content
+    assert "### WinRM" in note.content
+    assert "### SNMP" in note.content
+    assert "### DarkComet" in note.content
+    assert "### DarkGate" in note.content
+    assert "### RedLine" in note.content
+    assert "### Security Risks" in note.content
+    assert "compromise" in note.labels
+    assert "exposure" in note.labels
+    assert "misconfiguration" in note.labels
+    assert "darkcomet" in note.labels
+    assert "darkgate" in note.labels
+    assert "redline" in note.labels
+
+
+def test_generate_service_note_skips_without_port_or_scan_time() -> None:
+    """_generate_service_note yields nothing when port or scan_time is missing."""
+    from uuid import uuid4
+
+    from connectors_sdk.models import Reference
+
+    from .factories import ServiceFactory
+
+    converter = Converter()
+    observable = Reference(id=f"ipv4-addr--{uuid4()}")
+    service = ServiceFactory(port=None)
+
+    notes = list(converter._generate_service_note(observable, service))
+
+    assert notes == []
