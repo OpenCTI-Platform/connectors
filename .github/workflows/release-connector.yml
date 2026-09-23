@@ -10,11 +10,12 @@ run-name: >-
   ${{
     github.event_name == 'push'
       && format('🚀 {0}', github.ref_name)
-      || format('🚀 {0}{1}{2}{3}',
+      || format('🚀 {0}{1}{2}{3}{4}',
            inputs.connector_name,
            inputs.version != '' && format('@{0}', inputs.version) || '',
            inputs.dry_run && ' · dry-run' || '',
-           inputs.manifest_only && ' · manifest-only' || '')
+           inputs.manifest_only && ' · manifest-only' || '',
+           inputs.force && ' · force' || '')
   }}
 
 # Production release pipeline for individual connectors.
@@ -30,14 +31,19 @@ run-name: >-
 #   3. Generate scoped release notes (git-cliff)
 #   4. Build & push Docker image (DockerHub + GHCR)
 #   5. Create GitHub Release with changelog + manifest/schema/fragment assets
-#   6. Update container_version in manifest and commit back to default branch
 #
-# Transition mode — `manifest_only` (workflow_dispatch only, never on tag push):
-# skips step 4 (Docker build/push) only — everything else (release notes, tag,
-# GitHub Release, manifest fragment, container_version commit-back) still runs
-# normally. Used while image builds are still handled by CircleCI (see
-# release-bulk-connectors.yml, which forces this mode when triggered by a
-# platform CalVer tag push).
+# The manifest is patched with the released `container_version` for the release
+# assets only — it is never committed back. `container_version` stays `rolling`
+# in the repository (enforced by the connector linter, VC202), and the global
+# manifest is rebuilt from the published releases by build-manifest.yml.
+#
+# Manifest-only mode — `manifest_only` (workflow_dispatch only, never on tag
+# push): skips step 4 (Docker build/push) only — everything else (release
+# notes, tag, GitHub Release, manifest fragment, container_version
+# commit-back) still runs normally. Used when the images for this version are
+# already built elsewhere — see release-bulk-connectors.yml, which forces this
+# mode on a platform CalVer tag push because build-all-connectors.yml builds
+# and pushes every connector image for that same tag.
 
 on:
   push:
@@ -68,10 +74,21 @@ on:
         default: false
       manifest_only:
         description: >
-          Manifest-only — skip Docker build/push only (still handled by
-          CircleCI during the transition). Release notes, tag, GitHub
+          Manifest-only — skip Docker build/push only, for when the image
+          is already built by another workflow. Release notes, tag, GitHub
           Release, manifest fragment, and container_version commit-back are
           still fully produced.
+        required: false
+        type: boolean
+        default: false
+      force:
+        description: >
+          Force — delete any existing GitHub Release for this version before
+          recreating it. If a tag already exists for this version, it is
+          reused as-is rather than being deleted/recreated. Use this to
+          recover from a partially failed release (e.g. manifest fragment
+          generation or XTM Hub publish failure) that left a dangling
+          tag/release behind.
         required: false
         type: boolean
         default: false
@@ -112,6 +129,7 @@ jobs:
       is_tag_push: ${{ steps.parse.outputs.is_tag_push }}
       dry_run: ${{ steps.parse.outputs.dry_run }}
       manifest_only: ${{ steps.parse.outputs.manifest_only }}
+      force: ${{ steps.parse.outputs.force }}
       tag: ${{ steps.version.outputs.tag }}
       matrix_json: ${{ steps.matrix.outputs.matrix_json }}
     steps:
@@ -133,6 +151,7 @@ jobs:
             echo "is_tag_push=true" >> "$GITHUB_OUTPUT"
             echo "dry_run=false" >> "$GITHUB_OUTPUT"
             echo "manifest_only=false" >> "$GITHUB_OUTPUT"
+            echo "force=false" >> "$GITHUB_OUTPUT"
             echo "🏷️ Tag push: $TAG → connector=$CONNECTOR_NAME version=$VERSION"
           else
             # workflow_dispatch: use inputs directly
@@ -140,6 +159,7 @@ jobs:
             echo "is_tag_push=false" >> "$GITHUB_OUTPUT"
             echo "dry_run=${{ inputs.dry_run }}" >> "$GITHUB_OUTPUT"
             echo "manifest_only=${{ inputs.manifest_only }}" >> "$GITHUB_OUTPUT"
+            echo "force=${{ inputs.force }}" >> "$GITHUB_OUTPUT"
             echo "📋 Manual dispatch: connector=${{ inputs.connector_name }}"
           fi
 
@@ -469,28 +489,44 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Overwrite guard
+        id: overwrite-guard
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ needs.resolve.outputs.force }}
         run: |
           TAG="${{ needs.resolve.outputs.tag }}"
           if gh release view "$TAG" --json tagName >/dev/null 2>&1; then
-            echo "::error::A GitHub Release already exists for tag '${TAG}'. Aborting to prevent overwrite."
-            exit 1
+            if [ "$FORCE" = "true" ]; then
+              echo "⚠️ Force enabled — deleting existing release for '${TAG}'"
+              gh release delete "$TAG" --yes
+            else
+              echo "::error::A GitHub Release already exists for tag '${TAG}'. Aborting to prevent overwrite. Re-run with 'force' enabled to delete and recreate it."
+              exit 1
+            fi
           fi
 
       - name: Create tag (manual dispatch only)
         if: needs.resolve.outputs.is_tag_push != 'true'
+        env:
+          FORCE: ${{ needs.resolve.outputs.force }}
         run: |
           TAG="${{ needs.resolve.outputs.tag }}"
-          echo "🏷️  Creating tag: $TAG"
 
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
-            echo "::error::Tag '$TAG' already exists. Use a different version or push the existing tag to trigger a release."
-            exit 1
+          # `git rev-parse refs/tags/...` can't be used here: this job's checkout
+          # doesn't fetch tags, so a remote-only tag would look absent locally.
+          # `ls-remote` checks the remote directly regardless of local state.
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            if [ "$FORCE" = "true" ]; then
+              echo "⚠️ Force enabled — tag '${TAG}' already exists, reusing it as-is"
+            else
+              echo "::error::Tag '$TAG' already exists. Use a different version, push the existing tag to trigger a release, or re-run with 'force' enabled to reuse it."
+              exit 1
+            fi
+          else
+            echo "🏷️  Creating tag: $TAG"
+            git tag "$TAG"
+            git push origin "$TAG"
           fi
-
-          git tag "$TAG"
-          git push origin "$TAG"
 
       - name: Patch manifest container_version
         id: patch-manifest
@@ -500,9 +536,8 @@ jobs:
           MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
 
           if [ ! -f "$MANIFEST" ]; then
-            echo "patched=false" >> "$GITHUB_OUTPUT"
-            echo "⚠️ Manifest not found: $MANIFEST — skipping version patch"
-            exit 0
+            echo "::error::Manifest not found: $MANIFEST — cannot patch version"
+            exit 1
           fi
 
           jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$RUNNER_TEMP/manifest.json" \
@@ -526,9 +561,14 @@ jobs:
           VERSION="${{ needs.resolve.outputs.version }}"
           MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
 
+          # Same resolution as the `build` job's `sdk_ref` input, so the fragment's
+          # min_version is derived from the connectors-sdk ref actually pinned into
+          # the built image, not whatever happens to be checked out here.
+          SDK_REF="${{ inputs.sdk_ref != '' && inputs.sdk_ref || github.sha }}"
+
           if [ ! -f "$MANIFEST" ]; then
-            echo "::warning::Manifest not found for ${CONNECTOR_DIR} — skipping fragment generation"
-            exit 0
+            echo "::error::Manifest not found for ${CONNECTOR_DIR}"
+            exit 1
           fi
 
           pip install --quiet -r shared/tools/composer/generate_manifest_fragment/requirements.txt
@@ -537,6 +577,7 @@ jobs:
           python shared/tools/composer/generate_manifest_fragment/generate_manifest_fragment.py \
             --connector-dir "$CONNECTOR_DIR" \
             --version "$VERSION" \
+            --sdk-ref "$SDK_REF" \
             --output "$FRAGMENT_PATH"
 
           echo "fragment_path=$FRAGMENT_PATH" >> "$GITHUB_OUTPUT"
@@ -554,8 +595,8 @@ jobs:
           FRAGMENT_PATH="${{ steps.fragment.outputs.fragment_path }}"
 
           if [ -z "$XTM_HUB_TOKEN" ]; then
-            echo "::warning::XTM_HUB_TOKEN secret not set -- skipping XTM Hub publish"
-            exit 0
+            echo "::error::XTM_HUB_TOKEN secret not set — cannot publish to XTM Hub"
+            exit 1
           fi
 
           QUERY='mutation IngestManifestFragments($manifestFragments: [ManifestFragmentInput!]!) {
@@ -586,20 +627,20 @@ jobs:
           echo "$RESPONSE" | jq . 2>/dev/null || echo "$RESPONSE"
 
           if [ "$HTTP_STATUS" -ge 400 ]; then
-            echo "::warning::XTM Hub publish failed with HTTP $HTTP_STATUS"
-            exit 0
+            echo "::error::XTM Hub publish failed with HTTP $HTTP_STATUS"
+            exit 1
           fi
 
           if echo "$RESPONSE" | jq -e '.errors' >/dev/null 2>&1; then
-            echo "::warning::XTM Hub returned errors: $(echo "$RESPONSE" | jq -c '.errors')"
-            exit 0
+            echo "::error::XTM Hub returned errors: $(echo "$RESPONSE" | jq -c '.errors')"
+            exit 1
           fi
 
           SUCCESS=$(echo "$RESPONSE" | jq -r '.data.ingestManifestFragments.success // false')
           if [ "$SUCCESS" = "true" ]; then
             echo "✅ Manifest fragment published to XTM Hub"
           else
-            echo "::warning::XTM Hub did not report success for manifest fragment publish"
+            echo "::error::XTM Hub did not report success for manifest fragment publish"
           fi
 
       - name: Download pinned dependency files
@@ -627,7 +668,7 @@ jobs:
 
           NOTES="$CHANGELOG"
           if [ "$MANIFEST_ONLY" = "true" ]; then
-            NOTICE="> 🧩 **Manifest-only release** — Docker build/push is still handled by CircleCI during the CircleCI→GitHub Actions transition; no image was built by this workflow run for this tag."
+            NOTICE="> 🧩 **Manifest-only release** — no image was built by this workflow run for this tag; the Docker build/push is handled by the build workflow for this version."
             NOTES="${NOTICE}"$'\n\n'"${NOTES}"
           fi
 
@@ -701,84 +742,37 @@ jobs:
 
           echo "✅ Release created: $TITLE"
 
-  # ──────────────────────────────────────────────────────────
-  # 5. Commit manifest version back to default branch
-  # ──────────────────────────────────────────────────────────
-  update-manifest:
-    name: Update manifest version
-    runs-on: ubuntu-latest
-    needs: [resolve, release]
-    if: |
-      always() &&
-      needs.resolve.outputs.dry_run != 'true'
-    # Non-blocking: a failure here must not prevent the release from succeeding
-    continue-on-error: true
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout default branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-
-      - name: Patch and commit container_version
+      # Runs on any failure in this job that happens after the overwrite guard
+      # passed (guard failing itself means a real prior release exists and
+      # must be left untouched). Without this, a mid-job failure (e.g.
+      # manifest fragment generation or XTM Hub publish) leaves a dangling
+      # tag/release that blocks every future retry, since "Create tag" and
+      # "Overwrite guard" would then refuse to proceed on the next run.
+      - name: Cleanup tag on failure
+        if: failure() && steps.overwrite-guard.conclusion == 'success'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
-          CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
-          VERSION="${{ needs.resolve.outputs.version }}"
-          MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
-
-          if [ ! -f "$MANIFEST" ]; then
-            echo "⚠️ Manifest not found: $MANIFEST — skipping"
-            exit 0
-          fi
-
-          # Patch container_version
-          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$RUNNER_TEMP/manifest.json" \
-            && mv "$RUNNER_TEMP/manifest.json" "$MANIFEST"
-
-          # Validate the patched JSON
-          jq empty "$MANIFEST"
-
-          # Commit
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "$MANIFEST"
-
-          if git diff --cached --quiet; then
-            echo "ℹ️ container_version already set to $VERSION — nothing to commit"
-            exit 0
-          fi
-
-          git commit -m "chore(manifest): update ${CONNECTOR_NAME} container_version to ${VERSION} [skip ci]"
-
-          # Push with retry on non-fast-forward (concurrent releases for other connectors)
-          MAX_RETRIES=3
-          for attempt in $(seq 1 "$MAX_RETRIES"); do
-            if git push; then
-              echo "✅ Manifest update pushed (attempt $attempt)"
-              exit 0
-            fi
-            echo "⚠️ Push rejected (attempt $attempt/$MAX_RETRIES) — rebasing"
-            git pull --rebase origin "${{ github.event.repository.default_branch }}"
-          done
-
-          echo "::warning::Failed to push manifest update after $MAX_RETRIES attempts"
-          exit 1
+          TAG="${{ needs.resolve.outputs.tag }}"
+          echo "::warning::Release job failed — deleting tag '${TAG}' and any partial release so a retry can recreate it cleanly."
+          gh release delete "$TAG" --yes 2>/dev/null || true
+          git push origin --delete "$TAG" 2>/dev/null || true
 
   # ──────────────────────────────────────────────────────────
-  # 6. Summary
+  # 5. Summary
   # ──────────────────────────────────────────────────────────
   summary:
     name: Release summary
     runs-on: ubuntu-latest
-    needs: [resolve, release-notes, build, release, update-manifest]
+    needs: [resolve, release-notes, build, release]
     if: always()
     steps:
       - name: Print summary
         run: |
           DRY_RUN="${{ needs.resolve.outputs.dry_run }}"
           MANIFEST_ONLY="${{ needs.resolve.outputs.manifest_only }}"
+          FORCE="${{ needs.resolve.outputs.force }}"
           CONNECTOR="${{ needs.resolve.outputs.connector_name }}"
           VERSION="${{ needs.resolve.outputs.version }}"
           DIR="${{ needs.resolve.outputs.connector_dir }}"
@@ -791,7 +785,7 @@ jobs:
             echo "## 🚀 Release Connector — Summary"
             echo ""
             if [ "$MANIFEST_ONLY" = "true" ]; then
-              echo "> 🧩 **MANIFEST-ONLY** — Docker build/push was skipped (still handled by CircleCI during the transition); tag, GitHub Release, manifest fragment, and container_version commit-back were still produced normally."
+              echo "> 🧩 **MANIFEST-ONLY** — Docker build/push was skipped (handled by the build workflow for this version); tag, GitHub Release, manifest fragment, and container_version commit-back were still produced normally."
               echo ""
             elif [ "$DRY_RUN" = "true" ]; then
               echo "> ⚠️ **DRY RUN** — no images were pushed and no release was created."
@@ -808,6 +802,7 @@ jobs:
             echo "| Trigger | $([ \"$IS_TAG_PUSH\" = \"true\" ] && echo \"tag push\" || echo \"manual dispatch\") |"
             echo "| Dry Run | ${DRY_RUN} |"
             echo "| Manifest Only | ${MANIFEST_ONLY} |"
+            echo "| Force | ${FORCE} |"
             echo ""
 
             echo "### Job Results"
@@ -818,5 +813,4 @@ jobs:
             echo "| Release Notes | ${{ needs.release-notes.result }} |"
             echo "| Build | ${{ needs.build.result }} |"
             echo "| Release | ${{ needs.release.result }} |"
-            echo "| Update Manifest | ${{ needs.update-manifest.result }} |"
           } >> "$GITHUB_STEP_SUMMARY"
