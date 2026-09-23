@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "CensysCollectionsConnector"
 description = "External Import connector for Censys Collections."
 dynamic = ["version"]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 
 dependencies = [
     "pycti==7.260921.0",
