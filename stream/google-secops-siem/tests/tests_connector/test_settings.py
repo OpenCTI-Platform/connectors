@@ -57,6 +57,23 @@ from secops_siem_connector import ConnectorSettings
             },
             id="minimal_valid_settings_dict_uses_defaults",
         ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "google-secops-siem",
+                    "log_level": "error",
+                    "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
+                },
+                "secops_siem": {
+                    "project_id": "test-project-id",
+                    "project_instance": "test-instance",
+                    "auth_method": "adc",
+                },
+            },
+            id="adc_auth_method_without_service_account_fields",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -178,6 +195,28 @@ def test_settings_should_normalize_escaped_private_key_newlines():
             },
             "secops_siem.client_cert_url",
             id="missing_client_cert_url",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "google-secops-siem",
+                    "log_level": "error",
+                    "live_stream_id": "A2626721-31ED-441E-9C87-28AD1139D2AB",
+                },
+                "secops_siem": {
+                    "project_id": "test-project-id",
+                    "project_instance": "test-instance",
+                    "auth_method": "service_account",
+                    "private_key_id": "test-key-id",
+                    "client_email": "test@project.iam.gserviceaccount.com",
+                    "client_id": "123456789",
+                    "client_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test",
+                },
+            },
+            "secops_siem.private_key",
+            id="service_account_auth_method_missing_private_key",
         ),
     ],
 )
