@@ -14,6 +14,7 @@ from connector.src.octi.connector import Connector
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from connector.src.octi.global_config import GlobalConfig
 from pycti import OpenCTIConnectorHelper  # type: ignore
+
 from tests.conftest import mock_env_vars
 
 # =====================
@@ -288,32 +289,40 @@ def _when_connector_created() -> tuple[Any, Any]:
 # Then the connector should be created successfully
 def _then_connector_created_successfully(capfd, mock_env, connector, data) -> None:  # type: ignore
     """Check if the connector was created successfully."""
-    assert connector is not None  # noqa: S101
+    try:
+        assert connector is not None  # noqa: S101
 
-    for key, value in data.items():
-        if key.startswith("OPENCTI_"):
-            config_key = key[len("OPENCTI_") :].lower()
-            # noinspection PyProtectedMember
-            assert (  # noqa: S101
-                getattr(connector._config.octi_config, config_key)
-            ) == value
-        elif key.startswith("GTI_"):
-            config_key = key[len("GTI_") :].lower()
-            # noinspection PyProtectedMember
-            gti_config = connector._config.get_config_class(GTIConfig)
-            val = getattr(gti_config, config_key)
-            if type(val) is list:
-                val = ",".join(val)
-            assert str(val) == value  # noqa: S101
+        for key, value in data.items():
+            if key.startswith("OPENCTI_"):
+                config_key = key[len("OPENCTI_") :].lower()
+                # noinspection PyProtectedMember
+                dumped = connector._config.octi_config.model_dump(
+                    mode="json", context={"mode": "pycti"}
+                )
+                actual = dumped[config_key]
+                if config_key == "url":
+                    # pydantic's HttpUrl normalizes a bare host into a URL with a
+                    # trailing slash (e.g. "http://host:port" -> "http://host:port/").
+                    assert actual.rstrip("/") == value.rstrip("/")  # noqa: S101
+                else:
+                    assert actual == value  # noqa: S101
+            elif key.startswith("GTI_"):
+                config_key = key[len("GTI_") :].lower()
+                # noinspection PyProtectedMember
+                gti_config = connector._config.get_config_class(GTIConfig)
+                val = getattr(gti_config, config_key)
+                if type(val) is list:
+                    val = ",".join(val)
+                assert str(val) == value  # noqa: S101
 
-    log_records = capfd.readouterr()
-    # noinspection PyProtectedMember
-    if connector._config.connector_config.log_level in ["info", "debug"]:
+        log_records = capfd.readouterr()
         # noinspection PyProtectedMember
-        registered_message = f'"name": "{connector._config.connector_config.name}", "message": "Connector registered with ID", "attributes": {{"id": "{connector._config.connector_config.id}"}}'
-        assert registered_message in log_records.err  # noqa: S101
-
-    mock_env.stop()
+        if connector._config.connector_config.log_level in ["info", "debug"]:
+            # noinspection PyProtectedMember
+            registered_message = f'"name": "{connector._config.connector_config.name}", "message": "Connector registered with ID", "attributes": {{"id": "{connector._config.connector_config.id}"}}'
+            assert registered_message in log_records.err  # noqa: S101
+    finally:
+        mock_env.stop()
 
 
 # Then the connector config should raise a custom ConfigurationException
@@ -321,9 +330,10 @@ def _then_connector_configuration_exception(  # type: ignore
     mock_env, connector, config_ex
 ) -> None:
     """Check if the connector config raises a custom ConfigurationException."""
-    assert connector is None  # noqa: S101
-    assert isinstance(config_ex, ConfigurationError) or isinstance(  # noqa: S101
-        config_ex, GTIConfigurationError
-    )
-
-    mock_env.stop()
+    try:
+        assert connector is None  # noqa: S101
+        assert isinstance(config_ex, ConfigurationError) or isinstance(  # noqa: S101
+            config_ex, GTIConfigurationError
+        )
+    finally:
+        mock_env.stop()

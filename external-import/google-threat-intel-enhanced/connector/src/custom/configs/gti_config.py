@@ -47,7 +47,7 @@ class GTIConfig(BaseConfig):
     """Configuration for the GTI part of the connector."""
 
     yaml_section: ClassVar[str] = "gti"
-    model_config = SettingsConfigDict(env_prefix="gti_")
+    model_config = SettingsConfigDict(env_prefix="gti_", enable_decoding=False)
 
     api_key: str
     import_start_date: str = "P1D"
@@ -58,12 +58,12 @@ class GTIConfig(BaseConfig):
     import_threat_actors: bool = False
     import_malware_families: bool = False
     import_vulnerabilities: bool = False
-    report_types: List[str] | str = "All"
-    origins: List[str] | str = "All"
-    campaign_origins: List[str] | str = "google threat intelligence"
-    threat_actor_origins: List[str] | str = "google threat intelligence"
-    malware_family_origins: List[str] | str = "google threat intelligence"
-    vulnerability_origins: List[str] | str = "google threat intelligence"
+    report_types: List[str] = ["All"]
+    origins: List[str] = ["All"]
+    campaign_origins: List[str] = ["google threat intelligence"]
+    threat_actor_origins: List[str] = ["google threat intelligence"]
+    malware_family_origins: List[str] = ["google threat intelligence"]
+    vulnerability_origins: List[str] = ["google threat intelligence"]
     indicator_scoring: str = "gti_derived"
     enrich_iocs_with_threat_actors_and_malware: bool = False
     ioc_enrichment_threshold: int = 250
@@ -74,9 +74,7 @@ class GTIConfig(BaseConfig):
         """Validate indicator_scoring option."""
         try:
             if not isinstance(v, str):
-                raise GTIConfigurationError(
-                    "indicator_scoring must be a string."
-                )
+                raise GTIConfigurationError("indicator_scoring must be a string.")
             value = v.strip().lower()
             if value not in ALLOWED_INDICATOR_SCORING:
                 raise GTIConfigurationError(
@@ -100,6 +98,8 @@ class GTIConfig(BaseConfig):
 
             if isinstance(v, str):
                 parts = [item.strip() for item in v.split(",") if item.strip()]
+            elif isinstance(v, list):
+                parts = [str(item).strip() for item in v if str(item).strip()]
 
             if not parts:
                 raise GTIConfigurationError(
@@ -129,6 +129,8 @@ class GTIConfig(BaseConfig):
 
             if isinstance(v, str):
                 parts = [item.strip() for item in v.split(",") if item.strip()]
+            elif isinstance(v, list):
+                parts = [str(item).strip() for item in v if str(item).strip()]
 
             if not parts:
                 raise GTIConfigurationError("At least one origin must be specified.")
@@ -160,6 +162,8 @@ class GTIConfig(BaseConfig):
 
             if isinstance(v, str):
                 parts = [item.strip() for item in v.split(",") if item.strip()]
+            elif isinstance(v, list):
+                parts = [str(item).strip() for item in v if str(item).strip()]
 
             if not parts:
                 raise GTIConfigurationError("At least one origin must be specified.")

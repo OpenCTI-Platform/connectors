@@ -2,9 +2,9 @@
 
 from typing import TYPE_CHECKING, Any, Dict, Type
 
-from connector.src.octi.configs.connector_config import ConnectorConfig
-from connector.src.octi.configs.octi_config import OctiConfig
+from connector.src.octi.configs.connector_settings import ConnectorSettings
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
+from connectors_sdk.settings.exceptions import ConfigValidationError
 from pydantic_core import ValidationError
 
 if TYPE_CHECKING:
@@ -18,33 +18,26 @@ class GlobalConfig:
         """Initialize the global configuration."""
         self.instanciate_configs: Dict[str, Any] = {}
         try:
-            self.octi_config = OctiConfig()
-        except ValidationError as e:
+            self._settings = ConnectorSettings()
+        except ConfigValidationError as e:
+            cause = e.__cause__
+            errors = cause.errors() if isinstance(cause, ValidationError) else None
             raise ConfigurationError(
-                "Error loading the OpenCTI configuration", errors=e.errors()
-            ) from e
-        try:
-            self.connector_config = ConnectorConfig()
-        except ValidationError as e:
-            raise ConfigurationError(
-                "Error loading the connector configuration", errors=e.errors
+                "Error loading the OpenCTI/connector configuration", errors=errors
             ) from e
 
+        self.octi_config = self._settings.opencti
+        self.connector_config = self._settings.connector
+
+        helper_config = self._settings.to_helper_config()
+        for section in helper_config.values():
+            for key in [k for k, v in section.items() if v is None]:
+                del section[key]
         self.instanciate_configs.update(
-            {
-                "opencti": (
-                    self.octi_config.model_dump(exclude_none=True),
-                    self.octi_config,
-                )
-            }
+            {"opencti": (helper_config["opencti"], self.octi_config)}
         )
         self.instanciate_configs.update(
-            {
-                "connector": (
-                    self.connector_config.model_dump(exclude_none=True),
-                    self.connector_config,
-                )
-            }
+            {"connector": (helper_config["connector"], self.connector_config)}
         )
 
         self.to_dict()
@@ -56,7 +49,7 @@ class GlobalConfig:
         except ValidationError as e:
             raise ConfigurationError(
                 f"Error loading the {config_class.__name__} configuration",
-                errors=e.errors,
+                errors=e.errors(),
             ) from e
         self.instanciate_configs.update(
             {
