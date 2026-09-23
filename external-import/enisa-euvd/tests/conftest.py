@@ -1,7 +1,9 @@
 """Shared pytest fixtures for the whole test suite."""
 
+import json
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -10,6 +12,21 @@ import pytest
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from enisa_euvd import ConnectorSettings
+
+RESOURCES_DIR = Path(__file__).parent / "resources"
+
+
+def load_resource(name: str) -> Any:
+    """Load and parse a JSON fixture from `tests/resources/`.
+
+    Args:
+        name: File name relative to `tests/resources/` (e.g. `"search_page.json"`).
+
+    Returns:
+        The parsed JSON content (dict or list).
+    """
+    with (RESOURCES_DIR / name).open(encoding="utf-8") as handle:
+        return json.load(handle)
 
 
 class FakeLogger:
@@ -67,3 +84,21 @@ class TestConnectorSettings(ConnectorSettings):
 def connector_settings() -> TestConnectorSettings:
     """A fresh `TestConnectorSettings` for each test."""
     return TestConnectorSettings()
+
+
+@pytest.fixture
+def search_page() -> dict[str, Any]:
+    """A `/search` response page with three anonymised vulnerabilities."""
+    return load_resource("search_page.json")
+
+
+@pytest.fixture
+def search_page_empty() -> dict[str, Any]:
+    """An empty `/search` response page (`items: []`)."""
+    return load_resource("search_page_empty.json")
+
+
+@pytest.fixture
+def single_vulnerability() -> dict[str, Any]:
+    """A single anonymised EUVD vulnerability item."""
+    return load_resource("single_vulnerability.json")
