@@ -74,6 +74,30 @@ from secops_siem_connector import ConnectorSettings
             },
             id="adc_auth_method_without_service_account_fields",
         ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "google-secops-siem",
+                    "log_level": "error",
+                    "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
+                },
+                "secops_siem": {
+                    "project_id": "test-project-id",
+                    "project_instance": "test-instance",
+                    "auth_method": "adc",
+                    # Leftover placeholders from the samples must be ignored in ADC
+                    # mode, including a non-URL client_cert_url.
+                    "private_key_id": "ChangeMe",
+                    "private_key": "ChangeMe",
+                    "client_email": "ChangeMe",
+                    "client_id": "ChangeMe",
+                    "client_cert_url": "ChangeMe",
+                },
+            },
+            id="adc_auth_method_ignores_service_account_placeholders",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -94,6 +118,35 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.secops_siem, BaseConfigModel) is True
+
+
+def test_settings_adc_drops_service_account_placeholder_fields():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "google-secops-siem",
+                        "log_level": "error",
+                        "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
+                    },
+                    "secops_siem": {
+                        "project_id": "test-project-id",
+                        "project_instance": "test-instance",
+                        "auth_method": "adc",
+                        "client_cert_url": "ChangeMe",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+
+    assert settings.secops_siem.auth_method == "adc"
+    assert settings.secops_siem.client_cert_url is None
+    assert settings.secops_siem.private_key is None
 
 
 def test_settings_should_normalize_escaped_private_key_newlines():

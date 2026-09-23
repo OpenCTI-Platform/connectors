@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -88,6 +88,28 @@ class SecOpsSIEMConfig(BaseConfigModel):
         default=None,
     )
 
+    # In ADC mode the service account key fields are irrelevant; drop them before
+    # typed validation so leftover placeholders (e.g. a non-URL client_cert_url)
+    # cannot fail construction before google.auth.default() is ever reached.
+    _SERVICE_ACCOUNT_FIELDS: ClassVar[tuple[str, ...]] = (
+        "private_key",
+        "private_key_id",
+        "client_email",
+        "client_id",
+        "client_cert_url",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_service_account_fields_for_adc(cls, data: object) -> object:
+        if isinstance(data, dict) and data.get("auth_method") == "adc":
+            data = {
+                key: value
+                for key, value in data.items()
+                if key not in cls._SERVICE_ACCOUNT_FIELDS
+            }
+        return data
+
     @field_validator("private_key", mode="before")
     @classmethod
     def normalize_private_key(cls, value: Optional[SecretStr]) -> Optional[SecretStr]:
@@ -104,14 +126,11 @@ class SecOpsSIEMConfig(BaseConfigModel):
     @model_validator(mode="after")
     def _require_service_account_fields(self) -> "SecOpsSIEMConfig":
         if self.auth_method == "service_account":
-            required_fields = (
-                "private_key",
-                "private_key_id",
-                "client_email",
-                "client_id",
-                "client_cert_url",
-            )
-            missing = [name for name in required_fields if getattr(self, name) is None]
+            missing = [
+                name
+                for name in self._SERVICE_ACCOUNT_FIELDS
+                if getattr(self, name) is None
+            ]
             if missing:
                 raise ValueError(
                     "auth_method='service_account' requires: " + ", ".join(missing)
