@@ -7,6 +7,8 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       # - CONNECTOR_NAME=ImportDocument
+      # - CONNECTOR_TYPE=INTERNAL_IMPORT_FILE # Set to INTERNAL_ANALYSIS for the content mapping mode
+      # - CONNECTOR_ONLY_CONTEXTUAL=false # Set to true along with CONNECTOR_TYPE=INTERNAL_ANALYSIS for the content mapping mode
       # - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
       # - CONNECTOR_SCOPE=application/pdf,text/plain,text/csv,text/html,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document
       # - CONNECTOR_AUTO=false # Enable/disable auto-import of file

@@ -209,3 +209,55 @@ def test_converter_to_stix_with_attachment__mime_type_not_in_config(
     assert (
         "x_opencti_files" not in list(converter.to_stix_objects(entity=mocked_email))[0]
     )
+
+
+def test_converter_to_stix_plain_text_body(converter: ConnectorConverter) -> None:
+    """A text/plain email body keeps its line breaks and is HTML-escaped."""
+    mocked_email = Mock(
+        subject="Plain Text Report",
+        date=datetime.datetime(2025, 4, 16, 10, 10, 10),
+        html="",
+        text="line 1\r\nline 2\r\n<<< 3 & 4 >>>",
+        attachments=[],
+        from_="em@il.com",
+    )
+
+    report = list(converter.to_stix_objects(entity=mocked_email))[0]
+
+    assert report.x_opencti_content == (
+        "line 1<br>\nline 2<br>\n&lt;&lt;&lt; 3 &amp; 4 &gt;&gt;&gt;"
+    )
+
+
+def test_converter_to_stix_html_body_is_kept_as_is(
+    converter: ConnectorConverter,
+) -> None:
+    """A text/html email body is left untouched."""
+    mocked_email = Mock(
+        subject="HTML Report",
+        date=datetime.datetime(2025, 4, 16, 10, 10, 10),
+        html="<p>Test<br>Content</p>",
+        text="ignored plain text",
+        attachments=[],
+        from_="em@il.com",
+    )
+
+    report = list(converter.to_stix_objects(entity=mocked_email))[0]
+
+    assert report.x_opencti_content == "<p>Test<br>Content</p>"
+
+
+def test_converter_to_stix_empty_body(converter: ConnectorConverter) -> None:
+    """An email without any body is still converted into a Report."""
+    mocked_email = Mock(
+        subject="Empty Report",
+        date=datetime.datetime(2025, 4, 16, 10, 10, 10),
+        html="",
+        text="",
+        attachments=[],
+        from_="em@il.com",
+    )
+
+    report = list(converter.to_stix_objects(entity=mocked_email))[0]
+
+    assert report.x_opencti_content == ""

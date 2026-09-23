@@ -50,6 +50,45 @@ def test_filtered_ipv4_address_is_not_reclassified_as_phone_number():
 
 
 @pytest.mark.parametrize(
+    "address",
+    [
+        "119.139.117.171",
+        "198.51.100.234",
+        "255.255.255.255",
+    ],
+)
+def test_ipv4_address_adjacent_to_number_is_not_reclassified_as_phone_number(address):
+    result = _build_parser().parse(f"Log line id 5 {address} host reported.")
+
+    assert result[address][RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value"
+    assert not any(
+        info[RESULT_FORMAT_CATEGORY] == "Phone-Number.value" for info in result.values()
+    )
+
+
+def test_adjacent_ipv4_addresses_do_not_produce_a_phone_number():
+    addresses = ["1.2.3.4", "194.213.18.38", "194.213.18.67", "213.232.236.135"]
+    result = _build_parser().parse(f"Indicators: {' '.join(addresses)} end.")
+
+    for address in addresses:
+        assert result[address][RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value"
+    assert not any(
+        info[RESULT_FORMAT_CATEGORY] == "Phone-Number.value" for info in result.values()
+    )
+
+
+def test_repeated_ipv4_addresses_do_not_produce_a_phone_number():
+    text = "45.33.32.156 104.16.132.229 filler text 45.33.32.156 104.16.132.229"
+    result = _build_parser().parse(text)
+
+    assert result["45.33.32.156"][RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value"
+    assert result["104.16.132.229"][RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value"
+    assert not any(
+        info[RESULT_FORMAT_CATEGORY] == "Phone-Number.value" for info in result.values()
+    )
+
+
+@pytest.mark.parametrize(
     "phone_number",
     [
         # ACMA fictional-use number

@@ -49,8 +49,12 @@
       "type": "string"
     },
     "CONNECTOR_TYPE": {
-      "const": "INTERNAL_IMPORT_FILE",
       "default": "INTERNAL_IMPORT_FILE",
+      "description": "The type of the connector. Use `INTERNAL_ANALYSIS` to run the connector in content mapping mode, along with `only_contextual` set to `true`.",
+      "enum": [
+        "INTERNAL_IMPORT_FILE",
+        "INTERNAL_ANALYSIS"
+      ],
       "type": "string"
     },
     "CONNECTOR_AUTO": {

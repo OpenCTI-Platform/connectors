@@ -3,12 +3,11 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_EXPORT_FILE'
   id: 'ChangeMe'
-  name: 'ExportFileCsv'
-  scope: 'text/csv'
+  # name: 'ExportFileCsv' # optional (default: 'ExportFileCsv')
+  # scope: 'text/csv' # optional (default: 'text/csv')
+  # log_level: 'error' # optional (default: 'error')
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
-  log_level: 'info'
 
-export-file-csv:
-  delimiter: ';'
+# export_file_csv:
+#   delimiter: ';' # optional (default: ';')

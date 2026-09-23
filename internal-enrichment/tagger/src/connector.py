@@ -1,23 +1,9 @@
-import re
 from typing import Dict
 
 from pycti import OpenCTIConnectorHelper
 from settings import ConfigLoader
 
 CONTAINER_TYPE_LIST = ["report", "grouping", "case-incident", "case-rfi", "case-rft"]
-
-
-def load_re_flags(rule):
-    """Load the regular expression flags from a rule definition."""
-
-    config = rule.get("flags") or []
-
-    flags = 0
-    for flag in config:
-        flag = getattr(re, flag)
-        flags |= flag
-
-    return flags
 
 
 class TaggerConnector:
@@ -40,9 +26,7 @@ class TaggerConnector:
                     continue
 
                 for rule in definition.rules:
-                    flags = load_re_flags(rule)
-
-                    for attribute in rule["attributes"]:
+                    for attribute in rule.attributes:
                         if attribute.lower() in ["objects-type", "objects-name"]:
                             attr = enrichment_entity.get("objects")
                         else:
@@ -53,13 +37,11 @@ class TaggerConnector:
                         # Handles the case where the attribute is the list of labels
                         if attribute.lower() == "objectlabel":
                             for obj in attr:
-                                if not re.search(
-                                    rule["search"], obj["value"], flags=flags
-                                ):
+                                if not rule.pattern.search(obj["value"]):
                                     continue
 
                                 self.add_label(
-                                    enrichment_entity["standard_id"], rule["label"]
+                                    enrichment_entity["standard_id"], rule.label
                                 )
                                 break
 
@@ -74,13 +56,11 @@ class TaggerConnector:
                             # Handles the case where the attribute is the list of objects
                             if attribute.lower() == "objects-type":
                                 for obj in attr:
-                                    if not re.search(
-                                        rule["search"], obj["entity_type"], flags=flags
-                                    ):
+                                    if not rule.pattern.search(obj["entity_type"]):
                                         continue
 
                                     self.add_label(
-                                        enrichment_entity["standard_id"], rule["label"]
+                                        enrichment_entity["standard_id"], rule.label
                                     )
                                     break
 
@@ -95,20 +75,20 @@ class TaggerConnector:
                                     if name is None:
                                         continue
 
-                                    if not re.search(rule["search"], name, flags=flags):
+                                    if not rule.pattern.search(name):
                                         continue
 
                                     self.add_label(
-                                        enrichment_entity["standard_id"], rule["label"]
+                                        enrichment_entity["standard_id"], rule.label
                                     )
                                     break
 
                                 continue
 
-                        if not re.search(rule["search"], attr, flags=flags):
+                        if not rule.pattern.search(attr):
                             continue
 
-                        self.add_label(enrichment_entity["standard_id"], rule["label"])
+                        self.add_label(enrichment_entity["standard_id"], rule.label)
                         break
 
     def add_label(self, entity, label):
