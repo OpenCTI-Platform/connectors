@@ -5,8 +5,15 @@
   "short_description": "Ingests Censys analyst collections into OpenCTI as observables and indicators, with malware/threat-actor/CVE relationships and Censys collection external references.",
   "logo": "external-import/censys-collections/__metadata__/logo.png",
   "use_cases": [
-    "Threat Intelligence"
+    "Infrastructure & Attack Surface Visibility",
+    "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed",
+    "Attack Surface Management"
+  ],
+  "contact": null,
+  "license_type": "Commercial",
   "verified": false,
   "last_verified_date": "2026-07-21",
   "playbook_supported": false,

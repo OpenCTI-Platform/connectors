@@ -5,6 +5,9 @@ from __future__ import annotations
 from collections.abc import Generator
 from typing import Any
 
+from censys_collections.client import Client
+from censys_collections.converter import Converter
+from censys_collections.settings import ConfigLoader
 from censys_platform import Collection
 from connectors_sdk import (
     BaseConnectorSettings,
@@ -13,10 +16,6 @@ from connectors_sdk import (
 )
 from connectors_sdk.models import BaseObject
 from pycti import OpenCTIConnectorHelper
-
-from censys_collections.client import Client
-from censys_collections.converter import Converter
-from censys_collections.settings import ConfigLoader
 
 
 class CollectionsProcessor(BaseDataProcessor):
