@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-enisa-euvd:
+    image: opencti/connector-enisa-euvd:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=ENISA EUVD # optional (default: 'ENISA EUVD')
+      - CONNECTOR_SCOPE=vulnerability
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_DURATION_PERIOD=PT2H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT2H')
+      # Custom parameters for connector-enisa-euvd
+      - EUVD_API_BASE_URL=https://euvdservices.enisa.europa.eu/api # optional (default value)
+      - EUVD_IMPORT_START_DATE=P30D # optional, how far back (last-update) to pull on the first run (default: 'P30D')
+      - EUVD_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+      - EUVD_INGEST_SOFTWARE=false # optional, enable/disable the import of Software observables and "has" relationships (default: false)
+    restart: always
