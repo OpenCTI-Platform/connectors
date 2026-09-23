@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from censys_collections.client import Client, _RETRY_CONFIG
+from censys_collections.client import _RETRY_CONFIG, Client
 
 
 def test_client_default_timeout() -> None:
