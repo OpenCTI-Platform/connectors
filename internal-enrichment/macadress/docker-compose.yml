@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-macadress:
+    image: opencti/connector-macadress:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=3dc00c31-f8f4-470b-bfb4-35a11ccd5c75
+      - CONNECTOR_NAME=macadress.com
+      - CONNECTOR_SCOPE=mac-addr
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=info
+      - MACADRESS_API_BASE_URL=https://api.macadress.com
+      - MACADRESS_API_KEY=ChangeMe
+      - MACADRESS_MAX_TLP=TLP:AMBER
+      - MACADRESS_DEFAULT_SCORE=30
+      - MACADRESS_CREATE_NOTE=true
+      - MACADRESS_CREATE_VENDOR_IDENTITY=true
+    restart: always
