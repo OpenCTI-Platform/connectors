@@ -128,9 +128,9 @@
       ]
     },
     "license_type": {
-      "type": ["string"],
+      "type": ["string", "null"],
       "description": "Licensing model of the connector.",
-      "enum": ["Free", "Commercial", ""]
+      "enum": ["Free", "Commercial", null]
     },
     "contact": {
       "type": ["string"],
@@ -147,7 +147,7 @@
       "examples": ["2025-01-01"]
     },
     "subscription_link": {
-      "type": "string",
+      "type": ["string", "null"],
       "description": "URL to the external service or subscription page for the data source. Empty string if none.",
       "examples": ["https://www.misp-project.org", ""]
     },

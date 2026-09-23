@@ -391,10 +391,9 @@ class FlashpointConnector:
                                 )
                                 processed_alert["media_content"] = media_content
                                 processed_alert["media_type"] = media_type
-                                processed_alert["media_name"] = (
-                                    alert_document.get("media_id")
-                                    + guess_file_extension
-                                )
+                                processed_alert["media_name"] = str(
+                                    alert_document.get("media_id") or ""
+                                ) + (guess_file_extension or "")
 
                         stix_alert_objects = self.converter_to_stix.alert_to_incident(
                             alert=processed_alert,
