@@ -68,10 +68,10 @@ The exhaustive, generated list of every parameter is available in
 
 | Parameter          | config.yml            | Docker environment variable   | Default                                          | Mandatory | Description                                                                                          |
 | ------------------- | ---------------------- | -------------------------------| ------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------ |
-| API base URL        | `api_base_url`         | `EUVD_API_BASE_URL`           | `https://euvdservices.enisa.europa.eu/api`         | No        | Base URL of the ENISA EUVD API.                                                                        |
-| Import start date   | `import_start_date`    | `EUVD_IMPORT_START_DATE`      | `P30D`                                             | No        | First run only: how far back (by `dateUpdated`) to pull. Subsequent runs resume from persisted state.  |
-| TLP level           | `tlp_level`            | `EUVD_TLP_LEVEL`              | `clear`                                            | No        | One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.                                       |
-| Ingest software     | `ingest_software`      | `EUVD_INGEST_SOFTWARE`        | `false`                                            | No        | Import affected products as `Software` observables + `has` relationships. Off by default (volume).    |
+| API base URL        | `api_base_url`         | `ENISA_EUVD_API_BASE_URL`           | `https://euvdservices.enisa.europa.eu/api`         | No        | Base URL of the ENISA EUVD API.                                                                        |
+| Import start date   | `import_start_date`    | `ENISA_EUVD_IMPORT_START_DATE`      | `P30D`                                             | No        | First run only: how far back (by `dateUpdated`) to pull. Subsequent runs resume from persisted state.  |
+| TLP level           | `tlp_level`            | `ENISA_EUVD_TLP_LEVEL`              | `clear`                                            | No        | One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.                                       |
+| Ingest software     | `ingest_software`      | `ENISA_EUVD_INGEST_SOFTWARE`        | `false`                                            | No        | Import affected products as `Software` observables + `has` relationships. Off by default (volume).    |
 
 ### In-code constants
 

@@ -73,7 +73,7 @@ class TestConnectorSettings(ConnectorSettings):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "euvd": {
+                "enisa_euvd": {
                     "tlp_level": "clear",
                 },
             }

@@ -23,7 +23,7 @@ from enisa_euvd import ConnectorSettings
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "euvd": {
+                "enisa_euvd": {
                     "api_base_url": "https://euvdservices.enisa.europa.eu/api",
                     "import_start_date": "P30D",
                     "tlp_level": "clear",
@@ -55,14 +55,14 @@ def test_settings_should_accept_valid_input(settings_dict):
 
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.euvd, BaseConfigModel) is True
+    assert isinstance(settings.enisa_euvd, BaseConfigModel) is True
 
-    assert str(settings.euvd.api_base_url).rstrip("/") == (
+    assert str(settings.enisa_euvd.api_base_url).rstrip("/") == (
         "https://euvdservices.enisa.europa.eu/api"
     )
-    assert settings.euvd.import_start_date == timedelta(days=30)
-    assert settings.euvd.tlp_level == TLPLevel.CLEAR
-    assert isinstance(settings.euvd.ingest_software, bool)
+    assert settings.enisa_euvd.import_start_date == timedelta(days=30)
+    assert settings.enisa_euvd.tlp_level == TLPLevel.CLEAR
+    assert isinstance(settings.enisa_euvd.ingest_software, bool)
     assert settings.connector.scope == ["vulnerability"]
 
 
