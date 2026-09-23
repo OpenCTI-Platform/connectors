@@ -4,8 +4,6 @@ Tests verify that the Pydantic-based ConfigLoader can be populated from
 environment variables and that default values are applied correctly.
 """
 
-import pytest
-
 from src.models.configs.config_loader import ConfigLoader
 from src.models.configs.threatfox_configs import _ConfigLoaderThreatFox
 
@@ -42,27 +40,36 @@ class TestThreatFoxConfigDefaults:
 
 
 class TestThreatFoxConfigFromEnv:
-    """Tests that env vars override defaults correctly."""
+    """Tests that env vars override defaults correctly.
 
-    def test_csv_url_from_env(self, monkeypatch):
-        monkeypatch.setenv("CSV_URL", "https://custom.example.com/feed.csv")
-        cfg = _ConfigLoaderThreatFox()
-        assert cfg.csv_url == "https://custom.example.com/feed.csv"
+    The connector always instantiates `_ConfigLoaderThreatFox` nested inside
+    `ConfigLoader.threatfox`, which (per `ConfigBaseSettings`'s
+    `env_nested_delimiter="_"`) requires the `THREATFOX_` prefix on env vars,
+    e.g. `THREATFOX_CSV_URL`. Setting bare `CSV_URL` and instantiating
+    `_ConfigLoaderThreatFox()` standalone would pass even if the real,
+    documented env var contract were broken, so these go through the full
+    `ConfigLoader()` with prefixed names instead.
+    """
 
-    def test_score_override_from_env(self, monkeypatch):
-        monkeypatch.setenv("DEFAULT_X_OPENCTI_SCORE", "80")
-        cfg = _ConfigLoaderThreatFox()
-        assert cfg.default_x_opencti_score == 80
+    def test_csv_url_from_env(self, minimal_env, monkeypatch):
+        monkeypatch.setenv("THREATFOX_CSV_URL", "https://custom.example.com/feed.csv")
+        cfg = ConfigLoader()
+        assert cfg.threatfox.csv_url == "https://custom.example.com/feed.csv"
 
-    def test_type_specific_score_from_env(self, monkeypatch):
-        monkeypatch.setenv("X_OPENCTI_SCORE_IP", "90")
-        cfg = _ConfigLoaderThreatFox()
-        assert cfg.x_opencti_score_ip == 90
+    def test_score_override_from_env(self, minimal_env, monkeypatch):
+        monkeypatch.setenv("THREATFOX_DEFAULT_X_OPENCTI_SCORE", "80")
+        cfg = ConfigLoader()
+        assert cfg.threatfox.default_x_opencti_score == 80
 
-    def test_create_indicators_false_from_env(self, monkeypatch):
-        monkeypatch.setenv("CREATE_INDICATORS", "false")
-        cfg = _ConfigLoaderThreatFox()
-        assert cfg.create_indicators is False
+    def test_type_specific_score_from_env(self, minimal_env, monkeypatch):
+        monkeypatch.setenv("THREATFOX_X_OPENCTI_SCORE_IP", "90")
+        cfg = ConfigLoader()
+        assert cfg.threatfox.x_opencti_score_ip == 90
+
+    def test_create_indicators_false_from_env(self, minimal_env, monkeypatch):
+        monkeypatch.setenv("THREATFOX_CREATE_INDICATORS", "false")
+        cfg = ConfigLoader()
+        assert cfg.threatfox.create_indicators is False
 
 
 class TestConfigLoaderStructure:

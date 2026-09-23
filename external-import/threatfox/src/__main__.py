@@ -35,10 +35,8 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
-from stix2.base import _Observable as Observable
-
 from src.models.configs.config_loader import ConfigLoader
-
+from stix2.base import _Observable as Observable
 
 ALL_TYPES = "all_types"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -65,9 +63,21 @@ class ThreatFox:
         self.x_opencti_score_domain = self.config.threatfox.x_opencti_score_domain
         self.x_opencti_score_url = self.config.threatfox.x_opencti_score_url
         self.x_opencti_score_hash = self.config.threatfox.x_opencti_score_hash
+        # Per-IOC-type override, used in preference to the confidence-derived
+        # score when set; see _resolve_score().
+        self._score_override_by_type = {
+            "ip:port": self.x_opencti_score_ip,
+            "domain": self.x_opencti_score_domain,
+            "url": self.x_opencti_score_url,
+            "md5_hash": self.x_opencti_score_hash,
+            "sha1_hash": self.x_opencti_score_hash,
+            "sha256_hash": self.x_opencti_score_hash,
+        }
 
         self.ioc_to_import = [
-            ioc.strip() for ioc in self.config.threatfox.ioc_to_import.split(",") if ioc.strip()
+            ioc.strip()
+            for ioc in self.config.threatfox.ioc_to_import.split(",")
+            if ioc.strip()
         ]
         if len(self.ioc_to_import) == 0:
             self.ioc_to_import = [ALL_TYPES]
@@ -106,6 +116,22 @@ class ThreatFox:
     def get_interval(self) -> float:
         """Convert the threatfox_interval (days) to seconds"""
         return float(self.threatfox_interval) * 60 * 60 * 24
+
+    def _resolve_score(self, ioc: "FeedRow") -> int:
+        """Resolve the x_opencti_score for an IOC.
+
+        A per-type override (THREATFOX_X_OPENCTI_SCORE_IP/DOMAIN/URL/HASH) takes
+        precedence when set; otherwise the score is derived from ThreatFox's own
+        confidence_level, falling back to THREATFOX_DEFAULT_X_OPENCTI_SCORE only
+        if confidence_level itself is unusable.
+        """
+        override = self._score_override_by_type.get(ioc.type)
+        if override is not None:
+            return override
+        try:
+            return int(ioc.confidence_level)
+        except (TypeError, ValueError):
+            return self.default_x_opencti_score
 
     # ----------------------------- Run/Loop --------------------------- #
     def run(self):
@@ -161,7 +187,9 @@ class ThreatFox:
             "Threat Fox run @ " + now_dt.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-        csv.register_dialect("custom", delimiter=",", quotechar='"', skipinitialspace=True)
+        csv.register_dialect(
+            "custom", delimiter=",", quotechar='"', skipinitialspace=True
+        )
 
         last_processed_entry_running_max = 0
 
@@ -238,7 +266,9 @@ class ThreatFox:
 
             # ---- delay before post-pass (tunable) ----
             if self.postpass_delay > 0:
-                self.helper.log_info(f"[ThreatFox] sleeping {self.postpass_delay:.1f}s before post-pass attach")
+                self.helper.log_info(
+                    f"[ThreatFox] sleeping {self.postpass_delay:.1f}s before post-pass attach"
+                )
                 time.sleep(self.postpass_delay)
 
             # ---- 2nd pass: attach external references to Observables via API ----
@@ -293,7 +323,7 @@ class ThreatFox:
         result = self.process_row_observable(ioc)
         if result is None:
             return
-        
+
         stix_observable, stix_indicator, obs_metadata = result
         if stix_observable:
             yield stix_observable
@@ -342,11 +372,13 @@ class ThreatFox:
 
     def process_row_observable(
         self, ioc: "FeedRow"
-    ) -> Optional[Tuple[Observable, Optional[stix2.Indicator], Dict[str, Union[str, None]]]]:
+    ) -> Optional[
+        Tuple[Observable, Optional[stix2.Indicator], Dict[str, Union[str, None]]]
+    ]:
         """Process the IOC record and return an observable, indicator, and metadata for post-pass."""
 
         description = None
-        score_from_conf = int(ioc.confidence_level)
+        score = self._resolve_score(ioc)
 
         # --- Map the IOC to a STIX SCO (+ pattern metadata) ---
         # NOTE: external_references is NOT valid on STIX SCOs, only SDOs
@@ -365,7 +397,7 @@ class ThreatFox:
                     "created_by_ref": self.identity_id,
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score_from_conf,
+                    "x_opencti_score": score,
                 },
             )
             value_for_lookup = ioc.value
@@ -382,7 +414,7 @@ class ThreatFox:
                     "created_by_ref": self.identity_id,
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score_from_conf,
+                    "x_opencti_score": score,
                 },
             )
             value_for_lookup = ioc.value
@@ -399,7 +431,7 @@ class ThreatFox:
                     "created_by_ref": self.identity_id,
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score_from_conf,
+                    "x_opencti_score": score,
                 },
             )
             value_for_lookup = ioc.value
@@ -417,7 +449,7 @@ class ThreatFox:
                     "created_by_ref": self.identity_id,
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score_from_conf,
+                    "x_opencti_score": score,
                 },
             )
             value_for_lookup = ioc.value
@@ -435,7 +467,7 @@ class ThreatFox:
                     "created_by_ref": self.identity_id,
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score_from_conf,
+                    "x_opencti_score": score,
                 },
             )
             value_for_lookup = ioc.value
@@ -453,7 +485,7 @@ class ThreatFox:
                     "created_by_ref": self.identity_id,
                     "x_opencti_description": description,
                     "x_opencti_labels": ioc.tags,
-                    "x_opencti_score": score_from_conf,
+                    "x_opencti_score": score,
                 },
             )
             value_for_lookup = ioc.value
@@ -462,9 +494,6 @@ class ThreatFox:
         else:
             self.helper.log_warning(f"Unrecognized ioc_type: {ioc.type}")
             return None
-
-        # Capture the STIX id of the observable we just created (deterministic)
-        observable_stix_id = stix_observable.id
 
         # --- Indicator (optional) ---
         indicator_id: Optional[str] = None
@@ -489,7 +518,7 @@ class ThreatFox:
                 ],
                 custom_properties={
                     "x_opencti_main_observable_type": observable_type,
-                    "x_opencti_score": score_from_conf,
+                    "x_opencti_score": score,
                 },
             )
             self.helper.log_debug(f"Indicator created: {stix_indicator}")
@@ -525,7 +554,10 @@ class ThreatFox:
             aliases.append(ioc.fk_malware)
 
         # External references for Malware SDO (OK in STIX)
-        ext_refs = [stix2.ExternalReference(source_name="ThreatFox", url=u) for u in self._reference_urls(ioc)]
+        ext_refs = [
+            stix2.ExternalReference(source_name="ThreatFox", url=u)
+            for u in self._reference_urls(ioc)
+        ]
 
         # Create the malware object (as FAMILY)
         stix_malware = stix2.Malware(
@@ -586,11 +618,14 @@ class ThreatFox:
         """
         try:
             # Primary: indicator is the 'from' side in "based-on"
-            rels = self.helper.api.stix_core_relationship.list(
-                fromId=indicator_id,
-                relationship_type="based-on",
-                first=1,
-            ) or []
+            rels = (
+                self.helper.api.stix_core_relationship.list(
+                    fromId=indicator_id,
+                    relationship_type="based-on",
+                    first=1,
+                )
+                or []
+            )
             if rels:
                 rel = rels[0]
                 to_obj = rel.get("to") or {}
@@ -599,11 +634,14 @@ class ThreatFox:
                     return to_id
 
             # Fallback: direction-agnostic variant
-            rels = self.helper.api.stix_core_relationship.list(
-                fromOrToId=indicator_id,
-                relationship_type="based-on",
-                first=1,
-            ) or []
+            rels = (
+                self.helper.api.stix_core_relationship.list(
+                    fromOrToId=indicator_id,
+                    relationship_type="based-on",
+                    first=1,
+                )
+                or []
+            )
             if rels:
                 rel = rels[0]
                 to_obj = rel.get("to") or {}
@@ -639,9 +677,12 @@ class ThreatFox:
         value:       original value we emitted in STIX (or the hash string for files)
         hash_field:  "hashes.MD5" | "hashes.SHA-1" | "hashes.SHA-256" | None
         """
+
         def _read(filters_dict) -> Optional[str]:
             try:
-                oid_obj = self.helper.api.stix_cyber_observable.read(filters=filters_dict)
+                oid_obj = self.helper.api.stix_cyber_observable.read(
+                    filters=filters_dict
+                )
                 if oid_obj:
                     return oid_obj["id"]
             except Exception:
@@ -655,17 +696,23 @@ class ThreatFox:
             except Exception:
                 pass
             try:
-                items = self.helper.api.stix_cyber_observable.list(
-                    filters=filters_dict, first=1
-                ) or []
+                items = (
+                    self.helper.api.stix_cyber_observable.list(
+                        filters=filters_dict, first=1
+                    )
+                    or []
+                )
                 if items:
                     return items[0]["id"]
             except Exception:
                 pass
             try:
-                items = self.helper.api.stix_cyber_observable.list(
-                    filters=filters_dict.get("filters", filters_dict), first=1
-                ) or []
+                items = (
+                    self.helper.api.stix_cyber_observable.list(
+                        filters=filters_dict.get("filters", filters_dict), first=1
+                    )
+                    or []
+                )
                 if items:
                     return items[0]["id"]
             except Exception:
@@ -677,53 +724,74 @@ class ThreatFox:
         if entity_type == "StixFile":
             if hash_field:
                 candidates.append(
-                    {"mode": "and", "filters": [
-                        {"key": "entity_type", "values": [entity_type]},
-                        {"key": hash_field,    "values": [value]},
-                    ]}
+                    {
+                        "mode": "and",
+                        "filters": [
+                            {"key": "entity_type", "values": [entity_type]},
+                            {"key": hash_field, "values": [value]},
+                        ],
+                    }
                 )
             candidates.append(
-                {"mode": "and", "filters": [
-                    {"key": "entity_type", "values": [entity_type]},
-                    {"key": "value",       "values": [value]},
-                ]}
+                {
+                    "mode": "and",
+                    "filters": [
+                        {"key": "entity_type", "values": [entity_type]},
+                        {"key": "value", "values": [value]},
+                    ],
+                }
             )
         elif entity_type == "Url":
             v = value.strip()
             candidates.append(
-                {"mode": "and", "filters": [
-                    {"key": "entity_type", "values": [entity_type]},
-                    {"key": "value",       "values": [v]},
-                ]}
+                {
+                    "mode": "and",
+                    "filters": [
+                        {"key": "entity_type", "values": [entity_type]},
+                        {"key": "value", "values": [v]},
+                    ],
+                }
             )
             if v.endswith("/"):
                 candidates.append(
-                    {"mode": "and", "filters": [
-                        {"key": "entity_type", "values": [entity_type]},
-                        {"key": "value",       "values": [v[:-1]]},
-                    ]}
+                    {
+                        "mode": "and",
+                        "filters": [
+                            {"key": "entity_type", "values": [entity_type]},
+                            {"key": "value", "values": [v[:-1]]},
+                        ],
+                    }
                 )
         elif entity_type == "Domain-Name":
             v = value.strip()
             candidates.append(
-                {"mode": "and", "filters": [
-                    {"key": "entity_type", "values": [entity_type]},
-                    {"key": "value",       "values": [v]},
-                ]}
+                {
+                    "mode": "and",
+                    "filters": [
+                        {"key": "entity_type", "values": [entity_type]},
+                        {"key": "value", "values": [v]},
+                    ],
+                }
             )
             if v.lower() != v:
                 candidates.append(
-                    {"mode": "and", "filters": [
-                        {"key": "entity_type", "values": [entity_type]},
-                        {"key": "value",       "values": [v.lower()]},
-                    ]}
+                    {
+                        "mode": "and",
+                        "filters": [
+                            {"key": "entity_type", "values": [entity_type]},
+                            {"key": "value", "values": [v.lower()]},
+                        ],
+                    }
                 )
         elif entity_type == "IPv4-Addr":
             candidates.append(
-                {"mode": "and", "filters": [
-                    {"key": "entity_type", "values": [entity_type]},
-                    {"key": "value",       "values": [value.strip()]},
-                ]}
+                {
+                    "mode": "and",
+                    "filters": [
+                        {"key": "entity_type", "values": [entity_type]},
+                        {"key": "value", "values": [value.strip()]},
+                    ],
+                }
             )
 
         # Retry loop (trimmed to reduce noise)
@@ -741,10 +809,14 @@ class ThreatFox:
         """Attach ThreatFox external refs and relationships to SCOs via API (post-ingestion)."""
         total = len(self._pending_observables or [])
         if total == 0:
-            self.helper.log_info("[ThreatFox] post-pass: no pending observables to update")
+            self.helper.log_info(
+                "[ThreatFox] post-pass: no pending observables to update"
+            )
             return
 
-        self.helper.log_info(f"[ThreatFox] post-pass starting with {total} pending observable(s)")
+        self.helper.log_info(
+            f"[ThreatFox] post-pass starting with {total} pending observable(s)"
+        )
 
         refs_attached = 0
         rels_created = 0
@@ -752,12 +824,16 @@ class ThreatFox:
         errors = 0
 
         for entry in self._pending_observables:
-            entity_type: str = entry["entity_type"]            # "Url" | "Domain-Name" | "IPv4-Addr" | "StixFile"
+            entity_type: str = entry[
+                "entity_type"
+            ]  # "Url" | "Domain-Name" | "IPv4-Addr" | "StixFile"
             value: str = entry["value"]
-            hash_field: Optional[str] = entry["hash_field"]    # "hashes.MD5" | "hashes.SHA-1" | "hashes.SHA-256" | None
+            hash_field: Optional[str] = entry[
+                "hash_field"
+            ]  # "hashes.MD5" | "hashes.SHA-1" | "hashes.SHA-256" | None
             urls: List[str] = entry.get("urls") or []
             indicator_id: Optional[str] = entry.get("indicator_id")  # type: ignore[assignment]
-            stix_id: Optional[str] = entry.get("stix_id")            # type: ignore[assignment]
+            stix_id: Optional[str] = entry.get("stix_id")  # type: ignore[assignment]
             malware_stix_id: Optional[str] = entry.get("malware_stix_id")  # type: ignore[assignment]
             confidence: Optional[int] = entry.get("confidence")  # type: ignore[assignment]
 
@@ -823,14 +899,16 @@ class ThreatFox:
                     malware_obj = self.helper.api.malware.read(id=malware_stix_id)
                     if malware_obj:
                         malware_internal_id = malware_obj["id"]
-                        
+
                         # Create relationship via API
                         self.helper.api.stix_core_relationship.create(
                             fromId=obs_id,
                             toId=malware_internal_id,
                             relationship_type="related-to",
                             createdBy=self.identity["id"],
-                            confidence=int(confidence) if confidence is not None else None,
+                            confidence=(
+                                int(confidence) if confidence is not None else None
+                            ),
                         )
                         rels_created += 1
                         self.helper.log_debug(
@@ -906,7 +984,10 @@ class FeedRow:
         if self.malware_printable == "Unknown malware":
             self.malware_printable = ""
         else:
-            if self.malware_printable and self.malware_printable not in self.malware_aliases:
+            if (
+                self.malware_printable
+                and self.malware_printable not in self.malware_aliases
+            ):
                 self.malware_aliases.insert(0, self.malware_printable)
 
         last_seen = row[8]
@@ -919,10 +1000,7 @@ class FeedRow:
         self.confidence_level = int(row[9])
         self.is_compromised = str(row[10]).lower() == "true"
         self.reference = row[11] if row[11] != "None" else ""
-        self.tags = [
-            t for t in row[12].split(",")
-            if t and t.lower() != "none"
-        ]
+        self.tags = [t for t in row[12].split(",") if t and t.lower() != "none"]
 
         if self.threat_type:
             self.tags.insert(0, self.threat_type)

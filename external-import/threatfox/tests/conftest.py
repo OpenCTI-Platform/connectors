@@ -1,9 +1,6 @@
 """Pytest fixtures for ThreatFox connector tests."""
 
-import os
 import pytest
-from unittest.mock import MagicMock, patch
-
 
 MINIMAL_ENV = {
     "OPENCTI_URL": "http://localhost:8080",
