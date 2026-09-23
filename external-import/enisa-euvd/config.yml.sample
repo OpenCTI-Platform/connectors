@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'ENISA EUVD' # optional (default: 'ENISA EUVD')
+  scope: 'vulnerability'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT2H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT2H')
+
+euvd:
+  api_base_url: 'https://euvdservices.enisa.europa.eu/api' # optional (default value)
+  import_start_date: 'P30D' # optional, how far back (last-update) to pull on the first run (default: 'P30D')
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  ingest_software: false # optional, enable/disable the import of Software observables and "has" relationships (default: false)

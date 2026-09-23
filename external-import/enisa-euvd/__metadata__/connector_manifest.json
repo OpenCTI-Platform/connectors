@@ -1,0 +1,26 @@
+{
+  "title": "ENISA EUVD",
+  "slug": "enisa-euvd",
+  "description": "The ENISA EUVD connector for OpenCTI imports vulnerability intelligence from the European Union Vulnerability Database (EUVD), the official EU repository for timely, curated cybersecurity vulnerability intelligence published by ENISA.\n\nEach vulnerability is ingested as a STIX Vulnerability with its CVSS scores (v2/v3/v4), EPSS score, and aliases (CVE, GHSA...). Affected products can optionally be ingested as Software observables linked with a \"has\" relationship.",
+  "short_description": "The ENISA EUVD connector for OpenCTI imports vulnerability intelligence from the European Union Vulnerability Database published by ENISA.",
+  "logo": null,
+  "use_cases": [
+    "Vulnerability & Exploit Awareness"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/enisa-euvd",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-enisa-euvd",
+  "container_type": "EXTERNAL_IMPORT"
+}
