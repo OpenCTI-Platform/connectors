@@ -1,0 +1,89 @@
+{
+  "items": [
+    {
+      "id": "EUVD-2024-00001",
+      "enisaUuid": "00000000-0000-0000-0000-000000000001",
+      "description": "Example Reflected Cross-Site Scripting (XSS) vulnerability in Example CMS. An attacker can trick an authenticated user into executing arbitrary JavaScript in their browser.",
+      "datePublished": "Jan 10, 2024, 9:00:00 AM",
+      "dateUpdated": "Jan 15, 2024, 3:30:00 PM",
+      "baseScore": 5.9,
+      "baseScoreVersion": "4.0",
+      "baseScoreVector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:H/UI:A/VC:N/VI:N/VA:N/SC:H/SI:N/SA:N",
+      "references": "https://example-vendor.example/advisories/example-1\nhttps://cve-database.example/vuln/detail/CVE-2024-00001\n",
+      "aliases": "CVE-2024-00001\nGHSA-aaaa-bbbb-cccc\n",
+      "assigner": "Example-CERT",
+      "epss": 0.02,
+      "enisaIdProduct": [
+        {
+          "id": "10000000-0000-0000-0000-000000000001",
+          "product": {
+            "name": "Example Admin Panel",
+            "vendor": {
+              "name": "Example Vendor"
+            }
+          },
+          "product_version": "1.2.3"
+        }
+      ],
+      "enisaIdVendor": [
+        {
+          "id": "20000000-0000-0000-0000-000000000001",
+          "vendor": {
+            "name": "Example Vendor"
+          }
+        }
+      ]
+    },
+    {
+      "id": "EUVD-2024-00002",
+      "enisaUuid": "00000000-0000-0000-0000-000000000002",
+      "description": "Example arbitrary file upload vulnerability in Example File Manager due to missing validation of uploaded file extensions.",
+      "datePublished": "Jan 12, 2024, 11:00:00 AM",
+      "dateUpdated": "Jan 14, 2024, 8:15:00 PM",
+      "baseScore": 8.4,
+      "baseScoreVersion": "3.1",
+      "baseScoreVector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:H/A:H",
+      "references": "https://example-vendor2.example/security/example-2\n",
+      "aliases": "CVE-2024-00002\n",
+      "assigner": "Example-Vendor2",
+      "epss": 0.85,
+      "enisaIdProduct": [
+        {
+          "id": "10000000-0000-0000-0000-000000000002",
+          "product": {
+            "name": "Example File Manager",
+            "vendor": {
+              "name": "Example Vendor Two"
+            }
+          },
+          "product_version": "0 <2.0.0"
+        }
+      ],
+      "enisaIdVendor": [
+        {
+          "id": "20000000-0000-0000-0000-000000000002",
+          "vendor": {
+            "name": "Example Vendor Two"
+          }
+        }
+      ]
+    },
+    {
+      "id": "EUVD-2024-00003",
+      "enisaUuid": "00000000-0000-0000-0000-000000000003",
+      "description": "Example arbitrary code execution vulnerability in Example Widget affecting legacy authentication modules.",
+      "datePublished": "Jan 5, 2024, 6:45:00 AM",
+      "dateUpdated": "Jan 13, 2024, 1:00:00 PM",
+      "baseScore": 7.5,
+      "baseScoreVersion": "2.0",
+      "baseScoreVector": "AV:N/AC:L/Au:N/C:P/I:P/A:P",
+      "references": "https://example-vendor3.example/bulletins/example-3\n",
+      "aliases": "CVE-2024-00003\n",
+      "assigner": "Example-Vendor3",
+      "epss": 0.0,
+      "enisaIdProduct": [],
+      "enisaIdVendor": []
+    }
+  ],
+  "total": 3
+}
