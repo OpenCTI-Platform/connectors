@@ -1,3 +1,4 @@
 from .connector import Connector
+from .settings import ConnectorSettings
 
-__all__ = ["Connector"]
+__all__ = ["Connector", "ConnectorSettings"]

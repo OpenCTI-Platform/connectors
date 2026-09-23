@@ -10,18 +10,18 @@ This module tests:
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Callable
+from typing import Any, Callable
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from aiohttp import ClientResponse, ClientResponseError
-from aiohttp_retry import Any
-from client_api.v2.siem import SIEMClient, SIEMResponse
+from client_api.v2.siem import ClickEvent, MessageEvent, SIEMClient, SIEMResponse
 from proofpoint_tap.errors import (
     ProofpointAPIError,
     ProofpointAPIInvalidResponseError,
     ProofPointAPIRequestParamsError,
 )
+from proofpoint_tap.warnings import ValidationWarning
 from pydantic import SecretStr
 from yarl import URL
 
@@ -224,3 +224,122 @@ async def test_model_responses(client_instance: SIEMClient, method_name: str) ->
             start_time=datetime.now(timezone.utc) - timedelta(minutes=60),
             end_time=datetime.now(timezone.utc) - timedelta(minutes=30),
         )
+
+
+# Test permissive validation of malformed API data
+def _make_threat_info() -> dict[str, Any]:
+    """Return a minimal valid threatsInfoMap entry."""
+    return {
+        "classification": "malware",
+        "threat": "some-threat",
+        "threatID": "threat-id",
+        "threatStatus": "active",
+        "threatTime": "2025-01-10T10:00:00Z",
+        "threatType": "attachment",
+    }
+
+
+def _make_message_event(**overrides: Any) -> dict[str, Any]:
+    """Return a minimal valid messagesBlocked/messagesDelivered entry."""
+    payload: dict[str, Any] = {
+        "cluster": "cluster-name",
+        "fromAddress": ["sender@example.com"],
+        "GUID": "message-guid",
+        "messageParts": [{"contentType": "text/plain", "disposition": "inline"}],
+        "messageTime": "2025-01-10T10:00:00Z",
+        "QID": "queue-id",
+        "recipient": ["recipient@example.com"],
+        "sender": "sender@example.com",
+        "senderIP": "127.0.0.1",
+        "threatsInfoMap": [_make_threat_info()],
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _make_click_event(**overrides: Any) -> dict[str, Any]:
+    """Return a minimal valid clicksPermitted/clicksBlocked entry."""
+    payload: dict[str, Any] = {
+        "classification": "malware",
+        "clickIP": "127.0.0.1",
+        "clickTime": "2025-01-10T10:00:00Z",
+        "GUID": "click-guid",
+        "recipient": "recipient@example.com",
+        "sender": "sender@example.com",
+        "senderIP": "127.0.0.1",
+        "threatID": "threat-id",
+        "threatTime": "2025-01-10T10:00:00Z",
+        "threatUrl": "https://dashboard.example.com/threat",
+        "threatStatus": "active",
+        "url": "https://malicious.example.com",
+        "userAgent": "Mozilla/5.0",
+    }
+    payload.update(overrides)
+    return payload
+
+
+@pytest.mark.parametrize(
+    "overrides, expected",
+    [
+        pytest.param(
+            {"sender": ""},
+            {"field": "sender", "value": ""},
+            id="empty sender",
+        ),
+        pytest.param(
+            {"fromAddress": ['"quoted.local"@example.com']},
+            {"field": "from_address", "value": ['"quoted.local"@example.com']},
+            id="quoted local part in fromAddress",
+        ),
+        pytest.param(
+            {"replyToAddress": ["Some. Name <info@example.co.za>"]},
+            {
+                "field": "reply_to_address",
+                "value": ["Some. Name <info@example.co.za>"],
+            },
+            id="unquoted display name with period in replyToAddress",
+        ),
+    ],
+)
+def test_message_event_accepts_malformed_emails(
+    overrides: dict[str, Any], expected: dict[str, Any]
+) -> None:
+    """Malformed email values must not fail validation but be kept as-is."""
+    # Given a message event payload with a malformed email value
+    payload = _make_message_event(**overrides)
+    # When validating the MessageEvent model
+    with pytest.warns(ValidationWarning):
+        event = MessageEvent.model_validate(payload)
+    # Then validation passes and the raw value is preserved
+    assert getattr(event, expected["field"]) == expected["value"]  # noqa: S101
+
+
+def test_click_event_accepts_missing_threat_url() -> None:
+    """A click event without threatUrl must not fail validation."""
+    # Given a click event payload without a threatUrl key
+    payload = _make_click_event()
+    del payload["threatUrl"]
+    # When validating the ClickEvent model
+    event = ClickEvent.model_validate(payload)
+    # Then validation passes and threat_url is None
+    assert event.threat_url is None  # noqa: S101
+
+
+def test_siem_response_preserves_window_with_malformed_email() -> None:
+    """One malformed record must not drop the whole polling window."""
+    # Given a SIEM response with one valid and one malformed message
+    payload = {
+        "queryEndTime": "2025-01-10T10:00:00Z",
+        "messagesBlocked": [
+            _make_message_event(),
+            _make_message_event(sender=""),
+        ],
+        "clicksPermitted": [],
+        "clicksBlocked": [],
+        "messagesDelivered": [],
+    }
+    # When validating the SIEMResponse model
+    response = SIEMResponse.model_validate(payload)
+    # Then both messages are preserved (no silent data loss)
+    assert response.messages_blocked is not None  # noqa: S101
+    assert len(response.messages_blocked) == 2  # noqa: S101

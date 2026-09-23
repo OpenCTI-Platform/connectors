@@ -1,0 +1,61 @@
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+# Parity with what black, isort and flake8 enforced between them: F is the
+# pyflakes set (undefined names, unused imports), I is the import ordering.
+# Widening to UP or B is a deliberate step, not a side effect of the move.
+select = ["F", "I"]
+
+[tool.ruff.lint.isort]
+# Upstream checks formatting with one run from the repository root, where the
+# connector's own packages are not importable and therefore sort as
+# third-party. Naming them keeps a run started inside the connector identical.
+known-third-party = [
+    "_data",
+    "adapters",
+    "client",
+    "connector",
+    "main",
+    "models",
+    "pipeline",
+    "support",
+]
+
+[tool.ruff.format]
+# The defaults ruff shares with black, spelled out so an upgrade cannot change
+# them silently.
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+# Paths are relative to the repository root: pre-commit and CI both run from
+# there, which is also where the pylint hook resolves its own paths.
+mypy_path = "external-import/group-ib-ti/src"
+explicit_package_bases = true
+namespace_packages = true
+# pycti, stix2 and the Group-IB libraries ship no type information. This gate
+# is about the connector's own code, not about typing its dependencies.
+ignore_missing_imports = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_optional = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# --strict-markers turns a typo in @pytest.mark.<name> into an error instead
+# of a test that silently loses its marker; --strict-config does the same for
+# an unknown key in this section.
+addopts = "--strict-markers --strict-config -ra"
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
+# Two points below the 89% the suite measures today: the floor is here to catch
+# a drop, not to be a target. The connector's own bar is 80%.
+fail_under = 87
