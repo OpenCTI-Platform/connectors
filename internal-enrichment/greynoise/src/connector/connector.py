@@ -140,7 +140,7 @@ class GreyNoiseConnector:
                 self._create_custom_label(f"{tag['name']}", "#ff8178")
             elif tag["category"] == "worm":
                 malware_worm = {
-                    "name": f"{tag["name"]}",
+                    "name": tag["name"],
                     "description": f"{tag['description']}",
                     "type": "worm",
                 }
