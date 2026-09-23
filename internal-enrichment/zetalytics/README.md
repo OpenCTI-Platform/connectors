@@ -1,6 +1,6 @@
 # Zetalytics DNS Connector for OpenCTI
 
-`zetanalytics_dns` is an OpenCTI internal enrichment connector for the Zetalytics ZoneCruncher API. It enriches domains, hostnames, IPv4 addresses, and IPv6 addresses with passive DNS, live DNS, ASN, subdomain, registration, and nameserver context.
+`zetalytics_dns` is an OpenCTI internal enrichment connector for the Zetalytics ZoneCruncher API. It enriches domains, hostnames, IPv4 addresses, and IPv6 addresses with passive DNS, live DNS, ASN, subdomain, registration, and nameserver context.
 
 The connector is designed as **one connector package and one container image**, deployed multiple times with different configuration profiles. This allows the same codebase to support analyst-led manual enrichment, controlled playbook enrichment, lightweight automatic enrichment, and deeper investigation workflows without duplicating logic.
 
@@ -32,7 +32,7 @@ Supported enrichment areas:
 
 ## Package layout
 
-The connector package is named `zetanalytics_dns`.
+The connector package is named `zetalytics_dns`.
 
 | File | Purpose |
 |---|---|
@@ -425,7 +425,7 @@ ZETALYTICS_LOOKBACK_DAYS: "365"
 ZETALYTICS_TSFIELD: "all"
 ZETALYTICS_MAX_TLP: "TLP:AMBER"
 ZETALYTICS_CONFIDENCE: "60"
-ZETALYTICS_INCLUDE_PORTAL_LINK: "true" # optional (default: true) — adds a ZoneCruncher link to each enriched observable. WARNING: the API token is visible in the URL.
+ZETALYTICS_INCLUDE_PORTAL_LINK: "false" # optional (default: false) — adds a ZoneCruncher link to each enriched observable. WARNING: the API token is visible in the URL, so this is opt-in.
 ```
 
 Endpoint flags:
@@ -437,8 +437,10 @@ ZETALYTICS_INCLUDE_D8S: "true"
 ZETALYTICS_INCLUDE_HISTORICAL_WHOIS: "false"
 ZETALYTICS_INCLUDE_NS_GLUE: "true"
 ZETALYTICS_INCLUDE_NS2DOMAIN: "false"
+ZETALYTICS_MAX_NS_PIVOT_RESULTS: "100" # optional (default: 100) — only used when ZETALYTICS_INCLUDE_NS2DOMAIN=true
 ZETALYTICS_INCLUDE_MX2DOMAIN: "false"
-ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false"
+ZETALYTICS_MAX_MX_PIVOT_RESULTS: "100" # optional (default: 100) — only used when ZETALYTICS_INCLUDE_MX2DOMAIN=true
+ZETALYTICS_INCLUDE_EMAIL_PIVOTS: "false" # reserved for a future registration-email pivot; not yet actioned by the connector
 ```
 
 ---
@@ -458,7 +460,7 @@ zetalytics-dns-connector
 The console script calls:
 
 ```python
-zetanalytics_dns.__main__:main
+zetalytics_dns.__main__:main
 ```
 
 ### Dockerfile
@@ -585,7 +587,7 @@ pytest
 Run with coverage:
 
 ```bash
-pytest --cov=zetanalytics_dns --cov-report=term-missing
+pytest --cov=zetalytics_dns --cov-report=term-missing
 ```
 
 ---

@@ -57,7 +57,7 @@ class _ConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="Observable types this connector will enrich.",
     )
     log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
-        default="info",
+        default="error",
         description="Minimum log level to emit.",
     )
 
@@ -117,6 +117,11 @@ class _ZetalyticsConfig(BaseConfigModel):
         ge=0,
         description="Maximum results for nameserver pivot queries.",
     )
+    max_mx_pivot_results: int = Field(
+        default=100,
+        ge=0,
+        description="Maximum results for MX-to-domain pivot queries.",
+    )
     lookback_days: int = Field(
         default=365,
         ge=1,
@@ -158,7 +163,10 @@ class _ZetalyticsConfig(BaseConfigModel):
     )
     include_email_pivots: bool = Field(
         default=False,
-        description="Enrich via registration email pivots (disabled by default).",
+        description=(
+            "Reserved for a future registration-email pivot (disabled by "
+            "default). Not yet actioned by the connector."
+        ),
     )
 
     # --- STIX output controls ---
@@ -177,11 +185,12 @@ class _ZetalyticsConfig(BaseConfigModel):
         description="Create an OpenCTI note on the observable when no results are found.",
     )
     include_portal_link: bool = Field(
-        default=True,
+        default=False,
         description=(
             "Add an external reference linking to the observable in the ZoneCruncher web "
             "portal. The link includes the API token as part of the URL path, which is "
-            "visible to OpenCTI users who can view the observable. Set to false to omit."
+            "visible to any OpenCTI user who can view the observable. Disabled by default "
+            "to avoid exposing the token; set to true to opt in."
         ),
     )
 

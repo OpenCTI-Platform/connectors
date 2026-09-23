@@ -1,6 +1,6 @@
 """Tests for zetalytics_dns.client."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from zetalytics_dns.client import ZetalyticsClient

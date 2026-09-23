@@ -8,8 +8,8 @@ import pytest
 
 # ---------------------------------------------------------------------------
 # Stub the zetalytics package at module level so that importing
-# zetanalytics_dns.client never triggers a real network call.
-# This must run before any test module imports zetanalytics_dns.*, which is
+# zetalytics_dns.client never triggers a real network call.
+# This must run before any test module imports zetalytics_dns.*, which is
 # why it is at module scope in conftest rather than inside a fixture.
 # ---------------------------------------------------------------------------
 _zetalytics_stub = MagicMock()

@@ -74,7 +74,9 @@ class ZetalyticsClient:
         """Perform a live DNS lookup for a domain or hostname."""
         return self._client.liveDNS(q=value)
 
-    def subdomains(self, value: str, max_results: int, active_days: int = 90) -> dict[str, Any] | None:
+    def subdomains(
+        self, value: str, max_results: int, active_days: int = 90
+    ) -> dict[str, Any] | None:
         """Retrieve known subdomains for a domain."""
         response = self._client.subdomains(
             q=value,

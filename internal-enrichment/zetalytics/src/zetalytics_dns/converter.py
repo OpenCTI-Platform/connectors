@@ -19,8 +19,8 @@ Design notes
 
 from __future__ import annotations
 
-import ipaddress
 import datetime
+import ipaddress
 from collections import defaultdict
 from typing import Any
 
@@ -28,11 +28,11 @@ import stix2
 from pycti import (
     Identity,
     Location,
+    MarkingDefinition,
     Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
-
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -137,6 +137,15 @@ class Converter:
         self._seen_observables: set[tuple[str, str]] = set()
         self._seen_relationships: set[tuple[str, str, str]] = set()
 
+        # Nameserver / MX domain values discovered so far, used by the
+        # connector to drive the ns2domain and mx2domain pivots. These are
+        # tracked separately from the generic domain-name observables above
+        # so that pivoting only follows actual NS/MX records rather than
+        # every domain-name object created during enrichment (e.g. CNAME
+        # targets, subdomains, or PTR results).
+        self.nameserver_domains: set[str] = set()
+        self.mx_domains: set[str] = set()
+
     # ------------------------------------------------------------------
     # Author / TLP
     # ------------------------------------------------------------------
@@ -162,6 +171,14 @@ class Converter:
             "TLP:CLEAR": stix2.TLP_WHITE,
             "TLP:GREEN": stix2.TLP_GREEN,
             "TLP:AMBER": stix2.TLP_AMBER,
+            "TLP:AMBER+STRICT": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:AMBER+STRICT",
+            ),
             "TLP:RED": stix2.TLP_RED,
         }
         return mapping.get(self.marking_tlp.upper())
@@ -190,7 +207,9 @@ class Converter:
             },
         )
 
-    def _make_ipv4(self, value: str, existing_id: str | None = None) -> stix2.IPv4Address | None:
+    def _make_ipv4(
+        self, value: str, existing_id: str | None = None
+    ) -> stix2.IPv4Address | None:
         if not _is_valid_ipv4(value):
             self.helper.connector_logger.debug(
                 "[CONVERTER] Skipping invalid IPv4 value", {"value": value}
@@ -209,7 +228,9 @@ class Converter:
             },
         )
 
-    def _make_ipv6(self, value: str, existing_id: str | None = None) -> stix2.IPv6Address | None:
+    def _make_ipv6(
+        self, value: str, existing_id: str | None = None
+    ) -> stix2.IPv6Address | None:
         if not _is_valid_ipv6(value):
             self.helper.connector_logger.debug(
                 "[CONVERTER] Skipping invalid IPv6 value", {"value": value}
@@ -256,7 +277,7 @@ class Converter:
             kwargs["latitude"] = float(lat)
         if lon is not None:
             kwargs["longitude"] = float(lon)
-        return stix2.Location(**kwargs)
+        return stix2.Location(id=kwargs.pop("id"), **kwargs)
 
     def _make_asn(self, number: int, name: str) -> stix2.AutonomousSystem | None:
         key = ("autonomous-system", str(number))
@@ -312,17 +333,25 @@ class Converter:
         if stop_dt:
             kwargs["stop_time"] = stop_dt
 
-        return stix2.Relationship(**kwargs)
+        return stix2.Relationship(id=kwargs.pop("id"), **kwargs)
 
     # ------------------------------------------------------------------
     # Note factory
     # ------------------------------------------------------------------
 
     def _make_note(self, content: str, object_refs: list[str]) -> dict:
-        """Return a pycti-compatible Note object."""
-        now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        """Return a pycti-compatible Note object.
+
+        The STIX ID is generated from ``content`` alone (``created=None``), not
+        the current timestamp, so that re-running enrichment with unchanged
+        Zetalytics data produces the same Note ID instead of a fresh one (and
+        a fresh queue entry) on every run.
+        """
+        now = datetime.datetime.now(datetime.timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )
         return {
-            "id": Note.generate_id(content=content, created=now),
+            "id": Note.generate_id(content=content, created=None),
             "type": "note",
             "spec_version": "2.1",
             "created": now,
@@ -339,11 +368,22 @@ class Converter:
     # Public conversion methods
     # ------------------------------------------------------------------
 
+    def domain_id(self, value: str) -> str:
+        """Return the deterministic STIX ID for a domain-name observable value.
+
+        STIX 2.1 derives a DomainName's ID solely from its (normalised) ``value``,
+        so this reproduces the same ID as the object created by ``_make_domain``
+        for the same value without needing to look up or re-create it.
+        """
+        return stix2.DomainName(value=_normalise_domain(value))["id"]
+
     def base_objects(self) -> list:
         """Return the author identity, always included in every bundle."""
         return [self.author]
 
-    def anchor_object(self, obs_type: str, obs_value: str, obs_stix_id: str, token: str | None = None) -> Any:
+    def anchor_object(
+        self, obs_type: str, obs_value: str, obs_stix_id: str, token: str | None = None
+    ) -> Any:
         """Return the anchor observable with Zetalytics set as the created_by_ref.
 
         Including this in the bundle causes OpenCTI to register Zetalytics in
@@ -355,11 +395,17 @@ class Converter:
         ext_refs: list[stix2.ExternalReference] = []
         if token:
             if obs_type in ("domain-name", "hostname"):
-                portal_url = f"https://zonecruncher.com/{token}/?d={obs_value}&isns=false##top"
+                portal_url = (
+                    f"https://zonecruncher.com/{token}/?d={obs_value}&isns=false##top"
+                )
             elif obs_type == "ipv4-addr":
-                portal_url = f"https://zonecruncher.com/{token}/?ip={obs_value}&mask=32##top"
+                portal_url = (
+                    f"https://zonecruncher.com/{token}/?ip={obs_value}&mask=32##top"
+                )
             elif obs_type == "ipv6-addr":
-                portal_url = f"https://zonecruncher.com/{token}/?ip={obs_value}&mask=128##top"
+                portal_url = (
+                    f"https://zonecruncher.com/{token}/?ip={obs_value}&mask=128##top"
+                )
             else:
                 portal_url = None
             if portal_url:
@@ -441,7 +487,10 @@ class Converter:
                             objects.append(rel)
 
             elif rrtype in ("cname", "ns", "ptr"):
-                target_obj = self._make_domain(_normalise_domain(raw_value))
+                normalised = _normalise_domain(raw_value)
+                if rrtype == "ns":
+                    self.nameserver_domains.add(normalised)
+                target_obj = self._make_domain(normalised)
                 if target_obj:
                     objects.append(target_obj)
                     desc = f"Passive DNS {rrtype.upper()} record"
@@ -458,6 +507,7 @@ class Converter:
 
             elif rrtype == "mx":
                 mx_host = _normalise_domain(_mx_host(raw_value))
+                self.mx_domains.add(mx_host)
                 target_obj = self._make_domain(mx_host)
                 if target_obj:
                     objects.append(target_obj)
@@ -473,14 +523,17 @@ class Converter:
                         objects.append(rel)
 
             elif rrtype == "soa_email":
-                txt_values.append(f"- **SOA email:** {raw_value} (first: {first_seen or 'unknown'}, last: {last_seen or 'unknown'})")
+                txt_values.append(
+                    f"- **SOA email:** {raw_value} (first: {first_seen or 'unknown'}, last: {last_seen or 'unknown'})"
+                )
 
             elif rrtype == "txt":
                 txt_values.append(f"- {raw_value}")
 
         if txt_values:
             note = self._make_note(
-                content=f"**Zetalytics passive DNS TXT/SOA records for {domain_value}:**\n\n" + "\n".join(txt_values),
+                content=f"**Zetalytics passive DNS TXT/SOA records for {domain_value}:**\n\n"
+                + "\n".join(txt_values),
                 object_refs=[domain_stix_id],
             )
             objects.append(note)
@@ -501,14 +554,16 @@ class Converter:
                         if dt:
                             year_counts[dt.year] += 1
                     year_str = ", ".join(
-                        f"{y}: {c}" for y, c in sorted(year_counts.items(), reverse=True)
+                        f"{y}: {c}"
+                        for y, c in sorted(year_counts.items(), reverse=True)
                     )
                     lines.append(
                         f"- **{rrtype}:** {len(records)} record(s)"
                         + (f" ({year_str})" if year_str else "")
                     )
                 note = self._make_note(
-                    content=f"**Zetalytics passive DNS summary for {domain_value}:**\n\n" + "\n".join(lines),
+                    content=f"**Zetalytics passive DNS summary for {domain_value}:**\n\n"
+                    + "\n".join(lines),
                     object_refs=[domain_stix_id],
                 )
                 objects.append(note)
@@ -631,8 +686,12 @@ class Converter:
             lon = pwhois.get("Longitude")
 
             if city or country_code:
-                location_name = ", ".join(filter(None, [city, region, country_name or country_code]))
-                loc_obj = self._make_location(location_name, city, region, country_code, lat, lon)
+                location_name = ", ".join(
+                    filter(None, [city, region, country_name or country_code])
+                )
+                loc_obj = self._make_location(
+                    location_name, city, region, country_code, lat, lon
+                )
                 if loc_obj:
                     objects.append(loc_obj)
                     rel = self._make_relationship(
@@ -646,7 +705,12 @@ class Converter:
 
             # Note for remaining routing context
             prefix = pwhois.get("Prefix") or ""
-            org = pwhois.get("Org-Name") or pwhois.get("Net-Name") or record.get("o") or ""
+            org = (
+                pwhois.get("Org-Name")
+                or pwhois.get("Net-Name")
+                or record.get("o")
+                or ""
+            )
             registry = record.get("r") or ""
 
             context_parts = []
@@ -663,7 +727,8 @@ class Converter:
 
         if note_lines:
             note = self._make_note(
-                content="**Zetalytics routing/WHOIS context:**\n\n" + "\n\n---\n\n".join(note_lines),
+                content="**Zetalytics routing/WHOIS context:**\n\n"
+                + "\n\n---\n\n".join(note_lines),
                 object_refs=[ip_stix_id],
             )
             objects.append(note)
@@ -682,7 +747,9 @@ class Converter:
         coming from a live lookup via a Note.
         """
         # Reuse passive DNS logic; live records have the same structure
-        objects = self.from_domain_passive_dns(domain_value, domain_stix_id, response, include_summary_note=False)
+        objects = self.from_domain_passive_dns(
+            domain_value, domain_stix_id, response, include_summary_note=False
+        )
 
         results = _extract_results(response)
         if results:
@@ -691,7 +758,8 @@ class Converter:
                 for r in results[:20]
             ]
             note = self._make_note(
-                content=f"**Zetalytics live DNS for {domain_value}:**\n\n" + "\n".join(record_lines),
+                content=f"**Zetalytics live DNS for {domain_value}:**\n\n"
+                + "\n".join(record_lines),
                 object_refs=[domain_stix_id],
             )
             objects.append(note)
@@ -782,10 +850,16 @@ class Converter:
         objects: list = []
 
         for record in _extract_results(response):
-            ns_name = record.get("ns") or record.get("nameserver") or record.get("value") or ""
+            ns_name = (
+                record.get("ns")
+                or record.get("nameserver")
+                or record.get("value")
+                or ""
+            )
             ns_ip = record.get("ip") or record.get("a") or ""
 
             if ns_name:
+                self.nameserver_domains.add(_normalise_domain(ns_name))
                 ns_obj = self._make_domain(ns_name)
                 if ns_obj:
                     objects.append(ns_obj)
@@ -799,7 +873,11 @@ class Converter:
                         objects.append(rel)
 
                 if ns_ip and ns_obj:
-                    ip_obj = self._make_ipv4(ns_ip) if _is_valid_ipv4(ns_ip) else self._make_ipv6(ns_ip)
+                    ip_obj = (
+                        self._make_ipv4(ns_ip)
+                        if _is_valid_ipv4(ns_ip)
+                        else self._make_ipv6(ns_ip)
+                    )
                     if ip_obj:
                         objects.append(ip_obj)
                         rel = self._make_relationship(

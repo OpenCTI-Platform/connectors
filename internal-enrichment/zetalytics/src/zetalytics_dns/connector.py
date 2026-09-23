@@ -9,7 +9,6 @@ from zetalytics_dns.client import ZetalyticsClient
 from zetalytics_dns.converter import Converter
 from zetalytics_dns.settings import ConfigLoader
 
-
 # Observable types the connector handles, normalised to lowercase STIX type names
 _DOMAIN_TYPES = frozenset({"domain-name", "hostname"})
 _IP_TYPES = frozenset({"ipv4-addr", "ipv6-addr"})
@@ -58,7 +57,7 @@ class Connector:
         try:
             enrichment_entity = data["enrichment_entity"]
             observable = data["stix_entity"]
-            stix_objects: list = list(data.get("stix_objects") or [])
+            stix_objects: list = list(data["stix_objects"])
 
             obs_type: str = observable["type"]
             obs_value: str = observable["value"]
@@ -90,7 +89,11 @@ class Connector:
                 obs_type,
                 obs_value,
                 obs_stix_id,
-                self.config.zetalytics.token.get_secret_value() if self.config.zetalytics.include_portal_link else None,
+                (
+                    self.config.zetalytics.token.get_secret_value()
+                    if self.config.zetalytics.include_portal_link
+                    else None
+                ),
             )
             if anchor:
                 stix_objects.append(anchor)
@@ -106,22 +109,25 @@ class Connector:
                         object_refs=[obs_stix_id],
                     )
                     stix_objects.append(note)
-                else:
-                    return "No enrichment results returned"
 
             return self._send_bundle(stix_objects)
 
         except (TlpError, UnsupportedEntityTypeError) as exc:
+            # Send the original bundle back unchanged (rather than dropping it)
+            # so playbooks chained after this connector still receive the
+            # entity when it's skipped for being out of scope or over max TLP.
             self.helper.connector_logger.info(
                 "[CONNECTOR] Skipping observable", {"reason": str(exc)}
             )
-            return "Skipped"
+            return self._send_bundle(list(data.get("stix_objects") or []))
         except Exception as exc:
+            # Same playbook-compatibility rationale as above: forward the
+            # original bundle unchanged rather than swallowing it on error.
             self.helper.connector_logger.error(
                 "[CONNECTOR] Unexpected error during enrichment",
                 {"error": str(exc)},
             )
-            return "Error"
+            return self._send_bundle(list(data.get("stix_objects") or []))
 
     # ------------------------------------------------------------------
     # Domain / hostname enrichment
@@ -147,7 +153,9 @@ class Connector:
                 lookback_days=cfg.lookback_days,
                 tsfield=cfg.tsfield,
             )
-            objects.extend(converter.from_domain_passive_dns(value, stix_id, passive_resp))
+            objects.extend(
+                converter.from_domain_passive_dns(value, stix_id, passive_resp)
+            )
         except Exception as exc:
             self.helper.connector_logger.warning(
                 "[CONNECTOR] domain2rrtypes query failed",
@@ -210,41 +218,63 @@ class Connector:
 
         if cfg.include_ns2domain and cfg.max_ns_pivot_results > 0:
             # Pivot: for each NS we found, look up what domains they serve
-            objects.extend(
-                self._pivot_ns_to_domains(value, stix_id, objects, converter)
-            )
+            objects.extend(self._pivot_ns_to_domains(converter))
+
+        if cfg.include_mx2domain and cfg.max_mx_pivot_results > 0:
+            # Pivot: for each MX host we found, look up what domains it serves
+            objects.extend(self._pivot_mx_to_domains(converter))
 
         return objects
 
-    def _pivot_ns_to_domains(
-        self,
-        _domain_value: str,
-        domain_stix_id: str,
-        existing_objects: list,
-        converter: Converter,
-    ) -> list:
-        """For each nameserver observable already discovered, pivot to hosted domains."""
+    def _pivot_ns_to_domains(self, converter: Converter) -> list:
+        """For each nameserver discovered so far, pivot to the domains it hosts."""
         cfg = self.config.zetalytics
         pivot_objects: list = []
-        seen_ns: set[str] = set()
 
-        for obj in existing_objects:
-            if obj.get("type") == "domain-name":
-                ns_value = obj.get("value", "")
-                if ns_value and ns_value not in seen_ns:
-                    seen_ns.add(ns_value)
-                    try:
-                        resp = self.client.ns_to_domains(
-                            ns_value, size=cfg.max_ns_pivot_results
-                        )
-                        pivot_objects.extend(
-                            converter.from_domain_passive_dns(ns_value, obj["id"], resp)
-                        )
-                    except Exception as exc:
-                        self.helper.connector_logger.warning(
-                            "[CONNECTOR] ns2domain pivot failed",
-                            {"ns": ns_value, "error": str(exc)},
-                        )
+        # Snapshot before iterating: from_domain_passive_dns() below may add
+        # newly discovered NS values to converter.nameserver_domains, and
+        # mutating a set while iterating it raises RuntimeError. This also
+        # bounds the pivot to one level instead of recursing indefinitely.
+        for ns_value in list(converter.nameserver_domains):
+            try:
+                resp = self.client.ns_to_domains(
+                    ns_value, size=cfg.max_ns_pivot_results
+                )
+                pivot_objects.extend(
+                    converter.from_domain_passive_dns(
+                        ns_value, converter.domain_id(ns_value), resp
+                    )
+                )
+            except Exception as exc:
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] ns2domain pivot failed",
+                    {"ns": ns_value, "error": str(exc)},
+                )
+        return pivot_objects
+
+    def _pivot_mx_to_domains(self, converter: Converter) -> list:
+        """For each MX host discovered so far, pivot to the domains it hosts."""
+        cfg = self.config.zetalytics
+        pivot_objects: list = []
+
+        # See the snapshot note in _pivot_ns_to_domains: iterating a live copy
+        # of converter.mx_domains would be mutated by from_domain_passive_dns()
+        # below if the pivot response itself contains MX records.
+        for mx_value in list(converter.mx_domains):
+            try:
+                resp = self.client.mx_to_domains(
+                    mx_value, size=cfg.max_mx_pivot_results
+                )
+                pivot_objects.extend(
+                    converter.from_domain_passive_dns(
+                        mx_value, converter.domain_id(mx_value), resp
+                    )
+                )
+            except Exception as exc:
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] mx2domain pivot failed",
+                    {"mx": mx_value, "error": str(exc)},
+                )
         return pivot_objects
 
     # ------------------------------------------------------------------
@@ -314,17 +344,29 @@ class Connector:
             ),
             "TLP:CLEAR",
         )
-        if not self.helper.check_max_tlp(tlp=tlp, max_tlp=self.config.zetalytics.max_tlp):
+        if not self.helper.check_max_tlp(
+            tlp=tlp, max_tlp=self.config.zetalytics.max_tlp
+        ):
             raise TlpError(
                 f"Observable TLP ({tlp}) exceeds configured maximum "
                 f"({self.config.zetalytics.max_tlp}); skipping enrichment."
             )
 
     def _check_scope(self, obs_type: str) -> None:
-        """Raise UnsupportedEntityTypeError if the type is outside scope."""
+        """Raise UnsupportedEntityTypeError if the type is outside scope.
+
+        Checks both the types this connector knows how to handle at all, and
+        the (possibly narrower) CONNECTOR_SCOPE configured by the user.
+        """
         if obs_type not in _ALL_TYPES:
             raise UnsupportedEntityTypeError(
                 f"Entity type '{obs_type}' is not supported by the Zetalytics DNS connector."
+            )
+        configured_scope = {s.strip().lower() for s in self.config.connector.scope}
+        if obs_type not in configured_scope:
+            raise UnsupportedEntityTypeError(
+                f"Entity type '{obs_type}' is outside the configured connector scope "
+                f"{sorted(configured_scope)}."
             )
 
     # ------------------------------------------------------------------
@@ -335,5 +377,7 @@ class Connector:
         bundle = self.helper.stix2_create_bundle(stix_objects)
         if bundle is None:
             return "No STIX bundle produced"
-        bundles_sent = self.helper.send_stix2_bundle(bundle)
+        bundles_sent = self.helper.send_stix2_bundle(
+            bundle, cleanup_inconsistent_bundle=True
+        )
         return f"Zetalytics DNS enrichment complete: {len(bundles_sent)} bundle(s) sent"

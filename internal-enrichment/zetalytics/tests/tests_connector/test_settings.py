@@ -3,7 +3,7 @@
 from typing import Any
 
 import pytest
-from connectors_sdk import BaseConfigModel, ConfigValidationError
+from connectors_sdk import BaseConfigModel
 from zetalytics_dns.settings import ConfigLoader
 
 
@@ -107,6 +107,10 @@ def test_config_defaults_applied():
     assert config.zetalytics.include_live_dns is True
     assert config.zetalytics.include_historical_whois is False
     assert config.zetalytics.confidence == 60
+    assert config.zetalytics.max_mx_pivot_results == 100
+    # The ZoneCruncher portal link embeds the API token in the URL, so it must
+    # default to disabled rather than silently exposing the token.
+    assert config.zetalytics.include_portal_link is False
 
 
 def test_light_mode_config():
@@ -176,7 +180,10 @@ def test_connector_name_gets_lookback_period_appended(lookback_days, expected_su
             "zetalytics": {"token": "zt", "lookback_days": lookback_days},
         }
     )
-    assert config.connector.name == f"Zetalytics DNS - Deep Investigation {expected_suffix}"
+    assert (
+        config.connector.name
+        == f"Zetalytics DNS - Deep Investigation {expected_suffix}"
+    )
 
 
 def test_connector_name_suffix_not_duplicated_on_repeated_validation():

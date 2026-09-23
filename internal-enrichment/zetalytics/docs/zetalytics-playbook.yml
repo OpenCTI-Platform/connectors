@@ -9,37 +9,27 @@ connector:
   scope: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr"
   auto: false
   log_level: "info"
-  queue_threshold: 500
 
 zetalytics:
   token: "${ZETALYTICS_TOKEN}"
   mode: "playbook"
-  result_limits:
-    max_results: 100
-    max_subdomains: 0
-    max_whois_results: 0
-    max_ns_pivot_results: 0
-  time_window:
-    lookback_days: 180
-    tsfield: "all"
-  endpoints:
-    live_dns: true
-    subdomains: false
-    d8s: false
-    historical_whois: false
-    ns_glue: false
-    zone_activity: false
-    ns2domain: false
-    mx2domain: false
-    email_pivots: false
-  stix:
-    create_indicators: false
-    create_infrastructure: false
-    create_observations: true
-    confidence: 50
-    marking_definition: "TLP:AMBER"
-  safeguards:
-    deduplicate_observables: true
-    deduplicate_relationships: true
-    skip_invalid_values: true
-    create_note_when_no_results: false
+  max_tlp: "TLP:AMBER"
+  max_results: 100
+  max_subdomains: 0
+  max_whois_results: 0
+  max_ns_pivot_results: 0
+  max_mx_pivot_results: 0
+  lookback_days: 180
+  tsfield: "all"
+  include_live_dns: true
+  include_subdomains: false
+  include_d8s: false
+  include_historical_whois: false
+  include_ns_glue: false
+  include_ns2domain: false
+  include_mx2domain: false
+  include_email_pivots: false
+  confidence: 50
+  marking_definition: "TLP:AMBER"
+  create_note_when_no_results: false
+  include_portal_link: false

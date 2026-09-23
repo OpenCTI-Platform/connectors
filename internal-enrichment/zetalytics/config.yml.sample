@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   name: 'Zetalytics DNS - Analyst Enrichment' # optional
   scope: 'Domain-Name,Hostname,IPv4-Addr,IPv6-Addr' # optional
-  log_level: 'info' # optional (default: 'info')
+  log_level: 'info' # optional, shown here for visibility (default: 'error')
   auto: false # optional (default: false)
 
 zetalytics:

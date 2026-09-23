@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://www.filigran.io/connectors/zetalytics-dns_config.schema.json",
+  "$id": "https://www.filigran.io/connectors/zetalytics_config.schema.json",
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
@@ -12,20 +12,22 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
-    },
-    "CONNECTOR_ID": {
-      "default": "00000000-0000-4000-8000-000000000101",
-      "description": "A UUID v4 identifying this connector instance in OpenCTI. Must be overridden with a unique value per deployed profile.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Zetalytics DNS - Analyst Enrichment",
-      "description": "Display name for this connector in OpenCTI. The configured ZETALYTICS_LOOKBACK_DAYS is automatically appended, e.g. 'Zetalytics DNS - Deep Investigation (2 years)'.",
+      "description": "Display name for this connector in OpenCTI. The configured zetalytics.lookback_days is automatically appended, e.g. 'Zetalytics DNS - Deep Investigation (2 years)'.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": ["Domain-Name", "Hostname", "IPv4-Addr", "IPv6-Addr"],
+      "default": [
+        "Domain-Name",
+        "Hostname",
+        "IPv4-Addr",
+        "IPv6-Addr"
+      ],
       "description": "Observable types this connector will enrich.",
       "items": {
         "type": "string"
@@ -34,8 +36,14 @@
     },
     "CONNECTOR_LOG_LEVEL": {
       "default": "info",
-      "description": "The minimum level of logs to display.",
-      "enum": ["debug", "info", "warn", "warning", "error"],
+      "description": "Minimum log level to emit.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
       "type": "string"
     },
     "CONNECTOR_TYPE": {
@@ -62,14 +70,26 @@
     },
     "ZETALYTICS_MODE": {
       "default": "manual",
-      "description": "Enrichment profile controlling which endpoints are called by default. Endpoint flags below override mode defaults.",
-      "enum": ["light", "playbook", "manual", "deep"],
+      "description": "Enrichment profile controlling which endpoints are called. Endpoint flags below override mode defaults.",
+      "enum": [
+        "light",
+        "playbook",
+        "manual",
+        "deep"
+      ],
       "type": "string"
     },
     "ZETALYTICS_MAX_TLP": {
       "default": "TLP:AMBER",
       "description": "Maximum TLP level of observables this connector will enrich.",
-      "enum": ["TLP:WHITE", "TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED"],
+      "enum": [
+        "TLP:WHITE",
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     },
     "ZETALYTICS_MAX_RESULTS": {
@@ -96,6 +116,12 @@
       "minimum": 0,
       "type": "integer"
     },
+    "ZETALYTICS_MAX_MX_PIVOT_RESULTS": {
+      "default": 100,
+      "description": "Maximum results for MX-to-domain pivot queries.",
+      "minimum": 0,
+      "type": "integer"
+    },
     "ZETALYTICS_LOOKBACK_DAYS": {
       "default": 365,
       "description": "How many days back to query passive DNS records.",
@@ -104,8 +130,7 @@
     },
     "ZETALYTICS_TSFIELD": {
       "default": "all",
-      "description": "Zetalytics timestamp field to filter on.",
-      "enum": ["all", "last_seen", "first_seen"],
+      "description": "Zetalytics timestamp field to filter on (all, last_seen, first_seen).",
       "type": "string"
     },
     "ZETALYTICS_INCLUDE_LIVE_DNS": {
@@ -145,7 +170,7 @@
     },
     "ZETALYTICS_INCLUDE_EMAIL_PIVOTS": {
       "default": false,
-      "description": "Enrich via registration email pivots (disabled by default).",
+      "description": "Reserved for a future registration-email pivot (disabled by default). Not yet actioned by the connector.",
       "type": "boolean"
     },
     "ZETALYTICS_CONFIDENCE": {
@@ -166,8 +191,8 @@
       "type": "boolean"
     },
     "ZETALYTICS_INCLUDE_PORTAL_LINK": {
-      "default": true,
-      "description": "Add an external reference linking to the observable in the ZoneCruncher web portal. The link includes the API token as part of the URL path, which is visible to OpenCTI users who can view the observable. Set to false to omit.",
+      "default": false,
+      "description": "Add an external reference linking to the observable in the ZoneCruncher web portal. The link includes the API token as part of the URL path, which is visible to any OpenCTI user who can view the observable. Disabled by default to avoid exposing the token; set to true to opt in.",
       "type": "boolean"
     }
   },
