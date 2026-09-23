@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from cyfirma_client import CyfirmaClient
+
 # pyrefly: ignore [missing-import]
 from pycti import OpenCTIConnectorHelper
 
@@ -47,8 +48,6 @@ class CyfirmaConnector:
         """
         stix_objects = []
 
-
-
         # Get entities from external CYFIRMA source
         entities = self.client.get_entities()
 
@@ -57,9 +56,13 @@ class CyfirmaConnector:
         elif isinstance(entities, list):
             stix_objects = entities
 
-        # Ensure consistent bundle by adding the author and TLP marking
+        # Ensure the configured TLP marking is applied to every imported object.
         if len(stix_objects):
             # stix_objects.append(self.converter_to_stix.author)
+            for obj in stix_objects:
+                refs = obj.setdefault("object_marking_refs", [])
+                if self.converter_to_stix.tlp_marking.id not in refs:
+                    refs.append(self.converter_to_stix.tlp_marking.id)
             stix_objects.append(self.converter_to_stix.tlp_marking)
 
         return stix_objects
@@ -73,7 +76,7 @@ class CyfirmaConnector:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
-        work_id = None 
+        work_id = None
         try:
             # Get the current state
             now = datetime.now()

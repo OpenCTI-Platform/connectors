@@ -62,7 +62,6 @@ class ConverterToStix:
     def _create_tlp_marking(level):
         mapping = {
             "white": stix2.TLP_WHITE,
-            "clear": stix2.TLP_WHITE,
             "green": stix2.TLP_GREEN,
             "amber": stix2.TLP_AMBER,
             "amber+strict": stix2.MarkingDefinition(
@@ -72,6 +71,15 @@ class ConverterToStix:
                 custom_properties={
                     "x_opencti_definition_type": "TLP",
                     "x_opencti_definition": "TLP:AMBER+STRICT",
+                },
+            ),
+            "clear": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:CLEAR",
                 },
             ),
             "red": stix2.TLP_RED,
@@ -97,7 +105,7 @@ class ConverterToStix:
             target_ref=target_id,
             created_by_ref=self.author.id,
         )
-        
+
         return relationship
 
     # ===========================#

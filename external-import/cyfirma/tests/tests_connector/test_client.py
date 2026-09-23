@@ -18,6 +18,7 @@ def test_cyfirma_client_get_entities_success():
         mock_request.side_effect = [
             {"objects": [{"id": "indicator--1"}]},
             {"objects": []},
+            {"objects": []},
         ]
 
 

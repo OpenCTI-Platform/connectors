@@ -25,7 +25,7 @@ class CyfirmaClient:
         helper: OpenCTIConnectorHelper,
         base_url: HttpUrl,
         api_key: str,
-        tailored_iocs: bool =True,
+        tailored_iocs: bool = True,
         look_back_days: int = 7,
         tailored_vulnerabilities: bool = False,
     ):
@@ -50,9 +50,7 @@ class CyfirmaClient:
         self.session = requests.Session()
         # self.session.headers.update(self.headers)
 
-    def _request_data(
-        self, api_url: str, params=None, headers=None
-    ) -> dict[str, Any]:
+    def _request_data(self, api_url: str, params=None, headers=None) -> dict[str, Any]:
         """
         Internal method to handle API requests.
 
@@ -81,8 +79,6 @@ class CyfirmaClient:
                 error_msg, {"url_path": api_url, "error": str(err)}
             )
             return {}
-
-    
 
     def get_indicators_feeds(self):
         try:
@@ -258,18 +254,18 @@ class CyfirmaClient:
             return vuln
 
     def get_entities(self):
-            """
-            Fetch entities from the Cyfirma API.
-    
-            :return: List of entities or an empty list if an error occurs
-            """
-            try:
-                indicators = self.get_indicators_feeds()
-                vulnerabilities = self.get_vulnerabilities_feeds()
+        """
+        Fetch entities from the Cyfirma API.
 
-                return indicators + vulnerabilities
-            except Exception as err:
-                self.helper.connector_logger.error(
-                    "[API] Error while fetching entities: " + str(err)
-                )
-                return []
+        :return: List of entities or an empty list if an error occurs
+        """
+        try:
+            indicators = self.get_indicators_feeds()
+            vulnerabilities = self.get_vulnerabilities_feeds()
+
+            return indicators + vulnerabilities
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[API] Error while fetching entities: " + str(err)
+            )
+            return []

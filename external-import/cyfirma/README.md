@@ -64,8 +64,6 @@ Below are the parameters you'll need to set for the connector:
 | Parameter    | config.yml | Docker environment variable | Default | Mandatory | Description |
 | ------------ | ---------- | --------------------------- | ------- | --------- | ----------- |
 | API base URL | cyfirma.api_base_url | `CYFIRMA_API_BASE_URL` | / | Yes | CYFIRMA API base URL. |
-| API key      | cyfirma.api_key      | `CYFIRMA_API_KEY`      | / | Yes | CYFIRMA API key for authentication. |
-| TLP level    | cyfirma.tlp_level   | `CYFIRMA_TLP_LEVEL`   | clear | No | Default TLP marking level for imported objects. |
 | API key | cyfirma.api_key | `CYFIRMA_API_KEY` | / | Yes | CYFIRMA API key for authentication. |
 | TLP level | cyfirma.tlp_level | `CYFIRMA_TLP_LEVEL` | clear | No | Default TLP marking level for imported objects. |
 | Tailored IOCs | cyfirma.tailored_iocs | `CYFIRMA_TAILORED_IOCS` | true | No | Whether to fetch tailored IOCs. |
