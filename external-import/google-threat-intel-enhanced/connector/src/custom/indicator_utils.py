@@ -5,7 +5,7 @@ Supports two scoring modes configured via `indicator_scoring`:
 - `average_detection`: Score calculated from last_analysis_stats detection counts
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
 def escape_stix_pattern_value(value: str) -> str:
@@ -37,9 +37,9 @@ def gti_score_and_verdict(
 
     """
     gti = gti_assessment or {}
-    score = ((gti.get("threat_score") or {}).get("value"))
-    verdict = ((gti.get("verdict") or {}).get("value"))
-    severity = ((gti.get("severity") or {}).get("value"))
+    score = (gti.get("threat_score") or {}).get("value")
+    verdict = (gti.get("verdict") or {}).get("value")
+    severity = (gti.get("severity") or {}).get("value")
     try:
         score = int(score) if score is not None else None
     except Exception:
@@ -50,9 +50,7 @@ def gti_score_and_verdict(
 # ---------- GTI Derived Scoring (from verdict + severity) ----------
 
 
-def compute_score_gti_derived(
-    verdict: Optional[str], severity: Optional[str]
-) -> int:
+def compute_score_gti_derived(verdict: Optional[str], severity: Optional[str]) -> int:
     """Compute score from GTI verdict and severity.
 
     This is the GTI-derived confidence/score based on verdict + severity mapping.
@@ -169,8 +167,8 @@ def compute_indicator_score(
 
 def is_indicator_allowed(score: Optional[int], verdict: Optional[str]) -> bool:
     """Create Indicators only when:
-      - verdict is MALICIOUS or SUSPICIOUS, and
-      - score != 1 (suppression policy).
+    - verdict is MALICIOUS or SUSPICIOUS, and
+    - score != 1 (suppression policy).
     """
     if score == 1:
         return False

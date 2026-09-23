@@ -1,7 +1,7 @@
 """Converts a GTI campaign to a STIX campaign object."""
 
 from datetime import datetime, timezone
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional
 
 from connector.src.custom.models.gti_reports.gti_campaign_model import (
     CampaignModel,
@@ -11,8 +11,8 @@ from connector.src.custom.models.gti_reports.gti_campaign_model import (
     TargetedRegion,
 )
 from connector.src.stix.octi.models.campaign_model import OctiCampaignModel
-from connector.src.stix.octi.models.location_model import OctiLocationModel
 from connector.src.stix.octi.models.identity_sector_model import OctiIdentitySectorModel
+from connector.src.stix.octi.models.location_model import OctiLocationModel
 from connector.src.stix.v21.models.cdts.external_reference_model import (
     ExternalReferenceModel,
 )
@@ -86,9 +86,11 @@ class GTICampaignToSTIXCampaign(BaseMapper):
             last_seen=last_seen,
             aliases=aliases,
             labels=labels,
-            external_references=[
-                ref.model_dump(exclude_none=True) for ref in external_references
-            ] if external_references else None,
+            external_references=(
+                [ref.model_dump(exclude_none=True) for ref in external_references]
+                if external_references
+                else None
+            ),
         )
 
         # Build result list with campaign and related objects

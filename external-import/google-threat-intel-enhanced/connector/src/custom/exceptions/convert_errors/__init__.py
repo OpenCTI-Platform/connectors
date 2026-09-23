@@ -33,6 +33,9 @@ from connector.src.custom.exceptions.convert_errors.gti_reference_error import (
 from connector.src.custom.exceptions.convert_errors.gti_report_conversion_error import (
     GTIReportConversionError,
 )
+from connector.src.custom.exceptions.convert_errors.gti_software_toolkit_conversion_error import (
+    GTISoftwareToolkitConversionError,
+)
 from connector.src.custom.exceptions.convert_errors.gti_technique_conversion_error import (
     GTITechniqueConversionError,
 )
@@ -41,9 +44,6 @@ from connector.src.custom.exceptions.convert_errors.gti_url_conversion_error imp
 )
 from connector.src.custom.exceptions.convert_errors.gti_vulnerability_conversion_error import (
     GTIVulnerabilityConversionError,
-)
-from connector.src.custom.exceptions.convert_errors.gti_software_toolkit_conversion_error import (
-    GTISoftwareToolkitConversionError,
 )
 
 __all__ = [

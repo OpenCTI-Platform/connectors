@@ -8,14 +8,6 @@ import pycti  # type: ignore
 from connector.src.custom.models.gti_reports.gti_ip_addresses_model import (
     GTIIPData,
 )
-from ...indicator_utils import (
-    build_enhanced_description,
-    build_vt_gui_url,
-    compute_indicator_score,
-    derive_verdict_from_stats,
-    gti_score_and_verdict,
-    is_indicator_allowed,
-)
 from connector.src.stix.octi.models.indicator_model import OctiIndicatorModel
 from connector.src.stix.octi.models.ipv4_address_model import OctiIPv4AddressModel
 from connector.src.stix.octi.models.ipv6_address_model import OctiIPv6AddressModel
@@ -28,6 +20,15 @@ from connector.src.stix.v21.models.sdos.indicator_model import IndicatorModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+
+from ...indicator_utils import (
+    build_enhanced_description,
+    build_vt_gui_url,
+    compute_indicator_score,
+    derive_verdict_from_stats,
+    gti_score_and_verdict,
+    is_indicator_allowed,
+)
 
 
 class GTIIPToSTIXIP(BaseMapper):
@@ -340,9 +341,7 @@ class GTIIPToSTIXIP(BaseMapper):
         if self.ip.attributes:
             attrs = self.ip.attributes.model_dump()
 
-        score, verdict, severity = gti_score_and_verdict(
-            attrs.get("gti_assessment")
-        )
+        score, verdict, severity = gti_score_and_verdict(attrs.get("gti_assessment"))
 
         return build_enhanced_description(attrs, score, verdict, severity)
 

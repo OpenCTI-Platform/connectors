@@ -3,10 +3,10 @@
 from connector.src.custom.exceptions.fetch_errors.gti_actor_fetch_error import (
     GTIActorFetchError,
 )
+from connector.src.custom.exceptions.fetch_errors.gti_api_error import GTIApiError
 from connector.src.custom.exceptions.fetch_errors.gti_campaign_fetch_error import (
     GTICampaignFetchError,
 )
-from connector.src.custom.exceptions.fetch_errors.gti_api_error import GTIApiError
 from connector.src.custom.exceptions.fetch_errors.gti_domain_fetch_error import (
     GTIDomainFetchError,
 )
@@ -31,6 +31,9 @@ from connector.src.custom.exceptions.fetch_errors.gti_relationship_fetch_error i
 from connector.src.custom.exceptions.fetch_errors.gti_report_fetch_error import (
     GTIReportFetchError,
 )
+from connector.src.custom.exceptions.fetch_errors.gti_software_toolkit_fetch_error import (
+    GTISoftwareToolkitFetchError,
+)
 from connector.src.custom.exceptions.fetch_errors.gti_technique_fetch_error import (
     GTITechniqueFetchError,
 )
@@ -39,9 +42,6 @@ from connector.src.custom.exceptions.fetch_errors.gti_url_fetch_error import (
 )
 from connector.src.custom.exceptions.fetch_errors.gti_vulnerability_fetch_error import (
     GTIVulnerabilityFetchError,
-)
-from connector.src.custom.exceptions.fetch_errors.gti_software_toolkit_fetch_error import (
-    GTISoftwareToolkitFetchError,
 )
 
 __all__ = [

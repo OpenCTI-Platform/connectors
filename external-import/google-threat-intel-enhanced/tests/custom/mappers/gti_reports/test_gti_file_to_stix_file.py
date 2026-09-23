@@ -89,7 +89,8 @@ def minimal_file_data() -> GTIFileData:
             creation_date=None,
             last_modification_date=None,
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 
@@ -104,7 +105,8 @@ def file_with_timestamps() -> GTIFileData:
             first_submission_date=1640995200,
             last_submission_date=1641081600,
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 
@@ -118,7 +120,8 @@ def file_with_hashes() -> GTIFileData:
             sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709",
             md5="d41d8cd98f00b204e9800998ecf8427e",
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 
@@ -264,7 +267,8 @@ def file_with_invalid_timestamps() -> GTIFileData:
             creation_date=-1,
             last_modification_date=0,
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 

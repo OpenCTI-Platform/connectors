@@ -1,14 +1,12 @@
 """Converts a GTI report to a STIX report object."""
 
 import logging
-import uuid
 from datetime import datetime, timezone
 from typing import Any, List, Optional, Tuple
 
 from connector.src.custom.models.gti_reports.gti_report_model import (
     GTIReportData,
     ReportModel,
-    Technology,
 )
 from connector.src.stix.octi.models.report_model import OctiReportModel
 from connector.src.stix.v21.models.cdts.external_reference_model import (
@@ -17,7 +15,7 @@ from connector.src.stix.v21.models.cdts.external_reference_model import (
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from connector.src.utils.markdown_to_html import markdown_to_html
-from stix2.v21 import Identity, MarkingDefinition, Report, Software  # type: ignore
+from stix2.v21 import Identity, MarkingDefinition, Report  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -345,9 +343,9 @@ class GTIReportToSTIXReport(BaseMapper):
             The updated report with all original data preserved.
 
         """
-        from stix2.v21 import Report as STIX2Report
         from stix2.base import _STIXBase
-        
+        from stix2.v21 import Report as STIX2Report
+
         # Get current refs
         if hasattr(existing_report, "object_refs"):
             current_refs = existing_report.object_refs
@@ -364,7 +362,7 @@ class GTIReportToSTIXReport(BaseMapper):
 
         # Check if this is an immutable STIX2 object
         is_stix2_object = isinstance(existing_report, _STIXBase)
-        
+
         if is_stix2_object:
             # STIX2 objects are immutable - we need to create a new version
             # Use new_version() if available, otherwise recreate
@@ -400,16 +398,12 @@ class GTIReportToSTIXReport(BaseMapper):
         # Add executive summary if available
         if attributes.executive_summary:
             summary_html = markdown_to_html(attributes.executive_summary)
-            content_parts.append(
-                f"<h1>Executive Summary</h1>\n{summary_html}"
-            )
+            content_parts.append(f"<h1>Executive Summary</h1>\n{summary_html}")
 
         # Add analyst comment if available
         if attributes.analyst_comment:
             comment_html = markdown_to_html(attributes.analyst_comment)
-            content_parts.append(
-                f"<h1>Analyst Insights</h1>\n{comment_html}"
-            )
+            content_parts.append(f"<h1>Analyst Insights</h1>\n{comment_html}")
 
         # Add main content (may be HTML, markdown, or mixed)
         if attributes.content:

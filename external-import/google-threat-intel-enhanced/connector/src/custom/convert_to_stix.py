@@ -36,7 +36,9 @@ class ConvertToSTIX:
         global_dependencies = {
             "organization": self.organization,
             "tlp_marking": self.tlp_marking,
-            "indicator_scoring": getattr(self.config, "indicator_scoring", "gti_derived"),
+            "indicator_scoring": getattr(
+                self.config, "indicator_scoring", "gti_derived"
+            ),
         }
 
         factory = GenericConverterFactory(
@@ -141,9 +143,10 @@ class ConvertToSTIX:
             return []
 
     def convert_subentities_to_stix(
-        self, subentities: Dict[str, List[Any]], 
+        self,
+        subentities: Dict[str, List[Any]],
         threat_actor_map: Optional[Dict[str, Dict[str, List[str]]]] = None,
-        malware_map: Optional[Dict[str, Dict[str, List[str]]]] = None
+        malware_map: Optional[Dict[str, Dict[str, List[str]]]] = None,
     ) -> List[Any]:
         """Convert each subentity to STIX format.
 
@@ -162,6 +165,7 @@ class ConvertToSTIX:
 
         # Log current context state
         from connector.src.custom.configs.converter_configs import get_report_context
+
         context_report = get_report_context()
         self.logger.info(
             f"{LOG_PREFIX} Converting subentities. Report context: "
@@ -174,17 +178,25 @@ class ConvertToSTIX:
 
             try:
                 converter = self.converter_factory.create_converter_by_name(entity_type)
-                
+
                 # For IOC types, pass threat actor and malware IDs to each entity conversion
                 if entity_type in threat_actor_map or entity_type in malware_map:
                     entity_threat_actors = threat_actor_map.get(entity_type, {})
                     entity_malware = malware_map.get(entity_type, {})
                     for entity in entities:
                         entity_id = getattr(entity, "id", None)
-                        threat_actor_ids = entity_threat_actors.get(str(entity_id), []) if entity_id else []
-                        malware_ids = entity_malware.get(str(entity_id), []) if entity_id else []
+                        threat_actor_ids = (
+                            entity_threat_actors.get(str(entity_id), [])
+                            if entity_id
+                            else []
+                        )
+                        malware_ids = (
+                            entity_malware.get(str(entity_id), []) if entity_id else []
+                        )
                         stix_entity = converter.convert_single(
-                            entity, threat_actor_ids=threat_actor_ids, malware_ids=malware_ids
+                            entity,
+                            threat_actor_ids=threat_actor_ids,
+                            malware_ids=malware_ids,
                         )
                         if stix_entity:
                             if isinstance(stix_entity, list):
@@ -194,7 +206,7 @@ class ConvertToSTIX:
                 else:
                     stix_entities = converter.convert_multiple(entities)
                     all_stix_entities.extend(stix_entities)
-                
+
                 self.logger.info(
                     f"{LOG_PREFIX} Converted {len(entities)} {entity_type} -> {len(all_stix_entities)} total STIX objects"
                 )
@@ -207,9 +219,11 @@ class ConvertToSTIX:
         return all_stix_entities
 
     def convert_subentities_to_stix_with_linking(
-        self, subentities: Dict[str, List[Any]], report_entities: List[Any], 
+        self,
+        subentities: Dict[str, List[Any]],
+        report_entities: List[Any],
         threat_actor_map: Optional[Dict[str, Dict[str, List[str]]]] = None,
-        malware_map: Optional[Dict[str, Dict[str, List[str]]]] = None
+        malware_map: Optional[Dict[str, Dict[str, List[str]]]] = None,
     ) -> Optional[List[Any]]:
         """Convert each subentity to STIX format with report linking.
 
@@ -228,7 +242,7 @@ class ConvertToSTIX:
             f"{LOG_PREFIX} Looking for report in {len(report_entities)} entities: "
             f"{[type(e).__name__ + '/' + str(getattr(e, 'type', 'no-type')) for e in report_entities]}"
         )
-        
+
         report_obj = None
         for entity in report_entities:
             if hasattr(entity, "type") and entity.type == "report":
@@ -239,12 +253,16 @@ class ConvertToSTIX:
             self.logger.warning(
                 f"{LOG_PREFIX} No report object found for linking, falling back to standard conversion"
             )
-            return self.convert_subentities_to_stix(subentities, threat_actor_map, malware_map)
+            return self.convert_subentities_to_stix(
+                subentities, threat_actor_map, malware_map
+            )
 
         try:
             set_report_context(report_obj)
 
-            all_stix_entities = self.convert_subentities_to_stix(subentities, threat_actor_map, malware_map)
+            all_stix_entities = self.convert_subentities_to_stix(
+                subentities, threat_actor_map, malware_map
+            )
 
             self.logger.debug(
                 f"{LOG_PREFIX} Converted sub-entities with report linking to {getattr(report_obj, 'id', 'unknown')}"
@@ -278,7 +296,7 @@ class ConvertToSTIX:
                 etype = getattr(entity, "type", type(entity).__name__)
                 entity_types[etype] = entity_types.get(etype, 0) + 1
             types_summary = ", ".join([f"{k}: {v}" for k, v in entity_types.items()])
-            
+
             self.logger.debug(
                 f"{LOG_PREFIX} Converted campaign to {len(stix_entity)} STIX entities: {{{types_summary}}}"
             )
@@ -329,7 +347,9 @@ class ConvertToSTIX:
 
         """
         try:
-            converter = self.converter_factory.create_converter_by_name("malware_families")
+            converter = self.converter_factory.create_converter_by_name(
+                "malware_families"
+            )
             stix_entity = converter.convert_single(malware_data)
 
             if not isinstance(stix_entity, list):
@@ -357,7 +377,9 @@ class ConvertToSTIX:
 
         """
         try:
-            converter = self.converter_factory.create_converter_by_name("vulnerabilities")
+            converter = self.converter_factory.create_converter_by_name(
+                "vulnerabilities"
+            )
             stix_entity = converter.convert_single(vulnerability_data)
 
             if not isinstance(stix_entity, list):

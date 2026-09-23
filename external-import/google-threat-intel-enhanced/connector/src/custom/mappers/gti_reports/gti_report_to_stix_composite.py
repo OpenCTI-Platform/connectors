@@ -111,10 +111,7 @@ class GTIReportToSTIXComposite(BaseMapper):
             List[Software]: STIX Software objects for affected technologies
 
         """
-        if (
-            not self.report.attributes
-            or not self.report.attributes.technologies
-        ):
+        if not self.report.attributes or not self.report.attributes.technologies:
             return []
 
         software_objects: List[Software] = []
@@ -127,9 +124,7 @@ class GTIReportToSTIXComposite(BaseMapper):
 
         return software_objects
 
-    def _create_software(
-        self, tech: Technology, seen_keys: set
-    ) -> Optional[Software]:
+    def _create_software(self, tech: Technology, seen_keys: set) -> Optional[Software]:
         """Create a STIX Software object from a Technology.
 
         Args:
@@ -159,11 +154,11 @@ class GTIReportToSTIXComposite(BaseMapper):
             software_kwargs["vendor"] = tech.vendor
 
         # Generate deterministic ID
-        software_kwargs["id"] = self._generate_software_id(
+        software_id = self._generate_software_id(
             name=name, cpe=tech.cpe, vendor=tech.vendor
         )
 
-        return Software(**software_kwargs)
+        return Software(id=software_id, **software_kwargs)
 
     @staticmethod
     def _generate_software_id(

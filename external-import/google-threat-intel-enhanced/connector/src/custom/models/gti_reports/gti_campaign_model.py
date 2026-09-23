@@ -24,9 +24,7 @@ class AggregationValue(BaseModel):
         default=None, description="Last time this aggregation was seen (UTC timestamp)"
     )
     source: Optional[str] = Field(default=None, description="Information supplier")
-    value: Optional[Any] = Field(
-        default=None, description="Aggregation value"
-    )
+    value: Optional[Any] = Field(default=None, description="Aggregation value")
 
 
 class CrowdsourcedResult(BaseModel):
@@ -430,7 +428,9 @@ class GTICampaignResponse(BaseModel):
         default=None, description="List of campaign data"
     )
     links: Optional[Links] = Field(default=None, description="Response links")
-    meta: Optional[GTICampaignMeta] = Field(default=None, description="Response metadata")
+    meta: Optional[GTICampaignMeta] = Field(
+        default=None, description="Response metadata"
+    )
 
     def validate_data_structure(self) -> bool:
         """Validate the basic structure of the GTI campaign response."""

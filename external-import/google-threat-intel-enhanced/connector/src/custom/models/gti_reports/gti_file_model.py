@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 class PopularThreatName(BaseModel):
     """Represents a popular threat name detected for this file."""
 
-    count: Optional[int] = Field(None, description="Number of detections with this name.")
+    count: Optional[int] = Field(
+        None, description="Number of detections with this name."
+    )
     value: Optional[str] = Field(None, description="The threat/malware name.")
 
 
@@ -130,7 +132,8 @@ class ContributingFactors(BaseModel):
         None, description="Indicates widespread OSINT reports."
     )
     safebrowsing_verdict: Optional[str] = Field(
-        None, description="Google Safe Browsing verdict (e.g., 'harmless', 'malicious')."
+        None,
+        description="Google Safe Browsing verdict (e.g., 'harmless', 'malicious').",
     )
     gavs_detections: Optional[int] = Field(
         None, description="Number of GAVS detections."

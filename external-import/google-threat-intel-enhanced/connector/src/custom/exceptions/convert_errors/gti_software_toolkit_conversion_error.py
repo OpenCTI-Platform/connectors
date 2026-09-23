@@ -27,5 +27,7 @@ class GTISoftwareToolkitConversionError(GTIEntityConversionError):
         super().__init__(message, software_toolkit_id, "Software Toolkit")
         self.software_toolkit_name = software_toolkit_name
 
-        if software_toolkit_name and not self.args[0].endswith(f"(name: {software_toolkit_name})"):
+        if software_toolkit_name and not self.args[0].endswith(
+            f"(name: {software_toolkit_name})"
+        ):
             self.args = (f"{self.args[0]} (name: {software_toolkit_name})",)

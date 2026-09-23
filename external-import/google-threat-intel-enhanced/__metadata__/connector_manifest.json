@@ -1,0 +1,27 @@
+{
+  "title": "Google Threat Intelligence Enhanced (GTI Enhanced)",
+  "slug": "google-threat-intel-enhanced",
+  "description": "Google Threat Intelligence provides unparalleled visibility into threats, enabling the delivery of detailed and timely intelligence to security teams worldwide. By protecting billions of users, detecting millions of phishing attempts, and dedicating extensive resources to incident investigation, Google has a comprehensive view of the threat landscape, ensuring that critical organizations, including yours, remain secure.\n\nThis connector expands on standard GTI report ingestion by supporting direct, independent import of Campaigns, Threat Actors, Malware Families and Vulnerabilities, so entities that exist in GTI but are not attached to a report are no longer missed. It adds origin-based filtering (Partner, Crowdsourced, Google Threat Intelligence) per entity type, configurable indicator scoring strategies (GTI-derived or average-detection based), IOC-to-Campaign/Intrusion-Set/Malware relationship generation, Software Toolkit import as STIX Tool objects, and Malware-to-Vulnerability relationships, giving analysts a richer, more complete intelligence graph in OpenCTI.",
+  "short_description": "Imports Google Threat Intelligence reports, campaigns, threat actors, malware families and vulnerabilities into OpenCTI, with origin filtering, configurable indicator scoring and expanded relationship generation.",
+  "logo": "external-import/google-threat-intel-enhanced/__metadata__/logo.png",
+  "use_cases": [
+    "Vulnerability & Exploit Awareness",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.5.1",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/google-threat-intel-enhanced",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-google-threat-intel-enhanced",
+  "container_type": "EXTERNAL_IMPORT"
+}

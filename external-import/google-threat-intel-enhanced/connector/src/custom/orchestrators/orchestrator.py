@@ -7,7 +7,7 @@ using the proper fetchers/converters/batch processor pattern.
 import logging
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import pycti  # type: ignore
 from connector.src.custom.client_api import ClientAPI
@@ -62,9 +62,7 @@ class Orchestrator:
         self.enrich_iocs_with_threat_actors_and_malware = getattr(
             config, "enrich_iocs_with_threat_actors_and_malware", False
         )
-        self.ioc_enrichment_threshold = getattr(
-            config, "ioc_enrichment_threshold", 250
-        )
+        self.ioc_enrichment_threshold = getattr(config, "ioc_enrichment_threshold", 250)
 
     def _create_batch_processor(self) -> GenericBatchProcessor:
         """Create and configure the batch processor.
@@ -184,7 +182,7 @@ class Orchestrator:
                 if name:
                     vulnerability_names.append(name)
                     continue
-            
+
             # Fallback: parse from entity ID (e.g., "vulnerability--cve-2026-22769")
             vuln_id = getattr(vuln, "id", None)
             if vuln_id:
@@ -486,7 +484,12 @@ class Orchestrator:
 
         if relationships:
             ioc_summary = ""
-            if indicator_intrusion_count or observable_intrusion_count or indicator_malware_count or observable_malware_count:
+            if (
+                indicator_intrusion_count
+                or observable_intrusion_count
+                or indicator_malware_count
+                or observable_malware_count
+            ):
                 ioc_summary = (
                     f", iocs: {indicator_intrusion_count} ind->actor, {observable_intrusion_count} obs->actor, "
                     f"{indicator_malware_count} ind->malware, {observable_malware_count} obs->malware"
@@ -821,15 +824,15 @@ class Orchestrator:
         ioc_count = 0
         observable_count = 0
         sco_types = {"ipv4-addr", "ipv6-addr", "domain-name", "url", "file"}
-        
+
         if converted_stix:
             for stix_obj in converted_stix:
                 obj_type = getattr(stix_obj, "type", None)
                 obj_id = getattr(stix_obj, "id", None)
-                
+
                 if not obj_id:
                     continue
-                
+
                 # Create Indicator "indicates" Campaign relationship
                 if obj_type == "indicator":
                     relationship = RelationshipModel(
@@ -843,7 +846,7 @@ class Orchestrator:
                     )
                     relationships.append(relationship)
                     ioc_count += 1
-                
+
                 # Create Observable "related-to" Campaign relationship for SCOs
                 # This preserves the IOC-Campaign link even after indicators expire
                 elif obj_type in sco_types:
@@ -873,8 +876,11 @@ class Orchestrator:
         else:
             # Log when no relationships were created but entities were provided
             total_entities = (
-                len(threat_actors) + len(malware_families) + len(attack_techniques) +
-                len(software_toolkits) + len(vulnerabilities)
+                len(threat_actors)
+                + len(malware_families)
+                + len(attack_techniques)
+                + len(software_toolkits)
+                + len(vulnerabilities)
             )
             if total_entities > 0:
                 self.logger.warning(
@@ -887,7 +893,7 @@ class Orchestrator:
         self,
         report_entities: List[Any],
         subentity_stix: Optional[List[Any]],
-        additional_stix: Optional[List[Any]] = None
+        additional_stix: Optional[List[Any]] = None,
     ) -> List[Any]:
         """Update the report's object_refs with IDs from converted subentities.
 
@@ -928,7 +934,9 @@ class Orchestrator:
             if hasattr(entity, "type") and entity.type == "report":
                 # Get current refs count for logging
                 current_refs = len(getattr(entity, "object_refs", []) or [])
-                updated_report = GTIReportToSTIXReport.add_object_refs(object_ids, entity)
+                updated_report = GTIReportToSTIXReport.add_object_refs(
+                    object_ids, entity
+                )
                 new_refs = len(getattr(updated_report, "object_refs", []) or [])
                 self.logger.info(
                     f"{LOG_PREFIX} Updated report object_refs: {current_refs} -> {new_refs} "
@@ -997,7 +1005,7 @@ class Orchestrator:
                     subentity_ids = await self.client_api.fetch_campaign_subentities(
                         campaign.id
                     )
-                    
+
                     # Fetch detailed data for subentities
                     subentities_detailed: Dict[str, List[Any]] = {}
                     if subentity_ids:
@@ -1007,15 +1015,19 @@ class Orchestrator:
                         self.logger.info(
                             f"{LOG_PREFIX} ({campaign_idx + 1}/{total_campaigns}) Campaign relationships: {{{rel_summary}}}"
                         )
-                        subentities_detailed = await self.client_api.fetch_campaign_subentity_details(
-                            subentity_ids
+                        subentities_detailed = (
+                            await self.client_api.fetch_campaign_subentity_details(
+                                subentity_ids
+                            )
                         )
 
                     # Convert subentities to STIX
                     subentity_stix: List[Any] = []
                     if subentities_detailed:
-                        subentity_stix = self.converter.convert_campaign_subentities_to_stix(
-                            subentities_detailed
+                        subentity_stix = (
+                            self.converter.convert_campaign_subentities_to_stix(
+                                subentities_detailed
+                            )
                         )
 
                     # Create relationships between campaign and threat actors/malware/IOCs
@@ -1024,23 +1036,29 @@ class Orchestrator:
                     )
 
                     # Combine all entities
-                    all_entities = campaign_stix + subentity_stix + campaign_relationships
+                    all_entities = (
+                        campaign_stix + subentity_stix + campaign_relationships
+                    )
 
                     campaign_count += 1
-                    
+
                     # Build entity type summary for debugging victimology
                     entity_types: Dict[str, int] = {}
                     for entity in all_entities:
                         entity_type = getattr(entity, "type", None)
                         if entity_type:
-                            entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
-                    entities_summary = ", ".join([f"{k}: {v}" for k, v in entity_types.items()])
-                    
+                            entity_types[entity_type] = (
+                                entity_types.get(entity_type, 0) + 1
+                            )
+                    entities_summary = ", ".join(
+                        [f"{k}: {v}" for k, v in entity_types.items()]
+                    )
+
                     # Get campaign name for logging
                     campaign_name = "Unknown"
                     if campaign.attributes and campaign.attributes.name:
                         campaign_name = campaign.attributes.name
-                    
+
                     self.logger.info(
                         f"{LOG_PREFIX} ({campaign_idx + 1}/{total_campaigns}) Ingested campaign '{campaign_name}' - {len(all_entities)} STIX entities {{{entities_summary}}}"
                     )
@@ -1048,7 +1066,8 @@ class Orchestrator:
                     # Check if we need to flush before adding
                     if (
                         self.batch_processor.get_current_batch_size()
-                        + len(all_entities) + 2  # +2 for org and marking
+                        + len(all_entities)
+                        + 2  # +2 for org and marking
                     ) >= self.batch_processor.config.batch_size:
                         self.logger.info(
                             f"{LOG_PREFIX} Need to Flush before adding next campaign to preserve consistency of the bundle"
@@ -1065,9 +1084,13 @@ class Orchestrator:
                         f"{LOG_PREFIX} ({campaign_idx + 1}/{total_campaigns}) Error processing campaign: {str(e)}"
                     )
 
-        self.logger.info(f"{LOG_PREFIX} Campaign import completed. Processed {campaign_count} campaigns")
+        self.logger.info(
+            f"{LOG_PREFIX} Campaign import completed. Processed {campaign_count} campaigns"
+        )
 
-    async def _process_threat_actors(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def _process_threat_actors(
+        self, initial_state: Optional[Dict[str, Any]]
+    ) -> None:
         """Process standalone threat actors from the API.
 
         Args:
@@ -1077,7 +1100,9 @@ class Orchestrator:
         self.logger.info(f"{LOG_PREFIX} Starting standalone threat actor import")
         threat_actor_count = 0
 
-        async for gti_threat_actors in self.client_api.fetch_threat_actors(initial_state):
+        async for gti_threat_actors in self.client_api.fetch_threat_actors(
+            initial_state
+        ):
             total_threat_actors = len(gti_threat_actors)
             for ta_idx, threat_actor in enumerate(gti_threat_actors):
                 try:
@@ -1095,15 +1120,19 @@ class Orchestrator:
                         continue
 
                     threat_actor_count += 1
-                    
+
                     # Build entity type summary like reports
                     entity_types: Dict[str, int] = {}
                     for entity in ta_stix:
                         entity_type = getattr(entity, "type", None)
                         if entity_type:
-                            entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
-                    entities_summary = ", ".join([f"{k}: {v}" for k, v in entity_types.items()])
-                    
+                            entity_types[entity_type] = (
+                                entity_types.get(entity_type, 0) + 1
+                            )
+                    entities_summary = ", ".join(
+                        [f"{k}: {v}" for k, v in entity_types.items()]
+                    )
+
                     self.logger.info(
                         f"{LOG_PREFIX} ({ta_idx + 1}/{total_threat_actors}) Ingested standalone threat actor '{ta_name}' - {len(ta_stix)} STIX entities {{{entities_summary}}}"
                     )
@@ -1111,7 +1140,8 @@ class Orchestrator:
                     # Check if we need to flush before adding
                     if (
                         self.batch_processor.get_current_batch_size()
-                        + len(ta_stix) + 2  # +2 for org and marking
+                        + len(ta_stix)
+                        + 2  # +2 for org and marking
                     ) >= self.batch_processor.config.batch_size:
                         self.logger.info(
                             f"{LOG_PREFIX} Need to Flush before adding next threat actor to preserve consistency of the bundle"
@@ -1128,9 +1158,13 @@ class Orchestrator:
                         f"{LOG_PREFIX} ({ta_idx + 1}/{total_threat_actors}) Error processing threat actor: {str(e)}"
                     )
 
-        self.logger.info(f"{LOG_PREFIX} Threat actor import completed. Processed {threat_actor_count} threat actors")
+        self.logger.info(
+            f"{LOG_PREFIX} Threat actor import completed. Processed {threat_actor_count} threat actors"
+        )
 
-    async def _process_malware_families(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def _process_malware_families(
+        self, initial_state: Optional[Dict[str, Any]]
+    ) -> None:
         """Process standalone malware families from the API.
 
         Args:
@@ -1160,7 +1194,8 @@ class Orchestrator:
                     # Check if we need to flush before adding
                     if (
                         self.batch_processor.get_current_batch_size()
-                        + len(malware_stix) + 2  # +2 for org and marking
+                        + len(malware_stix)
+                        + 2  # +2 for org and marking
                     ) >= self.batch_processor.config.batch_size:
                         self.logger.info(
                             f"{LOG_PREFIX} Need to Flush before adding next malware family to preserve consistency of the bundle"
@@ -1177,9 +1212,13 @@ class Orchestrator:
                         f"{LOG_PREFIX} ({mw_idx + 1}/{total_malware}) Error processing malware family: {str(e)}"
                     )
 
-        self.logger.info(f"{LOG_PREFIX} Malware family import completed. Processed {malware_count} malware families")
+        self.logger.info(
+            f"{LOG_PREFIX} Malware family import completed. Processed {malware_count} malware families"
+        )
 
-    async def _process_vulnerabilities(self, initial_state: Optional[Dict[str, Any]]) -> None:
+    async def _process_vulnerabilities(
+        self, initial_state: Optional[Dict[str, Any]]
+    ) -> None:
         """Process standalone vulnerabilities from the API.
 
         Args:
@@ -1189,11 +1228,15 @@ class Orchestrator:
         self.logger.info(f"{LOG_PREFIX} Starting standalone vulnerability import")
         vulnerability_count = 0
 
-        async for gti_vulnerabilities in self.client_api.fetch_vulnerabilities(initial_state):
+        async for gti_vulnerabilities in self.client_api.fetch_vulnerabilities(
+            initial_state
+        ):
             total_vulnerabilities = len(gti_vulnerabilities)
             for vuln_idx, vulnerability in enumerate(gti_vulnerabilities):
                 try:
-                    vuln_stix = self.converter.convert_vulnerability_to_stix(vulnerability)
+                    vuln_stix = self.converter.convert_vulnerability_to_stix(
+                        vulnerability
+                    )
 
                     if not vuln_stix:
                         self.logger.warning(
@@ -1209,7 +1252,8 @@ class Orchestrator:
                     # Check if we need to flush before adding
                     if (
                         self.batch_processor.get_current_batch_size()
-                        + len(vuln_stix) + 2  # +2 for org and marking
+                        + len(vuln_stix)
+                        + 2  # +2 for org and marking
                     ) >= self.batch_processor.config.batch_size:
                         self.logger.info(
                             f"{LOG_PREFIX} Need to Flush before adding next vulnerability to preserve consistency of the bundle"
@@ -1226,7 +1270,9 @@ class Orchestrator:
                         f"{LOG_PREFIX} ({vuln_idx + 1}/{total_vulnerabilities}) Error processing vulnerability: {str(e)}"
                     )
 
-        self.logger.info(f"{LOG_PREFIX} Vulnerability import completed. Processed {vulnerability_count} vulnerabilities")
+        self.logger.info(
+            f"{LOG_PREFIX} Vulnerability import completed. Processed {vulnerability_count} vulnerabilities"
+        )
 
     async def _process_reports(self, initial_state: Optional[Dict[str, Any]]) -> None:
         """Process reports from the API.
@@ -1239,9 +1285,7 @@ class Orchestrator:
             total_reports = len(gti_reports)
             for report_idx, report in enumerate(gti_reports):
                 report_entities = self.converter.convert_report_to_stix(report)
-                subentities_ids = await self.client_api.fetch_subentities_ids(
-                    report.id
-                )
+                subentities_ids = await self.client_api.fetch_subentities_ids(report.id)
                 rel_summary = ", ".join(
                     [f"{k}: {len(v)}" for k, v in subentities_ids.items()]
                 )
@@ -1265,24 +1309,29 @@ class Orchestrator:
                     )
                     # Remove IOC types from subentities_ids to skip fetching their details
                     subentities_ids_filtered = {
-                        k: v for k, v in subentities_ids.items() if k not in IOC_ENTITY_TYPES
+                        k: v
+                        for k, v in subentities_ids.items()
+                        if k not in IOC_ENTITY_TYPES
                     }
                 else:
                     subentities_ids_filtered = subentities_ids
 
-                subentities_detailed = (
-                    await self.client_api.fetch_subentity_details(subentities_ids_filtered)
+                subentities_detailed = await self.client_api.fetch_subentity_details(
+                    subentities_ids_filtered
                 )
 
                 # Enrich IOCs with threat actor and malware from report context
                 threat_actor_map: Dict[str, Dict[str, List[str]]] = {}
                 malware_map: Dict[str, Dict[str, List[str]]] = {}
-                if self.enrich_iocs_with_threat_actors_and_malware and not skip_ioc_enrichment:
+                if (
+                    self.enrich_iocs_with_threat_actors_and_malware
+                    and not skip_ioc_enrichment
+                ):
                     self.logger.info(
                         f"{LOG_PREFIX} ({report_idx + 1}/{total_reports}) Enriching IOCs with threat actor and malware relationships from report"
                     )
-                    threat_actor_map, malware_map = self._enrich_iocs_with_report_context(
-                        subentities_detailed
+                    threat_actor_map, malware_map = (
+                        self._enrich_iocs_with_report_context(subentities_detailed)
                     )
                     if any(threat_actor_map.values()) or any(malware_map.values()):
                         # Count unique threat actors and malware from the report
@@ -1300,14 +1349,19 @@ class Orchestrator:
 
                 subentity_stix = (
                     self.converter.convert_subentities_to_stix_with_linking(
-                        subentities_detailed, report_entities, threat_actor_map, malware_map
+                        subentities_detailed,
+                        report_entities,
+                        threat_actor_map,
+                        malware_map,
                     )
                 )
 
                 # Create Malware → Vulnerability "exploits" relationships
                 # when both exist in the same report
-                malware_vuln_relationships = self._create_malware_vulnerability_relationships(
-                    subentities_detailed
+                malware_vuln_relationships = (
+                    self._create_malware_vulnerability_relationships(
+                        subentities_detailed
+                    )
                 )
 
                 # Create IntrusionSet (threat actor) relationship mesh
@@ -1317,7 +1371,9 @@ class Orchestrator:
                 )
 
                 # Combine all relationship types
-                all_relationships = malware_vuln_relationships + intrusion_set_relationships
+                all_relationships = (
+                    malware_vuln_relationships + intrusion_set_relationships
+                )
 
                 # Update report's object_refs with IOC and relationship IDs
                 # (STIX2 Report objects are immutable, so this creates a new report)
@@ -1325,14 +1381,14 @@ class Orchestrator:
                     report_entities, subentity_stix, all_relationships
                 )
 
-                all_entities = report_entities + (subentity_stix or []) + all_relationships
+                all_entities = (
+                    report_entities + (subentity_stix or []) + all_relationships
+                )
                 entity_types: Dict[str, int] = {}
                 for entity in all_entities:
                     entity_type = getattr(entity, "type", None)
                     if entity_type:
-                        entity_types[entity_type] = (
-                            entity_types.get(entity_type, 0) + 1
-                        )
+                        entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
                 entities_summary = ", ".join(
                     [f"{k}: {v}" for k, v in entity_types.items()]
                 )
@@ -1340,8 +1396,7 @@ class Orchestrator:
                     f"{LOG_PREFIX} ({report_idx + 1}/{total_reports}) Converted to {len(all_entities)} STIX entities {{{entities_summary}}}"
                 )
                 if (
-                    self.batch_processor.get_current_batch_size()
-                    + len(all_entities)
+                    self.batch_processor.get_current_batch_size() + len(all_entities)
                 ) >= self.batch_processor.config.batch_size:
                     self.logger.info(
                         f"{LOG_PREFIX} Need to Flush before adding next items to preserve consistency of the bundle"

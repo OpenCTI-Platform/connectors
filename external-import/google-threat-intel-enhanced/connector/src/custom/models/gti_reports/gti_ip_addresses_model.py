@@ -72,7 +72,8 @@ class ContributingFactors(BaseModel):
         None, description="Considered widespread in OSINT sources."
     )
     safebrowsing_verdict: Optional[str] = Field(
-        None, description="Google Safe Browsing verdict (e.g., 'harmless', 'malicious')."
+        None,
+        description="Google Safe Browsing verdict (e.g., 'harmless', 'malicious').",
     )
     gavs_detections: Optional[int] = Field(
         None,

@@ -4,13 +4,11 @@ from datetime import datetime, timezone
 from typing import Any, List, Optional
 
 from connector.src.custom.models.gti_reports.gti_software_toolkit_model import (
-    Capability,
     GTISoftwareToolkitData,
-    MalwareRole,
     SoftwareToolkitModel,
 )
-from connector.src.stix.v21.models.sdos.tool_model import ToolModel
 from connector.src.stix.v21.models.ovs.tool_type_ov_enums import ToolTypeOV
+from connector.src.stix.v21.models.sdos.tool_model import ToolModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from stix2.v21 import Identity, MarkingDefinition, Tool  # type: ignore
 
@@ -49,7 +47,11 @@ class GTISoftwareToolkitToSTIXTool(BaseMapper):
             or not self.software_toolkit.attributes
         ):
             # Fallback: use the ID as the name if no attributes
-            name = self.software_toolkit.id if hasattr(self.software_toolkit, "id") else "Unknown Tool"
+            name = (
+                self.software_toolkit.id
+                if hasattr(self.software_toolkit, "id")
+                else "Unknown Tool"
+            )
             return self._create_minimal_tool(name)
 
         attributes = self.software_toolkit.attributes
@@ -138,9 +140,7 @@ class GTISoftwareToolkitToSTIXTool(BaseMapper):
 
         return aliases if aliases else None
 
-    def _extract_tool_types(
-        self, attributes: SoftwareToolkitModel
-    ) -> List[ToolTypeOV]:
+    def _extract_tool_types(self, attributes: SoftwareToolkitModel) -> List[ToolTypeOV]:
         """Extract tool types from software toolkit attributes.
 
         Software toolkits are typically dual-use tools, so we default to

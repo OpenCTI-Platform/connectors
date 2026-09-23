@@ -26,7 +26,6 @@ dependencies = [
     "python-dotenv ~=1.0.1",
     "stix2 ~=3.0.1",
     "isodate ~=0.7.2",
-    "dotenv ~= 0.9.9",
 ]
 
 [project.optional-dependencies]

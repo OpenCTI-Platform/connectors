@@ -89,7 +89,8 @@ def minimal_ipv4_data() -> GTIIPData:
             last_analysis_date=None,
             last_modification_date=None,
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 
@@ -102,7 +103,8 @@ def minimal_ipv6_data() -> GTIIPData:
             last_analysis_date=None,
             last_modification_date=None,
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 
@@ -115,7 +117,8 @@ def ipv4_with_timestamps() -> GTIIPData:
             last_analysis_date=1672531200,
             last_modification_date=1672617600,
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 
@@ -128,7 +131,8 @@ def ipv6_with_timestamps() -> GTIIPData:
             last_analysis_date=1672531200,
             last_modification_date=1672617600,
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 
@@ -260,7 +264,8 @@ def ip_with_invalid_timestamps() -> GTIIPData:
             last_analysis_date=-1,
             last_modification_date=0,
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 

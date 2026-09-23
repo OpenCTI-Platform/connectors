@@ -7,14 +7,6 @@ import pycti  # type: ignore
 from connector.src.custom.models.gti_reports.gti_file_model import (
     GTIFileData,
 )
-from ...indicator_utils import (
-    build_enhanced_description,
-    build_vt_gui_url,
-    compute_indicator_score,
-    derive_verdict_from_stats,
-    gti_score_and_verdict,
-    is_indicator_allowed,
-)
 from connector.src.stix.octi.models.file_model import OctiFileModel
 from connector.src.stix.octi.models.indicator_model import OctiIndicatorModel
 from connector.src.stix.octi.observable_type_ov_enum import ObservableTypeOV
@@ -25,6 +17,15 @@ from connector.src.stix.v21.models.sdos.indicator_model import IndicatorModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from stix2.v21 import Identity, MarkingDefinition  # type: ignore
+
+from ...indicator_utils import (
+    build_enhanced_description,
+    build_vt_gui_url,
+    compute_indicator_score,
+    derive_verdict_from_stats,
+    gti_score_and_verdict,
+    is_indicator_allowed,
+)
 
 
 class GTIFileToSTIXFile(BaseMapper):
@@ -55,19 +56,21 @@ class GTIFileToSTIXFile(BaseMapper):
         self.tlp_marking = tlp_marking
         self.indicator_scoring = indicator_scoring
         self.threat_actor_ids = threat_actor_ids or []
-        
+
         # Start with malware names from report context
         all_malware_names = list(malware_ids or [])
-        
+
         # Extract additional malware names from popular_threat_name in file attributes
         if self.file.attributes and self.file.attributes.popular_threat_name:
             for threat_name in self.file.attributes.popular_threat_name:
                 if threat_name.value:
                     # Capitalize the malware name for consistency
                     name = threat_name.value.strip()
-                    if name and name.capitalize() not in [m.capitalize() for m in all_malware_names]:
+                    if name and name.capitalize() not in [
+                        m.capitalize() for m in all_malware_names
+                    ]:
                         all_malware_names.append(name.capitalize())
-        
+
         self.malware_ids = all_malware_names
 
     def _create_stix_file(self) -> FileModel:
@@ -320,9 +323,7 @@ class GTIFileToSTIXFile(BaseMapper):
         if self.file.attributes:
             attrs = self.file.attributes.model_dump()
 
-        score, verdict, severity = gti_score_and_verdict(
-            attrs.get("gti_assessment")
-        )
+        score, verdict, severity = gti_score_and_verdict(attrs.get("gti_assessment"))
 
         return build_enhanced_description(attrs, score, verdict, severity)
 

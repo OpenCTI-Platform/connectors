@@ -18,7 +18,7 @@ from connector.src.stix.v21.models.ovs.attack_motivation_ov_enums import (
 )
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from stix2.v21 import Identity, IntrusionSet, MarkingDefinition  # type: ignore
+from stix2.v21 import Identity, MarkingDefinition  # type: ignore
 
 
 class GTIThreatActorToSTIXIntrusionSet(BaseMapper):

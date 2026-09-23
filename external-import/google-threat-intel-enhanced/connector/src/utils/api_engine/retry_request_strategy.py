@@ -166,7 +166,9 @@ class RetryRequestStrategy(BaseRequestStrategy):
             ApiCircuitOpenError,
         ) as known_api_err:
             # Log 403/404 at debug level since they're handled gracefully (proxy blocked or not found)
-            if isinstance(known_api_err, ApiHttpError) and known_api_err.status_code in (403, 404):
+            if isinstance(
+                known_api_err, ApiHttpError
+            ) and known_api_err.status_code in (403, 404):
                 self._logger.debug(
                     f"{LOG_PREFIX} HTTP {known_api_err.status_code} for {self.api_req.url} - skipping entity"
                 )

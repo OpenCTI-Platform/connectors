@@ -378,7 +378,9 @@ class ClientAPI:
             start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
 
             last_mod_date = (
-                initial_state.get("next_cursor_start_date_campaigns") if initial_state else None
+                initial_state.get("next_cursor_start_date_campaigns")
+                if initial_state
+                else None
             )
 
             if last_mod_date:
@@ -393,7 +395,9 @@ class ClientAPI:
                 f"collection_type:campaign last_modification_date:{start_date}+"
             )
 
-            campaign_origins = getattr(self.config, "campaign_origins", ["google threat intelligence"])
+            campaign_origins = getattr(
+                self.config, "campaign_origins", ["google threat intelligence"]
+            )
             if isinstance(campaign_origins, str):
                 campaign_origins = [o.strip() for o in campaign_origins.split(",")]
 
@@ -442,7 +446,9 @@ class ClientAPI:
                         "limit": 40,
                         "order": "last_modification_date+",
                     },
-                    "cursor": initial_state.get("campaign_cursor") if initial_state else None,
+                    "cursor": (
+                        initial_state.get("campaign_cursor") if initial_state else None
+                    ),
                     "description": "fallback all campaigns",
                 }
             ]
@@ -476,7 +482,9 @@ class ClientAPI:
             ):
                 yield campaign_data
 
-    async def fetch_campaign_subentities(self, campaign_id: str) -> Dict[str, List[str]]:
+    async def fetch_campaign_subentities(
+        self, campaign_id: str
+    ) -> Dict[str, List[str]]:
         """Fetch all subentities associated with a campaign including threat actors, malware, TTPs, vulnerabilities, tools, and IOCs.
 
         Args:
@@ -632,7 +640,9 @@ class ClientAPI:
             start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
 
             last_mod_date = (
-                initial_state.get("next_cursor_start_date_threat_actors") if initial_state else None
+                initial_state.get("next_cursor_start_date_threat_actors")
+                if initial_state
+                else None
             )
 
             if last_mod_date:
@@ -647,9 +657,13 @@ class ClientAPI:
                 f"collection_type:threat-actor last_modification_date:{start_date}+"
             )
 
-            threat_actor_origins = getattr(self.config, "threat_actor_origins", ["google threat intelligence"])
+            threat_actor_origins = getattr(
+                self.config, "threat_actor_origins", ["google threat intelligence"]
+            )
             if isinstance(threat_actor_origins, str):
-                threat_actor_origins = [o.strip() for o in threat_actor_origins.split(",")]
+                threat_actor_origins = [
+                    o.strip() for o in threat_actor_origins.split(",")
+                ]
 
             if "All" in threat_actor_origins:
                 threat_actor_origins = ["All"]
@@ -673,7 +687,9 @@ class ClientAPI:
                         "order": "last_modification_date+",
                     },
                     "cursor": (
-                        initial_state.get("threat_actor_cursor") if initial_state else None
+                        initial_state.get("threat_actor_cursor")
+                        if initial_state
+                        else None
                     ),
                     "description": description,
                 }
@@ -696,7 +712,11 @@ class ClientAPI:
                         "limit": 40,
                         "order": "last_modification_date+",
                     },
-                    "cursor": initial_state.get("threat_actor_cursor") if initial_state else None,
+                    "cursor": (
+                        initial_state.get("threat_actor_cursor")
+                        if initial_state
+                        else None
+                    ),
                     "description": "fallback all threat actors",
                 }
             ]
@@ -749,7 +769,9 @@ class ClientAPI:
             start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
 
             last_mod_date = (
-                initial_state.get("next_cursor_start_date_malware") if initial_state else None
+                initial_state.get("next_cursor_start_date_malware")
+                if initial_state
+                else None
             )
 
             if last_mod_date:
@@ -764,7 +786,9 @@ class ClientAPI:
                 f"collection_type:malware-family last_modification_date:{start_date}+"
             )
 
-            malware_origins = getattr(self.config, "malware_family_origins", ["google threat intelligence"])
+            malware_origins = getattr(
+                self.config, "malware_family_origins", ["google threat intelligence"]
+            )
             if isinstance(malware_origins, str):
                 malware_origins = [o.strip() for o in malware_origins.split(",")]
 
@@ -813,7 +837,9 @@ class ClientAPI:
                         "limit": 40,
                         "order": "last_modification_date+",
                     },
-                    "cursor": initial_state.get("malware_cursor") if initial_state else None,
+                    "cursor": (
+                        initial_state.get("malware_cursor") if initial_state else None
+                    ),
                     "description": "fallback all malware families",
                 }
             ]
@@ -866,7 +892,9 @@ class ClientAPI:
             start_date = past_date.strftime("%Y-%m-%dT%H:%M:%S")
 
             last_mod_date = (
-                initial_state.get("next_cursor_start_date_vulnerabilities") if initial_state else None
+                initial_state.get("next_cursor_start_date_vulnerabilities")
+                if initial_state
+                else None
             )
 
             if last_mod_date:
@@ -881,9 +909,13 @@ class ClientAPI:
                 f"collection_type:vulnerability last_modification_date:{start_date}+"
             )
 
-            vulnerability_origins = getattr(self.config, "vulnerability_origins", ["google threat intelligence"])
+            vulnerability_origins = getattr(
+                self.config, "vulnerability_origins", ["google threat intelligence"]
+            )
             if isinstance(vulnerability_origins, str):
-                vulnerability_origins = [o.strip() for o in vulnerability_origins.split(",")]
+                vulnerability_origins = [
+                    o.strip() for o in vulnerability_origins.split(",")
+                ]
 
             if "All" in vulnerability_origins:
                 vulnerability_origins = ["All"]
@@ -907,7 +939,9 @@ class ClientAPI:
                         "order": "last_modification_date+",
                     },
                     "cursor": (
-                        initial_state.get("vulnerability_cursor") if initial_state else None
+                        initial_state.get("vulnerability_cursor")
+                        if initial_state
+                        else None
                     ),
                     "description": description,
                 }
@@ -930,7 +964,11 @@ class ClientAPI:
                         "limit": 40,
                         "order": "last_modification_date+",
                     },
-                    "cursor": initial_state.get("vulnerability_cursor") if initial_state else None,
+                    "cursor": (
+                        initial_state.get("vulnerability_cursor")
+                        if initial_state
+                        else None
+                    ),
                     "description": "fallback all vulnerabilities",
                 }
             ]
@@ -1128,7 +1166,9 @@ class ClientAPI:
                         if isinstance(item, dict):
                             # Try to get name from attributes, fall back to id
                             name = None
-                            if "attributes" in item and isinstance(item["attributes"], dict):
+                            if "attributes" in item and isinstance(
+                                item["attributes"], dict
+                            ):
                                 name = item["attributes"].get("name")
                             if not name and "id" in item:
                                 # Use id as fallback (often the lowercase name)
@@ -1141,7 +1181,9 @@ class ClientAPI:
                         for item in data:
                             if isinstance(item, dict):
                                 name = None
-                                if "attributes" in item and isinstance(item["attributes"], dict):
+                                if "attributes" in item and isinstance(
+                                    item["attributes"], dict
+                                ):
                                     name = item["attributes"].get("name")
                                 if not name and "id" in item:
                                     name = item["id"]
@@ -1192,7 +1234,9 @@ class ClientAPI:
                         if isinstance(item, dict):
                             # Try to get name from attributes, fall back to id
                             name = None
-                            if "attributes" in item and isinstance(item["attributes"], dict):
+                            if "attributes" in item and isinstance(
+                                item["attributes"], dict
+                            ):
                                 name = item["attributes"].get("name")
                             if not name and "id" in item:
                                 name = item["id"]
@@ -1204,7 +1248,9 @@ class ClientAPI:
                         for item in data:
                             if isinstance(item, dict):
                                 name = None
-                                if "attributes" in item and isinstance(item["attributes"], dict):
+                                if "attributes" in item and isinstance(
+                                    item["attributes"], dict
+                                ):
                                     name = item["attributes"].get("name")
                                 if not name and "id" in item:
                                     name = item["id"]

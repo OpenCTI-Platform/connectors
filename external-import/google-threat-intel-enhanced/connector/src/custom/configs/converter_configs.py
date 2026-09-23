@@ -50,6 +50,9 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_location import
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_report import (
     GTIReportToSTIXReport,
 )
+from connector.src.custom.mappers.gti_reports.gti_software_toolkit_to_stix_tool import (
+    GTISoftwareToolkitToSTIXTool,
+)
 from connector.src.custom.mappers.gti_reports.gti_threat_actor_to_stix_intrusion_set import (
     GTIThreatActorToSTIXIntrusionSet,
 )
@@ -58,9 +61,6 @@ from connector.src.custom.mappers.gti_reports.gti_url_to_stix_url import (
 )
 from connector.src.custom.mappers.gti_reports.gti_vulnerability_to_stix_vulnerability import (
     GTIVulnerabilityToSTIXVulnerability,
-)
-from connector.src.custom.mappers.gti_reports.gti_software_toolkit_to_stix_tool import (
-    GTISoftwareToolkitToSTIXTool,
 )
 from connector.src.custom.models.gti_reports.gti_attack_technique_model import (
     GTIAttackTechniqueData,
@@ -81,6 +81,9 @@ from connector.src.custom.models.gti_reports.gti_malware_family_model import (
     GTIMalwareFamilyData,
 )
 from connector.src.custom.models.gti_reports.gti_report_model import GTIReportData
+from connector.src.custom.models.gti_reports.gti_software_toolkit_model import (
+    GTISoftwareToolkitData,
+)
 from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
     GTIThreatActorData,
 )
@@ -89,9 +92,6 @@ from connector.src.custom.models.gti_reports.gti_url_model import (
 )
 from connector.src.custom.models.gti_reports.gti_vulnerability_model import (
     GTIVulnerabilityData,
-)
-from connector.src.custom.models.gti_reports.gti_software_toolkit_model import (
-    GTISoftwareToolkitData,
 )
 from connector.src.utils.converters.generic_converter_config import (
     GenericConverterConfig,
@@ -213,16 +213,18 @@ def create_report_linking_postprocessor() -> Any:
                 # Get current count before adding
                 current_refs = len(getattr(parent_report, "object_refs", []) or [])
                 # add_object_refs may return a NEW object if the original is immutable (STIX2)
-                updated_report = GTIReportToSTIXReport.add_object_refs(object_ids, parent_report)
+                updated_report = GTIReportToSTIXReport.add_object_refs(
+                    object_ids, parent_report
+                )
                 new_refs = len(getattr(updated_report, "object_refs", []) or [])
-                
+
                 # If a new object was created, update the context
                 if updated_report is not parent_report:
                     set_report_context(updated_report)
                     logger.debug(
                         f"{LOG_PREFIX} [Postprocessor] Updated report context with new object"
                     )
-                
+
                 logger.info(
                     f"{LOG_PREFIX} [Postprocessor] Linked {len(object_ids)} objects to report "
                     f"(refs: {current_refs} -> {new_refs})"

@@ -595,7 +595,9 @@ def test_get_score_without_data(
     """Test _get_score method without score data."""
     # Given a domain without score data
     domain_data = GTIDomainDataFactory.build(
-        attributes=DomainModelFactory.build(gti_assessment=None, last_analysis_stats=None)
+        attributes=DomainModelFactory.build(
+            gti_assessment=None, last_analysis_stats=None
+        )
     )
     mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
 
@@ -635,7 +637,9 @@ def test_determine_indicator_types_without_verdict(
     """Test _determine_indicator_types method without verdict."""
     # Given a domain without verdict
     domain_data = GTIDomainDataFactory.build(
-        attributes=DomainModelFactory.build(gti_assessment=None, last_analysis_stats=None)
+        attributes=DomainModelFactory.build(
+            gti_assessment=None, last_analysis_stats=None
+        )
     )
     mapper = _given_gti_domain_mapper(domain_data, mock_organization, mock_tlp_marking)
 

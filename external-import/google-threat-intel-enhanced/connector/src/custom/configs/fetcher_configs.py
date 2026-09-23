@@ -39,6 +39,9 @@ from connector.src.custom.models.gti_reports.gti_malware_family_model import (
     GTIMalwareFamilyResponse,
 )
 from connector.src.custom.models.gti_reports.gti_report_model import GTIReportResponse
+from connector.src.custom.models.gti_reports.gti_software_toolkit_model import (
+    GTISoftwareToolkitData,
+)
 from connector.src.custom.models.gti_reports.gti_threat_actor_model import (
     GTIThreatActorData,
     GTIThreatActorResponse,
@@ -49,9 +52,6 @@ from connector.src.custom.models.gti_reports.gti_url_model import (
 from connector.src.custom.models.gti_reports.gti_vulnerability_model import (
     GTIVulnerabilityData,
     GTIVulnerabilityResponse,
-)
-from connector.src.custom.models.gti_reports.gti_software_toolkit_model import (
-    GTISoftwareToolkitData,
 )
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
 

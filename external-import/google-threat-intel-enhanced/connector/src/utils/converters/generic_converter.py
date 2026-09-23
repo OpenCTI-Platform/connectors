@@ -71,7 +71,11 @@ class GenericConverter:
                 if isinstance(stix_model, list):
                     # Convert each item in the list to STIX2 object if it has the method
                     final_output = [
-                        item.to_stix2_object() if hasattr(item, "to_stix2_object") else item
+                        (
+                            item.to_stix2_object()
+                            if hasattr(item, "to_stix2_object")
+                            else item
+                        )
                         for item in stix_model
                     ]
                 elif hasattr(stix_model, "to_stix2_object"):

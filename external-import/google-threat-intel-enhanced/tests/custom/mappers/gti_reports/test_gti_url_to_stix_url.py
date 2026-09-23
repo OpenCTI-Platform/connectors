@@ -119,7 +119,8 @@ def url_with_url_value() -> GTIURLData:
             url="https://malicious.example.com/malware",
             last_final_url="https://final.example.com/endpoint",
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 
@@ -253,7 +254,8 @@ def url_with_invalid_timestamps() -> GTIURLData:
             first_submission_date=-1,
             last_modification_date=0,
             gti_assessment=None,
-            last_analysis_stats=None,        ),
+            last_analysis_stats=None,
+        ),
     )
 
 

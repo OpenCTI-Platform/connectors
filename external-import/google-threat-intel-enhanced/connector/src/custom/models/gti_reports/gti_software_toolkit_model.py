@@ -137,7 +137,9 @@ class MalwareRole(BaseModel):
     last_seen: Optional[int] = Field(
         None, description="Last time this role was attributed (UTC timestamp)."
     )
-    value: str = Field(..., description="The role classification (e.g., Utility, Backdoor).")
+    value: str = Field(
+        ..., description="The role classification (e.g., Utility, Backdoor)."
+    )
 
 
 class SoftwareToolkitModel(BaseModel):
@@ -191,7 +193,8 @@ class SoftwareToolkitModel(BaseModel):
         None, description="Capabilities of the software toolkit."
     )
     malware_roles: Optional[List[MalwareRole]] = Field(
-        None, description="Role classifications for the software toolkit (e.g., Utility)."
+        None,
+        description="Role classifications for the software toolkit (e.g., Utility).",
     )
 
 
