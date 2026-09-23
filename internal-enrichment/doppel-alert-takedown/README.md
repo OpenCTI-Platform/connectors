@@ -9,10 +9,10 @@ workflows:
 - From a Doppel **Incident**, it requests takedown for the already-correlated alert
   without creating a duplicate.
 
-Both workflows set `queue_state: "actioned"` through `PUT /v1/alert` and add an
-OpenCTI **Note** summarizing the result. Observable actions can be triggered manually,
-automatically, or from a playbook. Incident takedown is manual-only; playbook attempts
-are rejected before any Doppel API call.
+Both workflows set `queue_state: "actioned"` through `PUT /v1/alert` or
+`PUT /v2/alert` and add an OpenCTI **Note** summarizing the result. Observable actions
+can be triggered manually, automatically, or from a playbook. Incident takedown is
+manual-only; playbook attempts are rejected before any Doppel API call.
 
 Table of Contents
 
@@ -42,8 +42,9 @@ for an existing Doppel alert represented by an imported OpenCTI Incident.
 - OpenCTI Platform >= 7.260715.0
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
-- A Doppel account with an API key and a user API key
-- The Doppel organization code when the API user belongs to multiple organizations
+- Doppel API access using either V1 API and user API keys or V2 OAuth client
+  credentials
+- The Doppel organization code when a V1 API user belongs to multiple organizations
 - For Incident actions, the Doppel external-import connector configured with
   `DOPPEL_ENABLE_INCIDENTS=true`
 
@@ -53,6 +54,21 @@ Find all the configuration variables available here: [Connector Configurations](
 
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
 For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
+
+Configure exactly one authentication mode. V1 and V2 credential fields are mutually
+exclusive, and the connector rejects a configuration containing both. When changing
+versions, remove the inactive credential variables.
+
+Set `DOPPEL_ALERT_TAKEDOWN_API_VERSION=v1` (the default) with
+`DOPPEL_ALERT_TAKEDOWN_API_KEY` and `DOPPEL_ALERT_TAKEDOWN_USER_API_KEY` for V1.
+For V2, set `DOPPEL_ALERT_TAKEDOWN_API_VERSION=v2`,
+`DOPPEL_ALERT_TAKEDOWN_CLIENT_ID`, and `DOPPEL_ALERT_TAKEDOWN_CLIENT_SECRET`.
+
+In V2 mode, the connector exchanges its client credentials at `/oauth/token`, caches
+the bearer token in memory, and refreshes it before expiry or once after a
+`401 Unauthorized` response. Each connector container has its own token cache; if you
+deploy multiple connector instances, account for Doppel's token-issuance limits when
+deciding whether to reuse a client credential.
 
 ## Deployment
 
@@ -118,7 +134,7 @@ instance for explicit Incident actions.
 
 For each in-scope observable (URL or Domain-Name), the connector:
 
-- identifies every outbound Doppel API request with
+- identifies every outbound Doppel API request, including V2 token minting, with
   `x-doppel-client: opencti/7.260901.0` and
   `User-Agent: doppel-opencti/7.260901.0` for usage attribution;
 - maps the OpenCTI observable type to the Doppel `entity_type`

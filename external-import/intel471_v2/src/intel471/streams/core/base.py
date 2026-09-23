@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from queue import Queue
 from typing import TYPE_CHECKING, Any, Iterator, Union
 
-from intel471.common import HelperRequest
+from intel471.common import HelperRequest, coerce_epoch_millis
 from intel471.version import get_version
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
@@ -41,6 +41,16 @@ class Intel471Stream(ABC):
     api_class_name = None
     api_method_name = None
 
+    # Substring uniquely identifying the "account holds some report claims but not
+    # this report type" response (HTTP 401, body e.g.
+    # "Some(geopol_report) not in users access claims."). This is an expected,
+    # per-report-type entitlement gap that is softened to a one-time warning. Every
+    # other auth/authorization failure (no report claims at all, Reports API not on
+    # the App, bad credentials) means a whole stream/category cannot run and is left
+    # to propagate. Matched on the body rather than the status code, which the
+    # backend itself treats as unreliable for this case. See AGENTS.md.
+    ACCESS_CLAIMS_SIGNATURE = "access claims"
+
     def __init__(
         self,
         client_wrapper: "ClientWrapper",
@@ -57,6 +67,11 @@ class Intel471Stream(ABC):
         self.out_queue = out_queue
         self.ioc_score = ioc_score
         self.update_existing_data = update_existing_data
+        # Whether the "not entitled to this report type" warning has already been
+        # emitted in this process. The connector creates each stream once and the
+        # scheduler reuses the instance every interval, so this flag persists across
+        # runs and keeps the warning to a single line instead of recurring noise.
+        self._access_claims_warned = False
         if initial_history:
             self.initial_history = initial_history
         else:
@@ -93,7 +108,18 @@ class Intel471Stream(ABC):
                         f"{self.__class__.__name__} calls {self.client_wrapper.backend_name} API "
                         f"with arguments: {str(kwargs)}."
                     )
-                    api_response = getattr(api_instance, self.api_method_name)(**kwargs)
+                    try:
+                        api_response = getattr(api_instance, self.api_method_name)(
+                            **kwargs
+                        )
+                    except self.client_wrapper.auth_exceptions as exc:
+                        if not self._is_unentitled_report_type(exc):
+                            # No report claims at all, Reports API not on the App, or
+                            # bad credentials: a whole stream/category cannot run, so
+                            # let it propagate and be logged as an error, as before.
+                            raise
+                        self._log_unentitled_report_type()
+                        return
                     api_payload_objects = (
                         getattr(api_response, self.api_payload_objects_key) or []
                     )
@@ -126,6 +152,60 @@ class Intel471Stream(ABC):
                     continue
                 self._update_cursor(cursor)
                 break
+
+    def _is_unentitled_report_type(self, exc: Exception) -> bool:
+        """
+        True when `exc` is the "account is not entitled to this report type" response
+        (matched on the response body, since the status code is unreliable for this
+        case). Other auth/authorization failures return False and are re-raised.
+        """
+        haystack = f"{getattr(exc, 'body', '') or ''} {exc}".lower()
+        return self.ACCESS_CLAIMS_SIGNATURE in haystack
+
+    def _log_unentitled_report_type(self) -> None:
+        """
+        Report that this stream is skipped because the account is not entitled to its
+        report type. This is an expected, permanent state, so it is announced once per
+        process (warning) and demoted to debug afterwards to avoid recurring noise.
+        """
+        message = (
+            f"{self.__class__.__name__} skipped: the configured account is not "
+            f"entitled to this report type. The remaining report types are unaffected."
+        )
+        if self._access_claims_warned:
+            self.helper.log_debug(message)
+        else:
+            self.helper.log_warning(message)
+            self._access_claims_warned = True
+
+    def _get_stored_initial_history(self, key: str) -> int:
+        """
+        Return the initial history timestamp for streams that pin it in OpenCTI state
+        under `key`, so a later change to the config cannot desync it from the cursor.
+
+        The stored value is repaired if it was persisted in epoch seconds: such a
+        value used to be read as a date in early 1970 and re-ingest the whole
+        history on every run, and the config-level conversion alone does not reach
+        deployments that already wrote it to state.
+        """
+        stored_initial_history = self._get_state(key)
+        if not stored_initial_history:
+            stored_initial_history = self.initial_history
+            self._set_state(key, stored_initial_history)
+            return stored_initial_history
+        initial_history_millis = coerce_epoch_millis(stored_initial_history)
+        if (
+            initial_history_millis is not None
+            and initial_history_millis != stored_initial_history
+        ):
+            self.helper.log_warning(
+                f"{self.__class__.__name__} found initial history {stored_initial_history} "
+                f"stored in epoch seconds; converting it to {initial_history_millis} "
+                f"milliseconds, which is what the API expects."
+            )
+            stored_initial_history = initial_history_millis
+            self._set_state(key, stored_initial_history)
+        return stored_initial_history
 
     def send_to_server(self, bundle: Bundle) -> None:
         self.helper.log_info(
