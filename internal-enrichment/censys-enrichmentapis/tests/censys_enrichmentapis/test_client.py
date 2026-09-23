@@ -101,18 +101,20 @@ def test_restore_service_fields_skips_non_dict_raw_service() -> None:
     # A real Censys response could return a malformed/partial entry for a
     # given service; the merge must skip it rather than crash the whole
     # enrichment, while still restoring fields for well-formed siblings.
+    #
+    # The raw response mirrors the actual get_host_enrichment shape
+    # (single-level "result.resource.services"), not the SDK's
+    # "res.result.result.resource" *object* attribute chain.
     good_service = HostEnrichmentService(port=443)
     bad_service = HostEnrichmentService(port=80)
     host = HostEnrichment(services=[good_service, bad_service])
     raw_response = {
         "result": {
-            "result": {
-                "resource": {
-                    "services": [
-                        {"port": 443, "software": [{"product": "nginx"}]},
-                        "not-a-dict",
-                    ]
-                }
+            "resource": {
+                "services": [
+                    {"port": 443, "software": [{"product": "nginx"}]},
+                    "not-a-dict",
+                ]
             }
         }
     }

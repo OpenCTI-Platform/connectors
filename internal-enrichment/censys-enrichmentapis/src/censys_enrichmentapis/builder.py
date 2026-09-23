@@ -30,8 +30,8 @@ class CensysStixBuilder:
     def bundle(self) -> list[BaseObject]:
         return self._context.bundle
 
-    def reset(self) -> None:
-        self._context.reset()
+    def reset(self, marking_refs: list[str] | None = None) -> None:
+        self._context.reset(marking_refs)
         self.services.reset()
 
     def add_author_and_marking(self) -> None:

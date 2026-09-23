@@ -330,7 +330,7 @@ def test_converter_links_service_cves_through_software() -> None:
     # Match the generated SDK response: it deserializes recognised fields and
     # ignores service.vulns, while Client restores those raw service fields.
     host = HostEnrichment.model_validate(sample)
-    Client._restore_service_fields(host, {"result": {"result": {"resource": sample}}})
+    Client._restore_service_fields(host, {"result": {"resource": sample}})
     host = HostEnrichment(services=host.services)
 
     stix_objects = [
@@ -370,7 +370,7 @@ def test_converter_creates_complete_vulnerability_chain() -> None:
     sample = _get_host_245_52_sample()
     sample["services"][0]["vulns"] = sample["services"][0]["vulns"][:2]
     host = HostEnrichment.model_validate(sample)
-    Client._restore_service_fields(host, {"result": {"result": {"resource": sample}}})
+    Client._restore_service_fields(host, {"result": {"resource": sample}})
     host = HostEnrichment(services=host.services)
 
     observable = stix2.IPv4Address(value="193.233.245.52")
@@ -408,7 +408,7 @@ def test_converter_deduplicates_software_across_multiple_cves() -> None:
     # Use 3 CVEs - all reference the same OpenSSH CPE, ensuring deduplication
     sample["services"][0]["vulns"] = sample["services"][0]["vulns"][:3]
     host = HostEnrichment.model_validate(sample)
-    Client._restore_service_fields(host, {"result": {"result": {"resource": sample}}})
+    Client._restore_service_fields(host, {"result": {"resource": sample}})
     host = HostEnrichment(services=host.services)
 
     stix_objects = [
@@ -455,7 +455,7 @@ def test_converter_deduplicates_cve_with_multiple_cpe_evidence() -> None:
     )
 
     host = HostEnrichment.model_validate(sample)
-    Client._restore_service_fields(host, {"result": {"result": {"resource": sample}}})
+    Client._restore_service_fields(host, {"result": {"resource": sample}})
     host = HostEnrichment(services=host.services)
 
     stix_objects = [
@@ -803,7 +803,7 @@ def test_converter_handles_service_with_both_vulns_and_threats() -> None:
     ]
 
     host = HostEnrichment.model_validate(sample)
-    Client._restore_service_fields(host, {"result": {"result": {"resource": sample}}})
+    Client._restore_service_fields(host, {"result": {"resource": sample}})
 
     stix_objects = [
         obj.to_stix2_object()

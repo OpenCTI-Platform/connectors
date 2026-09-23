@@ -1,4 +1,3 @@
-import datetime
 from collections.abc import Sequence
 from typing import Any
 from urllib.parse import quote
@@ -197,27 +196,6 @@ class ServiceStixBuilder(AreaStixBuilder):
                 cpes.add(cpe)
         return cpes
 
-    def add_note(
-        self,
-        observable: Reference,
-        content: str | None,
-        publication_date: str | None,
-        port: int | None,
-    ) -> None:
-        if not (content and publication_date and port):
-            return
-
-        self.bundle.append(
-            Note(
-                abstract=f"Service banner on port {port}",
-                content=content,
-                created=datetime.datetime.fromisoformat(publication_date),
-                authors=[self._context.author.name],
-                objects=[observable],
-                **self.common_props,
-            )
-        )
-
     def add_web_property_note(
         self,
         observable: Reference,
@@ -302,13 +280,6 @@ class ServiceStixBuilder(AreaStixBuilder):
             censys_url = f"https://platform.censys.io/web/{webproperty_id}"
             content_parts.append(f"[{censys_url}]({censys_url})")
         content_parts.append("\n".join(rows))
-        note_args: dict[str, Any] = {}
-        scan_time = self._get_value(web_property, "scan_time")
-        if isinstance(scan_time, str):
-            try:
-                note_args["created"] = datetime.datetime.fromisoformat(scan_time)
-            except ValueError:
-                pass
 
         self.bundle.append(
             Note(
@@ -318,7 +289,6 @@ class ServiceStixBuilder(AreaStixBuilder):
                 labels=labels or None,
                 authors=[self._context.author.name],
                 objects=[observable],
-                **note_args,
                 **self.common_props,
             )
         )
@@ -489,7 +459,6 @@ class ServiceStixBuilder(AreaStixBuilder):
                     ),
                     content=content,
                     note_types=[NoteType.EXTERNAL],
-                    created=datetime.datetime.fromisoformat(scan_time),
                     authors=[self._context.author.name],
                     objects=[observable],
                     **self.common_props,

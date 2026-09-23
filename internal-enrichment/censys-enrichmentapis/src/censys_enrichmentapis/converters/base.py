@@ -27,14 +27,21 @@ class CensysConverter(ABC):
         self.primary_observable_labels: list[str] = []
 
     def to_stix(
-        self, observable: ObservableLike, data: Any | None = None
+        self,
+        observable: ObservableLike,
+        data: Any | None = None,
+        marking_refs: list[str] | None = None,
     ) -> list[BaseObject]:
         """Return the STIX bundle for *observable*.
 
         If *data* is provided, skip the API fetch and convert it directly —
         useful for tests and for callers that already have the payload.
         """
-        self.builder.reset()
+        if marking_refs is None:
+            observable_marking_refs = observable.get("object_marking_refs")
+            if observable_marking_refs:
+                marking_refs = list(observable_marking_refs)
+        self.builder.reset(marking_refs=marking_refs)
         self.primary_observable_labels = []
         if data is None:
             data = self._fetch_data(observable=observable)

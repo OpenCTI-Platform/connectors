@@ -14,15 +14,33 @@ class StixBuildContext:
     def __init__(self) -> None:
         self.author = OrganizationAuthor(name="Censys EnrichmentAPIs Connector")
         self.marking = TLPMarking(level=TLPLevel.CLEAR)
-        self.common_props = {"author": self.author, "markings": [self.marking]}
         self.bundle: list[BaseObject] = []
+        self.markings: list[TLPMarking | Reference] = []
+        self._metadata_added = False
+        self._set_markings()
 
-    def reset(self) -> None:
+    def _set_markings(self, marking_refs: list[str] | None = None) -> None:
+        self._uses_default_marking = not marking_refs
+        self.markings = (
+            [Reference(id=marking_ref) for marking_ref in marking_refs]
+            if marking_refs
+            else [self.marking]
+        )
+        self.common_props = {"author": self.author, "markings": self.markings}
+
+    def reset(self, marking_refs: list[str] | None = None) -> None:
         # Replace rather than clear so bundles already returned to callers remain stable.
         self.bundle = []
+        self._metadata_added = False
+        self._set_markings(marking_refs)
 
     def add_author_and_marking(self) -> None:
-        self.bundle.extend([self.author, self.marking])
+        if self._metadata_added:
+            return
+        self.bundle.append(self.author)
+        if self._uses_default_marking:
+            self.bundle.append(self.marking)
+        self._metadata_added = True
 
     def add_relationship(
         self,
@@ -35,7 +53,8 @@ class StixBuildContext:
                 source=source,
                 target=target,
                 type=relationship_type,
-                **self.common_props,
+                author=self.author,
+                markings=self.markings,
             )
         )
 

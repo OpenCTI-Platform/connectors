@@ -1,12 +1,16 @@
 import datetime
 
+import pytest
 from censys_enrichmentapis.builder import CensysStixBuilder
-from censys_platform import Certificate, CertificateParsed
+from censys_platform import Certificate, CertificateExtensions, CertificateParsed
+from censys_platform.types import UNSET
 from connectors_sdk.models import (
     City,
     IPV4Address,
     IPV6Address,
+    OrganizationAuthor,
     Reference,
+    Relationship,
     Vulnerability,
 )
 from connectors_sdk.models.enums import HashAlgorithm
@@ -27,6 +31,21 @@ def test_area_builders_share_context_and_reset_replaces_bundle() -> None:
     assert len(original_bundle) == 2
     assert builder.bundle == []
     assert builder.bundle is not original_bundle
+
+
+def test_builder_uses_source_marking_refs() -> None:
+    marking_id = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+    builder = CensysStixBuilder()
+    builder.reset(marking_refs=[marking_id])
+
+    builder.add_author_and_marking()
+    builder.geography.add_city(observable=OBSERVABLE, name="Paris")
+
+    assert isinstance(builder.bundle[0], OrganizationAuthor)
+    assert isinstance(builder.bundle[1], City)
+    assert isinstance(builder.bundle[2], Relationship)
+    for generated_object in builder.bundle[1:]:
+        assert generated_object.to_stix2_object().object_marking_refs == [marking_id]
 
 
 def test_geography_builder_adds_to_shared_bundle() -> None:
@@ -176,3 +195,26 @@ def test_add_certificate_maps_parsed_fields_and_extensions() -> None:
     )
     # Would raise if a mapped field held a value stix2 rejects.
     certificate.to_stix2_object()
+
+
+@pytest.mark.parametrize("missing_value", [None, UNSET, []])
+def test_add_certificate_omits_missing_list_extensions(missing_value: object) -> None:
+    builder = CensysStixBuilder()
+    cert = Certificate(
+        fingerprint_sha256=SHA256,
+        parsed=CertificateParsed(
+            extensions=CertificateExtensions(
+                crl_distribution_points=missing_value,
+                certificate_policies=missing_value,
+            )
+        ),
+    )
+
+    certificate = builder.certificates.add_certificate(cert=cert)
+
+    assert certificate is not None
+    assert certificate.crl_distribution_points is None
+    assert certificate.certificate_policies is None
+    stix_certificate = certificate.to_stix2_object()
+    assert "crl_distribution_points" not in stix_certificate
+    assert "certificate_policies" not in stix_certificate

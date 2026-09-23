@@ -71,16 +71,15 @@ def test__extract_tlp(
 
 @pytest.mark.usefixtures("mock_config")
 @pytest.mark.parametrize(
-    "markings, expected",
+    "markings",
     [
-        ([], True),
-        ([{"definition_type": "TLP", "definition": "TLP:AMBER"}], True),
-        ([{"definition_type": "TLP", "definition": "TLP:RED"}], False),
-        ([{"definition_type": "PAP", "definition": "PAP:AMBER"}], True),
+        [],
+        [{"definition_type": "TLP", "definition": "TLP:AMBER"}],
+        [{"definition_type": "PAP", "definition": "PAP:AMBER"}],
     ],
 )
-def test__is_entity_tlp_allowed(
-    mocked_helper: Mock, markings: list[dict[str, str]], expected: bool
+def test__validate_entity_tlp_allows_accepted_markings(
+    mocked_helper: Mock, markings: list[dict[str, str]]
 ) -> None:
     connector = Connector(
         config=ConfigLoader(),
@@ -88,7 +87,20 @@ def test__is_entity_tlp_allowed(
         client=Mock(),
     )
 
-    assert connector._is_entity_tlp_allowed(markings) == expected
+    assert connector._validate_entity_tlp(markings) is None
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__validate_entity_tlp_rejects_excessive_tlp(mocked_helper: Mock) -> None:
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+    )
+    markings = [{"definition_type": "TLP", "definition": "TLP:RED"}]
+
+    with pytest.raises(MaxTlpError, match="exceeds MAX TLP"):
+        connector._validate_entity_tlp(markings)
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -168,6 +180,145 @@ def test__process_entity_type_not_supported_error(mocked_helper: Mock) -> None:
 
     assert exc_info.typename == "EntityTypeNotSupportedError"
     assert exc_info.value.args == ("Observable type wrong-type not supported",)
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__process_propagates_source_marking_refs(
+    mocked_helper: Mock, mocker: MockerFixture
+) -> None:
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+    )
+    marking_id = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+    generate = mocker.patch.object(
+        connector,
+        "_generate_octi_objects",
+        return_value=iter([]),
+    )
+
+    connector._process(
+        observable={
+            "entity_type": "IPv4-Addr",
+            "objectMarking": [
+                {
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                    "standard_id": marking_id,
+                }
+            ],
+        },
+        stix_entity={"id": "ipv4-addr--example", "type": "ipv4-addr"},
+        original_stix_objects=[],
+    )
+
+    assert generate.call_args.kwargs["marking_refs"] == [marking_id]
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__process_includes_source_marking_definitions(
+    mocked_helper: Mock, mocker: MockerFixture
+) -> None:
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+    )
+    tlp_id = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+    pap_id = "marking-definition--a6f20d4d-0360-59b6-ba22-3b48707828b1"
+    mocker.patch.object(connector, "_generate_octi_objects", return_value=iter([]))
+
+    result = connector._process(
+        observable={
+            "entity_type": "IPv4-Addr",
+            "objectMarking": [
+                {
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                    "standard_id": tlp_id,
+                },
+                {
+                    "definition_type": "PAP",
+                    "definition": "PAP:AMBER",
+                    "standard_id": pap_id,
+                },
+            ],
+        },
+        stix_entity={
+            "id": "ipv4-addr--example",
+            "type": "ipv4-addr",
+            "object_marking_refs": [tlp_id, pap_id],
+        },
+        original_stix_objects=[],
+    )
+
+    assert [definition["id"] for definition in result] == [tlp_id, pap_id]
+    assert result[0]["definition"] == {"tlp": "amber"}
+    assert result[1]["x_opencti_definition"] == "PAP:AMBER"
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__process_drops_unknown_unbundled_marking_refs(
+    mocked_helper: Mock, mocker: MockerFixture
+) -> None:
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+    )
+    unknown_id = "marking-definition--11111111-1111-4111-8111-111111111111"
+    generate = mocker.patch.object(
+        connector, "_generate_octi_objects", return_value=iter([])
+    )
+
+    connector._process(
+        observable={"entity_type": "IPv4-Addr", "objectMarking": []},
+        stix_entity={
+            "id": "ipv4-addr--example",
+            "type": "ipv4-addr",
+            "object_marking_refs": [unknown_id],
+        },
+        original_stix_objects=[],
+    )
+
+    assert generate.call_args.kwargs["marking_refs"] == []
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__process_keeps_unknown_marking_ref_present_in_input_bundle(
+    mocked_helper: Mock, mocker: MockerFixture
+) -> None:
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+    )
+    unknown_id = "marking-definition--11111111-1111-4111-8111-111111111111"
+    source_definition = {
+        "type": "marking-definition",
+        "spec_version": "2.1",
+        "id": unknown_id,
+        "created": "2026-01-01T00:00:00.000Z",
+        "definition_type": "statement",
+        "definition": {"statement": "source restriction"},
+    }
+    generate = mocker.patch.object(
+        connector, "_generate_octi_objects", return_value=iter([])
+    )
+
+    result = connector._process(
+        observable={"entity_type": "IPv4-Addr", "objectMarking": []},
+        stix_entity={
+            "id": "ipv4-addr--example",
+            "type": "ipv4-addr",
+            "object_marking_refs": [unknown_id],
+        },
+        original_stix_objects=[source_definition],
+    )
+
+    assert generate.call_args.kwargs["marking_refs"] == [unknown_id]
+    assert result == [source_definition]
 
 
 @pytest.mark.usefixtures("mock_config")

@@ -37,13 +37,20 @@ class CertificateStixBuilder(AreaStixBuilder):
                 )
         if parsed.extensions:
             extensions = parsed.extensions
-            kwargs.update(
-                {
-            "crl_distribution_points": str(extensions.crl_distribution_points),
-            "authority_key_identifier": extensions.authority_key_id,
-            "certificate_policies": str(extensions.certificate_policies),
-                }
-            )
+            if (
+                isinstance(extensions.crl_distribution_points, list)
+                and extensions.crl_distribution_points
+            ):
+                kwargs["crl_distribution_points"] = str(
+                    extensions.crl_distribution_points
+                )
+            if isinstance(extensions.authority_key_id, str):
+                kwargs["authority_key_identifier"] = extensions.authority_key_id
+            if (
+                isinstance(extensions.certificate_policies, list)
+                and extensions.certificate_policies
+            ):
+                kwargs["certificate_policies"] = str(extensions.certificate_policies)
             if extensions.key_usage:
                 kwargs["key_usage"] = extensions.key_usage.model_dump_json()
             if extensions.basic_constraints:

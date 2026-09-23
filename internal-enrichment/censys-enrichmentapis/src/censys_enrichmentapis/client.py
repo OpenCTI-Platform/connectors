@@ -58,7 +58,7 @@ class Client:
     @staticmethod
     def _restore_service_fields(host: HostEnrichment, response: dict[str, Any]) -> None:
         """Restore service fields not yet represented by censys-platform 0.16."""
-        resource = response.get("result", {}).get("result", {}).get("resource", {})
+        resource = response.get("result", {}).get("resource", {})
         raw_services = (
             resource.get("services", []) if isinstance(resource, dict) else []
         )
