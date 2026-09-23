@@ -58,9 +58,9 @@ class CyfirmaConnector:
             stix_objects = entities
 
         # Ensure consistent bundle by adding the author and TLP marking
-        # if len(stix_objects):
-        #     stix_objects.append(self.converter_to_stix.author)
-        #     stix_objects.append(self.converter_to_stix.tlp_marking)
+        if len(stix_objects):
+            # stix_objects.append(self.converter_to_stix.author)
+            stix_objects.append(self.converter_to_stix.tlp_marking)
 
         return stix_objects
 
@@ -73,7 +73,7 @@ class CyfirmaConnector:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
-
+        work_id = None 
         try:
             # Get the current state
             now = datetime.now()
@@ -157,7 +157,11 @@ class CyfirmaConnector:
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            error_msg = f"[CONNECTOR] Unexpected error: {err}"
+            self.helper.connector_logger.error(error_msg)
+            if work_id:
+                self.helper.api.work.to_processed(work_id, error_msg, in_error=True)
+            raise
 
     def run(self) -> None:
         """

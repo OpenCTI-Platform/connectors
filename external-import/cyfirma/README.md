@@ -107,7 +107,7 @@ you environment.
 Install the required python dependencies (preferably in a virtual environment):
 
 ```shell
-pip3 install -r requirements.txt
+pip3 install -r src/requirements.txt
 ```
 
 Then, start the connector from `src` directory:

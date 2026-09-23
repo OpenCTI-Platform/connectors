@@ -82,29 +82,7 @@ class CyfirmaClient:
             )
             return {}
 
-    def get_entities(self):
-        """
-        Fetch entities from the Cyfirma API.
-
-        :return: List of entities or an empty list if an error occurs
-        """
-        try:
-            indicators = self.get_indicators_feeds() or []
-            vulnerabilities = self.get_vulnerabilities_feeds() or []
-            
-
-            if indicators is None and vulnerabilities is None:
-                self.helper.connector_logger.error(
-                    "[API] Error while fetching entities: No data returned from API"
-                )
-                return []
-
-            return indicators + vulnerabilities 
-        except Exception as err:
-            self.helper.connector_logger.error(
-                "[API] Error while fetching entities: " + str(err)
-            )
-            return []
+    
 
     def get_indicators_feeds(self):
         try:
@@ -278,3 +256,20 @@ class CyfirmaClient:
                 f"Error converting vulnerability {vuln.get('id')}: {ex}"
             )
             return vuln
+
+    def get_entities(self):
+            """
+            Fetch entities from the Cyfirma API.
+    
+            :return: List of entities or an empty list if an error occurs
+            """
+            try:
+                indicators = self.get_indicators_feeds()
+                vulnerabilities = self.get_vulnerabilities_feeds()
+
+                return indicators + vulnerabilities
+            except Exception as err:
+                self.helper.connector_logger.error(
+                    "[API] Error while fetching entities: " + str(err)
+                )
+                return []
