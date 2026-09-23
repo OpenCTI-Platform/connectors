@@ -21,7 +21,7 @@ class GlobalConfig:
             self.octi_config = OctiConfig()
         except ValidationError as e:
             raise ConfigurationError(
-                "Error loading the OpenCTI configuration", errors=e.errors
+                "Error loading the OpenCTI configuration", errors=e.errors()
             ) from e
         try:
             self.connector_config = ConnectorConfig()
