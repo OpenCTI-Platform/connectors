@@ -38,8 +38,8 @@ class ConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
-class EuvdConfig(BaseConfigModel):
-    """Configuration specific to the ENISA EUVD API (env prefix: `EUVD_`)."""
+class EnisaEuvdConfig(BaseConfigModel):
+    """Configuration specific to the ENISA EUVD API (env prefix: `ENISA_EUVD_`)."""
 
     api_base_url: HttpUrl = Field(
         default=HttpUrl("https://euvdservices.enisa.europa.eu/api"),
@@ -69,4 +69,4 @@ class ConnectorSettings(BaseConnectorSettings):
     """Aggregates all configuration objects the connector needs."""
 
     connector: ConnectorConfig = Field(default_factory=ConnectorConfig)
-    euvd: EuvdConfig = Field(default_factory=EuvdConfig)
+    enisa_euvd: EnisaEuvdConfig = Field(default_factory=EnisaEuvdConfig)

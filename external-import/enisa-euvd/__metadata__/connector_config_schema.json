@@ -54,7 +54,7 @@
       "format": "duration",
       "type": "string"
     },
-    "EUVD_API_BASE_URL": {
+    "ENISA_EUVD_API_BASE_URL": {
       "default": "https://euvdservices.enisa.europa.eu/api",
       "description": "The base URL of the ENISA EUVD API.",
       "format": "uri",
@@ -62,13 +62,13 @@
       "minLength": 1,
       "type": "string"
     },
-    "EUVD_IMPORT_START_DATE": {
+    "ENISA_EUVD_IMPORT_START_DATE": {
       "default": "P30D",
       "description": "First run only: how far back (last-update) to pull, as an ISO 8601 duration (e.g. 'P30D' for 30 days). Subsequent runs resume from the connector's persisted state.",
       "format": "duration",
       "type": "string"
     },
-    "EUVD_TLP_LEVEL": {
+    "ENISA_EUVD_TLP_LEVEL": {
       "description": "Default TLP (Traffic Light Protocol) marking applied to every object this connector creates in OpenCTI.",
       "enum": [
         "clear",
@@ -81,7 +81,7 @@
       "type": "string",
       "default": "clear"
     },
-    "EUVD_INGEST_SOFTWARE": {
+    "ENISA_EUVD_INGEST_SOFTWARE": {
       "default": false,
       "description": "Enable/disable the import of Software observables and their 'has' relationship to each vulnerability. Off by default: a single vulnerability can reference many affected products, which increases the volume of objects created per run.",
       "type": "boolean"

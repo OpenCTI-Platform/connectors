@@ -10,7 +10,7 @@ connector:
   log_level: 'error' # optional (default: 'error')
   duration_period: 'PT2H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT2H')
 
-euvd:
+enisa_euvd:
   api_base_url: 'https://euvdservices.enisa.europa.eu/api' # optional (default value)
   import_start_date: 'P30D' # optional, how far back (last-update) to pull on the first run (default: 'P30D')
   tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
