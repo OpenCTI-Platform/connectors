@@ -372,7 +372,7 @@ class GTIReportToSTIXReport(BaseMapper):
                 # Fallback: serialize and recreate
                 report_dict = dict(existing_report)
                 report_dict["object_refs"] = updated_refs
-                return STIX2Report(**report_dict)
+                return STIX2Report(id=report_dict.pop("id"), **report_dict)
         else:
             # Pydantic model - can be modified directly
             existing_report.object_refs = updated_refs
