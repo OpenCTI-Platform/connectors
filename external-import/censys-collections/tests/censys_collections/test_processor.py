@@ -7,11 +7,11 @@ from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
-from censys_platform import Collection, CollectionStatus, Host, SearchQueryHit
-from censys_platform.models import HostAssetWithMatchedServices
 from censys_collections.client import Client
 from censys_collections.converter import Converter
 from censys_collections.processor import CollectionsProcessor
+from censys_platform import Collection, CollectionStatus, Host, SearchQueryHit
+from censys_platform.models import HostAssetWithMatchedServices
 from connectors_sdk.models import IPV4Address
 
 
@@ -107,7 +107,9 @@ def test_collect_allowlist_takes_precedence_over_denylist() -> None:
 def test_transform_yields_objects_per_collection() -> None:
     collection = _make_collection("coll-1", "Alpha")
     hit = SearchQueryHit(
-        host_v1=HostAssetWithMatchedServices(extensions={}, resource=Host(ip="10.0.0.1"))
+        host_v1=HostAssetWithMatchedServices(
+            extensions={}, resource=Host(ip="10.0.0.1")
+        )
     )
     processor = _make_processor([collection], [hit])
 
@@ -263,7 +265,9 @@ def test_prune_stale_grouping_members_removes_stale_refs() -> None:
     # ipv4-addr--2 and ipv4-addr--3 are no longer part of the collection.
     processor._prune_stale_grouping_members("grouping--123", ["ipv4-addr--1"])
 
-    calls = mock_helper.api.grouping.remove_stix_object_or_stix_relationship.call_args_list
+    calls = (
+        mock_helper.api.grouping.remove_stix_object_or_stix_relationship.call_args_list
+    )
     removed_ids = {c.kwargs["stixObjectOrStixRelationshipId"] for c in calls}
     assert removed_ids == {"ipv4-addr--2", "ipv4-addr--3"}
     for c in calls:
