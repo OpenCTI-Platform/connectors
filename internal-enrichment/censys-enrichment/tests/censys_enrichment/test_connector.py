@@ -4,12 +4,13 @@ from unittest.mock import Mock
 
 import pytest
 from censys_enrichment.client import Client
-from censys_enrichment.connector import Connector
-from censys_enrichment.errors import (
+from censys_enrichment.connector import (
+    Connector,
     EntityNotInScopeError,
     EntityTypeNotSupportedError,
     MaxTlpError,
 )
+from censys_enrichment.converter import Converter
 from censys_enrichment.settings import ConfigLoader
 
 
@@ -23,6 +24,7 @@ def test__send_bundle(mocked_helper: Mock) -> None:
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
     res = connector._send_bundle([])
     mocked_helper.stix2_create_bundle.assert_called_once_with(items=[])
@@ -36,6 +38,7 @@ def test__is_entity_in_scope(mocked_helper: Mock) -> None:
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
     assert connector._is_entity_in_scope("IPv4-Addr")
     assert not connector._is_entity_in_scope("NotInScope")
@@ -64,6 +67,7 @@ def test__extract_tlp(
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
     assert connector._extract_tlp(markings) == expected_tlp
 
@@ -85,6 +89,7 @@ def test__is_entity_tlp_allowed(
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
 
     assert connector._is_entity_tlp_allowed(markings) == expected
@@ -96,6 +101,7 @@ def test__generate_octi_objects_wrong_entity_type(mocked_helper: Mock) -> None:
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
     with pytest.raises(EntityTypeNotSupportedError) as exc_info:
         connector._generate_octi_objects({"type": "wrong-type"})
@@ -105,11 +111,164 @@ def test__generate_octi_objects_wrong_entity_type(mocked_helper: Mock) -> None:
 
 
 @pytest.mark.usefixtures("mock_config")
+def test__build_nvd_data_map_no_cves_returns_empty(mocked_helper: Mock) -> None:
+    """No vulns on any service means no NVD lookups and an empty map."""
+    from censys_platform import Host, Service
+
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+        converter=Converter(),
+    )
+    host = Host(ip="1.2.3.4", services=[Service(port=443)])
+
+    result = connector._build_nvd_data_map(host)
+
+    assert result == {}
+    connector.client.fetch_nvd_data.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__build_nvd_data_map_skips_cve_with_no_nvd_data(mocked_helper: Mock) -> None:
+    """A CVE for which fetch_nvd_data returns None is skipped entirely."""
+    from censys_platform import Host, Service, Vuln
+
+    client = Mock()
+    client.fetch_nvd_data.return_value = None
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+        converter=Converter(),
+    )
+    host = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+
+    result = connector._build_nvd_data_map(host)
+
+    assert result == {}
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__build_nvd_data_map_clears_description_when_opencti_already_has_one(
+    mocked_helper: Mock,
+) -> None:
+    """An existing OpenCTI vulnerability description is not overwritten."""
+    from censys_enrichment.client import NVDData
+    from censys_platform import Host, Service, Vuln
+
+    client = Mock()
+    nvd_data = NVDData(description="from NVD")
+    client.fetch_nvd_data.return_value = nvd_data
+    mocked_helper.api.vulnerability.read.return_value = {
+        "description": "already documented in OpenCTI"
+    }
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+        converter=Converter(),
+    )
+    host = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+
+    result = connector._build_nvd_data_map(host)
+
+    assert result["CVE-2024-1234"].description is None
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__build_nvd_data_map_keeps_description_without_existing_entity(
+    mocked_helper: Mock,
+) -> None:
+    """The NVD description is kept when OpenCTI has no existing description."""
+    from censys_enrichment.client import NVDData
+    from censys_platform import Host, Service, Vuln
+
+    client = Mock()
+    nvd_data = NVDData(description="from NVD")
+    client.fetch_nvd_data.return_value = nvd_data
+    mocked_helper.api.vulnerability.read.return_value = None
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+        converter=Converter(),
+    )
+    host = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+
+    result = connector._build_nvd_data_map(host)
+
+    assert result["CVE-2024-1234"].description == "from NVD"
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__build_nvd_data_map_swallows_opencti_lookup_error(
+    mocked_helper: Mock,
+) -> None:
+    """A failure reading the existing OpenCTI vulnerability does not abort enrichment."""
+    from censys_enrichment.client import NVDData
+    from censys_platform import Host, Service, Vuln
+
+    client = Mock()
+    nvd_data = NVDData(description="from NVD")
+    client.fetch_nvd_data.return_value = nvd_data
+    mocked_helper.api.vulnerability.read.side_effect = RuntimeError("boom")
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+        converter=Converter(),
+    )
+    host = Host(
+        ip="1.2.3.4",
+        services=[Service(port=443, vulns=[Vuln(id="CVE-2024-1234")])],
+    )
+
+    result = connector._build_nvd_data_map(host)
+
+    assert result["CVE-2024-1234"].description == "from NVD"
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__generate_octi_objects_ipv4_skips_nvd_when_disabled(
+    mocked_helper: Mock, get_host, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """NVD enrichment is skipped entirely when CENSYS_ENRICHMENT_NVD_ENABLED=false."""
+    monkeypatch.setenv("CENSYS_ENRICHMENT_NVD_ENABLED", "false")
+    client = Mock()
+    client.fetch_ip.return_value = get_host
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=client,
+        converter=Mock(),
+    )
+
+    connector._generate_octi_objects({"type": "ipv4-addr", "value": "1.2.3.4"})
+
+    connector.converter.generate_octi_objects.assert_called_once_with(
+        stix_entity={"type": "ipv4-addr", "value": "1.2.3.4"},
+        data=get_host,
+        nvd_data_map=None,
+    )
+
+
+@pytest.mark.usefixtures("mock_config")
 def test__process_entity_not_in_scope_error(mocked_helper: Mock) -> None:
     connector = Connector(
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
 
     with pytest.raises(EntityNotInScopeError) as exc_info:
@@ -157,6 +316,7 @@ def test__process_max_tlp_error(mocked_helper: Mock) -> None:
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
 
     with pytest.raises(MaxTlpError) as exc_info:
@@ -180,6 +340,7 @@ def test__process_entity_type_not_supported_error(mocked_helper: Mock) -> None:
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
 
     with pytest.raises(EntityTypeNotSupportedError) as exc_info:
@@ -204,6 +365,7 @@ def test__message_callback_entity_type_not_supported_error(mocked_helper: Mock) 
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
 
     with pytest.raises(EntityTypeNotSupportedError) as exc_info:
@@ -230,6 +392,7 @@ def test__message_callback_in_playbook(mocked_helper: Mock) -> None:
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
 
     res = connector._message_callback(
@@ -252,6 +415,7 @@ def test__message_callback_not_in_playbook(mocked_helper: Mock) -> None:
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
     with pytest.raises(KeyError) as exc_info:
         connector._message_callback(
@@ -276,6 +440,7 @@ def test_run(mocked_helper: Mock) -> None:
         config=ConfigLoader(),
         helper=mocked_helper,
         client=Mock(),
+        converter=Converter(),
     )
     connector.run()
 
@@ -294,6 +459,7 @@ def test_enrichment(mocked_helper: Mock, get_host, ipv4_enrichment_message):
         config=ConfigLoader(),
         helper=mocked_helper,
         client=client,
+        converter=Converter(),
     )
     sent_bundle = {}
 
@@ -370,6 +536,7 @@ def test_domain_name_enrichment(
         config=ConfigLoader(),
         helper=mocked_helper,
         client=client,
+        converter=Converter(),
     )
     sent_bundle = {}
 

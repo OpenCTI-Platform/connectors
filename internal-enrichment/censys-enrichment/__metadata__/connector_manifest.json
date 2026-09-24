@@ -6,7 +6,8 @@
   "logo": "internal-enrichment/censys-enrichment/__metadata__/logo.png",
   "use_cases": [
     "Infrastructure & Attack Surface Visibility",
-    "Detection & Response Enablement"
+    "Detection & Response Enablement",
+    "Vulnerability & Exploit Awareness"
   ],
   "solution_categories": [
     "Enrichment & Reputation"
