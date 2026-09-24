@@ -1,4 +1,5 @@
 import time
+import traceback
 from datetime import datetime, timedelta
 
 import schedule
@@ -75,7 +76,8 @@ class FeedlyRunner:
                 "Connector state updated", meta={"stream_id": stream_id}
             )
         except Exception as e:
-            error_message = f"Failed {run_name} ({e})"
+            full_tb = traceback.format_exc()
+            error_message = f"Failed {run_name}\n{full_tb}"
             self.helper.log_error(error_message)
             self.helper.api.work.to_processed(
                 self.helper.work_id, error_message, in_error=True
