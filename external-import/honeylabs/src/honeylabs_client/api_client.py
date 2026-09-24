@@ -12,13 +12,21 @@ from typing import Any, Generator
 
 import requests
 from connectors_sdk import BaseClientApi
-
-from honeylabs_client.models import TaxiiCollection, TaxiiEnvelope, TaxiiIndicator
+from honeylabs_client.models import (
+    TaxiiCollection,
+    TaxiiEnvelope,
+    TaxiiIndicator,
+    TaxiiPage,
+)
 
 TAXII_MEDIA = "application/taxii+json;version=2.1"
 USER_AGENT = (
     "opencti-honeylabs-connector/1.0 (+https://honeylabs.net/integrations/opencti)"
 )
+
+
+class TaxiiPaginationError(RuntimeError):
+    """The server's envelope cannot be followed to the end of the collection."""
 
 
 class HoneyLabsTaxiiClient(BaseClientApi):
@@ -50,11 +58,29 @@ class HoneyLabsTaxiiClient(BaseClientApi):
             for c in (body or {}).get("collections", [])
         ]
 
+    def _get_envelope(
+        self, path: str, params: dict[str, Any]
+    ) -> tuple[TaxiiEnvelope, datetime | None]:
+        """One TAXII request, returning the envelope and the server's
+        `X-TAXII-Date-Added-Last` header parsed as a datetime."""
+        response = self._raw_request("GET", path, params=params)
+        if not response.ok:
+            self._raise_for_status(response, "GET", path)
+        envelope = TaxiiEnvelope.model_validate(self._parse_response(response) or {})
+        header = response.headers.get("X-TAXII-Date-Added-Last")
+        last = datetime.fromisoformat(header.replace("Z", "+00:00")) if header else None
+        return envelope, last
+
     def iter_objects(
         self, collection: str, added_after: datetime | None, limit: int
-    ) -> Generator[list[TaxiiIndicator], None, None]:
-        """Yield the collection's indicators page by page, following the
-        envelope's `next` cursor while `more` is true."""
+    ) -> Generator[TaxiiPage, None, None]:
+        """Yield the collection's indicators page by page.
+
+        The first request carries `added_after` and `limit`; when the server
+        says `more`, the following requests carry only its opaque `next`
+        cursor, which stands for the whole original query. A `more` without a
+        cursor is a server fault and raises, so the caller never checkpoints
+        a partial import as complete."""
         params: dict[str, Any] = {"limit": limit}
         if added_after is not None:
             params["added_after"] = (
@@ -62,11 +88,8 @@ class HoneyLabsTaxiiClient(BaseClientApi):
                 + f"{added_after.microsecond // 1000:03d}Z"
             )
         path = f"/collections/{collection}/objects/"
-        pages = 0
         while True:
-            envelope = TaxiiEnvelope.model_validate(
-                self._get(path, params=params) or {}
-            )
+            envelope, date_added_last = self._get_envelope(path, params)
             page: list[TaxiiIndicator] = []
             for obj in envelope.objects:
                 if obj.get("type") != "indicator":
@@ -78,8 +101,12 @@ class HoneyLabsTaxiiClient(BaseClientApi):
                         "Skipping an object the server sent in an unexpected shape",
                         {"error": str(exc), "id": obj.get("id")},
                     )
-            pages += 1
-            yield page
-            if not envelope.more or not envelope.next:
+            yield TaxiiPage(objects=page, date_added_last=date_added_last)
+            if not envelope.more:
                 return
-            params["next"] = envelope.next
+            if not envelope.next:
+                raise TaxiiPaginationError(
+                    f"{collection}: the server reported more objects but sent no "
+                    "`next` cursor; not treating this import as complete"
+                )
+            params = {"next": envelope.next}

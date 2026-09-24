@@ -51,3 +51,12 @@ class TaxiiEnvelope(BaseModel):
     objects: list[dict] = Field(default_factory=list)
     more: bool = False
     next: str | None = None
+
+
+class TaxiiPage(BaseModel):
+    """One page of a collection: its indicators and the server's own
+    `date_added` of the last object on the page (the `X-TAXII-Date-Added-Last`
+    header), which is the value a later `added_after` poll must resume from."""
+
+    objects: list[TaxiiIndicator] = Field(default_factory=list)
+    date_added_last: datetime | None = None

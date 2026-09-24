@@ -17,13 +17,12 @@ from connectors_sdk.models import (
     OrganizationAuthor,
     TLPMarking,
 )
-
 from honeylabs_client import HoneyLabsTaxiiClient
 
 if TYPE_CHECKING:
     from connector.settings import ConnectorSettings
     from connector.state import ConnectorState
-    from honeylabs_client.models import TaxiiIndicator
+    from honeylabs_client.models import TaxiiIndicator, TaxiiPage
 
 # Alias of the collection -> name of its checkpoint field on ConnectorState.
 STATE_FIELDS = {
@@ -79,7 +78,7 @@ class IndicatorsProcessor(BaseDataProcessor):
         setattr(self.state, STATE_FIELDS[self.collection], value)
 
     # -- collect / transform ----------------------------------------------
-    def collect(self) -> Generator[list[TaxiiIndicator], None, None]:
+    def collect(self) -> Generator[TaxiiPage, None, None]:
         since = self._checkpoint() or self.settings.honeylabs.import_since
         self.logger.info(
             "Fetching HoneyLabs collection",
@@ -90,13 +89,13 @@ class IndicatorsProcessor(BaseDataProcessor):
         )
 
     def transform(
-        self, pages: Generator[list[TaxiiIndicator], None, None]
+        self, pages: Generator[TaxiiPage, None, None]
     ) -> Generator[list[BaseIdentifiedObject], None, None]:
         newest = self._checkpoint()
         total = 0
         for page in pages:
             objects: list[BaseIdentifiedObject] = [self.author, self.tlp_marking]
-            for raw in page:
+            for raw in page.objects:
                 try:
                     objects.append(self._convert(raw))
                 except IndicatorConversionError as exc:
@@ -104,10 +103,15 @@ class IndicatorsProcessor(BaseDataProcessor):
                         "Skipping indicator", {"id": raw.id, "error": str(exc)}
                     )
                     continue
-                if newest is None or raw.modified > newest:
-                    newest = raw.modified
             total += len(objects) - 2
-            if newest is not None:
+            # The checkpoint is the server's own cursor (`date_added` of the
+            # last object on the page, from X-TAXII-Date-Added-Last), not a
+            # STIX timestamp: `added_after` filters on date_added, and the two
+            # need not agree. Pages arrive in ascending date_added order, so
+            # each page's last value is the furthest point imported so far.
+            last = page.date_added_last
+            if last is not None and (newest is None or last > newest):
+                newest = last
                 self._set_checkpoint(newest)
             yield objects
         self.logger.info(

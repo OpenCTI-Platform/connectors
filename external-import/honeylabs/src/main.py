@@ -2,10 +2,9 @@
 
 import traceback
 
-from connectors_sdk import ExternalImportConnector as HoneyLabsConnector
-
 from connector import ConnectorSettings, ConnectorState
 from connector.data_processors import IndicatorsProcessor
+from connectors_sdk import ExternalImportConnector as HoneyLabsConnector
 
 if __name__ == "__main__":
     try:

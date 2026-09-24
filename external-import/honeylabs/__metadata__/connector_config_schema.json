@@ -27,7 +27,7 @@
         "IPv4-Addr",
         "Url"
       ],
-      "description": "The scope of the connector e.g., the type of entities the connector imports.",
+      "description": "The scope of the connector, i.e. the entity types it imports.",
       "items": {
         "type": "string"
       },
@@ -74,13 +74,13 @@
       ],
       "description": "Which HoneyLabs collections to import, by alias. `attackers` is the union of `exploiters` (addresses that ran exploit or loader commands against the sensors) and, on paid plans, `cve-probers` (addresses that probed a specific CVE's exploit path, labelled with the CVE ids). `malware-infrastructure` is the loader and C2 URLs pulled out of captured payloads.",
       "items": {
-        "type": "string",
         "enum": [
           "attackers",
           "exploiters",
           "cve-probers",
           "malware-infrastructure"
-        ]
+        ],
+        "type": "string"
       },
       "type": "array"
     },
@@ -102,7 +102,6 @@
       "type": "boolean"
     },
     "HONEYLABS_TLP_LEVEL": {
-      "default": "clear",
       "description": "TLP marking applied to every object this connector creates.",
       "enum": [
         "clear",
@@ -112,7 +111,8 @@
         "amber+strict",
         "red"
       ],
-      "type": "string"
+      "type": "string",
+      "default": "clear"
     }
   },
   "required": [

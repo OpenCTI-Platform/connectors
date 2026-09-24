@@ -1,9 +1,8 @@
 from typing import Any
 
 import pytest
-from connectors_sdk import ConfigValidationError
-
 from connector import ConnectorSettings
+from connectors_sdk import ConfigValidationError
 
 
 def _settings_with(config: dict[str, Any]) -> ConnectorSettings:
@@ -42,3 +41,13 @@ def test_collections_accept_a_comma_separated_string():
 def test_api_key_is_required():
     with pytest.raises(ConfigValidationError):
         _settings_with({"opencti": {"url": "http://localhost:8080", "token": "t"}})
+
+
+def test_an_unknown_collection_alias_fails_at_startup():
+    with pytest.raises(ConfigValidationError):
+        _settings_with(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "t"},
+                "honeylabs": {"api_key": "k", "collections": "attakers"},
+            }
+        )

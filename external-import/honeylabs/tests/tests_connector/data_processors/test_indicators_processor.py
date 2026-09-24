@@ -4,11 +4,10 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
-from connectors_sdk import BaseDataProcessor
-
 from connector.data_processors.indicators_processor import IndicatorsProcessor
 from connector.state import ConnectorState
-from honeylabs_client.models import TaxiiIndicator
+from connectors_sdk import BaseDataProcessor
+from honeylabs_client.models import TaxiiIndicator, TaxiiPage
 
 RAW = {
     "type": "indicator",
@@ -66,17 +65,32 @@ def test_is_a_base_data_processor_and_rejects_unknown_collections():
         IndicatorsProcessor("something-else")
 
 
-def test_full_pipeline_runs_and_checkpoints(connector_settings, fake_logger):
-    p = _processor(
-        connector_settings, fake_logger, [[TaxiiIndicator.model_validate(RAW)]]
+def test_full_pipeline_runs_and_checkpoints_on_the_server_cursor(
+    connector_settings, fake_logger
+):
+    # The server's date_added (X-TAXII-Date-Added-Last) is later than the
+    # object's STIX `modified`; the checkpoint must follow the server, since
+    # that is what `added_after` filters on.
+    cursor = datetime(2026, 9, 24, 6, 0, 0, tzinfo=timezone.utc)
+    page = TaxiiPage(
+        objects=[TaxiiIndicator.model_validate(RAW)], date_added_last=cursor
     )
+    p = _processor(connector_settings, fake_logger, [page])
     p.process()
-    assert p.state.attackers_added_after == datetime(
-        2026, 9, 24, 4, 57, 26, tzinfo=timezone.utc
-    )
+    assert p.state.attackers_added_after == cursor
     assert (
         p.work_manager.method_calls
     ), "the processor must hand a bundle to the work manager"
+
+
+def test_an_empty_page_without_a_cursor_keeps_the_checkpoint(
+    connector_settings, fake_logger
+):
+    p = _processor(connector_settings, fake_logger, [TaxiiPage()])
+    before = datetime(2026, 9, 20, tzinfo=timezone.utc)
+    p.state.attackers_added_after = before
+    p.process()
+    assert p.state.attackers_added_after == before
 
 
 def test_conversion_keeps_the_evidence(connector_settings, fake_logger):

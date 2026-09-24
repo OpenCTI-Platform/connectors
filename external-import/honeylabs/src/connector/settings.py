@@ -7,6 +7,7 @@ Values come from environment variables (`HONEYLABS_*`) or `config.yml`.
 """
 
 from datetime import datetime, timedelta, timezone
+from typing import Annotated, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -16,9 +17,17 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
-from pydantic import Field, SecretStr
+from connectors_sdk.settings.annotated_types import parse_comma_separated_list
+from pydantic import BeforeValidator, Field, SecretStr
 
-COLLECTIONS = ("attackers", "exploiters", "cve-probers", "malware-infrastructure")
+Collection = Literal["attackers", "exploiters", "cve-probers", "malware-infrastructure"]
+COLLECTIONS: tuple[str, ...] = Collection.__args__
+
+# A comma-separated string or a list, every item one of the known aliases, so
+# a typo fails as ConfigValidationError at startup rather than in main().
+CollectionsFromString = Annotated[
+    list[Collection], BeforeValidator(parse_comma_separated_list)
+]
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -54,7 +63,7 @@ class HoneyLabsConfig(BaseConfigModel):
         description="The TAXII 2.1 API root of the HoneyLabs server.",
         default="https://honeylabs.net/taxii2/api/",
     )
-    collections: ListFromString = Field(
+    collections: CollectionsFromString = Field(
         description="Which HoneyLabs collections to import, by alias. `attackers` is "
         "the union of `exploiters` (addresses that ran exploit or loader commands "
         "against the sensors) and, on paid plans, `cve-probers` (addresses that probed "
