@@ -1,0 +1,27 @@
+{
+  "title": "Lamis Network",
+  "slug": "lamis-network",
+  "description": "Lamis Network provides IP intelligence, autonomous system details, infrastructure classification, and real-time fraud risk scoring hosted in Austria (EU).\n\nKey features:\n\n- Real-time IP fraud and risk scoring (0-100)\n- Autonomous System (ASN) context with belongs-to relationships\n- Geolocation enrichment (Country, City) with located-at relationships\n- Infrastructure classification: Datacenter, VPN, Tor exit node, Public Proxy\n- Configurable threshold for suspicious tagging\n- Strict TLP enforcement before external API dispatch",
+  "short_description": "Lamis Network connector enriches IPv4 and IPv6 observables with ASN, geolocation, infrastructure classification, and fraud risk scores.",
+  "logo": "internal-enrichment/lamis-network/__metadata__/logo.png",
+  "use_cases": [
+    "Fraud, Financial Crime & Cryptocurrency Monitoring",
+    "Infrastructure & Attack Surface Visibility"
+  ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=5.12.20",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/lamis-network",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-lamis-network",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

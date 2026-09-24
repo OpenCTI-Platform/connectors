@@ -1,0 +1,27 @@
+version: '3'
+services:
+  connector-lamis-network:
+    image: lamis-network-opencti:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Lamis Network IP Intelligence
+      # - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr
+      # - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_AUTO=false
+      # Custom parameters for Lamis Network
+      - LAMIS_NETWORK_API_KEY=ChangeMe
+      # - LAMIS_NETWORK_API_URL=https://api.lamisnetwork.com
+      # - LAMIS_NETWORK_TIMEOUT=10
+      # - LAMIS_NETWORK_SUSPICIOUS_THRESHOLD=75
+      # - LAMIS_NETWORK_CREATE_INDICATOR=true
+      # - LAMIS_NETWORK_ADD_RELATIONSHIPS=true
+      # - LAMIS_NETWORK_DEFAULT_TLP=TLP:CLEAR
+      # - LAMIS_NETWORK_MAX_TLP=TLP:AMBER
+    restart: always

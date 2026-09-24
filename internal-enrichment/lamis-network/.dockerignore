@@ -1,0 +1,6 @@
+.git
+.gitignore
+__pycache__
+tests
+config.yml
+src/config.yml
