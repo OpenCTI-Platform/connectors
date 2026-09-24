@@ -19,7 +19,7 @@
   "support_version": ">=7.260609.0",
   "subscription_link": "https://trukno.com",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/trukno",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-trukno",
   "container_type": "EXTERNAL_IMPORT"
