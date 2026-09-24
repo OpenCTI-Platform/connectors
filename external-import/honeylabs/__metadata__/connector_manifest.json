@@ -1,0 +1,26 @@
+{
+  "title": "HoneyLabs",
+  "slug": "honeylabs",
+  "description": "Imports evidence-backed indicators from HoneyLabs' own internet-facing honeypot sensors over TAXII 2.1: addresses that ran exploit or loader commands against the sensors, addresses probing specific CVEs (labelled with the CVE ids, paid plans), and the loader and command-and-control URLs extracted from captured payloads. Every indicator carries a confidence graded on observed activity and links to the captured evidence on honeylabs.net. Known research scanners are excluded, and indicators expire on their own as activity stops.",
+  "short_description": "Imports HoneyLabs honeypot indicators (exploitation sources, CVE probers, malware infrastructure) into OpenCTI over TAXII 2.1, each linked to its captured evidence.",
+  "logo": "external-import/honeylabs/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": "info@honeylabs.net",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 90,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://honeylabs.net/dashboard?src=opencti",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/honeylabs",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-honeylabs",
+  "container_type": "EXTERNAL_IMPORT"
+}
