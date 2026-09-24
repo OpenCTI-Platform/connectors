@@ -1,0 +1,33 @@
+version: '3'
+services:
+  connector-greedybear:
+    image: opencti/connector-greedybear:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=GreedyBear
+      - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Autonomous-System,Location,Infrastructure
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT6H
+      # GreedyBear connection
+      - GREEDYBEAR_API_BASE_URL=https://your-greedybear-instance.example.com
+      # - GREEDYBEAR_API_KEY=CHANGEME   # optional: leave out for public feed only
+      - GREEDYBEAR_TLP_LEVEL=green
+      # Operator identity (shown as "created by" in OpenCTI)
+      - GREEDYBEAR_OPERATOR_NAME=My Organization
+      # - GREEDYBEAR_OPERATOR_DESCRIPTION=SOC of My Organization
+      # - GREEDYBEAR_OPERATOR_URL=https://example.com
+      # Feed filters
+      - GREEDYBEAR_FEED_TYPE=all
+      - GREEDYBEAR_ATTACK_TYPE=all
+      - GREEDYBEAR_IOC_TYPE=all
+      - GREEDYBEAR_PRIORITIZE=recent
+      - GREEDYBEAR_INCLUDE_MASS_SCANNERS=false
+      - GREEDYBEAR_INCLUDE_TOR_EXIT_NODES=true
+      - GREEDYBEAR_MAX_AGE=3
+      - GREEDYBEAR_FEED_SIZE=5000
+      # - GREEDYBEAR_MIN_SCORE=0.3
+      - GREEDYBEAR_CREATE_INDICATORS=true
+      # - GREEDYBEAR_DEEP_ENRICH=false   # true: per-IoC enrichment (ports, FireHOL labels, days-seen); 1 API call each, slow
+    restart: always
