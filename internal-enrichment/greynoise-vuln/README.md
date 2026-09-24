@@ -74,10 +74,10 @@ This internal enrichment connector queries the GreyNoise API for CVE (Vulnerabil
 
 | Parameter | Docker envvar | Mandatory | Description |
 |-----------|---------------|-----------|-------------|
-| `greynoise_key` | `GREYNOISE_KEY` | Yes | The GreyNoise API key |
-| `greynoise_max_tlp` | `GREYNOISE_MAX_TLP` | Yes | Maximum TLP level for data processing |
-| `greynoise_name` | `GREYNOISE_NAME` | No | The GreyNoise organization name |
-| `greynoise_description` | `GREYNOISE_DESCRIPTION` | No | The GreyNoise organization description |
+| `greynoise_vuln_key` | `GREYNOISE_VULN_KEY` | Yes | The GreyNoise API key |
+| `greynoise_vuln_max_tlp` | `GREYNOISE_VULN_MAX_TLP` | No | Maximum TLP level for data processing |
+| `greynoise_vuln_name` | `GREYNOISE_VULN_NAME` | No | The GreyNoise organization name |
+| `greynoise_vuln_description` | `GREYNOISE_VULN_DESCRIPTION` | No | The GreyNoise organization description |
 
 ---
 
@@ -97,15 +97,15 @@ services:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=GreyNoise Vulnerability Enrichment
-      - CONNECTOR_SCOPE=vulnerability
-      - CONNECTOR_AUTO=true
-      - CONNECTOR_LOG_LEVEL=error
-      - GREYNOISE_KEY=ChangeMe
-      - GREYNOISE_MAX_TLP=TLP:AMBER
-      - "GREYNOISE_NAME=GreyNoise Internet Scanner"
-      - "GREYNOISE_DESCRIPTION=GreyNoise collects and analyzes opportunistic scan and attack activity."
+      #- CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_NAME=GreyNoise Vulnerability Enrichment # Optional (default: 'GreyNoise Vulnerability Enrichment')
+      #- CONNECTOR_SCOPE=vulnerability # Optional (default: ['vulnerability'])
+      #- CONNECTOR_AUTO=true # Optional (default: false)
+      #- CONNECTOR_LOG_LEVEL=error # Optional (default: error)
+      - GREYNOISE_VULN_KEY=ChangeMe
+      #- GREYNOISE_VULN_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
+      #- GREYNOISE_VULN_NAME=GreyNoise Internet Scanner # Optional (default: 'GreyNoise Internet Scanner')
+      #- GREYNOISE_VULN_DESCRIPTION=GreyNoise collects and analyzes opportunistic scan and attack activity for devices connected directly to the Internet. # Optional
     restart: always
 ```
 
