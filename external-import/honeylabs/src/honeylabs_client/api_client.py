@@ -76,17 +76,16 @@ class HoneyLabsTaxiiClient(BaseClientApi):
     ) -> Generator[TaxiiPage, None, None]:
         """Yield the collection's indicators page by page.
 
-        The first request carries `added_after` and `limit`; when the server
-        says `more`, the following requests carry only its opaque `next`
-        cursor, which stands for the whole original query. A `more` without a
-        cursor is a server fault and raises, so the caller never checkpoints
-        a partial import as complete."""
+        Pagination follows TAXII 2.1 section 3.5: while the envelope says
+        `more`, the next request repeats the original query parameters and
+        adds the server's `next` cursor. When `more` is true but no cursor is
+        given, the client resumes with `added_after` set to the page's
+        `X-TAXII-Date-Added-Last` header, as the specification allows. If the
+        server gives neither, the run raises rather than ending as if the
+        import were complete, so a partial import is never checkpointed."""
         params: dict[str, Any] = {"limit": limit}
         if added_after is not None:
-            params["added_after"] = (
-                added_after.strftime("%Y-%m-%dT%H:%M:%S.")
-                + f"{added_after.microsecond // 1000:03d}Z"
-            )
+            params["added_after"] = _rfc3339(added_after)
         path = f"/collections/{collection}/objects/"
         while True:
             envelope, date_added_last = self._get_envelope(path, params)
@@ -104,9 +103,20 @@ class HoneyLabsTaxiiClient(BaseClientApi):
             yield TaxiiPage(objects=page, date_added_last=date_added_last)
             if not envelope.more:
                 return
-            if not envelope.next:
+            if envelope.next:
+                params = {**params, "next": envelope.next}
+            elif date_added_last is not None:
+                params = {k: v for k, v in params.items() if k != "next"} | {
+                    "added_after": _rfc3339(date_added_last)
+                }
+            else:
                 raise TaxiiPaginationError(
-                    f"{collection}: the server reported more objects but sent no "
-                    "`next` cursor; not treating this import as complete"
+                    f"{collection}: the server reported more objects but sent "
+                    "neither a `next` cursor nor X-TAXII-Date-Added-Last; "
+                    "not treating this import as complete"
                 )
-            params = {"next": envelope.next}
+
+
+def _rfc3339(value: datetime) -> str:
+    """Millisecond RFC 3339 in UTC, the form the HoneyLabs server accepts."""
+    return value.strftime("%Y-%m-%dT%H:%M:%S.") + f"{value.microsecond // 1000:03d}Z"

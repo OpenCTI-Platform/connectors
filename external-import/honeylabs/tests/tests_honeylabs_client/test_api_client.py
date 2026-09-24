@@ -45,7 +45,7 @@ def test_authenticates_as_taxii_with_basic_auth():
     assert c.session_headers["Accept"].startswith("application/taxii+json")
 
 
-def test_follows_next_with_only_the_cursor_and_reports_the_server_date_added():
+def test_follows_next_with_the_original_query_and_reports_the_server_cursor():
     c = _client(
         [
             _response(
@@ -71,16 +71,34 @@ def test_follows_next_with_only_the_cursor_and_reports_the_server_date_added():
         "limit": 500,
         "added_after": "2026-09-17T00:00:00.000Z",
     }
-    assert second.kwargs["params"] == {"next": "500"}, (
-        "a follow-up request carries the opaque cursor only; "
-        "the original filters are already part of it"
+    assert second.kwargs["params"] == {
+        "limit": 500,
+        "added_after": "2026-09-17T00:00:00.000Z",
+        "next": "500",
+    }, "TAXII 2.1 s3.5: `next` goes along with the original query parameters"
+
+
+def test_more_without_a_cursor_resumes_from_the_date_added_header():
+    c = _client(
+        [
+            _response(
+                {"more": True, "objects": [INDICATOR]}, "2026-09-24T05:00:00.000Z"
+            ),
+            _response({"more": False, "objects": []}, None),
+        ]
     )
+    pages = list(c.iter_objects("attackers", None, 500))
+    assert len(pages) == 2
+    second = c._raw_request.call_args_list[1]
+    assert second.kwargs["params"] == {
+        "limit": 500,
+        "added_after": "2026-09-24T05:00:00.000Z",
+    }
 
 
-def test_more_without_a_cursor_raises_instead_of_ending_the_import():
+def test_more_without_cursor_or_header_raises_instead_of_ending_the_import():
     c = _client([_response({"more": True, "objects": [INDICATOR]}, None)])
     gen = c.iter_objects("attackers", None, 500)
-    first = next(gen)
-    assert len(first.objects) == 1
+    assert len(next(gen).objects) == 1
     with pytest.raises(TaxiiPaginationError):
         next(gen)
