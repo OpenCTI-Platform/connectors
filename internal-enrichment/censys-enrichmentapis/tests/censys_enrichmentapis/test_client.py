@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 import httpx
 import pytest
-from censys_enrichmentapis.client import Client
+from censys_enrichmentapis.client import MAX_SEARCH_RESULTS, Client
 from censys_enrichmentapis.errors import EntityHasNoUsableHashError
 from censys_platform import (
     ErrorModel,
@@ -159,6 +159,64 @@ def test_search_certificates_skips_hits_without_certificate(mocker) -> None:
     assert result == [matching_cert]
     query_arg = sdk.global_data.search.call_args.kwargs["search_query_input_body"]
     assert query_arg.query == "some query"
+
+
+def _search_page(hits: list, next_page_token: str = "") -> MagicMock:
+    page = MagicMock()
+    page.result.result.hits = [
+        MagicMock(certificate_v1=MagicMock(resource=hit)) for hit in hits
+    ]
+    page.result.result.next_page_token = next_page_token
+    return page
+
+
+def test_search_certificates_follows_next_page_token(mocker) -> None:
+    first_cert, second_cert, third_cert = MagicMock(), MagicMock(), MagicMock()
+    sdk = MagicMock()
+    sdk.global_data.search.side_effect = [
+        _search_page([first_cert, second_cert], next_page_token="page-2"),
+        _search_page([third_cert]),
+    ]
+    sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
+    sdk_context.return_value.__enter__.return_value = sdk
+
+    result = list(Client("test-org", "test-token")._search_certificates("q"))
+
+    assert result == [first_cert, second_cert, third_cert]
+    bodies = [
+        call.kwargs["search_query_input_body"]
+        for call in sdk.global_data.search.call_args_list
+    ]
+    assert [body.page_token for body in bodies] == [None, "page-2"]
+    assert [body.page_size for body in bodies] == [
+        MAX_SEARCH_RESULTS,
+        MAX_SEARCH_RESULTS - 2,
+    ]
+
+
+def test_search_certificates_stops_at_max_results(mocker) -> None:
+    # The cap bounds both the number of certificates and the number of
+    # (credit-consuming) search pages requested.
+    sdk = MagicMock()
+    sdk.global_data.search.side_effect = [
+        _search_page([MagicMock(), MagicMock()], next_page_token="page-2"),
+        _search_page([MagicMock(), MagicMock()], next_page_token="page-3"),
+    ]
+    sdk_context = mocker.patch("censys_enrichmentapis.client.SDK")
+    sdk_context.return_value.__enter__.return_value = sdk
+
+    result = list(
+        Client("test-org", "test-token")._search_certificates("q", max_results=3)
+    )
+
+    assert len(result) == 3
+    assert sdk.global_data.search.call_count == 2
+    bodies = [
+        call.kwargs["search_query_input_body"]
+        for call in sdk.global_data.search.call_args_list
+    ]
+    # The second page only asks for what is still missing.
+    assert [body.page_size for body in bodies] == [3, 1]
 
 
 def test_fetch_certs_drops_invalid_hash_but_keeps_valid_one(mocker) -> None:

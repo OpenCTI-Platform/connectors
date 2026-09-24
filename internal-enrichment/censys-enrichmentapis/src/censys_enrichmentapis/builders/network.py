@@ -1,13 +1,9 @@
-import ipaddress
-
 from censys_enrichmentapis.builders.base import AreaStixBuilder
 from censys_platform import HostDNS
 from connectors_sdk.models import (
     AutonomousSystem,
     Country,
     Hostname,
-    IPV4Address,
-    IPV6Address,
     Organization,
     Reference,
     Relationship,
@@ -95,22 +91,3 @@ class NetworkStixBuilder(AreaStixBuilder):
                 autonomous_system, country, RelationshipType.RELATED_TO
             )
         return autonomous_system
-
-    def add_ip(self, observable: Reference, ip: str) -> IPV4Address | IPV6Address:
-        ip_version = ipaddress.ip_network(ip, strict=False).version
-        if ip_version == 4:
-            ip_address = IPV4Address(value=ip, **self.common_props)
-        else:
-            ip_address = IPV6Address(value=ip, **self.common_props)
-        self.bundle.extend(
-            [
-                ip_address,
-                Relationship(
-                    source=observable,
-                    target=ip_address,
-                    type=RelationshipType.RELATED_TO,
-                    **self.common_props,
-                ),
-            ]
-        )
-        return ip_address

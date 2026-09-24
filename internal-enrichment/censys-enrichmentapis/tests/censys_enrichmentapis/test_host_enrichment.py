@@ -7,11 +7,18 @@ from censys_platform import (
     HostEnrichmentService,
     Label,
     Reputation,
-)
-from censys_platform.models.reputation_evidence import (
     ReputationEvidence,
     ReputationEvidenceFeature,
+    Threat,
+    ThreatActor,
+    ThreatMalware,
 )
+
+# ``HostEnrichmentService.threats`` is a declared censys-platform field, so in
+# production threats arrive as ``Threat`` models (with ``ThreatMalware`` /
+# ``Evidence`` / ``ThreatActor`` children). The tests below build them the same
+# way. Only ``software`` and ``vulns`` are undeclared and re-attached by
+# ``Client._restore_service_fields`` as the raw dicts of the API response.
 
 
 def _get_host_245_52_sample() -> dict:
@@ -126,29 +133,27 @@ def test_converter_adds_threat_names_to_primary_observable_labels() -> None:
         port=22,
         protocol="SSH",
         scan_time="2026-08-31T13:12:28Z",
+        threats=[
+            Threat(
+                id="THREAT-SSH",
+                name="Exposed SSH Service",
+                confidence=1.0,
+                type=["remote_access"],
+                tactic=["initial_access"],
+                evidence=[],
+                malware=ThreatMalware(),
+            ),
+            Threat(
+                id="THREAT-WEAK-CREDS",
+                name="Weak Credentials",
+                confidence=0.8,
+                type=["credential_access"],
+                tactic=["credential_access"],
+                evidence=[],
+                malware=ThreatMalware(),
+            ),
+        ],
     )
-    service.__dict__["threats"] = [
-        {
-            "id": "THREAT-SSH",
-            "name": "Exposed SSH Service",
-            "source": "censys",
-            "confidence": 1.0,
-            "type": ["remote_access"],
-            "tactic": ["initial_access"],
-            "evidence": [],
-            "malware": {},
-        },
-        {
-            "id": "THREAT-WEAK-CREDS",
-            "name": "Weak Credentials",
-            "source": "censys",
-            "confidence": 0.8,
-            "type": ["credential_access"],
-            "tactic": ["credential_access"],
-            "evidence": [],
-            "malware": {},
-        },
-    ]
 
     host = HostEnrichment(services=[service])
     converter = HostConverter()
@@ -250,46 +255,44 @@ def test_converter_adds_reputation_note_with_evidence() -> None:
 
     Uses realistic reputation structure from Censys API with ReputationEvidence objects.
     """
-    # Create reputation with evidence features matching Censys API structure
+    # Reputation evidence as deserialized by the SDK (``Reputation.evidence``
+    # is a declared field holding ``ReputationEvidence`` models).
     host_enrichment = HostEnrichment(
         reputation=Reputation(
             score=0.704,
             label="SUSPICIOUS",
             model_version="2.0.0",
+            evidence=[
+                ReputationEvidence(
+                    feature=ReputationEvidenceFeature(
+                        id="max_port",
+                        name="Max Port",
+                        value="49093",
+                        contribution=8.708259985239051,
+                        category="service_surface",
+                    )
+                ),
+                ReputationEvidence(
+                    feature=ReputationEvidenceFeature(
+                        id="high_port_ratio",
+                        name="High Port Ratio",
+                        value="0.875",
+                        contribution=5.341544169693149,
+                        category="service_surface",
+                    )
+                ),
+                ReputationEvidence(
+                    feature=ReputationEvidenceFeature(
+                        id="avg_epss_score",
+                        name="Avg EPSS Score",
+                        value="0.0937",
+                        contribution=-3.738838369305972,
+                        category="vulnerability_exposure",
+                    )
+                ),
+            ],
         )
     )
-
-    # Inject evidence as ReputationEvidence objects with feature field
-    # This mirrors the actual API response structure
-    host_enrichment.reputation.__dict__["evidence"] = [
-        ReputationEvidence(
-            feature=ReputationEvidenceFeature(
-                id="max_port",
-                name="Max Port",
-                value="49093",
-                contribution=8.708259985239051,
-                category="service_surface",
-            )
-        ),
-        ReputationEvidence(
-            feature=ReputationEvidenceFeature(
-                id="high_port_ratio",
-                name="High Port Ratio",
-                value="0.875",
-                contribution=5.341544169693149,
-                category="service_surface",
-            )
-        ),
-        ReputationEvidence(
-            feature=ReputationEvidenceFeature(
-                id="avg_epss_score",
-                name="Avg EPSS Score",
-                value="0.0937",
-                contribution=-3.738838369305972,
-                category="vulnerability_exposure",
-            )
-        ),
-    ]
 
     stix_objects = [
         octi_object.to_stix2_object()
@@ -540,31 +543,34 @@ def test_converter_creates_software_from_cpe_when_not_in_service() -> None:
 
 
 def test_converter_creates_malware_from_threats() -> None:
-    """Verify that Malware objects are created from service threats."""
+    """Verify that Malware objects are created from service threats.
+
+    Uses the deserialized SDK shape (``Threat`` with a ``ThreatMalware``
+    child), which is what the Host Enrichment API response turns into.
+    """
     service = HostEnrichmentService(
         port=4224,
         protocol="HTTP",
         scan_time="2026-08-31T11:11:35Z",
+        threats=[
+            Threat(
+                id="THREAT-0188",
+                name="ShellInABox",
+                confidence=0.5,
+                type=["webshell"],
+                tactic=["persistence"],
+                evidence=[
+                    Evidence(data_path="http.html_title", found_value="Shell In A Box")
+                ],
+                malware=ThreatMalware(
+                    id="MALWARE-188",
+                    primary_name="ShellInABox",
+                    all_names=["ShellInABox"],
+                    last_updated_at="2025-05-01T00:00:00Z",
+                ),
+            )
+        ],
     )
-    service.__dict__["threats"] = [
-        {
-            "id": "THREAT-0188",
-            "name": "ShellInABox",
-            "source": "censys",
-            "confidence": 0.5,
-            "type": ["webshell"],
-            "tactic": ["persistence"],
-            "evidence": [
-                {"data_path": "http.html_title", "found_value": "Shell In A Box"}
-            ],
-            "malware": {
-                "id": "MALWARE-188",
-                "primary_name": "ShellInABox",
-                "all_names": ["ShellInABox"],
-                "last_updated_at": "2025-05-01T00:00:00Z",
-            },
-        }
-    ]
 
     host = HostEnrichment(services=[service])
     stix_objects = [
@@ -580,6 +586,7 @@ def test_converter_creates_malware_from_threats() -> None:
     assert malware[0].name == "ShellInABox"
     assert "ShellInABox" in malware[0].aliases
     assert "webshell" in malware[0].malware_types
+    assert malware[0].description == "THREAT-0188: ShellInABox"
 
     # Verify relationship from IP to Malware
     malware_relationships = [
@@ -590,6 +597,47 @@ def test_converter_creates_malware_from_threats() -> None:
     assert len(malware_relationships) == 1
     assert malware_relationships[0].relationship_type == "related-to"
 
+    # The threat note carries the malware details read from the SDK model.
+    note = next(
+        obj for obj in stix_objects if obj.type == "note" and "Threat" in obj.abstract
+    )
+    assert "- **Malware:** ShellInABox" in note.content
+    assert "- **Aliases:** ShellInABox" in note.content
+    assert "- **Last Updated:** 2025-05-01T00:00:00Z" in note.content
+    assert "| http.html_title | Shell In A Box |" in note.content
+
+
+def test_converter_creates_malware_from_raw_threat_dicts() -> None:
+    """The builders must also accept the raw dict shape of the API payload."""
+    service = HostEnrichmentService(port=4224, scan_time="2026-08-31T11:11:35Z")
+    service.__dict__["threats"] = [
+        {
+            "id": "THREAT-0188",
+            "name": "ShellInABox",
+            "type": ["webshell"],
+            "tactic": ["persistence"],
+            "evidence": [
+                {"data_path": "http.html_title", "found_value": "Shell In A Box"}
+            ],
+            "malware": {"primary_name": "ShellInABox", "all_names": ["ShellInABox"]},
+        }
+    ]
+
+    stix_objects = [
+        obj.to_stix2_object()
+        for obj in HostConverter().to_stix(
+            observable=stix2.IPv4Address(value="37.187.119.91"),
+            data=HostEnrichment(services=[service]),
+        )
+    ]
+
+    malware = [obj for obj in stix_objects if obj.type == "malware"]
+    assert [item.name for item in malware] == ["ShellInABox"]
+    note = next(
+        obj for obj in stix_objects if obj.type == "note" and "Threat" in obj.abstract
+    )
+    assert "- **Malware:** ShellInABox" in note.content
+
 
 def test_converter_creates_attack_patterns_from_threat_tactics() -> None:
     """Verify that Attack-Pattern objects are created for threat tactics."""
@@ -597,19 +645,18 @@ def test_converter_creates_attack_patterns_from_threat_tactics() -> None:
         port=7070,
         protocol="FRPS",
         scan_time="2026-08-31T02:32:15Z",
+        threats=[
+            Threat(
+                id="THREAT-519",
+                name="FRP",
+                confidence=0.75,
+                type=["security_tool"],
+                tactic=["command_and_control"],
+                evidence=[Evidence(data_path="protocol", found_value="FRPS")],
+                malware=ThreatMalware(),
+            )
+        ],
     )
-    service.__dict__["threats"] = [
-        {
-            "id": "THREAT-519",
-            "name": "FRP",
-            "source": "censys",
-            "confidence": 0.75,
-            "type": ["security_tool"],
-            "tactic": ["command_and_control"],
-            "evidence": [{"data_path": "protocol", "found_value": "FRPS"}],
-            "malware": {},
-        }
-    ]
 
     host = HostEnrichment(services=[service])
     stix_objects = [
@@ -644,40 +691,39 @@ def test_converter_creates_threat_notes_with_evidence() -> None:
         port=4224,
         protocol="HTTP",
         scan_time="2026-08-31T11:11:35Z",
+        threats=[
+            Threat(
+                id="THREAT-0188",
+                name="ShellInABox",
+                confidence=0.5,
+                type=["webshell"],
+                tactic=["persistence"],
+                evidence=[
+                    Evidence(data_path="http.html_title", found_value="Shell In A Box")
+                ],
+                actors=[
+                    ThreatActor(
+                        id="ACTOR-1",
+                        primary_name="Anunak",
+                        all_names=["Anunak"],
+                        malpedia_group_id="anunak",
+                    ),
+                    ThreatActor(
+                        id="ACTOR-11",
+                        primary_name="Cobalt Group",
+                        all_names=["COBALT SPIDER", "Cobalt Group"],
+                        mitre_group_id="G0080",
+                        malpedia_group_id="cobalt",
+                    ),
+                ],
+                malware=ThreatMalware(
+                    primary_name="ShellInABox",
+                    all_names=["ShellInABox"],
+                    last_updated_at="2025-05-01T00:00:00Z",
+                ),
+            )
+        ],
     )
-    service.__dict__["threats"] = [
-        {
-            "id": "THREAT-0188",
-            "name": "ShellInABox",
-            "source": "censys",
-            "confidence": 0.5,
-            "type": ["webshell"],
-            "tactic": ["persistence"],
-            "evidence": [
-                {"data_path": "http.html_title", "found_value": "Shell In A Box"}
-            ],
-            "actors": [
-                {
-                    "id": "ACTOR-1",
-                    "primary_name": "Anunak",
-                    "all_names": ["Anunak"],
-                    "malpedia_group_id": "anunak",
-                },
-                {
-                    "id": "ACTOR-11",
-                    "primary_name": "Cobalt Group",
-                    "all_names": ["COBALT SPIDER", "Cobalt Group"],
-                    "mitre_group_id": "G0080",
-                    "malpedia_group_id": "cobalt",
-                },
-            ],
-            "malware": {
-                "primary_name": "ShellInABox",
-                "all_names": ["ShellInABox"],
-                "last_updated_at": "2025-05-01T00:00:00Z",
-            },
-        }
-    ]
 
     host = HostEnrichment(services=[service])
     stix_objects = [
@@ -727,33 +773,31 @@ def test_converter_handles_multiple_threats_per_service() -> None:
         port=9080,
         protocol="HTTP",
         scan_time="2026-08-31T13:12:28Z",
+        threats=[
+            Threat(
+                id="THREAT-519",
+                name="FRP",
+                confidence=0.75,
+                type=["security_tool"],
+                tactic=["command_and_control"],
+                evidence=[],
+                actors=[ThreatActor(id="ACTOR-ONLY")],
+                malware=ThreatMalware(),
+            ),
+            Threat(
+                id="THREAT-520",
+                name="Reverse Shell Proxy",
+                confidence=0.8,
+                type=["proxy"],
+                tactic=["lateral_movement"],
+                evidence=[],
+                malware=ThreatMalware(
+                    primary_name="Reverse Shell",
+                    all_names=["Reverse Shell", "RevShell"],
+                ),
+            ),
+        ],
     )
-    service.__dict__["threats"] = [
-        {
-            "id": "THREAT-519",
-            "name": "FRP",
-            "source": "censys",
-            "confidence": 0.75,
-            "type": ["security_tool"],
-            "tactic": ["command_and_control"],
-            "evidence": [],
-            "actors": [{"id": "ACTOR-ONLY"}],
-            "malware": {},
-        },
-        {
-            "id": "THREAT-520",
-            "name": "Reverse Shell Proxy",
-            "source": "censys",
-            "confidence": 0.8,
-            "type": ["proxy"],
-            "tactic": ["lateral_movement"],
-            "evidence": [],
-            "malware": {
-                "primary_name": "Reverse Shell",
-                "all_names": ["Reverse Shell", "RevShell"],
-            },
-        },
-    ]
 
     host = HostEnrichment(services=[service])
     stix_objects = [

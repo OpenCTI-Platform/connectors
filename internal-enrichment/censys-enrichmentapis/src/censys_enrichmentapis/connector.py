@@ -1,4 +1,3 @@
-import json
 from typing import Any, Iterator
 
 from censys_enrichmentapis.client import Client
@@ -6,14 +5,18 @@ from censys_enrichmentapis.converters import get_converter
 from censys_enrichmentapis.converters.base import CensysConverter
 from censys_enrichmentapis.errors import (
     EntityNotInScopeError,
+    MarkingResolutionError,
     MaxTlpError,
 )
 from censys_enrichmentapis.settings import ConfigLoader
-from connectors_sdk.models import BaseObject, TLPMarking
-from connectors_sdk.models.enums import TLPLevel
+from connectors_sdk.models import BaseObject
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import OpenCTIConnectorHelper
-from stix2.v21 import MarkingDefinition as Stix2MarkingDefinition
+
+# ``created`` timestamp OpenCTI (pycti ``prepare_export``) stamps on every
+# exported TLP marking definition. Reused so a marking definition rebuilt
+# here is byte-for-byte the one the platform itself would have exported.
+_TLP_MARKING_CREATED = "2017-01-20T00:00:00.000Z"
 
 
 class Connector:
@@ -53,72 +56,82 @@ class Connector:
 
     def _validate_entity_tlp(self, markings: list[dict[str, Any]]) -> None:
         """Reject an entity whose TLP exceeds the configured maximum."""
-        if not self.helper.check_max_tlp(
-            tlp=self._extract_tlp(markings=markings),
-            max_tlp=self.config.censys_enrichmentapis.max_tlp,
-        ):
-            raise MaxTlpError(f"TLP {markings} of observable exceeds MAX TLP")
+        entity_tlp = self._extract_tlp(markings=markings)
+        max_tlp = self.config.censys_enrichmentapis.max_tlp
+        if not self.helper.check_max_tlp(tlp=entity_tlp, max_tlp=max_tlp):
+            raise MaxTlpError(
+                f"TLP {entity_tlp} of observable exceeds MAX TLP {max_tlp}"
+            )
 
     @staticmethod
+    def _marking_id(marking: dict[str, Any]) -> str | None:
+        """Return the STIX id of an OpenCTI ``objectMarking`` entry."""
+        marking_id = marking.get("standard_id")
+        if isinstance(marking_id, str):
+            return marking_id
+        definition_type = marking.get("definition_type")
+        definition = marking.get("definition")
+        if isinstance(definition_type, str) and isinstance(definition, str):
+            return PyctiMarkingDefinition.generate_id(definition_type, definition)
+        return None
+
+    @classmethod
     def _extract_marking_refs(
-        stix_entity: dict[str, Any], markings: list[dict[str, Any]]
+        cls, stix_entity: dict[str, Any], markings: list[dict[str, Any]]
     ) -> list[str]:
+        """Return the marking refs of the enriched entity, source of truth first.
+
+        ``stix_entity["object_marking_refs"]`` is what OpenCTI exported for the
+        entity and is preferred; the OpenCTI ``objectMarking`` list is only used
+        as a fallback when the STIX entity carries no refs.
+        """
         entity_refs = stix_entity.get("object_marking_refs")
         if entity_refs:
             return list(dict.fromkeys(entity_refs))
 
-        marking_refs = []
-        for marking in markings:
-            marking_ref = marking.get("standard_id")
-            if not isinstance(marking_ref, str):
-                marking_ref = PyctiMarkingDefinition.generate_id(
-                    marking["definition_type"], marking["definition"]
-                )
-            marking_refs.append(marking_ref)
+        marking_refs = [
+            marking_id
+            for marking in markings
+            if (marking_id := cls._marking_id(marking)) is not None
+        ]
         return list(dict.fromkeys(marking_refs))
 
-    @staticmethod
+    @classmethod
     def _materialize_marking_definition(
-        marking: dict[str, Any],
+        cls, marking: dict[str, Any]
     ) -> dict[str, Any] | None:
+        """Rebuild a STIX marking definition from an OpenCTI ``objectMarking``.
+
+        Mirrors the shape produced by pycti's ``prepare_export`` (the very
+        objects OpenCTI puts in ``data["stix_objects"]``), so any marking type
+        the platform knows (TLP, PAP, statement, custom) round-trips without
+        special-casing and is accepted by the worker as-is.
+        """
         definition_type = marking.get("definition_type")
         definition = marking.get("definition")
-        if not isinstance(definition_type, str) or not isinstance(definition, str):
+        marking_id = cls._marking_id(marking)
+        if (
+            not isinstance(definition_type, str)
+            or not isinstance(definition, str)
+            or marking_id is None
+        ):
             return None
 
-        definition_type = definition_type.upper()
-        definition = definition.upper()
-        canonical_id = PyctiMarkingDefinition.generate_id(definition_type, definition)
-        marking_id = marking.get("standard_id")
-        if not isinstance(marking_id, str):
-            marking_id = canonical_id
-        if marking_id != canonical_id:
-            return None
-
-        if definition_type == "TLP":
-            try:
-                level = TLPLevel(definition.removeprefix("TLP:").lower())
-            except ValueError:
-                return None
-            stix_marking = TLPMarking(level=level).to_stix2_object()
-        elif definition_type == "PAP" and definition in {
-            "PAP:CLEAR",
-            "PAP:GREEN",
-            "PAP:AMBER",
-            "PAP:RED",
-        }:
-            stix_marking = Stix2MarkingDefinition(
-                id=canonical_id,
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="PAP",
-                x_opencti_definition=definition,
-            )
+        if definition_type.upper() == "TLP":
+            created = _TLP_MARKING_CREATED
         else:
-            return None
-
-        return json.loads(stix_marking.serialize())
+            created = marking.get("created") or _TLP_MARKING_CREATED
+        return {
+            "type": "marking-definition",
+            "spec_version": "2.1",
+            "id": marking_id,
+            "created": created,
+            "definition_type": definition_type.lower(),
+            "name": definition,
+            "definition": {
+                definition_type.lower(): definition.lower().replace("tlp:", "")
+            },
+        }
 
     @classmethod
     def _resolve_source_markings(
@@ -127,6 +140,17 @@ class Connector:
         markings: list[dict[str, Any]],
         original_stix_objects: list[dict[str, Any]],
     ) -> tuple[list[str], list[dict[str, Any]]]:
+        """Return the marking refs to apply to derived objects and the
+        marking-definition objects that must be added to the bundle for them.
+
+        Every source marking ref is preserved: a ref already bundled is used
+        as-is, a ref only known from ``objectMarking`` is materialized, and a
+        ref that cannot be resolved raises ``MarkingResolutionError`` rather
+        than silently letting ``cleanup_inconsistent_bundle`` strip it (which
+        would publish the derived data with downgraded, or no, markings).
+        An empty result means the source is genuinely unmarked, in which case
+        the builder applies the connector's default TLP:CLEAR marking.
+        """
         requested_refs = cls._extract_marking_refs(stix_entity, markings)
         bundled_definition_ids = {
             stix_object.get("id")
@@ -138,20 +162,19 @@ class Connector:
             for marking in markings
             if (definition := cls._materialize_marking_definition(marking)) is not None
         }
-        available_definition_ids = bundled_definition_ids | set(
-            materialized_definitions
-        )
-        resolved_refs = [
-            marking_ref
-            for marking_ref in requested_refs
-            if marking_ref in available_definition_ids
-        ]
-        missing_definitions = [
-            materialized_definitions[marking_ref]
-            for marking_ref in resolved_refs
-            if marking_ref not in bundled_definition_ids
-        ]
-        return resolved_refs, missing_definitions
+        missing_definitions = []
+        for marking_ref in requested_refs:
+            if marking_ref in bundled_definition_ids:
+                continue
+            definition = materialized_definitions.get(marking_ref)
+            if definition is None:
+                raise MarkingResolutionError(
+                    f"Marking {marking_ref} of the enriched entity cannot be "
+                    "resolved from the bundle or the entity markings; refusing "
+                    "to enrich with downgraded markings"
+                )
+            missing_definitions.append(definition)
+        return requested_refs, missing_definitions
 
     def _generate_octi_objects(
         self,
@@ -243,8 +266,12 @@ class Connector:
                 original_stix_objects=data["stix_objects"],
             )
             return self._send_bundle(stix_objects=stix_objects)
-        except Exception:
-            self.helper.connector_logger.exception("Error processing message")
+        except Exception as error:
+            # pycti's ``AppLogger.error`` already attaches ``exc_info``, so the
+            # traceback is logged; a bare ``raise`` below preserves it as well.
+            self.helper.connector_logger.error(
+                "Error processing message", {"error": str(error)}
+            )
             is_in_playbook_context = not bool(data.get("event_type"))
             if is_in_playbook_context:
                 # If it's in a playbook context, we send the original bundle unchanged

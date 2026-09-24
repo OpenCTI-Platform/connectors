@@ -2,15 +2,27 @@ import datetime
 
 import pytest
 from censys_enrichmentapis.builder import CensysStixBuilder
-from censys_platform import Certificate, CertificateExtensions, CertificateParsed
+from censys_platform import (
+    BasicConstraints,
+    Certificate,
+    CertificateExtensions,
+    CertificateParsed,
+    CertificatePolicy,
+    ExtendedKeyUsage,
+    GeneralNames,
+    KeyUsage,
+    Signature,
+    SubjectKeyInfo,
+)
 from censys_platform.types import UNSET
 from connectors_sdk.models import (
+    AttackPattern,
     City,
-    IPV4Address,
-    IPV6Address,
+    Malware,
     OrganizationAuthor,
     Reference,
     Relationship,
+    Software,
     Vulnerability,
 )
 from connectors_sdk.models.enums import HashAlgorithm
@@ -58,14 +70,90 @@ def test_geography_builder_adds_to_shared_bundle() -> None:
     assert len(builder.bundle) == 2
 
 
-def test_network_builder_selects_ip_version() -> None:
+def test_service_builder_deduplicates_software_and_relationships() -> None:
+    # The same software reported on two services of a host must yield one
+    # Software object and one related-to relationship, not one per service.
     builder = CensysStixBuilder()
 
-    ipv4 = builder.network.add_ip(OBSERVABLE, "192.0.2.1")
-    ipv6 = builder.network.add_ip(OBSERVABLE, "2001:db8::1")
+    first = builder.services.add_software(
+        observable=OBSERVABLE,
+        name="nginx",
+        vendor="nginx",
+        cpe="cpe:2.3:a:nginx:nginx:1.0:*:*:*:*:*:*:*",
+    )
+    second = builder.services.add_software(
+        observable=OBSERVABLE,
+        name="nginx",
+        vendor="nginx",
+        cpe="cpe:2.3:a:nginx:nginx:1.0:*:*:*:*:*:*:*",
+    )
 
-    assert isinstance(ipv4, IPV4Address)
-    assert isinstance(ipv6, IPV6Address)
+    assert first is second
+    assert len([obj for obj in builder.bundle if isinstance(obj, Software)]) == 1
+    assert len([obj for obj in builder.bundle if isinstance(obj, Relationship)]) == 1
+
+
+def test_service_builder_deduplicates_malware_and_attack_patterns() -> None:
+    # Two threats sharing the same malware family and tactic must not
+    # duplicate the Malware / Attack-Pattern objects or their relationships.
+    builder = CensysStixBuilder()
+    threats = [
+        {
+            "id": "THREAT-1",
+            "name": "Cobalt Strike Beacon",
+            "type": ["backdoor"],
+            "tactic": ["command_and_control"],
+            "malware": {"primary_name": "Cobalt Strike", "all_names": ["CS"]},
+        },
+        {
+            "id": "THREAT-2",
+            "name": "Cobalt Strike Team Server",
+            "type": ["backdoor"],
+            "tactic": ["command_and_control", "Command_And_Control"],
+            "malware": {"primary_name": "Cobalt Strike"},
+        },
+    ]
+
+    builder.services._add_threats(
+        observable=OBSERVABLE,
+        observable_value="192.0.2.1",
+        threats=threats,
+        port=443,
+        protocol="HTTPS",
+    )
+
+    malware = [obj for obj in builder.bundle if isinstance(obj, Malware)]
+    attack_patterns = [obj for obj in builder.bundle if isinstance(obj, AttackPattern)]
+    relationships = [obj for obj in builder.bundle if isinstance(obj, Relationship)]
+    assert len(malware) == 1
+    assert malware[0].description == "THREAT-1: Cobalt Strike Beacon"
+    assert len(attack_patterns) == 1
+    assert attack_patterns[0].name == "COMMAND AND CONTROL"
+    # One relationship to the malware, one to the attack pattern.
+    assert len(relationships) == 2
+
+
+def test_service_builder_extracts_cwe_entries() -> None:
+    # Censys returns CWEs as ``{"entry": "CWE-79"}`` objects; the ids must be
+    # extracted rather than dropped by a plain string filter.
+    builder = CensysStixBuilder()
+    software = builder.services.add_software(
+        observable=OBSERVABLE, name="openssh", vendor="openbsd", cpe=None
+    )
+    assert software is not None
+
+    vulnerability = builder.services.add_vulnerability(
+        software,
+        {
+            "id": "CVE-2026-12345",
+            "cwes": [{"entry": "CWE-787"}, "CWE-20", {"entry": "CWE-787"}, {}],
+            "kev": [{"date_added": "2026-01-01"}],
+        },
+    )
+
+    assert vulnerability is not None
+    assert vulnerability.cwe_ids == ["CWE-787", "CWE-20"]
+    assert vulnerability.is_cisa_kev is True
 
 
 def test_service_builder_skips_invalid_vulnerability() -> None:
@@ -182,18 +270,84 @@ def test_add_certificate_maps_parsed_fields_and_extensions() -> None:
         == parsed.subject_key_info.key_algorithm.name
     )
     assert certificate.authority_key_identifier == parsed.extensions.authority_key_id
-    assert certificate.crl_distribution_points == str(
+    assert certificate.crl_distribution_points == ", ".join(
         parsed.extensions.crl_distribution_points
     )
-    assert certificate.certificate_policies == str(
-        parsed.extensions.certificate_policies
+    assert certificate.certificate_policies == ", ".join(
+        policy.id for policy in parsed.extensions.certificate_policies
     )
-    assert certificate.key_usage == parsed.extensions.key_usage.model_dump_json()
-    assert (
-        certificate.extended_key_usage
-        == parsed.extensions.extended_key_usage.model_dump_json()
-    )
+    # The factory sets no usage flag, so the flag-only renderings stay unset.
+    assert certificate.key_usage is None
+    assert certificate.extended_key_usage is None
     # Would raise if a mapped field held a value stix2 rejects.
+    certificate.to_stix2_object()
+
+
+def test_add_certificate_renders_extensions_human_readable() -> None:
+    # Extension values must be rendered as readable text, never as Python
+    # reprs (``"['a', 'b']"``, ``"[CertificatePolicy(...)]"``) or JSON dumps.
+    builder = CensysStixBuilder()
+    cert = Certificate(
+        fingerprint_sha256=SHA256,
+        parsed=CertificateParsed(
+            signature=Signature(self_signed=True),
+            extensions=CertificateExtensions(
+                key_usage=KeyUsage(
+                    digital_signature=True, key_encipherment=True, crl_sign=False
+                ),
+                extended_key_usage=ExtendedKeyUsage(
+                    server_auth=True, client_auth=True, unknown=["1.2.3.4"]
+                ),
+                basic_constraints=BasicConstraints(is_ca=True, max_path_len=0),
+                certificate_policies=[
+                    CertificatePolicy(id="2.23.140.1.2.1", cps=["http://cps"]),
+                    CertificatePolicy(cps=["http://no-id"]),
+                ],
+                crl_distribution_points=["http://crl.example.com/a.crl"],
+                subject_key_id="ab:cd",
+                subject_alt_name=GeneralNames(
+                    dns_names=["example.com", "www.example.com"],
+                    ip_addresses=["192.0.2.1"],
+                ),
+            ),
+        ),
+    )
+
+    certificate = builder.certificates.add_certificate(cert=cert)
+
+    assert certificate is not None
+    assert certificate.is_self_signed is True
+    assert certificate.key_usage == "digital_signature, key_encipherment"
+    assert certificate.extended_key_usage == "client_auth, server_auth, 1.2.3.4"
+    assert certificate.basic_constraints == "CA:TRUE, pathlen:0"
+    assert certificate.certificate_policies == "2.23.140.1.2.1"
+    assert certificate.crl_distribution_points == "http://crl.example.com/a.crl"
+    assert certificate.subject_key_identifier == "ab:cd"
+    assert (
+        certificate.subject_alternative_name
+        == "example.com, www.example.com, 192.0.2.1"
+    )
+    certificate.to_stix2_object()
+
+
+def test_add_certificate_tolerates_partial_nested_models() -> None:
+    # Every nested censys-platform field is optional: a signature without an
+    # algorithm or key info without an algorithm must not raise.
+    builder = CensysStixBuilder()
+    cert = Certificate(
+        fingerprint_sha256=SHA256,
+        parsed=CertificateParsed(
+            signature=Signature(valid=True),
+            subject_key_info=SubjectKeyInfo(fingerprint_sha256=SHA256),
+        ),
+    )
+
+    certificate = builder.certificates.add_certificate(cert=cert)
+
+    assert certificate is not None
+    assert certificate.signature_algorithm is None
+    assert certificate.subject_public_key_algorithm is None
+    assert certificate.is_self_signed is False
     certificate.to_stix2_object()
 
 

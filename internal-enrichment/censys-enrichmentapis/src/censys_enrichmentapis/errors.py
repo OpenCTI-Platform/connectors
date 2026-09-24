@@ -12,3 +12,13 @@ class EntityTypeNotSupportedError(Exception):
 
 class EntityHasNoUsableHashError(Exception):
     """Custom exception for entity having no usable hash"""
+
+
+class MarkingResolutionError(Exception):
+    """Custom exception for a source marking that cannot be resolved.
+
+    Raised instead of silently enriching with downgraded (or missing)
+    markings when the enriched entity references a marking definition
+    that is neither part of the incoming bundle nor described by the
+    entity's ``objectMarking``.
+    """

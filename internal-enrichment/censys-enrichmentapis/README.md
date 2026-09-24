@@ -1,14 +1,16 @@
-# OpenCTI Censys Connector
+# OpenCTI Censys EnrichmentAPIs Connector
 
 | Status | Date | Comment |
 |--------|------|---------|
 | Community | -    | -       |
 
-The Censys EnrichmentAPIs connector enriches IP addresses, domains, and certificates with internet scanning data from the Censys Platform, providing geolocation, ASN, services, software, infrastructure information, host reputation score, host threat labels if present. 
+The Censys EnrichmentAPIs connector enriches IP addresses, domains, and certificates with internet scanning data from the Censys Platform, providing geolocation, ASN, services, software, infrastructure information, host reputation score, host threat labels if present.
+
+It is distinct from the existing `censys-enrichment` connector (which relies on the general Censys Search API): IP addresses are enriched through the purpose-built, lightweight [Host Enrichment API](https://docs.censys.com/reference/v3-globaldata-asset-host-enrichment) designed for high-volume automated lookups.
 
 ## Table of Contents
 
-- [OpenCTI Censys Connector](#opencti-censys-connector)
+- [OpenCTI Censys EnrichmentAPIs Connector](#opencti-censys-enrichmentapis-connector)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
@@ -132,40 +134,47 @@ The connector enriches IP addresses, domains, and certificates with Censys inter
 Select an IPv4-Addr, IPv6-Addr, Domain-Name, or X509-Certificate observable, then click the enrichment button and choose Censys EnrichmentAPIs.
 
 ## Behavior
-  The connector enriches the following observable types:
 
-  ### IPv4/IPv6 Addresses
-  - Retrieves host information including geolocation, ASN, services, and reputation
-  - Creates location entities (City, Country, Region, Administrative Area)
-  - Links autonomous systems and organizations
-  - Extracts DNS names associated with the IP
-  - Creates software entities for detected services
-  - Includes comprehensive service notes with:
-    - Service protocol and scan time
-    - Detected service labels (e.g., REMOTE_ACCESS)
-    - Associated threats and security information
-  - Generates reputation notes with:
-    - Host reputation score and risk level
-    - Model version information
+The connector enriches the following observable types:
 
-  ### Domain Names
-  - Retrieves the Censys web properties identified by `<domain>:80` and `<domain>:443`
-  - Creates one domain-linked Markdown note per property with web, threat, vulnerability, software, and certificate details
-  - **Discovers X.509 certificates** that reference the domain in their Subject Alternative Names (SANs) or Common Name (CN)
-  - Creates certificate entities with full metadata (issuer, validity, extensions)
-  - Links certificates to the domain for infrastructure mapping
+### IPv4/IPv6 Addresses
+- Retrieves host information from the Host Enrichment API including geolocation, ASN, services, and reputation
+- Creates location entities (City, Country, Region, Administrative Area)
+- Links autonomous systems and organizations
+- Extracts DNS names associated with the IP
+- Creates software entities for detected services and vulnerability entities (CVEs with CVSS/EPSS/CWE/KEV data) linked to them
+- Creates malware and attack-pattern entities for the threats Censys detected on the services
+- Includes comprehensive service notes with:
+  - Service protocol and scan time
+  - Detected service labels (e.g., REMOTE_ACCESS)
+  - Associated threats and security information
+- Generates reputation notes with:
+  - Host reputation score and risk level
+  - Model version information
+- Adds `Censys_*` labels (host/service labels, `Censys_Threat_*` threat names, reputation label) to the enriched observable
 
-  This comprehensive domain enrichment is particularly useful for:
-  - Certificate transparency monitoring
-  - Threat actor infrastructure discovery
-  - Identifying shared hosting or certificate patterns
-  - Detecting potential phishing domains using similar certificates
+### Domain Names
+- Retrieves the Censys web properties identified by `<domain>:80` and `<domain>:443` (Web Property API)
+- Creates one domain-linked Markdown note per property with web, threat, vulnerability, software, and certificate details
+- **Discovers X.509 certificates** that reference the domain in their Subject Alternative Names (SANs) or Common Name (CN) (Search API)
+- Creates certificate entities with full metadata (issuer, validity, extensions)
+- Links certificates to the domain for infrastructure mapping
 
-  ### X.509 Certificates
-  - Enriches certificates by their hash values (MD5, SHA-1, SHA-256)
-  - Extracts detailed certificate metadata including extensions and key information
+This comprehensive domain enrichment is particularly useful for:
+- Certificate transparency monitoring
+- Threat actor infrastructure discovery
+- Identifying shared hosting or certificate patterns
+- Detecting potential phishing domains using similar certificates
 
-  **Note**: Certificate discovery for domains adds an additional API call per domain enrichment. Be mindful of Censys API rate limits.
+### X.509 Certificates
+- Enriches certificates by their hash values (MD5, SHA-1, SHA-256) through the Search API
+- Extracts detailed certificate metadata including extensions and key information
+
+### API usage and credits
+
+- Only IPv4/IPv6 enrichment uses the lightweight Host Enrichment API. Domain and certificate enrichment call the Web Property and Search APIs, which are billed differently. To use this connector as a pure Host Enrichment API integration, restrict the scope with `CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr`.
+- Certificate discovery for domains adds search calls to each domain enrichment; results are paginated and capped at 100 certificates per domain to bound API credit usage and bundle size.
+- Be mindful of Censys API rate limits.
 
 The connector queries the Censys Platform APIs and creates related entities based on the data returned.
 
@@ -192,13 +201,16 @@ graph LR
         AdminArea[Administrative Area]
         Hostname[Hostname Observable]
         Software[Software Entity]
+        Vulnerability[Vulnerability]
+        Malware[Malware]
+        AttackPattern[Attack Pattern]
         Certificate[X509-Certificate]
         AS[Autonomous System]
         Org[Organization Identity]
         ServiceNote[Service Information Note]
+        ThreatNote[Service Threat Note]
         ReputationNote[Host Reputation Note]
         WebPropertyNote[Web Property Note]
-        IPOut[IPv4/IPv6 Observable]
     end
 
     IP --> hostEnrichmentAPI
@@ -211,11 +223,14 @@ graph LR
     hostEnrichmentAPI --> AdminArea
     hostEnrichmentAPI --> Hostname
     hostEnrichmentAPI --> Software
+    hostEnrichmentAPI --> Vulnerability
+    hostEnrichmentAPI --> Malware
+    hostEnrichmentAPI --> AttackPattern
     hostEnrichmentAPI --> AS
     hostEnrichmentAPI --> Org
     hostEnrichmentAPI --> ServiceNote
+    hostEnrichmentAPI --> ThreatNote
     hostEnrichmentAPI --> ReputationNote
-    hostEnrichmentAPI --> IPOut
     WebPropertyAPI --> WebPropertyNote
     CertAPI --> Certificate
 ```
@@ -233,8 +248,10 @@ graph LR
 | services.scan_time        | Note                     | Service scan timestamp                                      |
 | services.labels           | Note                     | Service labels (e.g., REMOTE_ACCESS, WEB)                  |
 | services.threats          | Note                     | Associated threats and security information                 |
+| services.threats.malware  | Malware                  | Malware family behind a detected threat                     |
+| services.threats.tactic   | Attack Pattern           | MITRE ATT&CK tactic of a detected threat                    |
 | services.software         | Software                 | Running software with vendor and CPE                        |
-| services.vulns            | Vulnerability            | CVEs detected for the service, with CVSS/EPSS/CWE data      |
+| services.vulns            | Vulnerability            | CVEs detected for the service, with CVSS/EPSS/CWE/KEV data  |
 | reputation.score          | Note                     | Host reputation score and risk level                        |
 | reputation.model_version  | Note                     | Reputation model version used                               |
 | autonomous_system.asn     | Autonomous System        | ASN number                                                  |
@@ -247,8 +264,8 @@ graph LR
 
 | Input Type       | Generated Entities                                                              |
 |------------------|---------------------------------------------------------------------------------|
-| IPv4-Addr        | Locations, Hostnames, Software, Vulnerabilities, ASN, Organization, Notes       |
-| IPv6-Addr        | Locations, Hostnames, Software, Vulnerabilities, ASN, Organization, Notes       |
+| IPv4-Addr        | Locations, Hostnames, Software, Vulnerabilities, Malware, Attack Patterns, ASN, Organization, Notes |
+| IPv6-Addr        | Locations, Hostnames, Software, Vulnerabilities, Malware, Attack Patterns, ASN, Organization, Notes |
 | Domain-Name      | Web-property notes for ports 80/443 and related certificate entities            |
 | X509-Certificate | Certificate entity with full parsed metadata                                    |
 
@@ -263,13 +280,15 @@ graph LR
 | `belongs-to`       | IP Observable       | Autonomous System   | ASN membership                        |
 | `related-to`       | IP Observable       | Software            | Running software                      |
 | `has`              | Software            | Vulnerability       | CVE affecting the detected service   |
+| `related-to`       | IP Observable       | Malware             | Malware family of a detected threat   |
+| `related-to`       | IP Observable       | Attack Pattern      | Tactic of a detected threat           |
 | `related-to`       | Autonomous System   | Organization        | AS operator                           |
 | `related-to`       | Autonomous System   | Country             | AS country location                   |
 | `related-to`       | X509-Certificate    | Domain-Name         | Certificate discovered for the domain |
 
 ### Note Types
 
-The connector generates two types of notes with detailed information:
+The connector generates the following notes with detailed information (plus one web-property note per port for domains):
 
 #### Service Information Notes
 Each detected service generates a comprehensive note containing:
@@ -299,10 +318,21 @@ Host reputation information is documented in external notes containing:
 
 *Note Format Example:*
 ```
+[View this host 1.2.3.4 on Censys Platform](https://platform.censys.io/hosts/1.2.3.4)
+
 - Score: 42
 - Label: MEDIUM_RISK
 - Model version: 2.0.0
 ```
+
+#### Service Threat Notes
+Each threat Censys detected on a service generates a note (abstract `Service Threat: <name> (Port <port>/<protocol>)`) containing:
+- A link to the host on the Censys Platform
+- A key/value table with the threat name, threat types and MITRE ATT&CK tactics
+- An evidence table (data path / found value) when Censys provides evidence
+- The associated malware family, its aliases and last update time when known
+
+The note is labeled with the threat types (e.g. `webshell`), and the enriched observable receives a `Censys_Threat_<name>` label.
 
 ### Processing Details
 
@@ -310,10 +340,11 @@ Host reputation information is documented in external notes containing:
 2. **API Query**: Queries appropriate Censys endpoint based on observable type
 3. **Location Processing**: Creates hierarchical location entities
 4. **DNS Processing**: Creates hostname observables with resolution relationships
-5. **Service Processing**: Creates comprehensive service notes with protocol, labels, and threats
+5. **Service Processing**: Creates comprehensive service notes with protocol, labels, and threats, plus software, vulnerability, malware and attack-pattern entities
 6. **Reputation Processing**: Generates reputation notes with score and risk level
 7. **ASN Processing**: Creates autonomous system with organization relationship
 8. **Certificate Processing**: Full certificate parsing with all available metadata
+9. **Marking Propagation**: Every generated entity, relationship and note carries the markings of the enriched observable (TLP, PAP or custom). Only a genuinely unmarked observable yields TLP:CLEAR enrichment data; an observable whose marking cannot be resolved is not enriched rather than enriched with downgraded markings.
 
 ## Debugging
 
@@ -331,7 +362,7 @@ Log output includes:
 
 ## Additional information
 
-- **API Reference**: [Censys Search API Documentation](https://search.censys.io/api)
+- **API Reference**: [Censys Platform API Documentation](https://docs.censys.com/reference) - in particular the [Host Enrichment API](https://docs.censys.com/reference/v3-globaldata-asset-host-enrichment)
 - **Rate Limits**: API calls are subject to Censys rate limits based on subscription tier
 - **Data Freshness**: Censys continuously scans the internet; data freshness depends on scan frequency
 - **TLP Handling**: Observables with TLP above `MAX_TLP` will not be sent to Censys

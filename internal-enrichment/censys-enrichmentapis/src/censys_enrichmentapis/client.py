@@ -15,6 +15,13 @@ from censys_platform import (
 
 _HEX_DIGITS_RE = re.compile(r"^[0-9a-fA-F]+$")
 
+# Upper bound on the certificates returned by one Censys search. Popular
+# domains match thousands of historical certificates; every extra page costs
+# a search credit and inflates the bundle, so pagination stops at this cap.
+MAX_SEARCH_RESULTS = 100
+# Largest page the Censys search API serves.
+_MAX_PAGE_SIZE = 100
+
 
 class Client:
     def __init__(self, organisation_id: str, token: str) -> None:
@@ -57,7 +64,15 @@ class Client:
 
     @staticmethod
     def _restore_service_fields(host: HostEnrichment, response: dict[str, Any]) -> None:
-        """Restore service fields not yet represented by censys-platform 0.16."""
+        """Restore service fields not yet represented by censys-platform 0.16.
+
+        ``HostEnrichmentService`` declares ``labels``, ``port``, ``protocol``,
+        ``scan_time`` and ``threats`` (deserialized as SDK models, e.g.
+        ``Threat`` / ``ThreatMalware`` / ``Evidence``). The API also returns
+        ``software`` and ``vulns`` per service, which the generated model
+        silently drops; they are re-attached here as the raw dicts of the
+        response, so the builders must accept both SDK models and dicts.
+        """
         resource = response.get("result", {}).get("resource", {})
         raw_services = (
             resource.get("services", []) if isinstance(resource, dict) else []
@@ -73,19 +88,42 @@ class Client:
                     # their instances remain safely extensible for conversion.
                     service.__dict__[field] = raw_service[field]
 
-    def _search_certificates(self, query: str) -> Generator[Certificate, None, None]:
-        """Run a Censys search query and yield the matching certificates."""
+    def _search_certificates(
+        self, query: str, max_results: int = MAX_SEARCH_RESULTS
+    ) -> Generator[Certificate, None, None]:
+        """Run a Censys search query and yield the matching certificates.
+
+        Follows ``next_page_token`` until *max_results* certificates have been
+        yielded or the result set is exhausted.
+        """
+        if max_results <= 0:
+            return
+        yielded = 0
+        page_token: str | None = None
         with SDK(
             organization_id=self.organisation_id,
             personal_access_token=self.token,
         ) as sdk:
-            res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
-                search_query_input_body=SearchQueryInputBody(query=query)
-            )
-            if res.result.result:
-                for hit in res.result.result.hits:
+            while True:
+                res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
+                    search_query_input_body=SearchQueryInputBody(
+                        query=query,
+                        page_size=min(_MAX_PAGE_SIZE, max_results - yielded),
+                        page_token=page_token,
+                    )
+                )
+                result = res.result.result
+                if not result:
+                    return
+                for hit in result.hits or []:
                     if hit.certificate_v1:
                         yield hit.certificate_v1.resource
+                        yielded += 1
+                        if yielded >= max_results:
+                            return
+                page_token = result.next_page_token
+                if not isinstance(page_token, str) or not page_token:
+                    return
 
     def fetch_certs(self, hashes: dict[str, str]) -> Generator[Certificate, None, None]:
         """Fetch certificates by their hashes

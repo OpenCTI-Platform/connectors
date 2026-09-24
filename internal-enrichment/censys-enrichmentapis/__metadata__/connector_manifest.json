@@ -14,7 +14,7 @@
   "license_type": "Commercial",
   "contact": null,
   "verified": false,
-  "last_verified_date": "2026-09-12",
+  "last_verified_date": null,
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">=6.8.11",

@@ -38,6 +38,10 @@ def fixture_mocked_helper(mocker: MockerFixture) -> Mock:
         side_effect=OpenCTIConnectorHelper.stix2_create_bundle
     )
     mocked_helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
+    # pycti's ``AppLogger`` only exposes these methods; a strict spec makes a
+    # call to a non-existent method (e.g. ``exception``) fail the test instead
+    # of silently passing on an auto-created MagicMock attribute.
+    mocked_helper.connector_logger = Mock(spec=["debug", "info", "warning", "error"])
     return mocked_helper
 
 
@@ -78,46 +82,14 @@ def fixture_host_ipv4() -> HostEnrichment:
 
 
 @pytest.fixture
-def get_host():
+def get_host(host_ipv4: HostEnrichment):
     with patch(
         "censys_platform.global_data.GlobalData.get_host_enrichment"
     ) as mock_get_host_enrichment:
-        host = HostEnrichment(
-            ip="1.1.1.1",
-            location=Location(
-                city="Brisbane",
-                continent="Oceania",
-                coordinates=Coordinates(latitude=-27.47, longitude=153.02),
-                country="Australia",
-                province="Queensland",
-            ),
-            dns=HostDNS(
-                names=["guestcontroller.sa.gov.au", "matrix.cyops.cloud"],
-            ),
-            autonomous_system=Routing(
-                asn=13335,
-                bgp_prefix="1.1.1.0/24",
-                country_code="US",
-                description="CLOUDFLARENET",
-                name="CLOUDFLARENET",
-            ),
-            labels=[
-                Label(value="BULLETPROOF"),
-                Label(value="BULLETPROOF"),
-                Label(value=""),
-            ],
-            services=[
-                HostEnrichmentService(
-                    port=443,
-                    scan_time="2025-11-03T12:35:48Z",
-                    labels=[Label(value="REMOTE_ACCESS")],
-                )
-            ],
-        )
         mock_result = MagicMock()
-        mock_result.result.result.resource = host
+        mock_result.result.result.resource = host_ipv4
         mock_get_host_enrichment.return_value = mock_result
-        yield host
+        yield host_ipv4
 
 
 @pytest.fixture

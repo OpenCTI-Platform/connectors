@@ -6,6 +6,7 @@ from censys_enrichmentapis.builders.base import AreaStixBuilder, StixBuildContex
 from censys_platform import HostEnrichmentService, Reputation, Service, Webproperty
 from connectors_sdk.models import (
     AttackPattern,
+    BaseIdentifiedEntity,
     ExternalReference,
     Malware,
     Note,
@@ -33,14 +34,48 @@ _KNOWN_MALWARE_TYPES = frozenset(member.value for member in MalwareType)
 
 
 class ServiceStixBuilder(AreaStixBuilder):
+    """Build the STIX objects derived from Censys services and web properties.
+
+    Censys reports the same software, CVE, malware or tactic on several
+    services (or several threats) of one host. Every entity created here is
+    therefore cached by its natural key for the duration of a conversion so
+    the bundle carries one object and one relationship per distinct pair
+    instead of one copy per occurrence.
+    """
+
     def __init__(self, context: StixBuildContext) -> None:
         super().__init__(context)
+        self._software_by_key: dict[tuple[str | None, ...], Software] = {}
         self._vulnerabilities_by_identifier: dict[str, Vulnerability] = {}
-        self._vulnerability_relationships: set[tuple[str, str]] = set()
+        self._malware_by_name: dict[str, Malware] = {}
+        self._attack_patterns_by_tactic: dict[str, AttackPattern] = {}
+        self._relationships: set[tuple[str, str, str]] = set()
 
     def reset(self) -> None:
+        self._software_by_key.clear()
         self._vulnerabilities_by_identifier.clear()
-        self._vulnerability_relationships.clear()
+        self._malware_by_name.clear()
+        self._attack_patterns_by_tactic.clear()
+        self._relationships.clear()
+
+    def _add_unique_relationship(
+        self,
+        source: BaseIdentifiedEntity | Reference,
+        target: BaseIdentifiedEntity | Reference,
+        relationship_type: RelationshipType,
+    ) -> None:
+        relationship_key = (str(source.id), str(target.id), relationship_type.value)
+        if relationship_key in self._relationships:
+            return
+        self._relationships.add(relationship_key)
+        self.bundle.append(
+            Relationship(
+                source=source,
+                target=target,
+                type=relationship_type,
+                **self.common_props,
+            )
+        )
 
     def add_software(
         self,
@@ -53,24 +88,19 @@ class ServiceStixBuilder(AreaStixBuilder):
         if not name:
             return None
 
-        software = Software(
-            name=name,
-            vendor=vendor,
-            cpe=cpe,
-            version=version,
-            **self.common_props,
-        )
-        self.bundle.extend(
-            [
-                software,
-                Relationship(
-                    source=observable,
-                    target=software,
-                    type=RelationshipType.RELATED_TO,
-                    **self.common_props,
-                ),
-            ]
-        )
+        software_key = (name, vendor, cpe, version)
+        software = self._software_by_key.get(software_key)
+        if software is None:
+            software = Software(
+                name=name,
+                vendor=vendor,
+                cpe=cpe,
+                version=version,
+                **self.common_props,
+            )
+            self._software_by_key[software_key] = software
+            self.bundle.append(software)
+        self._add_unique_relationship(observable, software, RelationshipType.RELATED_TO)
         return software
 
     def add_vulnerability(
@@ -91,17 +121,9 @@ class ServiceStixBuilder(AreaStixBuilder):
             self._vulnerabilities_by_identifier[identifier] = vulnerability_entity
             self.bundle.append(vulnerability_entity)
 
-        relationship_key = (str(software.id), str(vulnerability_entity.id))
-        if relationship_key not in self._vulnerability_relationships:
-            self.bundle.append(
-                Relationship(
-                    source=software,
-                    target=vulnerability_entity,
-                    type=RelationshipType.HAS,
-                    **self.common_props,
-                )
-            )
-            self._vulnerability_relationships.add(relationship_key)
+        self._add_unique_relationship(
+            software, vulnerability_entity, RelationshipType.HAS
+        )
         return vulnerability_entity
 
     def _create_vulnerability(
@@ -115,7 +137,7 @@ class ServiceStixBuilder(AreaStixBuilder):
 
         return Vulnerability(
             name=identifier,
-            cwe_ids=self._string_values(self._get_value(vulnerability, "cwes")),
+            cwe_ids=self._cwe_ids(self._get_value(vulnerability, "cwes")),
             epss_score=self._get_value(epss, "score"),
             epss_percentile=self._get_value(epss, "percentile"),
             is_cisa_kev=bool(self._get_value(vulnerability, "kev")),
@@ -495,31 +517,15 @@ class ServiceStixBuilder(AreaStixBuilder):
 
             malware = self._add_threat_malware(threat)
             if malware:
-                self.bundle.extend(
-                    [
-                        malware,
-                        Relationship(
-                            source=observable,
-                            target=malware,
-                            type=RelationshipType.RELATED_TO,
-                            **self.common_props,
-                        ),
-                    ]
+                self._add_unique_relationship(
+                    observable, malware, RelationshipType.RELATED_TO
                 )
 
             for tactic in self._get_value(threat, "tactic") or []:
                 attack_pattern = self._add_threat_attack_pattern(tactic)
                 if attack_pattern:
-                    self.bundle.extend(
-                        [
-                            attack_pattern,
-                            Relationship(
-                                source=observable,
-                                target=attack_pattern,
-                                type=RelationshipType.RELATED_TO,
-                                **self.common_props,
-                            ),
-                        ]
+                    self._add_unique_relationship(
+                        observable, attack_pattern, RelationshipType.RELATED_TO
                     )
 
             threat_note = self._build_threat_note(
@@ -533,12 +539,17 @@ class ServiceStixBuilder(AreaStixBuilder):
                 self.bundle.append(threat_note)
 
     def _add_threat_malware(self, threat: object) -> Malware | None:
+        # ``threat.malware`` is a ``ThreatMalware`` model once deserialized by
+        # censys-platform and a plain dict in raw payloads; ``_get_value``
+        # reads both shapes.
         malware_data = self._get_value(threat, "malware")
-        if not isinstance(malware_data, dict):
+        primary_name = self._get_value(malware_data, "primary_name")
+        if not isinstance(primary_name, str) or not primary_name:
             return None
-        primary_name = malware_data.get("primary_name")
-        if not primary_name:
-            return None
+
+        malware = self._malware_by_name.get(primary_name)
+        if malware is not None:
+            return malware
 
         malware_type_enums = []
         for threat_type in self._get_value(threat, "type") or []:
@@ -547,24 +558,37 @@ class ServiceStixBuilder(AreaStixBuilder):
                 if normalized in _KNOWN_MALWARE_TYPES:
                     malware_type_enums.append(MalwareType(normalized))
 
-        return Malware(
+        description_parts = [
+            str(part)
+            for part in (
+                self._get_value(threat, "id"),
+                self._get_value(threat, "name"),
+            )
+            if part
+        ]
+        malware = Malware(
             name=primary_name,
             is_family=False,
-            aliases=malware_data.get("all_names", []),
+            aliases=self._string_values(self._get_value(malware_data, "all_names")),
             types=malware_type_enums or None,
-            description=(
-                f"{self._get_value(threat, 'id')}: "
-                f"{self._get_value(threat, 'name')}"
-            ),
+            description=": ".join(description_parts) or None,
             **self.common_props,
         )
+        self._malware_by_name[primary_name] = malware
+        self.bundle.append(malware)
+        return malware
 
     def _add_threat_attack_pattern(self, tactic: str) -> AttackPattern | None:
         if not isinstance(tactic, str) or not tactic.strip():
             return None
 
-        tactic_name = tactic.upper().replace("_", " ")
-        mitre_id = self._get_mitre_tactic_id(tactic)
+        tactic_key = tactic.strip().lower()
+        attack_pattern = self._attack_patterns_by_tactic.get(tactic_key)
+        if attack_pattern is not None:
+            return attack_pattern
+
+        tactic_name = tactic_key.upper().replace("_", " ")
+        mitre_id = self._get_mitre_tactic_id(tactic_key)
         external_refs = []
         if mitre_id:
             external_refs.append(
@@ -574,11 +598,14 @@ class ServiceStixBuilder(AreaStixBuilder):
                     url=f"https://attack.mitre.org/tactics/{mitre_id}/",
                 )
             )
-        return AttackPattern(
+        attack_pattern = AttackPattern(
             name=tactic_name,
             external_references=external_refs or None,
             **self.common_props,
         )
+        self._attack_patterns_by_tactic[tactic_key] = attack_pattern
+        self.bundle.append(attack_pattern)
+        return attack_pattern
 
     def _build_threat_note(
         self,
@@ -640,13 +667,16 @@ class ServiceStixBuilder(AreaStixBuilder):
             content_parts.append("\n\n**Evidence:**")
             content_parts.append("\n".join(evidence_rows))
 
-        if malware_data := self._get_value(threat, "malware"):
-            if isinstance(malware_data, dict) and malware_data.get("primary_name"):
-                content_parts.append(f"\n- **Malware:** {malware_data['primary_name']}")
-                if aliases := malware_data.get("all_names"):
-                    content_parts.append(f"- **Aliases:** {', '.join(aliases)}")
-                if updated := malware_data.get("last_updated_at"):
-                    content_parts.append(f"- **Last Updated:** {updated}")
+        malware_data = self._get_value(threat, "malware")
+        malware_name = self._get_value(malware_data, "primary_name")
+        if isinstance(malware_name, str) and malware_name:
+            content_parts.append(f"\n- **Malware:** {malware_name}")
+            if aliases := self._string_values(
+                self._get_value(malware_data, "all_names")
+            ):
+                content_parts.append(f"- **Aliases:** {', '.join(aliases)}")
+            if updated := self._get_value(malware_data, "last_updated_at"):
+                content_parts.append(f"- **Last Updated:** {updated}")
 
         return Note(
             abstract=f"Service Threat: {threat_name}"
@@ -682,6 +712,13 @@ class ServiceStixBuilder(AreaStixBuilder):
         return mitre_map.get(tactic.lower())
 
     def _get_value(self, value: object, field: str) -> object | None:
+        """Read *field* from a dict or an SDK model; ``None`` when absent.
+
+        Unset censys-platform fields hold the ``UNSET`` sentinel, which is
+        falsy, so callers can safely chain ``or []`` / ``or {}`` on the result.
+        """
+        if value is None:
+            return None
         if isinstance(value, dict):
             return value.get(field)
         return getattr(value, field, None)
@@ -691,6 +728,21 @@ class ServiceStixBuilder(AreaStixBuilder):
             return None
         values = [item for item in value if isinstance(item, str)]
         return values or None
+
+    def _cwe_ids(self, value: object | None) -> list[str] | None:
+        """Extract CWE identifiers from Censys ``cwes`` entries.
+
+        Censys returns ``[{"entry": "CWE-79"}, ...]`` (``Cwe`` models or raw
+        dicts); plain strings are accepted too.
+        """
+        if not isinstance(value, list):
+            return None
+        cwe_ids = []
+        for item in value:
+            entry = item if isinstance(item, str) else self._get_value(item, "entry")
+            if isinstance(entry, str) and entry:
+                cwe_ids.append(entry)
+        return list(dict.fromkeys(cwe_ids)) or None
 
     def _cvss_severity(self, value: object | None) -> CvssSeverity | None:
         if not isinstance(value, str):

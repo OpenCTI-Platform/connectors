@@ -8,6 +8,7 @@ from censys_enrichmentapis.connector import Connector
 from censys_enrichmentapis.errors import (
     EntityNotInScopeError,
     EntityTypeNotSupportedError,
+    MarkingResolutionError,
     MaxTlpError,
 )
 from censys_enrichmentapis.settings import ConfigLoader
@@ -154,7 +155,7 @@ def test__process_max_tlp_error(mocked_helper: Mock) -> None:
         )
     assert exc_info.typename == "MaxTlpError"
     assert exc_info.value.args == (
-        "TLP [{'definition_type': 'TLP', 'definition': 'TLP:RED'}] of observable exceeds MAX TLP",
+        "TLP TLP:RED of observable exceeds MAX TLP TLP:AMBER",
     )
 
 
@@ -254,14 +255,111 @@ def test__process_includes_source_marking_definitions(
     )
 
     assert [definition["id"] for definition in result] == [tlp_id, pap_id]
-    assert result[0]["definition"] == {"tlp": "amber"}
-    assert result[1]["x_opencti_definition"] == "PAP:AMBER"
+    # Materialized exactly like pycti's ``prepare_export`` does for OpenCTI.
+    assert result[0] == {
+        "type": "marking-definition",
+        "spec_version": "2.1",
+        "id": tlp_id,
+        "created": "2017-01-20T00:00:00.000Z",
+        "definition_type": "tlp",
+        "name": "TLP:AMBER",
+        "definition": {"tlp": "amber"},
+    }
+    assert result[1]["definition_type"] == "pap"
+    assert result[1]["name"] == "PAP:AMBER"
 
 
 @pytest.mark.usefixtures("mock_config")
-def test__process_drops_unknown_unbundled_marking_refs(
+def test__process_materializes_custom_marking_from_object_marking(
     mocked_helper: Mock, mocker: MockerFixture
 ) -> None:
+    # A custom (statement-like) marking known only through ``objectMarking``
+    # must be materialized too, so derived objects keep the source marking.
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+    )
+    custom_id = "marking-definition--22222222-2222-4222-8222-222222222222"
+    generate = mocker.patch.object(
+        connector, "_generate_octi_objects", return_value=iter([])
+    )
+
+    result = connector._process(
+        observable={
+            "entity_type": "IPv4-Addr",
+            "objectMarking": [
+                {
+                    "definition_type": "statement",
+                    "definition": "Internal use only",
+                    "standard_id": custom_id,
+                    "created": "2026-01-01T00:00:00.000Z",
+                }
+            ],
+        },
+        stix_entity={"id": "ipv4-addr--example", "type": "ipv4-addr"},
+        original_stix_objects=[],
+    )
+
+    assert generate.call_args.kwargs["marking_refs"] == [custom_id]
+    assert result == [
+        {
+            "type": "marking-definition",
+            "spec_version": "2.1",
+            "id": custom_id,
+            "created": "2026-01-01T00:00:00.000Z",
+            "definition_type": "statement",
+            "name": "Internal use only",
+            "definition": {"statement": "internal use only"},
+        }
+    ]
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__process_does_not_bundle_already_bundled_marking_definitions(
+    mocked_helper: Mock, mocker: MockerFixture
+) -> None:
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+    )
+    tlp_id = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+    bundled_definition = {"type": "marking-definition", "id": tlp_id}
+    generate = mocker.patch.object(
+        connector, "_generate_octi_objects", return_value=iter([])
+    )
+
+    result = connector._process(
+        observable={
+            "entity_type": "IPv4-Addr",
+            "objectMarking": [
+                {
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                    "standard_id": tlp_id,
+                }
+            ],
+        },
+        stix_entity={
+            "id": "ipv4-addr--example",
+            "type": "ipv4-addr",
+            "object_marking_refs": [tlp_id],
+        },
+        original_stix_objects=[bundled_definition],
+    )
+
+    assert generate.call_args.kwargs["marking_refs"] == [tlp_id]
+    assert result == [bundled_definition]
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__process_refuses_unresolvable_marking_ref(
+    mocked_helper: Mock, mocker: MockerFixture
+) -> None:
+    # A source marking that is neither bundled nor described by
+    # ``objectMarking`` must never be dropped (which would let the derived
+    # objects fall back to TLP:CLEAR): the enrichment fails instead.
     connector = Connector(
         config=ConfigLoader(),
         helper=mocked_helper,
@@ -272,17 +370,42 @@ def test__process_drops_unknown_unbundled_marking_refs(
         connector, "_generate_octi_objects", return_value=iter([])
     )
 
-    connector._process(
+    with pytest.raises(MarkingResolutionError, match=unknown_id):
+        connector._process(
+            observable={"entity_type": "IPv4-Addr", "objectMarking": []},
+            stix_entity={
+                "id": "ipv4-addr--example",
+                "type": "ipv4-addr",
+                "object_marking_refs": [unknown_id],
+            },
+            original_stix_objects=[],
+        )
+
+    generate.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_config")
+def test__process_unmarked_source_uses_default_marking(
+    mocked_helper: Mock, mocker: MockerFixture
+) -> None:
+    connector = Connector(
+        config=ConfigLoader(),
+        helper=mocked_helper,
+        client=Mock(),
+    )
+    generate = mocker.patch.object(
+        connector, "_generate_octi_objects", return_value=iter([])
+    )
+
+    result = connector._process(
         observable={"entity_type": "IPv4-Addr", "objectMarking": []},
-        stix_entity={
-            "id": "ipv4-addr--example",
-            "type": "ipv4-addr",
-            "object_marking_refs": [unknown_id],
-        },
+        stix_entity={"id": "ipv4-addr--example", "type": "ipv4-addr"},
         original_stix_objects=[],
     )
 
+    # No refs -> the builder falls back to the connector's TLP:CLEAR marking.
     assert generate.call_args.kwargs["marking_refs"] == []
+    assert result == []
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -358,6 +481,7 @@ def test__message_callback_in_playbook(mocked_helper: Mock) -> None:
     res = connector._message_callback(
         {
             "stix_objects": [],
+            "stix_entity": {"id": "ipv4-addr--example", "type": "ipv4-addr"},
             "enrichment_entity": {
                 "entity_type": "wrong-type",
                 "objectMarking": [
@@ -367,6 +491,11 @@ def test__message_callback_in_playbook(mocked_helper: Mock) -> None:
         }
     )
     assert res == "Sending 0 stix bundle(s) for worker import"
+    # The failure is logged through a method pycti's logger actually exposes.
+    mocked_helper.connector_logger.error.assert_called_once_with(
+        "Error processing message",
+        {"error": "Unsupported entity type: wrong-type"},
+    )
 
 
 @pytest.mark.usefixtures("mock_config")
