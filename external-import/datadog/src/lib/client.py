@@ -277,7 +277,7 @@ class DataDogClient:
                 # forever. Operators who genuinely need a larger
                 # window should narrow it via
                 # ``DATADOG_IMPORT_START_DATE`` /
-                # ``DATADOG_IMPORT_INTERVAL`` or tighten filters
+                # ``CONNECTOR_DURATION_PERIOD`` or tighten filters
                 # rather than trust a silent truncation.
                 if len(all_signals) >= self._MAX_SIGNALS_PER_CYCLE:
                     self.helper.log_error(
@@ -286,7 +286,7 @@ class DataDogClient:
                         f"after {len(all_signals)} signal(s); the state cursor "
                         "will NOT be advanced so the same window is retried on "
                         "the next cycle. Narrow DATADOG_IMPORT_START_DATE / "
-                        "DATADOG_IMPORT_INTERVAL or tighten "
+                        "CONNECTOR_DURATION_PERIOD or tighten "
                         "DATADOG_ALERT_PRIORITIES / DATADOG_ALERT_TAGS_FILTER "
                         "to bring the per-cycle volume back under the cap."
                     )

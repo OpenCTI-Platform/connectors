@@ -7,14 +7,13 @@ connector:
   # name: 'DataDog'
   # scope: 'stix2'
   # log_level: 'error'
-  # duration_period: 'PT1H' # Not used for scheduling, see datadog.import_interval
+  # duration_period: 'PT1H' # ISO8601 format
 
 datadog:
   token: 'ChangeMe'
   app_key: 'ChangeMe'
   # api_base_url: 'https://api.datadoghq.com'
   # app_base_url: 'https://app.datadoghq.com'
-  # import_interval: 60
   # import_start_date: '2024-01-01T00:00:00Z'
   # max_tlp: 'TLP:AMBER'
   # batch_size: 100
