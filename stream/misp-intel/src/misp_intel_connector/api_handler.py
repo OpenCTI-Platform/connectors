@@ -629,9 +629,7 @@ class MispApiHandler:
                 # A tag that merely already existed on the event and also
                 # happens to be in the new payload is deliberately left out
                 # - it was never actually added by the connector.
-                kept_managed_tag_names = (
-                    previously_managed_tag_names & new_tag_name_set
-                )
+                kept_managed_tag_names = previously_managed_tag_names & new_tag_name_set
                 newly_added_tag_names = new_tag_name_set - pre_existing_tag_names
                 managed_tag_names_to_persist = (
                     kept_managed_tag_names
