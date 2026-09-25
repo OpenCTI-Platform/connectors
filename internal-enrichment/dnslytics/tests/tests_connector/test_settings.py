@@ -20,6 +20,12 @@ MINIMAL = {
     "dnslytics": {"api_key": "test-api-key"},
 }
 
+# What XTM Composer provides from the catalog form: no CONNECTOR_ID
+COMPOSER = {
+    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+    "dnslytics": {"api_key": "test-api-key"},
+}
+
 
 @pytest.mark.parametrize(
     "settings_dict",
@@ -44,6 +50,7 @@ MINIMAL = {
             id="full_valid_settings_dict",
         ),
         pytest.param(MINIMAL, id="minimal_valid_settings_dict"),
+        pytest.param(COMPOSER, id="composer_settings_without_connector_id"),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -64,6 +71,16 @@ def test_settings_defaults_follow_the_rfc():
     assert settings.dnslytics.max_tlp_level == "green"
     assert settings.dnslytics.output_tlp_level == "clear"
     assert str(settings.dnslytics.api_base_url) == "https://api.dnslytics.net/"
+
+
+def test_connector_id_has_a_stable_uuid_default():
+    import uuid
+
+    first = fake_settings(COMPOSER).connector.id
+    second = fake_settings(COMPOSER).connector.id
+
+    assert first == second
+    assert uuid.UUID(first).version == 4
 
 
 def test_api_key_is_never_shown():

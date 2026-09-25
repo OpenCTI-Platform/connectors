@@ -92,6 +92,7 @@ class DnslyticsConnector:
     def _send_bundle(self, stix_objects: list) -> None:
         bundle = self.helper.stix2_create_bundle(stix_objects)
         self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)
+        self._bundle_sent = True
 
     def _run_query(self, indicator: dict, stix_objects: list) -> str:
         query = indicator["pattern"]
@@ -156,7 +157,18 @@ class DnslyticsConnector:
         """
         Callback of `helper.listen`. The returned string is the work message;
         an exception marks the work in error with its message.
+        In a playbook, the next step needs a bundle even when the enrichment fails:
+        the original one is then sent back unchanged before the error is raised.
         """
+        self._bundle_sent = False
+        try:
+            return self._process(data)
+        except Exception:
+            if not data.get("event_type") and not self._bundle_sent:
+                self._send_bundle(list(data["stix_objects"]))
+            raise
+
+    def _process(self, data: dict) -> str:
         opencti_entity = data["enrichment_entity"]
         stix_objects = data["stix_objects"]
         indicator = data["stix_entity"]

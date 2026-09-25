@@ -143,7 +143,7 @@ class ConverterToStix:
             errors = []
             if failed:
                 errors.append(f"IP2ASN failed for {', '.join(failed)}")
-            if nameless_as and not providers:
+            if nameless_as:
                 errors.append("AS has no name, no provider label")
             if errors:
                 result.incomplete[hit.domain] = "; ".join(errors)

@@ -378,3 +378,61 @@ def test_vocabulary_without_capability_logs_the_fix_and_keeps_running():
 
     warning = helper.connector_logger.warning.call_args.args[0]
     assert "Settings > Vocabularies > pattern_type_ov" in warning
+
+
+def test_domain_with_one_nameless_as_fails_even_if_another_as_is_named(fake_dns):
+    routes = default_routes()
+    # IPv4 keeps its named AS (Hostinger), IPv6 gets an AS without a name
+    routes["/v1/ip2asn/2a02:4780:9:1582:0:26f7:e9b3:2"] = {
+        "ip": "2a02:4780:9:1582:0:26f7:e9b3:2",
+        "announced": True,
+        "asn": 64501,
+        "shortname": "",
+    }
+    connector, _ = make_connector(routes=routes)
+
+    with pytest.raises(ValueError, match="armeniadaily.am: AS has no name"):
+        connector.process_message(indicator_event())
+
+
+def test_playbook_gets_original_bundle_when_the_api_fails():
+    routes = default_routes()
+    routes["/v2/dataset/domains"] = FakeResponse(
+        403, {"status": "error", "data": "Forbidden access denied!"}
+    )
+    connector, helper = make_connector(routes=routes)
+    event = indicator_event(event_type=None)
+    original = list(event["stix_objects"])
+
+    with pytest.raises(Exception, match="Forbidden access denied!"):
+        connector.process_message(event)
+
+    helper.send_stix2_bundle.assert_called_once()
+    assert sent_objects(helper) == original
+
+
+def test_playbook_gets_original_bundle_when_tlp_is_too_high():
+    connector, helper = make_connector()
+    markings = [{"definition_type": "TLP", "definition": "TLP:RED"}]
+    event = indicator_event(markings=markings, event_type=None)
+
+    with pytest.raises(ValueError, match="MAX TLP"):
+        connector.process_message(event)
+
+    assert sent_objects(helper) == event["stix_objects"]
+    assert connector.client.session.calls == []
+
+
+def test_playbook_failure_after_sending_does_not_send_twice(fake_dns):
+    routes = default_routes()
+    failed = FakeResponse(403, {"status": "error", "data": "Forbidden access denied!"})
+    routes["/v1/ip2asn/45.84.204.99"] = failed
+    routes["/v1/ip2asn/2a02:4780:9:1582:0:26f7:e9b3:2"] = failed
+    connector, helper = make_connector(routes=routes)
+
+    with pytest.raises(ValueError, match="IP2ASN failed"):
+        connector.process_message(indicator_event(event_type=None))
+
+    # Only the enriched bundle, not the original one on top of it
+    helper.send_stix2_bundle.assert_called_once()
+    assert by_type(sent_objects(helper), "domain-name")

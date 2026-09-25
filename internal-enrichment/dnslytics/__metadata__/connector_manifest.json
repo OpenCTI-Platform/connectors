@@ -3,7 +3,7 @@
   "slug": "dnslytics",
   "description": "Run DNSlytics domain searches from OpenCTI. A hunting rule is stored as an Indicator with pattern type `dnslytics` and the search query as its pattern, for example `(name:*daily* OR name:*news*) AND (name:*armenia*)`. Enriching the Indicator makes one DNSlytics `dataset/domains` call (10 credits, first page, up to 1,000 domains) and creates one Domain-Name per hit, linked by Indicator `based-on` Domain-Name and labelled `dnslytics:active` or `dnslytics:dropped`. For active domains, the connector resolves the IPs (DNS), looks up the announcing Autonomous System (DNSlytics IP2ASN, free) and adds a `provider:<AS name>` label, so a widget or filter shows which hosting providers a campaign uses. The connector registers the `dnslytics` pattern type in OpenCTI at start-up and works in playbooks.",
   "short_description": "Run DNSlytics domain searches stored as Indicators and ingest the matching domains with their IPs, AS and hosting provider.",
-  "logo": null,
+  "logo": "internal-enrichment/dnslytics/__metadata__/logo.png",
   "use_cases": [
     "Infrastructure & Attack Surface Visibility",
     "FIMI & Disinformation"

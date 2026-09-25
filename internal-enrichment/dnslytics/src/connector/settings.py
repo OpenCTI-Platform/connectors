@@ -17,6 +17,10 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     to the configuration for connectors of type `INTERNAL_ENRICHMENT`.
     """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="0bf1d94c-f64c-4b96-8f6d-84f0b5ea34b4",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="DNSlytics",
