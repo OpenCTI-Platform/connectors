@@ -235,18 +235,52 @@ class STIXtoMISPConverter:
     ) -> None:
         """
         Add MISP tags derived from object_marking_refs to a taggable MISP
-        object (MISPEvent, MISPAttribute, or MISPObject all expose add_tag).
+        object that exposes add_tag() - namely MISPEvent or MISPAttribute.
+
+        Note: pymisp.MISPObject does NOT implement add_tag() (tagging is not
+        supported at the MISP Object level - see MISP/PyMISP#168), so this
+        must never be called with a MISPObject instance. For MISP Objects,
+        use _add_marking_tags_to_object_attributes() instead, which tags
+        every Attribute the Object contains.
 
         Markings whose definition_type was not in the allow-list (i.e. not
         present in self.marking_lookup) are silently skipped.
 
-        :param taggable: Any MISP object exposing add_tag()
+        :param taggable: A MISPEvent or MISPAttribute instance
         :param object_marking_refs: List of marking-definition STIX ids
         """
         for marking_ref in object_marking_refs or []:
             tag = self.marking_lookup.get(marking_ref)
             if tag:
                 taggable.add_tag(tag)
+
+    def _add_marking_tags_to_object_attributes(
+        self, misp_obj: MISPObject, object_marking_refs: Optional[List[str]]
+    ) -> None:
+        """
+        Add MISP tags derived from object_marking_refs to every Attribute of
+        a MISP Object.
+
+        pymisp.MISPObject does not support add_tag() at the Object level
+        (see MISP/PyMISP#168 - "Not supported yet"), only MISPEvent and
+        MISPAttribute do. To still surface the marking on a MISP Object
+        (e.g. an ip-port object built from an ipv4-addr observable), the tag
+        is applied to each of the Object's individual Attributes instead.
+
+        :param misp_obj: A MISPObject instance
+        :param object_marking_refs: List of marking-definition STIX ids
+        """
+        tags = [
+            self.marking_lookup[marking_ref]
+            for marking_ref in object_marking_refs or []
+            if marking_ref in self.marking_lookup
+        ]
+        if not tags:
+            return
+
+        for attribute in misp_obj.attributes:
+            for tag in tags:
+                attribute.add_tag(tag)
 
     def convert_bundle_to_event(
         self, stix_bundle: Dict, custom_uuid: Optional[str] = None
@@ -715,8 +749,12 @@ class STIXtoMISPConverter:
                 misp_obj.comment = " | ".join(comments)
 
             # Convert the observable's object_marking_refs (e.g. TLP/PAP) to
-            # MISP object-level tags (see #7011)
-            self._add_marking_tags(misp_obj, observable.get("object_marking_refs"))
+            # MISP tags on every attribute of the object (see #7011).
+            # Note: MISPObject itself does not support add_tag() in pymisp
+            # (MISP/PyMISP#168), so tags are applied at the attribute level.
+            self._add_marking_tags_to_object_attributes(
+                misp_obj, observable.get("object_marking_refs")
+            )
 
             # Add the object to the event
             if misp_obj.attributes:
