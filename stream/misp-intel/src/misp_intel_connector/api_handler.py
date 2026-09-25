@@ -96,6 +96,22 @@ def _tag_names(tags) -> List[str]:
 # recorded), reconciliation behaves correctly. This is intentional: it is
 # strictly safer to under-clean once on upgrade than to guess and risk
 # deleting a manually-added tag.
+#
+# Known accepted limitation (also from Copilot review on PR #7764, "Manual
+# tags may be deleted due to ambiguous ownership"): MISP's own EventTag
+# association is identified purely by tag *name* - the MISP API exposes no
+# per-tag-instance provenance/owner metadata, so this connector's state can
+# likewise only record tag names, not a tamper-proof identity per tag
+# instance. If an analyst manually removes a connector-managed tag (e.g.
+# "tlp:red") and later manually re-adds a tag with the exact same name to
+# the same event, this connector cannot distinguish it from the tag it
+# originally added, and a subsequent reconciliation may remove that
+# manually re-added tag. This is a limitation of MISP's data model (no
+# tag-instance-level ownership is exposed anywhere in the API this
+# connector can rely on), not something fixable purely in this connector's
+# code - see the README "Known limitations" section for the
+# user-facing wording and the recommended mitigation (avoid manually
+# reusing a tag name this connector manages on an event it syncs).
 _STATE_MANAGED_TAGS_KEY = "misp_connector_managed_event_tags"
 
 
@@ -546,6 +562,18 @@ class MispApiHandler:
             #     for some other reason (e.g. manually added) is never
             #     promoted to connector-managed just because it also
             #     happens to be present in the new payload.
+            #
+            # Known accepted limitation ("Manual tags may be deleted due to
+            # ambiguous ownership", Copilot review on PR #7764): this
+            # reconciliation is name-based, because MISP's own EventTag
+            # association carries no per-tag-instance provenance/owner
+            # metadata - only a name. If an analyst manually removes a
+            # connector-managed tag and later manually re-adds a tag with
+            # the exact same name to the same event, this code cannot tell
+            # it apart from the tag the connector originally added, and may
+            # remove it on a subsequent stale-tag cleanup. See
+            # _STATE_MANAGED_TAGS_KEY's docstring and the README "Known
+            # limitations" section.
             event_level_tag_names = (
                 _tag_names(event_data["Tag"]) if "Tag" in event_data else None
             )
