@@ -1,0 +1,18 @@
+{
+  "status": "succeed",
+  "data": {
+    "question": {
+      "query": "(name:*daily* OR name:*news*) AND (name:*armenia*)",
+      "page": 1
+    },
+    "typeinfo": "dataset/domains",
+    "ndomains": 5,
+    "domains": [
+      {"domain": "armeniadaily.am", "active": true},
+      {"domain": "armenianews.example", "active": true},
+      {"domain": "newsarmenia.example", "active": true},
+      {"domain": "dailyarmenia.example", "active": false},
+      {"domain": "armenia-daily.example", "active": true}
+    ]
+  }
+}
