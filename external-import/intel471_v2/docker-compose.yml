@@ -20,6 +20,12 @@ services:
       - INTEL471_INITIAL_HISTORY_CVES=0 # Optional (default: 0)
       - INTEL471_INTERVAL_REPORTS=120 # Optional (default: 0)
       - INTEL471_INITIAL_HISTORY_REPORTS=0 # Optional (default: 0)
+      - INTEL471_INTERVAL_ALERTS=0 # Optional (default: 0; Verity471 only, 0 disables the stream)
+      - INTEL471_INITIAL_HISTORY_ALERTS=0 # Optional (default: 0)
+      # - INTEL471_WATCHER_GROUP_IDS= # Optional (Verity471 only; comma-separated watcher group IDs)
+      # - INTEL471_WATCHER_IDS= # Optional (Verity471 only; comma-separated watcher IDs)
+      # - INTEL471_STATUSES= # Optional (Verity471 only; comma-separated: generated,needs_action,in_progress,completed,false_positive)
+      # - INTEL471_IS_TRASHED_INCLUDED=false # Optional (default: false; Verity471 only)
       # - INTEL471_PROXY=null # Optional (default: null)
       # - INTEL471_IOC_SCORE=70 # Optional (default: 70)
     restart: always

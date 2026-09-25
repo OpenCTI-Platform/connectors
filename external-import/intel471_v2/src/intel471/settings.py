@@ -125,6 +125,39 @@ class Intel471_V2Config(BaseConfigModel):
         "A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
         default=0,
     )
+    interval_alerts: int = Field(
+        description="How often watcher alerts should be fetched in minutes (Verity471 only). "
+        "Defaults to `0`, which leaves the stream disabled; set a non-zero interval to enable it.",
+        default=0,
+    )
+    initial_history_alerts: EpochMillis = Field(
+        description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
+        "the watcher alerts should be fetched from on the connector's first run (Verity471 only). "
+        "If not set, they will be fetched from the connector's start date. Excludes historical dates. "
+        "A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
+        default=0,
+    )
+    watcher_group_ids: ListFromString = Field(
+        description="Optional comma-separated list of watcher group IDs to restrict the alerts "
+        "stream to (Verity471 only). If not set, alerts from all watcher groups are fetched.",
+        default=[],
+    )
+    watcher_ids: ListFromString = Field(
+        description="Optional comma-separated list of watcher IDs to restrict the alerts stream "
+        "to (Verity471 only). If not set, alerts from all watchers are fetched.",
+        default=[],
+    )
+    statuses: ListFromString = Field(
+        description="Optional comma-separated list of alert statuses to restrict the alerts stream "
+        "to (Verity471 only). Allowed values: `generated`, `needs_action`, `in_progress`, "
+        "`completed`, `false_positive`. If not set, alerts of all statuses are fetched.",
+        default=[],
+    )
+    is_trashed_included: bool = Field(
+        description="Whether to include trashed alerts in the alerts stream (Verity471 only). "
+        "Defaults to `false`.",
+        default=False,
+    )
     proxy: HttpUrl | None = Field(
         description="Optional Proxy URL, for example `http://user:pass@localhost:3128`",
         default=None,
