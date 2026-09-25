@@ -17,6 +17,25 @@ class MispApiHandlerError(Exception):
     pass
 
 
+def _tag_names(tags) -> List[str]:
+    """
+    Normalize a list of tags coming from a flat event dict (as produced by
+    AbstractMISP.to_dict()) into a list of tag name strings.
+
+    Each entry is either a dict such as {"name": "tlp:red", ...} (the usual
+    shape produced by MISPTag.to_dict()) or already a plain string.
+
+    :param tags: List of tag dicts/strings (possibly None)
+    :return: List of tag name strings, empty strings/None filtered out
+    """
+    names = []
+    for tag in tags or []:
+        name = tag.get("name") if isinstance(tag, dict) else tag
+        if name:
+            names.append(name)
+    return names
+
+
 class MispApiHandler:
     """
     Handler for MISP API operations
@@ -166,7 +185,14 @@ class MispApiHandler:
                         "distribution", self.config.misp.distribution_level
                     )
 
-                    misp_event.add_attribute(**attr.to_dict())
+                    added_attr = misp_event.add_attribute(**attr.to_dict())
+
+                    # Re-apply tags carried by the source attribute data
+                    # (e.g. TLP/PAP marking tags, see #7011). These are lost
+                    # if only attr.to_dict() is forwarded, since to_dict()
+                    # does not round-trip through add_attribute() tag-aware.
+                    for tag_name in _tag_names(attr_data.get("Tag")):
+                        added_attr.add_tag(tag_name)
 
             # Add objects
             if "Object" in event_data:
@@ -179,13 +205,20 @@ class MispApiHandler:
 
                     # Add object attributes
                     for obj_attr in obj_data.get("Attribute", []):
-                        misp_obj.add_attribute(
+                        added_obj_attr = misp_obj.add_attribute(
                             object_relation=obj_attr.get("object_relation"),
                             simple_value=obj_attr.get("value"),
                             type=obj_attr.get("type"),
                             to_ids=obj_attr.get("to_ids", False),
                             comment=obj_attr.get("comment", ""),
                         )
+
+                        # Re-apply tags carried by the source object-attribute
+                        # data (e.g. TLP/PAP marking tags applied to each
+                        # Attribute of a MISP Object, see #7011 and
+                        # STIXtoMISPConverter._add_marking_tags_to_object_attributes).
+                        for tag_name in _tag_names(obj_attr.get("Tag")):
+                            added_obj_attr.add_tag(tag_name)
 
                     misp_event.add_object(misp_obj)
 
@@ -285,7 +318,7 @@ class MispApiHandler:
             # Add new attributes
             if "Attribute" in event_data:
                 for attr_data in event_data["Attribute"]:
-                    existing_event.add_attribute(
+                    added_attr = existing_event.add_attribute(
                         type=attr_data.get("type"),
                         value=attr_data.get("value"),
                         category=attr_data.get("category", "Other"),
@@ -295,6 +328,11 @@ class MispApiHandler:
                             "distribution", self.config.misp.distribution_level
                         ),
                     )
+
+                    # Re-apply tags carried by the source attribute data
+                    # (e.g. TLP/PAP marking tags, see #7011).
+                    for tag_name in _tag_names(attr_data.get("Tag")):
+                        added_attr.add_tag(tag_name)
 
             # Add new objects
             if "Object" in event_data:
@@ -307,13 +345,18 @@ class MispApiHandler:
 
                     # Add object attributes
                     for obj_attr in obj_data.get("Attribute", []):
-                        misp_obj.add_attribute(
+                        added_obj_attr = misp_obj.add_attribute(
                             object_relation=obj_attr.get("object_relation"),
                             simple_value=obj_attr.get("value"),
                             type=obj_attr.get("type"),
                             to_ids=obj_attr.get("to_ids", False),
                             comment=obj_attr.get("comment", ""),
                         )
+
+                        # Re-apply tags carried by the source object-attribute
+                        # data (e.g. TLP/PAP marking tags, see #7011).
+                        for tag_name in _tag_names(obj_attr.get("Tag")):
+                            added_obj_attr.add_tag(tag_name)
 
                     existing_event.add_object(misp_obj)
 
