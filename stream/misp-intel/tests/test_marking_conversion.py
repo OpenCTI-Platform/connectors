@@ -11,7 +11,6 @@ from unittest.mock import MagicMock
 import pytest
 from misp_intel_connector.stix_to_misp_converter import STIXtoMISPConverter
 
-
 TLP_RED_ID = "marking-definition--e828b379-4e03-4974-9ac4-e53a884c97c1"
 PAP_AMBER_ID = "marking-definition--5e5aa61b-eeb2-4a0f-8ed3-9bec293a02b1"
 CUSTOM_MARKING_ID = "marking-definition--11111111-2222-3333-4444-555555555555"
