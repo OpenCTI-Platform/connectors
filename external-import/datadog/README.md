@@ -8,7 +8,7 @@ OpenCTI external-import connector that ingests Security Signals raised by DataDo
 |----------|-------|
 | Connector Type | `EXTERNAL_IMPORT` |
 | Connector Scope | `stix2` |
-| Trigger | Polling loop (default every 60 min — configurable via `DATADOG_IMPORT_INTERVAL`) |
+| Trigger | Polling loop (default every hour — configurable via `CONNECTOR_DURATION_PERIOD`) |
 | TLP Support | Configurable via `DATADOG_MAX_TLP` (default: `TLP:AMBER`) |
 | Source API | DataDog Security Monitoring v2 (`/api/v2/security_monitoring/signals`) |
 
@@ -236,9 +236,9 @@ Observables are automatically extracted from security signals:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `CONNECTOR_DURATION_PERIOD` | `PT1H` | ISO 8601 duration awaited between two import cycles. Replaces the deprecated `DATADOG_IMPORT_INTERVAL` (minutes), which is still accepted and automatically migrated to this variable with a deprecation warning |
 | `DATADOG_API_BASE_URL` | `https://api.datadoghq.com` | DataDog API base URL (use `api.datadoghq.eu`, `api.us3.datadoghq.com`, etc. for non-US1 sites) |
 | `DATADOG_APP_BASE_URL` | `https://app.datadoghq.com` | DataDog app URL used to build the external references pointing back to signals / incidents |
-| `DATADOG_IMPORT_INTERVAL` | `60` | Import interval in minutes |
 | `DATADOG_IMPORT_START_DATE` | 24h ago | ISO 8601 start date for the first import cycle (e.g. `2024-01-01T00:00:00Z`); subsequent runs resume from the state-tracked timestamp |
 | `DATADOG_MAX_TLP` | `TLP:AMBER` | TLP marking applied to every emitted STIX object. Accepts `TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED` |
 | `DATADOG_BATCH_SIZE` | `100` | Page size (`page[limit]`) used when paginating the v2 Security Monitoring API (DataDog caps this at 1000) |
@@ -270,7 +270,7 @@ cp config.yml.sample config.yml
 python connector.py
 ```
 
-When `src/config.yml` exists it is loaded by the connector; when it is absent (the typical Docker / Kubernetes deployment) every key is resolved from the matching environment variable instead. The connector loops on `DATADOG_IMPORT_INTERVAL` minutes; use `Ctrl+C` to stop it.
+When `src/config.yml` exists it is loaded by the connector; when it is absent (the typical Docker / Kubernetes deployment) every key is resolved from the matching environment variable instead. The connector loops on `CONNECTOR_DURATION_PERIOD`; use `Ctrl+C` to stop it.
 
 ## Project Structure
 
