@@ -168,9 +168,16 @@ class MispApiHandler:
             if "date" in event_data:
                 misp_event.date = event_data["date"]
 
+            # event_data["Tag"] is a list of flat dicts such as
+            # {"name": "tlp:red", ...} (the shape produced by
+            # AbstractMISP.to_dict(), see convert_bundle_to_event()), not
+            # MISPTag objects or bare strings - normalize with _tag_names()
+            # before calling add_tag() (same fix as update_event(), see
+            # #7011 Copilot review finding "Normalize event tag dictionaries
+            # before adding them").
             if "Tag" in event_data:
-                for tag in event_data["Tag"]:
-                    misp_event.add_tag(tag)
+                for tag_name in _tag_names(event_data["Tag"]):
+                    misp_event.add_tag(tag_name)
 
             # Add attributes
             if "Attribute" in event_data:
