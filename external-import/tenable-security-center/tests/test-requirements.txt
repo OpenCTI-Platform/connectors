@@ -1,2 +1,3 @@
 # hack to be detected as a tested module by the connectors/run_test.sh script used in CI
 ./external-import/tenable-security-center/.[all]
+restfly
