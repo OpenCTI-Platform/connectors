@@ -8,4 +8,7 @@ services:
     volumes:
       - ../external-import/${CONNECTOR_NAME}/src:/opt/opencti-connector-${CONNECTOR_NAME}
       - ../external-import/${CONNECTOR_NAME}/tests:/opt/tests
+    env_file:
+      - ./secrets.env
+      - ./connector.env
     entrypoint: ["sh"]
