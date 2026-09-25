@@ -3,6 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from pycti import Identity as PyctiIdentity
+from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER
+from rflib.rf_to_stix2 import IPAddress as RFIPAddress
+from rflib.rf_to_stix2 import StixNote
+from rflib.rf_to_stix2 import Vulnerability as RFVulnerability
 from stix2 import (
     URL,
     AttackPattern,
@@ -21,10 +25,6 @@ from stix2 import (
     ThreatActor,
     Vulnerability,
 )
-
-from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER, StixNote
-from rflib.rf_to_stix2 import IPAddress as RFIPAddress
-from rflib.rf_to_stix2 import Vulnerability as RFVulnerability
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
