@@ -50,7 +50,7 @@
     },
     "CONNECTOR_DURATION_PERIOD": {
       "default": "PT1H",
-      "description": "The period of time to await between two runs of the connector. This connector drives its own polling loop from 'DATADOG_IMPORT_INTERVAL', so this value is only used to satisfy the manager-supported contract.",
+      "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
     },
@@ -77,9 +77,10 @@
       "type": "string"
     },
     "DATADOG_IMPORT_INTERVAL": {
-      "default": 60,
-      "description": "The interval, in minutes, between two runs of the connector.",
-      "type": "integer"
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
     "DATADOG_IMPORT_START_DATE": {
       "default": null,
