@@ -1,0 +1,11 @@
+services:
+  dev-connector:
+    build:
+      context: ../external-import/${CONNECTOR_NAME}
+      dockerfile: ../../docker-dev/Dockerfile
+      args:
+        CONNECTOR_NAME: ${CONNECTOR_NAME}
+    volumes:
+      - ../external-import/${CONNECTOR_NAME}/src:/opt/opencti-connector-${CONNECTOR_NAME}
+      - ../external-import/${CONNECTOR_NAME}/tests:/opt/tests
+    entrypoint: ["sh"]
