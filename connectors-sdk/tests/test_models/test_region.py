@@ -37,6 +37,7 @@ def test_region_to_stix2_object(
     """Test that Region to_stix2_object method returns correct STIX2.1 Location."""
     region = Region(
         name="Europe",
+        aliases=["Test alias"],
         author=fake_valid_organization_author,
         markings=fake_valid_tlp_markings,
         external_references=fake_valid_external_references,
@@ -61,5 +62,6 @@ def test_region_to_stix2_object(
         modified=region.modified,
         custom_properties=dict(
             x_opencti_location_type="Region",
+            x_opencti_aliases=["Test alias"],
         ),
     )

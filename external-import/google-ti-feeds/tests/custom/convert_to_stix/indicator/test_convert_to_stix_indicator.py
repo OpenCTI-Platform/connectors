@@ -42,6 +42,8 @@ class DummyConfig:
         self.indicator_types = ["file", "ip", "url", "domain"]
         self.indicator_import_start_date = timedelta(days=1)
         self.indicator_min_score = 0
+        self.indicator_require_malware_family = False
+        self.indicator_require_threat_actor = False
         self.report_import_start_date = timedelta(days=1)
         self.threat_actor_import_start_date = timedelta(days=1)
         self.malware_family_import_start_date = timedelta(days=1)
@@ -1048,3 +1050,243 @@ class TestConvertMinScoreFilter:
         result = _when_convert(converter, data)
         # Then – even a very low score entry is kept since the filter is disabled
         assert result  # noqa: S101
+
+
+# =====================
+# 27. convert – indicator_require_malware_family / indicator_require_threat_actor
+# =====================
+
+
+def _given_converter_with_association_filters(
+    logger: logging.Logger,
+    require_malware: bool = False,
+    require_threat_actor: bool = False,
+) -> ConvertToSTIXIndicator:
+    config = DummyConfig()
+    config.indicator_require_malware_family = require_malware
+    config.indicator_require_threat_actor = require_threat_actor
+    return ConvertToSTIXIndicator(
+        config=config,  # type: ignore[arg-type]
+        logger=logger,
+        tlp_level="white",
+    )
+
+
+def _given_relationships_with_malware_only() -> IOCDeltaRelationships:
+    return IOCDeltaRelationships(
+        malware_families=IOCDeltaRelationshipData(
+            data=[
+                IOCDeltaRelationshipItem(
+                    type="collection",
+                    id="malware--test",
+                    attributes=IOCDeltaRelationshipItemAttributes(name="TestMalware"),
+                )
+            ]
+        )
+    )
+
+
+def _given_relationships_with_threat_actor_only() -> IOCDeltaRelationships:
+    return IOCDeltaRelationships(
+        threat_actors=IOCDeltaRelationshipData(
+            data=[
+                IOCDeltaRelationshipItem(
+                    type="collection",
+                    id="threat-actor--test",
+                    attributes=IOCDeltaRelationshipItemAttributes(
+                        name="TestThreatActor"
+                    ),
+                )
+            ]
+        )
+    )
+
+
+def _given_relationships_with_both() -> IOCDeltaRelationships:
+    return IOCDeltaRelationships(
+        malware_families=IOCDeltaRelationshipData(
+            data=[
+                IOCDeltaRelationshipItem(
+                    type="collection",
+                    id="malware--test",
+                    attributes=IOCDeltaRelationshipItemAttributes(name="TestMalware"),
+                )
+            ]
+        ),
+        threat_actors=IOCDeltaRelationshipData(
+            data=[
+                IOCDeltaRelationshipItem(
+                    type="collection",
+                    id="threat-actor--test",
+                    attributes=IOCDeltaRelationshipItemAttributes(
+                        name="TestThreatActor"
+                    ),
+                )
+            ]
+        ),
+    )
+
+
+def _given_relationships_with_neither() -> IOCDeltaRelationships:
+    return IOCDeltaRelationships(
+        software_toolkits=IOCDeltaRelationshipData(
+            data=[
+                IOCDeltaRelationshipItem(
+                    type="collection",
+                    id="tool--test",
+                    attributes=IOCDeltaRelationshipItemAttributes(name="TestTool"),
+                )
+            ]
+        )
+    )
+
+
+class TestConvertAssociationFilter:
+    """Test convert() filtering IOC entries by association requirements."""
+
+    def test_no_filters_enabled_keeps_all(self, logger: logging.Logger) -> None:
+        # Given – both filters disabled (default)
+        converter = _given_converter_with_association_filters(logger)
+        data = _given_file_entry(relationships=_given_relationships_with_neither())
+        # When
+        result = _when_convert(converter, data)
+        # Then – entry is kept regardless of associations
+        assert result  # noqa: S101
+
+    def test_require_malware_with_malware_keeps(self, logger: logging.Logger) -> None:
+        # Given – require malware enabled, entry has malware association
+        converter = _given_converter_with_association_filters(
+            logger, require_malware=True
+        )
+        data = _given_file_entry(relationships=_given_relationships_with_malware_only())
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        assert result  # noqa: S101
+
+    def test_require_malware_without_malware_filters(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – require malware enabled, entry has no malware association
+        converter = _given_converter_with_association_filters(
+            logger, require_malware=True
+        )
+        data = _given_file_entry(
+            relationships=_given_relationships_with_threat_actor_only()
+        )
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        _then_returns_empty(result)
+
+    def test_require_threat_actor_with_threat_actor_keeps(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – require threat actor enabled, entry has threat actor association
+        converter = _given_converter_with_association_filters(
+            logger, require_threat_actor=True
+        )
+        data = _given_file_entry(
+            relationships=_given_relationships_with_threat_actor_only()
+        )
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        assert result  # noqa: S101
+
+    def test_require_threat_actor_without_threat_actor_filters(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – require threat actor enabled, entry has no threat actor association
+        converter = _given_converter_with_association_filters(
+            logger, require_threat_actor=True
+        )
+        data = _given_file_entry(relationships=_given_relationships_with_malware_only())
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        _then_returns_empty(result)
+
+    def test_both_required_with_malware_only_keeps(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – both filters enabled (OR logic), entry has malware only
+        converter = _given_converter_with_association_filters(
+            logger, require_malware=True, require_threat_actor=True
+        )
+        data = _given_file_entry(relationships=_given_relationships_with_malware_only())
+        # When
+        result = _when_convert(converter, data)
+        # Then – OR logic: malware is enough
+        assert result  # noqa: S101
+
+    def test_both_required_with_threat_actor_only_keeps(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – both filters enabled (OR logic), entry has threat actor only
+        converter = _given_converter_with_association_filters(
+            logger, require_malware=True, require_threat_actor=True
+        )
+        data = _given_file_entry(
+            relationships=_given_relationships_with_threat_actor_only()
+        )
+        # When
+        result = _when_convert(converter, data)
+        # Then – OR logic: threat actor is enough
+        assert result  # noqa: S101
+
+    def test_both_required_with_both_keeps(self, logger: logging.Logger) -> None:
+        # Given – both filters enabled, entry has both associations
+        converter = _given_converter_with_association_filters(
+            logger, require_malware=True, require_threat_actor=True
+        )
+        data = _given_file_entry(relationships=_given_relationships_with_both())
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        assert result  # noqa: S101
+
+    def test_both_required_with_neither_filters(self, logger: logging.Logger) -> None:
+        # Given – both filters enabled, entry has neither association
+        converter = _given_converter_with_association_filters(
+            logger, require_malware=True, require_threat_actor=True
+        )
+        data = _given_file_entry(relationships=_given_relationships_with_neither())
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        _then_returns_empty(result)
+
+    def test_require_malware_with_no_relationships_filters(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – require malware enabled, entry has no relationships at all
+        converter = _given_converter_with_association_filters(
+            logger, require_malware=True
+        )
+        data = _given_file_entry(relationships=None)
+        # When
+        result = _when_convert(converter, data)
+        # Then
+        _then_returns_empty(result)
+
+    def test_association_filter_combined_with_min_score(
+        self, logger: logging.Logger
+    ) -> None:
+        # Given – both score and association filters active (AND logic)
+        config = DummyConfig()
+        config.indicator_min_score = 50
+        config.indicator_require_malware_family = True
+        converter = ConvertToSTIXIndicator(
+            config=config,  # type: ignore[arg-type]
+            logger=logger,
+            tlp_level="white",
+        )
+        # Entry has malware association but score is below threshold
+        data = _given_file_entry(
+            score=10, relationships=_given_relationships_with_malware_only()
+        )
+        # When
+        result = _when_convert(converter, data)
+        # Then – AND logic: score filter rejects even with valid association
+        _then_returns_empty(result)

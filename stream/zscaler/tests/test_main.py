@@ -68,18 +68,12 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_live_stream_id == "live-stream-id"
 
 
-def test_connector_is_instantiated(mock_opencti_connector_helper, monkeypatch):
-    # ZscalerConnector builds an OpenCTIApiClient in __init__ - avoid real calls.
-    monkeypatch.setattr("stream_connector.connector.OpenCTIApiClient", MagicMock())
-
+def test_connector_is_instantiated(mock_opencti_connector_helper):
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
     connector = ZscalerConnector(
-        config_path=None,
         helper=helper,
-        opencti_url=str(settings.opencti.url),
-        opencti_token=settings.opencti.token,
         ssl_verify=settings.zscaler.ssl_verify,
         zscaler_username=settings.zscaler.username,
         zscaler_password=settings.zscaler.password.get_secret_value(),

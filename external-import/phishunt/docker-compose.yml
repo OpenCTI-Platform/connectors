@@ -5,7 +5,7 @@ services:
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe(UUIDv4 token)
+      - OPENCTI_TOKEN=ChangeMe
 
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe(UUIDv4 token)
@@ -15,7 +15,6 @@ services:
       - CONNECTOR_DURATION_PERIOD=P3D # ISO8601 format in String, start with 'P...' for Period
 
       # Connector's custom execution parameters
-      - PHISHUNT_API_KEY= # Optional, if not provided, consume only https://phishunt.io/feed.txt
       - PHISHUNT_CREATE_INDICATORS=true
       - PHISHUNT_DEFAULT_X_OPENCTI_SCORE=40 # Optional: default is 40
       - PHISHUNT_X_OPENCTI_SCORE_DOMAIN=40 # Optional: Default PHISHUNT_DEFAULT_X_OPENCTI_SCORE

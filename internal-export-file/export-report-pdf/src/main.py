@@ -1,14 +1,14 @@
 import traceback
 
-from export_report_pdf.config import ConnectorConfig
 from export_report_pdf.connector import Connector
+from export_report_pdf.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 
 def main() -> None:
     try:
-        config = ConnectorConfig()
-        helper = OpenCTIConnectorHelper(config=config.load)
+        config = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
 
         connector = Connector(config=config, helper=helper)
         connector.run()

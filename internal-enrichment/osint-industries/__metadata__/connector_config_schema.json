@@ -1,22 +1,24 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://www.filigran.io/connectors/osint_industries_config.schema.json",
+  "$id": "https://www.filigran.io/connectors/osint-industries_config.schema.json",
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
-      "description": "The OpenCTI platform URL.",
+      "description": "The base URL of the OpenCTI instance.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
     "OPENCTI_TOKEN": {
-      "description": "The token of the user who represents the connector in the OpenCTI platform.",
-      "type": "string"
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "OSINT Industries",
-      "description": "Name of the connector.",
+      "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -26,20 +28,15 @@
         "User-Account",
         "Cryptocurrency-Wallet"
       ],
-      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "description": "The scope of the connector, i.e. the observable types it can enrich.",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
-    "CONNECTOR_TYPE": {
-      "default": "INTERNAL_ENRICHMENT",
-      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
-      "type": "string"
-    },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
-      "description": "Determines the verbosity of the logs.",
+      "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
         "info",
@@ -49,20 +46,25 @@
       ],
       "type": "string"
     },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
     "CONNECTOR_AUTO": {
       "default": false,
-      "description": "Enables or disables automatic enrichment of observables for OpenCTI. Keep disabled for this quota-based paid source to avoid depleting API credits.",
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
     "OSINT_INDUSTRIES_API_KEY": {
-      "description": "API key used to authenticate requests to the OSINT Industries service.",
+      "description": "The API key used to authenticate against the OSINT Industries API.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "OSINT_INDUSTRIES_BASE_URL": {
-      "default": "https://api.osint.industries",
-      "description": "Base URL of the OSINT Industries API.",
+      "default": "https://api.osint.industries/",
+      "description": "The base URL of the OSINT Industries API.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
@@ -70,9 +72,10 @@
     },
     "OSINT_INDUSTRIES_TLP_LEVEL": {
       "default": "amber+strict",
-      "description": "Traffic Light Protocol (TLP) level applied to the objects imported into OpenCTI. Results contain personal data; a restrictive TLP is recommended.",
+      "description": "The TLP marking applied to the objects produced by the connector.",
       "enum": [
         "clear",
+        "white",
         "green",
         "amber",
         "amber+strict",
@@ -80,9 +83,22 @@
       ],
       "type": "string"
     },
+    "OSINT_INDUSTRIES_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "The maximum TLP level of an observable the connector is allowed to enrich. Observables marked above this level are skipped and their value is never sent to the OSINT Industries API.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
     "OSINT_INDUSTRIES_PREMIUM": {
       "default": false,
-      "description": "If enabled, queries additional premium modules. This consumes more API credits.",
+      "description": "Whether to query the premium modules. Enabling it returns more results but consumes more API credits.",
       "type": "boolean"
     }
   },

@@ -10,6 +10,11 @@ on:
       - 'internal-import-file/**'
       - 'stream/**'
       - 'shared/**'
+  merge_group:
+    branches:
+      - master
+      - lts/**
+    types: [checks_requested]
   workflow_call:
 
 concurrency:
@@ -27,13 +32,18 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       has_connectors: ${{ steps.set-matrix.outputs.has_connectors }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Resolve RELEASE_REF
         run: |
-          PR_BASE_REF="${{ github.base_ref }}"
+          if [ "${{ github.event_name }}" = "merge_group" ]; then
+            PR_BASE_REF="${{ github.event.merge_group.base_ref }}"
+          else
+            PR_BASE_REF="${{ github.base_ref }}"
+          fi
+          PR_BASE_REF="${PR_BASE_REF#refs/heads/}"
 
           if [ -n "${PR_BASE_REF:-}" ]; then
             case "${PR_BASE_REF}" in
@@ -63,13 +73,18 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       has_connectors: ${{ steps.set-matrix.outputs.has_connectors }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
       - name: Resolve RELEASE_REF
         run: |
-          PR_BASE_REF="${{ github.base_ref }}"
+          if [ "${{ github.event_name }}" = "merge_group" ]; then
+            PR_BASE_REF="${{ github.event.merge_group.base_ref }}"
+          else
+            PR_BASE_REF="${{ github.base_ref }}"
+          fi
+          PR_BASE_REF="${PR_BASE_REF#refs/heads/}"
 
           if [ -n "${PR_BASE_REF:-}" ]; then
             case "${PR_BASE_REF}" in
@@ -103,10 +118,10 @@ jobs:
       matrix: ${{ fromJson(needs.detect-connectors.outputs.matrix) }}
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:
           enable-cache: false
           python-version: "3.12"
@@ -265,10 +280,10 @@ jobs:
   # Newly-added connectors are not yet "verified" or "manager_supported", so
   # they are skipped by the `vclint` job above (which only targets eligible
   # connectors and is blocking only for the "verified-with-date" subset). This
-  # job enforces VC305 (connectors-sdk BaseConnectorSettings) as a hard,
-  # blocking requirement for any connector introduced for the first time in
-  # this PR, so new code never lands using the legacy get_config_variable()
-  # pattern.
+  # job enforces VC105 (no absolute date) and VC305 (connectors-sdk
+  # BaseConnectorSettings) as hard, blocking requirements for any connector
+  # introduced for the first time in this PR, so new code never lands with
+  # absolute dates in config/scheduling or the legacy get_config_variable() pattern.
   vclint-new-connector-settings:
     name: VC305 (new connector) ${{ matrix.name }}
     needs:
@@ -280,10 +295,10 @@ jobs:
       matrix: ${{ fromJson(needs.detect-new-connectors.outputs.matrix) }}
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v8.3.2
+        uses: astral-sh/setup-uv@v10.1.0
         with:
           enable-cache: false
           python-version: "3.12"
@@ -294,13 +309,13 @@ jobs:
       - name: Install connector-linter
         run: uv pip install ./shared/tools/connector_linter
 
-      - name: Run VC305 (connectors-sdk settings) on new connectors
+      - name: Run VC105/VC305 (connectors-sdk settings) on new connectors
         run: |
           exit_code=0
           while IFS= read -r connector_path; do
             [ -z "$connector_path" ] && continue
-            echo "::group::Checking VC305 for ${connector_path}"
-            uv run connector-linter check "$connector_path" --select VC305 --format github || exit_code=$?
+            echo "::group::Checking VC105/VC305 for ${connector_path}"
+            uv run connector-linter check "$connector_path" --select VC105 --select VC305 --format github || exit_code=$?
             echo "::endgroup::"
           done <<< "${{ matrix.connector_paths }}"
           exit "$exit_code"

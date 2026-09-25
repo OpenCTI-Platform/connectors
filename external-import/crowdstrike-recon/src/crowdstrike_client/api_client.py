@@ -2,14 +2,33 @@ from falconpy import Recon as CrowdstrikeRecon
 from pycti import OpenCTIConnectorHelper
 
 
+class CrowdstrikeReconPaginationLimitError(RuntimeError):
+    """Raised when the CrowdStrike Recon API rejects a request because the
+    offset/limit combination exceeds its (undocumented) pagination ceiling
+    for ``query_notifications`` (``PAGINATION_LIMIT_EXCEEDED``).
+    """
+
+
 class CrowdstrikeReconClient:
 
     # CrowdStrike's get_notifications_detailed accepts a batch of IDs, so detail
     # lookups are chunked to avoid one HTTP request per notification.
     _DETAIL_CHUNK_SIZE = 100
-    # Safety guard so a misbehaving API (e.g. a missing/zero ``total``) cannot
-    # turn pagination into an unbounded loop.
-    _MAX_PAGES = 1000
+
+    # CrowdStrike's Recon notification search enforces an undocumented ceiling
+    # on offset + limit: exceeding it fails with a 400 error whose
+    # ``message_key`` is ``PAGINATION_LIMIT_EXCEEDED``. We believe that ceiling
+    # to be 10,000 (the same limit reported on several other Falcon Query API
+    # endpoints), but it is not officially documented for this endpoint, so we
+    # stay comfortably below it rather than assume the exact boundary: 99
+    # pages * 100 = 9,900.
+    #
+    # Hitting this cap is an expected outcome whenever there is a large
+    # backlog, not a failure: the connector saves its progress at the end of
+    # every run using the most recent notification's ``created_date`` (see
+    # ``connector.py``), so the next scheduled run picks up exactly where
+    # this one left off instead of ever requesting past the ceiling.
+    _MAX_PAGES_PER_RUN = 99
 
     def __init__(
         self,
@@ -91,11 +110,28 @@ class CrowdstrikeReconClient:
         """
         Raise on a non-2xx falconpy response so auth / permission / rate-limit
         failures are surfaced instead of being silently treated as "no data".
+
+        A ``PAGINATION_LIMIT_EXCEEDED`` response raises
+        ``CrowdstrikeReconPaginationLimitError`` specifically (without logging
+        it here as a generic error), so callers that know how to recover from
+        it -- see ``query_notifications`` -- can do so quietly.
         """
         result = result or {}
         status_code = result.get("status_code")
         if status_code is None or status_code >= 300:
-            errors = (result.get("body") or {}).get("errors")
+            errors = (result.get("body") or {}).get("errors") or []
+
+            if any(
+                isinstance(error, dict)
+                and error.get("message_key") == "PAGINATION_LIMIT_EXCEEDED"
+                for error in errors
+            ):
+                raise CrowdstrikeReconPaginationLimitError(
+                    f"CrowdStrike Recon API '{operation}' rejected the "
+                    f"offset/limit combination as exceeding its pagination "
+                    f"limit: {errors}"
+                )
+
             self.helper.connector_logger.error(
                 "[API CLIENT] CrowdStrike Recon API request failed",
                 meta={
@@ -112,7 +148,8 @@ class CrowdstrikeReconClient:
     def query_notifications(self, from_date) -> list[str]:
         """
         Query notification IDs from the CrowdStrike Recon API with optional FQL filters.
-        Handles pagination to retrieve all matching notification IDs.
+        Handles pagination to retrieve all matching notification IDs, up to
+        ``_MAX_PAGES_PER_RUN`` pages per call (see its docstring for why).
 
         :return: List of notification IDs.
         """
@@ -129,7 +166,7 @@ class CrowdstrikeReconClient:
                 meta={"filter": fql_filter},
             )
 
-        for _ in range(self._MAX_PAGES):
+        for _ in range(self._MAX_PAGES_PER_RUN):
             kwargs = {
                 "limit": limit,
                 "offset": offset,
@@ -139,7 +176,23 @@ class CrowdstrikeReconClient:
                 kwargs["filter"] = fql_filter
 
             result = self.cs.query_notifications(**kwargs)
-            self._raise_for_status(result, "query_notifications")
+            try:
+                self._raise_for_status(result, "query_notifications")
+            except CrowdstrikeReconPaginationLimitError:
+                # We already cap ourselves below the ceiling we believe
+                # CrowdStrike enforces (see _MAX_PAGES_PER_RUN); this is a
+                # backstop in case the real ceiling is lower than assumed.
+                # Either way it is not fatal: keep what has already been
+                # collected this run and let the next scheduled run continue
+                # from the last notification's date.
+                self.helper.connector_logger.warning(
+                    "[API CLIENT] CrowdStrike Recon pagination limit "
+                    "reached; stopping this run's collection early. The "
+                    "next scheduled run will continue from the last "
+                    "notification's date.",
+                    meta={"offset": offset, "limit": limit},
+                )
+                break
 
             body = result.get("body") or {}
             resources = body.get("resources") or []
@@ -162,9 +215,10 @@ class CrowdstrikeReconClient:
             offset += limit
         else:
             self.helper.connector_logger.warning(
-                "[API CLIENT] Reached pagination safety limit while querying "
-                "notifications; results may be truncated",
-                meta={"max_pages": self._MAX_PAGES},
+                "[API CLIENT] Reached the per-run pagination cap while "
+                "querying notifications; more notifications remain and "
+                "will be fetched on the next scheduled run.",
+                meta={"max_pages_per_run": self._MAX_PAGES_PER_RUN},
             )
 
         return notification_ids

@@ -298,6 +298,8 @@ Unlike the other collections which use the `/collections` search endpoint, the I
 |-----------------------------------|-----------------------------------------------------------------------------------|-----------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | `GTI_INDICATOR_TYPES`             | List of IOC types to import                                                       | `["file", "ip", "url", "domain"]` | `["file", "ip", "url", "domain"]`                                                                                            |
 | `GTI_INDICATOR_MIN_SCORE`         | Minimum GTI score an indicator must have to be imported via Delta Sync            | `50`                               | Integer between `0` and `100`, or unset/`100` to disable the filter                                                          |
+| `GTI_INDICATOR_REQUIRE_MALWARE_FAMILY` | Only import indicators associated with at least one Malware Family           | `false`                            | `true` / `false`                                                                                                             |
+| `GTI_INDICATOR_REQUIRE_THREAT_ACTOR`   | Only import indicators associated with at least one Threat Actor             | `false`                            | `true` / `false`                                                                                                             |
 
 ---
 

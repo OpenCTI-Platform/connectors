@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Intel471 v2",
@@ -49,14 +51,23 @@
       "type": "string"
     },
     "INTEL471_API_USERNAME": {
-      "description": "Titan API username",
+      "description": "Verity Client ID or Titan API Username.",
       "type": "string"
     },
     "INTEL471_API_KEY": {
-      "description": "Titan API key",
+      "description": "Verity Client Secret or Titan API Key.",
       "format": "password",
       "type": "string",
       "writeOnly": true
+    },
+    "INTEL471_BACKEND": {
+      "default": "titan",
+      "description": "Backend to use for Intel471 API calls. Defaults to `titan`.",
+      "enum": [
+        "titan",
+        "verity471"
+      ],
+      "type": "string"
     },
     "INTEL471_INTERVAL_INDICATORS": {
       "default": 60,
@@ -65,17 +76,7 @@
     },
     "INTEL471_INITIAL_HISTORY_INDICATORS": {
       "default": 0,
-      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the malware indicators should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
-      "type": "integer"
-    },
-    "INTEL471_INTERVAL_YARA": {
-      "default": 60,
-      "description": "How often YARA rules should be fetched in minutes. If not set, the stream will not be enabled.",
-      "type": "integer"
-    },
-    "INTEL471_INITIAL_HISTORY_YARA": {
-      "default": 0,
-      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the YARA rules should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the malware indicators should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
       "type": "integer"
     },
     "INTEL471_INTERVAL_CVES": {
@@ -85,7 +86,7 @@
     },
     "INTEL471_INITIAL_HISTORY_CVES": {
       "default": 0,
-      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the CVE reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the CVE reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
       "type": "integer"
     },
     "INTEL471_INTERVAL_REPORTS": {
@@ -95,7 +96,17 @@
     },
     "INTEL471_INITIAL_HISTORY_REPORTS": {
       "default": 0,
-      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.",
+      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the reports should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
+      "type": "integer"
+    },
+    "INTEL471_INTERVAL_YARA": {
+      "default": 60,
+      "description": "How often YARA rules should be fetched in minutes (Titan only). If not set, the stream will not be enabled.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_YARA": {
+      "default": 0,
+      "description": "Initial date in epoch milliseconds UTC, such as `1643989649000`, the YARA rules should be fetched from on the connector's first run (Titan only). If not set, they will be fetched from the connector's start date. Excludes historical dates. A value given in epoch seconds, such as `1643989649`, is detected and converted to milliseconds.",
       "type": "integer"
     },
     "INTEL471_PROXY": {
@@ -110,15 +121,6 @@
       "default": 70,
       "description": "Indicator score. Defaults to `70`.",
       "type": "integer"
-    },
-    "INTEL471_BACKEND": {
-      "default": "titan",
-      "description": "Backend to use for Intel471 API calls. Defaults to `titan`.",
-      "enum": [
-        "titan",
-        "verity471"
-      ],
-      "type": "string"
     }
   },
   "required": [

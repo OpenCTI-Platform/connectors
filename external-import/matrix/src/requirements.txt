@@ -1,5 +1,5 @@
-pycti==7.260722.0
-matrix-nio==0.25.2
+pycti==7.260921.0
+matrix-nio==0.26.0
 # matrix-nio's ``[e2e]`` extra pins ``cachetools~=5.3`` which conflicts with
 # pycti's ``cachetools~=7.0.1`` (the pip resolver fails the install). Matrix-nio
 # only uses ``cachetools.LRUCache(maxsize)`` whose API is stable across 5.x–7.x,
@@ -8,4 +8,4 @@ matrix-nio==0.25.2
 atomicwrites~=1.4
 peewee~=3.14
 python-olm~=3.2
-stix2==3.0.1
+stix2==3.0.2

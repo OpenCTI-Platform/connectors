@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Phishunt",
@@ -51,13 +53,6 @@
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
-    },
-    "PHISHUNT_API_KEY": {
-      "default": null,
-      "description": "The API key for Phishunt. If not set, the connector will use the public feed.",
-      "format": "password",
-      "type": "string",
-      "writeOnly": true
     },
     "PHISHUNT_CREATE_INDICATORS": {
       "default": true,

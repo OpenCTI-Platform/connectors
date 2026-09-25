@@ -1,13 +1,15 @@
 """Urlscan connector settings"""
 
+from datetime import timedelta
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, HttpUrl, SecretStr
-from pydantic.json_schema import SkipJsonSchema
 
 __all__ = [
     "ConnectorSettings",
@@ -26,13 +28,19 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The name of the connector.",
         default="Urlscan",
     )
+    id: str = Field(
+        description="The ID of the connector.",
+        default="0247889a-84b9-4210-a719-b1037358c491",
+    )
     scope: ListFromString = Field(
         description="The scope of the connector, e.g. 'urlscan'.",
         default=["urlscan"],
     )
-    interval: int = Field(
-        description="Interval between two runs of the connector, in seconds.",
-        default=86400,
+    interval: int | None = DeprecatedField(
+        default=None,
+        deprecated="Use duration_period instead",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(seconds=x),
     )
     lookback: int = Field(
         description=(
@@ -41,10 +49,9 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         ),
         default=3,
     )
-    # Override `duration_period` as scheduling is handled by the connector's own loop.
-    duration_period: SkipJsonSchema[None] = Field(
-        description="Do not use. Scheduling is handled by the connector's own loop.",
-        default=None,
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector.",
+        default=timedelta(seconds=86400),
     )
 
 
@@ -81,6 +88,10 @@ class UrlscanConfig(BaseConfigModel):
     x_opencti_score_url: int | None = Field(
         description="Optional x_opencti_score for url observables.",
         default=None,
+    )
+    labels: ListFromString = Field(
+        description="list of labels to apply to each observable.",
+        default=["Phishing", "phishfeed"],
     )
 
 

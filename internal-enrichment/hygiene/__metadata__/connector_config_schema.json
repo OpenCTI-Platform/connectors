@@ -35,6 +35,7 @@
       "type": "array"
     },
     "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
       "default": "INTERNAL_ENRICHMENT",
       "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
       "type": "string"

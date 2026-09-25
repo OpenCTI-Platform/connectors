@@ -11,7 +11,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | VIRUSTOTAL_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | VirusTotal API token for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"VirusTotal"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["StixFile", "Artifact", "IPv4-Addr", "Domain-Name", "Url", "Hostname", "Indicator"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_TYPE | `string` |  | string | `"INTERNAL_ENRICHMENT"` | Should always be set to INTERNAL_ENRICHMENT for this connector. |
+| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` | Should always be set to INTERNAL_ENRICHMENT for this connector. |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Enables or disables automatic enrichment of observables for OpenCTI. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | VIRUSTOTAL_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI. Available values: TLP:CLEAR, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED |

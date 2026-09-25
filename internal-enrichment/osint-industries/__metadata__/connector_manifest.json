@@ -21,7 +21,7 @@
   "support_version": ">= 6.8.12",
   "subscription_link": "https://www.osint.industries/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/osint-industries",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-osint-industries",
   "container_type": "INTERNAL_ENRICHMENT"

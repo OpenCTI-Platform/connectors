@@ -42,7 +42,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         description="The scope or type of data the connector is processing.",
     )
 
-    type: str = Field(
+    type: Literal["STREAM"] = Field(
         default="STREAM",
         description="Should always be set to STREAM for this connector.",
     )

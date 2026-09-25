@@ -46,34 +46,10 @@ All data is imported in native STIX 2.1 format from MITRE's official GitHub repo
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter         | config.yml      | Docker environment variable   | Default         | Mandatory | Description                                                                 |
-|-------------------|-----------------|-------------------------------|-----------------|-----------|-----------------------------------------------------------------------------|
-| Connector ID      | id              | `CONNECTOR_ID`                |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name    | name            | `CONNECTOR_NAME`              | MITRE ATT&CK    | No        | Name of the connector.                                                      |
-| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | mitre           | No        | The scope or type of data the connector is importing.                       |
-| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-
-### Connector extra parameters environment variables
-
-| Parameter                | config.yml                   | Docker environment variable      | Default                                                                              | Mandatory | Description                                                    |
-|--------------------------|------------------------------|----------------------------------|--------------------------------------------------------------------------------------|-----------|----------------------------------------------------------------|
-| Remove Statement Marking | mitre.remove_statement_marking | `MITRE_REMOVE_STATEMENT_MARKING` | false                                                                              | No        | Remove statement markings from ingested MITRE data.            |
-| Interval                 | mitre.interval               | `MITRE_INTERVAL`                 | 7                                                                                    | Yes       | Interval in days between connector runs.                       |
-| Enterprise File URL      | mitre.enterprise_file_url    | `MITRE_ENTERPRISE_FILE_URL`      | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json | No | URL to MITRE Enterprise ATT&CK JSON. |
-| Mobile File URL          | mitre.mobile_attack_file_url | `MITRE_MOBILE_ATTACK_FILE_URL`   | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/mobile-attack/mobile-attack.json | No | URL to MITRE Mobile ATT&CK JSON. |
-| ICS File URL             | mitre.ics_attack_file_url    | `MITRE_ICS_ATTACK_FILE_URL`      | https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/ics-attack/ics-attack.json | No | URL to MITRE ICS ATT&CK JSON. |
-| CAPEC File URL           | mitre.capec_file_url         | `MITRE_CAPEC_FILE_URL`           | https://raw.githubusercontent.com/mitre/cti/master/capec/2.1/stix-capec.json         | No        | URL to CAPEC JSON.                                             |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -94,11 +70,11 @@ Configure the connector in `docker-compose.yml`:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=MITRE ATT&CK
-      - CONNECTOR_SCOPE=mitre
-      - CONNECTOR_LOG_LEVEL=error
-      - MITRE_INTERVAL=7 # In days
-      # - MITRE_REMOVE_STATEMENT_MARKING=true
+      # - CONNECTOR_NAME=MITRE ATT&CK
+      # - CONNECTOR_SCOPE=tool,report,malware,identity,campaign,intrusion-set,attack-pattern,course-of-action,x-mitre-data-source,x-mitre-data-component,x-mitre-matrix,x-mitre-tactic,x-mitre-collection
+      # - CONNECTOR_LOG_LEVEL=error
+      # - MITRE_INTERVAL=7 # In days
+      # # - MITRE_REMOVE_STATEMENT_MARKING=true
     restart: always
 ```
 

@@ -3,7 +3,7 @@
 from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
-from pydantic import Field, HttpUrl, PlainSerializer, field_validator
+from pydantic import Field, HttpUrl, PlainSerializer
 
 from .base_settings import ConfigBaseSettings
 
@@ -37,7 +37,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: ListFromString  # Scope can be a list or single value
 
-    type: str = Field(
+    type: Literal["STREAM"] = Field(
         default="STREAM",
         description="Should always be set to STREAM for this connector.",
     )
@@ -74,8 +74,3 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         alias="CONNECTOR_CONTAINER_TYPES",
         description="List of container types to process.",
     )
-
-    @field_validator("type")
-    def force_value_for_type_to_be_stream(cls, value):
-        """Ensure the connector type is always STREAM."""
-        return "STREAM"

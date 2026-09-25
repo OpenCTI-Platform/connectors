@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Deprecated | Default | Description |
 | -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The API token to connect to OpenCTI. |
 | VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | VirusTotal Premium API key. |
 | CONNECTOR_NAME | `string` |  | string |  | `"VirusTotal Livehunt Notifications"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string |  | `["StixFile", "Indicator", "Incident", "Domain-Name", "Url", "IPv4-Addr", "IPv6-Addr"]` | The scope of the connector. |

@@ -25,10 +25,6 @@ class BaseObservableEntity(BaseIdentifiedEntity, ABC):
         default=None,
         description="Description of the observable.",
     )
-    labels: list[str] | None = Field(
-        default=None,
-        description="Labels of the observable.",
-    )
 
     associated_files: list[AssociatedFile] | None = Field(
         default=None,
@@ -40,7 +36,6 @@ class BaseObservableEntity(BaseIdentifiedEntity, ABC):
     )
 
     def _common_stix2_properties(self) -> dict[str, Any]:
-        super()._common_stix2_properties()
         """Factorize custom params."""
         return dict(  # noqa: C408 # No literal dict for maintainability
             allow_custom=True,

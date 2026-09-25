@@ -1,10 +1,10 @@
 version: '3'
 services:
   connector_ransomwarelive:
-    image: opencti/connector-ransomwarelive:rolling
+    image: opencti/connector-ransomwarelive:latest
     container_name: connector_ransomwarelive
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=Ransomware Connector"
@@ -12,24 +12,29 @@ services:
       # write. The set below mirrors the entities ``create_bundle_list``
       # actually emits — including every flag-gated optional SDO and
       # the relationships that bind them together. Trim it down to the
-      # subset matching the ``CONNECTOR_CREATE_*`` flags enabled below
+      # subset matching the ``RANSOMWARELIVE_CREATE_*`` flags enabled below
       # if you want a tighter scope.
       - CONNECTOR_SCOPE=identity,domain-name,location,threat-actor,intrusion-set,campaign,report,relationship
       - CONNECTOR_LOG_LEVEL=info # Log level: debug, info, warn, error
       - CONNECTOR_DURATION_PERIOD=PT12H # ISO 8601 period between two scheduled runs
-      - CONNECTOR_PULL_HISTORY=false # Set to true to backfill historical data; produces a large initial ingest
-      - CONNECTOR_HISTORY_START_YEAR=2023 # Data only goes back to 2020
+      # API endpoint selector:
+      # - https://api.ransomware.live/v2 -> legacy unauthenticated client
+      # - https://api-pro.ransomware.live -> API-PRO client (requires key)
+      - RANSOMWARELIVE_API_BASE_URL=https://api.ransomware.live/v2
+      - RANSOMWARELIVE_API_KEY=
       # Entity-creation flags.
       # create_intrusion_set and create_report default to true (pre-PR #5590 behaviour).
       # create_threat_actor and create_campaign default to false (new capabilities).
-      - CONNECTOR_CREATE_THREAT_ACTOR=false
-      - CONNECTOR_CREATE_INTRUSION_SET=true
-      - CONNECTOR_CREATE_CAMPAIGN=false
-      - CONNECTOR_CREATE_REPORT=true
-      - CONNECTOR_CREATE_LEAK_SITE_DOMAINS=false
-      - CONNECTOR_CREATE_LEAK_POST_REFS=false
+      - RANSOMWARELIVE_CREATE_THREAT_ACTOR=false
+      - RANSOMWARELIVE_CREATE_INTRUSION_SET=true
+      - RANSOMWARELIVE_CREATE_CAMPAIGN=false
+      - RANSOMWARELIVE_CREATE_REPORT=true
+      - RANSOMWARELIVE_CREATE_LEAK_SITE_DOMAINS=false
+      - RANSOMWARELIVE_CREATE_LEAK_POST_REFS=false
+      - RANSOMWARELIVE_PULL_HISTORY=false # Set to true to backfill historical data; produces a large initial ingest
+      - RANSOMWARELIVE_HISTORY_START_YEAR=2023 # Data only goes back to 2020
       # TLP marking applied to every emitted STIX object. Allowed values:
       # TLP:CLEAR (default) / TLP:WHITE / TLP:GREEN / TLP:AMBER /
       # TLP:AMBER+STRICT / TLP:RED.
-      - CONNECTOR_MARKING_VALUE=TLP:CLEAR
+      - RANSOMWARELIVE_MARKING_VALUE=TLP:CLEAR
     restart: always

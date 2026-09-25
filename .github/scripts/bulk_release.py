@@ -65,8 +65,10 @@ import _matrix_common as common
 # Default CalVer major, matching release-connector.yml (MAJOR=7).
 DEFAULT_MAJOR = 7
 
-# CalVer format MAJOR.YYMMDD.PATCH — identical to release-connector.yml.
-VERSION_RE = re.compile(r"^[0-9]+\.[0-9]{6}\.[0-9]+$")
+# CalVer format MAJOR.YYMMDD.PATCH with an optional "-lts.N" suffix for LTS
+# releases (e.g. 7.260706.0 or 7.260706.0-lts.1) — identical to
+# release-connector.yml and the global tag patterns in build-all-connectors.yml.
+VERSION_RE = re.compile(r"^[0-9]+\.[0-9]{6}\.[0-9]+(-lts\.[0-9]+)?$")
 
 
 class BulkReleaseError(Exception):
@@ -94,11 +96,16 @@ def compute_calver(
 
 
 def validate_version(version: str) -> str:
-    """Validate a CalVer string against the release-connector.yml format."""
+    """Validate a CalVer string against the release-connector.yml format.
+
+    Accepts a plain CalVer (``MAJOR.YYMMDD.PATCH``) or an LTS variant with a
+    ``-lts.N`` suffix (e.g. ``7.260706.0-lts.1``).
+    """
     if not VERSION_RE.match(version):
         raise BulkReleaseError(
-            f"Invalid CalVer version '{version}'. "
-            "Expected format: MAJOR.YYMMDD.PATCH (e.g. 7.260706.0)."
+            f"Invalid CalVer version '{version}'. Expected format: "
+            "MAJOR.YYMMDD.PATCH or MAJOR.YYMMDD.PATCH-lts.N "
+            "(e.g. 7.260706.0 or 7.260706.0-lts.1)."
         )
     return version
 
@@ -115,9 +122,10 @@ def discover_all_connectors(repo_root: Path) -> list[Connector]:
     """Discover every buildable connector across all type directories.
 
     A directory is a connector when it lives directly under a type directory,
-    does not start with '.' or '_', and contains a ``Dockerfile``. This mirrors
-    the CI build matrix (.github/scripts/build_alpine_matrix.py) so that every
-    connector the pipeline can build is releasable in bulk.
+    does not start with '.' or '_', and contains both a ``Dockerfile`` and a
+    ``__metadata__/connector_manifest.json``. This mirrors the CI build matrix
+    (.github/scripts/build_alpine_matrix.py) so that every connector the
+    pipeline can build is releasable in bulk.
     """
     connectors: list[Connector] = []
     for type_dir in common.CONNECTOR_TYPE_DIRS:
@@ -130,6 +138,10 @@ def discover_all_connectors(repo_root: Path) -> list[Connector]:
             if connector_path.name.startswith((".", "_")):
                 continue
             if not (connector_path / "Dockerfile").exists():
+                continue
+            if not (
+                connector_path / "__metadata__" / "connector_manifest.json"
+            ).exists():
                 continue
             connectors.append(
                 Connector(
@@ -417,7 +429,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--github-output",
         default=os.environ.get("GITHUB_OUTPUT"),
-        help="Path to write matrix outputs (defaults to $GITHUB_OUTPUT).",
+        help="Path to write resolved outputs (defaults to $GITHUB_OUTPUT).",
     )
     parser.add_argument(
         "--github-step-summary",

@@ -9,6 +9,9 @@ __all__ = [
     "AccountType",
     "AttackMotivation",
     "AttackResourceLevel",
+    "CasePriority",
+    "CaseSeverity",
+    "CaseIncidentResponseType",
     "ChannelType",
     "CvssSeverity",
     "HashAlgorithm",
@@ -102,6 +105,40 @@ class AttackResourceLevel(_PermissiveEnum):
     TEAM = "team"
     ORGANIZATION = "organization"
     GOVERNMENT = "government"
+
+
+class CasePriority(_PermissiveEnum):
+    """Case Priority Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L123
+    """
+
+    P1 = "P1"
+    P2 = "P2"
+    P3 = "P3"
+    P4 = "P4"
+
+
+class CaseSeverity(_PermissiveEnum):
+    """Case Severity Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L117
+    """
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class CaseIncidentResponseType(_PermissiveEnum):
+    """Case Incident Response Type Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L274
+    """
+
+    RANSOMWARE = "ransomware"
+    DATA_LEAK = "data-leak"
 
 
 class CvssSeverity(StrEnum):

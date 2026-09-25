@@ -1,9 +1,9 @@
 # Dummy End to End Octi Models Test Examples
 
-Here is a minimal example of how to test the end-to-end functionality of the `connectors_sdk.models.octi` package and see the results in the Octi UI.
+Here is a minimal example of how to test the end-to-end functionality of the `connectors_sdk.models` package and see the results in the Octi UI.
 
 ```python
-"""Minimal exemple of OpenCTI connector using connectors-sdk octi model objects."""
+"""Minimal example of OpenCTI connector using connectors-sdk octi model objects."""
 
 import sys
 import traceback
@@ -16,9 +16,9 @@ from connectors_sdk.models import (
     IPV4Address,
     Organization,
     OrganizationAuthor,
+    Relationship,
     TLPMarking,
 )
-from connectors_sdk.models.octi import based_on, related_to
 
 if TYPE_CHECKING:
     from connectors_sdk.models import BaseObject
@@ -86,10 +86,18 @@ class ConnectorExample:
             )
             octi_models.append(observable)
             # Related-to
-            rel_related_to = observable | related_to | organization  # type: ignore[operator]
+            rel_related_to = Relationship(
+                type="related-to",
+                source=observable,
+                target=organization,
+            )
             octi_models.append(rel_related_to)
             # Based-on
-            rel_based_on = indicator | based_on | observable  # type: ignore[operator]
+            rel_based_on = Relationship(
+                type="based-on",
+                source=indicator,
+                target=observable,
+            )
             octi_models.append(rel_based_on)
             # Indicator with conversion
             indicator_with_obs = Indicator(

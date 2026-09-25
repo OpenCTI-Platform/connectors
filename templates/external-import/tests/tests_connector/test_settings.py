@@ -22,7 +22,6 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "duration_period": "PT5M",
                 },
                 "template": {
-                    "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "tlp_level": "clear",
                 },
@@ -35,12 +34,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "url": "http://localhost:8080",
                     "token": "test-token",
                 },
-                "connector": {
-                    "id": "connector-id",
-                    "scope": "test, connector",
-                },
                 "template": {
-                    "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                 },
             },
@@ -78,11 +72,6 @@ def test_settings_should_accept_valid_input(settings_dict):
     "settings_dict, field_name",
     [
         pytest.param(
-            {},
-            "settings",
-            id="empty_settings_dict",
-        ),
-        pytest.param(
             {
                 "opencti": {
                     "url": "http://localhost:PORT",
@@ -96,7 +85,6 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "template": {
-                    "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "tlp_level": "clear",
                 },
@@ -111,19 +99,19 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "token": "test-token",
                 },
                 "connector": {
+                    "id": "connector-id",
                     "name": "Test Connector",
                     "scope": "test, connector",
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
                 "template": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
                     "tlp_level": "clear",
+                    # "api_key" is missing, and has no default -- must raise.
                 },
             },
-            "connector.id",
-            id="missing_connector_id",
+            "template.api_key",
+            id="missing_template_api_key",
         ),
     ],
 )
@@ -134,6 +122,7 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     a fake and invalid dict (instead of the env/config vars parsed from `config.yml`, `.env` or env vars).
 
     :param settings_dict: The dict to use as `ConnectorSettings` input
+    :param field_name: The dotted path (e.g. "template.api_key") of the field expected to fail validation
     """
 
     class FakeConnectorSettings(ConnectorSettings):
@@ -148,4 +137,8 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+
+    assert "Error validating configuration" in str(err.value)
+    # The original pydantic error, naming the exact field that failed, is kept
+    # as this exception's `__cause__` (see `ConnectorSettings.__init__`).
+    assert field_name in str(err.value.__cause__)

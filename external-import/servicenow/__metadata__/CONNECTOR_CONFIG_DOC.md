@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | SERVICENOW_INSTANCE_NAME | `string` | ✅ | string |  | Corresponds to server instance name (will be used for API requests). |
 | SERVICENOW_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Secure identifier used to validate access to ServiceNow APIs. |
 | CONNECTOR_NAME | `string` |  | string | `"ServiceNow"` | Name of the connector. |
@@ -15,12 +15,8 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P1D"` | Duration between two scheduled runs of the connector (ISO 8601 format). |
-| CONNECTOR_QUEUE_THRESHOLD | `integer` |  | `0 < x ` | `null` | Connector queue max size in Mbytes. Default to 500. |
+| CONNECTOR_QUEUE_THRESHOLD | `integer` |  | `0 < x ` | `500` | Connector queue max size in Mbytes. Default to 500. |
 | CONNECTOR_RUN_AND_TERMINATE | `boolean` |  | boolean | `null` | Connector run-and-terminate flag. |
-| CONNECTOR_SEND_TO_QUEUE | `boolean` |  | boolean | `null` | Connector send-to-queue flag. |
-| CONNECTOR_SEND_TO_DIRECTORY | `boolean` |  | boolean | `null` | Connector send-to-directory flag. |
-| CONNECTOR_SEND_TO_DIRECTORY_PATH | `string` |  | string | `null` | Connector send-to-directory path. |
-| CONNECTOR_SEND_TO_DIRECTORY_RETENTION | `integer` |  | `0 < x ` | `null` | Connector send-to-directory retention in days. |
 | SERVICENOW_API_VERSION | `string` |  | `v1` `v2` | `"v2"` | ServiceNow API version used for REST requests. |
 | SERVICENOW_API_LEAKY_BUCKET_RATE | `integer` |  | `0 < x ` | `10` | Bucket refill rate (in tokens per second). Controls the rate at which API calls are allowed. For example, a rate of 10 means that 10 calls can be made per second, if the bucket is not empty. |
 | SERVICENOW_API_LEAKY_BUCKET_CAPACITY | `integer` |  | `0 < x ` | `10` | Maximum bucket capacity (in tokens). Defines the number of calls that can be made immediately in a burst. Once the bucket is empty, it refills at the rate defined by 'api_leaky_bucket_rate'. |

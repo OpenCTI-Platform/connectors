@@ -28,7 +28,8 @@ class TestConnectorSettingsInstantiation:
         """OpenCTI token should match the environment variable."""
         settings = ConnectorSettings()
         assert (
-            settings.opencti.token == "test-token-00000000-0000-0000-0000-000000000000"
+            settings.opencti.token.get_secret_value()
+            == "test-token-00000000-0000-0000-0000-000000000000"
         )
 
     def test_connector_id(self):

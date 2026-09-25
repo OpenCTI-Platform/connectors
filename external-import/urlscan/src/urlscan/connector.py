@@ -37,7 +37,7 @@ class UrlscanConnector:
         self._config = ConnectorSettings()
 
         self._helper = OpenCTIConnectorHelper(config=self._config.to_helper_config())
-        interval = self._config.connector.interval
+        interval = int(self._config.connector.duration_period.total_seconds())
         lookback = self._config.connector.lookback
 
         urlscan_url = str(self._config.urlscan.url)
@@ -69,7 +69,7 @@ class UrlscanConnector:
             description="Phishing indicators from Urlscan.io",
         )
 
-        self._default_labels = ["Phishing", "phishfeed"]
+        self._default_labels = self._config.urlscan.labels
         self._client = UrlscanClient(urlscan_url, urlscan_api_key)
         self._loop = ConnectorLoop(
             helper=self._helper,

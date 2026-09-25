@@ -4,21 +4,21 @@
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
-      "description": "The OpenCTI platform URL.",
+      "description": "The base URL of the OpenCTI instance.",
       "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "OPENCTI_TOKEN": {
-      "description": "The token used by the connector to authenticate to OpenCTI.",
-      "type": "string"
-    },
-    "CONNECTOR_ID": {
-      "description": "A stable UUID for this connector instance.",
-      "type": "string"
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "TruKno",
-      "description": "Name of the connector shown in OpenCTI.",
+      "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -27,23 +27,15 @@
         "attack-pattern",
         "malware"
       ],
-      "description": "STIX object scope currently imported by the connector.",
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
-    "CONNECTOR_TYPE": {
-      "default": "EXTERNAL_IMPORT",
-      "description": "Connector type for OpenCTI.",
-      "enum": [
-        "EXTERNAL_IMPORT"
-      ],
-      "type": "string"
-    },
     "CONNECTOR_LOG_LEVEL": {
-      "default": "info",
-      "description": "Determines the verbosity of runtime logs.",
+      "default": "error",
+      "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
         "info",
@@ -53,33 +45,42 @@
       ],
       "type": "string"
     },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs.",
+      "format": "duration",
+      "type": "string"
+    },
     "TRUKNO_API_BASE_URL": {
       "default": "https://api.trukno.com/v2",
-      "description": "Base URL of the TruKno API.",
+      "description": "TruKno API base URL.",
       "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "TRUKNO_API_KEY": {
-      "description": "API key used to authenticate to TruKno.",
+      "description": "TruKno API key.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
-    "TRUKNO_INTERVAL_MINUTES": {
-      "default": 60,
-      "description": "Polling interval in minutes between connector cycles.",
-      "exclusiveMinimum": 0,
-      "type": "integer"
-    },
-    "TRUKNO_INITIAL_LOOKBACK_DAYS": {
-      "default": 30,
-      "description": "Number of days to backfill on the first run before a checkpoint exists.",
-      "exclusiveMinimum": 0,
-      "type": "integer"
-    },
-    "TRUKNO_CONNECTOR_CONFIG": {
-      "description": "Optional explicit path to a config.yml file used for manual or packaged runs.",
+    "TRUKNO_INITIAL_LOOKBACK": {
+      "default": "P30D",
+      "description": "The period of time to look back on the first run.",
+      "format": "duration",
       "type": "string"
+    },
+    "TRUKNO_INTERVAL_MINUTES": {
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     }
   },
   "required": [

@@ -299,20 +299,24 @@ my-connector/
 ├── src/                          # Source code
 │   ├── connector/                # Main connector logic
 │   │   ├── __init__.py
-│   │   ├── connector.py          # Core connector implementation
-│   │   ├── converter_to_stix.py  # STIX conversion logic
-│   │   ├── settings.py           # Configuration and validation
-│   │   └── utils.py              # Utility functions
-│   ├── my_client/                # External API client
+│   │   ├── settings.py           # Configuration and validation (Pydantic)
+│   │   ├── state.py              # Persisted checkpoints (ExternalImportConnectorState)
+│   │   └── data_processors/      # One processor per data type (collect + transform)
+│   │       ├── __init__.py
+│   │       ├── reports_processor.py
+│   │       └── vulnerabilities_processor.py
+│   ├── template_client/          # External API client
 │   │   ├── __init__.py
-│   │   └── api_client.py         # API interaction logic
-│   ├── main.py                   # Entry point
+│   │   ├── api_client.py         # API interaction logic
+│   │   └── models.py             # Raw API response models
+│   ├── main.py                   # Entry point (wires settings/state/processors)
 │   └── requirements.txt          # Python dependencies
 ├── tests/                        # Test suite
-│   ├── test_connector/
-│   │   └── test_settings.py
+│   ├── tests_connector/
+│   │   ├── data_processors/
+│   │   ├── test_settings.py
+│   │   └── test_state.py
 │   ├── conftest.py
-│   ├── test_main.py
 │   └── test-requirements.txt
 ├── .dockerignore             
 ├── config.yml.sample             # Sample configuration

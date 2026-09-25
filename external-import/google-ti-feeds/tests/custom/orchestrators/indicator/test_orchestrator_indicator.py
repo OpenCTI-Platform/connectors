@@ -89,6 +89,8 @@ class DummyConfig:
         self.indicator_types = indicator_types
         self.indicator_import_start_date = indicator_import_start_date
         self.indicator_min_score = indicator_min_score
+        self.indicator_require_malware_family = False
+        self.indicator_require_threat_actor = False
         self.report_import_start_date = timedelta(days=1)
         self.threat_actor_import_start_date = timedelta(days=1)
         self.malware_family_import_start_date = timedelta(days=1)

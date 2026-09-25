@@ -1,5 +1,10 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
+# stixmarx (pulled in by stix2-elevator) builds a "~/.stixmarx" cache on first
+# import. Use a dedicated HOME (not /tmp, which may be shadowed by a mounted
+# volume) and pre-generate the cache at build time as world-readable, so the
+# connector runs as any non-root UID, even on a read-only root filesystem.
+ENV HOME=/opt/opencti-connector-import-file-stix
 
 # Copy the connector
 COPY src /opt/opencti-connector-import-file-stix
@@ -9,6 +14,9 @@ COPY src /opt/opencti-connector-import-file-stix
 RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev gfortran musl-dev g++ openblas openblas-dev && \
     cd /opt/opencti-connector-import-file-stix && \
     pip3 install --no-cache-dir -r requirements.txt && \
+    mkdir -p "$HOME" && \
+    python3 stixmarx_warmup.py && \
+    chmod -R a+rX "$HOME" && \
     apk del git build-base gfortran musl-dev g++ openblas-dev
 
 WORKDIR /opt/opencti-connector-import-file-stix

@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | TRELLIX_TIE_DXL_CONFIG_PATH | `string` | ✅ | string |  | Path to the ePO-provisioned OpenDXL configuration file (dxlclient.config) describing the DXL brokers and client certificate. |
 | CONNECTOR_NAME | `string` |  | string | `"Trellix TIE"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["trellix-tie"]` | The scope of the connector. |
@@ -16,5 +16,8 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LIVE_STREAM_ID | `string` |  | string | `"live"` | The ID of the OpenCTI live stream to connect to. |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Whether to listen for delete events on the live stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `true` | Whether to ignore dependencies when processing events from the live stream. |
+| CONNECTOR_LIVE_STREAM_START_TIMESTAMP | `integer` |  | integer | `null` | Stream position to start from, as epoch milliseconds (13 digits). Only applied on the connector's first run (no existing state). |
+| CONNECTOR_LIVE_STREAM_RECOVER | `boolean` |  | boolean | `true` | Whether to replay historical events from the database on first start (recover/backfill). Enabled by default: on its first run the connector replays all existing data (up to 'live_stream_recover_iso_date' if set) before switching to live events. Set to false to only process new events from now on. Only applied on the connector's first run (no existing state). |
+| CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | ISO 8601 date up to which historical events are replayed when recover is enabled. Leave empty to replay all existing data. Ignored when recover is disabled. Only applied on the connector's first run (no existing state). |
 | TRELLIX_TIE_TRUST_LEVEL | `string` |  | `KNOWN_MALICIOUS` `MOST_LIKELY_MALICIOUS` `MIGHT_BE_MALICIOUS` `UNKNOWN` `MIGHT_BE_TRUSTED` `MOST_LIKELY_TRUSTED` `KNOWN_TRUSTED` `KNOWN_TRUSTED_INSTALLER` `NOT_SET` | `"KNOWN_MALICIOUS"` | Trust level to set on the TIE enterprise reputation for pushed hashes. |
 | TRELLIX_TIE_COMMENT | `string` |  | string | `"Set by OpenCTI"` | Comment attached to the reputation set in TIE. |
