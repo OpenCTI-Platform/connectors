@@ -28,11 +28,7 @@ log_info "  IMAGE_TAG         = $IMAGE_TAG"
 NO_CACHE_FLAG=""
 [[ "${usage_no_cache:-}" == "true" ]] && NO_CACHE_FLAG="--no-cache"
 
-if command -v podman >/dev/null 2>&1; then
-    RUNTIME=podman
-else
-    RUNTIME=docker
-fi
+RUNTIME="$(container_runtime)"
 
 $RUNTIME buildx build $NO_CACHE_FLAG -t "$IMAGE_TAG" .
 

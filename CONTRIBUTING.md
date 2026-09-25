@@ -175,7 +175,6 @@ Key tasks included:
 | `push_docker` | `push`, `p` | Push the image to the local registry |
 | `generate_config_schema` | `gs` | Generate JSON schema from connector settings |
 | `global_manifest` | — | Regenerate the global manifest file |
-| `deploy_to_catalog` | `deploy` | Build the connector, push to local registry, and restart OpenCTI |
 
 Run a task from inside a connector directory:
 
