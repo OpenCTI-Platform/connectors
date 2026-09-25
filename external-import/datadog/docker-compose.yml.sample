@@ -10,13 +10,12 @@ services:
       # - CONNECTOR_NAME=DataDog
       # - CONNECTOR_SCOPE=stix2
       # - CONNECTOR_LOG_LEVEL=error
-      # - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format. Not used for scheduling, see DATADOG_IMPORT_INTERVAL
+      # - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format
       # Connector's custom execution parameters
       - DATADOG_TOKEN=ChangeMe
       - DATADOG_APP_KEY=ChangeMe
       # - DATADOG_API_BASE_URL=https://api.datadoghq.com
       # - DATADOG_APP_BASE_URL=https://app.datadoghq.com
-      # - DATADOG_IMPORT_INTERVAL=60 # In minutes
       # - DATADOG_IMPORT_START_DATE=2024-01-01T00:00:00Z
       # - DATADOG_MAX_TLP=TLP:AMBER # Available values are: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
       # - DATADOG_BATCH_SIZE=100
