@@ -1,23 +1,13 @@
-FROM python:3.12-slim
+FROM python:3.12-alpine
+ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app
+COPY src /opt/opencti-connector-withaname
+WORKDIR /opt/opencti-connector-withaname
 
-WORKDIR /app
+# Install system deps (git is required for connectors-sdk git+https:// URL),
+# then Python deps, then remove build deps to keep the image small.
+RUN apk --no-cache add git build-base libmagic libffi-dev && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install python dependencies
-COPY src/requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
-
-# Copy source code
-COPY src/ ./src/
-
-# Set the entrypoint
-CMD ["python3", "src/main.py"]
+CMD ["python3", "main.py"]

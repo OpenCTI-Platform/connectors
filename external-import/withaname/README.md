@@ -56,7 +56,7 @@ The WithaName connector automatically retrieves snapshots of DDoS targets. For e
 | Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
 | Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing.                                |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | 1h              | No        | The period of time to await between two runs of the connector.                           |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | PT1H              | No        | The period of time to await between two runs of the connector.                           |
 
 ### DDoSIA specific parameters
 

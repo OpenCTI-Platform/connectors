@@ -60,7 +60,7 @@ class WithanameClient:
         except requests.RequestException as err:
             self.helper.connector_logger.error(
                 "[API] HTTP request failed",
-                {"url": url, "error": str(err)},
+                meta={"url": url, "error": str(err)},
             )
             raise
 

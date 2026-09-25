@@ -7,7 +7,7 @@ connector:
   name: WithaName Connector
   scope: withaname
   log_level: info
-  duration_period: 1h
+  duration_period: PT1H
 
 withaname:
   api_base_url: https://witha.name

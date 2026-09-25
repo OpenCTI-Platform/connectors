@@ -12,14 +12,12 @@ services:
       - CONNECTOR_NAME=${CONNECTOR_NAME}
       - CONNECTOR_SCOPE=withaname
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=1h
+      - CONNECTOR_DURATION_PERIOD=PT1H
       # Optional connector-specific config (commented out; set if needed)
       - WITHANAME_API_BASE_URL=https://witha.name
       - WITHANAME_TLP_LEVEL=green
       - WITHANAME_IMPORT_START_TIMESTAMP=null
       - WITHANAME_CREATE_NOTES=true # whether to create STIX Note objects with raw targets data
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - opencti
 

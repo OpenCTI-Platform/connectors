@@ -114,7 +114,8 @@ class WithanameConnector:
 
         if not targets:
             self.helper.connector_logger.info(
-                f"[CONNECTOR] Snapshot {cfg_id} is empty", {"cfg_id": cfg_id}
+                f"[CONNECTOR] Snapshot {cfg_id} is empty",
+                meta={"cfg_id": cfg_id},
             )
             return []
 
@@ -157,7 +158,7 @@ class WithanameConnector:
         """
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting connector run...",
-            {"connector_name": self.helper.connect_name},
+            meta={"connector_name": self.helper.connect_name},
         )
 
         try:
@@ -184,7 +185,11 @@ class WithanameConnector:
                 # Optimization: if we have a start_ts, we can stop if the last item of the page
                 # is already older than our start_ts (since API is most recent first)
                 if start_ts is not None and start_ts > 0:
-                    last_item_ts = float(items[-1].get("ts", 0))
+                    last_item_ts = 0.0
+                    try:
+                        last_item_ts = float(items[-1].get("ts", 0))
+                    except (TypeError, ValueError):
+                        last_item_ts = 0.0
                     if last_item_ts < start_ts:
                         break
 
@@ -218,7 +223,11 @@ class WithanameConnector:
             # 4. Process each snapshot sequentially
             for config_item in configs_to_process:
                 cfg_id = config_item["id"]
-                cfg_ts = float(config_item.get("ts", 0))
+                cfg_ts = 0.0
+                try:
+                    cfg_ts = float(config_item.get("ts", 0))
+                except (TypeError, ValueError):
+                    cfg_ts = 0.0
 
                 # Initiate a work for this specific snapshot
                 friendly_name = f"DDoSIA - {cfg_id}"
@@ -231,8 +240,17 @@ class WithanameConnector:
                     stix_objects = self._process_snapshot(config_item)
 
                     if stix_objects:
-                        # Note: author and marking are handled automatically by the helper
-                        # (no need to append them to stix_objects)
+                        # Include author Identity and TLP MarkingDefinition in the bundle
+                        # so that created_by_ref / object_marking_refs are not orphaned.
+                        author_stix = json.loads(
+                            self.converter_to_stix.author.to_stix2_object().serialize()
+                        )
+                        marking_stix = json.loads(
+                            self.converter_to_stix.tlp_marking.to_stix2_object().serialize()
+                        )
+                        stix_objects.append(author_stix)
+                        stix_objects.append(marking_stix)
+
                         bundle = self.helper.stix2_create_bundle(stix_objects)
                         self.helper.send_stix2_bundle(
                             bundle,
@@ -242,7 +260,7 @@ class WithanameConnector:
 
                         self.helper.connector_logger.info(
                             f"[CONNECTOR] Snapshot {cfg_id} imported",
-                            {"objects_count": len(stix_objects)},
+                            meta={"objects_count": len(stix_objects)},
                         )
 
                     # Mark work as processed
@@ -264,7 +282,7 @@ class WithanameConnector:
                 except Exception as e:
                     self.helper.connector_logger.error(
                         f"[CONNECTOR] Critical error processing snapshot {cfg_id}. Skipping state update.",
-                        {"cfg_id": cfg_id, "error": str(e)},
+                        meta={"cfg_id": cfg_id, "error": str(e)},
                     )
                     # Mark work as failed
                     self.helper.api.work.to_processed(
