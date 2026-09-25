@@ -1,6 +1,4 @@
 from unittest.mock import MagicMock, patch
-from xmlrpc import client
-import pytest
 import requests
 from cyfirma_client import CyfirmaClient
 from pydantic import HttpUrl

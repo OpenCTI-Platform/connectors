@@ -1,4 +1,3 @@
-import json
 from typing import Any, Dict
 
 import requests
@@ -15,8 +14,6 @@ from connector.utils import (
     get_request_headers,
     get_request_params,
 )
-
-import uuid
 
 
 class CyfirmaClient:
