@@ -5,6 +5,7 @@
 import json
 import logging
 import os
+import re
 import sys
 import time
 
@@ -52,6 +53,12 @@ class QRadarConnector:
             ["qradar", "reference_name"],
             config,
             default="OpenCTI",
+        )
+        self.qradar_trim_url_scheme = get_config_variable(
+            "QRADAR_TRIM_URL_SCHEME",
+            ["qradar", "trim_url_scheme"],
+            config,
+            default=False,
         )
 
         self.base_url_sets = self.qradar_url + "/api/reference_data_collections/sets"
@@ -268,7 +275,15 @@ class QRadarConnector:
                 results = parsed["parsed_stix"]
                 for result in results:
                     result_data = data.copy()
-                    stix_value = result["value"]
+                    if self.qradar_trim_url_scheme:
+                        if result["attribute"] in ["url:value"]:
+                            stix_value = re.sub(
+                                r"^[a-z0-9\-]+:/?/?", "", result["value"]
+                            )
+                        else:
+                            stix_value = result["value"]
+                    else:
+                        stix_value = result["value"]
                     if result["attribute"] in [
                         "domain-name:value",
                         "hostname:value",

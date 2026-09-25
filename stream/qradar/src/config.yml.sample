@@ -17,4 +17,5 @@ qradar:
   ssl_verify: true
   token: 'ChangeMe'
   reference_name: 'OpenCTI'
+  trim_url_scheme: false
   ignore_types: 'label,marking-definition,identity'
