@@ -36,62 +36,42 @@ def _tag_names(tags) -> List[str]:
     return names
 
 
-# Fixed, lower-cased tag-name prefixes that update_event() is allowed to
-# reconcile (add and, if stale, remove) at the event level: TLP, PAP, and
-# the always-emitted "report-type:" prefix used for STIX report_types (see
-# #6057/#7011).
+# Key under which the connector persists, per MISP event UUID, the exact
+# set of event-level tag names *it itself* added on the last successful
+# create_event()/update_event() call for that event (via
+# helper.get_state()/helper.set_state() - the standard pycti connector
+# state mechanism, stored on the connector's OpenCTI work/connector object,
+# no extra external storage required).
 #
-# This is intentionally a FIXED list, not one derived from
-# MISP_MARKING_TYPES_TO_CONVERT (config.misp.get_marking_types_allowlist()).
-# STIXtoMISPConverter._get_marking_tag() only guarantees a predictable
-# "{definition_type.lower()}:" tag shape for TLP; PAP and any other
-# allow-listed definition_type are passed through as opaque tag strings
-# with no guaranteed prefix. Deriving managed prefixes from the allow-list
-# would therefore either (a) fail to ever reconcile/remove a stale tag for
-# a definition_type whose emitted tag does not actually start with that
-# prefix ("Generic allow-listed tags become stale during event updates"),
-# or (b) make the blast radius of automatic tag removal depend on
-# deployer-editable configuration, risking deletion of manually-added MISP
-# tags that merely share a namespace ("Updates delete manually added tags
-# in allow-listed namespaces"). Restricting reconciliation to this fixed,
-# documented set keeps both risks small and predictable - see the
-# "Known limitations" note in README.md. Other allow-listed marking types
-# are still converted to tags when a container/indicator/observable is
-# created or updated, they are simply never auto-removed once stale.
-_CONNECTOR_MANAGED_TAG_PREFIXES: List[str] = ["tlp:", "pap:", "report-type:"]
-
-
-def _connector_managed_tag_prefixes(config) -> List[str]:
-    """
-    Return the list of lower-cased tag name prefixes that update_event() is
-    allowed to reconcile/remove once stale (see
-    _CONNECTOR_MANAGED_TAG_PREFIXES for why this is a fixed set rather than
-    one derived from the marking_types_to_convert allow-list).
-
-    Used to distinguish connector-managed tags (safe to remove once stale,
-    e.g. after a TLP RED -> GREEN change) from tags a user or another tool
-    added directly on the MISP event, which must never be removed here.
-
-    :param config: Connector configuration object (currently unused - kept
-        as a parameter so a future per-deployment override remains
-        possible without changing every call site)
-    :return: List of lower-cased tag prefixes, each ending with ":"
-    """
-    del config  # Not currently used: see _CONNECTOR_MANAGED_TAG_PREFIXES.
-    return list(_CONNECTOR_MANAGED_TAG_PREFIXES)
-
-
-def _is_connector_managed_tag(tag_name: str, managed_prefixes: List[str]) -> bool:
-    """
-    Check whether a tag name matches one of the connector-managed prefixes
-    (case-insensitive), e.g. "tlp:red" matches the "tlp:" prefix.
-
-    :param tag_name: The tag name to check
-    :param managed_prefixes: Lower-cased prefixes, each ending with ":"
-    :return: True if tag_name is connector-managed
-    """
-    lowered = tag_name.lower()
-    return any(lowered.startswith(prefix) for prefix in managed_prefixes)
+# This replaces an earlier heuristic that tried to infer "connector-managed"
+# tags purely from a fixed prefix set (tlp:/pap:/report-type:). That
+# heuristic had two symmetric failure modes flagged in Copilot review on PR
+# #7764:
+#   - "Generic allow-listed tags become stale during event updates": any
+#     marking type in MISP_MARKING_TYPES_TO_CONVERT other than TLP/PAP (e.g.
+#     a custom CLASSIFICATION type) does not reliably produce a tag that
+#     starts with "{definition_type.lower()}:", so a fixed-prefix
+#     reconciliation could never detect it as stale and clean it up.
+#   - "Updates delete manually added tags in allow-listed namespaces": a
+#     tag that merely *looks* connector-managed (matches tlp:/pap:/
+#     report-type:) but was actually added manually by a MISP analyst would
+#     get deleted the moment it was absent from a new OpenCTI payload.
+#
+# Tracking the *actual* set of tags this connector previously added (per
+# event, in persisted connector state) solves both: reconciliation only
+# ever removes a tag that the connector itself is on record as having
+# added, regardless of its prefix/namespace, and never touches a tag it
+# never added, regardless of a shared prefix.
+#
+# Known transitional edge case: for an event synced by an older connector
+# version (before this state tracking existed), the first update_event()
+# call after upgrading finds no recorded state for that event, so it will
+# not clean up any pre-existing stale tlp:/pap:/report-type: tag from
+# before the upgrade. From the second sync onward (once state has been
+# recorded), reconciliation behaves correctly. This is intentional: it is
+# strictly safer to under-clean once on upgrade than to guess and risk
+# deleting a manually-added tag.
+_STATE_MANAGED_TAGS_KEY = "misp_connector_managed_event_tags"
 
 
 class MispApiHandler:
@@ -186,6 +166,77 @@ class MispApiHandler:
                 },
             )
 
+    def _get_managed_event_tags(self, event_uuid: str) -> List[str]:
+        """
+        Return the event-level tag names the connector itself added the
+        last time it successfully created/updated this MISP event, as
+        recorded in persisted connector state (see _STATE_MANAGED_TAGS_KEY).
+
+        :param event_uuid: MISP event UUID
+        :return: List of tag names (empty if never recorded, e.g. the first
+            sync of this event since upgrading to this feature)
+        """
+        try:
+            state = self.helper.get_state() or {}
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"Failed to read connector state for managed tags: {str(e)}"
+            )
+            return []
+        managed = state.get(_STATE_MANAGED_TAGS_KEY) or {}
+        return list(managed.get(event_uuid, []))
+
+    def _set_managed_event_tags(self, event_uuid: str, tag_names: List[str]) -> None:
+        """
+        Persist the exact set of event-level tag names the connector just
+        added/kept on this MISP event, so a future update_event() call can
+        reconcile (remove) exactly those tags once they become stale -
+        without guessing from a fixed tag-name prefix.
+
+        :param event_uuid: MISP event UUID
+        :param tag_names: Tag names the connector added/kept this sync
+        """
+        try:
+            state = self.helper.get_state() or {}
+            managed = dict(state.get(_STATE_MANAGED_TAGS_KEY) or {})
+            if tag_names:
+                managed[event_uuid] = list(tag_names)
+            else:
+                managed.pop(event_uuid, None)
+            state[_STATE_MANAGED_TAGS_KEY] = managed
+            self.helper.set_state(state)
+        except Exception as e:
+            # Persisting state must never break the create/update itself -
+            # worst case, the next sync falls back to "nothing recorded
+            # yet" for this event (no stale-tag cleanup that round, but no
+            # incorrect deletion either).
+            self.helper.connector_logger.warning(
+                f"Failed to persist connector-managed tag state for "
+                f"event {event_uuid}: {str(e)}"
+            )
+
+    def _clear_managed_event_tags(self, event_uuid: str) -> None:
+        """
+        Drop the persisted connector-managed-tag record for a MISP event,
+        e.g. once that event has been deleted, to avoid growing connector
+        state forever with entries for events that no longer exist.
+
+        :param event_uuid: MISP event UUID
+        """
+        try:
+            state = self.helper.get_state() or {}
+            managed = state.get(_STATE_MANAGED_TAGS_KEY)
+            if managed and event_uuid in managed:
+                managed = dict(managed)
+                del managed[event_uuid]
+                state[_STATE_MANAGED_TAGS_KEY] = managed
+                self.helper.set_state(state)
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"Failed to clear connector-managed tag state for "
+                f"event {event_uuid}: {str(e)}"
+            )
+
     def create_event(self, event_data: Dict) -> Optional[Dict]:
         """
         Create a new MISP event
@@ -232,10 +283,14 @@ class MispApiHandler:
             # MISPTag objects or bare strings - normalize with _tag_names()
             # before calling add_tag() (same fix as update_event(), see
             # #7011 Copilot review finding "Normalize event tag dictionaries
-            # before adding them").
-            if "Tag" in event_data:
-                for tag_name in _tag_names(event_data["Tag"]):
-                    misp_event.add_tag(tag_name)
+            # before adding them"). The resulting list is also what gets
+            # persisted to connector state below, so a future
+            # update_event() can reconcile exactly these tags once stale.
+            event_level_tag_names = (
+                _tag_names(event_data["Tag"]) if "Tag" in event_data else []
+            )
+            for tag_name in event_level_tag_names:
+                misp_event.add_tag(tag_name)
 
             # Add attributes
             if "Attribute" in event_data:
@@ -300,6 +355,15 @@ class MispApiHandler:
                         "event_info": event.get("info"),
                     },
                 )
+
+                # Record exactly which event-level tags the connector added,
+                # so a future update_event() call can reconcile (remove)
+                # precisely those tags once they become stale, without
+                # guessing from a fixed tag-name prefix - see
+                # _STATE_MANAGED_TAGS_KEY.
+                event_uuid = event.get("uuid") or event_data.get("uuid")
+                if event_uuid:
+                    self._set_managed_event_tags(event_uuid, event_level_tag_names)
 
                 # Publish the event if configured
                 if self.config.misp.publish_on_create:
@@ -373,21 +437,27 @@ class MispApiHandler:
             existing_event.attributes = []
             existing_event.objects = []
 
-            # Reconcile event-level tags: remove stale connector-managed
-            # tags that are no longer present in the new payload, then add
-            # any newly-required tags.
+            # Reconcile event-level tags: remove tags the connector itself
+            # previously added to this event (as recorded in persisted
+            # connector state, see _STATE_MANAGED_TAGS_KEY /
+            # _get_managed_event_tags()) that are no longer present in the
+            # new payload, then add any newly-required tags. Finally,
+            # persist the new set of connector-added tags for next time.
             #
-            # "Connector-managed" here means a FIXED tlp:/pap:/report-type:
-            # prefix set (see _CONNECTOR_MANAGED_TAG_PREFIXES /
-            # _connector_managed_tag_prefixes()) - deliberately NOT derived
-            # from the marking_types_to_convert allow-list, since other
-            # allow-listed marking types are not guaranteed to produce a
-            # predictable tag prefix (see #7011 Copilot review findings
-            # "Generic allow-listed tags become stale during event updates"
-            # and "Updates delete manually added tags in allow-listed
-            # namespaces"). Tags outside this fixed set - including other
-            # allow-listed marking types - are never touched by this
-            # reconciliation step; see README "Known limitations".
+            # This replaces an earlier fixed-prefix (tlp:/pap:/report-type:)
+            # heuristic. Tracking the actual previously-added tag names
+            # instead of guessing from a prefix fixes two Copilot review
+            # findings on PR #7764:
+            #   - "Generic allow-listed tags become stale during event
+            #     updates": any allow-listed marking type (not just
+            #     TLP/PAP) is now correctly reconciled, since we know
+            #     exactly which tag name the connector added last time,
+            #     regardless of its shape/prefix.
+            #   - "Updates delete manually added tags in allow-listed
+            #     namespaces": a tag that merely shares a namespace with a
+            #     connector-managed tag (e.g. an analyst manually adding
+            #     "tlp:red") is never removed, because it was never
+            #     recorded as connector-added in state.
             #
             # event_data["Tag"] is a list of flat dicts such as
             # {"name": "tlp:red", ...} (the shape produced by
@@ -403,16 +473,19 @@ class MispApiHandler:
             # forever, publishing conflicting handling metadata (see #7011
             # Copilot review finding "Reconcile stale event marking and
             # report-type tags during updates").
-            if "Tag" in event_data:
-                new_tag_names = _tag_names(event_data["Tag"])
-                new_tag_name_set = set(new_tag_names)
-                managed_prefixes = _connector_managed_tag_prefixes(self.config)
+            event_level_tag_names = (
+                _tag_names(event_data["Tag"]) if "Tag" in event_data else None
+            )
+            if event_level_tag_names is not None:
+                new_tag_name_set = set(event_level_tag_names)
+                previously_managed_tag_names = set(
+                    self._get_managed_event_tags(existing_event.uuid)
+                )
+                stale_tag_names = previously_managed_tag_names - new_tag_name_set
 
                 for tag in list(existing_event.tags):
                     tag_name = getattr(tag, "name", None)
-                    if not tag_name or tag_name in new_tag_name_set:
-                        continue
-                    if not _is_connector_managed_tag(tag_name, managed_prefixes):
+                    if not tag_name or tag_name not in stale_tag_names:
                         continue
                     try:
                         self.misp.untag(existing_event.uuid, tag_name)
@@ -424,7 +497,7 @@ class MispApiHandler:
                         )
 
                 existing_tag_names = {tag.name for tag in existing_event.tags}
-                for tag_name in new_tag_names:
+                for tag_name in event_level_tag_names:
                     if tag_name not in existing_tag_names:
                         existing_event.add_tag(tag_name)
 
@@ -487,6 +560,13 @@ class MispApiHandler:
                     },
                 )
 
+                # Persist the new set of connector-added event-level tags
+                # for the next reconciliation round.
+                if event_level_tag_names is not None:
+                    self._set_managed_event_tags(
+                        existing_event.uuid, event_level_tag_names
+                    )
+
                 # Publish the event if configured
                 if self.config.misp.publish_on_update:
                     self._publish_event(event)
@@ -527,6 +607,11 @@ class MispApiHandler:
                         "Successfully deleted MISP event",
                         {"event_uuid": event_uuid},
                     )
+                    # Drop the persisted connector-managed-tag record for
+                    # this event - it no longer exists, so there is nothing
+                    # left to reconcile tags against, and keeping the
+                    # entry would only grow connector state forever.
+                    self._clear_managed_event_tags(event_uuid)
                     return True
                 elif "errors" in response:
                     self.helper.connector_logger.error(
