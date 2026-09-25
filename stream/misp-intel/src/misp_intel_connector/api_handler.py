@@ -63,6 +63,19 @@ def _tag_names(tags) -> List[str]:
 # added, regardless of its prefix/namespace, and never touches a tag it
 # never added, regardless of a shared prefix.
 #
+# Two further refinements, also from Copilot review on PR #7764:
+#   - "Retain failed tag removals for later retry": if misp.untag() raises
+#     while removing a stale tag, that tag name stays in the persisted
+#     managed set (instead of being dropped from it), so the next
+#     update_event() call retries the removal rather than losing track of
+#     it forever after one transient failure.
+#   - "Do not mark pre-existing tags as connector-managed": a tag that
+#     already existed on the event for some other reason (e.g. manually
+#     added by an analyst) and merely happens to also be present in a new
+#     payload is never promoted to connector-managed just because it
+#     matches - only tags genuinely newly added this round, or previously-
+#     managed tags that are still required, are persisted as managed.
+#
 # Known transitional edge case: for an event synced by an older connector
 # version (before this state tracking existed), the first update_event()
 # call after upgrading finds no recorded state for that event, so it will
@@ -473,16 +486,41 @@ class MispApiHandler:
             # forever, publishing conflicting handling metadata (see #7011
             # Copilot review finding "Reconcile stale event marking and
             # report-type tags during updates").
+            #
+            # Two further refinements (also Copilot review findings on PR
+            # #7764):
+            #   - "Retain failed tag removals for later retry": if
+            #     misp.untag() raises for a given stale tag, that tag name
+            #     is kept in the persisted managed set below, so the next
+            #     update_event() call retries removing it instead of the
+            #     failure being silently dropped forever.
+            #   - "Do not mark pre-existing tags as connector-managed": a
+            #     tag that already existed on the event before this update
+            #     for some other reason (e.g. manually added) is never
+            #     promoted to connector-managed just because it also
+            #     happens to be present in the new payload.
             event_level_tag_names = (
                 _tag_names(event_data["Tag"]) if "Tag" in event_data else None
             )
+            managed_tag_names_to_persist = None
             if event_level_tag_names is not None:
                 new_tag_name_set = set(event_level_tag_names)
                 previously_managed_tag_names = set(
                     self._get_managed_event_tags(existing_event.uuid)
                 )
+                # Snapshot which tag names already exist on the event
+                # *before* any removal/addition this round - used below to
+                # tell "the connector genuinely newly added this tag" apart
+                # from "this tag already existed on the event for some
+                # other reason and merely continues to be present".
+                pre_existing_tag_names = {
+                    tag.name
+                    for tag in existing_event.tags
+                    if getattr(tag, "name", None)
+                }
                 stale_tag_names = previously_managed_tag_names - new_tag_name_set
 
+                failed_removal_tag_names = set()
                 for tag in list(existing_event.tags):
                     tag_name = getattr(tag, "name", None)
                     if not tag_name or tag_name not in stale_tag_names:
@@ -491,6 +529,12 @@ class MispApiHandler:
                         self.misp.untag(existing_event.uuid, tag_name)
                         existing_event.tags.remove(tag)
                     except Exception as e:
+                        # Keep this tag recorded as connector-managed (see
+                        # below) so the next update_event() call retries
+                        # removing it, instead of silently losing track of
+                        # it forever the moment a single untag() call fails
+                        # (transient MISP-side/network error).
+                        failed_removal_tag_names.add(tag_name)
                         self.helper.connector_logger.warning(
                             f"Failed to remove stale MISP tag "
                             f"'{tag_name}': {str(e)}"
@@ -500,6 +544,25 @@ class MispApiHandler:
                 for tag_name in event_level_tag_names:
                     if tag_name not in existing_tag_names:
                         existing_event.add_tag(tag_name)
+
+                # What to persist as "connector-managed" for the next
+                # reconciliation round: tags that were already managed and
+                # are still required (kept), plus tags the connector
+                # genuinely newly added this round (i.e. did not already
+                # exist on the event before this update), plus any stale
+                # tag whose removal just failed (kept eligible for retry).
+                # A tag that merely already existed on the event and also
+                # happens to be in the new payload is deliberately left out
+                # - it was never actually added by the connector.
+                kept_managed_tag_names = (
+                    previously_managed_tag_names & new_tag_name_set
+                )
+                newly_added_tag_names = new_tag_name_set - pre_existing_tag_names
+                managed_tag_names_to_persist = (
+                    kept_managed_tag_names
+                    | newly_added_tag_names
+                    | failed_removal_tag_names
+                )
 
             # Add new attributes
             if "Attribute" in event_data:
@@ -561,10 +624,12 @@ class MispApiHandler:
                 )
 
                 # Persist the new set of connector-added event-level tags
-                # for the next reconciliation round.
-                if event_level_tag_names is not None:
+                # for the next reconciliation round. Deliberately NOT the
+                # same as "all tags in the new payload" - see the
+                # managed_tag_names_to_persist computation above.
+                if managed_tag_names_to_persist is not None:
                     self._set_managed_event_tags(
-                        existing_event.uuid, event_level_tag_names
+                        existing_event.uuid, list(managed_tag_names_to_persist)
                     )
 
                 # Publish the event if configured
