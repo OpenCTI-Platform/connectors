@@ -161,7 +161,12 @@ def test_indicator_object_marking_refs_are_tagged_on_attribute(converter):
     assert "tlp:red" in attr_tags
 
 
-def test_observable_object_marking_refs_are_tagged_on_object(converter):
+def test_observable_object_marking_refs_are_tagged_on_object_attributes(converter):
+    """
+    pymisp.MISPObject does not support add_tag() at the Object level
+    (MISP/PyMISP#168), so marking-derived tags must be applied to each
+    Attribute the Object contains, not to the Object itself.
+    """
     bundle = {
         "type": "bundle",
         "id": "bundle--bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
@@ -177,5 +182,9 @@ def test_observable_object_marking_refs_are_tagged_on_object(converter):
     misp_objects = misp_event["Event"].get("Object", [])
     ip_port_obj = next((o for o in misp_objects if o.get("name") == "ip-port"), None)
     assert ip_port_obj is not None
-    obj_tags = [tag["name"] for tag in ip_port_obj.get("Tag", [])]
-    assert "PAP:AMBER" in obj_tags
+
+    object_attributes = ip_port_obj.get("Attribute", [])
+    assert len(object_attributes) > 0
+    for attribute in object_attributes:
+        attr_tags = [tag["name"] for tag in attribute.get("Tag", [])]
+        assert "PAP:AMBER" in attr_tags
