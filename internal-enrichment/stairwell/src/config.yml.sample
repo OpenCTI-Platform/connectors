@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  name: 'Stairwell' # optional (default: 'Stairwell')
+  scope: 'StixFile,Domain-Name,IPv4-Addr,IPv6-Addr,Autonomous-System'
+  log_level: 'error' # optional (default: 'error')
+  auto: false # optional, enable/disable auto-enrichment of in-scope observables (default: false)
+
+stairwell:
+  api_token: 'ChangeMe'
+  api_base_url: 'https://app.stairwell.com' # optional
+  organization_id: '' # optional, adds a rate-limit header
+  user_id: '' # optional, adds a rate-limit header
+  default_tlp: 'amber' # optional, one of: clear, white, green, amber, amber+strict, red (default: 'amber')
+  max_tlp_level: 'red' # optional, max TLP the connector will enrich (default: 'red')
+  variant_limit: 25 # optional, max variant SCOs per file (0 disables) (default: 25)
+  resolutions_limit: 50 # optional, max DNS resolution rows per domain (0 disables) (default: 50)
+  sightings_limit: 100 # optional, max unique assets per file (0 disables) (default: 100)
