@@ -8,7 +8,9 @@ it or its tests in the container — no rebuild needed between edits.
 
 - Docker with the Compose plugin (`docker compose`, not `docker-compose`)
 - `make`
-- An OpenCTI instance the connector can reach
+- An OpenCTI stack running with Docker Compose, e.g. from
+  [OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker), under
+  the Compose project name `xtm` (see [Networking](#networking))
 
 ## Configure
 
@@ -95,9 +97,18 @@ cp ../external-import/$CONNECTOR_NAME/config.yml.sample \
 Then fill in at least `opencti.url`, `opencti.token` and `connector.id` (any
 UUIDv4). `src/config.yml` is untracked by design, so do not commit it.
 
-If OpenCTI runs on the host, `http://localhost` is not reachable from inside the
-container. Use `http://host.docker.internal:8080`, or attach the container to
-the OpenCTI Docker network.
+## Networking
+
+`COMPOSE_PROJECT_NAME=xtm` in [.env](.env) puts the dev container on the
+`xtm_default` network. If the OpenCTI stack from
+[OpenCTI-Platform/docker](https://github.com/OpenCTI-Platform/docker) runs
+under the same project name, the container reaches its services by name:
+
+- OpenCTI: set `opencti.url` to `http://opencti:8080`
+- RabbitMQ: `rabbitmq` resolves to the RabbitMQ service
+
+If your OpenCTI stack uses another project name, change `COMPOSE_PROJECT_NAME`
+here to match it.
 
 ## Switching connectors
 
