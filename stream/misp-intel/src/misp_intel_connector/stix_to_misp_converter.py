@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from pymisp import MISPEvent, MISPObject, MISPSighting
+from pymisp import MISPAttribute, MISPEvent, MISPObject, MISPSighting
 
 
 class STIXtoMISPConverter:
@@ -141,30 +141,46 @@ class STIXtoMISPConverter:
         """
         self.helper = helper
         self.config = config
-        # Track added attribute values to prevent duplicates
-        self.added_attributes = {}
+        # Track already-created MISPAttribute instances by "type:value" key.
+        # This serves two purposes: (1) avoid adding a duplicate attribute
+        # for the same IOC, and (2) when a later indicator/observable
+        # resolves to the same type/value, its labels and marking-derived
+        # tags (TLP/PAP, see #7011) are merged onto the already-tracked
+        # attribute instead of being silently dropped - see
+        # _get_tracked_attribute()/_track_attribute() and the Copilot review
+        # finding "Preserve marking tags when deduplicating indicators".
+        self.added_attributes: Dict[str, MISPAttribute] = {}
         # Lookup of marking-definition STIX id -> MISP taxonomy tag,
         # rebuilt for every bundle conversion (see _build_marking_lookup)
         self.marking_lookup: Dict[str, str] = {}
 
-    def _should_add_attribute(self, attr_type: str, value: str) -> bool:
+    def _get_tracked_attribute(
+        self, attr_type: str, value: str
+    ) -> Optional[MISPAttribute]:
         """
-        Check if an attribute should be added (avoiding duplicates)
+        Return the MISPAttribute previously created for this type/value
+        combination, or None if no such attribute has been added yet to the
+        event currently being built.
 
         :param attr_type: MISP attribute type
         :param value: Attribute value
-        :return: True if attribute should be added, False if it's a duplicate
+        :return: The existing MISPAttribute, or None
         """
-        # Create a key for tracking (type and value combination)
-        key = f"{attr_type}:{value}"
+        return self.added_attributes.get(f"{attr_type}:{value}")
 
-        if key in self.added_attributes:
-            # Already added this attribute
-            return False
+    def _track_attribute(
+        self, attr_type: str, value: str, attribute: MISPAttribute
+    ) -> None:
+        """
+        Record a newly created MISPAttribute so later duplicates of the same
+        type/value can find it (and merge their tags into it) instead of
+        being silently skipped.
 
-        # Mark as added
-        self.added_attributes[key] = True
-        return True
+        :param attr_type: MISP attribute type
+        :param value: Attribute value
+        :param attribute: The MISPAttribute instance that was just added
+        """
+        self.added_attributes[f"{attr_type}:{value}"] = attribute
 
     def _get_marking_tag(self, definition_type: str, name: str) -> Optional[str]:
         """
@@ -629,9 +645,20 @@ class STIXtoMISPConverter:
                 else:
                     misp_type = "text"
 
-            # Check for duplicates before adding
-            if not self._should_add_attribute(misp_type, pattern_value):
-                # Skip duplicate attribute
+            # If an attribute with this type/value was already added (e.g.
+            # from another indicator resolving to the same IOC), do not add
+            # a duplicate attribute - but still merge this indicator's
+            # labels and marking tags onto the existing attribute, otherwise
+            # a differently-marked duplicate would silently lose its
+            # TLP/PAP tag (see Copilot review finding "Preserve marking tags
+            # when deduplicating indicators").
+            existing_attr = self._get_tracked_attribute(misp_type, pattern_value)
+            if existing_attr is not None:
+                for label in indicator.get("labels", []):
+                    existing_attr.add_tag(label)
+                self._add_marking_tags(
+                    existing_attr, indicator.get("object_marking_refs")
+                )
                 continue
 
             # Add attribute
@@ -642,6 +669,7 @@ class STIXtoMISPConverter:
                 to_ids=True,
                 comment=indicator.get("name", ""),
             )
+            self._track_attribute(misp_type, pattern_value, attr)
 
             # Add indicator tags
             for label in indicator.get("labels", []):
@@ -1488,9 +1516,16 @@ class STIXtoMISPConverter:
         else:
             misp_type = "text"
 
-        # Check for duplicates before adding
-        if not self._should_add_attribute(misp_type, value):
-            # Skip duplicate attribute
+        # If an attribute with this type/value was already added (e.g. the
+        # same IOC observed via two different STIX objects), do not add a
+        # duplicate attribute - but still merge this observable's labels/
+        # marking/score tags onto the existing attribute, otherwise a
+        # differently-marked duplicate would silently lose its TLP/PAP tag
+        # (see Copilot review finding "Preserve marking tags when
+        # deduplicating indicators", which applies equally to observables).
+        existing_attr = self._get_tracked_attribute(misp_type, value)
+        if existing_attr is not None:
+            self._apply_observable_tags(existing_attr, observable, obs_type)
             return
 
         # Determine if this is a C2 server or malicious infrastructure
@@ -1506,7 +1541,27 @@ class STIXtoMISPConverter:
             comment=f"Observable: {obs_type}",
             to_ids=to_ids,
         )
+        self._track_attribute(misp_type, value, attr)
 
+        self._apply_observable_tags(attr, observable, obs_type)
+
+    def _apply_observable_tags(
+        self, attr: MISPAttribute, observable: Dict, obs_type: str
+    ) -> None:
+        """
+        Apply labels, marking-derived tags, score-based threat-level tags,
+        the C2-infrastructure tag and the observable-type tag to a MISP
+        attribute representing an observable.
+
+        Factored out of _add_observable_as_attribute() so the exact same
+        tagging logic runs whether the attribute was just created, or is an
+        already-tracked attribute that a duplicate observable is merging its
+        tags into (see _get_tracked_attribute()).
+
+        :param attr: The MISPAttribute to tag
+        :param observable: The STIX observable dict this attribute derives from
+        :param obs_type: Lowercased STIX observable type (e.g. "ipv4-addr")
+        """
         # Add labels as tags to the attribute
         # Check both 'labels' and 'x_opencti_labels'
         labels = observable.get("labels", []) or observable.get("x_opencti_labels", [])
