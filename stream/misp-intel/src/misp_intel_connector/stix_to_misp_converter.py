@@ -143,6 +143,9 @@ class STIXtoMISPConverter:
         self.config = config
         # Track added attribute values to prevent duplicates
         self.added_attributes = {}
+        # Lookup of marking-definition STIX id -> MISP taxonomy tag,
+        # rebuilt for every bundle conversion (see _build_marking_lookup)
+        self.marking_lookup: Dict[str, str] = {}
 
     def _should_add_attribute(self, attr_type: str, value: str) -> bool:
         """
@@ -162,6 +165,88 @@ class STIXtoMISPConverter:
         # Mark as added
         self.added_attributes[key] = True
         return True
+
+    def _get_marking_tag(self, definition_type: str, name: str) -> Optional[str]:
+        """
+        Convert an OpenCTI marking-definition (definition_type + name) into
+        its MISP taxonomy tag.
+
+        OpenCTI's STIX 2.1 output for a marking-definition only carries
+        `definition_type` (e.g. "TLP") and `name` (e.g. "TLP:RED") - there is
+        no nested `definition` object.
+
+        TLP names are re-cased to match the MISP `tlp` taxonomy, which is
+        lowercase (e.g. "TLP:AMBER+STRICT" -> "tlp:amber+strict"). PAP names
+        already match the MISP `PAP` taxonomy format ("PAP:RED") and are used
+        as-is. Any other allow-listed definition_type is passed through
+        unchanged, on the assumption its `name` is already a valid tag.
+
+        :param definition_type: The marking's definition_type (e.g. "TLP", "PAP")
+        :param name: The marking's name (e.g. "TLP:RED")
+        :return: A MISP tag string, or None if it cannot be derived
+        """
+        if not name:
+            return None
+
+        if definition_type.upper() == "TLP":
+            value = name.split(":", 1)[1] if ":" in name else name
+            return f"tlp:{value.lower()}"
+
+        # PAP and any other future marking types are expected to already be
+        # in a MISP-compatible "NAMESPACE:VALUE" tag format.
+        return name
+
+    def _build_marking_lookup(self, stix_bundle: Dict) -> Dict[str, str]:
+        """
+        Build a lookup of marking-definition STIX id -> MISP tag for the
+        whole bundle, filtered by the MISP_MARKING_TYPES_TO_CONVERT allow-list.
+
+        This is an allow-list (fails closed): a marking-definition whose
+        definition_type is not in the allow-list (e.g. a custom/internal
+        distribution-control marking) is skipped entirely and will never
+        reach MISP as a tag.
+
+        :param stix_bundle: STIX 2.1 bundle dictionary
+        :return: Dict mapping marking-definition STIX id to MISP tag
+        """
+        allowlist = self.config.misp.get_marking_types_allowlist()
+        lookup: Dict[str, str] = {}
+
+        for obj in stix_bundle.get("objects", []):
+            if obj.get("type", "").lower() != "marking-definition":
+                continue
+
+            definition_type = obj.get("definition_type", "") or ""
+            if definition_type.upper() not in allowlist:
+                self.helper.connector_logger.debug(
+                    f"Skipping marking-definition {obj.get('id')}: "
+                    f"definition_type '{definition_type}' not in allow-list {sorted(allowlist)}"
+                )
+                continue
+
+            tag = self._get_marking_tag(definition_type, obj.get("name", ""))
+            if tag:
+                lookup[obj.get("id")] = tag
+
+        return lookup
+
+    def _add_marking_tags(
+        self, taggable, object_marking_refs: Optional[List[str]]
+    ) -> None:
+        """
+        Add MISP tags derived from object_marking_refs to a taggable MISP
+        object (MISPEvent, MISPAttribute, or MISPObject all expose add_tag).
+
+        Markings whose definition_type was not in the allow-list (i.e. not
+        present in self.marking_lookup) are silently skipped.
+
+        :param taggable: Any MISP object exposing add_tag()
+        :param object_marking_refs: List of marking-definition STIX ids
+        """
+        for marking_ref in object_marking_refs or []:
+            tag = self.marking_lookup.get(marking_ref)
+            if tag:
+                taggable.add_tag(tag)
 
     def convert_bundle_to_event(
         self, stix_bundle: Dict, custom_uuid: Optional[str] = None
@@ -189,6 +274,10 @@ class STIXtoMISPConverter:
             if not container:
                 self.helper.connector_logger.warning("No container found in bundle")
                 return None
+
+            # Build the marking-definition lookup (id -> MISP tag) once per
+            # bundle, so event/attribute/object level tagging can reuse it.
+            self.marking_lookup = self._build_marking_lookup(stix_bundle)
 
             # Create MISP event (pass bundle for score calculation)
             misp_event = self._create_base_event(container, custom_uuid, stix_bundle)
@@ -444,6 +533,14 @@ class STIXtoMISPConverter:
         for label in container.get("labels", []):
             event.add_tag(label)
 
+        # Convert the container's object_marking_refs (e.g. TLP/PAP) to
+        # MISP event-level tags (see #6057)
+        self._add_marking_tags(event, container.get("object_marking_refs"))
+
+        # Convert report_types to MISP event-level tags (e.g. "report-type:threat-report")
+        for report_type in container.get("report_types", []) or []:
+            event.add_tag(f"report-type:{report_type}")
+
         return event
 
     def _process_indicator(self, event: MISPEvent, indicator: Dict) -> None:
@@ -515,6 +612,10 @@ class STIXtoMISPConverter:
             # Add indicator tags
             for label in indicator.get("labels", []):
                 attr.add_tag(label)
+
+            # Convert the indicator's object_marking_refs (e.g. TLP/PAP) to
+            # MISP attribute-level tags (see #7011)
+            self._add_marking_tags(attr, indicator.get("object_marking_refs"))
 
             # Add validity period as comment
             if "valid_from" in indicator or "valid_until" in indicator:
@@ -612,6 +713,10 @@ class STIXtoMISPConverter:
             # Set comment on object
             if comments:
                 misp_obj.comment = " | ".join(comments)
+
+            # Convert the observable's object_marking_refs (e.g. TLP/PAP) to
+            # MISP object-level tags (see #7011)
+            self._add_marking_tags(misp_obj, observable.get("object_marking_refs"))
 
             # Add the object to the event
             if misp_obj.attributes:
@@ -1369,6 +1474,10 @@ class STIXtoMISPConverter:
         labels = observable.get("labels", []) or observable.get("x_opencti_labels", [])
         for label in labels:
             attr.add_tag(label)
+
+        # Convert the observable's object_marking_refs (e.g. TLP/PAP) to
+        # MISP attribute-level tags (see #7011)
+        self._add_marking_tags(attr, observable.get("object_marking_refs"))
 
         # Add threat level based on score if available
         score = observable.get("x_opencti_score")
