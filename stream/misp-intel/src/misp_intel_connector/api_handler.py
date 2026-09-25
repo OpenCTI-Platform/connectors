@@ -5,6 +5,7 @@ This module handles all interactions with the MISP API,
 including creating, updating, and deleting events.
 """
 
+import threading
 import traceback
 from typing import Dict, List, Optional
 
@@ -76,6 +77,17 @@ def _tag_names(tags) -> List[str]:
 #     matches - only tags genuinely newly added this round, or previously-
 #     managed tags that are still required, are persisted as managed.
 #
+# A fifth refinement, also from Copilot review on PR #7764 ("Synchronize
+# state read-modify-write operations"): the connector's worker thread
+# (create/update, queued) and stream thread (delete, handled immediately -
+# see connector.py's _process_message()) share this same MispApiHandler
+# instance and its persisted state. Without serialization, a delete for
+# one event racing an update for a different event could read the same
+# state snapshot and then have one write silently clobber the other's
+# change (lost update). _set_managed_event_tags()/_clear_managed_event_tags()
+# below hold a per-handler threading.Lock for their entire
+# get-modify-set sequence to prevent this.
+#
 # Known transitional edge case: for an event synced by an older connector
 # version (before this state tracking existed), the first update_event()
 # call after upgrading finds no recorded state for that event, so it will
@@ -104,6 +116,15 @@ class MispApiHandler:
         """
         self.helper = helper
         self.config = config
+
+        # Serializes the get_state() -> mutate -> set_state() sequence in
+        # _set_managed_event_tags()/_clear_managed_event_tags() below. This
+        # handler instance is shared between the connector's worker thread
+        # (create/update) and stream thread (delete, handled immediately),
+        # which can otherwise race on the same persisted state and lose
+        # each other's writes (see #7011 Copilot review finding
+        # "Synchronize state read-modify-write operations").
+        self._state_lock = threading.Lock()
 
         # Initialize PyMISP client
         try:
@@ -185,6 +206,14 @@ class MispApiHandler:
         last time it successfully created/updated this MISP event, as
         recorded in persisted connector state (see _STATE_MANAGED_TAGS_KEY).
 
+        This is a read-only snapshot and is intentionally NOT taken under
+        _state_lock: the write side (_set_managed_event_tags()) always
+        re-reads the latest state right before mutating/persisting it, so
+        a slightly stale read here (e.g. a concurrent update to a
+        *different* event's record landing a moment later) cannot by
+        itself cause a lost update - only concurrent, unsynchronized
+        writes could, which is what _state_lock prevents.
+
         :param event_uuid: MISP event UUID
         :return: List of tag names (empty if never recorded, e.g. the first
             sync of this event since upgrading to this feature)
@@ -206,18 +235,29 @@ class MispApiHandler:
         reconcile (remove) exactly those tags once they become stale -
         without guessing from a fixed tag-name prefix.
 
+        The whole get_state() -> mutate -> set_state() sequence is
+        serialized via _state_lock: this handler is shared between the
+        connector's worker thread (create/update) and stream thread
+        (delete, handled immediately in connector.py's _process_message()),
+        so without a lock a concurrent _clear_managed_event_tags() call for
+        a different event could read the same state snapshot and then have
+        one write silently overwrite (lose) the other's change (see #7011
+        Copilot review finding "Synchronize state read-modify-write
+        operations").
+
         :param event_uuid: MISP event UUID
         :param tag_names: Tag names the connector added/kept this sync
         """
         try:
-            state = self.helper.get_state() or {}
-            managed = dict(state.get(_STATE_MANAGED_TAGS_KEY) or {})
-            if tag_names:
-                managed[event_uuid] = list(tag_names)
-            else:
-                managed.pop(event_uuid, None)
-            state[_STATE_MANAGED_TAGS_KEY] = managed
-            self.helper.set_state(state)
+            with self._state_lock:
+                state = self.helper.get_state() or {}
+                managed = dict(state.get(_STATE_MANAGED_TAGS_KEY) or {})
+                if tag_names:
+                    managed[event_uuid] = list(tag_names)
+                else:
+                    managed.pop(event_uuid, None)
+                state[_STATE_MANAGED_TAGS_KEY] = managed
+                self.helper.set_state(state)
         except Exception as e:
             # Persisting state must never break the create/update itself -
             # worst case, the next sync falls back to "nothing recorded
@@ -234,16 +274,23 @@ class MispApiHandler:
         e.g. once that event has been deleted, to avoid growing connector
         state forever with entries for events that no longer exist.
 
+        Like _set_managed_event_tags(), the whole get_state() -> mutate ->
+        set_state() sequence is serialized via _state_lock - see that
+        method's docstring for why (this is called from the stream thread
+        on delete, concurrently with the worker thread's create/update
+        calls to _set_managed_event_tags() for other events).
+
         :param event_uuid: MISP event UUID
         """
         try:
-            state = self.helper.get_state() or {}
-            managed = state.get(_STATE_MANAGED_TAGS_KEY)
-            if managed and event_uuid in managed:
-                managed = dict(managed)
-                del managed[event_uuid]
-                state[_STATE_MANAGED_TAGS_KEY] = managed
-                self.helper.set_state(state)
+            with self._state_lock:
+                state = self.helper.get_state() or {}
+                managed = state.get(_STATE_MANAGED_TAGS_KEY)
+                if managed and event_uuid in managed:
+                    managed = dict(managed)
+                    del managed[event_uuid]
+                    state[_STATE_MANAGED_TAGS_KEY] = managed
+                    self.helper.set_state(state)
         except Exception as e:
             self.helper.connector_logger.warning(
                 f"Failed to clear connector-managed tag state for "
