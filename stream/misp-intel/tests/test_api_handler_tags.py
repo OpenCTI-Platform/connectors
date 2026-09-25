@@ -108,7 +108,11 @@ def test_create_event_preserves_object_attribute_level_tags(api_handler):
     }
 
     api_handler.misp.add_event.return_value = {
-        "Event": {"id": "2", "uuid": event_data["uuid"], "info": "Test event with object"}
+        "Event": {
+            "id": "2",
+            "uuid": event_data["uuid"],
+            "info": "Test event with object",
+        }
     }
 
     api_handler.create_event(event_data)
