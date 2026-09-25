@@ -9,8 +9,15 @@ update_event() used to discard the return value of add_attribute(), so
 those tags never made it onto the MISPAttribute objects actually sent to
 MISP. This file locks in the fix.
 
+It also covers the persisted-state-backed reconciliation of stale
+event-level tags (tlp:/pap:/report-type:/any other allow-listed marking
+type) on update_event(), see api_handler.py's
+_get_managed_event_tags()/_set_managed_event_tags()/_clear_managed_event_tags().
+
 Like the rest of this connector's test suite, no live MISP instance is
-required: PyMISP itself is mocked.
+required: PyMISP itself is mocked. helper.get_state()/set_state() are
+backed by a simple in-memory dict to emulate real pycti connector state
+persistence.
 """
 
 from unittest.mock import MagicMock, patch
@@ -18,17 +25,50 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 
+def _make_stateful_helper():
+    """
+    Build a MagicMock helper whose get_state()/set_state() are backed by a
+    simple in-memory dict, so tests can assert on what gets persisted (and
+    pre-seed state to simulate a prior sync) the same way the real pycti
+    OpenCTIConnectorHelper.get_state()/set_state() would round-trip through
+    the OpenCTI connector's persisted state.
+
+    :return: (helper mock, state_box) - state_box is a single-item dict
+        {"state": ...} so tests can inspect/mutate the "current" state.
+    """
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+
+    state_box = {"state": None}
+
+    def _get_state():
+        return state_box["state"]
+
+    def _set_state(new_state):
+        state_box["state"] = new_state
+
+    helper.get_state.side_effect = _get_state
+    helper.set_state.side_effect = _set_state
+
+    return helper, state_box
+
+
 @pytest.fixture
-def api_handler():
-    """Create a MispApiHandler with PyMISP mocked out."""
+def stateful_helper():
+    """Expose the stateful helper mock and its backing dict to tests."""
+    return _make_stateful_helper()
+
+
+@pytest.fixture
+def api_handler(stateful_helper):
+    """Create a MispApiHandler with PyMISP mocked out and a stateful helper."""
     with patch("misp_intel_connector.api_handler.PyMISP") as mock_pymisp_cls:
         mock_misp = MagicMock()
         mock_pymisp_cls.return_value = mock_misp
 
         from misp_intel_connector.api_handler import MispApiHandler
 
-        helper = MagicMock()
-        helper.connector_logger = MagicMock()
+        helper, _state_box = stateful_helper
 
         config = MagicMock()
         config.misp.url = "https://misp.example.com"
@@ -42,13 +82,15 @@ def api_handler():
         # get_marking_types_allowlist() is exercised by
         # stix_to_misp_converter.py (not this test module) to decide which
         # markings are converted to tags at all. It is set here purely for
-        # fixture realism; _connector_managed_tag_prefixes() itself no
-        # longer consults it - the set of prefixes update_event() may
-        # reconcile/remove is fixed (tlp:/pap:/report-type:), see
-        # _CONNECTOR_MANAGED_TAG_PREFIXES in api_handler.py and the
-        # "Generic allow-listed tags become stale during event updates" /
+        # fixture realism; the persisted-state-backed stale-tag
+        # reconciliation in update_event() no longer consults it at all -
+        # it tracks the *actual* tag names the connector previously added
+        # per event (see _get_managed_event_tags()/_set_managed_event_tags()
+        # in api_handler.py), regardless of which allow-listed marking type
+        # produced them. This is what fixes the Copilot review findings
+        # "Generic allow-listed tags become stale during event updates" and
         # "Updates delete manually added tags in allow-listed namespaces"
-        # Copilot review findings on PR #7764.
+        # on PR #7764.
         config.misp.get_marking_types_allowlist.return_value = {
             "TLP",
             "PAP",
@@ -144,6 +186,7 @@ def test_create_event_preserves_object_attribute_level_tags(api_handler):
 def test_update_event_preserves_attribute_level_tags(api_handler):
     """Same tag-preservation guarantee, but through the update_event() path."""
     existing_event = MagicMock()
+    existing_event.uuid = "33333333-3333-3333-3333-333333333333"
     existing_event.info = "Old info"
     existing_event.distribution = 1
     existing_event.threat_level_id = 2
@@ -252,6 +295,38 @@ def test_create_event_does_not_crash_on_event_level_tag_dicts(api_handler):
     assert "report-type:threat-report" in tag_names
 
 
+def test_create_event_persists_managed_tags_state(api_handler, stateful_helper):
+    """
+    create_event() must record, in persisted connector state, exactly which
+    event-level tags it just added for this event UUID - so a future
+    update_event() call can reconcile (remove) precisely those tags once
+    they become stale, without guessing from a fixed tag-name prefix.
+    """
+    _helper, state_box = stateful_helper
+
+    event_data = {
+        "uuid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "info": "Event with event-level tags",
+        "Tag": [
+            {"name": "tlp:red"},
+            {"name": "report-type:threat-report"},
+        ],
+    }
+
+    api_handler.misp.add_event.return_value = {
+        "Event": {
+            "id": "10",
+            "uuid": event_data["uuid"],
+            "info": "Event with event-level tags",
+        }
+    }
+
+    api_handler.create_event(event_data)
+
+    managed = state_box["state"]["misp_connector_managed_event_tags"]
+    assert set(managed[event_data["uuid"]]) == {"tlp:red", "report-type:threat-report"}
+
+
 def test_update_event_does_not_crash_on_event_level_tag_dicts(api_handler):
     """
     Regression test for a Copilot review finding on PR #7764: event_data["Tag"]
@@ -269,6 +344,7 @@ def test_update_event_does_not_crash_on_event_level_tag_dicts(api_handler):
     existing_tag_red.name = "tlp:red"
 
     existing_event = MagicMock()
+    existing_event.uuid = "55555555-5555-5555-5555-555555555555"
     existing_event.info = "Old info"
     existing_event.distribution = 1
     existing_event.threat_level_id = 2
@@ -305,14 +381,22 @@ def test_update_event_does_not_crash_on_event_level_tag_dicts(api_handler):
     assert "tlp:red" not in added_tag_names
 
 
-def test_update_event_removes_stale_connector_managed_tag(api_handler):
+def test_update_event_removes_stale_connector_managed_tag(api_handler, stateful_helper):
     """
     Regression test for a Copilot review finding on PR #7764 ("Reconcile
     stale event marking and report-type tags during updates"): if a
     container's marking changes (e.g. TLP RED -> GREEN), update_event() must
     remove the now-stale "tlp:red" tag from the MISP event (via
     self.misp.untag()) instead of just adding "tlp:green" alongside it.
+
+    "tlp:red" is recognized as removable because it was previously recorded
+    in persisted connector state as a tag *this connector* added on a prior
+    sync of the same event (simulating create_event() or an earlier
+    update_event() having run first) - not because it happens to match a
+    fixed prefix.
     """
+    _helper, state_box = stateful_helper
+
     existing_tag_red = MagicMock()
     existing_tag_red.name = "tlp:red"
 
@@ -325,6 +409,12 @@ def test_update_event_removes_stale_connector_managed_tag(api_handler):
     existing_event.objects = []
     existing_event.attributes = []
     existing_event.tags = [existing_tag_red]
+
+    # Simulate a prior sync of this event having recorded "tlp:red" as
+    # connector-managed.
+    state_box["state"] = {
+        "misp_connector_managed_event_tags": {existing_event.uuid: ["tlp:red"]}
+    }
 
     api_handler.misp.get_event.return_value = existing_event
     api_handler.misp.update_event.return_value = {
@@ -350,21 +440,33 @@ def test_update_event_removes_stale_connector_managed_tag(api_handler):
     # ...while the new tlp:green tag must have been added.
     added_tag_names = [call.args[0] for call in existing_event.add_tag.call_args_list]
     assert "tlp:green" in added_tag_names
+    # ...and the new managed-tag set persisted for the next reconciliation round.
+    managed = state_box["state"]["misp_connector_managed_event_tags"]
+    assert managed[existing_event.uuid] == ["tlp:green"]
 
 
-def test_update_event_does_not_remove_non_connector_managed_tags(api_handler):
+def test_update_event_does_not_remove_manually_added_tag_in_managed_namespace(
+    api_handler, stateful_helper
+):
     """
-    A tag that does not match a connector-managed prefix (tlp:/pap:/
-    report-type:, see _connector_managed_tag_prefixes()) - e.g. one added
-    manually by a MISP analyst, or a generic OpenCTI label tag - must never
-    be removed by update_event()'s stale-tag reconciliation, even if it is
-    absent from the new payload's Tag list.
-    """
-    existing_tag_manual = MagicMock()
-    existing_tag_manual.name = "analyst:reviewed"
+    Regression test for the Copilot review finding "Updates delete
+    manually added tags in allow-listed namespaces" on PR #7764.
 
-    existing_tag_red = MagicMock()
-    existing_tag_red.name = "tlp:red"
+    A tag that a MISP analyst added manually - even one that happens to
+    share a tlp:/pap:/report-type: namespace with connector-managed tags,
+    e.g. a manually-added "tlp:red" - must never be removed by
+    update_event()'s stale-tag reconciliation, because it was never
+    recorded in persisted connector state as a tag *this connector* added.
+    Only the genuinely connector-added tag ("report-type:threat-report",
+    recorded in state below) is eligible for removal.
+    """
+    _helper, state_box = stateful_helper
+
+    existing_tag_manual_tlp = MagicMock()
+    existing_tag_manual_tlp.name = "tlp:red"
+
+    existing_tag_report_type = MagicMock()
+    existing_tag_report_type.name = "report-type:threat-report"
 
     existing_event = MagicMock()
     existing_event.uuid = "88888888-8888-8888-8888-888888888888"
@@ -374,7 +476,16 @@ def test_update_event_does_not_remove_non_connector_managed_tags(api_handler):
     existing_event.analysis = 2
     existing_event.objects = []
     existing_event.attributes = []
-    existing_event.tags = [existing_tag_manual, existing_tag_red]
+    existing_event.tags = [existing_tag_manual_tlp, existing_tag_report_type]
+
+    # Only "report-type:threat-report" was ever recorded as connector-added
+    # for this event; "tlp:red" was added manually by an analyst and was
+    # never recorded in state.
+    state_box["state"] = {
+        "misp_connector_managed_event_tags": {
+            existing_event.uuid: ["report-type:threat-report"]
+        }
+    }
 
     api_handler.misp.get_event.return_value = existing_event
     api_handler.misp.update_event.return_value = {
@@ -387,38 +498,37 @@ def test_update_event_does_not_remove_non_connector_managed_tags(api_handler):
 
     event_data = {
         "info": "Updated info",
-        # New payload no longer carries tlp:red, and never carried the
-        # manually-added "analyst:reviewed" tag in the first place.
-        "Tag": [{"name": "tlp:green"}],
+        # New payload no longer carries the report-type tag, and never
+        # carried the manually-added "tlp:red" tag in the first place.
+        "Tag": [],
     }
 
     api_handler.update_event(existing_event.uuid, event_data)
 
-    # Only the connector-managed stale tag (tlp:red) is untagged - the
-    # manually-added, non-connector-managed tag is left alone.
-    api_handler.misp.untag.assert_called_once_with(existing_event.uuid, "tlp:red")
-    assert existing_tag_manual in existing_event.tags
+    # Only the previously-recorded connector-managed tag is untagged - the
+    # manually-added tag sharing the "tlp:" namespace is left alone.
+    api_handler.misp.untag.assert_called_once_with(
+        existing_event.uuid, "report-type:threat-report"
+    )
+    assert existing_tag_manual_tlp in existing_event.tags
 
 
-def test_update_event_does_not_remove_stale_tags_for_other_allow_listed_marking_types(
-    api_handler,
+def test_update_event_reconciles_generic_allow_listed_marking_type_tag(
+    api_handler, stateful_helper
 ):
     """
-    Regression test for the Copilot review findings on PR #7764 "Generic
-    allow-listed tags become stale during event updates" and "Updates
-    delete manually added tags in allow-listed namespaces".
+    Regression test for the Copilot review finding "Generic allow-listed
+    tags become stale during event updates" on PR #7764.
 
-    Even when a deployer adds a non-TLP/PAP marking type (e.g.
-    "CLASSIFICATION") to MISP_MARKING_TYPES_TO_CONVERT so it gets converted
-    to a tag on event *creation*, update_event()'s stale-tag reconciliation
-    must NOT auto-remove such a tag when it is missing from a later
-    payload: STIXtoMISPConverter._get_marking_tag() does not guarantee that
-    tag carries a predictable "classification:" prefix, so treating it as
-    connector-managed could either silently fail to clean it up or, worse,
-    delete an unrelated manually-added tag that happens to share a
-    namespace. Only the fixed tlp:/pap:/report-type: prefixes are
-    reconciled - see _CONNECTOR_MANAGED_TAG_PREFIXES in api_handler.py.
+    A non-TLP/PAP allow-listed marking type (e.g. "CLASSIFICATION") whose
+    resulting tag does not follow a predictable "{definition_type}:"
+    prefix is now correctly reconciled (removed once stale), because
+    reconciliation is driven by the persisted record of what the connector
+    itself previously added for this event - not by guessing from a fixed
+    prefix set.
     """
+    _helper, state_box = stateful_helper
+
     existing_tag_classification = MagicMock()
     existing_tag_classification.name = "classification:secret"
 
@@ -431,6 +541,15 @@ def test_update_event_does_not_remove_stale_tags_for_other_allow_listed_marking_
     existing_event.objects = []
     existing_event.attributes = []
     existing_event.tags = [existing_tag_classification]
+
+    # This event's "classification:secret" tag was previously added by the
+    # connector itself (e.g. via create_event() when CLASSIFICATION was
+    # allow-listed in MISP_MARKING_TYPES_TO_CONVERT).
+    state_box["state"] = {
+        "misp_connector_managed_event_tags": {
+            existing_event.uuid: ["classification:secret"]
+        }
+    }
 
     api_handler.misp.get_event.return_value = existing_event
     api_handler.misp.update_event.return_value = {
@@ -449,7 +568,90 @@ def test_update_event_does_not_remove_stale_tags_for_other_allow_listed_marking_
 
     api_handler.update_event(existing_event.uuid, event_data)
 
-    # A non-tlp/pap/report-type tag is never auto-removed, regardless of
-    # whether its marking type is allow-listed for conversion.
+    # The stale, connector-added, non-tlp/pap/report-type tag IS removed,
+    # because it was recorded as connector-managed in state.
+    api_handler.misp.untag.assert_called_once_with(
+        existing_event.uuid, "classification:secret"
+    )
+    assert existing_tag_classification not in existing_event.tags
+
+
+def test_update_event_with_no_recorded_state_does_not_remove_anything(
+    api_handler, stateful_helper
+):
+    """
+    Transitional edge case: an event synced by a pre-upgrade connector
+    version (before this state-tracking feature existed) has no recorded
+    entry in persisted state. The first update_event() call after
+    upgrading must not remove any existing tag purely because it is absent
+    from the new payload - it is strictly safer to under-clean once on
+    upgrade than to guess and risk deleting a manually-added tag.
+    """
+    _helper, state_box = stateful_helper
+    assert state_box["state"] is None  # no prior state recorded at all
+
+    existing_tag_red = MagicMock()
+    existing_tag_red.name = "tlp:red"
+
+    existing_event = MagicMock()
+    existing_event.uuid = "12121212-1212-1212-1212-121212121212"
+    existing_event.info = "Old info"
+    existing_event.distribution = 1
+    existing_event.threat_level_id = 2
+    existing_event.analysis = 2
+    existing_event.objects = []
+    existing_event.attributes = []
+    existing_event.tags = [existing_tag_red]
+
+    api_handler.misp.get_event.return_value = existing_event
+    api_handler.misp.update_event.return_value = {
+        "Event": {
+            "id": "12",
+            "uuid": existing_event.uuid,
+            "info": "Updated info",
+        }
+    }
+
+    event_data = {
+        "info": "Updated info",
+        "Tag": [{"name": "tlp:green"}],
+    }
+
+    api_handler.update_event(existing_event.uuid, event_data)
+
+    # No prior record for this event -> nothing is removed this round, even
+    # though "tlp:red" is absent from the new payload.
     api_handler.misp.untag.assert_not_called()
-    assert existing_tag_classification in existing_event.tags
+    assert existing_tag_red in existing_event.tags
+    # The new tag is still added normally.
+    added_tag_names = [call.args[0] for call in existing_event.add_tag.call_args_list]
+    assert "tlp:green" in added_tag_names
+    # From now on, state records exactly "tlp:green" for future reconciliation.
+    managed = state_box["state"]["misp_connector_managed_event_tags"]
+    assert managed[existing_event.uuid] == ["tlp:green"]
+
+
+def test_delete_event_clears_managed_tags_state(api_handler, stateful_helper):
+    """
+    delete_event() must drop the persisted connector-managed-tag record for
+    the deleted event, so connector state does not grow forever with
+    entries for events that no longer exist in MISP.
+    """
+    _helper, state_box = stateful_helper
+
+    event_uuid = "13131313-1313-1313-1313-131313131313"
+    state_box["state"] = {
+        "misp_connector_managed_event_tags": {
+            event_uuid: ["tlp:red"],
+            "other-event-uuid": ["pap:amber"],
+        }
+    }
+
+    api_handler.misp.delete_event.return_value = {"saved": True}
+
+    api_handler.delete_event(event_uuid, hard=True)
+
+    managed = state_box["state"]["misp_connector_managed_event_tags"]
+    assert event_uuid not in managed
+    # Unrelated events' records are left untouched.
+    assert managed["other-event-uuid"] == ["pap:amber"]
