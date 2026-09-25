@@ -75,7 +75,7 @@ class TheHiveConfig(BaseConfigModel):
         default=["1:01 - low", "2:02 - medium", "3:03 - high", "4:04 - critical"],
     )
     case_status_mapping: ListFromString = Field(
-        description="Comma-separated mapping of TheHive case extended status to OpenCTI workflow status IDs (e.g. Resolved:status-id-1).",
+        description="Comma-separated mapping of TheHive case status to OpenCTI workflow status IDs (e.g. Resolved:status-id-1).",
         default=[],
     )
     case_tag_whitelist: ListFromString = Field(
