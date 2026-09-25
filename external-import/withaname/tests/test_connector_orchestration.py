@@ -32,6 +32,13 @@ class TestWithanameConnectorOrchestration:
             conn = WithanameConnector(mock_config, mock_helper)
             conn.client = MagicMock()
             conn.converter_to_stix = MagicMock()
+            # Mock author and marking so json.loads() doesn't receive a MagicMock
+            conn.converter_to_stix.author.to_stix2_object.return_value.serialize.return_value = (
+                '{"type": "identity", "id": "identity--test"}'
+            )
+            conn.converter_to_stix.tlp_marking.to_stix2_object.return_value.serialize.return_value = (
+                '{"type": "marking-definition", "id": "marking-definition--test"}'
+            )
             return conn
 
     # --- Pagination Tests ---
@@ -129,7 +136,8 @@ class TestWithanameConnectorOrchestration:
 
         assert results == []
         connector.helper.connector_logger.info.assert_any_call(
-            "[CONNECTOR] Snapshot cfg_empty is empty", {"cfg_id": "cfg_empty"}
+            "[CONNECTOR] Snapshot cfg_empty is empty",
+            meta={"cfg_id": "cfg_empty"},
         )
 
     def test_process_snapshot_no_notes(self, connector):
@@ -176,7 +184,7 @@ class TestWithanameConnectorOrchestration:
         # Since we mock helper, we check if the call happened
         mock_helper.send_stix2_bundle.assert_called_once()
         mock_helper.api.work.to_processed.assert_called_with(
-            mock_work_id, "Processed snapshot cfg_1 with 1 objects"
+            mock_work_id, "Processed snapshot cfg_1 with 3 objects"
         )
         mock_helper.set_state.assert_called_once()
 
@@ -206,7 +214,7 @@ class TestWithanameConnectorOrchestration:
         )
         # Check that work_2 was marked as processed
         mock_helper.api.work.to_processed.assert_any_call(
-            "work_2", "Processed snapshot c2 with 1 objects"
+            "work_2", "Processed snapshot c2 with 3 objects"
         )
         # State should only be updated for the last successful one
         # The code updates state inside the loop after each successful snapshot
