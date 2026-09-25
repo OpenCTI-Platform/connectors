@@ -1,0 +1,6 @@
+# Install connector dependencies first, then test extras.
+# `-e .` resolves relative to the *invoking* working directory (the repo
+# root, per run_test.sh), not relative to this file's own location -- so the
+# path must be spelled out from the repo root rather than as a bare ".".
+-e ./internal-enrichment/zetalytics[test]
+pytest-mock>=3.14

@@ -1,0 +1,35 @@
+opencti:
+  url: "${OPENCTI_URL}"
+  token: "${OPENCTI_TOKEN_ZETALYTICS_ANALYST}"
+
+connector:
+  id: "00000000-0000-4000-8000-000000000101"
+  name: "Zetalytics DNS - Analyst Enrichment"
+  type: "INTERNAL_ENRICHMENT"
+  scope: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr"
+  auto: false
+  log_level: "info"
+
+zetalytics:
+  token: "${ZETALYTICS_TOKEN}"
+  mode: "manual"
+  max_tlp: "TLP:AMBER"
+  max_results: 300
+  max_subdomains: 500
+  max_whois_results: 5
+  max_ns_pivot_results: 100
+  max_mx_pivot_results: 100
+  lookback_days: 365
+  tsfield: "all"
+  include_live_dns: true
+  include_subdomains: true
+  include_d8s: true
+  include_historical_whois: false
+  include_ns_glue: true
+  include_ns2domain: false
+  include_mx2domain: false
+  include_email_pivots: false
+  confidence: 60
+  marking_definition: "TLP:AMBER"
+  create_note_when_no_results: false
+  include_portal_link: false
