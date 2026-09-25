@@ -36,27 +36,49 @@ def _tag_names(tags) -> List[str]:
     return names
 
 
+# Fixed, lower-cased tag-name prefixes that update_event() is allowed to
+# reconcile (add and, if stale, remove) at the event level: TLP, PAP, and
+# the always-emitted "report-type:" prefix used for STIX report_types (see
+# #6057/#7011).
+#
+# This is intentionally a FIXED list, not one derived from
+# MISP_MARKING_TYPES_TO_CONVERT (config.misp.get_marking_types_allowlist()).
+# STIXtoMISPConverter._get_marking_tag() only guarantees a predictable
+# "{definition_type.lower()}:" tag shape for TLP; PAP and any other
+# allow-listed definition_type are passed through as opaque tag strings
+# with no guaranteed prefix. Deriving managed prefixes from the allow-list
+# would therefore either (a) fail to ever reconcile/remove a stale tag for
+# a definition_type whose emitted tag does not actually start with that
+# prefix ("Generic allow-listed tags become stale during event updates"),
+# or (b) make the blast radius of automatic tag removal depend on
+# deployer-editable configuration, risking deletion of manually-added MISP
+# tags that merely share a namespace ("Updates delete manually added tags
+# in allow-listed namespaces"). Restricting reconciliation to this fixed,
+# documented set keeps both risks small and predictable - see the
+# "Known limitations" note in README.md. Other allow-listed marking types
+# are still converted to tags when a container/indicator/observable is
+# created or updated, they are simply never auto-removed once stale.
+_CONNECTOR_MANAGED_TAG_PREFIXES: List[str] = ["tlp:", "pap:", "report-type:"]
+
+
 def _connector_managed_tag_prefixes(config) -> List[str]:
     """
-    Build the list of lower-cased tag name prefixes this connector itself
-    manages at the event level: one prefix per allow-listed marking
-    definition_type (see MISP_MARKING_TYPES_TO_CONVERT, e.g. "tlp:",
-    "pap:"), plus the always-emitted "report-type:" prefix used for STIX
-    report_types (see #6057/#7011).
+    Return the list of lower-cased tag name prefixes that update_event() is
+    allowed to reconcile/remove once stale (see
+    _CONNECTOR_MANAGED_TAG_PREFIXES for why this is a fixed set rather than
+    one derived from the marking_types_to_convert allow-list).
 
     Used to distinguish connector-managed tags (safe to remove once stale,
     e.g. after a TLP RED -> GREEN change) from tags a user or another tool
     added directly on the MISP event, which must never be removed here.
 
-    :param config: Connector configuration object (exposes config.misp)
+    :param config: Connector configuration object (currently unused - kept
+        as a parameter so a future per-deployment override remains
+        possible without changing every call site)
     :return: List of lower-cased tag prefixes, each ending with ":"
     """
-    prefixes = [
-        f"{definition_type.lower()}:"
-        for definition_type in config.misp.get_marking_types_allowlist()
-    ]
-    prefixes.append("report-type:")
-    return prefixes
+    del config  # Not currently used: see _CONNECTOR_MANAGED_TAG_PREFIXES.
+    return list(_CONNECTOR_MANAGED_TAG_PREFIXES)
 
 
 def _is_connector_managed_tag(tag_name: str, managed_prefixes: List[str]) -> bool:
@@ -352,9 +374,20 @@ class MispApiHandler:
             existing_event.objects = []
 
             # Reconcile event-level tags: remove stale connector-managed
-            # tags (TLP/PAP/report-type, based on the marking allow-list -
-            # see _connector_managed_tag_prefixes()) that are no longer
-            # present in the new payload, then add any newly-required tags.
+            # tags that are no longer present in the new payload, then add
+            # any newly-required tags.
+            #
+            # "Connector-managed" here means a FIXED tlp:/pap:/report-type:
+            # prefix set (see _CONNECTOR_MANAGED_TAG_PREFIXES /
+            # _connector_managed_tag_prefixes()) - deliberately NOT derived
+            # from the marking_types_to_convert allow-list, since other
+            # allow-listed marking types are not guaranteed to produce a
+            # predictable tag prefix (see #7011 Copilot review findings
+            # "Generic allow-listed tags become stale during event updates"
+            # and "Updates delete manually added tags in allow-listed
+            # namespaces"). Tags outside this fixed set - including other
+            # allow-listed marking types - are never touched by this
+            # reconciliation step; see README "Known limitations".
             #
             # event_data["Tag"] is a list of flat dicts such as
             # {"name": "tlp:red", ...} (the shape produced by
@@ -369,9 +402,7 @@ class MispApiHandler:
             # leave the old "tlp:red"/"report-type:*" tag on the MISP event
             # forever, publishing conflicting handling metadata (see #7011
             # Copilot review finding "Reconcile stale event marking and
-            # report-type tags during updates"). Tags that are not
-            # connector-managed (e.g. added manually by a MISP user) are
-            # never touched here.
+            # report-type tags during updates").
             if "Tag" in event_data:
                 new_tag_names = _tag_names(event_data["Tag"])
                 new_tag_name_set = set(new_tag_names)
