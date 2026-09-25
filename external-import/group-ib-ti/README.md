@@ -1,8 +1,8 @@
 # OpenCTI Group-IB Connector
 
-| Status            | Date       | Comment |
-| ----------------- |------------| ------- |
-| Filigran Verified | 2025-03-10 |    -    |
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner | -    | -       |
 
 [![Python](https://img.shields.io/badge/python-v3.12-blue?logo=python)](https://www.python.org/downloads/release/python-3120/)
 [![OpenCTI](https://img.shields.io/badge/opencti-v7.260811.0+-orange?)](https://github.com/OpenCTI-Platform/opencti/releases/tag/7.260811.0)
