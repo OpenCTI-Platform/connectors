@@ -195,6 +195,48 @@ def test_create_event_attribute_without_tags_does_not_error(api_handler):
     assert list(attr.tags) == []
 
 
+def test_create_event_does_not_crash_on_event_level_tag_dicts(api_handler):
+    """
+    Regression test for a Copilot review finding on PR #7764 ("Normalize
+    event tag dictionaries before adding them"): event_data["Tag"]
+    (event-level tags, e.g. TLP/PAP/report_types tags produced by
+    convert_bundle_to_event()) is a list of flat dicts such as
+    {"name": "tlp:red"}, NOT a list of MISPTag objects or bare strings.
+
+    create_event() used to forward these dicts directly to
+    misp_event.add_tag(tag), instead of normalizing them with _tag_names()
+    the way update_event() already did. This locks in the fix so both
+    creation and update paths behave identically: the resulting MISPEvent
+    carries proper tag(s) named after the dict's "name" key.
+    """
+    event_data = {
+        "uuid": "66666666-6666-6666-6666-666666666666",
+        "info": "Event with event-level tags",
+        # Flat dicts, as produced by AbstractMISP.to_dict() /
+        # convert_bundle_to_event() - not MISPTag objects.
+        "Tag": [
+            {"name": "tlp:red"},
+            {"name": "report-type:threat-report"},
+        ],
+    }
+
+    api_handler.misp.add_event.return_value = {
+        "Event": {
+            "id": "6",
+            "uuid": event_data["uuid"],
+            "info": "Event with event-level tags",
+        }
+    }
+
+    # Must not raise.
+    api_handler.create_event(event_data)
+
+    submitted_event = api_handler.misp.add_event.call_args[0][0]
+    tag_names = [tag.name for tag in submitted_event.tags]
+    assert "tlp:red" in tag_names
+    assert "report-type:threat-report" in tag_names
+
+
 def test_update_event_does_not_crash_on_event_level_tag_dicts(api_handler):
     """
     Regression test for a Copilot review finding on PR #7764: event_data["Tag"]
