@@ -8,6 +8,17 @@ from connectors_sdk import (
 )
 from pydantic import Field, HttpUrl, SecretStr
 
+# TLP levels accepted in configuration. Lowercase because this is the form the
+# connectors-sdk `TLPMarking` model expects; `pycti` uses the canonical
+# `TLP:XXX` form instead (see `connector.utils.to_canonical_tlp_marking`).
+TLPLevel = Literal[
+    "clear",
+    "green",
+    "amber",
+    "amber+strict",
+    "red",
+]
+
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     """
@@ -41,13 +52,7 @@ class VisionHeightConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="VisionHeight API key used to authenticate requests (sent as the x-api-key header).",
     )
-    max_tlp_level: Literal[
-        "clear",
-        "green",
-        "amber",
-        "amber+strict",
-        "red",
-    ] = Field(
+    max_tlp_level: TLPLevel = Field(
         description="Maximum TLP level of observables this connector will enrich. Observables marked above this level cause the enrichment to abort with an error logged.",
         default="amber+strict",
     )
