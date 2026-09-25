@@ -382,6 +382,18 @@ Only marking types listed in `MISP_MARKING_TYPES_TO_CONVERT` (default `TLP,PAP`)
 | Any other allow-listed type         | Passed through as-is     | Assumes the marking's `name` is already a valid MISP tag       |
 | Not in allow-list (e.g. custom)     | *(skipped)*                | Never converted, never sent to MISP                             |
 
+#### Known limitations
+
+When a container's marking or `report_types` changes (e.g. TLP RED → GREEN) and OpenCTI sends a corresponding `update` event, the connector reconciles the now-stale MISP event tag: it adds the new tag and actively removes the old one via the MISP API. **This automatic removal is only performed for the fixed `tlp:`, `pap:`, and `report-type:` tag prefixes.**
+
+If you add a marking `definition_type` other than `TLP`/`PAP` to `MISP_MARKING_TYPES_TO_CONVERT` (e.g. a custom `CLASSIFICATION` marking type), it is still converted to a tag on event creation/update as described above, but:
+
+- Its resulting tag is **not guaranteed to start with `{definition_type.lower()}:`** — `_get_marking_tag()` passes non-TLP/PAP marking names through unchanged, so the actual tag shape depends entirely on how that marking is named in OpenCTI.
+- Because of this, such a tag is **never automatically removed** by the connector once stale (e.g. if the marking is later removed from the container). It has to be cleaned up manually in MISP if needed.
+- This is intentional: deriving the auto-removal prefix set from the (deployer-editable) allow-list instead of a fixed list would risk either silently failing to clean up stale tags of unpredictable shape, or — worse — deleting a manually-added MISP tag that happens to share the same namespace as an allow-listed marking type.
+
+In short: **TLP/PAP/report-type tags are fully reconciled (added and removed) on update; any other allow-listed marking type is only ever added, never auto-removed.**
+
 ### Tag Generation
 
 The connector generates various tags for MISP events:
@@ -450,4 +462,4 @@ CONNECTOR_LOG_LEVEL=debug
 - **Proxy Support**: Configure HTTP/HTTPS proxy for enterprise environments
 - **Sightings**: STIX 2.1 sightings are processed and can be attached to MISP attributes
 - **Organization Handling**: Creator org (orgc) is extracted from the container's `created_by_ref`, while owner org is configured via `MISP_OWNER_ORG`
-- **Marking Conversion**: TLP/PAP markings (and any other allow-listed marking type) are converted to MISP tags at both the event and attribute/object level, see [Marking to Tag Conversion](#marking-to-tag-conversion)
+- **Marking Conversion**: TLP/PAP markings (and any other allow-listed marking type) are converted to MISP tags at both the event and attribute/object level, see [Marking to Tag Conversion](#marking-to-tag-conversion). See also the [Known limitations](#known-limitations) note regarding stale-tag removal on update.
