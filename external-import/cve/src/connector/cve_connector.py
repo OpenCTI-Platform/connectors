@@ -67,8 +67,11 @@ class CVEConnector:
         CPE resolution starts immediately and runs concurrently
         with further CVE fetching (bounded by cpe_max_concurrency).
         """
-        # Reset rate limiter state to avoid stale asyncio.Lock across runs
-        self.converter._rate_limiter.reset()
+        # Drop the stale asyncio.Lock from the previous asyncio.run() while
+        # keeping the sliding-window request history, so the rate limiter stays
+        # continuous across consecutive runs (e.g. historical-backfill chunks)
+        # instead of allowing a fresh burst at every chunk boundary.
+        self.converter._rate_limiter.invalidate_lock()
         try:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starting CVE+CPE streaming pipeline"
