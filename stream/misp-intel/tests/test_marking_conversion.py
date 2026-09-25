@@ -167,9 +167,7 @@ def test_observable_object_marking_refs_are_tagged_on_object(converter):
         "id": "bundle--bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
         "objects": [
             _marking_definition(PAP_AMBER_ID, "PAP", "PAP:AMBER"),
-            _report(
-                object_refs=["ipv4-addr--55555555-5555-5555-5555-555555555555"]
-            ),
+            _report(object_refs=["ipv4-addr--55555555-5555-5555-5555-555555555555"]),
             _ipv4_observable(object_marking_refs=[PAP_AMBER_ID]),
         ],
     }
