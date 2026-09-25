@@ -19,3 +19,9 @@ wiz_cloud:
   since: 'P30D'            # relative import start on first run (ISO 8601)
   marking: 'amber+strict'  # default TLP for all produced entities
   page_size: 50
+
+  # Vulnerability findings of the assets referenced by the imported issues
+  import_vulnerabilities: false
+  vulnerability_severity: 'CRITICAL,HIGH'    # VulnerabilityFindingFilters.severity
+  vulnerability_status: 'OPEN,IN_PROGRESS'   # VulnerabilityFindingFilters.status
+  vulnerability_has_exploit: false           # the filter that actually cuts volume
