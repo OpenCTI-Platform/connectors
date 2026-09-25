@@ -1,0 +1,37 @@
+opencti:
+  url: 'http://localhost'
+  token: 'CHANGEME'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'CHANGEME'                    # generate: python3 -c "import uuid; print(uuid.uuid4())"
+  name: 'GreedyBear'
+  scope: 'IPv4-Addr,IPv6-Addr,Domain-Name,Autonomous-System,Location,Infrastructure'
+  log_level: 'info'
+  duration_period: 'PT6H'
+
+greedybear:
+  api_base_url: 'https://your-greedybear-instance.example.com'
+  # api_key: 'CHANGEME'             # DRF token (Authorization: Token <key>)
+                                    # Leave commented out to use only the public standard feed.
+  tlp_level: 'green'                # clear | white | green | amber | amber+strict | red
+
+  # Who operates the honeypots? This becomes "created by" in OpenCTI.
+  # GreedyBear is stored as a Tool used by this operator.
+  operator_name: 'My Organization'
+  # operator_description: 'SOC of My Organization'   # optional
+  # operator_url: 'https://example.com'              # optional
+
+  # IoC filter - all values are passed directly to the GreedyBear advanced feed API
+  feed_type: 'all'                  # all | cowrie | dionaea | adbhoney | honeytrap | ...
+  attack_type: 'all'                # all | scanner | payload_request
+  ioc_type: 'all'                   # all | ip | domain
+  prioritize: 'recent'              # for standard-feed fallback only:
+                                    # recent | persistent | likely_to_recur | most_expected_hits
+  include_mass_scanners: false
+  include_tor_exit_nodes: true
+  max_age: 3                        # days - advanced feed (default 3)
+  feed_size: 5000                   # max IoCs per run (default 5000)
+  # min_score: 0.3                  # minimum recurrence_probability (0.0-1.0)
+  create_indicators: true           # set to false to import observables only
+  # deep_enrich: false              # true: per-IoC enrichment (ports, FireHOL labels, days-seen); 1 API call each
