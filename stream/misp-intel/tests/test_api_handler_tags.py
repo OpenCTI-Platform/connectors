@@ -193,3 +193,58 @@ def test_create_event_attribute_without_tags_does_not_error(api_handler):
     submitted_event = api_handler.misp.add_event.call_args[0][0]
     attr = submitted_event.attributes[0]
     assert list(attr.tags) == []
+
+
+def test_update_event_does_not_crash_on_event_level_tag_dicts(api_handler):
+    """
+    Regression test for a Copilot review finding on PR #7764: event_data["Tag"]
+    (event-level tags, e.g. TLP/PAP/report_types tags produced by
+    convert_bundle_to_event()) is a list of flat dicts such as
+    {"name": "tlp:red"}, NOT a list of MISPTag objects.
+
+    Before the fix, update_event() did `tag.name` directly on these dicts,
+    which raises AttributeError - meaning update_event() would crash on
+    every event that actually carries a marking/report_type tag, which is
+    the very feature this connector adds. This must no longer raise, and
+    must add only the genuinely new (not-already-present) tag names.
+    """
+    existing_tag_red = MagicMock()
+    existing_tag_red.name = "tlp:red"
+
+    existing_event = MagicMock()
+    existing_event.info = "Old info"
+    existing_event.distribution = 1
+    existing_event.threat_level_id = 2
+    existing_event.analysis = 2
+    existing_event.objects = []
+    existing_event.attributes = []
+    # Existing event already has tlp:red as a real MISPTag-like object
+    existing_event.tags = [existing_tag_red]
+
+    api_handler.misp.get_event.return_value = existing_event
+    api_handler.misp.update_event.return_value = {
+        "Event": {
+            "id": "5",
+            "uuid": "55555555-5555-5555-5555-555555555555",
+            "info": "Updated info",
+        }
+    }
+
+    event_data = {
+        "info": "Updated info",
+        # Flat dicts, as produced by AbstractMISP.to_dict() /
+        # convert_bundle_to_event() - not MISPTag objects.
+        "Tag": [
+            {"name": "tlp:red"},  # already present -> must be skipped
+            {"name": "report-type:threat-report"},  # new -> must be added
+        ],
+    }
+
+    # Must not raise AttributeError.
+    api_handler.update_event("55555555-5555-5555-5555-555555555555", event_data)
+
+    added_tag_names = [
+        call.args[0] for call in existing_event.add_tag.call_args_list
+    ]
+    assert "report-type:threat-report" in added_tag_names
+    assert "tlp:red" not in added_tag_names
