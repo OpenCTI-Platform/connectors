@@ -631,27 +631,139 @@ def test_update_event_with_no_recorded_state_does_not_remove_anything(
     assert managed[existing_event.uuid] == ["tlp:green"]
 
 
-def test_delete_event_clears_managed_tags_state(api_handler, stateful_helper):
+def test_update_event_retries_failed_tag_removal_next_round(
+    api_handler, stateful_helper
+):
     """
-    delete_event() must drop the persisted connector-managed-tag record for
-    the deleted event, so connector state does not grow forever with
-    entries for events that no longer exist in MISP.
+    Regression test for the Copilot review finding "Retain failed tag
+    removals for later retry" on PR #7764.
+
+    If self.misp.untag() raises while removing a stale connector-managed
+    tag (e.g. a transient MISP-side/network error), that tag must stay
+    recorded as connector-managed in persisted state afterwards, so the
+    *next* update_event() call retries removing it - instead of the
+    failure being silently dropped forever (which would leave a
+    permanently stale tag on the MISP event with no further attempt to
+    clean it up).
     """
     _helper, state_box = stateful_helper
 
-    event_uuid = "13131313-1313-1313-1313-131313131313"
+    existing_tag_red = MagicMock()
+    existing_tag_red.name = "tlp:red"
+
+    existing_event = MagicMock()
+    existing_event.uuid = "14141414-1414-1414-1414-141414141414"
+    existing_event.info = "Old info"
+    existing_event.distribution = 1
+    existing_event.threat_level_id = 2
+    existing_event.analysis = 2
+    existing_event.objects = []
+    existing_event.attributes = []
+    existing_event.tags = [existing_tag_red]
+
+    # "tlp:red" was previously recorded as connector-managed for this event.
+    state_box["state"] = {
+        "misp_connector_managed_event_tags": {existing_event.uuid: ["tlp:red"]}
+    }
+
+    api_handler.misp.get_event.return_value = existing_event
+    api_handler.misp.update_event.return_value = {
+        "Event": {
+            "id": "14",
+            "uuid": existing_event.uuid,
+            "info": "Updated info",
+        }
+    }
+    # Simulate a transient failure removing the stale tag from MISP.
+    api_handler.misp.untag.side_effect = Exception("MISP is temporarily unavailable")
+
+    event_data = {
+        "info": "Updated info",
+        # tlp:red is no longer in the new payload - it is now stale.
+        "Tag": [],
+    }
+
+    # Must not raise despite untag() failing - the failure is logged and
+    # handled, not propagated.
+    api_handler.update_event(existing_event.uuid, event_data)
+
+    api_handler.misp.untag.assert_called_once_with(existing_event.uuid, "tlp:red")
+    # Since removal failed, the tag must remain on the local event object -
+    # it was never actually removed from MISP.
+    assert existing_tag_red in existing_event.tags
+    # It must still be recorded as connector-managed, so the next
+    # update_event() call retries removing it.
+    managed = state_box["state"]["misp_connector_managed_event_tags"]
+    assert managed[existing_event.uuid] == ["tlp:red"]
+
+
+def test_update_event_does_not_promote_pre_existing_tag_to_managed(
+    api_handler, stateful_helper
+):
+    """
+    Regression test for the Copilot review finding "Do not mark
+    pre-existing tags as connector-managed" on PR #7764.
+
+    A tag that already existed on the MISP event before this update for
+    some other reason (e.g. manually added by an analyst) and merely also
+    happens to be present in the new OpenCTI payload (e.g. because the
+    analyst independently chose the same TLP value the container carries)
+    must NOT be promoted to "connector-managed" in persisted state just
+    because it matches. Only tags genuinely newly added by the connector
+    this round are recorded as managed - otherwise a later, unrelated
+    change to the container's marking would cause this manually-added tag
+    to be deleted by stale-tag reconciliation, even though the connector
+    never actually added it.
+    """
+    _helper, state_box = stateful_helper
+
+    existing_tag_manual_tlp = MagicMock()
+    existing_tag_manual_tlp.name = "tlp:red"
+
+    existing_event = MagicMock()
+    existing_event.uuid = "15151515-1515-1515-1515-151515151515"
+    existing_event.info = "Old info"
+    existing_event.distribution = 1
+    existing_event.threat_level_id = 2
+    existing_event.analysis = 2
+    existing_event.objects = []
+    existing_event.attributes = []
+    # "tlp:red" already exists on the event (e.g. added manually) and was
+    # never recorded as connector-managed in state.
+    existing_event.tags = [existing_tag_manual_tlp]
     state_box["state"] = {
         "misp_connector_managed_event_tags": {
-            event_uuid: ["tlp:red"],
             "other-event-uuid": ["pap:amber"],
         }
     }
 
-    api_handler.misp.delete_event.return_value = {"saved": True}
+    api_handler.misp.get_event.return_value = existing_event
+    api_handler.misp.update_event.return_value = {
+        "Event": {
+            "id": "15",
+            "uuid": existing_event.uuid,
+            "info": "Updated info",
+        }
+    }
 
-    api_handler.delete_event(event_uuid, hard=True)
+    event_data = {
+        "info": "Updated info",
+        # The new payload happens to also carry "tlp:red" - coincidentally
+        # matching the pre-existing manual tag.
+        "Tag": [{"name": "tlp:red"}],
+    }
 
+    api_handler.update_event(existing_event.uuid, event_data)
+
+    # Nothing is removed (it is not stale) and no new tag needs to be added
+    # (it already matches), so untag()/add_tag() are not called for it.
+    api_handler.misp.untag.assert_not_called()
+    assert existing_tag_manual_tlp in existing_event.tags
+
+    # Crucially, this event must NOT gain a managed-tags record: the
+    # pre-existing "tlp:red" was never actually added by the connector,
+    # so it must not be treated as connector-managed going forward.
     managed = state_box["state"]["misp_connector_managed_event_tags"]
-    assert event_uuid not in managed
+    assert existing_event.uuid not in managed
     # Unrelated events' records are left untouched.
     assert managed["other-event-uuid"] == ["pap:amber"]
