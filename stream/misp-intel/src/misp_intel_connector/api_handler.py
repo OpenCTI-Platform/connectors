@@ -36,6 +36,42 @@ def _tag_names(tags) -> List[str]:
     return names
 
 
+def _connector_managed_tag_prefixes(config) -> List[str]:
+    """
+    Build the list of lower-cased tag name prefixes this connector itself
+    manages at the event level: one prefix per allow-listed marking
+    definition_type (see MISP_MARKING_TYPES_TO_CONVERT, e.g. "tlp:",
+    "pap:"), plus the always-emitted "report-type:" prefix used for STIX
+    report_types (see #6057/#7011).
+
+    Used to distinguish connector-managed tags (safe to remove once stale,
+    e.g. after a TLP RED -> GREEN change) from tags a user or another tool
+    added directly on the MISP event, which must never be removed here.
+
+    :param config: Connector configuration object (exposes config.misp)
+    :return: List of lower-cased tag prefixes, each ending with ":"
+    """
+    prefixes = [
+        f"{definition_type.lower()}:"
+        for definition_type in config.misp.get_marking_types_allowlist()
+    ]
+    prefixes.append("report-type:")
+    return prefixes
+
+
+def _is_connector_managed_tag(tag_name: str, managed_prefixes: List[str]) -> bool:
+    """
+    Check whether a tag name matches one of the connector-managed prefixes
+    (case-insensitive), e.g. "tlp:red" matches the "tlp:" prefix.
+
+    :param tag_name: The tag name to check
+    :param managed_prefixes: Lower-cased prefixes, each ending with ":"
+    :return: True if tag_name is connector-managed
+    """
+    lowered = tag_name.lower()
+    return any(lowered.startswith(prefix) for prefix in managed_prefixes)
+
+
 class MispApiHandler:
     """
     Handler for MISP API operations
@@ -315,7 +351,11 @@ class MispApiHandler:
             existing_event.attributes = []
             existing_event.objects = []
 
-            # Add new tags (keeping existing ones).
+            # Reconcile event-level tags: remove stale connector-managed
+            # tags (TLP/PAP/report-type, based on the marking allow-list -
+            # see _connector_managed_tag_prefixes()) that are no longer
+            # present in the new payload, then add any newly-required tags.
+            #
             # event_data["Tag"] is a list of flat dicts such as
             # {"name": "tlp:red", ...} (the shape produced by
             # AbstractMISP.to_dict(), see convert_bundle_to_event()), not
@@ -323,9 +363,37 @@ class MispApiHandler:
             # AttributeError. Normalize with _tag_names() before comparing
             # against/adding to the existing (pythonify=True, so genuinely
             # MISPTag-typed) event tags.
+            #
+            # Without this reconciliation step, changing or removing a
+            # container marking/report type (e.g. TLP RED -> GREEN) would
+            # leave the old "tlp:red"/"report-type:*" tag on the MISP event
+            # forever, publishing conflicting handling metadata (see #7011
+            # Copilot review finding "Reconcile stale event marking and
+            # report-type tags during updates"). Tags that are not
+            # connector-managed (e.g. added manually by a MISP user) are
+            # never touched here.
             if "Tag" in event_data:
+                new_tag_names = _tag_names(event_data["Tag"])
+                new_tag_name_set = set(new_tag_names)
+                managed_prefixes = _connector_managed_tag_prefixes(self.config)
+
+                for tag in list(existing_event.tags):
+                    tag_name = getattr(tag, "name", None)
+                    if not tag_name or tag_name in new_tag_name_set:
+                        continue
+                    if not _is_connector_managed_tag(tag_name, managed_prefixes):
+                        continue
+                    try:
+                        self.misp.untag(existing_event.uuid, tag_name)
+                        existing_event.tags.remove(tag)
+                    except Exception as e:
+                        self.helper.connector_logger.warning(
+                            f"Failed to remove stale MISP tag "
+                            f"'{tag_name}': {str(e)}"
+                        )
+
                 existing_tag_names = {tag.name for tag in existing_event.tags}
-                for tag_name in _tag_names(event_data["Tag"]):
+                for tag_name in new_tag_names:
                     if tag_name not in existing_tag_names:
                         existing_event.add_tag(tag_name)
 
