@@ -39,6 +39,11 @@ def api_handler():
         config.misp.owner_org = None
         config.misp.publish_on_create = False
         config.misp.publish_on_update = False
+        # Used by _connector_managed_tag_prefixes() to build the list of
+        # tag prefixes (e.g. "tlp:", "pap:") that update_event() is allowed
+        # to reconcile/remove when stale. config.misp is a MagicMock, so
+        # without this explicit return_value it would not be iterable.
+        config.misp.get_marking_types_allowlist.return_value = {"TLP", "PAP"}
 
         handler = MispApiHandler(helper, config)
         handler.misp = mock_misp
@@ -288,3 +293,102 @@ def test_update_event_does_not_crash_on_event_level_tag_dicts(api_handler):
     added_tag_names = [call.args[0] for call in existing_event.add_tag.call_args_list]
     assert "report-type:threat-report" in added_tag_names
     assert "tlp:red" not in added_tag_names
+
+
+def test_update_event_removes_stale_connector_managed_tag(api_handler):
+    """
+    Regression test for a Copilot review finding on PR #7764 ("Reconcile
+    stale event marking and report-type tags during updates"): if a
+    container's marking changes (e.g. TLP RED -> GREEN), update_event() must
+    remove the now-stale "tlp:red" tag from the MISP event (via
+    self.misp.untag()) instead of just adding "tlp:green" alongside it.
+    """
+    existing_tag_red = MagicMock()
+    existing_tag_red.name = "tlp:red"
+
+    existing_event = MagicMock()
+    existing_event.uuid = "77777777-7777-7777-7777-777777777777"
+    existing_event.info = "Old info"
+    existing_event.distribution = 1
+    existing_event.threat_level_id = 2
+    existing_event.analysis = 2
+    existing_event.objects = []
+    existing_event.attributes = []
+    existing_event.tags = [existing_tag_red]
+
+    api_handler.misp.get_event.return_value = existing_event
+    api_handler.misp.update_event.return_value = {
+        "Event": {
+            "id": "7",
+            "uuid": existing_event.uuid,
+            "info": "Updated info",
+        }
+    }
+
+    event_data = {
+        "info": "Updated info",
+        # Marking changed from TLP:RED to TLP:GREEN.
+        "Tag": [{"name": "tlp:green"}],
+    }
+
+    api_handler.update_event(existing_event.uuid, event_data)
+
+    # The stale tlp:red tag must have been actively removed from MISP...
+    api_handler.misp.untag.assert_called_once_with(
+        existing_event.uuid, "tlp:red"
+    )
+    # ...and removed from the local tags list...
+    assert existing_tag_red not in existing_event.tags
+    # ...while the new tlp:green tag must have been added.
+    added_tag_names = [call.args[0] for call in existing_event.add_tag.call_args_list]
+    assert "tlp:green" in added_tag_names
+
+
+def test_update_event_does_not_remove_non_connector_managed_tags(api_handler):
+    """
+    A tag that does not match a connector-managed prefix (tlp:/pap:/
+    report-type:, see _connector_managed_tag_prefixes()) - e.g. one added
+    manually by a MISP analyst, or a generic OpenCTI label tag - must never
+    be removed by update_event()'s stale-tag reconciliation, even if it is
+    absent from the new payload's Tag list.
+    """
+    existing_tag_manual = MagicMock()
+    existing_tag_manual.name = "analyst:reviewed"
+
+    existing_tag_red = MagicMock()
+    existing_tag_red.name = "tlp:red"
+
+    existing_event = MagicMock()
+    existing_event.uuid = "88888888-8888-8888-8888-888888888888"
+    existing_event.info = "Old info"
+    existing_event.distribution = 1
+    existing_event.threat_level_id = 2
+    existing_event.analysis = 2
+    existing_event.objects = []
+    existing_event.attributes = []
+    existing_event.tags = [existing_tag_manual, existing_tag_red]
+
+    api_handler.misp.get_event.return_value = existing_event
+    api_handler.misp.update_event.return_value = {
+        "Event": {
+            "id": "8",
+            "uuid": existing_event.uuid,
+            "info": "Updated info",
+        }
+    }
+
+    event_data = {
+        "info": "Updated info",
+        # New payload no longer carries tlp:red, and never carried the
+        # manually-added "analyst:reviewed" tag in the first place.
+        "Tag": [{"name": "tlp:green"}],
+    }
+
+    api_handler.update_event(existing_event.uuid, event_data)
+
+    # Only the connector-managed stale tag (tlp:red) is untagged - the
+    # manually-added, non-connector-managed tag is left alone.
+    api_handler.misp.untag.assert_called_once_with(
+        existing_event.uuid, "tlp:red"
+    )
+    assert existing_tag_manual in existing_event.tags
