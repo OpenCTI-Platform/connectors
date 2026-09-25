@@ -1,0 +1,184 @@
+"""
+Unit tests for TLP/PAP marking-definition to MISP tag conversion.
+
+These tests do not require a real MISP instance, following the same
+approach as test_misp_to_misp.py: they exercise STIXtoMISPConverter
+directly against constructed STIX 2.1 bundles.
+"""
+
+from unittest.mock import MagicMock
+
+import pytest
+from misp_intel_connector.stix_to_misp_converter import STIXtoMISPConverter
+
+
+TLP_RED_ID = "marking-definition--e828b379-4e03-4974-9ac4-e53a884c97c1"
+PAP_AMBER_ID = "marking-definition--5e5aa61b-eeb2-4a0f-8ed3-9bec293a02b1"
+CUSTOM_MARKING_ID = "marking-definition--11111111-2222-3333-4444-555555555555"
+
+
+def _marking_definition(marking_id, definition_type, name):
+    return {
+        "type": "marking-definition",
+        "spec_version": "2.1",
+        "id": marking_id,
+        "definition_type": definition_type,
+        "name": name,
+    }
+
+
+def _report(object_marking_refs=None, report_types=None, object_refs=None):
+    return {
+        "type": "report",
+        "spec_version": "2.1",
+        "id": "report--33333333-3333-3333-3333-333333333333",
+        "name": "Test report",
+        "created": "2026-01-01T00:00:00.000Z",
+        "modified": "2026-01-01T00:00:00.000Z",
+        "published": "2026-01-01T00:00:00.000Z",
+        "object_marking_refs": object_marking_refs or [],
+        "report_types": report_types or [],
+        "object_refs": object_refs or [],
+    }
+
+
+def _indicator(object_marking_refs=None):
+    return {
+        "type": "indicator",
+        "spec_version": "2.1",
+        "id": "indicator--44444444-4444-4444-4444-444444444444",
+        "name": "Malicious IP",
+        "pattern": "[ipv4-addr:value = '1.2.3.4']",
+        "pattern_type": "stix",
+        "valid_from": "2026-01-01T00:00:00.000Z",
+        "object_marking_refs": object_marking_refs or [],
+    }
+
+
+def _ipv4_observable(object_marking_refs=None):
+    return {
+        "type": "ipv4-addr",
+        "spec_version": "2.1",
+        "id": "ipv4-addr--55555555-5555-5555-5555-555555555555",
+        "value": "5.6.7.8",
+        "object_marking_refs": object_marking_refs or [],
+    }
+
+
+@pytest.fixture
+def converter():
+    helper = MagicMock()
+    helper.connector_logger = MagicMock()
+
+    config = MagicMock()
+    config.misp.distribution_level = 1
+    config.misp.marking_types_to_convert = "TLP,PAP"
+    config.misp.get_marking_types_allowlist.return_value = {"TLP", "PAP"}
+
+    return STIXtoMISPConverter(helper, config)
+
+
+def test_tlp_marking_is_converted_to_lowercase_tlp_tag(converter):
+    bundle = {
+        "type": "bundle",
+        "id": "bundle--66666666-6666-6666-6666-666666666666",
+        "objects": [
+            _marking_definition(TLP_RED_ID, "TLP", "TLP:RED"),
+            _report(object_marking_refs=[TLP_RED_ID]),
+        ],
+    }
+
+    misp_event = converter.convert_bundle_to_event(bundle)
+
+    tags = [tag["name"] for tag in misp_event["Event"].get("Tag", [])]
+    assert "tlp:red" in tags
+
+
+def test_pap_marking_is_converted_to_pap_tag_as_is(converter):
+    bundle = {
+        "type": "bundle",
+        "id": "bundle--77777777-7777-7777-7777-777777777777",
+        "objects": [
+            _marking_definition(PAP_AMBER_ID, "PAP", "PAP:AMBER"),
+            _report(object_marking_refs=[PAP_AMBER_ID]),
+        ],
+    }
+
+    misp_event = converter.convert_bundle_to_event(bundle)
+
+    tags = [tag["name"] for tag in misp_event["Event"].get("Tag", [])]
+    assert "PAP:AMBER" in tags
+
+
+def test_report_types_are_converted_to_report_type_tags(converter):
+    bundle = {
+        "type": "bundle",
+        "id": "bundle--88888888-8888-8888-8888-888888888888",
+        "objects": [
+            _report(report_types=["threat-report"]),
+        ],
+    }
+
+    misp_event = converter.convert_bundle_to_event(bundle)
+
+    tags = [tag["name"] for tag in misp_event["Event"].get("Tag", [])]
+    assert "report-type:threat-report" in tags
+
+
+def test_custom_marking_type_not_in_allowlist_is_skipped(converter):
+    bundle = {
+        "type": "bundle",
+        "id": "bundle--99999999-9999-9999-9999-999999999999",
+        "objects": [
+            _marking_definition(CUSTOM_MARKING_ID, "internal-dist", "INTERNAL:SECRET"),
+            _report(object_marking_refs=[CUSTOM_MARKING_ID]),
+        ],
+    }
+
+    misp_event = converter.convert_bundle_to_event(bundle)
+
+    tags = [tag["name"] for tag in misp_event["Event"].get("Tag", [])]
+    assert "INTERNAL:SECRET" not in tags
+    assert not any("internal" in tag.lower() for tag in tags)
+
+
+def test_indicator_object_marking_refs_are_tagged_on_attribute(converter):
+    bundle = {
+        "type": "bundle",
+        "id": "bundle--aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "objects": [
+            _marking_definition(TLP_RED_ID, "TLP", "TLP:RED"),
+            _report(object_refs=["indicator--44444444-4444-4444-4444-444444444444"]),
+            _indicator(object_marking_refs=[TLP_RED_ID]),
+        ],
+    }
+
+    misp_event = converter.convert_bundle_to_event(bundle)
+
+    attributes = misp_event["Event"].get("Attribute", [])
+    ip_attr = next((a for a in attributes if a.get("value") == "1.2.3.4"), None)
+    assert ip_attr is not None
+    attr_tags = [tag["name"] for tag in ip_attr.get("Tag", [])]
+    assert "tlp:red" in attr_tags
+
+
+def test_observable_object_marking_refs_are_tagged_on_object(converter):
+    bundle = {
+        "type": "bundle",
+        "id": "bundle--bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "objects": [
+            _marking_definition(PAP_AMBER_ID, "PAP", "PAP:AMBER"),
+            _report(
+                object_refs=["ipv4-addr--55555555-5555-5555-5555-555555555555"]
+            ),
+            _ipv4_observable(object_marking_refs=[PAP_AMBER_ID]),
+        ],
+    }
+
+    misp_event = converter.convert_bundle_to_event(bundle)
+
+    misp_objects = misp_event["Event"].get("Object", [])
+    ip_port_obj = next((o for o in misp_objects if o.get("name") == "ip-port"), None)
+    assert ip_port_obj is not None
+    obj_tags = [tag["name"] for tag in ip_port_obj.get("Tag", [])]
+    assert "PAP:AMBER" in obj_tags
