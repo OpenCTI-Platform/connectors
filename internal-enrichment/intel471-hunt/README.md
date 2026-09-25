@@ -301,13 +301,23 @@ The connector can be debugged by setting the appropriate log level (`CONNECTOR_L
 
 ### Running without OpenCTI
 
-Two scenarios run the connector's logic without an OpenCTI platform attached. Both run from the connector directory
-after `pip install -e ".[dev]"`.
+Three scenarios run the connector's logic without an OpenCTI platform attached. All run from the connector directory
+after `pip install -e ".[dev]"`. The two CLI helpers live in `scripts/` — they are developer tooling, are never
+imported by the connector runtime, and are not shipped in the container image.
 
 **Unit tests** — no network, no API key required:
 
 ```shell
 pytest
+```
+
+**API smoke test** — live network, no STIX, no OpenCTI. Checks credentials and filter behaviour by printing the
+`uuid`/`title` of every hunt the API returns:
+
+```shell
+export HUNTER_API_KEY=...
+
+python3 -m scripts.hunter_client_cli --actors TeamPCP
 ```
 
 **Full pipeline dry run** — live network, real STIX bundle, no OpenCTI. This is the closest thing to a real
@@ -316,7 +326,7 @@ enrichment: the same code path the connector takes in production, without OpenCT
 ```shell
 export HUNTER_API_KEY=...
 
-python3 -m src.dry_run \
+python3 -m scripts.dry_run \
   --entity-type Threat-Actor-Group \
   --entity-name TeamPCP \
   --out /tmp/teampcp-bundle.json
@@ -332,13 +342,13 @@ More examples:
 
 ```shell
 # MITRE technique trigger
-python3 -m src.dry_run --entity-type Attack-Pattern --entity-name JavaScript --mitre-id T1059.007
+python3 -m scripts.dry_run --entity-type Attack-Pattern --entity-name JavaScript --mitre-id T1059.007
 
 # Campaign
-python3 -m src.dry_run --entity-type Campaign --entity-name "Shai-Hulud 2.0"
+python3 -m scripts.dry_run --entity-type Campaign --entity-name "Shai-Hulud 2.0"
 
 # Vulnerability
-python3 -m src.dry_run --entity-type Vulnerability --entity-name CVE-2024-0001
+python3 -m scripts.dry_run --entity-type Vulnerability --entity-name CVE-2024-0001
 ```
 
 Supported `--entity-type` values: `Threat-Actor`, `Threat-Actor-Group`, `Threat-Actor-Individual`, `Intrusion-Set`,
