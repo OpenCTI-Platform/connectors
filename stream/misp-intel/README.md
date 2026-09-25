@@ -29,6 +29,7 @@ The MISP Intel connector streams threat intelligence from OpenCTI to MISP, autom
     - [Indicator Pattern Mapping](#indicator-pattern-mapping)
     - [Observable to MISP Object Mapping](#observable-to-misp-object-mapping)
     - [Identity and Location Mapping](#identity-and-location-mapping)
+    - [Marking to Tag Conversion](#marking-to-tag-conversion)
     - [Tag Generation](#tag-generation)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
@@ -46,6 +47,7 @@ Key features:
 - STIX 2.1 sightings support
 - Bidirectional linking via external references
 - Configurable distribution and threat levels
+- TLP/PAP marking-definitions converted to MISP tags at both event and attribute/object level
 - Proxy support for enterprise environments
 - Queue-based architecture to handle large containers without stream timeouts
 
@@ -72,7 +74,7 @@ There are a number of configuration options, which are set either in `docker-com
 ### Base connector environment variables
 
 | Parameter                      | config.yml                | Docker environment variable             | Default                                      | Mandatory | Description                                                                    |
-|--------------------------------|---------------------------|-----------------------------------------|----------------------------------------------|-----------|--------------------------------------------------------------------------------|
+|--------------------------------|---------------------------|------------------------------------------|-----------------------------------------------|-----------|--------------------------------------------------------------------------------|
 | Connector ID                   | id                        | `CONNECTOR_ID`                          |                                              | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
 | Connector Name                 | name                      | `CONNECTOR_NAME`                        | MISP Intel                                   | No        | Name of the connector.                                                         |
 | Connector Scope                | scope                     | `CONNECTOR_SCOPE`                       | misp                                         | No        | The scope of the connector.                                                    |
@@ -85,22 +87,23 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-| Parameter            | config.yml                | Docker environment variable   | Default           | Mandatory | Description                                                |
-|----------------------|---------------------------|-------------------------------|-------------------|-----------|------------------------------------------------------------|
-| MISP URL             | misp.url                  | `MISP_URL`                    |                   | Yes       | URL of your MISP instance.                                 |
-| MISP API Key         | misp.api_key              | `MISP_API_KEY`                |                   | Yes       | API key for MISP authentication.                           |
-| MISP SSL Verify      | misp.ssl_verify           | `MISP_SSL_VERIFY`             | true              | No        | Verify SSL certificates for MISP.                          |
-| MISP Owner Org       | misp.owner_org            | `MISP_OWNER_ORG`              |                   | No        | Organization that will own events in MISP.                 |
-| Distribution Level   | misp.distribution_level   | `MISP_DISTRIBUTION_LEVEL`     | 1                 | No        | MISP distribution level (0-3).                             |
-| Threat Level         | misp.threat_level         | `MISP_THREAT_LEVEL`           | 2                 | No        | MISP threat level (1-4), used as fallback.                 |
-| Publish on Create    | misp.publish_on_create    | `MISP_PUBLISH_ON_CREATE`      | false             | No        | Automatically publish events when created.                 |
-| Publish on Update    | misp.publish_on_update    | `MISP_PUBLISH_ON_UPDATE`      | false             | No        | Automatically publish events when updated.                 |
-| Hard Delete          | misp.hard_delete          | `MISP_HARD_DELETE`            | true              | No        | Permanently delete events without blocklisting.            |
-| Tag OpenCTI          | misp.tag_opencti          | `MISP_TAG_OPENCTI`            | true              | No        | Add OpenCTI-specific tags to MISP events.                  |
-| Tag Prefix           | misp.tag_prefix           | `MISP_TAG_PREFIX`             | opencti:          | No        | Prefix for OpenCTI tags.                                   |
-| HTTP Proxy           | proxy.http                | `PROXY_HTTP`                  |                   | No        | HTTP proxy URL.                                            |
-| HTTPS Proxy          | proxy.https               | `PROXY_HTTPS`                 |                   | No        | HTTPS proxy URL.                                           |
-| No Proxy             | proxy.no_proxy            | `PROXY_NO_PROXY`              | localhost,127.0.0.1| No       | Comma-separated list of hosts to bypass proxy.             |
+| Parameter                  | config.yml                     | Docker environment variable       | Default            | Mandatory | Description                                                                                                                                                                                                                                                        |
+|-----------------------------|---------------------------------|------------------------------------|--------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| MISP URL                   | misp.url                       | `MISP_URL`                        |                    | Yes       | URL of your MISP instance.                                                                                                                                                                                                                                        |
+| MISP API Key                | misp.api_key                    | `MISP_API_KEY`                    |                    | Yes       | API key for MISP authentication.                                                                                                                                                                                                                                  |
+| MISP SSL Verify             | misp.ssl_verify                 | `MISP_SSL_VERIFY`                 | true               | No        | Verify SSL certificates for MISP.                                                                                                                                                                                                                                 |
+| MISP Owner Org               | misp.owner_org                  | `MISP_OWNER_ORG`                  |                    | No        | Organization that will own events in MISP.                                                                                                                                                                                                                        |
+| Distribution Level          | misp.distribution_level         | `MISP_DISTRIBUTION_LEVEL`         | 1                  | No        | MISP distribution level (0-3).                                                                                                                                                                                                                                    |
+| Threat Level                | misp.threat_level               | `MISP_THREAT_LEVEL`               | 2                  | No        | MISP threat level (1-4), used as fallback.                                                                                                                                                                                                                        |
+| Publish on Create           | misp.publish_on_create          | `MISP_PUBLISH_ON_CREATE`          | false              | No        | Automatically publish events when created.                                                                                                                                                                                                                        |
+| Publish on Update           | misp.publish_on_update          | `MISP_PUBLISH_ON_UPDATE`          | false              | No        | Automatically publish events when updated.                                                                                                                                                                                                                        |
+| Hard Delete                 | misp.hard_delete                | `MISP_HARD_DELETE`                | true               | No        | Permanently delete events without blocklisting.                                                                                                                                                                                                                   |
+| Tag OpenCTI                 | misp.tag_opencti                | `MISP_TAG_OPENCTI`                | true               | No        | Add OpenCTI-specific tags to MISP events.                                                                                                                                                                                                                         |
+| Tag Prefix                  | misp.tag_prefix                 | `MISP_TAG_PREFIX`                 | opencti:           | No        | Prefix for OpenCTI tags.                                                                                                                                                                                                                                          |
+| Marking Types To Convert    | misp.marking_types_to_convert   | `MISP_MARKING_TYPES_TO_CONVERT`   | TLP,PAP            | No        | Comma-separated allow-list of marking-definition `definition_type` values (case-insensitive) converted to MISP tags, at both the event level (container's markings + `report_types`) and the attribute/object level (indicator's/observable's markings). Marking types not in this allow-list are never converted, see [Marking to Tag Conversion](#marking-to-tag-conversion). |
+| HTTP Proxy                  | proxy.http                      | `PROXY_HTTP`                      |                    | No        | HTTP proxy URL.                                                                                                                                                                                                                                                    |
+| HTTPS Proxy                 | proxy.https                     | `PROXY_HTTPS`                     |                    | No        | HTTPS proxy URL.                                                                                                                                                                                                                                                   |
+| No Proxy                    | proxy.no_proxy                  | `PROXY_NO_PROXY`                  | localhost,127.0.0.1| No        | Comma-separated list of hosts to bypass proxy.                                                                                                                                                                                                                    |
 
 ## Deployment
 
@@ -209,7 +212,7 @@ graph LR
 ### Supported Container Types
 
 | OpenCTI Container Type | STIX Type               | MISP Event Created |
-|------------------------|-------------------------|--------------------|
+|------------------------|--------------------------|--------------------|
 | Report                 | report                  | Yes                |
 | Grouping               | grouping                | Yes                |
 | Case-Incident          | case-incident / x-opencti-case-incident | Yes |
@@ -221,7 +224,7 @@ graph LR
 ### Container Field Mapping
 
 | OpenCTI Field           | MISP Field       | Description                              |
-|-------------------------|------------------|------------------------------------------|
+|-------------------------|-------------------|-------------------------------------------|
 | Container Name          | Event Info       | Event title                              |
 | Created Date            | Event Date       | Creation timestamp                       |
 | Modified Date           | Event Timestamp  | Last modification timestamp              |
@@ -229,6 +232,8 @@ graph LR
 | Configured Owner Org    | Org (Owner Org)  | Organization that owns the event         |
 | Calculated Threat Level | Threat Level ID  | Mapped based on indicator/observable scores |
 | Labels                  | Tags             | Container labels as event tags           |
+| Object Marking Refs (TLP/PAP) | Tags       | See [Marking to Tag Conversion](#marking-to-tag-conversion) |
+| Report Types            | Tags             | Converted to `report-type:{type}` event tags |
 | Description             | Comment Attribute| Added as comment attribute               |
 | Analysis Status         | Analysis         | Always set to 2 (Completed)              |
 
@@ -246,18 +251,18 @@ The MISP threat level is dynamically calculated based on the average `x_opencti_
 If no scores are found, the connector falls back to the container's confidence level:
 
 | Confidence Level | MISP Threat Level |
-|------------------|-------------------|
-| >= 80            | 1 (High)          |
-| >= 60            | 2 (Medium)        |
-| >= 30            | 3 (Low)           |
-| < 30             | 4 (Undefined)     |
+|-------------------|-------------------|
+| >= 80             | 1 (High)          |
+| >= 60             | 2 (Medium)        |
+| >= 30             | 3 (Low)           |
+| < 30              | 4 (Undefined)     |
 
 ### Entity to Galaxy Mapping
 
 The connector maps OpenCTI entities to MISP galaxies for proper contextual tagging:
 
 | STIX/OpenCTI Entity Type | MISP Galaxy Type                    | Notes                                          |
-|--------------------------|-------------------------------------|------------------------------------------------|
+|--------------------------|--------------------------------------|-------------------------------------------------|
 | threat-actor             | threat-actor                        | Direct mapping                                 |
 | intrusion-set            | threat-actor                        | Also adds alias tags for known aliases         |
 | malware                  | malware                             | Direct mapping                                 |
@@ -282,7 +287,7 @@ The connector maps OpenCTI entities to MISP galaxies for proper contextual taggi
 The connector parses STIX 2.1 indicator patterns and maps them to MISP attribute types:
 
 | STIX Pattern Type              | MISP Type         | MISP Category       |
-|--------------------------------|-------------------|---------------------|
+|---------------------------------|--------------------|-----------------------|
 | ipv4-addr:value                | ip-dst            | Network activity    |
 | ipv6-addr:value                | ip-dst            | Network activity    |
 | domain-name:value              | domain            | Network activity    |
@@ -319,7 +324,7 @@ The connector parses STIX 2.1 indicator patterns and maps them to MISP attribute
 STIX observables are converted to MISP objects with their associated attributes:
 
 | STIX Observable Type     | MISP Object Type     | Attributes Included                                           |
-|--------------------------|----------------------|---------------------------------------------------------------|
+|---------------------------|-----------------------|------------------------------------------------------------------|
 | file                     | file                 | filename, md5, sha1, sha256, sha512, ssdeep, size-in-bytes, mimetype |
 | network-traffic          | network-connection   | src-port, dst-port, protocol                                  |
 | process                  | process              | pid, name, command-line                                       |
@@ -343,7 +348,7 @@ STIX observables are converted to MISP objects with their associated attributes:
 **Identity Mapping** (based on `identity_class`):
 
 | Identity Class | MISP Galaxy           | Notes                                    |
-|----------------|-----------------------|------------------------------------------|
+|-----------------|-------------------------|---------------------------------------------|
 | organization   | target-information    | Or `sector` if x_opencti_type is sector  |
 | class          | sector                | Industry sectors                         |
 | individual     | target-information    | Individuals                              |
@@ -353,19 +358,51 @@ STIX observables are converted to MISP objects with their associated attributes:
 **Location Mapping** (based on `x_opencti_location_type`):
 
 | Location Type        | MISP Galaxy           |
-|----------------------|-----------------------|
+|------------------------|--------------------------|
 | country              | country               |
 | region               | region                |
 | city                 | target-information    |
 | administrative-area  | target-information    |
 | position             | target-information    |
 
+### Marking to Tag Conversion
+
+OpenCTI's STIX 2.1 output represents a TLP/PAP marking as a `marking-definition` object carrying a `definition_type` (e.g. `"TLP"`, `"PAP"`) and a `name` (e.g. `"TLP:RED"`) — there is no nested `definition` object. The connector converts these markings to MISP tags at two levels:
+
+- **Event level**: the container's own `object_marking_refs`, plus its `report_types`, are converted to MISP event tags.
+- **Attribute/Object level**: each indicator's and observable's `object_marking_refs` are converted to tags on the corresponding MISP attribute or object.
+
+Only marking types listed in `MISP_MARKING_TYPES_TO_CONVERT` (default `TLP,PAP`) are converted; this is an **allow-list, so it fails closed** — any marking-definition whose `definition_type` is not in the list (for example a custom/internal distribution-control marking) is skipped entirely and never reaches MISP as a tag.
+
+| OpenCTI Marking                     | MISP Tag Example         | Notes                                                        |
+|--------------------------------------|----------------------------|-----------------------------------------------------------------|
+| TLP (`definition_type="TLP"`)       | `tlp:red`                 | Re-cased to lowercase to match the MISP `tlp` taxonomy         |
+| PAP (`definition_type="PAP"`)       | `PAP:AMBER`               | Used as-is; already matches the MISP `PAP` taxonomy format     |
+| `report_types` (event level only)   | `report-type:threat-report` | One tag per report type                                     |
+| Any other allow-listed type         | Passed through as-is     | Assumes the marking's `name` is already a valid MISP tag       |
+| Not in allow-list (e.g. custom)     | *(skipped)*                | Never converted, never sent to MISP                             |
+
+#### Known limitations
+
+When a container's marking or `report_types` changes (e.g. TLP RED → GREEN) and OpenCTI sends a corresponding `update` event, the connector reconciles the now-stale MISP event tag: it adds the new tag and actively removes the old one via the MISP API.
+
+**Removal is driven by persisted connector state, not by guessing from a tag-name prefix.** Every time the connector creates or updates a MISP event, it records — via `helper.get_state()`/`helper.set_state()`, keyed by MISP event UUID — exactly which event-level tags it itself just added. On the next `update` for that same event, only tags previously recorded in that state are eligible for automatic removal; any tag not recorded there (most commonly one added manually by a MISP analyst, or one added by another tool) is always left untouched, no matter how similar its name looks to a connector-managed tag.
+
+This means:
+
+- **Any allow-listed marking type is correctly reconciled**, not just `TLP`/`PAP`. Even a custom `definition_type` added to `MISP_MARKING_TYPES_TO_CONVERT` (e.g. `CLASSIFICATION`) whose resulting tag does not follow a predictable `{definition_type.lower()}:` prefix is cleaned up correctly once stale, because the connector tracks the actual tag name it added — not an assumed prefix.
+- **A manually-added tag is never deleted**, even if it happens to share a namespace with connector-managed tags (e.g. an analyst manually tagging an event `tlp:red`). Since that tag was never recorded as connector-added in state, it is never a candidate for removal.
+- **One transitional edge case**: for a MISP event that was synced by a connector version older than this state-tracking feature, there is no recorded state yet for that event. The *first* `update` after upgrading will not clean up any pre-existing stale tag on that event (it simply has nothing to compare against), but will start recording state from that point on — so reconciliation behaves correctly from the second sync onward. This is intentional: it is strictly safer to under-clean once on upgrade than to guess and risk deleting a manually-added tag.
+- **One narrow, unavoidable edge case**: MISP's own tag-to-event association is identified purely by tag *name* — it has no concept of *who* added a given tag, so the connector's persisted state can likewise only track tag names, not a tamper-proof identity per tag instance. If an analyst manually removes a connector-managed tag (e.g. `tlp:red`) and later manually re-adds a tag with the *exact same name* to the *same* event, the connector's state still lists that name as connector-managed for that event, and the next stale-tag reconciliation may remove the analyst's manually re-added tag, believing it to be the one the connector originally added. This is the one case where the "never deletes a tag it didn't add" guarantee cannot be fully upheld, because MISP itself exposes no data that would let the connector tell the two apart. To avoid it, do not manually add a tag whose name exactly matches one this connector manages (`tlp:*`/`pap:*`/`report-type:*`, plus any custom marking type configured in `MISP_MARKING_TYPES_TO_CONVERT`) to an event synced by this connector.
+
+In short: **every event-level tag the connector adds is tracked per-event in connector state, and reconciliation on update only ever removes a tag the connector itself previously added — regardless of its name/prefix — with the sole exception of the same-name re-addition edge case above, which MISP's data model makes impossible to fully close.**
+
 ### Tag Generation
 
 The connector generates various tags for MISP events:
 
 | Tag Type                | Format                           | Example                                    |
-|-------------------------|----------------------------------|--------------------------------------------|
+|--------------------------|-------------------------------------|-----------------------------------------------|
 | Source tag              | `source:opencti`                 | `source:opencti`                           |
 | Container type          | `opencti:type:{type}`            | `opencti:type:report`                      |
 | Confidence level        | `confidence:{level}`             | `confidence:85`                            |
@@ -377,11 +414,13 @@ The connector generates various tags for MISP events:
 | Infrastructure type     | `infrastructure:c2`              | `infrastructure:c2`                        |
 | Standard entities       | `opencti:{entity_type}:{name}`   | `opencti:channel:Telegram`                 |
 | MITRE extensions        | `mitre:{type}:{name}`            | `mitre:data-source:Network Traffic`        |
+| Marking (TLP/PAP)       | see [Marking to Tag Conversion](#marking-to-tag-conversion) | `tlp:red`, `PAP:AMBER`  |
+| Report type             | `report-type:{type}`             | `report-type:threat-report`                |
 
 ### Distribution Levels
 
 | Level | Description                |
-|-------|----------------------------|
+|-------|------------------------------|
 | 0     | Your organisation only     |
 | 1     | This community only        |
 | 2     | Connected communities      |
@@ -390,7 +429,7 @@ The connector generates various tags for MISP events:
 ### Threat Levels
 
 | Level | Description |
-|-------|-------------|
+|-------|--------------|
 | 1     | High        |
 | 2     | Medium      |
 | 3     | Low         |
@@ -407,7 +446,7 @@ CONNECTOR_LOG_LEVEL=debug
 ### Common Issues
 
 | Issue                          | Solution                                              |
-|--------------------------------|-------------------------------------------------------|
+|----------------------------------|----------------------------------------------------------|
 | Connection failed              | Verify URLs and API keys are correct                  |
 | SSL errors                     | Set `MISP_SSL_VERIFY=false` for self-signed certs     |
 | Missing events                 | Check container type filter configuration             |
@@ -426,3 +465,4 @@ CONNECTOR_LOG_LEVEL=debug
 - **Proxy Support**: Configure HTTP/HTTPS proxy for enterprise environments
 - **Sightings**: STIX 2.1 sightings are processed and can be attached to MISP attributes
 - **Organization Handling**: Creator org (orgc) is extracted from the container's `created_by_ref`, while owner org is configured via `MISP_OWNER_ORG`
+- **Marking Conversion**: TLP/PAP markings (and any other allow-listed marking type) are converted to MISP tags at both the event and attribute/object level, see [Marking to Tag Conversion](#marking-to-tag-conversion). See also the [Known limitations](#known-limitations) note regarding stale-tag removal on update.

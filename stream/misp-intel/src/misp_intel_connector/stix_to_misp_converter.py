@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from uuid import uuid4
 
-from pymisp import MISPEvent, MISPObject, MISPSighting
+from pymisp import MISPAttribute, MISPEvent, MISPObject, MISPSighting
 
 
 class STIXtoMISPConverter:
@@ -141,27 +141,162 @@ class STIXtoMISPConverter:
         """
         self.helper = helper
         self.config = config
-        # Track added attribute values to prevent duplicates
-        self.added_attributes = {}
+        # Track already-created MISPAttribute instances by "type:value" key.
+        # This serves two purposes: (1) avoid adding a duplicate attribute
+        # for the same IOC, and (2) when a later indicator/observable
+        # resolves to the same type/value, its labels and marking-derived
+        # tags (TLP/PAP, see #7011) are merged onto the already-tracked
+        # attribute instead of being silently dropped - see
+        # _get_tracked_attribute()/_track_attribute() and the Copilot review
+        # finding "Preserve marking tags when deduplicating indicators".
+        self.added_attributes: Dict[str, MISPAttribute] = {}
+        # Lookup of marking-definition STIX id -> MISP taxonomy tag,
+        # rebuilt for every bundle conversion (see _build_marking_lookup)
+        self.marking_lookup: Dict[str, str] = {}
 
-    def _should_add_attribute(self, attr_type: str, value: str) -> bool:
+    def _get_tracked_attribute(
+        self, attr_type: str, value: str
+    ) -> Optional[MISPAttribute]:
         """
-        Check if an attribute should be added (avoiding duplicates)
+        Return the MISPAttribute previously created for this type/value
+        combination, or None if no such attribute has been added yet to the
+        event currently being built.
 
         :param attr_type: MISP attribute type
         :param value: Attribute value
-        :return: True if attribute should be added, False if it's a duplicate
+        :return: The existing MISPAttribute, or None
         """
-        # Create a key for tracking (type and value combination)
-        key = f"{attr_type}:{value}"
+        return self.added_attributes.get(f"{attr_type}:{value}")
 
-        if key in self.added_attributes:
-            # Already added this attribute
-            return False
+    def _track_attribute(
+        self, attr_type: str, value: str, attribute: MISPAttribute
+    ) -> None:
+        """
+        Record a newly created MISPAttribute so later duplicates of the same
+        type/value can find it (and merge their tags into it) instead of
+        being silently skipped.
 
-        # Mark as added
-        self.added_attributes[key] = True
-        return True
+        :param attr_type: MISP attribute type
+        :param value: Attribute value
+        :param attribute: The MISPAttribute instance that was just added
+        """
+        self.added_attributes[f"{attr_type}:{value}"] = attribute
+
+    def _get_marking_tag(self, definition_type: str, name: str) -> Optional[str]:
+        """
+        Convert an OpenCTI marking-definition (definition_type + name) into
+        its MISP taxonomy tag.
+
+        OpenCTI's STIX 2.1 output for a marking-definition only carries
+        `definition_type` (e.g. "TLP") and `name` (e.g. "TLP:RED") - there is
+        no nested `definition` object.
+
+        TLP names are re-cased to match the MISP `tlp` taxonomy, which is
+        lowercase (e.g. "TLP:AMBER+STRICT" -> "tlp:amber+strict"). PAP names
+        already match the MISP `PAP` taxonomy format ("PAP:RED") and are used
+        as-is. Any other allow-listed definition_type is passed through
+        unchanged, on the assumption its `name` is already a valid tag.
+
+        :param definition_type: The marking's definition_type (e.g. "TLP", "PAP")
+        :param name: The marking's name (e.g. "TLP:RED")
+        :return: A MISP tag string, or None if it cannot be derived
+        """
+        if not name:
+            return None
+
+        if definition_type.upper() == "TLP":
+            value = name.split(":", 1)[1] if ":" in name else name
+            return f"tlp:{value.lower()}"
+
+        # PAP and any other future marking types are expected to already be
+        # in a MISP-compatible "NAMESPACE:VALUE" tag format.
+        return name
+
+    def _build_marking_lookup(self, stix_bundle: Dict) -> Dict[str, str]:
+        """
+        Build a lookup of marking-definition STIX id -> MISP tag for the
+        whole bundle, filtered by the MISP_MARKING_TYPES_TO_CONVERT allow-list.
+
+        This is an allow-list (fails closed): a marking-definition whose
+        definition_type is not in the allow-list (e.g. a custom/internal
+        distribution-control marking) is skipped entirely and will never
+        reach MISP as a tag.
+
+        :param stix_bundle: STIX 2.1 bundle dictionary
+        :return: Dict mapping marking-definition STIX id to MISP tag
+        """
+        allowlist = self.config.misp.get_marking_types_allowlist()
+        lookup: Dict[str, str] = {}
+
+        for obj in stix_bundle.get("objects", []):
+            if obj.get("type", "").lower() != "marking-definition":
+                continue
+
+            definition_type = obj.get("definition_type", "") or ""
+            if definition_type.upper() not in allowlist:
+                self.helper.connector_logger.debug(
+                    f"Skipping marking-definition {obj.get('id')}: "
+                    f"definition_type '{definition_type}' not in allow-list {sorted(allowlist)}"
+                )
+                continue
+
+            tag = self._get_marking_tag(definition_type, obj.get("name", ""))
+            if tag:
+                lookup[obj.get("id")] = tag
+
+        return lookup
+
+    def _add_marking_tags(
+        self, taggable, object_marking_refs: Optional[List[str]]
+    ) -> None:
+        """
+        Add MISP tags derived from object_marking_refs to a taggable MISP
+        object that exposes add_tag() - namely MISPEvent or MISPAttribute.
+
+        Note: pymisp.MISPObject does NOT implement add_tag() (tagging is not
+        supported at the MISP Object level - see MISP/PyMISP#168), so this
+        must never be called with a MISPObject instance. For MISP Objects,
+        use _add_marking_tags_to_object_attributes() instead, which tags
+        every Attribute the Object contains.
+
+        Markings whose definition_type was not in the allow-list (i.e. not
+        present in self.marking_lookup) are silently skipped.
+
+        :param taggable: A MISPEvent or MISPAttribute instance
+        :param object_marking_refs: List of marking-definition STIX ids
+        """
+        for marking_ref in object_marking_refs or []:
+            tag = self.marking_lookup.get(marking_ref)
+            if tag:
+                taggable.add_tag(tag)
+
+    def _add_marking_tags_to_object_attributes(
+        self, misp_obj: MISPObject, object_marking_refs: Optional[List[str]]
+    ) -> None:
+        """
+        Add MISP tags derived from object_marking_refs to every Attribute of
+        a MISP Object.
+
+        pymisp.MISPObject does not support add_tag() at the Object level
+        (see MISP/PyMISP#168 - "Not supported yet"), only MISPEvent and
+        MISPAttribute do. To still surface the marking on a MISP Object
+        (e.g. an ip-port object built from an ipv4-addr observable), the tag
+        is applied to each of the Object's individual Attributes instead.
+
+        :param misp_obj: A MISPObject instance
+        :param object_marking_refs: List of marking-definition STIX ids
+        """
+        tags = [
+            self.marking_lookup[marking_ref]
+            for marking_ref in object_marking_refs or []
+            if marking_ref in self.marking_lookup
+        ]
+        if not tags:
+            return
+
+        for attribute in misp_obj.attributes:
+            for tag in tags:
+                attribute.add_tag(tag)
 
     def convert_bundle_to_event(
         self, stix_bundle: Dict, custom_uuid: Optional[str] = None
@@ -189,6 +324,10 @@ class STIXtoMISPConverter:
             if not container:
                 self.helper.connector_logger.warning("No container found in bundle")
                 return None
+
+            # Build the marking-definition lookup (id -> MISP tag) once per
+            # bundle, so event/attribute/object level tagging can reuse it.
+            self.marking_lookup = self._build_marking_lookup(stix_bundle)
 
             # Create MISP event (pass bundle for score calculation)
             misp_event = self._create_base_event(container, custom_uuid, stix_bundle)
@@ -444,6 +583,14 @@ class STIXtoMISPConverter:
         for label in container.get("labels", []):
             event.add_tag(label)
 
+        # Convert the container's object_marking_refs (e.g. TLP/PAP) to
+        # MISP event-level tags (see #6057)
+        self._add_marking_tags(event, container.get("object_marking_refs"))
+
+        # Convert report_types to MISP event-level tags (e.g. "report-type:threat-report")
+        for report_type in container.get("report_types", []) or []:
+            event.add_tag(f"report-type:{report_type}")
+
         return event
 
     def _process_indicator(self, event: MISPEvent, indicator: Dict) -> None:
@@ -498,9 +645,20 @@ class STIXtoMISPConverter:
                 else:
                     misp_type = "text"
 
-            # Check for duplicates before adding
-            if not self._should_add_attribute(misp_type, pattern_value):
-                # Skip duplicate attribute
+            # If an attribute with this type/value was already added (e.g.
+            # from another indicator resolving to the same IOC), do not add
+            # a duplicate attribute - but still merge this indicator's
+            # labels and marking tags onto the existing attribute, otherwise
+            # a differently-marked duplicate would silently lose its
+            # TLP/PAP tag (see Copilot review finding "Preserve marking tags
+            # when deduplicating indicators").
+            existing_attr = self._get_tracked_attribute(misp_type, pattern_value)
+            if existing_attr is not None:
+                for label in indicator.get("labels", []):
+                    existing_attr.add_tag(label)
+                self._add_marking_tags(
+                    existing_attr, indicator.get("object_marking_refs")
+                )
                 continue
 
             # Add attribute
@@ -511,10 +669,15 @@ class STIXtoMISPConverter:
                 to_ids=True,
                 comment=indicator.get("name", ""),
             )
+            self._track_attribute(misp_type, pattern_value, attr)
 
             # Add indicator tags
             for label in indicator.get("labels", []):
                 attr.add_tag(label)
+
+            # Convert the indicator's object_marking_refs (e.g. TLP/PAP) to
+            # MISP attribute-level tags (see #7011)
+            self._add_marking_tags(attr, indicator.get("object_marking_refs"))
 
             # Add validity period as comment
             if "valid_from" in indicator or "valid_until" in indicator:
@@ -612,6 +775,14 @@ class STIXtoMISPConverter:
             # Set comment on object
             if comments:
                 misp_obj.comment = " | ".join(comments)
+
+            # Convert the observable's object_marking_refs (e.g. TLP/PAP) to
+            # MISP tags on every attribute of the object (see #7011).
+            # Note: MISPObject itself does not support add_tag() in pymisp
+            # (MISP/PyMISP#168), so tags are applied at the attribute level.
+            self._add_marking_tags_to_object_attributes(
+                misp_obj, observable.get("object_marking_refs")
+            )
 
             # Add the object to the event
             if misp_obj.attributes:
@@ -1345,9 +1516,16 @@ class STIXtoMISPConverter:
         else:
             misp_type = "text"
 
-        # Check for duplicates before adding
-        if not self._should_add_attribute(misp_type, value):
-            # Skip duplicate attribute
+        # If an attribute with this type/value was already added (e.g. the
+        # same IOC observed via two different STIX objects), do not add a
+        # duplicate attribute - but still merge this observable's labels/
+        # marking/score tags onto the existing attribute, otherwise a
+        # differently-marked duplicate would silently lose its TLP/PAP tag
+        # (see Copilot review finding "Preserve marking tags when
+        # deduplicating indicators", which applies equally to observables).
+        existing_attr = self._get_tracked_attribute(misp_type, value)
+        if existing_attr is not None:
+            self._apply_observable_tags(existing_attr, observable, obs_type)
             return
 
         # Determine if this is a C2 server or malicious infrastructure
@@ -1363,12 +1541,36 @@ class STIXtoMISPConverter:
             comment=f"Observable: {obs_type}",
             to_ids=to_ids,
         )
+        self._track_attribute(misp_type, value, attr)
 
+        self._apply_observable_tags(attr, observable, obs_type)
+
+    def _apply_observable_tags(
+        self, attr: MISPAttribute, observable: Dict, obs_type: str
+    ) -> None:
+        """
+        Apply labels, marking-derived tags, score-based threat-level tags,
+        the C2-infrastructure tag and the observable-type tag to a MISP
+        attribute representing an observable.
+
+        Factored out of _add_observable_as_attribute() so the exact same
+        tagging logic runs whether the attribute was just created, or is an
+        already-tracked attribute that a duplicate observable is merging its
+        tags into (see _get_tracked_attribute()).
+
+        :param attr: The MISPAttribute to tag
+        :param observable: The STIX observable dict this attribute derives from
+        :param obs_type: Lowercased STIX observable type (e.g. "ipv4-addr")
+        """
         # Add labels as tags to the attribute
         # Check both 'labels' and 'x_opencti_labels'
         labels = observable.get("labels", []) or observable.get("x_opencti_labels", [])
         for label in labels:
             attr.add_tag(label)
+
+        # Convert the observable's object_marking_refs (e.g. TLP/PAP) to
+        # MISP attribute-level tags (see #7011)
+        self._add_marking_tags(attr, observable.get("object_marking_refs"))
 
         # Add threat level based on score if available
         score = observable.get("x_opencti_score")
