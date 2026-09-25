@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -47,7 +48,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "app_key": "test-app-key",
                     "api_base_url": "https://api.datadoghq.com",
                     "app_base_url": "https://app.datadoghq.com",
-                    "import_interval": 60,
                     "max_tlp": "TLP:AMBER",
                     "batch_size": 100,
                     "import_alerts": True,
@@ -130,7 +130,7 @@ def test_connector_config_is_wired_to_connector_attributes(
     assert datadog_connector.app_key == "test-app-key"
     assert datadog_connector.api_base_url == "https://api.datadoghq.com"
     assert datadog_connector.app_base_url == "https://app.datadoghq.com"
-    assert datadog_connector.import_interval == 60
+    assert datadog_connector.duration_period == timedelta(minutes=5)
     assert datadog_connector.import_start_date is None
     assert datadog_connector.max_tlp == "TLP:AMBER"
     assert datadog_connector.batch_size == 100

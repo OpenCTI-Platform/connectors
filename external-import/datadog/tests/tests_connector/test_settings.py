@@ -1,3 +1,5 @@
+import warnings
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -43,7 +45,6 @@ MINIMAL_VALID_SETTINGS_DICT: dict[str, Any] = {
                     "app_key": "test-app-key",
                     "api_base_url": "https://api.datadoghq.eu",
                     "app_base_url": "https://app.datadoghq.eu",
-                    "import_interval": 30,
                     "import_start_date": "2024-01-01T00:00:00Z",
                     "max_tlp": "TLP:RED",
                     "batch_size": 500,
@@ -158,10 +159,10 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "datadog": {
                     "token": "test-api-key",
                     "app_key": "test-app-key",
-                    "import_interval": "not-a-number",
+                    "batch_size": "not-a-number",
                 },
             },
-            id="invalid_datadog_import_interval",
+            id="invalid_datadog_batch_size",
         ),
     ],
 )
@@ -187,6 +188,69 @@ def test_settings_should_raise_when_invalid_input(settings_dict):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_import_interval():
+    """
+    Test that the deprecated `DATADOG_IMPORT_INTERVAL` (minutes) is automatically
+    migrated to `CONNECTOR_DURATION_PERIOD` via `DeprecatedField` metadata in
+    `BaseConnectorSettings`.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "datadog": {
+                        "token": "test-api-key",
+                        "app_key": "test-app-key",
+                        "import_interval": 30,
+                    },
+                }
+            )
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(minutes=30)
+    warning_messages = [str(warning.message) for warning in caught_warnings]
+    assert any("import_interval" in message for message in warning_messages)
+
+
+def test_settings_should_prefer_duration_period_over_deprecated_import_interval():
+    """
+    When both `CONNECTOR_DURATION_PERIOD` and the deprecated `DATADOG_IMPORT_INTERVAL`
+    are set, the new variable MUST win and the deprecated one MUST be ignored.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "connector": {
+                        "id": "connector-id",
+                        "duration_period": "PT15M",
+                    },
+                    "datadog": {
+                        "token": "test-api-key",
+                        "app_key": "test-app-key",
+                        "import_interval": 30,
+                    },
+                }
+            )
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always")
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(minutes=15)
+    warning_messages = [str(warning.message) for warning in caught_warnings]
+    assert any("import_interval" in message for message in warning_messages)
 
 
 def test_settings_should_default_connector_id():
@@ -216,6 +280,7 @@ def test_settings_should_default_connector_section():
     assert settings.connector.type == "EXTERNAL_IMPORT"
     assert settings.connector.name == "DataDog"
     assert settings.connector.scope == ["stix2"]
+    assert settings.connector.duration_period == timedelta(hours=1)
 
 
 def test_settings_should_default_datadog_section():
@@ -230,7 +295,6 @@ def test_settings_should_default_datadog_section():
 
     assert settings.datadog.api_base_url == "https://api.datadoghq.com"
     assert settings.datadog.app_base_url == "https://app.datadoghq.com"
-    assert settings.datadog.import_interval == 60
     assert settings.datadog.import_start_date is None
     assert settings.datadog.max_tlp == "TLP:AMBER"
     assert settings.datadog.batch_size == 100
