@@ -243,8 +243,6 @@ def test_update_event_does_not_crash_on_event_level_tag_dicts(api_handler):
     # Must not raise AttributeError.
     api_handler.update_event("55555555-5555-5555-5555-555555555555", event_data)
 
-    added_tag_names = [
-        call.args[0] for call in existing_event.add_tag.call_args_list
-    ]
+    added_tag_names = [call.args[0] for call in existing_event.add_tag.call_args_list]
     assert "report-type:threat-report" in added_tag_names
     assert "tlp:red" not in added_tag_names
