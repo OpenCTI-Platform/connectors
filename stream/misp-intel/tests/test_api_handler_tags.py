@@ -334,9 +334,7 @@ def test_update_event_removes_stale_connector_managed_tag(api_handler):
     api_handler.update_event(existing_event.uuid, event_data)
 
     # The stale tlp:red tag must have been actively removed from MISP...
-    api_handler.misp.untag.assert_called_once_with(
-        existing_event.uuid, "tlp:red"
-    )
+    api_handler.misp.untag.assert_called_once_with(existing_event.uuid, "tlp:red")
     # ...and removed from the local tags list...
     assert existing_tag_red not in existing_event.tags
     # ...while the new tlp:green tag must have been added.
@@ -388,7 +386,5 @@ def test_update_event_does_not_remove_non_connector_managed_tags(api_handler):
 
     # Only the connector-managed stale tag (tlp:red) is untagged - the
     # manually-added, non-connector-managed tag is left alone.
-    api_handler.misp.untag.assert_called_once_with(
-        existing_event.uuid, "tlp:red"
-    )
+    api_handler.misp.untag.assert_called_once_with(existing_event.uuid, "tlp:red")
     assert existing_tag_manual in existing_event.tags
