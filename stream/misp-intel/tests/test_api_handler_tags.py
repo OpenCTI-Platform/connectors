@@ -39,11 +39,21 @@ def api_handler():
         config.misp.owner_org = None
         config.misp.publish_on_create = False
         config.misp.publish_on_update = False
-        # Used by _connector_managed_tag_prefixes() to build the list of
-        # tag prefixes (e.g. "tlp:", "pap:") that update_event() is allowed
-        # to reconcile/remove when stale. config.misp is a MagicMock, so
-        # without this explicit return_value it would not be iterable.
-        config.misp.get_marking_types_allowlist.return_value = {"TLP", "PAP"}
+        # get_marking_types_allowlist() is exercised by
+        # stix_to_misp_converter.py (not this test module) to decide which
+        # markings are converted to tags at all. It is set here purely for
+        # fixture realism; _connector_managed_tag_prefixes() itself no
+        # longer consults it - the set of prefixes update_event() may
+        # reconcile/remove is fixed (tlp:/pap:/report-type:), see
+        # _CONNECTOR_MANAGED_TAG_PREFIXES in api_handler.py and the
+        # "Generic allow-listed tags become stale during event updates" /
+        # "Updates delete manually added tags in allow-listed namespaces"
+        # Copilot review findings on PR #7764.
+        config.misp.get_marking_types_allowlist.return_value = {
+            "TLP",
+            "PAP",
+            "CLASSIFICATION",
+        }
 
         handler = MispApiHandler(helper, config)
         handler.misp = mock_misp
@@ -388,3 +398,58 @@ def test_update_event_does_not_remove_non_connector_managed_tags(api_handler):
     # manually-added, non-connector-managed tag is left alone.
     api_handler.misp.untag.assert_called_once_with(existing_event.uuid, "tlp:red")
     assert existing_tag_manual in existing_event.tags
+
+
+def test_update_event_does_not_remove_stale_tags_for_other_allow_listed_marking_types(
+    api_handler,
+):
+    """
+    Regression test for the Copilot review findings on PR #7764 "Generic
+    allow-listed tags become stale during event updates" and "Updates
+    delete manually added tags in allow-listed namespaces".
+
+    Even when a deployer adds a non-TLP/PAP marking type (e.g.
+    "CLASSIFICATION") to MISP_MARKING_TYPES_TO_CONVERT so it gets converted
+    to a tag on event *creation*, update_event()'s stale-tag reconciliation
+    must NOT auto-remove such a tag when it is missing from a later
+    payload: STIXtoMISPConverter._get_marking_tag() does not guarantee that
+    tag carries a predictable "classification:" prefix, so treating it as
+    connector-managed could either silently fail to clean it up or, worse,
+    delete an unrelated manually-added tag that happens to share a
+    namespace. Only the fixed tlp:/pap:/report-type: prefixes are
+    reconciled - see _CONNECTOR_MANAGED_TAG_PREFIXES in api_handler.py.
+    """
+    existing_tag_classification = MagicMock()
+    existing_tag_classification.name = "classification:secret"
+
+    existing_event = MagicMock()
+    existing_event.uuid = "99999999-9999-9999-9999-999999999999"
+    existing_event.info = "Old info"
+    existing_event.distribution = 1
+    existing_event.threat_level_id = 2
+    existing_event.analysis = 2
+    existing_event.objects = []
+    existing_event.attributes = []
+    existing_event.tags = [existing_tag_classification]
+
+    api_handler.misp.get_event.return_value = existing_event
+    api_handler.misp.update_event.return_value = {
+        "Event": {
+            "id": "9",
+            "uuid": existing_event.uuid,
+            "info": "Updated info",
+        }
+    }
+
+    event_data = {
+        "info": "Updated info",
+        # The new payload no longer carries the "classification:secret" tag.
+        "Tag": [],
+    }
+
+    api_handler.update_event(existing_event.uuid, event_data)
+
+    # A non-tlp/pap/report-type tag is never auto-removed, regardless of
+    # whether its marking type is allow-listed for conversion.
+    api_handler.misp.untag.assert_not_called()
+    assert existing_tag_classification in existing_event.tags
