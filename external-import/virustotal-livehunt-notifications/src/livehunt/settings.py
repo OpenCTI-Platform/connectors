@@ -1,3 +1,4 @@
+import warnings
 from datetime import timedelta
 from typing import Literal
 
@@ -5,10 +6,9 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
-    DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -178,11 +178,6 @@ class VirusTotalLiveHuntNotificationsConfig(BaseConfigModel):
         default=None,
         ge=1,
     )
-    interval_sec: int | None = DeprecatedField(
-        new_namespace="connector",
-        new_namespaced_var="duration_period",
-        new_value_factory=lambda v: timedelta(seconds=int(v)),
-    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
@@ -196,3 +191,34 @@ class ConnectorSettings(BaseConnectorSettings):
     virustotal_livehunt_notifications: VirusTotalLiveHuntNotificationsConfig = Field(
         default_factory=VirusTotalLiveHuntNotificationsConfig
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_deprecated_interval(cls, data: dict) -> dict:
+        """
+        Env var `VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC` is deprecated.
+        This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
+        """
+        if not isinstance(data, dict):
+            return data
+        connector_data: dict = data.get("connector", {})
+        virustotal_livehunt_notifications_data: dict = data.get(
+            "virustotal_livehunt_notifications", {}
+        )
+        if interval := virustotal_livehunt_notifications_data.pop("interval_sec", None):
+            if connector_data.get("duration_period") is not None:
+                warnings.warn(
+                    "Both 'VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC' and 'CONNECTOR_DURATION_PERIOD' are set. "
+                    "'CONNECTOR_DURATION_PERIOD' will take precedence."
+                )
+            else:
+                warnings.warn(
+                    "Env var 'VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_INTERVAL_SEC' is deprecated. "
+                    "Use 'CONNECTOR_DURATION_PERIOD' instead."
+                )
+                connector_data["duration_period"] = timedelta(seconds=int(interval))
+        data["connector"] = connector_data
+        data["virustotal_livehunt_notifications"] = (
+            virustotal_livehunt_notifications_data
+        )
+        return data
