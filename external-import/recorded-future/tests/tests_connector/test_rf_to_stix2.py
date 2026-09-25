@@ -369,6 +369,240 @@ def test_from_json_skips_invalid_attachment_and_keeps_processing_valid_ones():
     assert len(detection_rule_indicators) == 1
 
 
+@pytest.mark.parametrize(
+    "rule_type, content",
+    [
+        ("yara", "rule test { condition: true }"),
+        ("sigma", "title: t\ndetection:\n  sel:\n    a: b\n  condition: sel\n"),
+        ("snort", 'alert tcp any any -> any any (msg:"t"; sid:1;)'),
+        (
+            "suricata",
+            'alert tcp any any -> any any (msg:"t"; sid:1;)',
+        ),
+        ("nuclei", "id: t\ninfo:\n  name: n\n"),
+    ],
+)
+def test_from_json_accepts_all_five_pattern_types(rule_type, content):
+    # Given a StixNote and an analyst note with a single attachment of RULE_TYPE
+    note = _given_stix_note()
+    note_json = _given_analyst_note_json_with_attachments(
+        [{"name": f"rule.{rule_type}", "type": rule_type, "content": content}]
+    )
+
+    # When the note is converted from JSON
+    _when_note_converted_from_json(note, note_json)
+
+    # Then no warning is logged
+    note.helper.connector_logger.warning.assert_not_called()
+    # And an indicator with the matching pattern_type is produced.
+    #
+    # Recorded Future serves suricata and nuclei rules alongside yara/sigma/snort
+    # -- measured at 279 of 2,502 real detection-rule documents (11.2%) -- and
+    # OpenCTI's `pattern_type_ov` vocabulary already supports all five. Before
+    # this fix, DetectionRule.__init__ raised ConversionError for suricata and
+    # nuclei, discarding them.
+    matching = [
+        obj for obj in note.objects if getattr(obj, "pattern_type", None) == rule_type
+    ]
+    assert len(matching) == 1
+
+
+def test_detection_rule_name_preserves_embedded_version_numbers():
+    # Given a StixNote and a YARA attachment whose filename contains a version
+    # number before the extension
+    note = _given_stix_note()
+    note_json = _given_analyst_note_json_with_attachments(
+        [
+            {
+                "name": "MAL_Lockbit_3.0_v2.yar",
+                "type": "yara",
+                "content": "rule test { condition: true }",
+            }
+        ]
+    )
+
+    # When the note is converted from JSON
+    _when_note_converted_from_json(note, note_json)
+
+    # Then the indicator name keeps the version number.
+    #
+    # The previous derivation used `name.split(".")[0]`, which splits on the
+    # FIRST dot and turned "MAL_Lockbit_3.0_v2.yar" into "MAL_Lockbit_3" --
+    # measured on 11 of 2,502 real rule filenames.
+    indicators = [
+        obj for obj in note.objects if getattr(obj, "pattern_type", None) == "yara"
+    ]
+    assert len(indicators) == 1
+    assert indicators[0].name == "MAL_Lockbit_3.0_v2"
+
+
+def test_split_snort_suricata_rules_single_rule_returned_unchanged():
+    from rflib.rf_to_stix2 import split_snort_suricata_rules
+
+    content = 'alert tcp any any -> any any (msg:"one"; sid:1;)'
+    assert split_snort_suricata_rules(content) == [content]
+
+
+def test_split_snort_suricata_rules_splits_multiple_rules():
+    from rflib.rf_to_stix2 import split_snort_suricata_rules
+
+    rule_a = 'alert tcp any any -> any any (msg:"one"; sid:1;)'
+    rule_b = 'alert udp any any -> any any (msg:"two"; sid:2;)'
+    content = f"{rule_a}\n{rule_b}"
+
+    result = split_snort_suricata_rules(content)
+
+    assert result == [rule_a, rule_b]
+
+
+def test_split_snort_suricata_rules_drops_leading_comments():
+    from rflib.rf_to_stix2 import split_snort_suricata_rules
+
+    rule = 'alert tcp any any -> any any (msg:"one"; sid:1;)'
+    content = f"# a leading comment with no rule\n{rule}"
+
+    assert split_snort_suricata_rules(content) == [rule]
+
+
+def test_split_snort_suricata_rules_empty_content_returns_empty_list():
+    from rflib.rf_to_stix2 import split_snort_suricata_rules
+
+    assert split_snort_suricata_rules("") == []
+    assert split_snort_suricata_rules(None) == []
+
+
+def test_from_json_splits_multi_rule_snort_attachment_into_multiple_indicators():
+    # Given a StixNote and an analyst note whose snort attachment concatenates
+    # two rules in a single `content` string -- the real-world shape that
+    # OpenCTI's single-rule parser rejects wholesale
+    note = _given_stix_note()
+    rule_a = 'alert tcp any any -> any any (msg:"one"; sid:1;)'
+    rule_b = 'alert udp any any -> any any (msg:"two"; sid:2;)'
+    note_json = _given_analyst_note_json_with_attachments(
+        [
+            {
+                "name": "multi.rules",
+                "type": "snort",
+                "content": f"{rule_a}\n{rule_b}",
+            }
+        ]
+    )
+
+    # When the note is converted from JSON
+    _when_note_converted_from_json(note, note_json)
+
+    # Then TWO separate snort indicators are produced, one per rule
+    snort_indicators = [
+        obj for obj in note.objects if getattr(obj, "pattern_type", None) == "snort"
+    ]
+    assert len(snort_indicators) == 2
+    patterns = {ind.pattern for ind in snort_indicators}
+    assert patterns == {rule_a, rule_b}
+
+
+@pytest.mark.parametrize(
+    "action",
+    [
+        # Snort 2 -- the only actions OpenCTI's bundled parser accepts
+        "alert",
+        "log",
+        "pass",
+        "activate",
+        "dynamic",
+        "drop",
+        "reject",
+        "sdrop",
+        # Snort 3 additions
+        "block",
+        "react",
+        "rewrite",
+        # Suricata reject variants
+        "rejectsrc",
+        "rejectdst",
+        "rejectboth",
+    ],
+)
+def test_split_snort_suricata_rules_recognises_every_documented_action(action):
+    from rflib.rf_to_stix2 import split_snort_suricata_rules
+
+    # Given an `alert` rule followed by a rule using ACTION
+    rule_a = 'alert tcp any any -> any any (msg:"one"; sid:1;)'
+    rule_b = f'{action} tcp any any -> any any (msg:"two"; sid:2;)'
+
+    # When the concatenated document is split
+    result = split_snort_suricata_rules(f"{rule_a}\n{rule_b}")
+
+    # Then both rules are separated.
+    #
+    # OpenCTI's parser rejects the Snort 3 and Suricata-only actions, but the
+    # splitter must still recognise them: if it does not, the unsupported rule
+    # stays glued to `rule_a` and the whole document is discarded rather than
+    # just the one rule. The `reject` variants also matter because a naive
+    # `reject` alternative cannot match `rejectsrc`.
+    assert result == [rule_a, rule_b]
+
+
+def test_snort_suricata_action_vocabulary_excludes_rule_options():
+    from rflib.rf_to_stix2 import SNORT_SURICATA_ACTIONS
+
+    # `bypass` and `config` are frequently mistaken for actions. `bypass` is a
+    # rule OPTION in Suricata; treating either as an action risks splitting a
+    # rule mid-body.
+    assert "bypass" not in SNORT_SURICATA_ACTIONS
+    assert "config" not in SNORT_SURICATA_ACTIONS
+    # And the set is exactly the union of the three documented vocabularies.
+    assert set(SNORT_SURICATA_ACTIONS) == {
+        "activate",
+        "alert",
+        "block",
+        "drop",
+        "dynamic",
+        "log",
+        "pass",
+        "react",
+        "reject",
+        "rejectboth",
+        "rejectdst",
+        "rejectsrc",
+        "rewrite",
+        "sdrop",
+    }
+
+
+def test_detection_rule_rejects_empty_content():
+    from rflib.rf_to_stix2 import ConversionError, DetectionRule
+
+    # Given an attachment whose content is blank
+    # When a DetectionRule is constructed
+    # Then it is refused rather than producing an Indicator with an empty
+    # pattern, which OpenCTI's validator rejects and which would collapse every
+    # such rule onto a single deterministic id.
+    for blank in ("", "   \n\t "):
+        with pytest.raises(ConversionError):
+            DetectionRule(
+                name="empty.yar",
+                _type="yara",
+                content=blank,
+                author=_given_author(),
+                tlp=_given_tlp(),
+            )
+
+
+def test_from_json_skips_empty_attachment_and_logs():
+    # Given a note with a blank snort attachment
+    note = _given_stix_note()
+    note_json = _given_analyst_note_json_with_attachments(
+        [{"name": "empty.rules", "type": "snort", "content": ""}]
+    )
+
+    # When the note is converted from JSON
+    _when_note_converted_from_json(note, note_json)
+
+    # Then no indicator is produced and the skip is logged
+    assert not [obj for obj in note.objects if getattr(obj, "pattern_type", None)]
+    note.helper.connector_logger.warning.assert_called()
+
+
 # ── Given helpers ────────────────────────────────────────────────────────────
 
 
