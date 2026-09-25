@@ -308,12 +308,19 @@ class MispApiHandler:
             existing_event.attributes = []
             existing_event.objects = []
 
-            # Add new tags (keeping existing ones)
+            # Add new tags (keeping existing ones).
+            # event_data["Tag"] is a list of flat dicts such as
+            # {"name": "tlp:red", ...} (the shape produced by
+            # AbstractMISP.to_dict(), see convert_bundle_to_event()), not
+            # MISPTag objects - accessing `.name` directly on them raises
+            # AttributeError. Normalize with _tag_names() before comparing
+            # against/adding to the existing (pythonify=True, so genuinely
+            # MISPTag-typed) event tags.
             if "Tag" in event_data:
-                existing_tags = {tag.name for tag in existing_event.tags}
-                for tag in event_data["Tag"]:
-                    if tag.name not in existing_tags:
-                        existing_event.add_tag(tag)
+                existing_tag_names = {tag.name for tag in existing_event.tags}
+                for tag_name in _tag_names(event_data["Tag"]):
+                    if tag_name not in existing_tag_names:
+                        existing_event.add_tag(tag_name)
 
             # Add new attributes
             if "Attribute" in event_data:
