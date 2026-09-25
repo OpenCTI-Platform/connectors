@@ -89,7 +89,11 @@ def test_tlp_marking_is_converted_to_lowercase_tlp_tag(converter):
 
     misp_event = converter.convert_bundle_to_event(bundle)
 
-    tags = [tag["name"] for tag in misp_event["Event"].get("Tag", [])]
+    # convert_bundle_to_event() returns MISPEvent.to_dict(), which is a flat
+    # dict (Tag/Attribute/Object at the top level) - there is no "Event" key
+    # at this stage (that wrapper only appears in MISP server REST responses
+    # and in MISPEvent.to_feed()).
+    tags = [tag["name"] for tag in misp_event.get("Tag", [])]
     assert "tlp:red" in tags
 
 
@@ -105,7 +109,7 @@ def test_pap_marking_is_converted_to_pap_tag_as_is(converter):
 
     misp_event = converter.convert_bundle_to_event(bundle)
 
-    tags = [tag["name"] for tag in misp_event["Event"].get("Tag", [])]
+    tags = [tag["name"] for tag in misp_event.get("Tag", [])]
     assert "PAP:AMBER" in tags
 
 
@@ -120,7 +124,7 @@ def test_report_types_are_converted_to_report_type_tags(converter):
 
     misp_event = converter.convert_bundle_to_event(bundle)
 
-    tags = [tag["name"] for tag in misp_event["Event"].get("Tag", [])]
+    tags = [tag["name"] for tag in misp_event.get("Tag", [])]
     assert "report-type:threat-report" in tags
 
 
@@ -136,7 +140,7 @@ def test_custom_marking_type_not_in_allowlist_is_skipped(converter):
 
     misp_event = converter.convert_bundle_to_event(bundle)
 
-    tags = [tag["name"] for tag in misp_event["Event"].get("Tag", [])]
+    tags = [tag["name"] for tag in misp_event.get("Tag", [])]
     assert "INTERNAL:SECRET" not in tags
     assert not any("internal" in tag.lower() for tag in tags)
 
@@ -154,7 +158,7 @@ def test_indicator_object_marking_refs_are_tagged_on_attribute(converter):
 
     misp_event = converter.convert_bundle_to_event(bundle)
 
-    attributes = misp_event["Event"].get("Attribute", [])
+    attributes = misp_event.get("Attribute", [])
     ip_attr = next((a for a in attributes if a.get("value") == "1.2.3.4"), None)
     assert ip_attr is not None
     attr_tags = [tag["name"] for tag in ip_attr.get("Tag", [])]
@@ -179,7 +183,7 @@ def test_observable_object_marking_refs_are_tagged_on_object_attributes(converte
 
     misp_event = converter.convert_bundle_to_event(bundle)
 
-    misp_objects = misp_event["Event"].get("Object", [])
+    misp_objects = misp_event.get("Object", [])
     ip_port_obj = next((o for o in misp_objects if o.get("name") == "ip-port"), None)
     assert ip_port_obj is not None
 
