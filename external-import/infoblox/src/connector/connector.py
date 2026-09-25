@@ -1,4 +1,3 @@
-import json
 import sys
 from datetime import datetime, timezone
 
@@ -54,37 +53,40 @@ class Infoblox:
 
         self.marking = marking
 
-    def infoblox_api_get(self):
-        try:
-            headers = {
-                "Authorization": "Token {}".format(
-                    self.config.infoblox.api_key.get_secret_value()
-                )
-            }
-            # The lookup period (in hours) is derived from the connector's duration period.
-            period_hours = (
-                int(self.config.connector.duration_period.total_seconds() // 3600) or 1
-            )
-            ioc_types = ["ip", "url", "host"]
-            infoblox_result = []
-            for ioc_type in ioc_types:
+    def infoblox_api_get(self) -> dict:
+        """Fetch threats from Infoblox TIDE for each IOC type.
 
-                url = (
-                    f"{str(self.config.infoblox.url).rstrip('/')}?type={ioc_type}"
-                    f"&period={period_hours}h&profile=IID&dga=false&up=true&"
-                    f"rlimit={self.config.infoblox.ioc_limit}"
-                )
-                response = requests.get(
-                    url, headers=headers, verify=True, timeout=(80000, 80000)
-                )
-                r_json = response.json()
-                r_json1 = json.dumps(r_json, indent=4)
-                infoblox_result.append(r_json1)
-            return infoblox_result
-        except Exception as e:
-            self.helper.connector_logger.error(
-                f"Error while getting intelligence from Infoblox: {e}"
+        Returns a dict mapping each IOC type ("ip", "url", "host") to the parsed
+        JSON response. Raises on HTTP errors (e.g. 401) or invalid JSON responses.
+        """
+        headers = {
+            "Authorization": "Token {}".format(
+                self.config.infoblox.api_key.get_secret_value()
             )
+        }
+        # The lookup period (in hours) is derived from the connector's duration period.
+        period_hours = (
+            int(self.config.connector.duration_period.total_seconds() // 3600) or 1
+        )
+        infoblox_result = {}
+        for ioc_type in ("ip", "url", "host"):
+            url = (
+                f"{str(self.config.infoblox.url).rstrip('/')}?type={ioc_type}"
+                f"&period={period_hours}h&profile=IID&dga=false&up=true&"
+                f"rlimit={self.config.infoblox.ioc_limit}"
+            )
+            response = requests.get(
+                url, headers=headers, verify=True, timeout=(80000, 80000)
+            )
+            response.raise_for_status()
+            try:
+                infoblox_result[ioc_type] = response.json()
+            except ValueError as e:
+                raise ValueError(
+                    f"Infoblox API returned a non-JSON response (type={ioc_type}): "
+                    f"{response.text[:500]}"
+                ) from e
+        return infoblox_result
 
     def create_stix_object(self, threat, identity_id):
         object_type = threat["type"]
@@ -190,15 +192,9 @@ class Infoblox:
         return None
 
     def create_stix_bundle(self, var_url, var_ip, var_domain):
-        urls = []
-        ips = []
-        domains = []
-        if var_url != "":
-            urls = var_url["threat"]
-        if var_ip != "":
-            ips = var_ip["threat"]
-        if var_domain != "":
-            domains = var_domain["threat"]
+        urls = (var_url or {}).get("threat") or []
+        ips = (var_ip or {}).get("threat") or []
+        domains = (var_domain or {}).get("threat") or []
         identity_id = "identity--2998978f-8336-5dfc-93a2-2f3d2f79d0e3"
         identity = stix2.Identity(
             id=identity_id,
@@ -227,23 +223,15 @@ class Infoblox:
 
     def opencti_bundle(self, work_id):
         info = self.infoblox_api_get()
-        try:
-            var_ip = json.loads(info[0])
-            var_url = json.loads(info[1])
-            var_domain = json.loads(info[2])
-            stix_bundle, all_threats = self.create_stix_bundle(
-                var_url, var_ip, var_domain
-            )
-
-            # Convert the bundle to a dictionary
-            stix_bundle_dict = json.loads(stix_bundle.serialize())
-
-            stix_bundle_dict = json.dumps(stix_bundle_dict, indent=4)
-            self.helper.send_stix2_bundle(
-                stix_bundle_dict, update=False, work_id=work_id
-            )
-        except Exception as e:
-            self.helper.connector_logger.error(str(e))
+        stix_bundle, all_threats = self.create_stix_bundle(
+            info["url"], info["ip"], info["host"]
+        )
+        self.helper.connector_logger.info(
+            f"Sending {len(all_threats)} threats from Infoblox to OpenCTI"
+        )
+        self.helper.send_stix2_bundle(
+            stix_bundle.serialize(), update=False, work_id=work_id
+        )
 
     def send_bundle(self, work_id, serialized_bundle: str):
         try:
@@ -262,6 +250,7 @@ class Infoblox:
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
+        work_id = None
         try:
             self.helper.connector_logger.info("Synchronizing with Infoblox APIs...")
             now = datetime.now(tz=timezone.utc)
@@ -291,6 +280,8 @@ class Infoblox:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            if work_id is not None:
+                self.helper.api.work.to_processed(work_id, str(err), in_error=True)
 
     def run(self) -> None:
         """Run the main process encapsulated in the pycti scheduler."""
