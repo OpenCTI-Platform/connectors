@@ -137,6 +137,32 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
         description="Whether or not to include the attributes info in Note.",
     )
 
+    # GTI collection enrichment settings (applies to File, IP, Domain, URL)
+    gti_enrichment_enabled: bool = Field(
+        default=False,
+        description="Whether to use GTI assessment data (score/verdict) and enable GTI relationship enrichment. Requires a VirusTotal account with GTI access.",
+    )
+    gti_include_malware_families: bool = Field(
+        default=False,
+        description="Whether or not to enrich with related GTI malware families (created as Malware entities).",
+    )
+    gti_include_threat_actors: bool = Field(
+        default=False,
+        description="Whether or not to enrich with related GTI threat actors (created as Intrusion-Set entities).",
+    )
+    gti_include_campaigns: bool = Field(
+        default=False,
+        description="Whether or not to enrich with related GTI campaigns (created as Campaign entities).",
+    )
+    gti_include_reports: bool = Field(
+        default=False,
+        description="Whether or not to enrich with related GTI reports (created as Report entities).",
+    )
+    gti_relationship_limit: int = Field(
+        default=10,
+        description="Maximum number of related objects to pull per GTI relationship, per observable.",
+    )
+
     @model_validator(mode="before")
     def auto_build_configs(cls, values: dict):
         """

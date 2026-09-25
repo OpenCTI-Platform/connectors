@@ -35,3 +35,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | VIRUSTOTAL_URL_INDICATOR_VALID_MINUTES | `integer` |  | integer | `2880` | How long the indicator is valid for in minutes. |
 | VIRUSTOTAL_URL_INDICATOR_DETECT | `boolean` |  | boolean | `true` | Whether or not to set detection for the indicator to true. |
 | VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE | `boolean` |  | boolean | `false` | Whether or not to include the attributes info in Note. |
+| VIRUSTOTAL_GTI_ENRICHMENT_ENABLED | `boolean` |  | boolean | `false` | Whether to use GTI assessment data (score/verdict) and enable GTI relationship enrichment. Requires a VirusTotal account with GTI access. |
+| VIRUSTOTAL_GTI_INCLUDE_MALWARE_FAMILIES | `boolean` |  | boolean | `false` | Whether or not to enrich with related GTI malware families (created as Malware entities). |
+| VIRUSTOTAL_GTI_INCLUDE_THREAT_ACTORS | `boolean` |  | boolean | `false` | Whether or not to enrich with related GTI threat actors (created as Intrusion-Set entities). |
+| VIRUSTOTAL_GTI_INCLUDE_CAMPAIGNS | `boolean` |  | boolean | `false` | Whether or not to enrich with related GTI campaigns (created as Campaign entities). |
+| VIRUSTOTAL_GTI_INCLUDE_REPORTS | `boolean` |  | boolean | `false` | Whether or not to enrich with related GTI reports (created as Report entities). |
+| VIRUSTOTAL_GTI_RELATIONSHIP_LIMIT | `integer` |  | integer | `10` | Maximum number of related objects to pull per GTI relationship, per observable. |
