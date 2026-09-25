@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe' # Valid UUIDv4
+  name: 'Flowtriq DDoS Incidents'
+  scope: 'flowtriq' # Connector scope identifier
+  log_level: 'info'
+
+flowtriq:
+  api_url: 'https://app.flowtriq.com'
+  api_key: 'ChangeMe'
+  # incident_status: 'resolved'
+  # incident_severity:
+  # create_indicator: true
+  # tlp_level: 'green'
+  # import_limit: 100
+  # min_severity: ''
