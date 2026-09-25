@@ -18,6 +18,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -43,12 +44,7 @@ class DataDogConnectorConfig(BaseExternalImportConnectorConfig):
         default=["stix2"],
     )
     duration_period: timedelta = Field(
-        description=(
-            "The period of time to await between two runs of the connector. "
-            "This connector drives its own polling loop from "
-            "'DATADOG_IMPORT_INTERVAL', so this value is only used to satisfy "
-            "the manager-supported contract."
-        ),
+        description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=1),
     )
 
@@ -79,9 +75,12 @@ class DataDogConfig(BaseConfigModel):
         ),
         default="https://app.datadoghq.com",
     )
-    import_interval: int = Field(
-        description="The interval, in minutes, between two runs of the connector.",
-        default=60,
+    import_interval: int | None = DeprecatedField(
+        default=None,
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(minutes=int(x)),
     )
     import_start_date: str | None = Field(
         description=(

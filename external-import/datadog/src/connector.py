@@ -44,7 +44,11 @@ class DataDogConnector:
 
         self.app_base_url = self.config.datadog.app_base_url
 
-        self.import_interval = self.config.datadog.import_interval
+        # The polling cadence is driven by the standard
+        # ``CONNECTOR_DURATION_PERIOD`` (ISO-8601 duration). The legacy
+        # ``DATADOG_IMPORT_INTERVAL`` (minutes) is still accepted and
+        # transparently migrated into it by the settings model.
+        self.duration_period = self.config.connector.duration_period
 
         self.import_start_date = self.config.datadog.import_start_date
 
@@ -145,8 +149,11 @@ class DataDogConnector:
         if not self.app_key:
             raise ValueError("DATADOG_APP_KEY is required")
 
-        if not isinstance(self.import_interval, int) or self.import_interval <= 0:
-            raise ValueError("import_interval must be a positive integer (minutes)")
+        # Pydantic already guarantees ``duration_period`` is a ``timedelta``,
+        # but a zero / negative duration is still expressible (e.g. ``PT0S``)
+        # and would turn the polling loop into a busy loop.
+        if self.duration_period.total_seconds() <= 0:
+            raise ValueError("CONNECTOR_DURATION_PERIOD must be a positive duration")
 
         if self.max_tlp not in [
             "TLP:CLEAR",
@@ -335,8 +342,8 @@ class DataDogConnector:
             # tells the operator the connector is idle by design;
             # demote the per-cycle line to ``info`` so idle deployments
             # do not look like they are failing in the OpenCTI logs
-            # (one warning per cycle, every ``DATADOG_IMPORT_INTERVAL``
-            # minutes). The cursor is still advanced because the
+            # (one warning per cycle, every ``CONNECTOR_DURATION_PERIOD``).
+            # The cursor is still advanced because the
             # connector never called the API on this cycle — there is
             # no "failed window" to retry and the next cycle should
             # look forward from ``current_time`` if the operator flips
@@ -515,7 +522,7 @@ class DataDogConnector:
         Main execution loop for external import connector
         """
         self.helper.log_info("Starting DataDog external import connector")
-        self.helper.log_info(f"Import interval: {self.import_interval} minutes")
+        self.helper.log_info(f"Duration period: {self.duration_period}")
 
         while True:
             try:
@@ -620,8 +627,8 @@ class DataDogConnector:
                         )
 
                 # Wait for next import cycle
-                self.helper.log_info(f"Next import in {self.import_interval} minutes")
-                time.sleep(self.import_interval * 60)
+                self.helper.log_info(f"Next import in {self.duration_period}")
+                time.sleep(self.duration_period.total_seconds())
 
             except KeyboardInterrupt:
                 self.helper.log_info("Import connector stopped by user")
