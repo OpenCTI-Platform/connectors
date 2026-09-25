@@ -41,25 +41,25 @@ def _report(object_marking_refs=None, report_types=None, object_refs=None):
     }
 
 
-def _indicator(object_marking_refs=None):
+def _indicator(indicator_id=None, pattern=None, object_marking_refs=None):
     return {
         "type": "indicator",
         "spec_version": "2.1",
-        "id": "indicator--44444444-4444-4444-4444-444444444444",
+        "id": indicator_id or "indicator--44444444-4444-4444-4444-444444444444",
         "name": "Malicious IP",
-        "pattern": "[ipv4-addr:value = '1.2.3.4']",
+        "pattern": pattern or "[ipv4-addr:value = '1.2.3.4']",
         "pattern_type": "stix",
         "valid_from": "2026-01-01T00:00:00.000Z",
         "object_marking_refs": object_marking_refs or [],
     }
 
 
-def _ipv4_observable(object_marking_refs=None):
+def _ipv4_observable(observable_id=None, value=None, object_marking_refs=None):
     return {
         "type": "ipv4-addr",
         "spec_version": "2.1",
-        "id": "ipv4-addr--55555555-5555-5555-5555-555555555555",
-        "value": "5.6.7.8",
+        "id": observable_id or "ipv4-addr--55555555-5555-5555-5555-555555555555",
+        "value": value or "5.6.7.8",
         "object_marking_refs": object_marking_refs or [],
     }
 
@@ -192,3 +192,98 @@ def test_observable_object_marking_refs_are_tagged_on_object_attributes(converte
     for attribute in object_attributes:
         attr_tags = [tag["name"] for tag in attribute.get("Tag", [])]
         assert "PAP:AMBER" in attr_tags
+
+
+def test_duplicate_indicators_with_different_markings_merge_tags(converter):
+    """
+    Regression test for Copilot review finding "Preserve marking tags when
+    deduplicating indicators" (stix_to_misp_converter.py:652).
+
+    Two distinct indicators that both resolve to the same MISP attribute
+    (same type + value, here ip-dst / 1.2.3.4) but carry *different*
+    TLP markings must both end up tagged on the single resulting attribute,
+    instead of the second indicator being skipped as a "duplicate" and its
+    marking silently lost.
+    """
+    bundle = {
+        "type": "bundle",
+        "id": "bundle--cccccccc-cccc-cccc-cccc-cccccccccccc",
+        "objects": [
+            _marking_definition(TLP_RED_ID, "TLP", "TLP:RED"),
+            _marking_definition(PAP_AMBER_ID, "PAP", "PAP:AMBER"),
+            _report(
+                object_refs=[
+                    "indicator--44444444-4444-4444-4444-444444444444",
+                    "indicator--dddddddd-dddd-dddd-dddd-dddddddddddd",
+                ]
+            ),
+            _indicator(
+                indicator_id="indicator--44444444-4444-4444-4444-444444444444",
+                pattern="[ipv4-addr:value = '1.2.3.4']",
+                object_marking_refs=[TLP_RED_ID],
+            ),
+            # Same IOC value/type, but a different marking - would previously
+            # be skipped entirely by _should_add_attribute(), losing PAP:AMBER.
+            _indicator(
+                indicator_id="indicator--dddddddd-dddd-dddd-dddd-dddddddddddd",
+                pattern="[ipv4-addr:value = '1.2.3.4']",
+                object_marking_refs=[PAP_AMBER_ID],
+            ),
+        ],
+    }
+
+    misp_event = converter.convert_bundle_to_event(bundle)
+
+    attributes = misp_event.get("Attribute", [])
+    matching = [a for a in attributes if a.get("value") == "1.2.3.4"]
+    # Still deduplicated to a single MISP attribute...
+    assert len(matching) == 1
+    # ...but both markings must be present on it.
+    attr_tags = [tag["name"] for tag in matching[0].get("Tag", [])]
+    assert "tlp:red" in attr_tags
+    assert "PAP:AMBER" in attr_tags
+
+
+def test_duplicate_observables_with_different_markings_merge_tags(converter):
+    """
+    Same guarantee as test_duplicate_indicators_with_different_markings_merge_tags,
+    but through the plain-observable path (_add_observable_as_attribute()),
+    e.g. an observable type without a dedicated MISP object mapping.
+    """
+    bundle = {
+        "type": "bundle",
+        "id": "bundle--eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+        "objects": [
+            _marking_definition(TLP_RED_ID, "TLP", "TLP:RED"),
+            _marking_definition(PAP_AMBER_ID, "PAP", "PAP:AMBER"),
+            _report(
+                object_refs=[
+                    "hostname--11111111-1111-1111-1111-111111111112",
+                    "hostname--22222222-2222-2222-2222-222222222223",
+                ]
+            ),
+            {
+                "type": "hostname",
+                "spec_version": "2.1",
+                "id": "hostname--11111111-1111-1111-1111-111111111112",
+                "value": "evil.example.com",
+                "object_marking_refs": [TLP_RED_ID],
+            },
+            {
+                "type": "hostname",
+                "spec_version": "2.1",
+                "id": "hostname--22222222-2222-2222-2222-222222222223",
+                "value": "evil.example.com",
+                "object_marking_refs": [PAP_AMBER_ID],
+            },
+        ],
+    }
+
+    misp_event = converter.convert_bundle_to_event(bundle)
+
+    attributes = misp_event.get("Attribute", [])
+    matching = [a for a in attributes if a.get("value") == "evil.example.com"]
+    assert len(matching) == 1
+    attr_tags = [tag["name"] for tag in matching[0].get("Tag", [])]
+    assert "tlp:red" in attr_tags
+    assert "PAP:AMBER" in attr_tags
