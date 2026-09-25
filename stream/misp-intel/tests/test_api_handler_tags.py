@@ -12,7 +12,9 @@ MISP. This file locks in the fix.
 It also covers the persisted-state-backed reconciliation of stale
 event-level tags (tlp:/pap:/report-type:/any other allow-listed marking
 type) on update_event(), see api_handler.py's
-_get_managed_event_tags()/_set_managed_event_tags()/_clear_managed_event_tags().
+_get_managed_event_tags()/_set_managed_event_tags()/_clear_managed_event_tags(),
+including serialization of concurrent state writes from the connector's
+worker thread (create/update) and stream thread (delete).
 
 Like the rest of this connector's test suite, no live MISP instance is
 required: PyMISP itself is mocked. helper.get_state()/set_state() are
@@ -20,6 +22,8 @@ backed by a simple in-memory dict to emulate real pycti connector state
 persistence.
 """
 
+import threading
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -767,3 +771,68 @@ def test_update_event_does_not_promote_pre_existing_tag_to_managed(
     assert existing_event.uuid not in managed
     # Unrelated events' records are left untouched.
     assert managed["other-event-uuid"] == ["pap:amber"]
+
+
+def test_concurrent_set_managed_event_tags_for_different_events_does_not_lose_updates(
+    api_handler,
+):
+    """
+    Regression test for the Copilot review finding "Synchronize state
+    read-modify-write operations" on PR #7764.
+
+    The connector's worker thread (create/update, queued) and stream thread
+    (delete, handled immediately in connector.py's _process_message()) share
+    the same MispApiHandler instance and its persisted state. Without
+    serializing the get_state() -> mutate -> set_state() sequence in
+    _set_managed_event_tags()/_clear_managed_event_tags(), two concurrent
+    calls for *different* event UUIDs can both read the same state
+    snapshot, then whichever call writes back second silently overwrites
+    (loses) the other's change.
+
+    This test uses a state backend whose get_state() deliberately sleeps
+    just long enough to force two threads' read phases to overlap, then
+    asserts BOTH events' managed-tag records survive - which would fail
+    (one record missing) without the threading.Lock added to
+    MispApiHandler._set_managed_event_tags()/_clear_managed_event_tags().
+    """
+    state_box = {"state": {}}
+    state_lock_for_test_backend = threading.Lock()
+
+    def _get_state():
+        # Widen the race window: without api_handler's own _state_lock
+        # serializing callers, two threads calling _set_managed_event_tags()
+        # concurrently would both pass through here before either has
+        # written back, causing a lost update.
+        time.sleep(0.05)
+        with state_lock_for_test_backend:
+            # Return a deep-enough copy so each thread mutates its own
+            # snapshot, faithfully reproducing the real
+            # get_state()-returns-a-fresh-dict-like-object semantics.
+            import copy
+
+            return copy.deepcopy(state_box["state"])
+
+    def _set_state(new_state):
+        with state_lock_for_test_backend:
+            state_box["state"] = new_state
+
+    api_handler.helper.get_state.side_effect = _get_state
+    api_handler.helper.set_state.side_effect = _set_state
+
+    thread_a = threading.Thread(
+        target=api_handler._set_managed_event_tags,
+        args=("event-a", ["tlp:red"]),
+    )
+    thread_b = threading.Thread(
+        target=api_handler._set_managed_event_tags,
+        args=("event-b", ["pap:amber"]),
+    )
+
+    thread_a.start()
+    thread_b.start()
+    thread_a.join(timeout=5)
+    thread_b.join(timeout=5)
+
+    managed = state_box["state"]["misp_connector_managed_event_tags"]
+    assert managed.get("event-a") == ["tlp:red"]
+    assert managed.get("event-b") == ["pap:amber"]
