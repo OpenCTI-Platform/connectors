@@ -3,6 +3,7 @@ import json
 import uuid
 import warnings
 from collections import OrderedDict
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from io import BytesIO
 from logging import getLogger
@@ -700,6 +701,161 @@ def extend_bundle(
         objects=bundle.get("objects", []) + additional_objects,
         allow_custom=True,
     )
+
+
+def _as_dict(stix_object: stix2.v21._STIXBase21 | dict) -> dict:
+    """Return a mutable, JSON-shaped copy of a STIX object."""
+    if isinstance(stix_object, stix2.v21._STIXBase21):
+        return json.loads(stix_object.serialize())
+    return json.loads(json.dumps(stix_object))
+
+
+def _is_reference_property(name: object) -> bool:
+    return isinstance(name, str) and name.endswith(("_ref", "_refs"))
+
+
+def _references_any(
+    value: object, id_mapping: dict[str, str], name: object = None
+) -> bool:
+    if isinstance(value, Mapping):
+        return any(
+            _references_any(item, id_mapping, item_name)
+            for item_name, item in value.items()
+        )
+    if isinstance(value, (list, tuple)):
+        return any(_references_any(item, id_mapping, name) for item in value)
+    return (
+        isinstance(value, str) and _is_reference_property(name) and value in id_mapping
+    )
+
+
+def _remap_reference_values(
+    value: object, id_mapping: dict[str, str], name: object = None
+) -> object:
+    if isinstance(value, dict):
+        return {
+            item_name: _remap_reference_values(item, id_mapping, item_name)
+            for item_name, item in value.items()
+        }
+    if isinstance(value, list):
+        items = [_remap_reference_values(item, id_mapping, name) for item in value]
+        if _is_reference_property(name) and all(isinstance(i, str) for i in items):
+            items = list(dict.fromkeys(items))
+        return items
+    if isinstance(value, str) and _is_reference_property(name):
+        return id_mapping.get(value, value)
+    return value
+
+
+def remap_references(
+    stix_object: stix2.v21._STIXBase21 | dict, id_mapping: dict[str, str]
+) -> stix2.v21._STIXBase21 | dict:
+    """Point the references of a STIX object to new ids.
+
+    Every ``*_ref`` / ``*_refs`` property holding an id of ``id_mapping`` is
+    rewritten to the mapped id, at any depth (extensions and embedded objects
+    included). ``*_refs`` lists are deduplicated, order preserved, since two
+    remapped ids can point to the same object. Any other property, free text
+    included, is left untouched.
+
+    Args:
+        stix_object (stix2.v21._STIXBase21 | dict): The STIX object to process
+            (a dict for a type stix2 does not know).
+        id_mapping (dict[str, str]): The new id of each remapped id.
+
+    Returns:
+        (stix2.v21._STIXBase21 | dict): The object with its references
+            rewritten, or the object itself when it references none of the
+            remapped ids.
+
+    Examples:
+        >>> import stix2
+        >>> former_id = "ipv4-addr--9cfa31a5-45c4-4e93-b0a6-c96e5eb0bd2a"
+        >>> domain = stix2.DomainName(value="example.com", resolves_to_refs=[former_id])
+        >>> ip = stix2.IPv4Address(value="192.0.2.1")
+        >>> remapped_domain = remap_references(domain, {former_id: ip["id"]})
+    """
+    if not id_mapping or not _references_any(stix_object, id_mapping):
+        return stix_object
+    object_dict = _remap_reference_values(_as_dict(stix_object), id_mapping)
+    return stix2.parse(object_dict, allow_custom=True)
+
+
+def remap_references_in_bundle(
+    bundle: stix2.Bundle, id_mapping: dict[str, str]
+) -> stix2.Bundle:
+    """Point every reference of a STIX bundle to new ids.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+        id_mapping (dict[str, str]): The new id of each remapped id.
+
+    Returns:
+        (stix2.Bundle): The STIX bundle whose objects reference the new ids.
+    """
+    updated_objects = [
+        remap_references(obj, id_mapping) for obj in bundle.get("objects", [])
+    ]
+    return stix2.Bundle(type=bundle["type"], objects=updated_objects, allow_custom=True)
+
+
+def _union_preserving_order(first: list, second: list) -> list:
+    union = list(first)
+    seen = {json.dumps(item, sort_keys=True) for item in first}
+    for item in second:
+        key = json.dumps(item, sort_keys=True)
+        if key not in seen:
+            seen.add(key)
+            union.append(item)
+    return union
+
+
+def _merge_stix_objects(
+    stix_objects: list[stix2.v21._STIXBase21],
+) -> stix2.v21._STIXBase21:
+    merged = _as_dict(stix_objects[0])
+    for duplicate in stix_objects[1:]:
+        for name, value in _as_dict(duplicate).items():
+            if name not in merged:
+                merged[name] = value
+            elif isinstance(merged[name], list) and isinstance(value, list):
+                merged[name] = _union_preserving_order(merged[name], value)
+    return stix2.parse(merged, allow_custom=True)
+
+
+def merge_duplicate_objects(bundle: stix2.Bundle) -> stix2.Bundle:
+    """Merge the objects of a STIX bundle that share the same id.
+
+    The first occurrence keeps its position and its values, takes the
+    properties it lacks from the later occurrences, and list properties are
+    unioned (order preserved).
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+
+    Returns:
+        (stix2.Bundle): The STIX bundle holding each id once.
+
+    Examples:
+        >>> import stix2
+        >>> ip = stix2.IPv4Address(value="192.0.2.1")
+        >>> marked_ip = stix2.IPv4Address(value="192.0.2.1", object_marking_refs=[stix2.TLP_GREEN["id"]])
+        >>> bundle = stix2.Bundle(objects=[ip, marked_ip], allow_custom=True)
+        >>> merged_bundle = merge_duplicate_objects(bundle)
+    """
+    objects_by_id: dict[str, list[stix2.v21._STIXBase21]] = {}
+    for obj in bundle.get("objects", []):
+        objects_by_id.setdefault(obj["id"], []).append(obj)
+    duplicated_ids = [
+        object_id for object_id, objects in objects_by_id.items() if len(objects) > 1
+    ]
+    if not duplicated_ids:
+        return bundle
+    for object_id in duplicated_ids:
+        bundle = replace_in_bundle(
+            bundle, object_id, _merge_stix_objects(objects_by_id[object_id])
+        )
+    return deduplicate_bundle_objects(bundle)
 
 
 def convert_location_to_octi_location(

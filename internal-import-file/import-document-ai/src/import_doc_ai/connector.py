@@ -4,6 +4,8 @@ See : https://github.com/OpenCTI-Platform/connectors/blob/42e0ad002318224e88cac2
 
 import json
 
+import stix2
+from import_doc_ai.refang import refang_bundle_observables
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ImportDocumentAIClient
@@ -61,6 +63,38 @@ class Connector:
                 fetch_octi_allowed_stix_relations_triplets(self.helper)
             )
 
+    def _refang_observables(self, bundle: stix2.Bundle) -> stix2.Bundle:
+        """Refang the observables the extraction returned defanged."""
+        refanged_bundle, summary = refang_bundle_observables(bundle)
+        for observable in summary.refanged:
+            self.helper.connector_logger.debug(
+                "Refanged a defanged observable",
+                {
+                    "type": observable.observable_type,
+                    "value": observable.original_value,
+                    "refanged_value": observable.refanged_value,
+                },
+            )
+        if summary.refanged:
+            self.helper.connector_logger.info(
+                "Refanged the defanged observables of the extracted bundle",
+                {
+                    "refanged": len(summary.refanged),
+                    "merged_duplicates": summary.merged_objects,
+                },
+            )
+        for observable in summary.unrefanged:
+            self.helper.connector_logger.warning(
+                "Observable value looks defanged but does not refang into a "
+                "valid value, sending it unchanged",
+                {
+                    "type": observable.observable_type,
+                    "id": observable.observable_id,
+                    "value": observable.value,
+                },
+            )
+        return refanged_bundle
+
     def _resolve_agent_slug(self, data: dict) -> str | None:
         """Extract agent_slug from the message configuration field if present."""
         config_str = data.get("configuration")
@@ -115,6 +149,12 @@ class Connector:
                 file_data=file.buffered_data,
                 allowed_relationship_triplets=self.allowed_relationships_triplets,
             )
+
+        # Documents defang their indicators ("admin[at]filigran[dot]io"):
+        # OpenCTI rejects such values, and with them every object referencing
+        # the observable, so they are refanged before any id is relied upon.
+        ai_bundle = self._refang_observables(ai_bundle)
+
         # Handle Attack pattern special case reunification if already present in OCTI platform
         for ai_attack_pattern in filter_bundle_entities_by_type(
             ai_bundle, {"attack-pattern"}
