@@ -60,6 +60,12 @@ class MarkingResolutionError(Exception):
     """A marking on the enriched entity cannot be represented in the bundle."""
 
 
+TLP_MARKING_IDS = frozenset(
+    PyctiMarkingDefinition.generate_id("TLP", f"TLP:{level.upper()}")
+    for level in TLP_RANK
+)
+
+
 def marking_sequence(value: Any, field: str) -> list[Any]:
     """The entries of a marking field, refusing anything that is not a sequence.
 
@@ -116,6 +122,31 @@ def is_marking_id(value: Any) -> bool:
     string is not enough: `"not-a-stix-id"` was travelling into both.
     """
     return isinstance(value, str) and bool(MARKING_ID_RE.match(value.strip()))
+
+
+def declared_marking_id(marking: dict[str, Any]) -> str | None:
+    """The id the marking's own definition implies, or None if it declares one.
+
+    A TLP value is canonicalised first, so `tlp:red` and `TLP:RED` imply the
+    same id and a difference in spelling is not mistaken for a difference in
+    meaning.
+    """
+    custom = custom_marking_fields(marking)
+    if custom:
+        definition_type, definition = custom
+    else:
+        definition_type = marking.get("definition_type")
+        definition = marking.get("definition")
+        if not (_filled(definition_type) and _filled(definition)):
+            return None
+    if str(definition_type).strip().upper() == "TLP":
+        level = tlp_level_of(definition)
+        if level is None:
+            return None
+        return PyctiMarkingDefinition.generate_id("TLP", canonical_tlp(level))
+    return PyctiMarkingDefinition.generate_id(
+        str(definition_type).strip(), str(definition).strip()
+    )
 
 
 def marking_id(marking: dict[str, Any]) -> str | None:
@@ -275,6 +306,18 @@ def resolve_source_markings(
                 f"Marking {marking!r} of the enriched observable cannot be"
                 " assigned an identifier; refusing to enrich rather than drop"
                 " a restriction this connector could not read."
+            )
+        declared = declared_marking_id(marking)
+        if (
+            declared is not None
+            and declared != identifier
+            and (identifier in TLP_MARKING_IDS or declared in TLP_MARKING_IDS)
+        ):
+            raise MarkingResolutionError(
+                f"Marking {marking!r} of the enriched observable carries an"
+                " identifier that belongs to a different TLP definition than"
+                " the one it declares; refusing to enrich rather than publish"
+                " a restriction under an identifier that contradicts it."
             )
         identifiers.append(identifier)
     refs = list(dict.fromkeys(supplied + identifiers))

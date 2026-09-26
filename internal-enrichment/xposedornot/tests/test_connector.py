@@ -17,6 +17,7 @@ from connectors_sdk.settings.exceptions import ConfigValidationError
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import OpenCTIConnectorHelper
 from src.xposedornot.connector import (
+    TLP_MARKING_IDS,
     TLP_RANK,
     MarkingResolutionError,
     XposedOrNotConnector,
@@ -654,6 +655,46 @@ def test_forward_paths_still_forward_when_markings_resolve():
         helper.send_stix2_bundle.assert_called_once_with(
             "BUNDLE", update=False, cleanup_inconsistent_bundle=True
         )
+
+
+def test_an_identifier_contradicting_its_own_tlp_definition_refuses():
+    """A TLP id must agree with the definition it is attached to.
+
+    An entry carrying the AMBER id but declaring TLP:RED produced a RED body
+    under the AMBER identifier, so the observable's reference and the
+    restriction travelling with it disagreed. Scoped to TLP: a custom marking
+    may legitimately arrive with an identifier the platform did not derive
+    from its definition, and refusing those would block valid enrichment.
+    """
+    amber = PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER")
+    red = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
+    assert amber in TLP_MARKING_IDS and red in TLP_MARKING_IDS
+
+    for contradiction in (
+        {"standard_id": amber, "definition_type": "TLP", "definition": "TLP:RED"},
+        {"standard_id": red, "definition_type": "TLP", "definition": "TLP:AMBER"},
+        {"standard_id": amber, "definition_type": "PAP", "definition": "PAP:RED"},
+    ):
+        with pytest.raises(MarkingResolutionError, match="contradicts"):
+            resolve_source_markings({}, {"objectMarking": [contradiction]}, [])
+
+    for consistent in (
+        {"standard_id": red, "definition_type": "TLP", "definition": "TLP:RED"},
+        {"standard_id": red, "definition_type": "TLP", "definition": "tlp:red"},
+        {"definition_type": "TLP", "definition": "TLP:RED"},
+        {
+            "standard_id": "marking-definition--aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+            "definition_type": "statement",
+            "definition": "Internal only",
+        },
+        {
+            "standard_id": "marking-definition--bbbbbbbb-cccc-4ddd-8eee-ffffffffffff",
+            "definition_type": "PAP",
+            "definition": "PAP:AMBER",
+        },
+    ):
+        refs, _ = resolve_source_markings({}, {"objectMarking": [consistent]}, [])
+        assert len(refs) == 1, consistent
 
 
 def test_only_real_marking_identifiers_are_trusted():
@@ -1570,6 +1611,7 @@ def test_community_score_still_overwrites_a_previous_one():
 
 
 RED_ID = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
+AMBER_ID = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
 CUSTOM_ID = "marking-definition--aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
 
 
@@ -1602,7 +1644,7 @@ def test_markings_known_only_from_object_marking_reach_the_note():
     data = _enrichment_data()
     data["stix_entity"].pop("object_marking_refs", None)
     data["enrichment_entity"]["objectMarking"] = [
-        {"definition_type": "TLP", "definition": "TLP:AMBER", "standard_id": RED_ID},
+        {"definition_type": "TLP", "definition": "TLP:AMBER", "standard_id": AMBER_ID},
         {"definition_type": "PAP", "definition": "PAP:AMBER", "standard_id": CUSTOM_ID},
     ]
     connector._process_message(data)

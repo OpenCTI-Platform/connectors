@@ -1,3 +1,5 @@
+import io
+
 # -*- coding: utf-8 -*-
 """Tests for the connector wiring.
 
@@ -86,3 +88,45 @@ def test_connector_is_instantiated_from_settings(mock_opencti_connector_helper):
     assert connector.tlp_level == "amber+strict"
     assert connector.client.api_key == "test-api-key"
     assert connector.client.base_url == "https://api.xposedornot.com"
+
+
+def test_top_level_traceback_is_redacted():
+    """A failure escaping main() must not put secrets on stderr.
+
+    The connector promises that neither the API key nor the platform token
+    appears in anything it emits, and a raw traceback bypassed that. The
+    traceback itself is kept: `traceback.print_exc` writes into a buffer
+    which is redacted before it is printed, which also satisfies the
+    repository linter rule that requires that call in the main guard.
+    """
+    import os
+    import traceback as _traceback
+
+    from src.main import redact_secrets
+
+    os.environ["XPOSEDORNOT_API_KEY"] = "SUPERSECRETKEY"
+    os.environ["OPENCTI_TOKEN"] = "6f1d8d0e-2a4b-4c7e-9f11-3b7a5c9e2d40"
+    try:
+        try:
+            raise RuntimeError("auth failed key=SUPERSECRETKEY")
+        except RuntimeError:
+            captured = io.StringIO()
+            _traceback.print_exc(file=captured)
+            printed = redact_secrets(captured.getvalue())
+        assert "SUPERSECRETKEY" not in printed
+        assert "<redacted>" in printed
+        assert "RuntimeError" in printed and "Traceback" in printed
+    finally:
+        os.environ.pop("XPOSEDORNOT_API_KEY", None)
+        os.environ["OPENCTI_TOKEN"] = "t"
+
+
+def test_neither_entrypoint_prints_a_raw_traceback():
+    """Both guards must capture and redact rather than print straight out."""
+    import pathlib
+
+    for name in ("src/main.py", "src/__main__.py"):
+        source = pathlib.Path(name).read_text()
+        assert "traceback.print_exc(file=captured)" in source, name
+        assert "redact_secrets(captured.getvalue())" in source, name
+        assert "traceback.print_exc()" not in source, name
