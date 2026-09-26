@@ -608,6 +608,76 @@ def test_malformed_marking_references_fail_closed():
         helper.send_stix2_bundle.assert_not_called()
 
 
+def test_a_forwarded_entity_keeps_the_markings_it_arrived_with():
+    """A no-op pass-through must not hand on an unmarked observable.
+
+    A marking supplied only through `objectMarking` is not on the stix entity
+    being forwarded, so the gate saw the restriction while the bundle that
+    travelled onward did not carry it. The definitions those references need
+    travel with it too, or cleanup drops them again.
+    """
+    red = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
+    StubConnectorSettings._max_tlp = "TLP:RED"
+    for lookup in ({}, None):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(return_value=lookup)
+        data = _enrichment_data(playbook=True)
+        data["stix_entity"].pop("object_marking_refs", None)
+        data["enrichment_entity"]["objectMarking"] = [
+            {
+                "standard_id": red,
+                "definition_type": "TLP",
+                "definition": "TLP:RED",
+            }
+        ]
+        connector._process_message(data)
+        sent = helper.stix2_create_bundle.call_args[0][0]
+        entity = next(o for o in sent if o["id"] == data["stix_entity"]["id"])
+        assert entity.get("object_marking_refs") == [red], lookup
+        definitions = {
+            o["id"]
+            for o in sent
+            if getattr(o, "get", dict().get)("type") == "marking-definition"
+        }
+        assert red in definitions, "the definition did not travel with the ref"
+        assert data["stix_entity"].get("object_marking_refs") is None
+
+
+def test_a_bundled_definition_must_agree_with_its_own_identifier():
+    """A reference-only marking was trusted for whatever body arrived.
+
+    A bundle carrying the TLP:RED identifier with an AMBER body was gated as
+    AMBER, so the address left the platform under a marking that said
+    otherwise. The disagreement is unreadable, and unreadable fails closed.
+    """
+    red = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
+    liar = {
+        "type": "marking-definition",
+        "spec_version": "2.1",
+        "id": red,
+        "created": "2017-01-20T00:00:00.000Z",
+        "definition_type": "tlp",
+        "name": "TLP:AMBER",
+        "definition": {"tlp": "amber"},
+    }
+    levels, unreadable = source_tlp_levels({}, [liar])
+    assert levels == [] and unreadable, (levels, unreadable)
+
+    StubConnectorSettings._max_tlp = "TLP:AMBER"
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(side_effect=AssertionError("API was called"))
+    data = _enrichment_data()
+    data["enrichment_entity"]["objectMarking"] = []
+    data["stix_entity"]["object_marking_refs"] = [red]
+    data["stix_objects"].append(liar)
+    message = connector._process_message(data)
+    assert "cannot read" in message
+    connector.client.lookup.assert_not_called()
+
+    honest = dict(liar, name="TLP:RED", definition={"tlp": "red"})
+    assert source_tlp_levels({}, [honest]) == (["red"], [])
+
+
 def test_no_forward_path_publishes_an_unresolvable_marking():
     """Every early return must refuse, not just the in-scope one.
 
@@ -1812,18 +1882,29 @@ def test_process_message_refuses_when_any_marking_exceeds_max_tlp():
 
 
 def _assert_forwarded_intact(helper, data):
-    """The forwarded bundle keeps every original object and adds only markings.
+    """The forwarded bundle keeps every original object, changed only as allowed.
 
-    It is not byte-identical to the input any more: a definition the platform
-    sent only as `objectMarking` has to travel with the bundle, or the cleanup
-    pass drops the reference pointing at it and weakens the very entity being
-    handed back untouched.
+    Two departures from byte-identical are deliberate. A definition the
+    platform sent only as `objectMarking` has to travel with the bundle, or
+    the cleanup pass drops the reference pointing at it. And the entity may
+    gain `object_marking_refs`, because a marking supplied only on the
+    observable is otherwise absent from the object handed onward, leaving the
+    next playbook step with an unmarked observable. Nothing else may differ.
     """
     passed = helper.stix2_create_bundle.call_args.args[0]
     assert passed is not data["stix_objects"]
+    by_id = {obj["id"]: obj for obj in passed if hasattr(obj, "get")}
     for original in data["stix_objects"]:
-        assert original in passed, "a forwarded object was dropped or altered"
-    added = [obj for obj in passed if obj not in data["stix_objects"]]
+        forwarded = by_id.get(original["id"])
+        assert forwarded is not None, "a forwarded object was dropped"
+        for key, value in original.items():
+            if key == "object_marking_refs":
+                continue
+            assert forwarded.get(key) == value, (original["id"], key)
+        extra = set(forwarded) - set(original)
+        assert extra <= {"object_marking_refs"}, (original["id"], extra)
+    originals = {obj["id"] for obj in data["stix_objects"]}
+    added = [obj for obj in passed if obj["id"] not in originals]
     assert all(obj.get("type") == "marking-definition" for obj in added), added
     referenced = {
         ref for obj in passed for ref in (obj.get("object_marking_refs") or [])

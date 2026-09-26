@@ -380,6 +380,28 @@ def tlp_marking_value(marking: Any) -> tuple[bool, Any]:
     return True, definition
 
 
+def contradicting_tlp_id(marking: Any, level: str) -> str | None:
+    """A description of the disagreement between a marking's id and its level.
+
+    A bundled definition is trusted for the level its body declares, while
+    the entity points at it by id. Nothing checked that the two agreed, so a
+    bundle carrying the TLP:RED identifier with an AMBER body was gated as
+    AMBER and the address left the platform under a marking that said
+    otherwise. Only the six TLP identifiers are judged here: any other id may
+    legitimately have been assigned elsewhere.
+    """
+    identifier = marking.get("id")
+    if not is_marking_id(identifier):
+        return None
+    identifier = identifier.strip()
+    expected = PyctiMarkingDefinition.generate_id("TLP", canonical_tlp(level))
+    if identifier == expected:
+        return None
+    if identifier not in TLP_MARKING_IDS and expected not in TLP_MARKING_IDS:
+        return None
+    return f"{identifier} carrying a {canonical_tlp(level)} definition"
+
+
 def source_tlp_levels(
     observable: dict[str, Any],
     definitions: list[dict[str, Any]] | None = None,
@@ -411,7 +433,12 @@ def source_tlp_levels(
         level = tlp_level_of(raw)
         if level is None:
             unreadable.append(raw)
-        elif level not in levels:
+            continue
+        contradiction = contradicting_tlp_id(marking, level)
+        if contradiction is not None:
+            unreadable.append(contradiction)
+            continue
+        if level not in levels:
             levels.append(level)
     return levels, unreadable
 
@@ -610,14 +637,14 @@ class XposedOrNotConnector:
         message = self._redacted(message, data)
         if is_playbook_run(data):
             try:
-                _, missing_markings = resolve_source_markings(
+                marking_refs, missing_markings = resolve_source_markings(
                     data.get("stix_entity") or {},
                     data.get("enrichment_entity") or {},
                     data.get("stix_objects") or [],
                 )
             except MarkingResolutionError as error:
                 return self._refuse_unresolved_marking(error, data)
-            forwarded = list(data["stix_objects"])
+            forwarded = self._forwarded_objects(data, marking_refs)
             referenced = {
                 ref
                 for obj in forwarded
@@ -635,6 +662,37 @@ class XposedOrNotConnector:
                 )
             )
         return message
+
+    def _forwarded_objects(
+        self, data: dict[str, Any], marking_refs: list[str]
+    ) -> list[Any]:
+        """The incoming objects, with the entity's own markings restored.
+
+        A marking the platform supplied only through `objectMarking`, or
+        through refs on the observable rather than the stix entity, is not on
+        the entity being handed back, so a no-op pass-through gave the next
+        playbook step an unmarked observable. The gate saw the restriction;
+        the bundle that travelled onward did not carry it.
+
+        The entity is copied rather than edited, so the caller's own objects
+        are left as they arrived.
+        """
+        forwarded = list(data.get("stix_objects") or [])
+        entity = data.get("stix_entity") or {}
+        entity_id = entity.get("id") if hasattr(entity, "get") else None
+        if not marking_refs or not entity_id:
+            return forwarded
+        if sorted(listed(entity.get("object_marking_refs"))) == sorted(marking_refs):
+            return forwarded
+        marked = deepcopy(entity)
+        marked["object_marking_refs"] = marking_refs
+        replaced = [
+            marked if getattr(obj, "get", dict().get)("id") == entity_id else obj
+            for obj in forwarded
+        ]
+        if all(getattr(obj, "get", dict().get)("id") != entity_id for obj in replaced):
+            replaced.append(marked)
+        return replaced
 
     def _refuse_unresolved_marking(self, error: Exception, data: dict[str, Any]) -> str:
         """Refuse without handing the bundle on.
