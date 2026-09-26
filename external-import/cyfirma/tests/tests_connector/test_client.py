@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+
 import requests
 from cyfirma_client import CyfirmaClient
 from pydantic import HttpUrl
