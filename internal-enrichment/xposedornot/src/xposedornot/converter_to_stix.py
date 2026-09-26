@@ -11,7 +11,7 @@ The enrichment is deliberately conservative to keep graphs clean:
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from connectors_sdk.models import Note, OrganizationAuthor, Reference
@@ -26,10 +26,16 @@ class ObservableNote(Note):
     so a re-enrichment updates the existing Note in place instead of adding a
     second one. `modified` advances with each enrichment: it is the STIX
     version marker, and freezing it lets a platform treat refreshed breach
-    content as an unchanged version and drop it."""
+    content as an unchanged version and drop it. `supersedes` carries the
+    `modified` of the version being replaced, so the new one outranks it even
+    when that version claims a timestamp ahead of the clock."""
 
     source_id: str = Field(
         description="STIX id of the observable this note describes.",
+    )
+    supersedes: datetime | None = Field(
+        default=None,
+        description="`modified` of the version this note replaces, if any.",
     )
 
     @staticmethod
@@ -43,7 +49,10 @@ class ObservableNote(Note):
         properties["id"] = self.stable_id(self.source_id)
         anchor = self.created or EPOCH_ANCHOR
         properties["created"] = anchor
-        properties["modified"] = max(datetime.now(timezone.utc), anchor)
+        modified = max(datetime.now(timezone.utc), anchor)
+        if self.supersedes is not None and modified <= self.supersedes:
+            modified = self.supersedes + timedelta(microseconds=1)
+        properties["modified"] = modified
         return NoteStix(allow_custom=True, **properties)
 
 
@@ -60,6 +69,24 @@ def breach_year(breach: dict[str, Any]) -> int | None:
 
 
 DEFAULT_MAX_TABLE_ROWS = 50
+
+
+def read_timestamp(value: Any) -> datetime | None:
+    """A timestamp exactly as given, or None when it cannot be read.
+
+    `stable_timestamp` discards a value ahead of the clock because it is
+    choosing an anchor. This one keeps it, because the caller is asking what
+    an existing version already claims and therefore what it has to beat.
+    """
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str) and value:
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    return None
 
 
 def stable_timestamp(value: Any) -> datetime:
@@ -180,6 +207,7 @@ class ConverterToStix:
         result: dict[str, Any],
         markings: list[Any],
         observed_at: Any = None,
+        supersedes: datetime | None = None,
     ) -> ObservableNote:
         breaches = [
             breach for breach in result.get("breaches") or [] if hasattr(breach, "get")
@@ -259,4 +287,5 @@ class ConverterToStix:
             labels=["xposedornot", "data-breach"],
             author=self.author,
             markings=markings,
+            supersedes=supersedes,
         )

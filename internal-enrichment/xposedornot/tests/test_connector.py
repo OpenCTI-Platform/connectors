@@ -23,6 +23,7 @@ from src.xposedornot.connector import (
     canonical_tlp,
     effective_tlp_level,
     is_marking_id,
+    is_own_reference,
     is_playbook_run,
     is_valid_email,
     listed,
@@ -761,6 +762,101 @@ def test_the_bundle_never_references_an_object_it_omits():
         for field in ("created_by_ref", "x_opencti_created_by_ref"):
             ref = get(field)
             assert ref is None or ref in present, f"{get('type')}.{field} -> {ref}"
+
+
+def test_our_own_reference_is_matched_whatever_its_case():
+    """A stale entry spelled differently survived and gained a twin.
+
+    The comparison was case-sensitive, so `xposedornot` was not recognised as
+    ours: the old entry stayed and a second one was appended beside it. The
+    same comparison decides whether the observable was enriched before, which
+    drives score retraction.
+    """
+    for spelling in ("XposedOrNot", "xposedornot", "XPOSEDORNOT", " XposedOrNot "):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(return_value=BREACHED)
+        data = _enrichment_data()
+        data["stix_entity"].pop("external_references", None)
+        data["stix_entity"]["x_opencti_external_references"] = [
+            {"source_name": spelling, "url": "https://xposedornot.com"}
+        ]
+        connector._process_message(data)
+        sent = helper.stix2_create_bundle.call_args[0][0]
+        observable = next(o for o in sent if o["id"] == data["stix_entity"]["id"])
+        ours = [
+            ref
+            for ref in observable["x_opencti_external_references"]
+            if is_own_reference(ref)
+        ]
+        assert len(ours) == 1, (spelling, observable["x_opencti_external_references"])
+        assert ours[0]["source_name"] == "XposedOrNot"
+
+    assert is_own_reference({"source_name": "xposedornot"})
+    assert not is_own_reference({"source_name": "other"})
+    assert not is_own_reference("not-a-dict")
+    assert not is_own_reference({})
+
+
+def test_references_without_a_source_or_url_are_not_collapsed():
+    """Deduplication keyed on (source_name, url) merged distinct entries.
+
+    Two references carrying only a description both keyed to (None, None) and
+    the second was dropped, losing an analyst's own reference.
+    """
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data()
+    data["stix_entity"].pop("external_references", None)
+    data["stix_entity"]["x_opencti_external_references"] = [
+        {"description": "first"},
+        {"description": "second"},
+        {"source_name": "X", "url": "u", "description": "1"},
+        {"source_name": "X", "url": "u", "description": "2"},
+    ]
+    connector._process_message(data)
+    sent = helper.stix2_create_bundle.call_args[0][0]
+    observable = next(o for o in sent if o["id"] == data["stix_entity"]["id"])
+    refs = observable["x_opencti_external_references"]
+    assert [r.get("description") for r in refs if not r.get("source_name")] == [
+        "first",
+        "second",
+    ]
+    assert len([r for r in refs if r.get("source_name") == "X"]) == 1
+
+
+def test_the_new_note_outranks_the_version_it_replaces():
+    """A replaced note claiming a future `modified` would otherwise win.
+
+    The new Note's `modified` is now, so a stale version stamped ahead of the
+    clock looked newer and a platform could keep it, discarding the refreshed
+    breach content.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    for stale_modified in (now - timedelta(days=1), now + timedelta(days=365)):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(return_value=BREACHED)
+        data = _enrichment_data(playbook=True)
+        note_id = ObservableNote.stable_id(data["stix_entity"]["id"])
+        data["stix_objects"].append(
+            {
+                "type": "note",
+                "spec_version": "2.1",
+                "id": note_id,
+                "created": "1970-01-01T00:00:00.000Z",
+                "modified": stale_modified.isoformat(),
+                "abstract": "XposedOrNot",
+                "content": "STALE",
+                "object_refs": [data["stix_entity"]["id"]],
+            }
+        )
+        connector._process_message(data)
+        sent = helper.stix2_create_bundle.call_args[0][0]
+        notes = [o for o in sent if getattr(o, "get", dict().get)("type") == "note"]
+        assert len(notes) == 1
+        assert "STALE" not in notes[0]["content"]
+        assert notes[0]["modified"] > stale_modified, stale_modified
 
 
 def test_re_enrichment_replaces_a_stale_note_in_the_bundle():

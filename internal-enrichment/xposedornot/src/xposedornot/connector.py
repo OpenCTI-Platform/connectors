@@ -22,7 +22,11 @@ from connectors_sdk.models import Reference, TLPMarking
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import OpenCTIConnectorHelper
 from src.xposedornot.client_api import XposedOrNotClient, redact, usable_score
-from src.xposedornot.converter_to_stix import ConverterToStix
+from src.xposedornot.converter_to_stix import (
+    ConverterToStix,
+    ObservableNote,
+    read_timestamp,
+)
 from src.xposedornot.settings import ConnectorSettings
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -423,6 +427,23 @@ def refused_tlps(
     ], unreadable
 
 
+OWN_REFERENCE_SOURCE = "XposedOrNot"
+
+
+def is_own_reference(reference: Any) -> bool:
+    """Whether an external reference is one this connector wrote.
+
+    Matched without regard to case or padding. A stale entry spelled
+    `xposedornot` was not recognised, so it survived and a second one was
+    appended beside it, and the same comparison decides whether the
+    observable was enriched before, which drives score retraction.
+    """
+    if not hasattr(reference, "get"):
+        return False
+    source = str(reference.get("source_name") or "").strip().casefold()
+    return source == OWN_REFERENCE_SOURCE.casefold()
+
+
 def named_labels(value: Any) -> list[str]:
     """The labels in a field, keeping only entries that name something.
 
@@ -634,9 +655,7 @@ class XposedOrNotConnector:
             + listed(enriched_entity.get("x_opencti_external_references"))
             if hasattr(ref, "get")
         ]
-        enriched_before = any(
-            ref.get("source_name") == "XposedOrNot" for ref in existing_refs
-        )
+        enriched_before = any(is_own_reference(ref) for ref in existing_refs)
         raw_score = result.get("risk_score")
         score = usable_score(raw_score)
         if score is not None:
@@ -665,13 +684,19 @@ class XposedOrNotConnector:
             labels.append("plaintext-password-exposure")
         enriched_entity["x_opencti_labels"] = labels
         enriched_entity.pop("labels", None)
-        seen: list[tuple] = []
+        seen: set[tuple[str, str]] = set()
         external_references = []
         for ref in existing_refs:
-            key = (ref.get("source_name"), ref.get("url"))
-            if ref.get("source_name") == "XposedOrNot" or key in seen:
+            if is_own_reference(ref):
                 continue
-            seen.append(key)
+            key = (
+                str(ref.get("source_name") or "").strip().casefold(),
+                str(ref.get("url") or "").strip().casefold(),
+            )
+            if any(key):
+                if key in seen:
+                    continue
+                seen.add(key)
             external_references.append(ref)
         external_references.append(
             {
@@ -696,11 +721,18 @@ class XposedOrNotConnector:
         note_markings = [note_tlp] + [
             Reference(id=ref) for ref in marking_refs if ref != note_tlp.id
         ]
+        note_id = ObservableNote.stable_id(enriched_entity["id"])
+        superseded = [
+            read_timestamp(obj.get("modified"))
+            for obj in enriched_objects
+            if obj.get("id") == note_id
+        ]
         note = self.converter.build_note(
             enriched_entity["id"],
             result,
             markings=note_markings,
             observed_at=observable.get("created_at"),
+            supersedes=max([stamp for stamp in superseded if stamp], default=None),
         )
         note_object = note.to_stix2_object()
         enriched_objects = [
