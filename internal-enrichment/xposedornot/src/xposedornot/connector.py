@@ -96,18 +96,35 @@ def _filled(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+MARKING_ID_RE = re.compile(
+    r"^marking-definition--[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}"
+    r"-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+
+def is_marking_id(value: Any) -> bool:
+    """Whether a value is a STIX marking-definition identifier.
+
+    Anything else placed in `object_marking_refs`, or used as a definition's
+    own `id`, produces a bundle the platform cannot resolve. A non-empty
+    string is not enough: `"not-a-stix-id"` was travelling into both.
+    """
+    return isinstance(value, str) and bool(MARKING_ID_RE.match(value.strip()))
+
+
 def marking_id(marking: dict[str, Any]) -> str | None:
     """The STIX id of an OpenCTI objectMarking entry.
 
-    A blank `standard_id` is not an id. Accepting one produced an empty string
-    that was then quietly discarded further down, so a marking the platform
-    did describe, a non-TLP one above all, vanished from the references
-    without anything refusing. Derivation from the definition is tried
-    instead, and only a marking that survives none of these routes is
-    unidentifiable.
+    A blank or malformed `standard_id` is not an id. Accepting one emitted it
+    as both the reference and the rebuilt definition's own id, so the bundle
+    carried an identifier nothing could resolve. The definition itself is
+    authoritative, so an entry whose `standard_id` is unusable is identified
+    from its type and value instead, and only one that survives none of these
+    routes is unidentifiable.
     """
     standard_id = marking.get("standard_id")
-    if _filled(standard_id):
+    if is_marking_id(standard_id):
         return standard_id.strip()
     custom = custom_marking_fields(marking)
     if custom:
@@ -238,7 +255,7 @@ def resolve_source_markings(
             marking_sequence(source.get("object_marking_refs"), "object_marking_refs")
         )
     for ref in supplied:
-        if not isinstance(ref, str) or not ref.strip():
+        if not is_marking_id(ref):
             raise MarkingResolutionError(
                 f"Marking reference {ref!r} of the enriched observable is not a"
                 " usable identifier; refusing to enrich rather than treat the"

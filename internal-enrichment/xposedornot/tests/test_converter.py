@@ -349,6 +349,11 @@ def test_risk_label_cannot_open_a_new_markdown_block():
         ], label
 
 
+EPOCH = __import__("datetime").datetime(
+    1970, 1, 1, tzinfo=__import__("datetime").timezone.utc
+)
+
+
 def _gfm_columns(line):
     """Column separators as GFM counts them.
 
@@ -434,3 +439,61 @@ def test_a_usable_score_is_shown_even_without_a_label():
     assert risk_line("Critical", 150) == "**Overall risk:** Critical"
     assert risk_line(None, None) is None
     assert risk_line(None, 150) is None
+
+
+def test_a_future_anchor_does_not_freeze_the_modified_marker():
+    """`modified` is the later of the anchor and now, so a future anchor wins.
+
+    An observable stamped ahead of the clock made the anchor the modified
+    marker itself, so it stopped advancing between runs. That is precisely
+    the freezing the anchoring exists to prevent: a platform reads refreshed
+    breach content as an unchanged version and drops it.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from src.xposedornot.converter_to_stix import ConverterToStix, stable_timestamp
+
+    now = datetime.now(timezone.utc)
+    assert stable_timestamp((now + timedelta(days=30)).isoformat()) == EPOCH
+    assert stable_timestamp((now + timedelta(seconds=1)).isoformat()) == EPOCH
+    assert stable_timestamp("not-a-date") == EPOCH
+    assert stable_timestamp(None) == EPOCH
+    past = now - timedelta(days=30)
+    assert stable_timestamp(past.isoformat()) == past
+
+    converter = ConverterToStix(author=ConverterToStix.make_author())
+    for observed_at in (
+        (now + timedelta(days=30)).isoformat(),
+        (now - timedelta(days=30)).isoformat(),
+        "not-a-date",
+        None,
+    ):
+        note = converter.build_note(
+            "email-addr--11111111-1111-4111-8111-111111111111",
+            {"breaches": [{"name": "B"}]},
+            markings=[],
+            observed_at=observed_at,
+        ).to_stix2_object()
+        assert note["modified"] >= note["created"], observed_at
+        assert note["modified"] > EPOCH, observed_at
+
+
+def test_a_malformed_breach_entry_does_not_break_the_note():
+    """The normalisers guarantee the shape, but the Note must not depend on it."""
+    from src.xposedornot.converter_to_stix import ConverterToStix
+
+    converter = ConverterToStix(author=ConverterToStix.make_author())
+    for breaches in (
+        [None],
+        ["x"],
+        [{"name": "B", "records": {"a": 1}}],
+        [{"name": "B", "data_classes": [1, None]}],
+        [{"name": "B", "data_classes": {"a": 1}}],
+        [None, {"name": "Real", "records": 5}],
+    ):
+        note = converter.build_note(
+            "email-addr--11111111-1111-4111-8111-111111111111",
+            {"breaches": breaches},
+            markings=[],
+        )
+        assert "XposedOrNot" in note.content

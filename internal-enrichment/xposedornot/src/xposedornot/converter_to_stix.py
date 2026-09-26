@@ -69,16 +69,31 @@ def stable_timestamp(value: Any) -> datetime:
     same Note id a new version on every run. Anchoring on the observable's own
     creation time keeps them constant; any deterministic value works, so an
     unparseable or absent one falls back to the epoch.
+
+    A timestamp in the future falls back too. `modified` is the later of the
+    anchor and now, so an anchor ahead of the clock becomes the modified
+    marker itself and stops advancing between runs, which is exactly the
+    freezing this anchoring exists to avoid: a platform would read refreshed
+    breach content as an unchanged version and drop it.
     """
+    parsed = None
     if isinstance(value, datetime):
-        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-    if isinstance(value, str) and value:
+        parsed = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    elif isinstance(value, str) and value:
         try:
             parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return EPOCH_ANCHOR
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-    return EPOCH_ANCHOR
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+    if parsed is None or parsed > datetime.now(timezone.utc):
+        return EPOCH_ANCHOR
+    return parsed
+
+
+def _one_line_items(value: Any) -> list[Any]:
+    """The entries of a list-shaped field, or nothing when it is not one."""
+    return list(value) if isinstance(value, (list, tuple)) else []
 
 
 def _one_line(value: Any) -> str:
@@ -166,9 +181,13 @@ class ConverterToStix:
         markings: list[Any],
         observed_at: Any = None,
     ) -> ObservableNote:
-        breaches = result.get("breaches") or []
+        breaches = [
+            breach for breach in result.get("breaches") or [] if hasattr(breach, "get")
+        ]
         first_year, latest_year = self.years(breaches)
-        total_records = sum(b.get("records") or 0 for b in breaches)
+        total_records = sum(
+            b.get("records") for b in breaches if isinstance(b.get("records"), int)
+        )
 
         lines = [
             "## XposedOrNot — breach exposure summary",
@@ -208,7 +227,12 @@ class ConverterToStix:
                 _fmt_records(breach.get("records")),
                 _md_cell(breach.get("domain")),
                 _md_cell(breach.get("industry")),
-                _md_cell(", ".join(breach.get("data_classes") or [])),
+                _md_cell(
+                    ", ".join(
+                        str(item)
+                        for item in _one_line_items(breach.get("data_classes"))
+                    )
+                ),
                 _md_cell(breach.get("password_risk")),
                 _md_cell(breach.get("verified")),
             ]

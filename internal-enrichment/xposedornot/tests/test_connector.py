@@ -22,6 +22,7 @@ from src.xposedornot.connector import (
     XposedOrNotConnector,
     canonical_tlp,
     effective_tlp_level,
+    is_marking_id,
     is_playbook_run,
     is_valid_email,
     listed,
@@ -621,6 +622,56 @@ def test_forward_paths_still_forward_when_markings_resolve():
         helper.send_stix2_bundle.assert_called_once_with(
             "BUNDLE", update=False, cleanup_inconsistent_bundle=True
         )
+
+
+def test_only_real_marking_identifiers_are_trusted():
+    """A non-empty string is not a STIX id.
+
+    `"not-a-stix-id"` was accepted as a marking reference and then emitted as
+    both `object_marking_refs` and the rebuilt definition's own `id`,
+    producing a bundle nothing could resolve. A reference must be a real
+    marking id; an entry whose `standard_id` is unusable is identified from
+    its definition instead, which is the authoritative half.
+    """
+    good = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
+    assert is_marking_id(good)
+    assert is_marking_id(
+        good.upper().replace("MARKING-DEFINITION", "marking-definition")
+    )
+    for bad in (
+        "not-a-stix-id",
+        "marking-definition--nope",
+        "identity--11111111-1111-4111-8111-111111111111",
+        "http://evil",
+        "",
+        None,
+        7,
+    ):
+        assert not is_marking_id(bad), bad
+        with pytest.raises(MarkingResolutionError, match="not a usable identifier"):
+            resolve_source_markings({"object_marking_refs": [bad]}, {}, [])
+
+    derived = marking_id(
+        {
+            "standard_id": "not-a-stix-id",
+            "definition_type": "TLP",
+            "definition": "TLP:RED",
+        }
+    )
+    assert derived == good
+    assert (
+        materialize_marking(
+            {"standard_id": "bogus", "definition_type": "TLP", "definition": "TLP:RED"}
+        )["id"]
+        == good
+    )
+
+    for unidentifiable in (
+        {"standard_id": "bogus"},
+        {"standard_id": "x", "definition_type": "TLP"},
+    ):
+        with pytest.raises(MarkingResolutionError, match="cannot be assigned"):
+            resolve_source_markings({}, {"objectMarking": [unidentifiable]}, [])
 
 
 def test_malformed_marking_containers_fail_closed():
