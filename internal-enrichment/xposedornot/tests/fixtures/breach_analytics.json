@@ -1,0 +1,54 @@
+{
+  "BreachMetrics": {
+    "risk": [
+      {
+        "risk_label": "Critical",
+        "risk_score": 100
+      }
+    ]
+  },
+  "BreachesSummary": {
+    "site": "Collection-1;WHMCS;MCBans;KomplettFritid;Win7VistaForum;OGusers-2020;PayAsuGym;Yahoo;Coinmama;PPCGeeks;BitcoinTalk;XKCD;BTC-E;TrueFire;Reincubate;TravelOklahoma;GPSUnderground;Sonicbids;Sphero;Stratfor;Imavex;OwnedCore;Petflow;Bolt;Sitepoint;Ledger;Artsy;LazadaRedmart;Elance;GeniusU;Wedmegood;Havenly;Diet;AnimeGame;SlideTeam;GameSalad;Bookcrossing;Payhere;Nihonomaru;StarTribune;Glofox;Patreon;Factual;Morele.net;Funimation;Duolingo;Audi;Bonobos;Xsplit;Coinmarketcap;Mpgh;LiveAuctioneers;GoGames;Dunzo;Zoomcar;FlexBooker;Bookmate;Avvo;Swvl;Peatix;Gaadi;MalindoAir;Minted;MemeChat;Roll20;StrongholdKingdoms;Ticketfly;Gemini;Yatra;Scentbird;Appen;ToonDoo;GameSprite;EatStreet;Wakanim;StockX;CashCrate;Lifeboat;HeroesofNewerth;Truthfinder;Teespring;WeHeartIt;HomeChef;Zacks;Jefit;Bitly;Wishbone;ArmorGames;JobandTalent;InstantCheckmate;Bukalapak;Promo;500px;ClearvoiceSurveys;Epik;Zomato;Ixigo;Disqus;EyeEm;8tracks;CDEK;Parkmobile;R2games;Animoto;GFAN;Wanelo;Cafepress;BigBasket;Mathway;Livejournal;HauteLook;Poshmark;Last.fm;ShareThis;Houzz;Imesh;Dropbox;Luxottica;Nitro;Dailymotion;MyHeritage;Canva;MyFitnessPal;Adobe;LinkedIn;Dubsmash;Zynga;Twitter-Scraped;Cit0day;Wattpad;AntiPublicCombo;ExploitIN;Verifications;Gemplex;JoyGames;OMGPOP;Chess;SoarGames;Kaneva;000webhost;Chegg;VK;LimeVPN;Roblox;7k7k;Apollo;Tumblr;NetEase;Apollo;Pemiblanc;Eye4fraud;Ticketcounter;ClickASnap;KitchenPal;ATT-Speculated;SwordFantasy;GSMHosting;GiantTiger;LeSlipFrancais;WashingtonStateFoodWorkerCard;PostMillennial;CouponMom;NeimanMarcus;HeritageFoundation;Trello;BreachForum;Condo;Tracelo;AnimeLeague;Ticketek;SchenkYou;Welhof;Zacks-2024;1Win;Twitter;Shein;Naz.API;Dodonew;MyVidster-2025;WIRED;Instagram;SoundCloud;Betterment;CarGurus;TheSquare;WebHostingTalk;Aura;SongTrivia2;TLDRtech;Amtrak;McGrawHill;ADT;Baydoner;MarcusMillichap;Charter;Addi;Ameriprise;ZenBusiness;7-Eleven;AlienStealerLogs;WoFlow;Sysco;GlendaleCommunityCollege;ACTMobile;Paidwork;Alcon;RingCentral;BrinksHome;OzHairAndBeauty;Questel;Carhartt;Lumenis;Sharecare;ManchesterAirportsGroup"
+  },
+  "ExposedBreaches": {
+    "breaches_details": [
+      {
+        "added": "2026-06-15T05:23:45+00:00",
+        "breach": "AlienStealerLogs",
+        "details": "ALIEN TXTBASE, a stealer log collection, was exposed in February 2025 when 23 billion rows of logs were obtained from a Telegram channel, revealing 299M unique email addresses along with the websites they were entered into and the passwords used.",
+        "domain": "",
+        "industry": "Miscellaneous",
+        "logo": "https://xposedornot.com/static/logos/combolist.png",
+        "password_risk": "plaintext",
+        "references": "",
+        "searchable": "Yes",
+        "verified": "Yes",
+        "xposed_data": "Email addresses;Passwords",
+        "xposed_date": "2025",
+        "xposed_records": 299646818
+      },
+      {
+        "added": "2026-09-03T07:41:36+00:00",
+        "breach": "ManchesterAirportsGroup",
+        "details": "Manchester Airports Group (MAG), an airport operator, was compromised in August 2026, with data later published by the FulcrumSec group exposing email addresses and phone numbers relating to 8.4M customers along with vehicle registrations, parking history, Fast Track purchases, and lounge bookings.",
+        "domain": "magairports.com",
+        "industry": "Transport",
+        "logo": "https://xposedornot.com/static/logos/ManchesterAirportsGroup.png",
+        "password_risk": "unknown",
+        "references": "",
+        "searchable": "Yes",
+        "verified": "Yes",
+        "xposed_data": "Email addresses;Names;Phone numbers;IP addresses;Vehicle registration numbers;Geographic locations;Browser user agents",
+        "xposed_date": "2026",
+        "xposed_records": 8379476
+      }
+    ]
+  },
+  "ExposedPastes": null,
+  "PasteMetrics": null,
+  "PastesSummary": {
+    "cnt": 0,
+    "domain": "",
+    "tmpstmp": ""
+  }
+}
