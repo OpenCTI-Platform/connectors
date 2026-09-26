@@ -154,7 +154,8 @@ Reports often defang their indicators so that nobody follows them by mistake (`a
 | `hxxp` `hxxps` `fxp` `fxps` schemes | `http` `https` `ftp` `ftps` | URL |
 
 - Only the `value` of these observables is refanged: names, descriptions and any other free text keep their defanged spelling.
-- A refanged value is only kept when it is a valid value of its type: it must pass the checks OpenCTI applies to domain names, hostnames, email addresses and IP addresses, and a URL must be well-formed. Otherwise the observable is sent unchanged (and logged as a warning), for OpenCTI to report it.
+- Brackets must pair up (`[.]` is refanged, `[.}` is not), and a notation is only refanged in the types listed for it.
+- A refanged value is only kept when it is a valid value of its type: it must pass the checks OpenCTI applies to domain names, hostnames, email addresses and IP addresses, and a URL must be well-formed (a valid host, or valid addresses for a `mailto:` URL). Otherwise the observable is sent unchanged (and logged as a warning), for OpenCTI to report it.
 - A refanged observable gets the deterministic STIX id derived from its new value and loses its `defanged` flag. Every reference to its former id (report `object_refs`, relationship `source_ref` / `target_ref`, any `*_ref` / `*_refs`) is rewritten, and two spellings of one value, as well as the relationships they end up sharing, are merged.
 
 ### Mapping to OpenCTI entities

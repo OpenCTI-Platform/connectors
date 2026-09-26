@@ -22,9 +22,12 @@ REFANGABLE_OBSERVABLE_TYPES = frozenset(
 
 # One separator wrapped in brackets, parentheses or braces, whitespace
 # tolerated inside and around: "[.]", "(dot)", " [at] ", "{:}", "[://]", "[/]".
+# A mismatched pair such as "[.}" is matched too, but only to be reported.
 _BRACKETED_SEPARATOR_RE = re.compile(
-    r"\s*[\[({]\s*(?P<token>://|\.|dot|@|at|:|/)\s*[\])}]\s*", re.IGNORECASE
+    r"\s*(?P<open>[\[({])\s*(?P<token>://|\.|dot|@|at|:|/)\s*(?P<close>[\])}])\s*",
+    re.IGNORECASE,
 )
+_CLOSING_BRACKETS = {"[": "]", "(": ")", "{": "}"}
 _SPACED_DOT_RE = re.compile(r"\s+dot\s+", re.IGNORECASE)
 _SPACED_AT_RE = re.compile(r"\s+at\s+", re.IGNORECASE)
 _DEFANGED_SCHEME_RE = re.compile(r"^(?P<scheme>hxxps?|fxps?)(?=:)", re.IGNORECASE)
@@ -95,7 +98,20 @@ _IPV6_ADDR_RE = re.compile(
 _NETWORK_SCHEMES = {"http", "https", "ftp", "ftps"}
 
 
+def _is_host(host: str | None) -> bool:
+    return bool(host) and any(
+        pattern.fullmatch(host)
+        for pattern in (_HOSTNAME_RE, _DOMAIN_NAME_RE, _IPV4_ADDR_RE, _IPV6_ADDR_RE)
+    )
+
+
 def _is_url(value: str) -> bool:
+    """Whether a URL is well-formed.
+
+    A URL with an authority (``scheme://host``) or without a scheme
+    (``host/path``) needs a valid host, a ``mailto:`` URL valid addresses, and
+    a network scheme (http, https, ftp, ftps) an authority.
+    """
     if any(character.isspace() for character in value):
         return False
     try:
@@ -104,7 +120,17 @@ def _is_url(value: str) -> bool:
             return False
     except ValueError:  # an unbalanced IPv6 host or a non-numeric port
         return False
-    return bool(parts.hostname) or parts.scheme.lower() not in _NETWORK_SCHEMES
+    scheme = parts.scheme.lower()
+    if scheme == "mailto":
+        return all(
+            _EMAIL_ADDR_RE.fullmatch(address) for address in parts.path.split(",")
+        )
+    hierarchical_part = value[len(parts.scheme) + 1 :] if parts.scheme else value
+    if hierarchical_part.startswith("//"):
+        return _is_host(parts.hostname)
+    if not scheme:
+        return _is_host(parts.path.split("/", 1)[0])
+    return scheme not in _NETWORK_SCHEMES
 
 
 _VALIDATORS = {
@@ -122,7 +148,12 @@ def _substitute_defang_notations(observable_type: str, value: str) -> str:
 
     def refang_separator(match: re.Match) -> str:
         separator = _SEPARATORS[match.group("token").lower()]
-        return separator if separator in separators else match.group(0)
+        if (
+            _CLOSING_BRACKETS[match.group("open")] != match.group("close")
+            or separator not in separators
+        ):
+            return match.group(0)
+        return separator
 
     refanged = _BRACKETED_SEPARATOR_RE.sub(refang_separator, value)
     if observable_type in _SPACED_DOT_TYPES:
@@ -148,10 +179,10 @@ def refang_observable_value(observable_type: str, value: str) -> str:
     Handled notations, case-insensitive: ``[.]`` ``(.)`` ``{.}`` ``[dot]``
     ``(dot)`` ``{dot}`` and `` dot ``, ``[at]`` ``(at)`` ``{at}`` ``[@]`` and
     `` at `` (email addresses), ``[:]``, ``[://]``, ``[/]``, and the ``hxxp``,
-    ``hxxps``, ``fxp`` and ``fxps`` schemes (URLs). Only the separators a value
-    of the type can hold are refanged, and the refanged value is only returned
-    when it is a valid value of the type: one OpenCTI accepts, and a
-    well-formed URL for URLs, which OpenCTI does not check.
+    ``hxxps``, ``fxp`` and ``fxps`` schemes (URLs); brackets must pair up. Only
+    the separators a value of the type can hold are refanged, and the refanged
+    value is only returned when it is a valid value of the type: one OpenCTI
+    accepts, and a well-formed URL for URLs, which OpenCTI does not check.
 
     Args:
         observable_type (str): The STIX type of the observable

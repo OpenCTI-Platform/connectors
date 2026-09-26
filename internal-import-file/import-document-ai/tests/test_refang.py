@@ -99,6 +99,24 @@ NOTATIONS = [
         id="url embedded email",
     ),
     pytest.param(
+        "url",
+        "mailto:admin[at]filigran[dot]io,soc[at]filigran[dot]io",
+        "mailto:admin@filigran.io,soc@filigran.io",
+        id="url embedded emails",
+    ),
+    pytest.param(
+        "url", "hxxp://localhost[:]8080/", "http://localhost:8080/", id="url hostname"
+    ),
+    pytest.param(
+        "url", "hxxp://192[.]0[.]2[.]1/x", "http://192.0.2.1/x", id="url ipv4 host"
+    ),
+    pytest.param(
+        "url",
+        "hxxp://[2001[:]db8[:][:]1]:8080/",
+        "http://[2001:db8::1]:8080/",
+        id="url ipv6 host",
+    ),
+    pytest.param(
         "url", "filigran[.]io/about", "filigran.io/about", id="url without scheme"
     ),
 ]
@@ -116,9 +134,13 @@ CLEAN_VALUES = [
     ("url", "https://filigran.io/about?q=a.b#top"),
     ("url", "http://[2001:db8::1]:8080/index.html"),
     ("url", "https://en.wikipedia.org/wiki/Mercury_(planet)"),
+    ("url", "mailto:admin@filigran.io"),
 ]
 
 UNREFANGABLE_VALUES = [
+    pytest.param("domain-name", "filigran[.}io", id="mismatched brackets"),
+    pytest.param("email-addr", "admin(at]filigran.io", id="email mismatched brackets"),
+    pytest.param("url", "hxxps://filigran{.)io", id="url mismatched brackets"),
     pytest.param("email-addr", "admin[at][dot]io", id="email without domain"),
     pytest.param("email-addr", "admin[at]filigran[:]io", id="colon in an email"),
     pytest.param("domain-name", "evil[at]example[.]com", id="at in a domain name"),
@@ -131,6 +153,11 @@ UNREFANGABLE_VALUES = [
     pytest.param("url", "hxxp://[:]8080/", id="url port without host"),
     pytest.param("url", "hxxp://filigran[.]io[:]https/", id="url non-numeric port"),
     pytest.param("url", "hxxp://[2001[:]db8[:][:]1/", id="url unbalanced ipv6 host"),
+    pytest.param("url", "hxxp://filigran[.]/", id="url invalid host"),
+    pytest.param("url", "filigran[.]/about", id="url without scheme invalid host"),
+    pytest.param("url", "hxxp[:]filigran[.]io", id="url network scheme no authority"),
+    pytest.param("url", "foo[://]", id="url authority without host"),
+    pytest.param("url", "mailto:admin[at][dot]io", id="url mailto invalid address"),
 ]
 
 OBSERVABLE_CLASSES = {
