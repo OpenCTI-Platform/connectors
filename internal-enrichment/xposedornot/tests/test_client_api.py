@@ -457,3 +457,31 @@ def test_fully_decoded_settles_and_is_bounded():
     for _ in range(8):
         deep = quote(deep, safe="")
     assert fully_decoded(deep) == "secret"
+
+
+def test_a_record_without_an_identifier_is_not_a_breach():
+    """A nameless record was counted as an exposure that never happened.
+
+    An empty object in either API's breach list produced "Found 1 breach(es)",
+    labelled the observable `data-breach` and wrote a row of dashes into the
+    note: an assertion about a person's exposure the API never made.
+    """
+    from src.xposedornot.client_api import _normalise_free, _normalise_plus
+
+    def free(details):
+        return _normalise_free({"ExposedBreaches": {"breaches_details": details}})
+
+    def plus(entries):
+        return _normalise_plus({"breaches": entries})
+
+    for nameless in ({}, {"breach": None}, {"breach": "   "}, {"xposed_records": 9}):
+        assert free([nameless]) == {}, nameless
+    for nameless in ({}, {"breach_id": None}, {"breach_id": "  "}):
+        assert plus([nameless]) == {}, nameless
+
+    kept = free([{"breach": "Real", "xposed_records": 5}, {}])
+    assert [b["name"] for b in kept["breaches"]] == ["Real"]
+    kept = plus([{"breach_id": "Real"}, {}])
+    assert [b["name"] for b in kept["breaches"]] == ["Real"]
+
+    assert free([{"breach": "  Padded  "}])["breaches"][0]["name"] == "Padded"

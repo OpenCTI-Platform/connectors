@@ -141,6 +141,18 @@ def usable_score(value: Any) -> int | None:
     return score if 0 <= score <= 100 else None
 
 
+def _identifier(value: Any) -> str | None:
+    """The name a breach record goes by, or None when it names nothing.
+
+    A record with no identifier is not a breach this connector can report. It
+    was being counted as one, so a response carrying an empty object produced
+    "Found 1 breach(es)", labelled the observable `data-breach` and wrote a
+    row of dashes into the note: an assertion that someone's address had been
+    exposed, which the API never made.
+    """
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
 def _split_data_classes(value) -> list[str]:
     return [item.strip() for item in str(value or "").split(";") if item.strip()]
 
@@ -159,9 +171,12 @@ def _normalise_free(data: dict[str, Any]) -> dict[str, Any]:
     for entry in _as_list(exposed.get("breaches_details")):
         if not isinstance(entry, dict):
             continue
+        name = _identifier(entry.get("breach"))
+        if name is None:
+            continue
         breaches.append(
             {
-                "name": entry.get("breach"),
+                "name": name,
                 "date": entry.get("xposed_date"),
                 "records": _to_int(entry.get("xposed_records")),
                 "domain": entry.get("domain"),
@@ -185,9 +200,12 @@ def _normalise_plus(data: dict[str, Any]) -> dict[str, Any]:
     for entry in _as_list(data.get("breaches")):
         if not isinstance(entry, dict):
             continue
+        name = _identifier(entry.get("breach_id"))
+        if name is None:
+            continue
         breaches.append(
             {
-                "name": entry.get("breach_id"),
+                "name": name,
                 "date": entry.get("breached_date"),
                 "records": _to_int(entry.get("xposed_records")),
                 "domain": entry.get("domain"),

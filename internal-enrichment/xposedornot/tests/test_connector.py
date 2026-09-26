@@ -764,6 +764,21 @@ def test_the_bundle_never_references_an_object_it_omits():
             assert ref is None or ref in present, f"{get('type')}.{field} -> {ref}"
 
 
+def test_nameless_records_do_not_become_a_breach_claim():
+    """End to end: a response of nameless records must report no exposure."""
+    from src.xposedornot.client_api import _normalise_free
+
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(
+        return_value=_normalise_free(
+            {"ExposedBreaches": {"breaches_details": [{}, {"breach": "   "}]}}
+        )
+    )
+    message = connector._process_message(_enrichment_data())
+    assert "No known breach exposure" in message
+    helper.send_stix2_bundle.assert_not_called()
+
+
 def test_our_own_reference_is_matched_whatever_its_case():
     """A stale entry spelled differently survived and gained a twin.
 
