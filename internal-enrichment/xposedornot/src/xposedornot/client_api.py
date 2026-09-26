@@ -53,6 +53,25 @@ def retry_after_seconds(value, default: int = DEFAULT_RETRY_AFTER) -> int:
     return max(0, math.ceil(remaining))
 
 
+MAX_DECODE_PASSES = 20
+
+
+def fully_decoded(text: str) -> str:
+    """Percent-encoding peeled off until the text stops changing.
+
+    A single `unquote` only removes one layer, so a value encoded twice still
+    reads as encoded afterwards. Each pass either shortens the text or leaves
+    it alone, so this settles on its own; the cap only bounds the work done on
+    something a third party sent, and sits far above any real encoding depth.
+    """
+    for _ in range(MAX_DECODE_PASSES):
+        decoded = unquote(text)
+        if decoded == text:
+            break
+        text = decoded
+    return text
+
+
 def redact(text: str, *secrets: str | None) -> str:
     """Blank out every secret, in raw and URL-encoded form, before logging.
 
@@ -66,6 +85,10 @@ def redact(text: str, *secrets: str | None) -> str:
     secret is still legible once the text is decoded. Losing a diagnostic
     string is the cheaper mistake: what is being protected here is an address
     belonging to a person who did not choose to appear in these logs.
+
+    Decoding repeats until it settles. One pass turns `%2573ecret` into
+    `%73ecret` rather than into the secret, so a value encoded twice would
+    have read as already clean and survived into the log.
     """
     if not text:
         return text
@@ -74,7 +97,7 @@ def redact(text: str, *secrets: str | None) -> str:
             continue
         for form in dict.fromkeys((quote(secret, safe=""), secret)):
             text = re.sub(re.escape(form), "<redacted>", text, flags=re.IGNORECASE)
-        if secret.casefold() in unquote(text).casefold():
+        if secret.casefold() in fully_decoded(text).casefold():
             return "<redacted>"
     return text
 

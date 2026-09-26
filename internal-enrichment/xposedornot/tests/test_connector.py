@@ -520,6 +520,36 @@ def test_malformed_label_and_reference_fields_are_survivable():
         ), overrides
 
 
+def test_a_malformed_label_does_not_fail_the_enrichment():
+    """Filtering has to happen before deduplication.
+
+    A label that is a dict or a list is unhashable, and `dict.fromkeys`
+    raised on it, so one malformed entry turned into a failed enrichment
+    reported as an internal error. Blank entries are dropped too.
+    """
+    for labels, expected in (
+        (["ok", {"a": 1}], ["ok"]),
+        (["ok", ["nested"]], ["ok"]),
+        (["ok", 7, None], ["ok"]),
+        (["", "   ", "ok"], ["ok"]),
+        ([{"a": 1}], []),
+    ):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(return_value=BREACHED)
+        data = _enrichment_data()
+        data["stix_entity"].pop("labels", None)
+        data["stix_entity"].pop("external_references", None)
+        data["stix_entity"]["x_opencti_labels"] = labels
+        message = connector._process_callback(data)
+        assert "Internal error" not in message, labels
+        sent = helper.stix2_create_bundle.call_args[0][0]
+        observable = next(o for o in sent if o["id"] == data["stix_entity"]["id"])
+        assert observable["x_opencti_labels"] == expected + [
+            "data-breach",
+            "plaintext-password-exposure",
+        ], labels
+
+
 def test_labels_are_deduplicated_across_both_spellings():
     connector, helper = _make_connector()
     connector.client.lookup = MagicMock(return_value=BREACHED)

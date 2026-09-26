@@ -410,3 +410,50 @@ def test_to_int_does_not_launder_values_the_score_check_rejects():
         coerced = _to_int(raw)
         assert usable_score(raw) is None
         assert usable_score(coerced) is None, (raw, coerced)
+
+
+def test_a_multiply_encoded_secret_is_still_redacted():
+    """One decode pass only peels one layer.
+
+    `%2573ecret` decodes to `%73ecret`, not to the secret, so a value encoded
+    twice read as already clean and survived into the logged field.
+    """
+    from urllib.parse import quote, unquote
+
+    from src.xposedornot.client_api import redact
+
+    def recoverable(text, secret, depth=12):
+        current = text
+        for _ in range(depth):
+            if secret.casefold() in current.casefold():
+                return True
+            nxt = unquote(current)
+            if nxt == current:
+                return False
+            current = nxt
+        return False
+
+    assert redact("k=%2573ecret", "secret") == "<redacted>"
+
+    for secret in ("s p@c/al+secret", "user+tag@example.com"):
+        spelling = secret
+        for _ in range(10):
+            assert not recoverable(redact("body=" + spelling, secret), secret), spelling
+            spelling = quote(spelling, safe="")
+
+    assert redact("nothing sensitive", "s p@c/al+secret") == "nothing sensitive"
+
+
+def test_fully_decoded_settles_and_is_bounded():
+    from src.xposedornot.client_api import MAX_DECODE_PASSES, fully_decoded
+
+    assert fully_decoded("plain") == "plain"
+    assert fully_decoded("%2573ecret") == "secret"
+    assert fully_decoded("a%2520b") == "a b"
+    assert MAX_DECODE_PASSES >= 10
+    deep = "secret"
+    from urllib.parse import quote
+
+    for _ in range(8):
+        deep = quote(deep, safe="")
+    assert fully_decoded(deep) == "secret"

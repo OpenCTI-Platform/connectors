@@ -423,6 +423,19 @@ def refused_tlps(
     ], unreadable
 
 
+def named_labels(value: Any) -> list[str]:
+    """The labels in a field, keeping only entries that name something.
+
+    Filtering has to happen before deduplication rather than after: a label
+    that is a dict or a list is unhashable, and `dict.fromkeys` raised on it,
+    which turned one malformed entry into a failed enrichment. Blank entries
+    are dropped too, since a label of spaces names nothing.
+    """
+    return [
+        label for label in listed(value) if isinstance(label, str) and label.strip()
+    ]
+
+
 def unique_by_id(objects: list[Any]) -> list[Any]:
     """Drop repeated STIX ids, keeping the first occurrence.
 
@@ -636,16 +649,16 @@ class XposedOrNotConnector:
             )
         elif enriched_before and enriched_entity.get("x_opencti_score") is not None:
             enriched_entity["x_opencti_score"] = None
-        owned_labels = listed(enriched_entity.get("x_opencti_labels"))
+        owned_labels = named_labels(enriched_entity.get("x_opencti_labels"))
         existing_labels = owned_labels + [
             label
-            for label in listed(enriched_entity.get("labels"))
+            for label in named_labels(enriched_entity.get("labels"))
             if label not in owned_labels
         ]
         labels = [
             label
             for label in dict.fromkeys(existing_labels)
-            if isinstance(label, str) and label not in self.OWNED_LABELS
+            if label not in self.OWNED_LABELS
         ]
         labels.append("data-breach")
         if self.converter.has_plaintext_exposure(breaches):
