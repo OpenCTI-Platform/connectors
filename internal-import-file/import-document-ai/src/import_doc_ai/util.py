@@ -846,16 +846,14 @@ def merge_duplicate_objects(bundle: stix2.Bundle) -> stix2.Bundle:
     objects_by_id: dict[str, list[stix2.v21._STIXBase21]] = {}
     for obj in bundle.get("objects", []):
         objects_by_id.setdefault(obj["id"], []).append(obj)
-    duplicated_ids = [
-        object_id for object_id, objects in objects_by_id.items() if len(objects) > 1
-    ]
-    if not duplicated_ids:
+    if len(objects_by_id) == len(bundle.get("objects", [])):
         return bundle
-    for object_id in duplicated_ids:
-        bundle = replace_in_bundle(
-            bundle, object_id, _merge_stix_objects(objects_by_id[object_id])
-        )
-    return deduplicate_bundle_objects(bundle)
+    # One pass and one bundle: building a bundle parses every observable again.
+    merged_objects = [
+        objects[0] if len(objects) == 1 else _merge_stix_objects(objects)
+        for objects in objects_by_id.values()
+    ]
+    return stix2.Bundle(type=bundle["type"], objects=merged_objects, allow_custom=True)
 
 
 def convert_location_to_octi_location(

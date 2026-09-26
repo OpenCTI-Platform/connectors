@@ -633,6 +633,45 @@ def test_clean_values_holding_brackets_are_not_reported(observable_type, value):
     assert summary.unrefanged == []
 
 
+def spelled_twice(count: int) -> stix2.Bundle:
+    """``count`` addresses, each in two defanged spellings, and their report."""
+    objects = []
+    for index in range(count):
+        objects.append(observable("email-addr", f"user{index}[at]filigran[dot]io"))
+        objects.append(observable("email-addr", f"user{index}(at)filigran(.)io"))
+    return make_bundle(*objects, report([obj["id"] for obj in objects]))
+
+
+def bundle_builds(monkeypatch: pytest.MonkeyPatch, bundle: stix2.Bundle) -> int:
+    """How many STIX bundles refanging ``bundle`` builds.
+
+    Building a bundle parses every observable it holds again, so each build
+    costs as much as the whole bundle.
+    """
+    builds = 0
+    bundle_class = stix2.Bundle
+
+    def counting_bundle(*args, **kwargs):
+        nonlocal builds
+        builds += 1
+        return bundle_class(*args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(stix2, "Bundle", counting_bundle)
+        _, summary = refang_bundle_observables(bundle)
+    assert summary.merged_objects == len(bundle.objects) // 2
+    return builds
+
+
+def test_refanging_cost_does_not_grow_with_the_number_of_merges(monkeypatch):
+    # Given a bundle with a few addresses spelled twice, and one with many
+    few, many = spelled_twice(2), spelled_twice(30)
+
+    # When refanging them, then both are rebuilt the same number of times:
+    # merging the spellings of each address does not rebuild the bundle again
+    assert bundle_builds(monkeypatch, few) == bundle_builds(monkeypatch, many)
+
+
 def test_free_text_keeps_its_defanged_spelling():
     # Given defanged indicators quoted in names, descriptions and external
     # references, next to a defanged URL observable
