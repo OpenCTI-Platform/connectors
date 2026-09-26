@@ -1,9 +1,6 @@
 from typing import Any, Dict
 
 import requests
-from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
-
 from connector.utils import (
     _IOC_GENERIC_PATH,
     _IOC_TAILORED_PATH,
@@ -11,8 +8,11 @@ from connector.utils import (
     _VUL_TAILORED_PATH,
     CYFIRMA_EXTENSION_DEFINITION_ID,
     OPENCTI_EXTENSION_DEFINITION_ID,
+    get_request_headers,
+    get_request_params,
 )
-from connector.utils import get_request_headers, get_request_params
+from pycti import OpenCTIConnectorHelper
+from pydantic import HttpUrl
 
 
 class CyfirmaClient:

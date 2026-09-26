@@ -3,7 +3,7 @@
   "slug": "cyfirma",
   "description": "CYFIRMA connector for OpenCTI",
   "short_description": "CYFIRMA provides External Threat Landscape Management and Threat intelligence feeds.",
-  "logo": null,
+  "logo": "external-import/cyfirma/__metadata__/logo.png",
   "use_cases": [
     "Vulnerability & Exploit Awareness", "Threat Intelligence"
   ],
@@ -17,7 +17,7 @@
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=6.8.12",
-  "subscription_link": null,
+  "subscription_link": "https://www.cyfirma.com/start-now",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cyfirma",
   "manager_supported": false,
   "container_version": "rolling",
