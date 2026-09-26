@@ -167,8 +167,14 @@ def _substitute_defang_notations(observable_type: str, value: str) -> str:
     return refanged.strip() if refanged != value else value
 
 
+def _holds_defang_notation(value: str) -> bool:
+    return bool(
+        _BRACKETED_SEPARATOR_RE.search(value) or _DEFANGED_SCHEME_RE.match(value)
+    )
+
+
 def _is_valid(observable_type: str, value: str) -> bool:
-    if _BRACKETED_SEPARATOR_RE.search(value) or _DEFANGED_SCHEME_RE.match(value):
+    if _holds_defang_notation(value):
         return False
     return bool(_VALIDATORS[observable_type](value))
 
@@ -306,7 +312,9 @@ def refang_bundle_observables(
     the objects that end up describing the same thing (two spellings of one
     address, their relationships to a same object) are merged. Any other
     object or property, free text included, is left untouched, and so is a
-    value that does not refang into a valid one.
+    value that does not refang into a valid one or holds a notation that is
+    not refanged (brackets that do not pair up, a separator its type cannot
+    hold): the summary reports these values as not refanged.
 
     Args:
         bundle (stix2.Bundle): The STIX bundle to process.
@@ -336,7 +344,10 @@ def refang_bundle_observables(
         ):
             continue
         candidate = _substitute_defang_notations(observable_type, value)
-        if candidate == value:
+        # An unchanged value holding a notation left in place (brackets that do
+        # not pair up, a separator its type cannot hold) is not a valid value,
+        # so it is reported as not refanged below.
+        if candidate == value and not _holds_defang_notation(value):
             continue
         if not _is_valid(observable_type, candidate):
             summary.unrefanged.append(

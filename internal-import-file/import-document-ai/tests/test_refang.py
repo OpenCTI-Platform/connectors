@@ -160,6 +160,31 @@ UNREFANGABLE_VALUES = [
     pytest.param("url", "mailto:admin[at][dot]io", id="url mailto invalid address"),
 ]
 
+# Values holding a defang notation that is left in place: its brackets do not
+# pair up, or its separator is not one a value of the type can hold.
+NOTATIONS_LEFT_IN_PLACE = [
+    pytest.param("domain-name", "filigran[.}io", id="mismatched brackets"),
+    pytest.param("email-addr", "admin(at]filigran.io", id="email mismatched brackets"),
+    pytest.param("url", "https://filigran{.)io/", id="url mismatched brackets"),
+    pytest.param("domain-name", "evil[at]example.com", id="at in a domain name"),
+    pytest.param("hostname", "srv01[@]filigran.io", id="at in a hostname"),
+    pytest.param("email-addr", "admin@filigran[:]io", id="colon in an email"),
+    pytest.param("ipv4-addr", "192[:]168[:]1[:]1", id="colon in an ipv4"),
+]
+
+# Clean values that merely hold brackets or parentheses.
+BRACKETED_CLEAN_VALUES = [
+    pytest.param("url", "http://[2001:db8::1]:8080/index.html", id="ipv6 host"),
+    pytest.param("url", "http://[::1]/", id="ipv6 loopback host"),
+    pytest.param("url", "https://en.wikipedia.org/wiki/Mercury_(planet)", id="path"),
+    pytest.param(
+        "url",
+        "https://filigran.io/search?q=(apt)&tags[]=cti&range=[1,5]",
+        id="query string",
+    ),
+    pytest.param("email-addr", "first.last+{tag}@filigran.io", id="email braces"),
+]
+
 OBSERVABLE_CLASSES = {
     "domain-name": stix2.DomainName,
     "email-addr": stix2.EmailAddress,
@@ -572,6 +597,40 @@ def test_values_that_do_not_refang_into_a_valid_value_are_sent_unchanged():
     assert summary.unrefanged == [
         UnrefangedObservable("email-addr", email["id"], "admin[at][dot]io")
     ]
+
+
+@pytest.mark.parametrize("observable_type, value", NOTATIONS_LEFT_IN_PLACE)
+def test_notations_left_in_place_are_reported_as_not_refanged(observable_type, value):
+    # Given an observable holding a defang notation that is not refanged, its
+    # brackets not pairing up or its separator not being one of its type
+    defanged = observable(observable_type, value, defanged=True)
+    bundle = make_bundle(defanged, report([defanged["id"]]))
+
+    # When refanging the bundle
+    refanged_bundle, summary = refang_bundle_observables(bundle)
+
+    # Then the bundle is left untouched, and the value is reported as not
+    # refanged like any other defanged value that does not refang
+    assert refanged_bundle is bundle
+    assert summary.refanged == []
+    assert summary.unrefanged == [
+        UnrefangedObservable(observable_type, defanged["id"], value)
+    ]
+
+
+@pytest.mark.parametrize("observable_type, value", BRACKETED_CLEAN_VALUES)
+def test_clean_values_holding_brackets_are_not_reported(observable_type, value):
+    # Given a clean value that merely holds brackets or parentheses
+    clean = observable(observable_type, value)
+    bundle = make_bundle(clean, report([clean["id"]]))
+
+    # When refanging the bundle
+    refanged_bundle, summary = refang_bundle_observables(bundle)
+
+    # Then the bundle is left untouched and nothing is reported
+    assert refanged_bundle is bundle
+    assert summary.refanged == []
+    assert summary.unrefanged == []
 
 
 def test_free_text_keeps_its_defanged_spelling():

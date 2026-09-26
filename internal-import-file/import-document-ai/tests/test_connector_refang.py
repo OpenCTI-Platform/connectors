@@ -224,16 +224,28 @@ def test_process_message_sends_refanged_observables(
     )
 
 
+@pytest.mark.parametrize(
+    "observable_type, value",
+    [
+        pytest.param("email-addr", "admin[at][dot]io", id="invalid once refanged"),
+        pytest.param("domain-name", "filigran[.}io", id="mismatched brackets"),
+        pytest.param("domain-name", "evil[at]example.com", id="at in a domain name"),
+    ],
+)
 def test_process_message_warns_about_values_that_do_not_refang(
-    monkeypatch: pytest.MonkeyPatch, connector: Connector, helper: Mock
+    observable_type: str,
+    value: str,
+    monkeypatch: pytest.MonkeyPatch,
+    connector: Connector,
+    helper: Mock,
 ):
-    # Given an extraction returning a defanged value that is not an address
-    # once refanged
-    email = observable("email-addr", "admin[at][dot]io")
+    # Given an extraction returning a defanged value that does not refang: not
+    # a valid value once refanged, or holding a notation left in place
+    defanged = observable(observable_type, value)
     extraction = {
         "type": "bundle",
         "id": f"bundle--{uuid.uuid4()}",
-        "objects": [email],
+        "objects": [defanged],
     }
     data = serve_extraction("legacy", monkeypatch, connector, extraction)
 
@@ -241,13 +253,13 @@ def test_process_message_warns_about_values_that_do_not_refang(
     connector.process_message(data=data)
 
     # Then the value is sent unchanged for OpenCTI to report it, with a warning
-    sent_email = next(
-        obj for obj in sent_bundle(helper)["objects"] if obj["type"] == "email-addr"
+    sent_observable = next(
+        obj for obj in sent_bundle(helper)["objects"] if obj["type"] == observable_type
     )
-    assert sent_email["id"] == email["id"]
-    assert sent_email["value"] == "admin[at][dot]io"
+    assert sent_observable["id"] == defanged["id"]
+    assert sent_observable["value"] == value
     helper.connector_logger.warning.assert_any_call(
         "Observable value looks defanged but does not refang into a valid value, "
         "sending it unchanged",
-        {"type": "email-addr", "id": email["id"], "value": "admin[at][dot]io"},
+        {"type": observable_type, "id": defanged["id"], "value": value},
     )
