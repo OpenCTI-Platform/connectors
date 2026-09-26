@@ -7,7 +7,7 @@ SDK's default parser treats as text, so responses are parsed here.
 """
 
 from base64 import b64encode
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Generator
 
 import requests
@@ -118,5 +118,11 @@ class HoneyLabsTaxiiClient(BaseClientApi):
 
 
 def _rfc3339(value: datetime) -> str:
-    """Millisecond RFC 3339 in UTC, the form the HoneyLabs server accepts."""
+    """Millisecond RFC 3339 in UTC, the form the HoneyLabs server accepts.
+
+    An aware value is converted to UTC first, so a cursor that arrives with
+    an offset (RFC 3339 allows `+02:00`) is not shifted by it. A naive value
+    is taken to be UTC already."""
+    if value.tzinfo is not None:
+        value = value.astimezone(timezone.utc)
     return value.strftime("%Y-%m-%dT%H:%M:%S.") + f"{value.microsecond // 1000:03d}Z"

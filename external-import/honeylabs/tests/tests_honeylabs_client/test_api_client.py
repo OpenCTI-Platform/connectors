@@ -4,7 +4,11 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
-from honeylabs_client.api_client import HoneyLabsTaxiiClient, TaxiiPaginationError
+from honeylabs_client.api_client import (
+    HoneyLabsTaxiiClient,
+    TaxiiPaginationError,
+    _rfc3339,
+)
 
 INDICATOR = {
     "type": "indicator",
@@ -102,3 +106,29 @@ def test_more_without_cursor_or_header_raises_instead_of_ending_the_import():
     assert len(next(gen).objects) == 1
     with pytest.raises(TaxiiPaginationError):
         next(gen)
+
+
+def test_cursor_with_an_offset_is_sent_in_utc():
+    from datetime import timedelta
+
+    plus_two = timezone(timedelta(hours=2))
+    assert (
+        _rfc3339(datetime(2026, 9, 24, 5, 0, 0, 123000, tzinfo=plus_two))
+        == "2026-09-24T03:00:00.123Z"
+    )
+    assert _rfc3339(datetime(2026, 9, 24, 5, 0, 0)) == "2026-09-24T05:00:00.000Z"
+
+
+def test_offset_header_resumes_from_the_same_instant():
+    c = _client(
+        [
+            _response(
+                {"more": True, "objects": [INDICATOR]}, "2026-09-24T07:00:00+02:00"
+            ),
+            _response({"more": False, "objects": []}, None),
+        ]
+    )
+    list(c.iter_objects("attackers", None, 500))
+    assert c._raw_request.call_args_list[1].kwargs["params"]["added_after"] == (
+        "2026-09-24T05:00:00.000Z"
+    )

@@ -93,6 +93,7 @@ class IndicatorsProcessor(BaseDataProcessor):
     ) -> Generator[list[BaseIdentifiedObject], None, None]:
         newest = self._checkpoint()
         total = 0
+        skipped = 0
         for page in pages:
             objects: list[BaseIdentifiedObject] = [self.author, self.tlp_marking]
             for raw in page.objects:
@@ -102,6 +103,7 @@ class IndicatorsProcessor(BaseDataProcessor):
                     self.logger.warning(
                         "Skipping indicator", {"id": raw.id, "error": str(exc)}
                     )
+                    skipped += 1
                     continue
             total += len(objects) - 2
             # The checkpoint is the server's own cursor (`date_added` of the
@@ -109,6 +111,11 @@ class IndicatorsProcessor(BaseDataProcessor):
             # STIX timestamp: `added_after` filters on date_added, and the two
             # need not agree. Pages arrive in ascending date_added order, so
             # each page's last value is the furthest point imported so far.
+            # The cursor moves past objects _convert rejected: those are
+            # rejected for what they are (a pattern type this connector does
+            # not import), so a retry would reject them again, and holding the
+            # cursor on them would stall the collection for good. Each one is
+            # logged as a warning and counted in the run summary.
             last = page.date_added_last
             if last is not None and (newest is None or last > newest):
                 newest = last
@@ -116,7 +123,7 @@ class IndicatorsProcessor(BaseDataProcessor):
             yield objects
         self.logger.info(
             "HoneyLabs collection imported",
-            {"collection": self.collection, "indicators": total},
+            {"collection": self.collection, "indicators": total, "skipped": skipped},
         )
 
     # -- conversion -------------------------------------------------------
