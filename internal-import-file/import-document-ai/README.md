@@ -17,6 +17,7 @@
   - [Usage](#usage)
   - [Behavior](#behavior)
     - [Processing workflow](#processing-workflow)
+    - [Refanging of defanged observables](#refanging-of-defanged-observables)
     - [Mapping to OpenCTI entities](#mapping-to-opencti-entities)
     - [Contextual import relationships](#contextual-import-relationships)
     - [Extractable entities](#extractable-entities)
@@ -126,7 +127,8 @@ flowchart TD
     B --> C[Send to Ariane AI Service]
     C --> D[Receive Extracted Data]
     D --> E[Deduplicate Entities]
-    E --> F[Create STIX Objects]
+    E --> R[Refang Defanged Observables]
+    R --> F[Create STIX Objects]
     F --> G{Context Entity?}
     G -->|Yes| H[Add to Context Entity]
     G -->|No| I[Add file to first extracted Report OR Create New Report]
@@ -135,6 +137,26 @@ flowchart TD
     J --> K[Build STIX Bundle]
     K --> L[Send to OpenCTI]
 ```
+
+### Refanging of defanged observables
+
+Reports often defang their indicators so that nobody follows them by mistake (`admin[at]filigran[dot]io`, `hxxps://evil[.]com`, `2001[:]db8[:][:]1`). OpenCTI rejects such values (`INCORRECT_OBSERVABLE_FORMAT`), and with them every object referencing the observable, so the connector refangs the observables of the extracted bundle before anything else, whether the bundle comes from the web service or from XTM One.
+
+| Notation (case-insensitive) | Refanged to | Observable types |
+|-----------------------------|-------------|------------------|
+| `[.]` `(.)` `{.}` `[dot]` `(dot)` `{dot}` | `.` | Domain Name, Hostname, Email Address, IPv4, IPv6, URL |
+| `dot` between spaces (`filigran dot io`) | `.` | Domain Name, Hostname, Email Address, IPv4 |
+| `[at]` `(at)` `{at}` `[@]` `(@)` `{@}` | `@` | Email Address, URL |
+| `at` between spaces (`admin at filigran dot io`) | `@` | Email Address |
+| `[:]` `(:)` `{:}` | `:` | IPv6, URL |
+| `[://]` | `://` | URL |
+| `[/]` | `/` | IPv4 and IPv6 (CIDR), URL |
+| `hxxp` `hxxps` `fxp` `fxps` schemes | `http` `https` `ftp` `ftps` | URL |
+
+- Only the `value` of these observables is refanged: names, descriptions and any other free text keep their defanged spelling.
+- Brackets must pair up (`[.]` is refanged, `[.}` is not), and a notation is only refanged in the types listed for it.
+- A refanged value is only kept when it is a valid value of its type: it must pass the checks OpenCTI applies to domain names, hostnames, email addresses and IP addresses, and a URL must be well-formed (a valid host, or valid addresses for a `mailto:` URL). Otherwise the observable is sent unchanged (and logged as a warning), for OpenCTI to report it.
+- A refanged observable gets the deterministic STIX id derived from its new value and loses its `defanged` flag. Every reference to its former id (report `object_refs`, relationship `source_ref` / `target_ref`, any `*_ref` / `*_refs`) is rewritten, and two spellings of one value, as well as the relationships they end up sharing, are merged.
 
 ### Mapping to OpenCTI entities
 
@@ -324,5 +346,6 @@ A dedicated development environment is available in the [dev directory](./dev/RE
 - **Attack Pattern reuse**: Existing Attack Patterns are reused when found by `x_mitre_id` or `name`; new ones are created only if not found.
 - **Global imports**: When importing via `import/global`, the original file is attached to the first Report extracted by the AI, or a new Report is created to host it as `x_opencti_files`.
 - **Deterministic IDs**: STIX objects use deterministic ID generation (e.g., `Malware.generate_id(name)`) to ensure idempotent imports.
+- **Refanging**: Defanged observable values (`admin[at]filigran[dot]io`, `hxxps://evil[.]com`) are refanged before import, see [Refanging of defanged observables](#refanging-of-defanged-observables).
 
 *Reference: [STIX 2.1 Specification](https://docs.oasis-open.org/cti/stix/v2.1/cs01/stix-v2.1-cs01.html)*
