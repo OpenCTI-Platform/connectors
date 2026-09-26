@@ -47,25 +47,52 @@ class ObservableNote(Note):
     def to_stix2_object(self) -> NoteStix:
         properties = dict(super().to_stix2_object())
         properties["id"] = self.stable_id(self.source_id)
-        anchor = self.created or EPOCH_ANCHOR
+        anchor = as_utc(self.created) or EPOCH_ANCHOR
         properties["created"] = anchor
         modified = max(datetime.now(timezone.utc), anchor)
-        if self.supersedes is not None and modified <= self.supersedes:
-            modified = self.supersedes + timedelta(microseconds=1)
+        superseded = as_utc(self.supersedes)
+        if superseded is not None and modified <= superseded:
+            modified = superseded + timedelta(microseconds=1)
         properties["modified"] = modified
         return NoteStix(allow_custom=True, **properties)
+
+
+def as_utc(value: datetime | None) -> datetime | None:
+    """A datetime that can be compared with `now`, or None.
+
+    Both timestamps here are compared against an aware `datetime.now`, and
+    Python refuses to order a naive datetime against an aware one, so a
+    caller passing a bare `datetime.now()` raised a TypeError instead of
+    producing a note.
+    """
+    if value is None:
+        return None
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
 
 PLAINTEXT_PASSWORD_RISKS = frozenset({"plaintext", "plaintextpassword"})
 EPOCH_ANCHOR = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
+EARLIEST_BREACH_YEAR = 1970
+
+
 def breach_year(breach: dict[str, Any]) -> int | None:
-    """The four-digit year a breach is dated, or None when it is unreadable."""
+    """The four-digit year a breach is dated, or None when it is unreadable.
+
+    A year outside the range breaches can plausibly fall in is treated as
+    unreadable rather than reported. The note states the first and latest
+    exposure as fact, so a record dated `9999` or `0001` was presenting the
+    API's malformed value to an analyst as though the connector stood behind
+    it, and it dragged the newest-first ordering of the table with it.
+    """
     try:
-        return int(str(breach.get("date"))[:4])
+        year = int(str(breach.get("date"))[:4])
     except (TypeError, ValueError):
         return None
+    if EARLIEST_BREACH_YEAR <= year <= datetime.now(timezone.utc).year:
+        return year
+    return None
 
 
 DEFAULT_MAX_TABLE_ROWS = 50

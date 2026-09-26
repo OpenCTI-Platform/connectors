@@ -497,3 +497,68 @@ def test_a_malformed_breach_entry_does_not_break_the_note():
             markings=[],
         )
         assert "XposedOrNot" in note.content
+
+
+def test_an_implausible_breach_year_is_not_reported_as_fact():
+    """The note states first and latest exposure as fact.
+
+    A record dated `9999` or `0001` was presented to an analyst as though the
+    connector stood behind it, and it dragged the newest-first ordering of
+    the table with it.
+    """
+    from datetime import datetime, timezone
+
+    from src.xposedornot.converter_to_stix import ConverterToStix, breach_year
+
+    this_year = datetime.now(timezone.utc).year
+    assert breach_year({"date": "2024-01-01"}) == 2024
+    assert breach_year({"date": str(this_year)}) == this_year
+    assert breach_year({"date": "1970"}) == 1970
+    for implausible in ("9999-01-01", "0001-01-01", "1800", str(this_year + 1)):
+        assert breach_year({"date": implausible}) is None, implausible
+
+    converter = ConverterToStix(author=ConverterToStix.make_author())
+
+    def span(dates):
+        note = converter.build_note(
+            "email-addr--11111111-1111-4111-8111-111111111111",
+            {"breaches": [{"name": f"B{i}", "date": d} for i, d in enumerate(dates)]},
+            markings=[],
+        )
+        lines = [l for l in note.content.splitlines() if "First exposure" in l]
+        return lines[0].strip() if lines else None
+
+    assert span(["9999-01-01"]) is None
+    assert span(["1800"]) is None
+    assert span(["2020", "2024"]) == "**First exposure:** 2020 — **Latest:** 2024"
+    assert span(["2024", "9999"]) == "**First exposure:** 2024 — **Latest:** 2024"
+
+
+def test_a_naive_timestamp_does_not_break_the_note():
+    """Both timestamps are compared against an aware `now`.
+
+    Python refuses to order a naive datetime against an aware one, so a
+    caller passing a bare `datetime.now()` raised TypeError instead of
+    producing a note.
+    """
+    from datetime import datetime, timezone
+
+    from src.xposedornot.converter_to_stix import ConverterToStix, as_utc
+
+    assert as_utc(None) is None
+    naive = datetime(2024, 5, 1, 10, 0, 0)
+    assert as_utc(naive).tzinfo is timezone.utc
+    aware = datetime(2024, 5, 1, 10, 0, 0, tzinfo=timezone.utc)
+    assert as_utc(aware) is aware
+
+    converter = ConverterToStix(author=ConverterToStix.make_author())
+    for supersedes in (naive, aware, None):
+        for created in (naive, aware, None):
+            note = converter.build_note(
+                "email-addr--11111111-1111-4111-8111-111111111111",
+                {"breaches": [{"name": "B"}]},
+                markings=[],
+                observed_at=created,
+                supersedes=supersedes,
+            ).to_stix2_object()
+            assert note["modified"] >= note["created"], (created, supersedes)
