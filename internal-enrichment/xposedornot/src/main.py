@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Entry point for the XposedOrNot internal-enrichment connector."""
 
+import sys
 import traceback
 
 from pycti import OpenCTIConnectorHelper
@@ -21,4 +22,4 @@ if __name__ == "__main__":
         main()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)

@@ -653,6 +653,35 @@ def test_malformed_marking_containers_fail_closed():
         helper.send_stix2_bundle.assert_not_called()
 
 
+def test_the_bundle_never_references_an_object_it_omits():
+    """Every reference the bundle makes must resolve inside the bundle.
+
+    The enriched observable was only ever substituted into the incoming
+    objects, so if it was not among them it was dropped and the Note was
+    published pointing at an object nobody shipped. The connector still
+    reported success, and cleanup would then strip the reference and detach
+    the Note. pycti always includes the entity, so this never fired, but it
+    failed silently rather than loudly.
+    """
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data()
+    data["stix_objects"] = [{"type": "identity", "id": "identity--0000", "name": "x"}]
+    connector._process_message(data)
+
+    sent = helper.stix2_create_bundle.call_args[0][0]
+    present = {o["id"] for o in sent}
+    assert data["stix_entity"]["id"] in present, "the enriched observable was dropped"
+    for obj in sent:
+        get = getattr(obj, "get", dict().get)
+        for field in ("object_refs", "object_marking_refs"):
+            for ref in get(field) or []:
+                assert ref in present, f"{get('type')}.{field} -> {ref} is missing"
+        for field in ("created_by_ref", "x_opencti_created_by_ref"):
+            ref = get(field)
+            assert ref is None or ref in present, f"{get('type')}.{field} -> {ref}"
+
+
 def test_re_enrichment_replaces_a_stale_note_in_the_bundle():
     """A playbook bundle can already hold last run's Note under the same id.
 

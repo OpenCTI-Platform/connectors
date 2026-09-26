@@ -656,6 +656,8 @@ class XposedOrNotConnector:
             enriched_entity if obj["id"] == enriched_entity["id"] else obj
             for obj in stix_objects
         ]
+        if all(obj["id"] != enriched_entity["id"] for obj in enriched_objects):
+            enriched_objects.append(enriched_entity)
 
         # Per-breach detail as a markdown Note attached to the observable.
         note_tlp = TLPMarking(
