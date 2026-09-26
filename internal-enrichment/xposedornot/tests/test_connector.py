@@ -29,6 +29,7 @@ from src.xposedornot.connector import (
     listed,
     marking_id,
     materialize_marking,
+    normalised_url,
     refused_tlps,
     resolve_source_markings,
     source_tlp_levels,
@@ -810,6 +811,53 @@ def test_our_own_reference_is_matched_whatever_its_case():
     assert not is_own_reference({"source_name": "other"})
     assert not is_own_reference("not-a-dict")
     assert not is_own_reference({})
+
+
+def test_only_the_case_insensitive_parts_of_a_url_are_folded():
+    """Folding the whole URL merged references to different documents.
+
+    RFC 3986 makes the scheme and host case-insensitive and leaves the path,
+    query and fragment case-sensitive, so `/Report` and `/report` are not the
+    same page. Folding everything dropped one of them as a duplicate.
+    """
+    assert normalised_url("HTTPS://X.TEST/a") == "https://x.test/a"
+    assert normalised_url("https://x.test/Report") == "https://x.test/Report"
+    assert normalised_url("https://x.test/a?Id=1") == "https://x.test/a?Id=1"
+    assert normalised_url("  https://X.test/A  ") == "https://x.test/A"
+    assert normalised_url("not-a-url") == "not-a-url"
+    assert normalised_url(None) == ""
+    assert normalised_url({"a": 1}) == "{'a': 1}"
+
+    def kept(refs):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(return_value=BREACHED)
+        data = _enrichment_data()
+        data["stix_entity"].pop("external_references", None)
+        data["stix_entity"]["x_opencti_external_references"] = refs
+        connector._process_message(data)
+        sent = helper.stix2_create_bundle.call_args[0][0]
+        observable = next(o for o in sent if o["id"] == data["stix_entity"]["id"])
+        return [
+            r.get("url")
+            for r in observable["x_opencti_external_references"]
+            if not is_own_reference(r)
+        ]
+
+    distinct = kept(
+        [
+            {"source_name": "S", "url": "https://x.test/Report"},
+            {"source_name": "S", "url": "https://x.test/report"},
+        ]
+    )
+    assert len(distinct) == 2, distinct
+
+    same_host = kept(
+        [
+            {"source_name": "S", "url": "https://X.TEST/a"},
+            {"source_name": "S", "url": "https://x.test/a"},
+        ]
+    )
+    assert len(same_host) == 1, same_host
 
 
 def test_references_without_a_source_or_url_are_not_collapsed():

@@ -17,6 +17,7 @@ import re
 import traceback
 from copy import deepcopy
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from connectors_sdk.models import Reference, TLPMarking
 from pycti import MarkingDefinition as PyctiMarkingDefinition
@@ -427,6 +428,35 @@ def refused_tlps(
     ], unreadable
 
 
+def normalised_url(value: Any) -> str:
+    """A URL with only the parts that are case-insensitive folded.
+
+    RFC 3986 makes the scheme and the host case-insensitive and leaves the
+    path, query and fragment case-sensitive. Folding the whole URL therefore
+    merged references to genuinely different documents: `/Report` and
+    `/report` are not the same page, and one of the analyst's own references
+    was being dropped as a duplicate of the other.
+    """
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        parts = urlsplit(text)
+    except ValueError:
+        return text
+    if not parts.scheme and not parts.netloc:
+        return text
+    return urlunsplit(
+        (
+            parts.scheme.casefold(),
+            parts.netloc.casefold(),
+            parts.path,
+            parts.query,
+            parts.fragment,
+        )
+    )
+
+
 OWN_REFERENCE_SOURCE = "XposedOrNot"
 
 
@@ -691,7 +721,7 @@ class XposedOrNotConnector:
                 continue
             key = (
                 str(ref.get("source_name") or "").strip().casefold(),
-                str(ref.get("url") or "").strip().casefold(),
+                normalised_url(ref.get("url")),
             )
             if any(key):
                 if key in seen:
