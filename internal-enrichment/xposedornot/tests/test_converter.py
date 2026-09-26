@@ -347,3 +347,90 @@ def test_risk_label_cannot_open_a_new_markdown_block():
             for l in note.content.splitlines()
             if "Injected" in l and not l.startswith("**Overall risk:**")
         ], label
+
+
+def _gfm_columns(line):
+    """Column separators as GFM counts them.
+
+    A backslash escapes the next character, so a doubled backslash is a
+    literal backslash and any pipe after it is a live separator. Counting
+    with a regex lookbehind instead treats that pipe as escaped, which is
+    why the backslash case survived an earlier sweep.
+    """
+    count, i = 0, 0
+    while i < len(line):
+        if line[i] == "\\":
+            i += 2
+            continue
+        if line[i] == "|":
+            count += 1
+        i += 1
+    return count
+
+
+def test_a_backslash_cannot_smuggle_a_column_separator():
+    """Escaping the pipe alone is not enough.
+
+    `foo\\|bar` became `foo\\\\|bar`, where the pair resolves to a
+    literal backslash and leaves the pipe live, so an API value could still
+    open a column of its own.
+    """
+    from src.xposedornot.converter_to_stix import ConverterToStix
+
+    converter = ConverterToStix(author=ConverterToStix.make_author())
+    for name in (
+        "foo" + chr(92) + "|bar",
+        "Acme" + chr(92) + "|9999|evil",
+        chr(92) * 2 + "|x",
+        "trailing" + chr(92),
+        "a|b",
+        "plain",
+    ):
+        result = {
+            "breaches": [
+                {
+                    "name": name,
+                    "date": "2024",
+                    "records": 5,
+                    "domain": "d.test",
+                    "industry": "F",
+                    "password_risk": "hashed",
+                    "verified": "Yes",
+                    "data_classes": ["E"],
+                }
+            ],
+            "risk_score": 5,
+        }
+        note = converter.build_note(
+            "email-addr--11111111-1111-4111-8111-111111111111", result, markings=[]
+        )
+        rows = [line for line in note.content.splitlines() if line.startswith("|")]
+        assert _gfm_columns(rows[2]) == _gfm_columns(rows[0]), (name, rows[2])
+
+
+def test_a_usable_score_is_shown_even_without_a_label():
+    """The risk line was gated on the label, so a score could go unpublished.
+
+    The observable took the score while the Note omitted the line entirely,
+    leaving the bundle disagreeing with itself about the same number.
+    """
+    from src.xposedornot.converter_to_stix import ConverterToStix
+
+    converter = ConverterToStix(author=ConverterToStix.make_author())
+
+    def risk_line(label, score):
+        note = converter.build_note(
+            "email-addr--11111111-1111-4111-8111-111111111111",
+            {"breaches": [{"name": "B"}], "risk_label": label, "risk_score": score},
+            markings=[],
+        )
+        lines = [l for l in note.content.splitlines() if "Overall risk" in l]
+        return lines[0].strip() if lines else None
+
+    assert risk_line("Critical", 77) == "**Overall risk:** Critical (77/100)"
+    assert risk_line(None, 77) == "**Overall risk:** 77/100"
+    assert risk_line("", 77) == "**Overall risk:** 77/100"
+    assert risk_line("Critical", None) == "**Overall risk:** Critical"
+    assert risk_line("Critical", 150) == "**Overall risk:** Critical"
+    assert risk_line(None, None) is None
+    assert risk_line(None, 150) is None

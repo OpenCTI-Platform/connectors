@@ -99,10 +99,15 @@ def _md_cell(value: Any) -> str:
 
     As `_one_line`, and the cell separator is escaped as well so a value
     carrying a pipe cannot open a column of its own.
+
+    Backslashes go first, and the order matters. Escaping only the pipe
+    leaves a value that already ends in a backslash spelling an escaped
+    backslash followed by a live separator, so it could still open a
+    column despite the escaping.
     """
-    return (
-        _one_line(str(value if value is not None else "—").replace("|", "\\|")) or "—"
-    )
+    text = str(value if value is not None else "—")
+    text = text.replace("\\", "\\\\")
+    return _one_line(text.replace("|", "\\|")) or "—"
 
 
 def _fmt_records(value) -> str:
@@ -177,10 +182,13 @@ class ConverterToStix:
         if total_records:
             lines.append(f"**Total records across breaches:** {total_records:,}  ")
         risk_label = _one_line(result.get("risk_label") or "")
-        if risk_label:
-            score = usable_score(result.get("risk_score"))
-            suffix = f" ({score}/100)" if score is not None else ""
-            lines.append(f"**Overall risk:** {risk_label}{suffix}  ")
+        score = usable_score(result.get("risk_score"))
+        if risk_label and score is not None:
+            lines.append(f"**Overall risk:** {risk_label} ({score}/100)  ")
+        elif risk_label:
+            lines.append(f"**Overall risk:** {risk_label}  ")
+        elif score is not None:
+            lines.append(f"**Overall risk:** {score}/100  ")
         if self.has_plaintext_exposure(breaches):
             lines.append("")
             lines.append("⚠️ **At least one breach stored passwords in plaintext.**")
