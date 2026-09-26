@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/honeylabs_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "HoneyLabs",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Indicator",
+        "IPv4-Addr",
+        "Url"
+      ],
+      "description": "The scope of the connector, i.e. the entity types it imports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT1H` for one hour). The feeds refresh every 15 minutes; hourly is the sensible floor.",
+      "format": "duration",
+      "type": "string"
+    },
+    "HONEYLABS_API_KEY": {
+      "description": "A HoneyLabs API key. Free keys are created at https://honeylabs.net/dashboard. It is sent as the HTTP Basic password on the TAXII server, with the fixed username `taxii`.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "HONEYLABS_API_ROOT": {
+      "default": "https://honeylabs.net/taxii2/api/",
+      "description": "The TAXII 2.1 API root of the HoneyLabs server.",
+      "type": "string"
+    },
+    "HONEYLABS_COLLECTIONS": {
+      "default": [
+        "attackers",
+        "malware-infrastructure"
+      ],
+      "description": "Which HoneyLabs collections to import, by alias. `attackers` is the union of `exploiters` (addresses that ran exploit or loader commands against the sensors) and, on paid plans, `cve-probers` (addresses that probed a specific CVE's exploit path, labelled with the CVE ids). `malware-infrastructure` is the loader and C2 URLs pulled out of captured payloads.",
+      "items": {
+        "enum": [
+          "attackers",
+          "exploiters",
+          "cve-probers",
+          "malware-infrastructure"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "HONEYLABS_IMPORT_SINCE": {
+      "description": "Start date for the first import (ISO 8601, absolute like '2026-01-01T00:00:00Z' or relative like 'P7D'). Later runs resume from the connector state. The free plan serves 7 days of history, paid plans 30.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "HONEYLABS_PAGE_SIZE": {
+      "default": 500,
+      "description": "Objects requested per TAXII page.",
+      "maximum": 1000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "HONEYLABS_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Create the IPv4 address and URL observables behind each indicator, with a `based-on` relationship.",
+      "type": "boolean"
+    },
+    "HONEYLABS_TLP_LEVEL": {
+      "description": "TLP marking applied to every object this connector creates.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "clear"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "HONEYLABS_API_KEY"
+  ],
+  "additionalProperties": true
+}
