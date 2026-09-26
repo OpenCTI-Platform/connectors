@@ -23,13 +23,16 @@ REFANGABLE_OBSERVABLE_TYPES = frozenset(
 # One separator wrapped in brackets, parentheses or braces, whitespace
 # tolerated inside and around: "[.]", "(dot)", " [at] ", "{:}", "[://]", "[/]".
 # A mismatched pair such as "[.}" is matched too, but only to be reported.
+# Leading whitespace is only matched from the start of its run ("(?<!\s)"):
+# trying every position of a long run would take quadratic time.
 _BRACKETED_SEPARATOR_RE = re.compile(
-    r"\s*(?P<open>[\[({])\s*(?P<token>://|\.|dot|@|at|:|/)\s*(?P<close>[\])}])\s*",
+    r"(?:(?<!\s)\s+)?(?P<open>[\[({])\s*(?P<token>://|\.|dot|@|at|:|/)\s*"
+    r"(?P<close>[\])}])\s*",
     re.IGNORECASE,
 )
 _CLOSING_BRACKETS = {"[": "]", "(": ")", "{": "}"}
-_SPACED_DOT_RE = re.compile(r"\s+dot\s+", re.IGNORECASE)
-_SPACED_AT_RE = re.compile(r"\s+at\s+", re.IGNORECASE)
+_SPACED_DOT_RE = re.compile(r"(?<!\s)\s+dot\s+", re.IGNORECASE)
+_SPACED_AT_RE = re.compile(r"(?<!\s)\s+at\s+", re.IGNORECASE)
 _DEFANGED_SCHEME_RE = re.compile(r"^(?P<scheme>hxxps?|fxps?)(?=:)", re.IGNORECASE)
 
 _SEPARATORS = {

@@ -8,6 +8,7 @@ observables (INCORRECT_OBSERVABLE_FORMAT), then the report referencing them
 
 import json
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -670,6 +671,30 @@ def test_refanging_cost_does_not_grow_with_the_number_of_merges(monkeypatch):
     # When refanging them, then both are rebuilt the same number of times:
     # merging the spellings of each address does not rebuild the bundle again
     assert bundle_builds(monkeypatch, few) == bundle_builds(monkeypatch, many)
+
+
+@pytest.mark.parametrize(
+    "observable_type, value",
+    [
+        pytest.param(
+            "email-addr", "admin" + " " * 40_000 + "@filigran.io", id="email address"
+        ),
+        pytest.param(
+            "url", "hxxps://filigran[.]io/" + " " * 40_000 + "about", id="url"
+        ),
+    ],
+)
+def test_long_whitespace_runs_are_scanned_in_linear_time(observable_type, value):
+    # Given an observable whose value holds a long run of whitespace that is
+    # not part of a notation
+    bundle = make_bundle(observable(observable_type, value))
+
+    # When refanging the bundle, then the value is scanned in linear time:
+    # a scan in quadratic time takes several seconds on such a value
+    start = time.perf_counter()
+    _, summary = refang_bundle_observables(bundle)
+    assert time.perf_counter() - start < 1
+    assert summary.refanged == []
 
 
 def test_free_text_keeps_its_defanged_spelling():
