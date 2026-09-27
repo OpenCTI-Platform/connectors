@@ -60,6 +60,124 @@ _MARKING_ID_TO_TLP: Dict[str, str] = {
     marking.id: tlp_string for tlp_string, marking in _TLP_MAP.items()
 }
 
+
+def _object_value(obj: Any, key: str, default: Any = None) -> Any:
+    return (
+        obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
+    )
+
+
+def complete_bundle_references(
+    helper: OpenCTIConnectorHelper, objects: List[Any]
+) -> List[Any]:
+    """Append referenced authors and markings without modifying input objects."""
+    bundle = list(objects)
+    existing_ids = {_object_value(obj, "id") for obj in bundle}
+    attempted = set()
+    # Appended identities are scanned too, so their own markings are included.
+    for obj in bundle:
+        refs = list(_object_value(obj, "object_marking_refs", []) or [])
+        for key in ("created_by_ref", "x_opencti_created_by_ref"):
+            ref = _object_value(obj, key)
+            if ref:
+                refs.append(ref)
+        for extension in (_object_value(obj, "extensions", {}) or {}).values():
+            if isinstance(extension, dict) and extension.get("created_by_ref"):
+                refs.append(extension["created_by_ref"])
+        for ref in refs:
+            if not isinstance(ref, str) or ref in existing_ids or ref in attempted:
+                continue
+            attempted.add(ref)
+            if ref in _MARKING_ID_TO_TLP:
+                bundle.append(_TLP_MAP[_MARKING_ID_TO_TLP[ref]])
+                existing_ids.add(ref)
+                continue
+            if not getattr(helper, "api", None):
+                continue
+            try:
+                if ref.startswith("marking-definition--"):
+                    data = helper.api.marking_definition.read(id=ref)
+                    if not isinstance(data, dict):
+                        continue
+                    marking_type = str(data.get("definition_type") or "").lower()
+                    definition = data.get("definition")
+                    if not marking_type or not definition:
+                        continue
+                    properties = {}
+                    if marking_type in {"tlp", "pap"}:
+                        properties = {
+                            "x_opencti_definition_type": marking_type.upper(),
+                            "x_opencti_definition": definition,
+                        }
+                        marking_type = "statement"
+                        definition = {"statement": str(definition)}
+                    elif not isinstance(definition, dict):
+                        definition = {marking_type: definition}
+                    supporting = [
+                        stix2.MarkingDefinition(
+                            id=ref,
+                            definition_type=marking_type,
+                            definition=definition,
+                            custom_properties=properties,
+                            allow_custom=True,
+                        )
+                    ]
+                elif ref.startswith("identity--"):
+                    exported = (
+                        helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                            entity_type="Identity", entity_id=ref
+                        )
+                    )
+                    supporting = (
+                        exported.get("objects", [])
+                        if isinstance(exported, dict)
+                        else []
+                    )
+                else:
+                    continue
+                for item in supporting:
+                    item_id = _object_value(item, "id")
+                    if item_id and item_id not in existing_ids:
+                        bundle.append(item)
+                        existing_ids.add(item_id)
+            except Exception as exc:
+                helper.connector_logger.warning(
+                    f"[Lamis Network] Unable to include bundle reference {ref}: {exc}"
+                )
+    return bundle
+
+
+def _extract_labels_from_source(src: Any) -> List[str]:
+    raw = (
+        src.get("labels") or src.get("x_opencti_labels") or src.get("objectLabel")
+        if isinstance(src, dict)
+        else getattr(src, "labels", None)
+    )
+    if isinstance(raw, dict):
+        raw = [
+            edge.get("node") for edge in raw.get("edges", []) if isinstance(edge, dict)
+        ]
+    labels = []
+    for item in raw if isinstance(raw, (list, set, tuple)) else []:
+        value = (
+            item.get("value") or item.get("name") if isinstance(item, dict) else item
+        )
+        if isinstance(value, str) and value:
+            labels.append(value)
+    return labels
+
+
+def _extract_tracked_from_source(src: Any) -> Optional[List[str]]:
+    raw = _object_value(src, "x_lamis_network_labels")
+    if raw is None:
+        raw = (_object_value(src, "custom_properties", {}) or {}).get(
+            "x_lamis_network_labels"
+        )
+    if isinstance(raw, (list, set, tuple)):
+        return [str(x) for x in raw if isinstance(x, (str, int))]
+    return None
+
+
 LAMIS_MANAGED_LABELS: Set[str] = {
     "datacenter",
     "vpn",
@@ -1421,6 +1539,62 @@ class LamisNetworkBuilder:
 
         if found_in_bundle or found_in_observable or found_in_opencti:
             marking_refs = self.get_marking_refs()
+            sources = [
+                obj
+                for obj in self.bundle
+                if _object_value(obj, "id") == indicator_id
+                and _object_value(obj, "created_by_ref") == author_id
+            ]
+            sources.extend(
+                ind
+                for ind in self.observable.get("indicators", [])
+                if isinstance(ind, dict)
+                and (ind.get("standard_id") or ind.get("id")) == indicator_id
+                and (
+                    (ind.get("createdBy") or {}).get("standard_id")
+                    or (ind.get("createdBy") or {}).get("id")
+                    or ind.get("created_by_ref")
+                )
+                == author_id
+            )
+            if found_in_opencti:
+                sources.append(ind_data)
+            preserved_labels: List[str] = []
+            preserved_references: List[Dict[str, Any]] = []
+            tracked_labels = None
+            for source in sources:
+                for label in _extract_labels_from_source(source):
+                    if label not in preserved_labels:
+                        preserved_labels.append(label)
+                if tracked_labels is None:
+                    tracked_labels = _extract_tracked_from_source(source)
+                for ref in _object_value(source, "object_marking_refs", []) or []:
+                    if ref not in marking_refs:
+                        marking_refs.append(ref)
+                raw_references = _object_value(
+                    source, "external_references"
+                ) or _object_value(source, "externalReferences", [])
+                for reference in raw_references or []:
+                    source_name = _object_value(
+                        reference, "source_name"
+                    ) or _object_value(reference, "sourceName")
+                    if not source_name:
+                        continue
+                    normalized = {"source_name": source_name}
+                    for key in ("url", "description", "hashes", "external_id"):
+                        value = _object_value(reference, key)
+                        if key == "external_id" and value is None:
+                            value = _object_value(reference, "externalId")
+                        if value:
+                            normalized[key] = value
+                    if normalized not in preserved_references:
+                        preserved_references.append(normalized)
+            custom_properties = {
+                "x_opencti_score": 0,
+                "x_opencti_main_observable_type": entity_type,
+            }
+            if tracked_labels is not None:
+                custom_properties["x_lamis_network_labels"] = tracked_labels
             now_utc = datetime.now(timezone.utc)
             valid_from = self._find_existing_indicator_valid_from(
                 indicator_id=indicator_id, ind_data=ind_data
@@ -1435,10 +1609,9 @@ class LamisNetworkBuilder:
                 pattern_type="stix",
                 valid_from=valid_from,
                 valid_until=now_utc,
-                custom_properties={
-                    "x_opencti_score": 0,
-                    "x_opencti_main_observable_type": entity_type,
-                },
+                custom_properties=custom_properties,
+                labels=preserved_labels,
+                external_references=preserved_references,
                 object_marking_refs=marking_refs,
                 allow_custom=True,
             )
@@ -1551,56 +1724,6 @@ class LamisNetworkBuilder:
             for s in (existing_bundle_indicator, existing_obs_indicator, ind_data)
             if s is not None
         ]
-
-        def _extract_labels_from_source(src: Any) -> List[str]:
-            raw_labels = None
-            if isinstance(src, dict):
-                raw_labels = (
-                    src.get("labels")
-                    or src.get("x_opencti_labels")
-                    or src.get("objectLabel")
-                )
-            else:
-                raw_labels = getattr(src, "labels", None)
-
-            extracted: List[str] = []
-            if isinstance(raw_labels, (list, set, tuple)):
-                for item in raw_labels:
-                    if isinstance(item, str) and item:
-                        extracted.append(item)
-                    elif isinstance(item, dict):
-                        val = item.get("value") or item.get("name")
-                        if isinstance(val, str) and val:
-                            extracted.append(val)
-            elif isinstance(raw_labels, dict) and "edges" in raw_labels:
-                for edge in raw_labels.get("edges", []):
-                    if isinstance(edge, dict):
-                        node = edge.get("node")
-                        if isinstance(node, dict):
-                            val = node.get("value") or node.get("name")
-                            if isinstance(val, str) and val:
-                                extracted.append(val)
-                        elif isinstance(node, str) and node:
-                            extracted.append(node)
-            return extracted
-
-        def _extract_tracked_from_source(src: Any) -> Optional[List[str]]:
-            raw = None
-            if isinstance(src, dict):
-                raw = src.get("x_lamis_network_labels") or (
-                    src.get("custom_properties") or {}
-                ).get("x_lamis_network_labels")
-            else:
-                raw = getattr(src, "x_lamis_network_labels", None)
-                if (
-                    raw is None
-                    and hasattr(src, "custom_properties")
-                    and isinstance(src.custom_properties, dict)
-                ):
-                    raw = src.custom_properties.get("x_lamis_network_labels")
-            if isinstance(raw, (list, set, tuple)):
-                return [str(x) for x in raw if isinstance(x, (str, int))]
-            return None
 
         prev_ind_labels: List[str] = []
         for src in existing_sources:
@@ -1770,55 +1893,9 @@ class LamisNetworkBuilder:
                 self.bundle.append(marking)
                 existing_ids.add(marking.id)
 
-        # Include referenced marking definitions from OpenCTI (e.g. PAP, custom markings)
-        if (
-            hasattr(self.helper, "api")
-            and self.helper.api
-            and hasattr(self.helper.api, "marking_definition")
-        ):
-            for ref in self.get_marking_refs():
-                if ref not in existing_ids:
-                    try:
-                        m_data = self.helper.api.marking_definition.read(id=ref)
-                        if isinstance(m_data, dict):
-                            m_def = (
-                                m_data.get("definition")
-                                or m_data.get("name")
-                                or "statement"
-                            )
-                            m_type = m_data.get("definition_type") or "statement"
-                            try:
-                                marking_obj = stix2.MarkingDefinition(
-                                    id=ref,
-                                    definition_type=m_type,
-                                    definition=(
-                                        {"statement": m_def}
-                                        if m_type == "statement"
-                                        else {m_type: m_def}
-                                    ),
-                                    allow_custom=True,
-                                )
-                            except Exception:
-                                marking_obj = {
-                                    "type": "marking-definition",
-                                    "spec_version": "2.1",
-                                    "id": ref,
-                                    "definition_type": m_type,
-                                    "definition": (
-                                        {"statement": m_def}
-                                        if m_type == "statement"
-                                        else {m_type: m_def}
-                                    ),
-                                }
-                            self.bundle.append(marking_obj)
-                            existing_ids.add(ref)
-                    except Exception:
-                        pass
-
-        # Send with cleanup_inconsistent_bundle=False so that platform markings
-        # and references on newly enriched objects are never stripped by OpenCTI SDK.
+        self.bundle = complete_bundle_references(self.helper, self.bundle)
         serialized_bundle = self.helper.stix2_create_bundle(self.bundle)
         self.helper.send_stix2_bundle(
-            serialized_bundle, cleanup_inconsistent_bundle=False
+            serialized_bundle, cleanup_inconsistent_bundle=True
         )
         return f"Sent STIX bundle with {len(self.bundle)} objects."

@@ -8,6 +8,7 @@ from lamis_network.builder import (
     _MARKING_ID_TO_TLP,
     _TLP_MAP,
     LamisNetworkBuilder,
+    complete_bundle_references,
 )
 from lamis_network.client import LamisNetworkClient
 from lamis_network.settings import ConnectorSettings
@@ -184,11 +185,11 @@ class LamisNetworkConnector:
         object_marking_id_to_tlp: Dict[str, str],
         known_non_tlp_refs: set,
     ) -> Optional[str]:
-        if ref in known_non_tlp_refs:
-            return "NON_TLP"
-        level = object_marking_id_to_tlp.get(ref) or _MARKING_ID_TO_TLP.get(ref)
+        level = _MARKING_ID_TO_TLP.get(ref) or object_marking_id_to_tlp.get(ref)
         if level is not None:
             return level
+        if ref in known_non_tlp_refs:
+            return "NON_TLP"
         # Check platform marking definition if available
         if (
             hasattr(self.helper, "api")
@@ -207,7 +208,11 @@ class LamisNetworkConnector:
                             object_marking_id_to_tlp[ref] = level
                             return level
                         return None
-                    else:
+                    elif (
+                        m_type in {"PAP", "STATEMENT"}
+                        and isinstance(m_data.get("definition"), str)
+                        and m_data["definition"].strip()
+                    ):
                         known_non_tlp_refs.add(ref)
                         return "NON_TLP"
             except Exception:
@@ -238,11 +243,16 @@ class LamisNetworkConnector:
         if raw_marking_refs is not None and not isinstance(raw_marking_refs, list):
             return False
         object_marking_id_to_tlp: Dict[str, str] = {}
+        known_non_tlp_refs = set()
         if isinstance(raw_object_marking, list):
             for marking in raw_object_marking:
                 if not isinstance(marking, dict):
                     return False
-                if str(marking.get("definition_type", "")).upper() == "TLP":
+                marking_type = str(marking.get("definition_type") or "").upper()
+                ref = marking.get("standard_id")
+                if not isinstance(ref, str) or not ref:
+                    return False
+                if marking_type == "TLP":
                     level = _normalize_tlp(
                         marking.get("definition"), fallback="INVALID"
                     )
@@ -252,13 +262,16 @@ class LamisNetworkConnector:
                         return False
                     object_marking_id_to_tlp[marking["standard_id"]] = level
                     levels.append(level)
-
-        known_non_tlp_refs = {
-            marking.get("standard_id")
-            for marking in (raw_object_marking or [])
-            if isinstance(marking, dict)
-            and str(marking.get("definition_type", "")).upper() != "TLP"
-        }
+                elif (
+                    marking_type in {"PAP", "STATEMENT"}
+                    and isinstance(marking.get("definition"), str)
+                    and marking["definition"].strip()
+                ):
+                    known_non_tlp_refs.add(ref)
+                else:
+                    return False
+                if ref in _MARKING_ID_TO_TLP:
+                    levels.append(_MARKING_ID_TO_TLP[ref])
 
         if isinstance(raw_marking_refs, list):
             for ref in raw_marking_refs:
@@ -362,21 +375,31 @@ class LamisNetworkConnector:
         """Forward unmodified incoming stix_objects preserving existing markings and references."""
         if not stix_objects:
             return
-        # Do not use cleanup_inconsistent_bundle=True on pass-through bundles:
-        # the connector did not modify these objects, and cleanup would strip
-        # object_marking_refs pointing to platform-persisted marking definitions.
+        objects = complete_bundle_references(self.helper, stix_objects)
         self.helper.send_stix2_bundle(
-            self.helper.stix2_create_bundle(stix_objects),
-            cleanup_inconsistent_bundle=False,
+            self.helper.stix2_create_bundle(objects),
+            cleanup_inconsistent_bundle=True,
         )
 
     def _process_message(self, data: Dict[str, Any]) -> str:
         """Process incoming OpenCTI enrichment event."""
+        stix_objects = data["stix_objects"] if "stix_objects" in data else []
+        try:
+            return self._process_enrichment(data, stix_objects)
+        except Exception:
+            try:
+                self._send_passthrough_bundle(stix_objects)
+            except Exception:
+                self.helper.connector_logger.exception(
+                    "[Lamis Network] Failed to forward the original bundle on error."
+                )
+            raise
+
+    def _process_enrichment(self, data: Dict[str, Any], stix_objects: List[Any]) -> str:
+        """Validate and enrich an event, preserving the original bundle on skips."""
         observable = data.get("enrichment_entity")
         if not observable:
             raise ValueError("Observable not found in enrichment event data.")
-
-        stix_objects = data["stix_objects"] if "stix_objects" in data else []
 
         entity_type = observable.get("entity_type")
         if entity_type not in ("IPv4-Addr", "IPv6-Addr"):

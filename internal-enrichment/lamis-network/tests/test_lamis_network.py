@@ -2055,10 +2055,9 @@ def test_indicator_not_created_when_ownership_check_raises_exception(
 
 
 @patch("lamis_network.connector.OpenCTIConnectorHelper")
-def test_passthrough_bundles_preserve_markings_without_cleanup(mock_helper_cls):
+def test_passthrough_bundles_use_required_cleanup(mock_helper_cls):
     """[P2] R11: Pass-through bundles (TLP skip, invalid response, unsupported type)
-    must be sent with cleanup_inconsistent_bundle=False so that platform markings
-    are never stripped.
+    must be sent with the repository-required cleanup enabled.
     """
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
@@ -2094,8 +2093,8 @@ def test_passthrough_bundles_preserve_markings_without_cleanup(mock_helper_cls):
     mock_helper.send_stix2_bundle.assert_called_once()
     _, kwargs = mock_helper.send_stix2_bundle.call_args
     assert (
-        kwargs.get("cleanup_inconsistent_bundle") is False
-    ), "Pass-through bundle must have cleanup_inconsistent_bundle=False!"
+        kwargs.get("cleanup_inconsistent_bundle") is True
+    ), "Pass-through bundle must have cleanup_inconsistent_bundle=True!"
 
 
 @patch("lamis_network.connector.OpenCTIConnectorHelper")
@@ -2157,8 +2156,8 @@ def test_obsolete_relationships_retired_and_deleted_from_opencti(
     mock_helper.send_stix2_bundle.assert_called_once()
     _, kwargs = mock_helper.send_stix2_bundle.call_args
     assert (
-        kwargs.get("cleanup_inconsistent_bundle") is False
-    ), "Enriched bundle must be sent with cleanup_inconsistent_bundle=False!"
+        kwargs.get("cleanup_inconsistent_bundle") is True
+    ), "Enriched bundle must be sent with cleanup_inconsistent_bundle=True!"
 
     # Obsolete relationship must be retired in the bundle with stop_time set, NOT deleted directly via API
     bundle_objs = mock_helper.stix2_create_bundle.call_args[0][0]
@@ -2359,7 +2358,7 @@ def test_revoked_indicator_deletes_based_on_relationship_in_opencti(
 @patch("lamis_network.connector.OpenCTIConnectorHelper")
 def test_enriched_bundle_preserves_non_tlp_markings(mock_helper_cls):
     """[P1] R11: Enriched bundles include non-TLP markings (e.g. PAP) from OpenCTI
-    and send with cleanup_inconsistent_bundle=False to prevent stripping.
+    and include their definitions before the required cleanup.
     """
     mock_helper = MagicMock()
     mock_helper_cls.return_value = mock_helper
@@ -2409,7 +2408,7 @@ def test_enriched_bundle_preserves_non_tlp_markings(mock_helper_cls):
     assert "Sent STIX bundle" in result
     mock_helper.send_stix2_bundle.assert_called_once()
     _, kwargs = mock_helper.send_stix2_bundle.call_args
-    assert kwargs.get("cleanup_inconsistent_bundle") is False
+    assert kwargs.get("cleanup_inconsistent_bundle") is True
 
     # The PAP marking definition must be added to the bundle
     bundle_objs = mock_helper.stix2_create_bundle.call_args[0][0]

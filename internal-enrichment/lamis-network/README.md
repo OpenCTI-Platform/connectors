@@ -93,13 +93,13 @@ Configuration can be provided via environment variables or `config.yml`.
 Build the image from this connector directory before starting Compose:
 
 ```bash
-docker build -t lamis-network-opencti:local .
+docker build -t opencti/connector-lamis-network:latest .
 ```
 
 ```yaml
 services:
   connector-lamis-network:
-    image: lamis-network-opencti:local
+    image: opencti/connector-lamis-network:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -151,8 +151,8 @@ TLP Check (<= max_tlp?) ─── No ──► Skip (no external request)
 Query Lamis Network API (/v1/ip/{ip})
        │
        ├─► Update Observable (score, labels, source reference) in STIX bundle
-       ├─► Create AutonomousSystem SCO ──(belongs-to)──► Observable
-       ├─► Create Country & City Location SDOs ──(located-at)──► Observable
+       ├─► Observable ──(belongs-to)──► AutonomousSystem SCO
+       ├─► Observable ──(located-at)──► Country & City Location SDOs
        └─► Create Indicator (labels, description) ──(based-on)──► Observable
 ```
 
