@@ -22,6 +22,7 @@
   - [Enrichment Mapping](#enrichment-mapping)
   - [Indicator Creation](#indicator-creation)
   - [Generated STIX Objects](#generated-stix-objects)
+  - [IP Resolutions](#ip-resolutions)
 - [Debugging](#debugging)
 - [Additional Information](#additional-information)
 
@@ -85,6 +86,12 @@ Key features:
 | `virustotal_file_import_yara` | `VIRUSTOTAL_FILE_IMPORT_YARA` | No | Import YARA rules |
 | `virustotal_ip_indicator_create_positives` | `VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES` | No | IP indicator creation threshold |
 | `virustotal_ip_add_relationships` | `VIRUSTOTAL_IP_ADD_RELATIONSHIPS` | No | Add ASN and location relationships |
+| `virustotal_ip_add_resolutions` | `VIRUSTOTAL_IP_ADD_RESOLUTIONS` | No | Import the domains resolving to the IP (default: false). See [IP Resolutions](#ip-resolutions) |
+| `virustotal_ip_resolutions_since` | `VIRUSTOTAL_IP_RESOLUTIONS_SINCE` | No | Date floor: `YYYY-MM-DD`, a number of days such as `90d` (resolved at each enrichment) or `none` (default: `90d`) |
+| `virustotal_ip_resolutions_max_entries` | `VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES` | No | Stop after this many resolutions fetched, counted before the keyword filter (default: unset, no entry cap) |
+| `virustotal_ip_resolutions_max_pages` | `VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES` | No | Maximum pages of 40 resolutions per enrichment, one API lookup each (default: 25) |
+| `virustotal_ip_resolutions_keywords` | `VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS` | No | Case-insensitive regex a resolved domain must match to be imported (default: unset, all) |
+| `virustotal_api_requests_per_minute` | `VIRUSTOTAL_API_REQUESTS_PER_MINUTE` | No | Spacing between resolutions pages; `0` disables the wait (default: 4) |
 | `virustotal_domain_indicator_create_positives` | `VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES` | No | Domain indicator creation threshold |
 | `virustotal_domain_add_relationships` | `VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS` | No | Add IP resolution relationships |
 | `virustotal_url_upload_unseen` | `VIRUSTOTAL_URL_UPLOAD_UNSEEN` | No | Upload unknown URLs for analysis |
@@ -160,7 +167,7 @@ flowchart LR
 | Observable Type | Enrichment Data | Relationships |
 |-----------------|-----------------|---------------|
 | StixFile/Artifact | Hash, detections, YARA | Indicator based-on |
-| IPv4-Addr | Detection count, ASN | ASN, Location |
+| IPv4-Addr | Detection count, ASN, resolutions (optional) | ASN, Location, resolving Domain-Names |
 | Domain-Name | Detection count, resolution | Resolved IPs |
 | URL | Detection count | Indicator based-on |
 | Hostname | Detection count | Similar to domain |
@@ -183,7 +190,41 @@ flowchart LR
 | YARA Indicator | Crowdsourced YARA rules (for files) |
 | Autonomous System | ASN for IP addresses |
 | Location | Geolocation for IPs |
+| Domain-Name | Domains resolving to an IP (when `VIRUSTOTAL_IP_ADD_RESOLUTIONS=true`), no score |
 | Relationship | Various entity links |
+
+### IP Resolutions
+
+When `VIRUSTOTAL_IP_ADD_RESOLUTIONS=true`, enriching an IPv4-Addr observable also pages
+`/ip_addresses/{ip}/resolutions` (40 per page, newest first) after the usual enrichment. Indicators are not concerned.
+
+For each kept resolution, the connector creates a Domain-Name (author VirusTotal, no score, no label) and a
+`Domain-Name resolves-to IPv4-Addr` relationship whose `start_time` is the VirusTotal **last seen** date of the
+resolution. Re-enriching the same IP updates these objects instead of duplicating them.
+
+Paging stops at the first of:
+
+1. a resolution last seen before `VIRUSTOTAL_IP_RESOLUTIONS_SINCE`;
+2. `VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES` resolutions fetched (sent to VirusTotal as the page size when below 40, so `3` is one lookup returning the three most recent resolutions);
+3. `VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES` pages fetched;
+4. the end of the list;
+5. a failed page, including HTTP 429 after the client retries. What was already sent stays.
+
+`VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS` filters which resolutions are imported; it does not reduce the lookups spent.
+Each page is sent as its own bundle, so the first results appear before paging ends. In a playbook, all
+resolutions are added to the enrichment bundle and sent once. The work message ends with
+`resolutions: kept N of M fetched (P pages, stopped: date floor | entry cap | page cap | end of list | error)`.
+
+#### Cost
+
+One page is one API lookup. The worst case of one enrichment is the lower of `MAX_PAGES` and
+`ceil(MAX_ENTRIES / 40)` lookups, on top of the IP lookup itself.
+
+| API key | Settings | Worst case per enrichment |
+|---------|----------|---------------------------|
+| Free (4 lookups/min, 500/day) | `MAX_PAGES=25`, `API_REQUESTS_PER_MINUTE=4` | 25 of 500 daily lookups, about 6 minutes; usually far less once the date floor stops paging |
+| Free | `MAX_ENTRIES=3` | 1 lookup |
+| Premium | `MAX_PAGES=50`, `API_REQUESTS_PER_MINUTE=0` | 50 lookups of the group's daily quota, seconds |
 
 ---
 

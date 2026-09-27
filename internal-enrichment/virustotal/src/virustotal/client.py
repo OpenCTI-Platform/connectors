@@ -223,6 +223,36 @@ class VirusTotalClient:
         url = f"{self.url}/ip_addresses/{ip}"
         return self._query(url)
 
+    def get_ip_resolutions_page(
+        self, ip: str, cursor: str | None = None, limit: int = 40
+    ) -> dict | None:
+        """
+        Retrieve one page of the domains resolving to the given IP.
+
+        Parameters
+        ----------
+        ip : str
+            IP address.
+        cursor : str | None
+            Cursor returned in the `meta` of the previous page, None for the first page.
+        limit : int
+            Number of resolutions to return (VirusTotal maximum: 40).
+
+        Returns
+        -------
+        dict | None
+            Resolutions page, newest first, see https://developers.virustotal.com/reference/ip-relationships
+            or None in case of failure.
+        """
+        params = {"limit": limit}
+        if cursor:
+            params["cursor"] = cursor
+        url = (
+            f"{self.url}/ip_addresses/{ip}/resolutions?"
+            f"{urllib.parse.urlencode(params)}"
+        )
+        return self._query(url)
+
     def get_domain_info(self, domain):
         """
         Retrieve Domain report based on the given Domain.

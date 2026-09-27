@@ -1,5 +1,6 @@
 """VirusTotal enrichment connector."""
 
+import re
 from typing import TYPE_CHECKING, Dict
 
 import stix2
@@ -85,6 +86,17 @@ class VirusTotalConnector:
         self.ip_indicator_config = self.config.virustotal.model_extra.get(
             "ip_indicator_config"
         )
+        self.ip_add_resolutions = self.config.virustotal.ip_add_resolutions
+        self.ip_resolutions_since = self.config.virustotal.ip_resolutions_since
+        self.ip_resolutions_max_entries = (
+            self.config.virustotal.ip_resolutions_max_entries
+        )
+        self.ip_resolutions_max_pages = self.config.virustotal.ip_resolutions_max_pages
+        keywords = self.config.virustotal.ip_resolutions_keywords
+        self.ip_resolutions_keywords = (
+            re.compile(keywords, re.IGNORECASE) if keywords else None
+        )
+        self.api_requests_per_minute = self.config.virustotal.api_requests_per_minute
 
         # Domain specific settings
         self.domain_add_relationships = self.config.virustotal.domain_add_relationships

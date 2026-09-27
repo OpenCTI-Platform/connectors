@@ -29,6 +29,12 @@ virustotal:
 #  ip_indicator_valid_minutes: 2880 # How long the indicator is valid for in minutes
 #  ip_indicator_detect: true # Whether or not to set detection for the indicator to true
 #  ip_add_relationships: false # Whether or not to add ASN and location resolution relationships
+#  ip_add_resolutions: false # Whether or not to import the domains resolving to the IP, with a dated resolves-to relationship
+#  ip_resolutions_since: 90d # Date floor: YYYY-MM-DD, a number of days (90d) or none
+#  ip_resolutions_max_entries: 3 # Stop after this many resolutions fetched (unset: no entry cap)
+#  ip_resolutions_max_pages: 25 # Maximum pages (40 entries, one lookup each) per enrichment
+#  ip_resolutions_keywords: news|press|journal # Case-insensitive regex a resolved domain must match (unset: all)
+#  api_requests_per_minute: 4 # Spacing between resolutions pages; 4 fits a free key, 0 disables the wait
 
   # Domain specific config settings
 #  domain_indicator_create_positives: 10 # Create an indicator for Domain based observables once this positive threshold is reached. Note: specify 0 to disable indicator creation
