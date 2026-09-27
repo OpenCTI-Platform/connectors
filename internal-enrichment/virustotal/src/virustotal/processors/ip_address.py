@@ -61,10 +61,15 @@ class IPProcessor(EntityProcessor):
     def _send_resolutions_page(self, objects: list) -> None:
         """Send the objects built from one resolutions page as their own bundle.
 
-        The enriched IP is included so the relationships' target survives
-        ``cleanup_inconsistent_bundle``.
+        Like the main enrichment bundle, it carries the incoming objects (the
+        enriched IP and the marking definitions it references), so
+        ``cleanup_inconsistent_bundle`` keeps both the relationships' target
+        and the IP's markings.
         """
-        bundle_objects = [self.connector.author, self.stix_entity] + objects
+        incoming = list(self.stix_objects)
+        if all(o["id"] != self.stix_entity["id"] for o in incoming):
+            incoming.append(self.stix_entity)
+        bundle_objects = [self.connector.author] + incoming + objects
         self.helper.metric.inc("record_send", len(bundle_objects))
         serialized_bundle = self.helper.stix2_create_bundle(bundle_objects)
         self.helper.send_stix2_bundle(

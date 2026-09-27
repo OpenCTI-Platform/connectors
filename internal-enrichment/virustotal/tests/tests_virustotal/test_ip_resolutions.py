@@ -71,7 +71,10 @@ THREE_PAGES = [
 
 
 def _make_processor(
-    pages: list, is_indicator: bool = False, **settings
+    pages: list,
+    is_indicator: bool = False,
+    stix_objects: list | None = None,
+    **settings,
 ) -> tuple[IPProcessor, MagicMock]:
     connector = _make_connector()
     connector.ip_add_resolutions = True
@@ -86,8 +89,13 @@ def _make_processor(
     helper.stix2_create_bundle.side_effect = list
     helper.send_stix2_bundle.return_value = ["bundle"]
     entity = {"entity_type": "IPv4-Addr", "observable_value": IP, "objectMarking": []}
-    stix_entity = json.loads(stix2.IPv4Address(value=IP).serialize())
-    processor = IPProcessor(connector, [], stix_entity, entity, is_indicator)
+    if stix_objects is None:
+        stix_objects = []
+        stix_entity = json.loads(stix2.IPv4Address(value=IP).serialize())
+    else:
+        # As pycti does: the enriched entity is one of the incoming objects.
+        stix_entity = next(o for o in stix_objects if o["id"] == IP_ID)
+    processor = IPProcessor(connector, stix_objects, stix_entity, entity, is_indicator)
     return processor, helper
 
 
@@ -277,6 +285,33 @@ class TestIPResolutionsLoop(unittest.TestCase):
         self.assertEqual(len(relationships), 1)
         self.assertEqual(relationships[0]["target_ref"], IP_ID)
         self.assertIsNotNone(relationships[0]["source_ref"])
+
+    def test_page_bundle_keeps_ip_markings(self):
+        tlp_green = json.loads(stix2.TLP_GREEN.serialize())
+        marked_ip = json.loads(
+            stix2.IPv4Address(
+                value=IP, object_marking_refs=[tlp_green["id"]]
+            ).serialize()
+        )
+        processor, helper = _make_processor(
+            [THREE_PAGES[2]], stix_objects=[tlp_green, marked_ip]
+        )
+        helper.stix2_create_bundle.side_effect = lambda objects: stix2.Bundle(
+            objects=objects, allow_custom=True
+        ).serialize()
+        processor.process()
+        page_bundle = helper.send_stix2_bundle.call_args_list[1].args[0]
+        sent_ids = [o["id"] for o in json.loads(page_bundle)["objects"]]
+        self.assertEqual(sent_ids.count(IP_ID), 1)
+        self.assertIn(tlp_green["id"], sent_ids)
+        _, _, bundles = OpenCTIStix2Splitter().split_bundle_with_expectations(
+            bundle=page_bundle, cleanup_inconsistent_bundle=True
+        )
+        objects = [o for b in bundles for o in json.loads(b)["objects"]]
+        ip = next(o for o in objects if o["id"] == IP_ID)
+        self.assertEqual(ip["object_marking_refs"], [tlp_green["id"]])
+        relationship = next(o for o in objects if o["type"] == "relationship")
+        self.assertEqual(relationship["target_ref"], IP_ID)
 
     def test_keywords_filter_created_domains(self):
         processor, helper = _make_processor(

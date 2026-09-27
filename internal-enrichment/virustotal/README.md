@@ -217,8 +217,9 @@ resolutions are added to the enrichment bundle and sent once. The work message e
 
 #### Cost
 
-One page is one API lookup. The worst case of one enrichment is the lower of `MAX_PAGES` and
-`ceil(MAX_ENTRIES / 40)` lookups, on top of the IP lookup itself.
+One page is one API lookup. On top of the IP lookup itself, the worst case of one enrichment is
+`MAX_PAGES` lookups when `MAX_ENTRIES` is unset, and the lower of `MAX_PAGES` and `ceil(MAX_ENTRIES / 40)`
+lookups when it is set.
 
 | API key | Settings | Worst case per enrichment |
 |---------|----------|---------------------------|
