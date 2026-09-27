@@ -132,6 +132,7 @@ Only one call costs credits: `v2/dataset/domains`, 10 credits each. DNS, IP2ASN 
 ## Limits
 
 - One call per enrichment, page 1 only: at most 1,000 domains. Beyond that, the work message shows the truncation (`created 1000 of 40000 matches`).
-- The client allows at most 30 DNSlytics requests per minute. HTTP 429 and 503 are retried twice. HTTP 403 is never retried.
+- The client allows at most 30 requests per minute to the premium API, and 5 per second to the free IP2ASN API. HTTP 429 and 503 are retried twice. HTTP 403 is never retried.
 - IP2ASN is free but capped at 2,500 calls per day. The connector counts its calls and stops at the cap. Each unique IP costs one call.
+- Long runs log their progress: the number of domains resolved, the number of unique IPs, then a line every 50 IP2ASN lookups (`IP2ASN 150/420`).
 - The API key is sent as a query parameter, as DNSlytics requires. It is never logged.

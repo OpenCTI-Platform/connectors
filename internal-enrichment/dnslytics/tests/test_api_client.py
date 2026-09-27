@@ -143,3 +143,18 @@ def test_rate_limiter_waits_when_the_window_is_full(monkeypatch):
     limiter.wait()
 
     assert slept == [50.0]
+
+
+def test_ip2asn_does_not_use_the_premium_rate_limit():
+    client = make_client()
+
+    for _ in range(3):
+        client.ip2asn("45.84.204.99")
+    client.search_domains(RFC_QUERY)
+
+    # IP2ASN calls count against their own 5/s limiter, not the 30/min premium one
+    assert len(client._limiter._calls) == 1
+    assert len(client._ip2asn_limiter._calls) == 3
+    assert client._limiter.max_calls == 30 and client._limiter.period == 60.0
+    assert client._ip2asn_limiter.max_calls == 5
+    assert client._ip2asn_limiter.period == 1.0

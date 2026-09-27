@@ -10,7 +10,11 @@ from pycti import OpenCTIConnectorHelper
 DATASET_DOMAINS_CREDITS = 10
 IP2ASN_BASE_URL = "https://freeapi.dnslytics.net"
 IP2ASN_DAILY_CAP = 2500
+# Premium API: 30 requests/min (DNSlytics premium limit)
 REQUESTS_PER_MINUTE = 30
+# Free IP2ASN API: only a daily cap is documented; 5/s keeps runs short
+# without bursting, and 429 answers are retried
+IP2ASN_REQUESTS_PER_SECOND = 5
 RETRYABLE_STATUS_CODES = (429, 503)
 RETRY_DELAYS_SECONDS = (5, 15)
 TIMEOUT_SECONDS = 30
@@ -73,7 +77,7 @@ class DnslyticsClient:
     """
     Client for the two DNSlytics endpoints used by the connector:
     - `GET {api_base_url}/v2/dataset/domains` (premium, 10 credits per call)
-    - `GET https://freeapi.dnslytics.net/v1/ip2asn/<ip>` (free, 2,500 calls/day)
+    - `GET https://freeapi.dnslytics.net/v1/ip2asn/<ip>` (free, 2,500 calls/day, 5/s here)
     and the free `v1/accountinfo` endpoint, used to check a key without spending credits.
     """
 
@@ -93,18 +97,23 @@ class DnslyticsClient:
         self.session = session or requests.Session()
         self._sleep = sleep
         self._limiter = RateLimiter(REQUESTS_PER_MINUTE)
+        self._ip2asn_limiter = RateLimiter(IP2ASN_REQUESTS_PER_SECOND, period=1.0)
         self._ip2asn_day = None
         self._ip2asn_calls = 0
         self._ip2asn_lock = threading.Lock()
 
-    def _get(self, url: str, params: dict | None = None) -> dict:
+    def _get(
+        self, url: str, params: dict | None = None, limiter: RateLimiter | None = None
+    ) -> dict:
         """
         GET `url` and return the decoded JSON body.
+        `limiter` defaults to the premium API limiter (30 requests/min).
         429 and 503 are retried with a delay; 403 and any other error are raised at once.
         """
+        limiter = limiter or self._limiter
         attempts = len(RETRY_DELAYS_SECONDS) + 1
         for attempt in range(attempts):
-            self._limiter.wait()
+            limiter.wait()
             try:
                 response = self.session.get(url, params=params, timeout=TIMEOUT_SECONDS)
             except requests.RequestException as err:
@@ -182,7 +191,9 @@ class DnslyticsClient:
                     f"IP2ASN daily cap of {IP2ASN_DAILY_CAP} calls reached"
                 )
             self._ip2asn_calls += 1
-        body = self._get(f"{self.ip2asn_base_url}/v1/ip2asn/{ip}")
+        body = self._get(
+            f"{self.ip2asn_base_url}/v1/ip2asn/{ip}", limiter=self._ip2asn_limiter
+        )
         if not body.get("announced") or body.get("asn") is None:
             return None
         name = body.get("shortname")

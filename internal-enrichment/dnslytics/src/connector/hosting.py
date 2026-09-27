@@ -9,6 +9,8 @@ from dnslytics_client import AsInfo, DnslyticsApiError, DnslyticsClient
 DNS_LIFETIME_SECONDS = 5.0
 DNS_WORKERS = 16
 IP2ASN_WORKERS = 4
+# Log a progress line every N lookups, so a long run does not look frozen
+PROGRESS_EVERY = 50
 
 
 def resolve_domain(
@@ -54,7 +56,9 @@ def derive_hosting(
     IPs are de-duplicated before the AS lookup, so each IP costs one IP2ASN call.
     """
     resolve = resolve or resolve_domain
+    logger = client.helper.connector_logger
     hosting = Hosting()
+    logger.info("[CONNECTOR] Resolving active domains (DNS)", {"domains": len(domains)})
     with ThreadPoolExecutor(max_workers=DNS_WORKERS) as pool:
         for domain, ips in zip(domains, pool.map(resolve, domains)):
             # dict.fromkeys keeps order and drops duplicates
@@ -62,6 +66,9 @@ def derive_hosting(
 
     unique_ips = list(
         dict.fromkeys(ip for ips in hosting.ips_by_domain.values() for ip in ips)
+    )
+    logger.info(
+        "[CONNECTOR] Looking up AS of unique IPs (IP2ASN)", {"ips": len(unique_ips)}
     )
     # One failed IP must not lose the whole run: record it and go on, unless
     # DNSlytics refuses access (403) or the daily cap is hit, then stop calling.
@@ -78,7 +85,14 @@ def derive_hosting(
             return err
 
     with ThreadPoolExecutor(max_workers=IP2ASN_WORKERS) as pool:
-        for ip, result in zip(unique_ips, pool.map(lookup, unique_ips)):
+        for done, (ip, result) in enumerate(
+            zip(unique_ips, pool.map(lookup, unique_ips)), start=1
+        ):
+            if done % PROGRESS_EVERY == 0 or done == len(unique_ips):
+                logger.info(
+                    f"[CONNECTOR] IP2ASN {done}/{len(unique_ips)}",
+                    {"errors": len(hosting.ip2asn_errors)},
+                )
             if isinstance(result, DnslyticsApiError):
                 hosting.ip2asn_errors[ip] = str(result)
             else:

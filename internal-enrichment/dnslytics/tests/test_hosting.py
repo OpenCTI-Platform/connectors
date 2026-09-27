@@ -5,6 +5,7 @@ import dns.resolver
 from conftest import FakeResponse, FakeSession, default_routes, fake_resolve
 from connector.hosting import derive_hosting, resolve_domain
 from dnslytics_client import DnslyticsClient
+from dnslytics_client.api_client import RateLimiter
 
 
 def make_client(routes) -> DnslyticsClient:
@@ -82,3 +83,32 @@ def test_resolve_domain_treats_nxdomain_and_timeouts_as_not_resolving():
     )
 
     assert resolve_domain("x.example", resolver) == []
+
+
+def test_progress_is_logged_every_50_lookups():
+    ips = {f"d{i}.example": [f"198.51.100.{i}"] for i in range(120)}
+    routes = {
+        f"/v1/ip2asn/{ip[0]}": {
+            "ip": ip[0],
+            "announced": True,
+            "asn": 64500,
+            "shortname": "X",
+        }
+        for ip in ips.values()
+    }
+    client = make_client(routes)
+    # The 5/s limit is tested in test_api_client; lift it to keep this test fast
+    client._ip2asn_limiter = RateLimiter(10_000, period=1.0)
+
+    derive_hosting(list(ips), client, resolve=lambda d: ips[d])
+
+    messages = [
+        call.args[0] for call in client.helper.connector_logger.info.call_args_list
+    ]
+    assert "[CONNECTOR] Resolving active domains (DNS)" in messages
+    assert "[CONNECTOR] Looking up AS of unique IPs (IP2ASN)" in messages
+    assert [m for m in messages if m.startswith("[CONNECTOR] IP2ASN ")] == [
+        "[CONNECTOR] IP2ASN 50/120",
+        "[CONNECTOR] IP2ASN 100/120",
+        "[CONNECTOR] IP2ASN 120/120",
+    ]
