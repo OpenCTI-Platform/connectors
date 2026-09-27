@@ -59,11 +59,17 @@ class IPProcessor(EntityProcessor):
         builder.create_notes()
 
     def _send_resolutions_page(self, objects: list) -> None:
-        """Send the objects built from one resolutions page as their own bundle."""
-        bundle_objects = [self.connector.author] + objects
+        """Send the objects built from one resolutions page as their own bundle.
+
+        The enriched IP is included so the relationships' target survives
+        ``cleanup_inconsistent_bundle``.
+        """
+        bundle_objects = [self.connector.author, self.stix_entity] + objects
         self.helper.metric.inc("record_send", len(bundle_objects))
         serialized_bundle = self.helper.stix2_create_bundle(bundle_objects)
-        self.helper.send_stix2_bundle(serialized_bundle)
+        self.helper.send_stix2_bundle(
+            serialized_bundle, cleanup_inconsistent_bundle=True
+        )
 
     def _import_resolutions(
         self, builder: "VirusTotalBuilder", emit: Callable[[list], None]

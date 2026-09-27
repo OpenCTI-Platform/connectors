@@ -361,7 +361,6 @@ class VirusTotalBuilder:
                 created_by_ref=self.author,
                 source_ref=domain_stix.id,
                 target_ref=self.stix_entity["id"],
-                confidence=self.helper.connect_confidence_level,
                 allow_custom=True,
                 **relationship_properties,
             )

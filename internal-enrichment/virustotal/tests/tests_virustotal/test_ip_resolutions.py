@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import stix2
 from pycti import StixCoreRelationship
+from pycti.utils.opencti_stix2_splitter import OpenCTIStix2Splitter
 from pydantic import ValidationError
 from tests_virustotal.test_virustotal import _make_connector
 from virustotal.client import VirusTotalClient
@@ -85,7 +86,8 @@ def _make_processor(
     helper.stix2_create_bundle.side_effect = list
     helper.send_stix2_bundle.return_value = ["bundle"]
     entity = {"entity_type": "IPv4-Addr", "observable_value": IP, "objectMarking": []}
-    processor = IPProcessor(connector, [], {"id": IP_ID}, entity, is_indicator)
+    stix_entity = json.loads(stix2.IPv4Address(value=IP).serialize())
+    processor = IPProcessor(connector, [], stix_entity, entity, is_indicator)
     return processor, helper
 
 
@@ -243,6 +245,9 @@ class TestIPResolutionsLoop(unittest.TestCase):
         self.assertEqual(_domains(bundles[3]), ["press-three.example"])
         for bundle in bundles[1:]:
             self.assertEqual(bundle[0]["type"], "identity")
+            self.assertEqual(bundle[1]["id"], IP_ID)
+        for call in helper.send_stix2_bundle.call_args_list[1:]:
+            self.assertTrue(call.kwargs["cleanup_inconsistent_bundle"])
         self.assertEqual(
             [c.args[1] for c in processor.client.get_ip_resolutions_page.mock_calls],
             [None, "c1", "c2"],
@@ -252,6 +257,26 @@ class TestIPResolutionsLoop(unittest.TestCase):
                 "resolutions: kept 5 of 5 fetched (3 pages, stopped: end of list)"
             )
         )
+
+    def test_page_bundle_survives_inconsistent_bundle_cleanup(self):
+        processor, helper = _make_processor([THREE_PAGES[2]])
+        helper.stix2_create_bundle.side_effect = lambda objects: stix2.Bundle(
+            objects=objects, allow_custom=True
+        ).serialize()
+        processor.process()
+        page_bundle = helper.send_stix2_bundle.call_args_list[1].args[0]
+        _, _, bundles = OpenCTIStix2Splitter().split_bundle_with_expectations(
+            bundle=page_bundle, cleanup_inconsistent_bundle=True
+        )
+        relationships = [
+            o
+            for b in bundles
+            for o in json.loads(b)["objects"]
+            if o["type"] == "relationship"
+        ]
+        self.assertEqual(len(relationships), 1)
+        self.assertEqual(relationships[0]["target_ref"], IP_ID)
+        self.assertIsNotNone(relationships[0]["source_ref"])
 
     def test_keywords_filter_created_domains(self):
         processor, helper = _make_processor(
