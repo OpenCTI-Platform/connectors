@@ -1,6 +1,6 @@
 """Configuration models for the Zetalytics DNS connector."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -9,6 +9,64 @@ from connectors_sdk import (
     ListFromString,
 )
 from pydantic import Field, SecretStr, model_validator
+
+# Per-mode defaults for the endpoint flags and volume controls below, applied
+# to any field the user hasn't explicitly set (via env var or yaml). "manual"
+# is intentionally absent: it's exactly this class's own Field() defaults, so
+# there's nothing to override.
+_MODE_DEFAULTS: dict[str, dict[str, Any]] = {
+    "light": {
+        "max_results": 25,
+        "max_subdomains": 0,
+        "max_whois_results": 0,
+        "max_ns_pivot_results": 0,
+        "max_mx_pivot_results": 0,
+        "lookback_days": 90,
+        "tsfield": "last_seen",
+        "include_live_dns": False,
+        "include_subdomains": False,
+        "include_d8s": False,
+        "include_historical_whois": False,
+        "include_ns_glue": False,
+        "include_ns2domain": False,
+        "include_mx2domain": False,
+        "confidence": 40,
+    },
+    "playbook": {
+        "max_results": 100,
+        "max_subdomains": 0,
+        "max_whois_results": 0,
+        "max_ns_pivot_results": 0,
+        "max_mx_pivot_results": 0,
+        "lookback_days": 180,
+        "tsfield": "all",
+        "include_live_dns": True,
+        "include_subdomains": False,
+        "include_d8s": False,
+        "include_historical_whois": False,
+        "include_ns_glue": False,
+        "include_ns2domain": False,
+        "include_mx2domain": False,
+        "confidence": 50,
+    },
+    "deep": {
+        "max_results": 500,
+        "max_subdomains": 1000,
+        "max_whois_results": 10,
+        "max_ns_pivot_results": 250,
+        "max_mx_pivot_results": 250,
+        "lookback_days": 730,
+        "tsfield": "all",
+        "include_live_dns": True,
+        "include_subdomains": True,
+        "include_d8s": True,
+        "include_historical_whois": True,
+        "include_ns_glue": True,
+        "include_ns2domain": True,
+        "include_mx2domain": True,
+        "confidence": 60,
+    },
+}
 
 
 def _format_lookback_days(days: int) -> str:
@@ -193,6 +251,22 @@ class _ZetalyticsConfig(BaseConfigModel):
             "to avoid exposing the token; set to true to opt in."
         ),
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _apply_mode_defaults(cls, data: Any) -> Any:
+        """Apply the selected enrichment profile's defaults to unset fields.
+
+        Env/yaml settings sources only populate this dict with the keys the
+        user actually provided, so anything absent here is safe to default
+        from the profile; fields the user did set are left untouched.
+        """
+        if not isinstance(data, dict):
+            return data
+        mode = str(data.get("mode", "manual")).lower()
+        for field, value in _MODE_DEFAULTS.get(mode, {}).items():
+            data.setdefault(field, value)
+        return data
 
 
 class ConfigLoader(BaseConnectorSettings):

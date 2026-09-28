@@ -22,7 +22,7 @@ services:
   # Rich output is acceptable here because a human has intentionally triggered it.
   # ---------------------------------------------------------------------------
   connector-zetalytics-analyst:
-    image: opencti/connector-zetalytics-dns:latest
+    image: opencti/connector-zetalytics:latest
     container_name: connector-zetalytics-analyst
     restart: unless-stopped
     environment:
@@ -103,7 +103,7 @@ services:
   # Output is bounded and deterministic to avoid unexpected graph expansion.
   # ---------------------------------------------------------------------------
   connector-zetalytics-playbook:
-    image: opencti/connector-zetalytics-dns:latest
+    image: opencti/connector-zetalytics:latest
     container_name: connector-zetalytics-playbook
     restart: unless-stopped
     environment:
@@ -142,7 +142,7 @@ services:
   # Review result volumes carefully before enabling in a high-throughput environment.
   # ---------------------------------------------------------------------------
   connector-zetalytics-auto-light:
-    image: opencti/connector-zetalytics-dns:latest
+    image: opencti/connector-zetalytics:latest
     container_name: connector-zetalytics-auto-light
     restart: unless-stopped
     environment:
@@ -182,7 +182,7 @@ services:
   # CONNECTOR_AUTO must remain false — this profile is analyst-triggered only.
   # ---------------------------------------------------------------------------
   connector-zetalytics-deep:
-    image: ${DOCKER_REGISTRY:-registry.example.internal}/zetalytics-dns-connector:${TAG:-latest}
+    image: opencti/connector-zetalytics:latest
     container_name: connector-zetalytics-deep
     restart: unless-stopped
     environment:
@@ -191,8 +191,7 @@ services:
       CONNECTOR_ID: "00000000-0000-4000-8000-000000000104"
       CONNECTOR_NAME: "Zetalytics DNS - Deep Investigation"
       CONNECTOR_TYPE: "INTERNAL_ENRICHMENT"
-      # Includes Email-Addr to support email pivot enrichment
-      CONNECTOR_SCOPE: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr,Email-Addr"
+      CONNECTOR_SCOPE: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr"
       # Must remain false - deep investigation is analyst-triggered only
       CONNECTOR_AUTO: "false"
       CONNECTOR_LOG_LEVEL: "info"

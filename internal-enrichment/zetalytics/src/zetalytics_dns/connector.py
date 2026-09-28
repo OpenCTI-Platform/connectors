@@ -68,13 +68,14 @@ class Connector:
                 {"type": obs_type, "value": obs_value},
             )
 
-            self._check_tlp(enrichment_entity)
+            source_tlp = self._check_tlp(enrichment_entity)
             self._check_scope(obs_type)
 
             converter = Converter(
                 helper=self.helper,
                 confidence=self.config.zetalytics.confidence,
                 marking_tlp=self.config.zetalytics.marking_definition,
+                source_tlp=source_tlp,
             )
 
             if obs_type in _DOMAIN_TYPES:
@@ -208,8 +209,7 @@ class Connector:
         if cfg.include_historical_whois and cfg.max_whois_results > 0:
             try:
                 whois_resp = self.client.domain_whois(value, size=cfg.max_whois_results)
-                # WHOIS is stored as a note by the d8s converter; reuse the same pattern
-                objects.extend(converter.from_d8s(value, stix_id, whois_resp))
+                objects.extend(converter.from_whois(value, stix_id, whois_resp))
             except Exception as exc:
                 self.helper.connector_logger.warning(
                     "[CONNECTOR] domain2whois query failed",
@@ -334,8 +334,8 @@ class Connector:
     # Guards
     # ------------------------------------------------------------------
 
-    def _check_tlp(self, enrichment_entity: dict[str, Any]) -> None:
-        """Raise TlpError if the observable's TLP exceeds the configured max."""
+    def _check_tlp(self, enrichment_entity: dict[str, Any]) -> str:
+        """Return the observable's TLP, raising TlpError if it exceeds the configured max."""
         tlp: str = next(
             (
                 m["definition"]
@@ -351,6 +351,7 @@ class Connector:
                 f"Observable TLP ({tlp}) exceeds configured maximum "
                 f"({self.config.zetalytics.max_tlp}); skipping enrichment."
             )
+        return tlp
 
     def _check_scope(self, obs_type: str) -> None:
         """Raise UnsupportedEntityTypeError if the type is outside scope.

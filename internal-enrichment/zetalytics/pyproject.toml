@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ZetalyticsDnsConnector"
+version = "1.0.0"
 description = "Internal Enrichment connector for Zetalytics DNS and infrastructure intelligence."
-dynamic = ["version"]
 requires-python = ">=3.11"
 
 dependencies = [

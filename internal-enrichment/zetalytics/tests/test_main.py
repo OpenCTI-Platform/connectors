@@ -518,6 +518,91 @@ def test_enrich_ip_survives_every_endpoint_failing(
     assert helper.connector_logger.warning.call_count >= 3
 
 
+def test_historical_whois_uses_dedicated_converter(
+    mock_opencti_helper, stub_config_dict
+):
+    """domain2whois results must go through from_whois(), not be silently
+    dropped by reusing from_d8s()'s fixed d8s field list."""
+    stub_config_dict["zetalytics"]["include_historical_whois"] = True
+    stub_config_dict["zetalytics"]["max_whois_results"] = 5
+    config = make_stub_config(stub_config_dict)
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    helper.check_max_tlp = MagicMock(return_value=True)
+    helper.connector_logger = MagicMock()
+    helper.stix2_create_bundle = MagicMock(
+        return_value={"type": "bundle", "objects": []}
+    )
+    helper.send_stix2_bundle = MagicMock(return_value=["bundle-1"])
+
+    mock_client = MagicMock()
+    mock_client.passive_dns_for_domain.return_value = {"results": []}
+    mock_client.domain_whois.return_value = {
+        "results": [{"date": "2019-05-01", "raw": "Domain Name: EXAMPLE.COM"}]
+    }
+    connector = Connector(config=config, helper=helper, client=mock_client)
+
+    data = {
+        "enrichment_entity": {"objectMarking": []},
+        "stix_entity": {
+            "type": "domain-name",
+            "value": "example.com",
+            "id": "domain-name--00000000-0000-4000-8000-000000000012",
+        },
+        "stix_objects": [],
+    }
+    connector.process_message(data)
+
+    sent_objects = helper.stix2_create_bundle.call_args.args[0]
+    notes = [o for o in sent_objects if o.get("type") == "note"]
+    assert any("EXAMPLE.COM" in n["content"] for n in notes)
+
+
+def test_derived_objects_do_not_downgrade_source_observable_marking(
+    mock_opencti_helper, stub_config_dict
+):
+    """Enriching a TLP:RED observable with a connector configured for a looser
+    marking_definition (TLP:AMBER) must not publish derived objects at
+    TLP:AMBER -- they should inherit the source's more restrictive TLP:RED."""
+    config = make_stub_config(stub_config_dict)
+    helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+    helper.check_max_tlp = MagicMock(return_value=True)
+    helper.connector_logger = MagicMock()
+    helper.stix2_create_bundle = MagicMock(
+        return_value={"type": "bundle", "objects": []}
+    )
+    helper.send_stix2_bundle = MagicMock(return_value=["bundle-1"])
+
+    mock_client = MagicMock()
+    mock_client.passive_dns_for_domain.return_value = {
+        "results": [{"qname": "example.com", "rrtype": "a", "value": "1.2.3.4"}]
+    }
+    connector = Connector(config=config, helper=helper, client=mock_client)
+
+    data = {
+        "enrichment_entity": {
+            "objectMarking": [{"definition_type": "TLP", "definition": "TLP:RED"}],
+        },
+        "stix_entity": {
+            "type": "domain-name",
+            "value": "example.com",
+            "id": "domain-name--00000000-0000-4000-8000-000000000013",
+        },
+        "stix_objects": [],
+    }
+    connector.process_message(data)
+
+    sent_objects = helper.stix2_create_bundle.call_args.args[0]
+    ip_obj = next(o for o in sent_objects if o.get("type") == "ipv4-addr")
+    markings = [
+        o
+        for o in sent_objects
+        if o.get("id") in (ip_obj.get("object_marking_refs") or [])
+    ]
+    assert any(m.get("x_opencti_definition") == "TLP:RED" for m in markings) or any(
+        m.get("name") == "TLP:RED" for m in markings
+    )
+
+
 def test_send_bundle_reports_no_bundle_produced(mock_opencti_helper, stub_config_dict):
     """_send_bundle should short-circuit cleanly when the helper produces no bundle."""
     config = make_stub_config(stub_config_dict)

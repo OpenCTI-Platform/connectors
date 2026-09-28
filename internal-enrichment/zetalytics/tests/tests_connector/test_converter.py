@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+import stix2
 from zetalytics_dns.converter import (
     Converter,
     _extract_results,
@@ -140,8 +141,9 @@ def test_converter_author_is_created(converter):
 
 def test_base_objects_contains_author(converter):
     objects = converter.base_objects()
-    assert len(objects) == 1
+    assert len(objects) == 2
     assert objects[0]["name"] == "Zetalytics"
+    assert objects[1]["definition_type"] == "tlp"
 
 
 def test_from_domain_passive_dns_a_record(converter):
@@ -428,6 +430,148 @@ def test_from_ns_glue_tracks_nameserver_domains(converter):
     assert "ns1.example.com" in converter.nameserver_domains
 
 
+def test_tlp_clear_marking_carries_its_own_opencti_definition(mock_helper):
+    """TLP:CLEAR shares stix2's legacy TLP_WHITE id by design (OpenCTI kept
+    the same node when TLP 2.0 renamed WHITE to CLEAR), but it must carry its
+    own x_opencti_definition -- previously the connector emitted the bare
+    stix2.TLP_WHITE constant (name='TLP:WHITE', no OpenCTI TLP extension
+    fields at all), making it indistinguishable from a real TLP:WHITE marking."""
+    clear_converter = Converter(
+        helper=mock_helper, confidence=60, marking_tlp="TLP:CLEAR"
+    )
+    white_converter = Converter(
+        helper=mock_helper, confidence=60, marking_tlp="TLP:WHITE"
+    )
+
+    clear_marking = clear_converter._tlp_marking()
+    white_marking = white_converter._tlp_marking()
+
+    assert clear_marking["id"] == white_marking["id"] == stix2.TLP_WHITE["id"]
+    assert clear_marking["x_opencti_definition"] == "TLP:CLEAR"
+    assert "x_opencti_definition" not in white_marking
+
+
+def test_base_objects_includes_custom_marking_definition(mock_helper):
+    """Non-standard markings (CLEAR, AMBER+STRICT) aren't ready-made stix2
+    constants, so the object itself must ship in the bundle rather than only
+    being referenced by id via object_marking_refs."""
+    converter = Converter(
+        helper=mock_helper, confidence=60, marking_tlp="TLP:AMBER+STRICT"
+    )
+    objects = converter.base_objects()
+
+    marking_ids = [o["id"] for o in objects if o.get("type") == "marking-definition"]
+    assert converter._tlp_marking()["id"] in marking_ids
+
+
+def test_source_tlp_more_restrictive_than_config_wins(mock_helper):
+    """Derived objects must not be published at a looser marking than the
+    source observable they were derived from."""
+    converter = Converter(
+        helper=mock_helper,
+        confidence=60,
+        marking_tlp="TLP:AMBER",
+        source_tlp="TLP:RED",
+    )
+
+    assert converter._tlp_marking()["id"] == stix2.TLP_RED["id"]
+
+
+def test_configured_marking_wins_when_more_restrictive_than_source(mock_helper):
+    converter = Converter(
+        helper=mock_helper,
+        confidence=60,
+        marking_tlp="TLP:AMBER",
+        source_tlp="TLP:CLEAR",
+    )
+
+    assert converter._tlp_marking()["id"] == stix2.TLP_AMBER["id"]
+
+
+def test_make_location_includes_object_marking_refs(converter):
+    location = converter._make_location(
+        "London, GB", city="London", region="", country_code="GB"
+    )
+
+    assert location["object_marking_refs"] == [
+        m["id"] for m in converter._object_markings()
+    ]
+
+
+def test_anchor_object_hostname_uses_custom_observable(converter):
+    """Hostname observables aren't STIX 2.1 DomainName objects; re-emitting the
+    anchor with the wrong SCO type would mismatch OpenCTI's actual stored type
+    for the observable being enriched."""
+    existing_id = "hostname--00000000-0000-4000-8000-000000000099"
+    anchor = converter.anchor_object("hostname", "host.example.com", existing_id)
+
+    assert anchor["type"] != "domain-name"
+    assert anchor["value"] == "host.example.com"
+    assert anchor["id"] == existing_id
+
+
+def test_anchor_object_domain_name_still_uses_domain_name(converter):
+    existing_id = "domain-name--00000000-0000-4000-8000-000000000098"
+    anchor = converter.anchor_object("domain-name", "example.com", existing_id)
+
+    assert anchor["type"] == "domain-name"
+
+
+def test_from_ns_glue_still_relates_already_seen_nameserver(converter):
+    """A nameserver already discovered earlier in the run (e.g. via passive
+    DNS) must not cause the glue relationship to be dropped just because
+    _make_domain() returns None for the duplicate."""
+    existing = converter._make_domain("ns1.example.com")
+    response = {"results": [{"ns": "ns1.example.com", "ip": "5.6.7.8"}]}
+    stix_id = "domain-name--00000000-0000-4000-8000-000000000030"
+
+    objects = converter.from_ns_glue("example.com", stix_id, response)
+
+    # The domain object itself shouldn't be recreated (already seen)...
+    assert not any(o["type"] == "domain-name" for o in objects)
+    # ...but the glue relationship must still be created against its id.
+    rel_objs = [o for o in objects if o["type"] == "relationship"]
+    assert any(
+        r["source_ref"] == stix_id and r["target_ref"] == existing["id"]
+        for r in rel_objs
+    )
+    assert any(r["source_ref"] == existing["id"] for r in rel_objs)
+
+
+def test_from_subdomains_sets_start_and_stop_time(converter):
+    response = {
+        "results": [
+            {
+                "qname": "sub1.example.com",
+                "date": "2020-01-01",
+                "last_seen": "2023-11-10",
+            },
+        ]
+    }
+    stix_id = "domain-name--00000000-0000-4000-8000-000000000031"
+    objects = converter.from_subdomains("example.com", stix_id, response)
+
+    rel = next(o for o in objects if o["type"] == "relationship")
+    assert rel["start_time"].year == 2020
+    assert rel["stop_time"].year == 2023
+
+
+def test_from_whois_converts_arbitrary_fields(converter):
+    """Historical WHOIS records don't follow the domain2d8s field layout, so
+    the conversion must not depend on that fixed field list."""
+    response = {
+        "results": [
+            {"date": "2019-05-01", "raw": "Domain Name: EXAMPLE.COM"},
+        ]
+    }
+    stix_id = "domain-name--00000000-0000-4000-8000-000000000032"
+    objects = converter.from_whois("example.com", stix_id, response)
+
+    note_objs = [o for o in objects if o.get("type") == "note"]
+    assert len(note_objs) == 1
+    assert "EXAMPLE.COM" in note_objs[0]["content"]
+
+
 def test_empty_response_produces_no_objects(converter):
     stix_id = "domain-name--00000000-0000-4000-8000-000000000013"
     assert converter.from_domain_passive_dns("example.com", stix_id, None) == []
@@ -435,4 +579,5 @@ def test_empty_response_produces_no_objects(converter):
     assert converter.from_ip_context("1.2.3.4", stix_id, None) == []
     assert converter.from_subdomains("example.com", stix_id, None) == []
     assert converter.from_d8s("example.com", stix_id, None) == []
+    assert converter.from_whois("example.com", stix_id, None) == []
     assert converter.from_ns_glue("example.com", stix_id, None) == []

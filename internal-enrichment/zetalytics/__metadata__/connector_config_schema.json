@@ -35,7 +35,7 @@
       "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
-      "default": "info",
+      "default": "error",
       "description": "Minimum log level to emit.",
       "enum": [
         "debug",

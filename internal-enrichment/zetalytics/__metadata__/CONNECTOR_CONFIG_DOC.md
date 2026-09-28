@@ -11,7 +11,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | ZETALYTICS_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Zetalytics API token. |
 | CONNECTOR_NAME | `string` |  | string | `"Zetalytics DNS - Analyst Enrichment"` | Display name for this connector in OpenCTI. The configured zetalytics.lookback_days is automatically appended, e.g. 'Zetalytics DNS - Deep Investigation (2 years)'. |
 | CONNECTOR_SCOPE | `array` |  | string | `["Domain-Name", "Hostname", "IPv4-Addr", "IPv6-Addr"]` | Observable types this connector will enrich. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | Minimum log level to emit. |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Minimum log level to emit. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | ZETALYTICS_REQUEST_TIMEOUT | `integer` |  | `5 <= x ` | `30` | HTTP request timeout in seconds for all Zetalytics API calls. |

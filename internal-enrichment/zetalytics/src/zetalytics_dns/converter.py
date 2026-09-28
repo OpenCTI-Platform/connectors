@@ -26,6 +26,7 @@ from typing import Any
 
 import stix2
 from pycti import (
+    CustomObservableHostname,
     Identity,
     Location,
     MarkingDefinition,
@@ -44,6 +45,18 @@ _AUTHOR_URL = "https://zetalytics.com"
 # Relationship types used across methods
 _REL_RESOLVES_TO = "resolves-to"
 _REL_RELATED_TO = "related-to"
+
+# Restrictiveness ranking used to pick the more restrictive of the configured
+# marking_definition and the source observable's own TLP, so enrichment never
+# publishes derived objects at a looser marking than the data they came from.
+_TLP_RANK = {
+    "TLP:WHITE": 0,
+    "TLP:CLEAR": 0,
+    "TLP:GREEN": 1,
+    "TLP:AMBER": 2,
+    "TLP:AMBER+STRICT": 3,
+    "TLP:RED": 4,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -126,12 +139,22 @@ class Converter:
         helper: OpenCTIConnectorHelper,
         confidence: int,
         marking_tlp: str,
+        source_tlp: str | None = None,
     ) -> None:
         self.helper = helper
         self.confidence = confidence
-        self.marking_tlp = marking_tlp
+        # Use whichever of the configured marking_definition and the source
+        # observable's own TLP is more restrictive, so enrichment can't emit
+        # derived objects at a looser marking than the observable they came
+        # from.
+        self.marking_tlp = max(
+            (lvl.upper() for lvl in (marking_tlp, source_tlp) if lvl),
+            key=lambda lvl: _TLP_RANK.get(lvl, 0),
+            default=marking_tlp.upper(),
+        )
 
         self.author = self._create_author()
+        self._marking = self._tlp_marking()
 
         # Deduplication: track (type, normalised_value) pairs already created
         self._seen_observables: set[tuple[str, str]] = set()
@@ -168,7 +191,14 @@ class Converter:
         """Return the STIX TLP marking object for the configured level."""
         mapping = {
             "TLP:WHITE": stix2.TLP_WHITE,
-            "TLP:CLEAR": stix2.TLP_WHITE,
+            "TLP:CLEAR": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:CLEAR",
+            ),
             "TLP:GREEN": stix2.TLP_GREEN,
             "TLP:AMBER": stix2.TLP_AMBER,
             "TLP:AMBER+STRICT": stix2.MarkingDefinition(
@@ -184,8 +214,7 @@ class Converter:
         return mapping.get(self.marking_tlp.upper())
 
     def _object_markings(self) -> list:
-        marking = self._tlp_marking()
-        return [marking] if marking else []
+        return [self._marking] if self._marking else []
 
     # ------------------------------------------------------------------
     # Observable factories (with deduplication)
@@ -265,6 +294,7 @@ class Converter:
         kwargs: dict[str, Any] = {
             "id": Location.generate_id(name=name, x_opencti_location_type="City"),
             "name": name,
+            "object_marking_refs": self._object_markings(),
             "custom_properties": {"x_opencti_created_by_ref": self.author["id"]},
         }
         if country_code:
@@ -378,8 +408,17 @@ class Converter:
         return stix2.DomainName(value=_normalise_domain(value))["id"]
 
     def base_objects(self) -> list:
-        """Return the author identity, always included in every bundle."""
-        return [self.author]
+        """Return the author identity and TLP marking, always included in every bundle.
+
+        The marking definition is included explicitly (rather than only
+        referenced by id via object_marking_refs) so the bundle is
+        self-contained even for non-standard levels like TLP:CLEAR or
+        TLP:AMBER+STRICT, which stix2 doesn't ship as ready-made constants.
+        """
+        objects: list = [self.author]
+        if self._marking:
+            objects.append(self._marking)
+        return objects
 
     def anchor_object(
         self, obs_type: str, obs_value: str, obs_stix_id: str, token: str | None = None
@@ -423,8 +462,10 @@ class Converter:
         }
         if ext_refs:
             kwargs["external_references"] = ext_refs
-        if obs_type in ("domain-name", "hostname"):
+        if obs_type == "domain-name":
             return stix2.DomainName(**kwargs, allow_custom=True)
+        if obs_type == "hostname":
+            return CustomObservableHostname(**kwargs, allow_custom=True)
         if obs_type == "ipv4-addr":
             return stix2.IPv4Address(**kwargs, allow_custom=True)
         if obs_type == "ipv6-addr":
@@ -781,6 +822,9 @@ class Converter:
 
         for record in _extract_results(response):
             qname = record.get("qname") or record.get("subdomain") or ""
+            first_seen = (
+                record.get("date") or record.get("first_seen") or record.get("first_ts")
+            )
             last_seen = record.get("last_seen") or record.get("last_ts")
 
             if not qname:
@@ -794,6 +838,7 @@ class Converter:
                     _REL_RELATED_TO,
                     domain_stix_id,
                     description=f"Subdomain of {_normalise_domain(domain_value)}",
+                    start_time=first_seen,
                     stop_time=last_seen,
                 )
                 if rel:
@@ -840,6 +885,43 @@ class Converter:
 
         return objects
 
+    def from_whois(
+        self,
+        domain_value: str,
+        domain_stix_id: str,
+        response: dict[str, Any] | None,
+    ) -> list:
+        """Convert domain2whois historical WHOIS records to a Note on the domain.
+
+        Historical WHOIS snapshots don't follow the domain2d8s field layout
+        (registrar/creation_date/...), so each record's fields are rendered
+        generically rather than reusing ``from_d8s``'s fixed field list, which
+        would silently drop this data whenever the field names differ.
+        """
+        objects: list = []
+        lines: list[str] = []
+
+        for record in _extract_results(response):
+            parts = [
+                f"{str(field).replace('_', ' ').title()}: {value}"
+                for field, value in record.items()
+                if value not in (None, "", [], {})
+            ]
+            if parts:
+                lines.append("\n".join(parts))
+
+        if lines:
+            note = self._make_note(
+                content=(
+                    f"Zetalytics historical WHOIS records for {domain_value}:\n\n"
+                    + "\n---\n".join(lines)
+                ),
+                object_refs=[domain_stix_id],
+            )
+            objects.append(note)
+
+        return objects
+
     def from_ns_glue(
         self,
         observable_value: str,
@@ -861,18 +943,24 @@ class Converter:
             if ns_name:
                 self.nameserver_domains.add(_normalise_domain(ns_name))
                 ns_obj = self._make_domain(ns_name)
+                # _make_domain() returns None when the nameserver was already
+                # created earlier in this run (e.g. seen via passive DNS), but
+                # its STIX id is still deterministic, so the glue
+                # relationship must still be created against that id rather
+                # than being skipped.
+                ns_id = ns_obj["id"] if ns_obj else self.domain_id(ns_name)
                 if ns_obj:
                     objects.append(ns_obj)
-                    rel = self._make_relationship(
-                        observable_stix_id,
-                        _REL_RELATED_TO,
-                        ns_obj["id"],
-                        description="Nameserver glue record",
-                    )
-                    if rel:
-                        objects.append(rel)
+                rel = self._make_relationship(
+                    observable_stix_id,
+                    _REL_RELATED_TO,
+                    ns_id,
+                    description="Nameserver glue record",
+                )
+                if rel:
+                    objects.append(rel)
 
-                if ns_ip and ns_obj:
+                if ns_ip:
                     ip_obj = (
                         self._make_ipv4(ns_ip)
                         if _is_valid_ipv4(ns_ip)
@@ -881,7 +969,7 @@ class Converter:
                     if ip_obj:
                         objects.append(ip_obj)
                         rel = self._make_relationship(
-                            ns_obj["id"],
+                            ns_id,
                             _REL_RESOLVES_TO,
                             ip_obj["id"],
                             description="Nameserver glue A/AAAA record",

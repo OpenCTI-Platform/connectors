@@ -138,6 +138,103 @@ def test_light_mode_config():
     assert config.zetalytics.include_subdomains is False
 
 
+def test_light_mode_applies_profile_defaults_when_unset():
+    """Selecting a mode with no other zetalytics overrides must actually change
+    behaviour -- previously `mode` was purely informational and every endpoint
+    flag/volume control silently fell back to the manual-profile Field()
+    defaults regardless of which mode was configured."""
+    config = _make_loader(
+        {
+            "opencti": {"url": "http://localhost:8080", "token": "tok"},
+            "connector": {"id": "abc", "scope": "Domain-Name,IPv4-Addr", "auto": True},
+            "zetalytics": {"token": "zt", "mode": "light"},
+        }
+    )
+
+    assert config.zetalytics.max_results == 25
+    assert config.zetalytics.max_subdomains == 0
+    assert config.zetalytics.lookback_days == 90
+    assert config.zetalytics.tsfield == "last_seen"
+    assert config.zetalytics.include_live_dns is False
+    assert config.zetalytics.include_subdomains is False
+    assert config.zetalytics.include_d8s is False
+    assert config.zetalytics.include_ns_glue is False
+    assert config.zetalytics.confidence == 40
+
+
+def test_deep_mode_applies_profile_defaults_when_unset():
+    config = _make_loader(
+        {
+            "opencti": {"url": "http://localhost:8080", "token": "tok"},
+            "connector": {"id": "abc", "scope": "Domain-Name"},
+            "zetalytics": {"token": "zt", "mode": "deep"},
+        }
+    )
+
+    assert config.zetalytics.max_results == 500
+    assert config.zetalytics.max_subdomains == 1000
+    assert config.zetalytics.max_whois_results == 10
+    assert config.zetalytics.lookback_days == 730
+    assert config.zetalytics.include_historical_whois is True
+    assert config.zetalytics.include_ns2domain is True
+    assert config.zetalytics.include_mx2domain is True
+    assert config.zetalytics.confidence == 60
+
+
+def test_playbook_mode_applies_profile_defaults_when_unset():
+    config = _make_loader(
+        {
+            "opencti": {"url": "http://localhost:8080", "token": "tok"},
+            "connector": {"id": "abc", "scope": "Domain-Name"},
+            "zetalytics": {"token": "zt", "mode": "playbook"},
+        }
+    )
+
+    assert config.zetalytics.max_results == 100
+    assert config.zetalytics.lookback_days == 180
+    assert config.zetalytics.include_subdomains is False
+    assert config.zetalytics.include_d8s is False
+    assert config.zetalytics.include_ns_glue is False
+    assert config.zetalytics.confidence == 50
+
+
+def test_mode_defaults_do_not_override_explicit_settings():
+    """A field the user set explicitly must win over the mode's profile default."""
+    config = _make_loader(
+        {
+            "opencti": {"url": "http://localhost:8080", "token": "tok"},
+            "connector": {"id": "abc", "scope": "Domain-Name"},
+            "zetalytics": {
+                "token": "zt",
+                "mode": "light",
+                "include_live_dns": True,
+                "max_results": 42,
+            },
+        }
+    )
+
+    assert config.zetalytics.include_live_dns is True
+    assert config.zetalytics.max_results == 42
+    # Fields not overridden should still pick up the light profile's default.
+    assert config.zetalytics.include_subdomains is False
+
+
+def test_manual_mode_unaffected_by_profile_defaults():
+    """manual is the class's own Field() defaults; selecting it explicitly must
+    not change anything."""
+    config = _make_loader(
+        {
+            "opencti": {"url": "http://localhost:8080", "token": "tok"},
+            "connector": {"id": "abc", "scope": "Domain-Name"},
+            "zetalytics": {"token": "zt", "mode": "manual"},
+        }
+    )
+
+    assert config.zetalytics.max_results == 300
+    assert config.zetalytics.lookback_days == 365
+    assert config.zetalytics.confidence == 60
+
+
 def test_to_helper_config_returns_dict():
     config = _make_loader(
         {
