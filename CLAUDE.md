@@ -83,6 +83,104 @@ Older connectors still use `get_config_variable`, a monolithic single file or
   unused and missing dependencies per changed connector.
 - Never commit secrets. Samples (`config.yml.sample`, `docker-compose.yml`)
   hold placeholders only.
+- **Logging:** static message plus a context dict, never an f-string:
+  `self.logger.info("Reports fetched", {"count": len(reports)})` (use
+  `helper.connector_logger` in legacy connectors). Log a handled or skipped
+  error at WARNING, keep ERROR for unexpected failures at the top level.
+- **Errors:** use the SDK exceptions (`ConfigValidationError` at startup,
+  `DataRetrievalError` for source failures, `UseCaseError` for conversion
+  failures) and always `raise ... from err`. See
+  `connectors-sdk/docs/HOW-TO-Handle-errors-in-connectors.md`.
+- Never pass a `datetime` to `Note.generate_id()`: use `created=None`. A
+  timestamp creates a new note on every run and floods the RabbitMQ queue.
+- Environment variables are `<SECTION>_<FIELD>` in upper case, where the
+  section is the settings attribute name (`connector`, `opencti`, or the
+  connector's own section).
+- Avoid `helper.api` queries from connector code: they are slow and couple the
+  connector to the platform schema.
+
+### External-import connectors
+
+The base class owns the run loop, work management, bundle sending and state
+persistence. A data processor only fetches and converts.
+
+- `collect()` returns raw data, with no STIX. `transform()` converts, with no
+  network call. Build the client, author and marking once in `post_init()`.
+- Never call `send()`, `initiate_work()`, `to_processed()`,
+  `stix2_create_bundle()`, `send_stix2_bundle()` or `state.save()` from a
+  processor, and never set `last_run`.
+- Every `transform()` result includes the author and the marking objects,
+  otherwise references to them break (`MISSING_REFERENCE_ERROR`). Return `[]`
+  when there is nothing to send.
+- Skip and log (WARNING) a single item that fails to convert instead of
+  failing the whole run, and advance a checkpoint only past items that
+  converted.
+- State is saved once, after every processor succeeds. An exception in any
+  processor discards all checkpoints of that run.
+- State fields are JSON-friendly types (`str`, `int`, timezone-aware
+  `datetime`, `None`) defaulting to `None`. State holds checkpoints, not a
+  cache.
+- No `while True`, `time.sleep()` or `force_ping()`. `duration_period` is an
+  ISO-8601 duration; a zero duration means run once and exit.
+- Start-date settings default to a relative duration (`P30D`) through
+  `DatetimeFromIsoString`, not a hard-coded date.
+- For large or paginated sources, make `collect()` and `transform()`
+  generators and keep bundles under about 10,000 objects.
+
+Details: `docs/02-external-import-specifications.md`.
+
+### Internal-enrichment connectors
+
+- Check the entity scope from the `data["entity_id"]` prefix against
+  `helper.connect_scope`.
+- Check the TLP with `helper.check_max_tlp(entity_tlp, max_tlp)` before any
+  external API call. Both values must be in `TLP:XXX` form: pycti raises
+  `KeyError` on `"amber+strict"`.
+- When the message comes from a playbook (`data.get("event_type")` is falsy)
+  and the entity is out of scope, send `data["stix_objects"]` back unchanged.
+  Otherwise the playbook stalls.
+- Set `playbook_compatible=True` on the helper and `"playbook_supported": true`
+  in the manifest only when every code path sends a bundle, and keep the
+  original `stix_objects` in it.
+- Send results only through `stix2_create_bundle()` and `send_stix2_bundle()`.
+  Direct API writes skip confidence checks and deduplication.
+- Default `CONNECTOR_AUTO` to `false` for paid or quota-limited sources.
+
+Details: `docs/03-internal-enrichment-specifications.md`.
+
+### Stream connectors
+
+- `msg.data` is a JSON string: parse it with `json.loads(msg.data)["data"]`,
+  then branch on `msg.event` (`create`, `update`, `delete`).
+- Reject a missing or `ChangeMe` `helper.connect_live_stream_id` at startup.
+- The helper stores the stream position (`start_from`, `recover_until`) in the
+  connector state. Merge into `helper.get_state()` before `set_state()`,
+  never overwrite it with your own dict.
+
+Details: `docs/04-stream-specifications.md`.
+
+### Specification docs are partly stale
+
+`docs/`, `CONTRIBUTING.md` and `templates/README.md` still describe the old
+layout in places (`connector.py`, `converter_to_stix.py`, `entrypoint.sh`,
+`schedule_iso`, `pip install`, random `uuid4()` relationship IDs). When they
+disagree with `templates/<type>/`, the SDK code or this file, those three win.
+
+## Changing connectors-sdk
+
+- Read `connectors-sdk/TDRs/` first: they record the design decisions
+  (Pydantic models, settings, state, error handling, coverage).
+- The SDK test session also runs `ruff check` (Google-style docstrings
+  required) and strict `mypy`, and fails if either fails. Coverage must stay
+  at 100%.
+- New model: one file per model under `connectors_sdk/models/`, exported from
+  `connectors_sdk/models/__init__.py`, listed in
+  `tests/test_models/test_api.py`, with its own `tests/test_models/test_<name>.py`.
+  `connectors_sdk/models/hostname.py` is a small example.
+- Renamed or removed config keys go through `connectors_sdk.settings.deprecations`,
+  not hand-written alias fallbacks.
+- The SDK how-tos for new observables and relationships reference modules that
+  no longer exist (`models/octi/...`, `MODEL_REGISTRY`). Follow the rule above.
 
 ## Creating a connector
 
@@ -95,6 +193,15 @@ Valid types: `external-import`, `internal-enrichment`, `stream`,
 `Template`/`template` reference, generate a UUIDv4 for the connector `id`
 default, fill in `__metadata__/connector_manifest.json`, and resolve the
 `TODO` checklists left in the template files.
+
+Manifest rules (`__metadata__/connector_manifest.json`):
+
+- `use_cases` and `solution_categories`: 1 to 3 values each, from the fixed
+  lists in `CONTRIBUTING.md`.
+- `short_description`: 250 characters or fewer.
+- Logo: square PNG or JPEG, at least 96x96.
+- Never change `verified`, `last_verified_date` or `manager_supported`:
+  maintainers own them.
 
 ## Validation commands
 
@@ -155,17 +262,19 @@ and commits them, so never edit them by hand. To regenerate locally after
 changing `settings.py`:
 
 ```bash
-printf 'myconnector\ny\n' | make connector_config_schema
+mise run gs external-import/myconnector
 ```
 
-The `make` targets are interactive (they prompt for the connector folder
-name), hence the piped answers. Other targets: `connectors_config_schemas`,
-`connector_manifest`, `connectors_manifests`, `global_manifest`.
+`gs` is the `generate_config_schema` mise task (`.mise/tasks/`); it takes the
+connector path and does not prompt. The equivalent `make` targets
+(`connector_config_schema`, `connectors_config_schemas`, `connector_manifest`,
+`connectors_manifests`, `global_manifest`) prompt for the connector folder
+name, so they need piped answers: `printf 'myconnector\ny\n' | make connector_config_schema`.
 
 The generator installs `connectors-sdk` from GitHub `master`, which pins an
 exact pycti version. If the connector's `requirements.txt` pins an older
-pycti, dependency resolution fails silently and `make` exits with
-`Error 1`. Rebase on the latest `master` before regenerating.
+pycti, dependency resolution fails and generation stops. Rebase on the latest
+`master` before regenerating.
 
 ## CI overview
 
@@ -211,7 +320,16 @@ convention. See [`.github/LABELS.md`](.github/LABELS.md) for the full title and
 label taxonomy.
 <!-- filigran-conventions:end -->
 
-## Pull request checklist
+## Pull requests
+
+- One GitHub issue per pull request, referenced at the end of the title.
+- Fill in `.github/PULL_REQUEST_TEMPLATE.md` (proposed changes, related
+  issues, checklist) rather than writing a free-form body.
+- Labels: exactly one ownership label (`filigran team` or `community`), plus
+  `vibe-coded` for an AI-assisted pull request. Type, area and workflow labels
+  are for issues only. Language and `dependencies` labels are automatic.
+
+Checklist before opening one:
 
 - Formatting, flake8, STIX ID pylint and connector-linter pass locally.
 - Tests pass with `run_test.sh`, and new behaviour has tests.
