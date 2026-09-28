@@ -2,6 +2,6 @@
 azure-identity==1.25.1
 email_validator==2.3.0
 msgraph-sdk==1.63.0
-pycti==7.260928.0
+pycti==7.260928.1
 pydantic~=2.13.5
 pydantic-settings==2.15.0
