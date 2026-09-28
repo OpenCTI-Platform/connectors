@@ -10,6 +10,7 @@ import pytest
 from connector.src.custom.client_api.indicator.client_api_indicator import (
     ClientAPIIndicator,
 )
+from connector.src.custom.exceptions import GTIIndicatorPackageUnavailableError
 
 # =====================
 # Helpers
@@ -133,23 +134,46 @@ async def test_fetch_ioc_delta_package_404_returns_none(
 
 
 @pytest.mark.asyncio
-async def test_fetch_ioc_delta_package_400_returns_none(
+async def test_fetch_ioc_delta_package_400_raises_unavailable(
     client: ClientAPIIndicator,
     mock_fetcher: MagicMock,
 ) -> None:
-    """400 Bad Request (package not available yet) returns None."""
+    """400 Bad Request (package not available yet) raises so the hour is retried."""
     # Given
     mock_fetcher.fetch_bytes.return_value = (400, b"Package not ready")
 
-    # When
-    result = await client.fetch_ioc_delta_package("pkg-pending", "url")
-
-    # Then
-    assert result is None
+    # When / Then
+    with pytest.raises(GTIIndicatorPackageUnavailableError) as exc_info:
+        await client.fetch_ioc_delta_package("pkg-pending", "url")
+    assert exc_info.value.package_id == "pkg-pending"
+    assert exc_info.value.status_code == "400"
 
 
 # =====================
-# Scenario: fetch_ioc_delta_package – unexpected status (500)
+# Scenario: fetch_ioc_delta_package – transient failures (429, 5xx, no response)
+# =====================
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [429, 500, 503, 0])
+async def test_fetch_ioc_delta_package_transient_status_raises_unavailable(
+    client: ClientAPIIndicator,
+    mock_fetcher: MagicMock,
+    status: int,
+) -> None:
+    """Rate limiting, server errors and failed requests raise and log a warning."""
+    # Given
+    mock_fetcher.fetch_bytes.return_value = (status, b"Service Unavailable")
+
+    # When / Then
+    with pytest.raises(GTIIndicatorPackageUnavailableError) as exc_info:
+        await client.fetch_ioc_delta_package("pkg-err", "file")
+    assert exc_info.value.status_code == str(status)
+    client.logger.warning.assert_called_once()
+
+
+# =====================
+# Scenario: fetch_ioc_delta_package – unexpected non-retryable status (403)
 # =====================
 
 
@@ -158,9 +182,9 @@ async def test_fetch_ioc_delta_package_unexpected_status_returns_none(
     client: ClientAPIIndicator,
     mock_fetcher: MagicMock,
 ) -> None:
-    """Unexpected HTTP status (e.g. 500) returns None and logs a warning."""
+    """Unexpected non-retryable HTTP status (e.g. 403) returns None and logs a warning."""
     # Given
-    mock_fetcher.fetch_bytes.return_value = (500, b"Internal Server Error")
+    mock_fetcher.fetch_bytes.return_value = (403, b"Forbidden")
 
     # When
     result = await client.fetch_ioc_delta_package("pkg-err", "file")

@@ -11,11 +11,14 @@ from connector.src.custom.configs.indicator.batch_processor_config_indicator imp
 from connector.src.custom.convert_to_stix.indicator.convert_to_stix_indicator import (
     ConvertToSTIXIndicator,
 )
+from connector.src.custom.exceptions import GTIIndicatorPackageUnavailableError
 from connector.src.custom.orchestrators.base_orchestrator import BaseOrchestrator
 from connector.src.octi.work_manager import WorkManager
 from connector.src.utils.batch_processors import GenericBatchProcessor
 
 LOG_PREFIX = "[OrchestratorIndicator]"
+# IOC delta packages cover one clock hour and are published after it closes.
+PACKAGE_WINDOW = timedelta(hours=1)
 
 
 class OrchestratorIndicator(BaseOrchestrator):
@@ -68,15 +71,23 @@ class OrchestratorIndicator(BaseOrchestrator):
         return datetime.now(timezone.utc) - lookback
 
     async def run(self, initial_state: dict[str, Any] | None) -> None:
-        """Run the indicator orchestrator."""
+        """Run the indicator orchestrator.
+
+        Only hours that have fully closed are requested. An hour is recorded in
+        state after its objects have been sent, and processing stops at the first
+        package that is not available yet so that it is retried on the next run
+        instead of being skipped.
+        """
         self.logger.info("Starting indicator orchestration", {"prefix": LOG_PREFIX})
 
         now = datetime.now(timezone.utc)
-        start_dt = self._get_start_datetime(initial_state)
+        start_dt = self._get_start_datetime(initial_state).replace(
+            minute=0, second=0, microsecond=0
+        )
 
-        if start_dt >= now:
+        if start_dt + PACKAGE_WINDOW > now:
             self.logger.info(
-                "No new packages to process (start_dt >= now)",
+                "No new packages to process (next package hour has not closed)",
                 {"prefix": LOG_PREFIX, "start_dt": start_dt.isoformat()},
             )
             return
@@ -91,7 +102,7 @@ class OrchestratorIndicator(BaseOrchestrator):
         )
 
         current_dt = start_dt
-        while current_dt < now:
+        while current_dt + PACKAGE_WINDOW <= now:
             package_id = current_dt.strftime("%Y%m%d%H")
 
             self.logger.info(
@@ -99,26 +110,67 @@ class OrchestratorIndicator(BaseOrchestrator):
                 {"prefix": LOG_PREFIX, "package_id": package_id},
             )
 
-            for ioc_type in self.config.indicator_types:
-                await self._process_package(package_id, ioc_type)
+            try:
+                entries_by_type = await self._fetch_package(package_id)
+            except GTIIndicatorPackageUnavailableError as e:
+                self.logger.info(
+                    "IOC delta package unavailable, will retry on next run",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "package_id": package_id,
+                        "status": e.status_code,
+                    },
+                )
+                return
 
+            for ioc_type, raw_entries in entries_by_type.items():
+                self._add_package_to_batch(package_id, ioc_type, raw_entries)
+
+            self.batch_processor.flush()
             self.work_manager.update_state(
                 state_key="indicator_last_run_datetime",
                 date_str=current_dt.isoformat(),
             )
+            current_dt += PACKAGE_WINDOW
 
-            current_dt += timedelta(hours=1)
-            self.batch_processor.flush()
+    async def _fetch_package(self, package_id: str) -> dict[str, list[Any]]:
+        """Fetch every configured IOC type of one package before any is converted.
 
-    async def _process_package(self, package_id: str, ioc_type: str) -> None:
-        """Fetch and process a single IOC delta package."""
+        Raises:
+            GTIIndicatorPackageUnavailableError: Any IOC type of the package is not
+                available yet, so nothing from this package may be sent.
+
+        """
+        entries_by_type: dict[str, list[Any]] = {}
+        for ioc_type in self.config.indicator_types:
+            raw_entries = await self._fetch_package_entries(package_id, ioc_type)
+            if raw_entries:
+                entries_by_type[ioc_type] = raw_entries
+        return entries_by_type
+
+    async def _fetch_package_entries(
+        self, package_id: str, ioc_type: str
+    ) -> list[Any] | None:
+        """Fetch one IOC type of a package; other fetch errors skip that type."""
         try:
             raw_entries = await self.client_api.fetch_ioc_delta_package(
                 package_id, ioc_type
             )
-            if not raw_entries:
-                return
+        except GTIIndicatorPackageUnavailableError:
+            raise
+        except Exception as e:
+            self.logger.warning(
+                "Error processing IOC delta package",
+                {
+                    "prefix": LOG_PREFIX,
+                    "package_id": package_id,
+                    "ioc_type": ioc_type,
+                    "error": str(e),
+                },
+            )
+            return None
 
+        if raw_entries:
             self.logger.info(
                 "Fetched IOC delta entries",
                 {
@@ -128,17 +180,21 @@ class OrchestratorIndicator(BaseOrchestrator):
                     "count": len(raw_entries),
                 },
             )
+        return raw_entries
 
+    def _add_package_to_batch(
+        self, package_id: str, ioc_type: str, raw_entries: list[Any]
+    ) -> None:
+        """Convert one IOC type's entries to STIX and add them to the batch."""
+        try:
             all_stix: list[Any] = []
             for entry_data in raw_entries:
-                stix_objects = self.converter.convert(entry_data)
-                all_stix.extend(stix_objects)
+                all_stix.extend(self.converter.convert(entry_data))
 
             if all_stix:
                 self._add_entities_to_batch(
                     self.batch_processor, all_stix, self.converter
                 )
-
         except Exception as e:
             self.logger.warning(
                 "Error processing IOC delta package",

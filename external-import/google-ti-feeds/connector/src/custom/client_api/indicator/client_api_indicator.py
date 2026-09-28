@@ -7,8 +7,16 @@ import tarfile
 from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
+from connector.src.custom.exceptions import GTIIndicatorPackageUnavailableError
 
 LOG_PREFIX = "[ClientAPIIndicator]"
+
+# The API answers 400 for a package that has not been published yet.
+PACKAGE_NOT_READY_STATUS = 400
+RATE_LIMITED_STATUS = 429
+FIRST_SERVER_ERROR_STATUS = 500
+# GenericFetcher.fetch_bytes reports a request that never completed as status 0.
+TRANSPORT_FAILURE_STATUS = 0
 
 
 class ClientAPIIndicator(BaseClientAPI):
@@ -27,7 +35,18 @@ class ClientAPIIndicator(BaseClientAPI):
     async def fetch_ioc_delta_package(
         self, package_id: str, ioc_type: str
     ) -> list[dict[str, Any]] | None:
-        """Fetch an IOC delta package for a given package_id and ioc_type."""
+        """Fetch an IOC delta package for a given package_id and ioc_type.
+
+        Returns:
+            The parsed entries, or None when the package does not exist (404) or
+            the API returned another non-retryable status.
+
+        Raises:
+            GTIIndicatorPackageUnavailableError: The package is not published yet
+                (400), or the request was rate limited, failed server-side or never
+                completed. The package must be retried on a later run.
+
+        """
         fetcher = self.fetcher_factory.create_fetcher_by_name(
             "ioc_deltas",
             base_url=self.config.api_url.unicode_string(),
@@ -58,7 +77,7 @@ class ClientAPIIndicator(BaseClientAPI):
                 },
             )
             return None
-        if status == 400:
+        if status == PACKAGE_NOT_READY_STATUS:
             self.logger.debug(
                 "IOC delta package not available yet (400)",
                 {
@@ -67,7 +86,27 @@ class ClientAPIIndicator(BaseClientAPI):
                     "body": content[:200].decode("utf-8", errors="replace"),
                 },
             )
-            return None
+            raise GTIIndicatorPackageUnavailableError(
+                message="package not available yet",
+                package_id=package_id,
+                status_code=str(status),
+            )
+        if status in (RATE_LIMITED_STATUS, TRANSPORT_FAILURE_STATUS) or (
+            status >= FIRST_SERVER_ERROR_STATUS
+        ):
+            self.logger.warning(
+                "IOC delta package temporarily unavailable",
+                {
+                    **log_metadata,
+                    "status": status,
+                    "body": content[:200].decode("utf-8", errors="replace"),
+                },
+            )
+            raise GTIIndicatorPackageUnavailableError(
+                message="package temporarily unavailable",
+                package_id=package_id,
+                status_code=str(status),
+            )
         if status != 200:
             self.logger.warning(
                 "Unexpected HTTP status for IOC delta package",

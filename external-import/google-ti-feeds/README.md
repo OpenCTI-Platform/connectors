@@ -274,6 +274,8 @@ Fetches **Indicators** via the GTI **IOC Delta feed API**. The IOC Delta feed is
 
 Unlike the other collections which use the `/collections` search endpoint, the IOC collection uses a **completely different mechanism**: binary delta packages delivered per hour (`YYYYMMDDHH` package IDs).
 
+Each run requests only packages whose hour has closed, starting from the hour after the one recorded in state (`indicator_last_run_datetime`). An hour is recorded after its objects have been sent to OpenCTI. If a package is not published yet or the API fails transiently (HTTP 400, 429, 5xx), the run stops there and the same hour is retried on the next run. Scheduling the connector a few minutes after the hour (for example hourly at `:20`) gives the previous hour's package time to be published.
+
 **What it produces in OpenCTI per IOC type:**
 
 | IOC type | STIX Observable                          | STIX Indicator | Relationship |
