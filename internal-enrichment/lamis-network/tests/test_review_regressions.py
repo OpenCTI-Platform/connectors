@@ -273,3 +273,70 @@ def test_retirement_preserves_metadata_and_later_label_reconciliation(
     assert list(active["labels"]) == ["analyst-label", "suspicious"]
     assert list(active["x_lamis_network_labels"]) == ["suspicious"]
     assert "valid_until" not in active
+
+
+@pytest.mark.parametrize(
+    "source", ["dict", "stix", "platform", "observable", "multiple"]
+)
+def test_reenrichment_preserves_other_external_references(connector, event, source):
+    ip = event["stix_entity"]["value"]
+    indicator_id = PyctiIndicator.generate_id(f"[ipv4-addr:value = '{ip}']")
+    analyst_ref = {
+        "source_name": "Analyst",
+        "url": "https://example.org/report",
+        "external_id": "CASE-42",
+    }
+    old_lamis_ref = {
+        "source_name": "Lamis Network",
+        "url": "https://lamisnetwork.com",
+        "description": "Lamis Network IP risk evaluation (Score: 80/100)",
+    }
+    indicator = {
+        "type": "indicator",
+        "id": indicator_id,
+        "spec_version": "2.1",
+        "created": "2024-01-01T00:00:00Z",
+        "modified": "2024-01-01T00:00:00Z",
+        "created_by_ref": connector.author.id,
+        "name": ip,
+        "pattern": f"[ipv4-addr:value = '{ip}']",
+        "pattern_type": "stix",
+        "valid_from": "2024-01-01T00:00:00Z",
+        "external_references": [analyst_ref, old_lamis_ref],
+    }
+    if source in {"dict", "multiple"}:
+        event["stix_objects"].append(deepcopy(indicator))
+    if source == "stix":
+        event["stix_objects"].append(stix2.parse(indicator, allow_custom=True))
+    if source in {"platform", "observable", "multiple"}:
+        platform_indicator = deepcopy(indicator)
+        platform_indicator["standard_id"] = indicator_id
+        platform_references = []
+        for ref in indicator["external_references"]:
+            platform_ref = {"sourceName": ref["source_name"], "url": ref["url"]}
+            if "external_id" in ref:
+                platform_ref["externalId"] = ref["external_id"]
+            if "description" in ref:
+                platform_ref["description"] = ref["description"]
+            platform_references.append(platform_ref)
+        platform_indicator["externalReferences"] = platform_references
+        platform_indicator.pop("external_references")
+        if source in {"platform", "multiple"}:
+            connector.helper.api.indicator.read.return_value = platform_indicator
+        else:
+            event["enrichment_entity"]["indicators"] = [platform_indicator]
+
+    builder = LamisNetworkBuilder(
+        helper=connector.helper,
+        author=connector.author,
+        observable=event["enrichment_entity"],
+        stix_objects=event["stix_objects"],
+    )
+    builder.create_indicator(ip, "IPv4-Addr", 90, ["suspicious"], "Risk increased")
+    updated = next(obj for obj in builder.bundle if obj["id"] == indicator_id)
+    references = [dict(ref) for ref in updated["external_references"]]
+    assert analyst_ref in references
+    assert references.count(analyst_ref) == 1
+    lamis_refs = [ref for ref in references if ref["source_name"] == "Lamis Network"]
+    assert len(lamis_refs) == 1
+    assert "Score: 90/100" in lamis_refs[0]["description"]

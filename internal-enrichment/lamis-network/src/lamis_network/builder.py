@@ -1725,6 +1725,35 @@ class LamisNetworkBuilder:
             if s is not None
         ]
 
+        # Keep references contributed by analysts and other sources while
+        # replacing our previous score reference with the current evaluation.
+        external_references: List[Dict[str, Any]] = []
+        for source in existing_sources:
+            raw_references = _object_value(
+                source, "external_references"
+            ) or _object_value(source, "externalReferences", [])
+            if not isinstance(raw_references, (list, tuple)):
+                continue
+            for reference in raw_references:
+                source_name = _object_value(reference, "source_name") or _object_value(
+                    reference, "sourceName"
+                )
+                if not isinstance(source_name, str) or not source_name:
+                    continue
+                url = _object_value(reference, "url")
+                if source_name == "Lamis Network" and url == "https://lamisnetwork.com":
+                    continue
+                normalized = {"source_name": source_name}
+                for key in ("url", "description", "hashes", "external_id"):
+                    value = _object_value(reference, key)
+                    if key == "external_id" and value is None:
+                        value = _object_value(reference, "externalId")
+                    if value:
+                        normalized[key] = value
+                if normalized not in external_references:
+                    external_references.append(normalized)
+        external_references.append(dict(ext_ref))
+
         prev_ind_labels: List[str] = []
         for src in existing_sources:
             for lbl in _extract_labels_from_source(src):
@@ -1784,7 +1813,7 @@ class LamisNetworkBuilder:
                 },
                 labels=reconciled_labels,
                 object_marking_refs=marking_refs,
-                external_references=[ext_ref],
+                external_references=external_references,
                 allow_custom=True,
             )
         else:
@@ -1802,7 +1831,7 @@ class LamisNetworkBuilder:
                 },
                 labels=reconciled_labels,
                 object_marking_refs=marking_refs,
-                external_references=[ext_ref],
+                external_references=external_references,
                 allow_custom=True,
             )
 

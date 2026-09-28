@@ -43,7 +43,7 @@ This internal-enrichment connector automatically enriches `IPv4-Addr` and `IPv6-
 
 ### Requirements
 
-- OpenCTI Platform >= 5.12.0
+- OpenCTI Platform >= 5.12.20
 - Valid Lamis Network API Key ([Community Program](https://lamisnetwork.com/community.html) or Commercial)
 - Network connectivity from the connector to `https://api.lamisnetwork.com`
 
