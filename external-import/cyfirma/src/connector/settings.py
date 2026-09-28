@@ -55,9 +55,8 @@ class CyfirmaConfig(BaseConfigModel):
     )
     tailored_vulnerabilities: bool = Field(
         description="Whether to fetch tailored vulnerabilities.",
-        default=False,
+        default=True,
     )
-
 
 
 class ConnectorSettings(BaseConnectorSettings):
@@ -69,4 +68,3 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     cyfirma: CyfirmaConfig = Field(default_factory=CyfirmaConfig)
-

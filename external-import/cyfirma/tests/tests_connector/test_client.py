@@ -20,7 +20,6 @@ def test_cyfirma_client_get_entities_success():
             {"objects": []},
         ]
 
-
         res = client.get_entities()
         assert res == [{"id": "indicator--1"}]
         mock_helper.connector_logger.info.assert_called()

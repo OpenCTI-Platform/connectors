@@ -14,3 +14,6 @@ cyfirma:
   api_base_url: 'ChangeMe'
   api_key: 'ChangeMe'
   tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  tailored_iocs: true # optional (default: true)
+  look_back_days: 3 # optional (default: 3)
+  tailored_vulnerabilities: true # optional (default: true)

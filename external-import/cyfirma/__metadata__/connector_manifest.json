@@ -5,7 +5,9 @@
   "short_description": "CYFIRMA provides External Threat Landscape Management and Threat intelligence feeds.",
   "logo": "external-import/cyfirma/__metadata__/logo.png",
   "use_cases": [
-    "Vulnerability & Exploit Awareness", "Threat Intelligence"
+    "Vulnerability & Exploit Awareness",
+    "Adversary & Campaign Insights",
+    "Detection & Response Enablement"
   ],
   "solution_categories": [
     "Threat Intelligence Feed"
