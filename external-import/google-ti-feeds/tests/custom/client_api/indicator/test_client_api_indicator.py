@@ -10,7 +10,10 @@ import pytest
 from connector.src.custom.client_api.indicator.client_api_indicator import (
     ClientAPIIndicator,
 )
-from connector.src.custom.exceptions import GTIIndicatorPackageUnavailableError
+from connector.src.custom.exceptions import (
+    GTIIndicatorFetchError,
+    GTIIndicatorPackageUnavailableError,
+)
 
 # =====================
 # Helpers
@@ -172,19 +175,40 @@ async def test_fetch_ioc_delta_package_transient_status_raises_unavailable(
     client.logger.warning.assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_fetch_ioc_delta_package_request_error_raises_unavailable(
+    client: ClientAPIIndicator,
+    mock_fetcher: MagicMock,
+) -> None:
+    """Network/client failures raised by the fetcher keep the package retryable."""
+    # Given
+    mock_fetcher.fetch_bytes.side_effect = GTIIndicatorFetchError(
+        message="Network error fetching IOC delta packages: timeout"
+    )
+
+    # When / Then
+    with pytest.raises(GTIIndicatorPackageUnavailableError) as exc_info:
+        await client.fetch_ioc_delta_package("pkg-net", "domain")
+    assert exc_info.value.package_id == "pkg-net"
+    assert isinstance(exc_info.value.__cause__, GTIIndicatorFetchError)
+    client.logger.warning.assert_called_once()
+
+
 # =====================
-# Scenario: fetch_ioc_delta_package – unexpected non-retryable status (403)
+# Scenario: fetch_ioc_delta_package – unexpected non-retryable status (403, 6xx)
 # =====================
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("status", [403, 600])
 async def test_fetch_ioc_delta_package_unexpected_status_returns_none(
     client: ClientAPIIndicator,
     mock_fetcher: MagicMock,
+    status: int,
 ) -> None:
-    """Unexpected non-retryable HTTP status (e.g. 403) returns None and logs a warning."""
+    """Unexpected non-retryable HTTP status (e.g. 403, 6xx) returns None and warns."""
     # Given
-    mock_fetcher.fetch_bytes.return_value = (403, b"Forbidden")
+    mock_fetcher.fetch_bytes.return_value = (status, b"Forbidden")
 
     # When
     result = await client.fetch_ioc_delta_package("pkg-err", "file")

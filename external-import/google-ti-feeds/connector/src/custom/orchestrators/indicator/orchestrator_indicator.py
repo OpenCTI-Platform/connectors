@@ -52,7 +52,13 @@ class OrchestratorIndicator(BaseOrchestrator):
         )
 
     def _get_start_datetime(self, initial_state: dict[str, Any] | None) -> datetime:
-        """Determine start datetime from state or config."""
+        """Determine start datetime from state or config.
+
+        State on an hour boundary names the last package fully processed, so the
+        next run starts one hour later. State off the boundary was written before
+        closed-hour processing, when the recorded hour could still have been in
+        progress and never fetched, so that hour is retried.
+        """
         if initial_state:
             last_run = initial_state.get("indicator_last_run_datetime")
             if last_run:
@@ -60,7 +66,10 @@ class OrchestratorIndicator(BaseOrchestrator):
                     last_dt = datetime.fromisoformat(last_run)
                     if last_dt.tzinfo is None:
                         last_dt = last_dt.replace(tzinfo=timezone.utc)
-                    return last_dt + timedelta(hours=1)
+                    last_hour = last_dt.replace(minute=0, second=0, microsecond=0)
+                    if last_dt != last_hour:
+                        return last_hour
+                    return last_dt + PACKAGE_WINDOW
                 except ValueError:
                     self.logger.warning(
                         "Invalid last run datetime format in state, falling back to config",

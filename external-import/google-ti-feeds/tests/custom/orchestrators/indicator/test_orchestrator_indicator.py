@@ -323,6 +323,16 @@ def test_get_start_datetime_with_valid_state(
     assert result == expected  # noqa: S101
 
 
+def test_get_start_datetime_with_legacy_off_boundary_state(
+    gti_config: DummyConfig, caplog: Any
+) -> None:
+    """Off-boundary state (previous implementation) → retries the recorded hour."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    state = {"indicator_last_run_datetime": "2026-09-28T14:00:05.136020+00:00"}
+    result = ind_orch._get_start_datetime(state)
+    assert result == datetime(2026, 9, 28, 14, 0, 0, tzinfo=timezone.utc)  # noqa: S101
+
+
 def test_get_start_datetime_with_naive_datetime(
     gti_config: DummyConfig, caplog: Any
 ) -> None:
@@ -434,10 +444,31 @@ async def test_run_never_requests_the_in_progress_hour(
     requests = _record_fetches(monkeypatch, unavailable=set())
     ind_orch = _get_indicator_orchestrator(gti_config, caplog)
 
-    # State as written by the previous run at 12:00:05.
-    await ind_orch.run({"indicator_last_run_datetime": "2026-09-28T12:00:05+00:00"})
+    await ind_orch.run({"indicator_last_run_datetime": "2026-09-28T12:00:00+00:00"})
 
     assert requests == [("2026092813", "file")]  # noqa: S101
+    stored = ind_orch.work_manager.updated_state["indicator_last_run_datetime"]
+    assert stored == "2026-09-28T13:00:00+00:00"  # noqa: S101
+
+
+@pytest.mark.asyncio
+async def test_run_retries_hour_recorded_by_legacy_state(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any, frozen_now: datetime
+) -> None:
+    """Off-boundary state from the previous implementation retries its hour.
+
+    The old loop recorded the in-progress hour (e.g. 12:00:05 at 12:01) without
+    fetching it, so that hour is requested again before moving on.
+    """
+    requests = _record_fetches(monkeypatch, unavailable=set())
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+
+    await ind_orch.run({"indicator_last_run_datetime": "2026-09-28T12:00:05+00:00"})
+
+    assert requests == [  # noqa: S101
+        ("2026092812", "file"),
+        ("2026092813", "file"),
+    ]
     stored = ind_orch.work_manager.updated_state["indicator_last_run_datetime"]
     assert stored == "2026-09-28T13:00:00+00:00"  # noqa: S101
 

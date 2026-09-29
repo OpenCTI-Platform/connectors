@@ -7,7 +7,10 @@ import tarfile
 from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
-from connector.src.custom.exceptions import GTIIndicatorPackageUnavailableError
+from connector.src.custom.exceptions import (
+    GTIIndicatorFetchError,
+    GTIIndicatorPackageUnavailableError,
+)
 
 LOG_PREFIX = "[ClientAPIIndicator]"
 
@@ -15,7 +18,8 @@ LOG_PREFIX = "[ClientAPIIndicator]"
 PACKAGE_NOT_READY_STATUS = 400
 RATE_LIMITED_STATUS = 429
 FIRST_SERVER_ERROR_STATUS = 500
-# GenericFetcher.fetch_bytes reports a request that never completed as status 0.
+LAST_SERVER_ERROR_STATUS = 599
+# GenericFetcher.fetch_bytes reports an empty API client result as status 0.
 TRANSPORT_FAILURE_STATUS = 0
 
 
@@ -63,10 +67,22 @@ class ClientAPIIndicator(BaseClientAPI):
             log_metadata,
         )
 
-        status, content = await fetcher.fetch_bytes(
-            package_id=package_id,
-            ioc_type=ioc_type,
-        )
+        try:
+            status, content = await fetcher.fetch_bytes(
+                package_id=package_id,
+                ioc_type=ioc_type,
+            )
+        except GTIIndicatorFetchError as err:
+            # The fetcher raises its configured exception on network and client
+            # failures rather than returning a status.
+            self.logger.warning(
+                "IOC delta package request failed",
+                {**log_metadata, "error": str(err)},
+            )
+            raise GTIIndicatorPackageUnavailableError(
+                message="package request failed",
+                package_id=package_id,
+            ) from err
 
         if status == 404:
             self.logger.debug(
@@ -92,7 +108,7 @@ class ClientAPIIndicator(BaseClientAPI):
                 status_code=str(status),
             )
         if status in (RATE_LIMITED_STATUS, TRANSPORT_FAILURE_STATUS) or (
-            status >= FIRST_SERVER_ERROR_STATUS
+            FIRST_SERVER_ERROR_STATUS <= status <= LAST_SERVER_ERROR_STATUS
         ):
             self.logger.warning(
                 "IOC delta package temporarily unavailable",
