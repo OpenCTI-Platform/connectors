@@ -128,6 +128,8 @@ docker_image_tag() {
     # Print the fully-qualified local-registry image tag.
     # Requires CONTAINER_IMAGE and CONTAINER_VERSION to be set (via
     # load_manifest).
-    local registry="${DOCKER_REGISTRY:+${DOCKER_REGISTRY%/}/}"
+    local registry="${DOCKER_REGISTRY:-}"
+    while [[ "$registry" == */ ]]; do registry="${registry%/}"; done
+    [[ -n "$registry" ]] && registry+="/"
     printf "%s%s:%s" "$registry" "$CONTAINER_IMAGE" "$CONTAINER_VERSION"
 }
