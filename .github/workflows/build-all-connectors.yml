@@ -1,22 +1,6 @@
 name: Build Connector Images
 
 on:
-  workflow_dispatch:
-    inputs:
-      build_mode:
-        description: "Build mode (rolling, prerelease, release)"
-        required: true
-        default: "rolling"
-        type: choice
-        options:
-          - rolling
-          - prerelease
-          - release
-      push:
-        description: "Push images to registries"
-        required: true
-        default: "true"
-        type: boolean
   push:
     branches:
       - master
@@ -29,24 +13,23 @@ on:
       - '[0-9]*.[0-9]*.[0-9]*'
       - '[0-9]*.[0-9]*.[0-9]*-lts*'
 
-# No workflow-wide concurrency group here on purpose. GitHub Actions
-# concurrency operates on the whole run, not per-job — a top-level group
-# would gate lint/tests/build-manifest AND the image builds together. With
-# cancel-in-progress: false, several commits pushed in a short interval used
-# to pile up pending runs of which GitHub only keeps the latest, silently
-# dropping the connectors changed by the discarded runs (each run's
-# build_alpine_matrix.py only diffs its own HEAD~1..HEAD).
-#
-# Instead:
-#   - lint (ci-lint-format.yml), tests (ci-tests-connectors.yml) and
-#     build-manifest.yml each declare their own concurrency (cancel-in-progress:
-#     true, keyed off the ref), so calling them from multiple overlapping
-#     runs of this workflow still dedupes that work correctly.
-#   - Image builds are deliberately NOT deduped at the run level: concurrency
-#     for those is scoped per connector directory in build-connector-type.yml,
-#     so unrelated connectors always build in full across overlapping runs,
-#     while repeated pushes touching the same connector still cancel/dedupe
-#     safely.
+# Concurrency is deliberately NOT set at the run level, nor on lint/tests
+# (ci-lint-format.yml, ci-tests-connectors.yml declare none). Each run's
+# build_alpine_matrix.py only diffs its own HEAD~1..HEAD, so a run that is
+# cancelled or discarded before its builds start silently loses its
+# connectors until they are touched again:
+#   - a top-level group with cancel-in-progress: true cancels the older run;
+#   - with cancel-in-progress: false GitHub keeps only the latest pending run;
+#   - a shared group on lint/tests lets run B cancel run A's tests, which
+#     skips A's builds through `needs`.
+# Instead, overlapping runs proceed independently and dedupe only where it
+# is safe:
+#   - image builds are scoped per connector directory in
+#     build-connector-type.yml, so unrelated connectors always build in full,
+#     while repeated pushes touching the same connector cancel the older
+#     build in favour of the newer code;
+#   - build-manifest.yml keeps a per-ref group, since the manifest is
+#     regenerated from the full tree and a newer run supersedes an older one.
 
 permissions:
   contents: read
