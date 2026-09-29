@@ -68,7 +68,7 @@ Below are the parameters you'll need to set for the connector:
 | TLP level | cyfirma.tlp_level | `CYFIRMA_TLP_LEVEL` | clear | No | Default TLP marking level for imported objects. |
 | Tailored IOCs | cyfirma.tailored_iocs | `CYFIRMA_TAILORED_IOCS` | true | No | Whether to fetch tailored IOCs. |
 | Look back days | cyfirma.look_back_days | `CYFIRMA_LOOK_BACK_DAYS` | 7 | No | Number of days to look back for fetching IOCs. |
-| Tailored vulnerabilities | cyfirma.tailored_vulnerabilities | `CYFIRMA_TAILORED_VULNERABILITIES` | false | No | Whether to fetch tailored vulnerabilities. |
+| Tailored vulnerabilities | cyfirma.tailored_vulnerabilities | `CYFIRMA_TAILORED_VULNERABILITIES` | true | No | Whether to fetch tailored vulnerabilities. |
 
 ## Deployment
 
@@ -127,12 +127,37 @@ download of data by re-running the connector.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+## Behavior
+
+The connector periodically pulls data from the CYFIRMA API and imports it into OpenCTI as STIX 2.1 objects.
+
+### Data ingested
+
+| CYFIRMA feed | OpenCTI entities |
+|--------------|------------------|
+| Indicators | Indicator, plus related observables and relationships (verify) |
+| Vulnerabilities | Vulnerability, plus related objects such as software or identities (verify) |
+
+- Each feed is paginated. The connector requests pages until the API returns no further results.
+- Related STIX objects returned with a feed item are imported alongside it and linked with relationships.
+- All created objects carry the TLP marking set in `CYFIRMA_TLP_LEVEL` (verify the variable name).
+
+### CVSS handling
+
+CYFIRMA CVSS data is translated into OpenCTI's Vulnerability CVSS fields. CVSS v2 and v3 scores are mapped to their own version-specific attributes, so a v2 score does not populate v3 fields, and vice versa.
+Missing scores are left unset rather than defaulted to 0.
+
+### State and scheduling
+
+- The connector runs every `CONNECTOR_DURATION_PERIOD` (verify) and stores the time of the last successful run in the connector state.
+- The next run fetches data from that point onward. If a run fails, the state is not advanced, so the same window is retried next time.
+
+### Limitations and considerations
+
+- The first run may import a large volume of data depending on the configured start date (verify), so allow extra time.
+- Requests that fail after retries mark the run as failed instead of ending with partial data.
+- Objects are upserted by STIX ID, so re-importing the same data updates existing entities rather than duplicating them (verify).
+- Confidence and scoring values come from CYFIRMA. Check whether they're overridden by a connector setting.
 
 ## Debugging
 

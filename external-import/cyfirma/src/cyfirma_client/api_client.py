@@ -71,10 +71,33 @@ class CyfirmaClient:
 
         except requests.RequestException as err:
             error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error(
-                error_msg, {"url_path": api_url, "error": str(err)}
-            )
+            self.helper.connector_logger.error("[CONNECTOR] Run failed", {"error": str(err)})
             return {}
+
+
+    def get_entities(self):
+        """
+        Fetch entities from the Cyfirma API.
+
+        :return: List of entities or an empty list if an error occurs
+        """
+        try:
+            indicators = []  # self.get_indicators_feeds() or []
+            vulnerabilities = []  # self.get_vulnerabilities_feeds() or []
+
+            if indicators is None and vulnerabilities is None:
+                self.helper.connector_logger.error(
+                    "[API] Error while fetching entities: No data returned from API"
+                )
+                return []
+
+            return indicators + vulnerabilities
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[API] Error while fetching entities: " + str(err)
+            )
+            return []
+
 
     def get_indicators_feeds(self):
         try:
@@ -153,7 +176,8 @@ class CyfirmaClient:
             )
 
             for vuln in return_data:
-                self._convert_to_opencti_vulnerabilities(vuln)
+                if vuln.get("type") == "vulnerability":
+                     self._convert_to_opencti_vulnerabilities(vuln)
 
             return return_data
 
@@ -186,7 +210,7 @@ class CyfirmaClient:
                 )
                 new_extension_props["cvss_vector"] = str(
                     ext_props.get("cvss_vector", "")
-                ).replace("3.0", "3.1")
+                )
                 new_extension_props["cvss_attack_complexity"] = ext_props.get(
                     "attack_complexity", ""
                 )
@@ -240,8 +264,14 @@ class CyfirmaClient:
                 )
                 # new_extension_props["x_opencti_cvss_v2_exploit_code_maturity"] = ext_props.get("exploitability_score", "0.0")
 
-            vuln["extensions"] = {OPENCTI_EXTENSION_DEFINITION_ID: new_extension_props}
-            vuln["external_references"] = []
+            
+            extensions = vuln.setdefault("extensions", {})
+            extensions.pop(CYFIRMA_EXTENSION_DEFINITION_ID, None)
+            opencti_extension = extensions.setdefault(
+                OPENCTI_EXTENSION_DEFINITION_ID,
+                {"extension_type": "property-extension"},
+            )
+            opencti_extension.update(new_extension_props)
             return vuln
         except Exception as ex:
             self.helper.connector_logger.error(
