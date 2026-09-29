@@ -1,10 +1,17 @@
 """End-to-end dry run: simulate one enrichment locally without OpenCTI.
 
+Developer tooling — not part of the connector runtime.
+
 Goes through the same code path the connector takes in production —
 ``entity_mapper.build_query`` → ``HunterClient.query`` → ``stix_builder.build_bundle``
 — and writes the resulting STIX bundle to a file (or stdout). Useful for
 verifying API connectivity, bundle shape, and trigger-entity linking before
 wiring the connector to a real OpenCTI instance.
+
+Run it from the connector directory (so ``src`` is importable)::
+
+    export HUNTER_API_KEY=...
+    python -m scripts.dry_run --entity-type Threat-Actor-Group --entity-name TeamPCP
 """
 
 from __future__ import annotations
@@ -48,9 +55,10 @@ def _synthesise_stix_id(entity_type: str, name: str) -> str:
     return f"{stix_type}--{derived}"
 
 
-def main(argv: list[str] | None = None) -> int:  # pragma: no cover
+def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI parser (separate from ``main`` so tests can exercise it)."""
     p = argparse.ArgumentParser(
-        prog="python -m src.dry_run",
+        prog="python -m scripts.dry_run",
         description="Run one Hunter enrichment locally and emit the STIX bundle.",
     )
     p.add_argument("--entity-type", required=True, choices=SUPPORTED_TRIGGER_TYPES)
@@ -74,6 +82,11 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover
         ),
     )
     p.add_argument("--log-level", default="INFO")
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:  # pragma: no cover
+    p = build_parser()
     args = p.parse_args(argv)
 
     if not args.api_key:

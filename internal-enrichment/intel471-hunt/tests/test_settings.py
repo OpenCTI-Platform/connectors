@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from connectors_sdk import ConfigValidationError
 from src.settings import ConnectorSettings
@@ -44,6 +46,21 @@ def test_settings_load_with_required_values(env):
     assert settings.connector.id == REQUIRED_ENV["CONNECTOR_ID"]
     assert settings.connector.type == "INTERNAL_ENRICHMENT"
     assert settings.hunter.api_key.get_secret_value() == "secret"
+
+
+def test_settings_should_default_connector_id(env):
+    """The connector id MUST fall back on its unique default UUID v4.
+
+    The SDK declares `id` as required with no default; without the connector's
+    own override, CONNECTOR_ID would stay mandatory and the connector could not
+    be deployed from the catalog without manual input.
+    """
+    env.delenv("CONNECTOR_ID")
+
+    settings = ConnectorSettings()
+
+    assert settings.connector.id == "925c878a-d754-4ecd-b5d4-fcf8b22c767d"
+    assert UUID(settings.connector.id).version == 4
 
 
 def test_settings_defaults(env):

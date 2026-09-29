@@ -25,6 +25,7 @@ def main() -> None:
         author_name="Email Intel Microsoft",
         author_description="Email Intel Microsoft Connector",
         tlp_level=config.email_intel_microsoft.tlp_level,
+        report_type=config.email_intel_microsoft.report_type,
     )
     client = ConnectorClient(
         tenant_id=config.email_intel_microsoft.tenant_id,
