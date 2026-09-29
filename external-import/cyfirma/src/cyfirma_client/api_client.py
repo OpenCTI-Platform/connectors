@@ -55,7 +55,7 @@ class CyfirmaClient:
         :return: Response object or None if an error occurs
         """
         try:
-            response = self.session.get(
+            response =requests.get(
                 api_url, params=params, headers=headers, timeout=30
             )
 
@@ -70,33 +70,8 @@ class CyfirmaClient:
             return {}
 
         except requests.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error("[CONNECTOR] Run failed", {"error": str(err)})
-            return {}
-
-
-    def get_entities(self):
-        """
-        Fetch entities from the Cyfirma API.
-
-        :return: List of entities or an empty list if an error occurs
-        """
-        try:
-            indicators = []  # self.get_indicators_feeds() or []
-            vulnerabilities = []  # self.get_vulnerabilities_feeds() or []
-
-            if indicators is None and vulnerabilities is None:
-                self.helper.connector_logger.error(
-                    "[API] Error while fetching entities: No data returned from API"
-                )
-                return []
-
-            return indicators + vulnerabilities
-        except Exception as err:
-            self.helper.connector_logger.error(
-                "[API] Error while fetching entities: " + str(err)
-            )
-            return []
+            self.helper.connector_logger.error("[CONNECTOR] Request failed", {"error": str(err)})
+            raise
 
 
     def get_indicators_feeds(self):
@@ -137,7 +112,7 @@ class CyfirmaClient:
 
         except Exception as err:
             self.helper.connector_logger.error(str(err))
-            return {}
+            raise
 
     def get_vulnerabilities_feeds(self):
         try:
@@ -183,7 +158,7 @@ class CyfirmaClient:
 
         except Exception as err:
             self.helper.connector_logger.error(str(err))
-            return {}
+            raise
 
     def _convert_to_opencti_vulnerabilities(self, vuln: dict) -> Dict[str, Any]:
         """Convert vulnerability to OpenCTI format."""
@@ -277,7 +252,7 @@ class CyfirmaClient:
             self.helper.connector_logger.error(
                 f"Error converting vulnerability {vuln.get('id')}: {ex}"
             )
-            return vuln
+            raise
 
     def get_entities(self):
         """
@@ -294,4 +269,4 @@ class CyfirmaClient:
             self.helper.connector_logger.error(
                 "[API] Error while fetching entities: " + str(err)
             )
-            return []
+            raise

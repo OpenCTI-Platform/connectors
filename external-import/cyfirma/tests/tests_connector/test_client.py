@@ -5,7 +5,6 @@ import requests
 from cyfirma_client import CyfirmaClient
 from pydantic import HttpUrl
 
-
 # Constants for API paths and parameters
 _BASE_PREFIX_PATH = "/api/ex/v3/da"
 _STIX_PATH = "/stix/2.1"
