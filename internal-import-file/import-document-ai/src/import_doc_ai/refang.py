@@ -167,7 +167,9 @@ def _substitute_defang_notations(observable_type: str, value: str) -> str:
         refanged = _DEFANGED_SCHEME_RE.sub(
             lambda match: _SCHEMES[match.group("scheme").lower()], refanged
         )
-    return refanged.strip() if refanged != value else value
+    # The patterns consume the whitespace around a notation; any other
+    # whitespace belongs to the value and is kept for the validation to judge.
+    return refanged
 
 
 def _holds_defang_notation(value: str) -> bool:

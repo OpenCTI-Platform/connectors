@@ -6,9 +6,11 @@ same web service: in both cases it must reach OpenCTI refanged, with every
 reference resolving, or OpenCTI rejects the observables and the report.
 """
 
+import copy
 import json
 import sys
 import uuid
+from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from unittest.mock import Mock
@@ -17,10 +19,12 @@ import pycti
 import pytest
 import requests
 import stix2
+from stix2.utils import STIXdatetime
 
 sys.path.append(str((Path(__file__).resolve().parent.parent / "src")))
 
 from import_doc_ai.connector import Connector
+from import_doc_ai.refang import RefangSummary, refang_bundle_observables
 from import_doc_ai.util import OpenCTIFileObject
 
 DEFANGED_EMAIL = "admin[at]filigran[dot]io"
@@ -93,7 +97,7 @@ def fixture_connector(
     return Connector(config=config, helper=helper)
 
 
-def observable(observable_type: str, value: str) -> dict:
+def observable(observable_type: str, value: str, **properties) -> dict:
     """An observable as the extraction returns it, its id derived from its value."""
     return json.loads(
         stix2.parse(
@@ -101,23 +105,27 @@ def observable(observable_type: str, value: str) -> dict:
                 "type": observable_type,
                 "spec_version": "2.1",
                 "value": value,
-                "defanged": True,
+                **properties,
             },
             allow_custom=True,
         ).serialize()
     )
 
 
-def defanged_extraction(with_report: bool) -> dict:
-    """What the extraction returns for a document quoting defanged indicators."""
-    email = observable("email-addr", DEFANGED_EMAIL)
-    ipv6 = observable("ipv6-addr", DEFANGED_IPV6)
-    apt = {
+def intrusion_set(name: str) -> dict:
+    return {
         "type": "intrusion-set",
         "spec_version": "2.1",
-        "id": pycti.IntrusionSet.generate_id("APT41"),
-        "name": "APT41",
+        "id": pycti.IntrusionSet.generate_id(name),
+        "name": name,
     }
+
+
+def defanged_extraction(with_report: bool) -> dict:
+    """What the extraction returns for a document quoting defanged indicators."""
+    email = observable("email-addr", DEFANGED_EMAIL, defanged=True)
+    ipv6 = observable("ipv6-addr", DEFANGED_IPV6, defanged=True)
+    apt = intrusion_set("APT41")
     related_to = {
         "type": "relationship",
         "spec_version": "2.1",
@@ -141,6 +149,73 @@ def defanged_extraction(with_report: bool) -> dict:
             }
         )
     return {"type": "bundle", "id": f"bundle--{uuid.uuid4()}", "objects": objects}
+
+
+def clean_extraction(with_report: bool) -> dict:
+    """What the extraction returns for a document quoting no defanged indicator.
+
+    Clean values holding brackets are included, and a file whose name looks
+    defanged: a file is not a network indicator.
+    """
+    email = observable("email-addr", REFANGED_EMAIL)
+    apt = intrusion_set("APT41")
+    objects = [
+        email,
+        observable("ipv6-addr", REFANGED_IPV6),
+        observable("domain-name", "filigran.io"),
+        observable("url", "http://[2001:db8::1]:8080/index.html"),
+        observable("url", "https://en.wikipedia.org/wiki/Mercury_(planet)"),
+        json.loads(
+            stix2.File(
+                name="invoice[.]pdf[.]exe", hashes={"SHA-256": "a" * 64}
+            ).serialize()
+        ),
+        apt,
+        {
+            "type": "relationship",
+            "spec_version": "2.1",
+            "id": f"relationship--{uuid.uuid4()}",
+            "relationship_type": "related-to",
+            "source_ref": apt["id"],
+            "target_ref": email["id"],
+        },
+    ]
+    if with_report:
+        published = "2026-09-01T00:00:00.000Z"
+        objects.append(
+            {
+                "type": "report",
+                "spec_version": "2.1",
+                "id": pycti.Report.generate_id("Clean report", published),
+                "name": "Clean report",
+                "published": published,
+                "report_types": ["threat-report"],
+                "object_refs": [obj["id"] for obj in objects],
+            }
+        )
+    return {"type": "bundle", "id": f"bundle--{uuid.uuid4()}", "objects": objects}
+
+
+class FrozenDatetime(datetime):
+    """A ``datetime`` whose ``now`` never moves."""
+
+    @classmethod
+    def now(cls, tz=None):
+        return datetime(2026, 9, 1, tzinfo=tz)
+
+
+@pytest.fixture(name="frozen_clock")
+def fixture_frozen_clock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stop the clocks of the connector and of stix2, so two runs are alike.
+
+    The connector dates the report it creates, and stix2 stamps the objects
+    that carry no ``created`` / ``modified`` with the time it parses them.
+    """
+    monkeypatch.setattr("import_doc_ai.util.datetime", FrozenDatetime)
+    monkeypatch.setattr(
+        "stix2.base.get_timestamp",
+        lambda: STIXdatetime(2026, 9, 1, tzinfo=timezone.utc),
+    )
 
 
 def serve_extraction(
@@ -224,6 +299,69 @@ def test_process_message_sends_refanged_observables(
     )
 
 
+@pytest.mark.usefixtures("frozen_clock")
+@pytest.mark.parametrize("with_report", [True, False], ids=["report", "no-report"])
+@pytest.mark.parametrize("mode", ["legacy", "xtm_one"])
+def test_process_message_sends_a_bundle_without_defanged_observables_as_before(
+    mode: str,
+    with_report: bool,
+    monkeypatch: pytest.MonkeyPatch,
+    connector: Connector,
+    helper: Mock,
+):
+    # Given an extraction holding no defanged observable
+    extraction = clean_extraction(with_report)
+    refang_calls = []
+
+    def spied_refang(bundle: stix2.Bundle) -> tuple[stix2.Bundle, RefangSummary]:
+        refanged_bundle, summary = refang_bundle_observables(bundle)
+        refang_calls.append((bundle, refanged_bundle))
+        return refanged_bundle, summary
+
+    # When processing the import, then processing it again without the refang
+    # step, as the connector did before it
+    monkeypatch.setattr(
+        "import_doc_ai.connector.refang_bundle_observables", spied_refang
+    )
+    connector.process_message(
+        data=serve_extraction(mode, monkeypatch, connector, copy.deepcopy(extraction))
+    )
+    monkeypatch.setattr(
+        "import_doc_ai.connector.refang_bundle_observables",
+        lambda bundle: (bundle, RefangSummary()),
+    )
+    connector.process_message(
+        data=serve_extraction(mode, monkeypatch, connector, copy.deepcopy(extraction))
+    )
+
+    # Then the refang step hands the very same bundle on, and OpenCTI receives
+    # the same objects, under the same ids and in the same order, with the same
+    # send options
+    [(received_bundle, handed_on_bundle)] = refang_calls
+    assert handed_on_bundle is received_bundle
+    with_refang, without_refang = (
+        {**call.kwargs, "bundle": json.loads(call.kwargs["bundle"])["objects"]}
+        for call in helper.send_stix2_bundle.call_args_list
+    )
+    assert with_refang == without_refang
+
+    # And nothing is logged about refanging
+    logged_messages = [
+        call.args[0]
+        for log in (
+            helper.connector_logger.debug,
+            helper.connector_logger.info,
+            helper.connector_logger.warning,
+        )
+        for call in log.call_args_list
+    ]
+    assert not [
+        message
+        for message in logged_messages
+        if message.startswith(("Refanged", "Observable value looks defanged"))
+    ]
+
+
 @pytest.mark.parametrize(
     "observable_type, value",
     [
@@ -241,7 +379,7 @@ def test_process_message_warns_about_values_that_do_not_refang(
 ):
     # Given an extraction returning a defanged value that does not refang: not
     # a valid value once refanged, or holding a notation left in place
-    defanged = observable(observable_type, value)
+    defanged = observable(observable_type, value, defanged=True)
     extraction = {
         "type": "bundle",
         "id": f"bundle--{uuid.uuid4()}",

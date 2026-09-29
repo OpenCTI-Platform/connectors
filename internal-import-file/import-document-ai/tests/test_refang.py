@@ -120,6 +120,12 @@ NOTATIONS = [
     pytest.param(
         "url", "filigran[.]io/about", "filigran.io/about", id="url without scheme"
     ),
+    pytest.param(
+        "url",
+        "hxxps://filigran[.]io[/] ",
+        "https://filigran.io/",
+        id="whitespace after a trailing notation",
+    ),
 ]
 
 CLEAN_VALUES = [
@@ -159,6 +165,15 @@ UNREFANGABLE_VALUES = [
     pytest.param("url", "hxxp[:]filigran[.]io", id="url network scheme no authority"),
     pytest.param("url", "foo[://]", id="url authority without host"),
     pytest.param("url", "mailto:admin[at][dot]io", id="url mailto invalid address"),
+]
+
+# Defanged values holding whitespace that is not part of a notation: only the
+# notations are refanged, so they do not refang into a valid value.
+STRAY_WHITESPACE_VALUES = [
+    pytest.param("email-addr", "admin[at]filigran[dot]io\n", id="trailing newline"),
+    pytest.param("domain-name", " filigran[.]io", id="leading space"),
+    pytest.param("ipv4-addr", "192[.]168[.]1[.]1\t", id="trailing tab"),
+    pytest.param("url", " hxxps://filigran[.]io/", id="url leading space"),
 ]
 
 # Values holding a defang notation that is left in place: its brackets do not
@@ -597,6 +612,26 @@ def test_values_that_do_not_refang_into_a_valid_value_are_sent_unchanged():
     assert summary.refanged == []
     assert summary.unrefanged == [
         UnrefangedObservable("email-addr", email["id"], "admin[at][dot]io")
+    ]
+
+
+@pytest.mark.parametrize("observable_type, value", STRAY_WHITESPACE_VALUES)
+def test_whitespace_outside_a_notation_is_not_stripped(observable_type, value):
+    # Given a defanged value holding whitespace that is not part of a notation
+    defanged = observable(observable_type, value, defanged=True)
+    bundle = make_bundle(defanged, report([defanged["id"]]))
+
+    # When refanging it
+    refanged_bundle, summary = refang_bundle_observables(bundle)
+
+    # Then the whitespace is not stripped to make the value valid: the value
+    # and the bundle are left untouched, and the value is reported as not
+    # refanged
+    assert refang_observable_value(observable_type, value) == value
+    assert refanged_bundle is bundle
+    assert summary.refanged == []
+    assert summary.unrefanged == [
+        UnrefangedObservable(observable_type, defanged["id"], value)
     ]
 
 

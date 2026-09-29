@@ -140,7 +140,7 @@ flowchart TD
 
 ### Refanging of defanged observables
 
-Reports often defang their indicators so that nobody follows them by mistake (`admin[at]filigran[dot]io`, `hxxps://evil[.]com`, `2001[:]db8[:][:]1`). OpenCTI rejects such values (`INCORRECT_OBSERVABLE_FORMAT`), and with them every object referencing the observable, so the connector refangs the observables of the extracted bundle before anything else, whether the bundle comes from the web service or from XTM One.
+Reports often defang their indicators so that nobody follows them by mistake (`admin[at]filigran[dot]io`, `hxxps://evil[.]com`, `2001[:]db8[:][:]1`). OpenCTI rejects such domain names, hostnames, email addresses and IP addresses (`INCORRECT_OBSERVABLE_FORMAT`), and with them every object referencing the observable. It does not check URLs: a defanged URL is stored under its defanged value, which no search or enrichment will match. The connector therefore refangs the observables of the extracted bundle before anything else, whether the bundle comes from the web service or from XTM One.
 
 | Notation (case-insensitive) | Refanged to | Observable types |
 |-----------------------------|-------------|------------------|
@@ -155,7 +155,8 @@ Reports often defang their indicators so that nobody follows them by mistake (`a
 
 - Only the `value` of these observables is refanged: names, descriptions and any other free text keep their defanged spelling.
 - Brackets must pair up (`[.]` is refanged, `[.}` is not), and a notation is only refanged in the types listed for it (`[at]` is not refanged in a domain name): a value holding a notation that is not refanged is sent unchanged and logged as a warning.
-- A refanged value is only kept when it is a valid value of its type: it must pass the checks OpenCTI applies to domain names, hostnames, email addresses and IP addresses, and a URL must be well-formed (a valid host, or valid addresses for a `mailto:` URL). Otherwise the observable is sent unchanged (and logged as a warning), for OpenCTI to report it.
+- A refanged value is only kept when it is a valid value of its type: it must pass the checks OpenCTI applies to domain names, hostnames, email addresses and IP addresses, and a URL must be well-formed (a valid host, or valid addresses for a `mailto:` URL). Otherwise the observable is sent unchanged, as it was before, and logged as a warning.
+- Only the notations are refanged, with the whitespace inside and around them (`filigran [ . ] io`): any other whitespace is kept, so a value with stray leading or trailing whitespace does not refang.
 - A refanged observable gets the deterministic STIX id derived from its new value and loses its `defanged` flag. Every reference to its former id (report `object_refs`, relationship `source_ref` / `target_ref`, any `*_ref` / `*_refs`) is rewritten, and two spellings of one value, as well as the relationships they end up sharing, are merged.
 
 ### Mapping to OpenCTI entities
