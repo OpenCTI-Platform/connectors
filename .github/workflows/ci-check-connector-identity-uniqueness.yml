@@ -53,6 +53,23 @@ jobs:
             echo "relevant=false" >> "$GITHUB_OUTPUT"
           fi
 
+  # Skipped jobs are reported as successful, so a failed detect-changes would
+  # silently skip the check below. This gate always runs and fails in that case.
+  detect-changes-gate:
+    name: Change detection gate
+    needs: detect-changes
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if change detection did not succeed
+        env:
+          DETECT_RESULT: ${{ needs.detect-changes.result }}
+        run: |
+          if [ "$DETECT_RESULT" != "success" ]; then
+            echo "::error::Change detection did not succeed (result: $DETECT_RESULT)."
+            exit 1
+          fi
+
   check-connector-identity:
     name: Check connector identity uniqueness
     needs: detect-changes
