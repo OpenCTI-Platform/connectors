@@ -12,6 +12,14 @@ from connectors_sdk.client.exceptions import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.client.rate_limit import RateLimit
+from connectors_sdk.client.recorders import (
+    FileSystemRecorder,
+    LogRecorder,
+    MultiRecorder,
+    OpenCTIFileRecorder,
+    RequestRecorder,
+    build_recorder,
+)
 from connectors_sdk.connectors.external_import._work_manager import WorkManager
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
@@ -53,6 +61,13 @@ __all__ = [
     "ApiRateLimitError",
     "ApiServerError",
     "ApiUnauthorizedError",
+    # Request recorders (debugging)
+    "RequestRecorder",
+    "FileSystemRecorder",
+    "LogRecorder",
+    "OpenCTIFileRecorder",
+    "MultiRecorder",
+    "build_recorder",
     # Base Settings
     "BaseConnectorSettings",
     # Base Configs

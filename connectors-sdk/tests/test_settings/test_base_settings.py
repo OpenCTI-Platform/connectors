@@ -430,6 +430,9 @@ def test_base_connector_settings_should_provide_helper_config(mock_environment):
             "log_level": "error",
             "name": "Test Connector",
             "scope": "scope1,scope2",  # comma-separated string
+            "record_requests": False,
+            "record_requests_mode": "log",
+            "record_requests_dir": None,
         },
     }
 

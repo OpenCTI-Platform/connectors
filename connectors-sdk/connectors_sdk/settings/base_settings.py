@@ -143,6 +143,28 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         description="The minimum level of logs to display.",
         default="error",
     )
+    record_requests: bool = Field(
+        default=False,
+        description=(
+            "Enable recording of outgoing HTTP requests/responses for debugging. "
+            "Secrets are redacted. Disabled by default."
+        ),
+    )
+    record_requests_mode: Literal["log", "file"] = Field(
+        default="log",
+        description=(
+            "Where recorded requests are written: 'log' (connector logs, works "
+            "in managed catalog deployments) or 'file' (session folder, "
+            "self-hosted with a mounted volume)."
+        ),
+    )
+    record_requests_dir: str | None = Field(
+        default=None,
+        description=(
+            "Target folder for recorded requests when 'record_requests_mode' is "
+            "'file'. Defaults to './recordings'."
+        ),
+    )
 
     @field_serializer("scope", mode="wrap", when_used="json")
     def _serialize_scope(

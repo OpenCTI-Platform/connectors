@@ -35,6 +35,12 @@ def test_root_public_api_is_valid():
         "ApiNotFoundError",
         "ApiRateLimitError",
         "ApiServerError",
+        "RequestRecorder",
+        "FileSystemRecorder",
+        "LogRecorder",
+        "OpenCTIFileRecorder",
+        "MultiRecorder",
+        "build_recorder",
     }
     missing = imports - set(root_api.__all__)
     extra = set(root_api.__all__) - imports

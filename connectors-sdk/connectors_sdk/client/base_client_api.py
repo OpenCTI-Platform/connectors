@@ -8,12 +8,15 @@ Provides a reusable foundation that handles:
 - Proactive rate limiting via the ``limits`` library
 - Pagination helpers (offset/page-based)
 - Configurable timeouts and SSL verification
+- Optional recording of requests/responses via pluggable recorders (folder,
+  connector logs, or an uploaded OpenCTI bundle) for debugging
 """
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
+from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urljoin
 
@@ -27,6 +30,12 @@ from connectors_sdk.client.exceptions import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.client.rate_limit import RateLimit, _RateLimitAdapter
+from connectors_sdk.client.recorders import (
+    FileSystemRecorder,
+    MultiRecorder,
+    RequestRecorder,
+    build_exchange,
+)
 from requests.adapters import Retry
 
 logger = logging.getLogger(__name__)
@@ -69,6 +78,16 @@ class BaseClientApi:
         raise_on_limit_exceeded: If True (default), raises ``ApiRateLimitError``
             when the proactive rate limit is exceeded. If False, the client
             will sleep until the window resets.
+        record_dir: Shortcut to record every request/response as JSON files in
+            a timestamped session subfolder of ``record_dir`` (a
+            :class:`FileSystemRecorder`). Best for self-hosted / docker-compose
+            deployments where the folder can be mounted and retrieved.
+        recorder: One or more :class:`RequestRecorder` sinks to capture
+            requests/responses. Use :class:`LogRecorder` for managed catalog
+            deployments (records to connector logs) or
+            :class:`OpenCTIFileRecorder` to upload a downloadable bundle.
+            Combined with ``record_dir`` if both are provided. Sensitive
+            headers are always redacted so recordings can be safely shared.
     """
 
     def __init__(
@@ -81,6 +100,8 @@ class BaseClientApi:
         backoff_factor: float = 1.0,
         rate_limit: RateLimit | str | None = None,
         raise_on_limit_exceeded: bool = True,
+        record_dir: str | Path | None = None,
+        recorder: RequestRecorder | Sequence[RequestRecorder] | None = None,
     ) -> None:
         """Initialize the API client.
 
@@ -94,6 +115,29 @@ class BaseClientApi:
         self._rate_limit = rate_limit
         self._raise_on_limit_exceeded = raise_on_limit_exceeded
         self.__session: requests.Session | None = None
+
+        self._record_seq = 0
+        self._recorder = self._build_recorder(record_dir, recorder)
+
+    @staticmethod
+    def _build_recorder(
+        record_dir: str | Path | None,
+        recorder: RequestRecorder | Sequence[RequestRecorder] | None,
+    ) -> RequestRecorder | None:
+        """Combine ``record_dir`` and ``recorder`` into a single recorder."""
+        recorders: list[RequestRecorder] = []
+        if record_dir is not None:
+            recorders.append(FileSystemRecorder(record_dir))
+        if isinstance(recorder, RequestRecorder):
+            recorders.append(recorder)
+        elif recorder is not None:
+            recorders.extend(recorder)
+
+        if not recorders:
+            return None
+        if len(recorders) == 1:
+            return recorders[0]
+        return MultiRecorder(recorders)
 
     # ------------------------------------------------------------------
     # Session (lazy initialization)
@@ -302,7 +346,10 @@ class BaseClientApi:
         """
         url = self._build_url(path)
         kwargs.setdefault("timeout", self._timeout)
-        return self._session.request(method, url, **kwargs)
+        response = self._session.request(method, url, **kwargs)
+        if self._recorder is not None:
+            self._record_exchange(response)
+        return response
 
     def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         """Execute an HTTP request with error handling and response parsing.
@@ -452,3 +499,40 @@ class BaseClientApi:
             if len(response.text) > 2000:
                 return response.text[:2000] + "...[truncated]"
             return response.text
+
+    # ------------------------------------------------------------------
+    # Request recording (debugging)
+    # ------------------------------------------------------------------
+
+    def _record_exchange(self, response: requests.Response) -> None:
+        """Send a request/response pair to the configured recorder.
+
+        Recording failures never interrupt the actual HTTP flow.
+        """
+        try:
+            self._record_seq += 1
+            exchange = build_exchange(response, seq=self._record_seq)
+            assert self._recorder is not None  # guarded by caller
+            self._recorder.record(exchange)
+        except Exception:  # pragma: no cover - recording must never break requests
+            logger.warning("Failed to record API request/response", exc_info=True)
+
+    def close(self) -> None:
+        """Close the session and flush the recorder (if any).
+
+        Call this at connector shutdown so buffered recorders (e.g.
+        :class:`OpenCTIFileRecorder`) can flush/upload their data.
+        """
+        if self._recorder is not None:
+            self._recorder.close()
+        if self.__session is not None:
+            self.__session.close()
+            self.__session = None
+
+    def __enter__(self) -> "BaseClientApi":
+        """Enter the runtime context and return the client."""
+        return self
+
+    def __exit__(self, *exc_info: Any) -> None:
+        """Exit the runtime context, closing the session and recorder."""
+        self.close()

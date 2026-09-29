@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -16,6 +18,7 @@ from connectors_sdk.client.exceptions import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.client.rate_limit import RateLimit, _RateLimitAdapter
+from connectors_sdk.client.recorders import FileSystemRecorder, MultiRecorder
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -800,3 +803,242 @@ class TestSafeResponseBody:
             with pytest.raises(ApiClientError) as exc_info:
                 client._get("/bad")
             assert exc_info.value.response_body == "short error"
+
+
+# ===========================================================================
+# Request Recording (debugging session folder)
+# ===========================================================================
+
+
+def _mock_recorded_response(
+    status_code: int = 200,
+    json_data=None,
+    text: str = "",
+    request_method: str = "GET",
+    request_url: str = "https://api.example.com/test",
+    request_headers: dict | None = None,
+    request_body=None,
+    response_headers: dict | None = None,
+):
+    """Create a mock response wired for recording (request, elapsed, content)."""
+    resp = _mock_response(
+        status_code=status_code,
+        json_data=json_data,
+        text=text,
+        headers=response_headers,
+        content_type="application/json" if json_data is not None else None,
+    )
+    resp.content = (
+        json.dumps(json_data).encode() if json_data is not None else text.encode()
+    )
+    resp.elapsed = timedelta(milliseconds=12.5)
+    req = MagicMock(spec=requests.PreparedRequest)
+    req.method = request_method
+    req.url = request_url
+    req.headers = request_headers or {}
+    req.body = request_body
+    resp.request = req
+    return resp
+
+
+class TestRequestRecording:
+    def test_no_recording_by_default(self, tmp_path):
+        client = BaseClientApi("https://api.example.com", max_retries=0)
+        assert client._recorder is None
+        assert not list(tmp_path.iterdir())
+
+    def test_record_dir_creates_filesystem_recorder(self, tmp_path):
+        client = BaseClientApi(
+            "https://api.example.com", max_retries=0, record_dir=tmp_path
+        )
+        assert isinstance(client._recorder, FileSystemRecorder)
+        assert client._recorder.session_dir.exists()
+        assert client._recorder.session_dir.parent == tmp_path
+        assert client._recorder.session_dir.name.startswith("session_")
+
+    def test_request_is_recorded(self, tmp_path):
+        client = BaseClientApi(
+            "https://api.example.com", max_retries=0, record_dir=tmp_path
+        )
+        resp = _mock_recorded_response(
+            json_data={"result": "ok"},
+            request_method="GET",
+            request_url="https://api.example.com/indicators?page=1",
+        )
+        with patch.object(client._session, "request", return_value=resp):
+            client._get("/indicators", params={"page": 1})
+
+        files = sorted(client._recorder.session_dir.glob("*.json"))
+        assert len(files) == 1
+        assert files[0].name == "0001_GET.json"
+        record = json.loads(files[0].read_text())
+        assert record["request"]["method"] == "GET"
+        assert record["response"]["status_code"] == 200
+        assert record["response"]["body"] == {"result": "ok"}
+        assert record["response"]["elapsed_ms"] == 12.5
+
+    def test_multiple_requests_incrementing_seq(self, tmp_path):
+        client = BaseClientApi(
+            "https://api.example.com", max_retries=0, record_dir=tmp_path
+        )
+        resp = _mock_recorded_response(json_data={"result": "ok"})
+        with patch.object(client._session, "request", return_value=resp):
+            client._get("/one")
+            client._get("/two")
+
+        files = sorted(client._recorder.session_dir.glob("*.json"))
+        assert [f.name for f in files] == ["0001_GET.json", "0002_GET.json"]
+
+    def test_sensitive_headers_are_redacted(self, tmp_path):
+        client = BaseClientApi(
+            "https://api.example.com", max_retries=0, record_dir=tmp_path
+        )
+        resp = _mock_recorded_response(
+            json_data={"ok": True},
+            request_headers={
+                "Authorization": "Bearer super-secret",
+                "X-API-KEY": "another-secret",
+                "Accept": "application/json",
+            },
+            response_headers={"Set-Cookie": "session=abc"},
+        )
+        with patch.object(client._session, "request", return_value=resp):
+            client._get("/secure")
+
+        record = json.loads(
+            next(client._recorder.session_dir.glob("*.json")).read_text()
+        )
+        req_headers = record["request"]["headers"]
+        assert req_headers["Authorization"] == "***REDACTED***"
+        assert req_headers["X-API-KEY"] == "***REDACTED***"
+        assert req_headers["Accept"] == "application/json"
+        assert record["response"]["headers"]["Set-Cookie"] == "***REDACTED***"
+
+    def test_request_body_recorded_and_parsed(self, tmp_path):
+        client = BaseClientApi(
+            "https://api.example.com", max_retries=0, record_dir=tmp_path
+        )
+        resp = _mock_recorded_response(
+            json_data={"ok": True},
+            request_method="POST",
+            request_body='{"name": "value"}',
+        )
+        with patch.object(client._session, "request", return_value=resp):
+            client._post("/create", json={"name": "value"})
+
+        record = json.loads(
+            next(client._recorder.session_dir.glob("*.json")).read_text()
+        )
+        assert record["request"]["body"] == {"name": "value"}
+
+    def test_custom_recorder_receives_exchange(self):
+        captured = []
+
+        class CapturingRecorder:
+            def record(self, exchange):
+                captured.append(exchange)
+
+            def close(self):
+                pass
+
+        client = BaseClientApi(
+            "https://api.example.com", max_retries=0, recorder=CapturingRecorder()
+        )
+        resp = _mock_recorded_response(json_data={"ok": True})
+        with patch.object(client._session, "request", return_value=resp):
+            client._get("/x")
+
+        assert len(captured) == 1
+        assert captured[0]["seq"] == 1
+        assert captured[0]["response"]["status_code"] == 200
+
+    def test_record_dir_and_recorder_combined(self, tmp_path):
+        captured = []
+
+        class CapturingRecorder:
+            def record(self, exchange):
+                captured.append(exchange)
+
+            def close(self):
+                pass
+
+        client = BaseClientApi(
+            "https://api.example.com",
+            max_retries=0,
+            record_dir=tmp_path,
+            recorder=CapturingRecorder(),
+        )
+        assert isinstance(client._recorder, MultiRecorder)
+        resp = _mock_recorded_response(json_data={"ok": True})
+        with patch.object(client._session, "request", return_value=resp):
+            client._get("/x")
+        assert len(captured) == 1
+
+    def test_recorder_sequence_accepted(self):
+        class NoopRecorder:
+            def record(self, exchange):
+                pass
+
+            def close(self):
+                pass
+
+        client = BaseClientApi(
+            "https://api.example.com",
+            max_retries=0,
+            recorder=[NoopRecorder(), NoopRecorder()],
+        )
+        assert isinstance(client._recorder, MultiRecorder)
+
+    def test_recording_failure_does_not_break_request(self):
+        class ExplodingRecorder:
+            def record(self, exchange):
+                raise RuntimeError("boom")
+
+            def close(self):
+                pass
+
+        client = BaseClientApi(
+            "https://api.example.com", max_retries=0, recorder=ExplodingRecorder()
+        )
+        resp = _mock_recorded_response(json_data={"ok": True})
+        with patch.object(client._session, "request", return_value=resp):
+            result = client._get("/still-works")
+        assert result == {"ok": True}
+
+    def test_close_flushes_recorder_and_session(self):
+        closed = []
+
+        class ClosableRecorder:
+            def record(self, exchange):
+                pass
+
+            def close(self):
+                closed.append(True)
+
+        client = BaseClientApi(
+            "https://api.example.com", max_retries=0, recorder=ClosableRecorder()
+        )
+        _ = client._session  # force session creation
+        client.close()
+        assert closed == [True]
+        assert client._BaseClientApi__session is None
+
+    def test_context_manager_closes(self):
+        closed = []
+
+        class ClosableRecorder:
+            def record(self, exchange):
+                pass
+
+            def close(self):
+                closed.append(True)
+
+        with BaseClientApi(
+            "https://api.example.com", max_retries=0, recorder=ClosableRecorder()
+        ) as client:
+            assert client._recorder is not None
+        assert closed == [True]
+
+    def test_close_without_recorder_or_session(self):
+        client = BaseClientApi("https://api.example.com", max_retries=0)
+        client.close()  # no recorder, no session created — must not raise
