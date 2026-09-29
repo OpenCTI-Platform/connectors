@@ -42,6 +42,7 @@ def library_mapping() -> Dict:
         "File.hashes.MD5": ioc_finder.parse_md5s,
         "File.hashes.SHA-1": ioc_finder.parse_sha1s,
         "File.hashes.SHA-256": ioc_finder.parse_sha256s,
+        "File.hashes.SHA-512": ioc_finder.parse_sha512s,
         "Url.value": ioc_finder.parse_urls,
         "Vulnerability.name": ioc_finder.parse_cves,
         "Windows-Registry-Key.key": ioc_finder.parse_registry_key_paths,
