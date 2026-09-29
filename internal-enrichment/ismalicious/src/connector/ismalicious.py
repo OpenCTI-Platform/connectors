@@ -18,6 +18,11 @@ from pycti import (
 
 from .models import ConfigLoader
 
+# Identifies the connector to the isMalicious API, which attributes usage by
+# User-Agent prefix (the requests default would read as a generic script).
+CONNECTOR_VERSION = "1.0.1"
+USER_AGENT = f"ismalicious-opencti/{CONNECTOR_VERSION} (+https://ismalicious.com)"
+
 # Threat category mapping to OpenCTI labels
 THREAT_CATEGORY_LABELS = {
     "phishing": "phishing",
@@ -34,14 +39,30 @@ THREAT_CATEGORY_LABELS = {
     "suspicious": "suspicious",
 }
 
-# Risk level to score mapping
-RISK_LEVEL_SCORES = {
-    "critical": 95,
-    "high": 80,
-    "medium": 60,
-    "low": 40,
-    "safe": 10,
+# Hints logged for the HTTP errors an operator can act on
+HTTP_ERROR_HINTS = {
+    401: "API key rejected, check ISMALICIOUS_API_KEY",
+    403: "API key not allowed to call this endpoint",
+    429: "rate limit or request quota reached, retry later",
 }
+
+
+def is_threat_source(source: Any) -> bool:
+    """Tell whether a `sources[]` row of a /check response is a detection.
+
+    Rows carry a `threatClass`: `threat` (the default when absent),
+    `infrastructure` (cloud ranges, Tor exits, DoH resolvers), `policy`
+    (ads, tracking) or `allowlist`. Only `threat` rows say the observable
+    was seen doing harm; the others describe what it is.
+    """
+    if not isinstance(source, dict):
+        return False
+    return source.get("threatClass") in (None, "", "threat")
+
+
+def threat_sources(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return the detection rows of a /check response, in response order."""
+    return [source for source in data.get("sources") or [] if is_threat_source(source)]
 
 
 class IsMaliciousConnector:
@@ -88,27 +109,36 @@ class IsMaliciousConnector:
                 headers={
                     "X-API-KEY": self.api_key,
                     "Accept": "application/json",
+                    "User-Agent": USER_AGENT,
                 },
                 timeout=30,
             )
             response.raise_for_status()
             return response.json()
+        except requests.exceptions.HTTPError as e:
+            status = e.response.status_code if e.response is not None else None
+            hint = HTTP_ERROR_HINTS.get(status, str(e))
+            self.helper.log_error(f"API call failed for {observable_value}: {hint}")
+            return None
         except requests.exceptions.RequestException as e:
             self.helper.log_error(f"API call failed for {observable_value}: {e}")
             return None
 
     def _calculate_score(self, data: Dict[str, Any]) -> int:
         """Calculate OpenCTI score (0-100) from isMalicious response."""
+        # riskScore.score is the API's 0-100 risk score (standard enrichment)
+        risk_score = data.get("riskScore")
+        if isinstance(risk_score, dict):
+            score = risk_score.get("score")
+            if isinstance(score, (int, float)):
+                return min(100, max(0, int(score)))
+
         # Check if malicious
         if not data.get("malicious", False):
             return 10  # Low score for non-malicious
 
-        # Use confidence score if available
-        if "confidenceScore" in data:
-            return min(100, max(0, int(data["confidenceScore"])))
-
         # Use reputation data if available
-        reputation = data.get("reputation", {})
+        reputation = data.get("reputation") or {}
         if reputation:
             malicious = reputation.get("malicious", 0)
             total = sum(
@@ -120,10 +150,7 @@ class IsMaliciousConnector:
                 score = int((malicious / total) * 100)
                 return min(100, max(0, score))
 
-        # Use risk level from metadata
-        metadata = data.get("metadata", {})
-        threat_level = metadata.get("threatLevel", "medium")
-        return RISK_LEVEL_SCORES.get(threat_level, 50)
+        return 50
 
     def _get_labels(self, data: Dict[str, Any]) -> List[str]:
         """Extract labels from isMalicious response."""
@@ -133,15 +160,9 @@ class IsMaliciousConnector:
         if data.get("malicious", False):
             labels.append("malicious")
 
-        # Add category labels
-        categories = data.get("categories", [])
-        for category in categories:
-            if mapped := THREAT_CATEGORY_LABELS.get(category.lower()):
-                if mapped not in labels:
-                    labels.append(mapped)
-
-        # Also check sources for categories
-        for source in data.get("sources", []):
+        # Category labels come from the detection rows only: an ad-blocking
+        # list or a cloud range carries a category but is not a detection
+        for source in threat_sources(data):
             if category := source.get("category"):
                 if mapped := THREAT_CATEGORY_LABELS.get(category.lower()):
                     if mapped not in labels:
@@ -168,15 +189,21 @@ class IsMaliciousConnector:
             }
         )
 
-        # Add source references
-        for source in data.get("sources", []):
+        # Add source references; non-detection rows are kept as context
+        for source in data.get("sources") or []:
+            if not isinstance(source, dict):
+                continue
             ref = {
                 "source_name": source.get("name", "Unknown"),
             }
             if url := source.get("url"):
                 ref["url"] = url
             if category := source.get("category"):
-                ref["description"] = f"Detected as: {category}"
+                if is_threat_source(source):
+                    ref["description"] = f"Detected as: {category}"
+                else:
+                    threat_class = source.get("threatClass")
+                    ref["description"] = f"Listed as: {category} ({threat_class})"
             refs.append(ref)
 
         return refs
@@ -282,8 +309,13 @@ class IsMaliciousConnector:
 
         # Add description with summary
         malicious = api_data.get("malicious", False)
-        sources_count = len(api_data.get("sources", []))
-        categories = api_data.get("categories", [])
+        detections = threat_sources(api_data)
+        sources_count = len(detections)
+        categories = []
+        for source in detections:
+            category = source.get("category")
+            if category and category not in categories:
+                categories.append(category)
 
         description_parts = []
         if malicious:
@@ -295,6 +327,12 @@ class IsMaliciousConnector:
 
         if categories:
             description_parts.append(f"Categories: {', '.join(categories)}")
+
+        # What the observable is (cloud, CDN, Tor exit...), apart from the verdict
+        infrastructure = api_data.get("infrastructure")
+        if isinstance(infrastructure, dict) and infrastructure.get("attributes"):
+            attributes = ", ".join(str(a) for a in infrastructure["attributes"])
+            description_parts.append(f"Infrastructure: {attributes}")
 
         # Add reputation summary if available
         if reputation := api_data.get("reputation"):
