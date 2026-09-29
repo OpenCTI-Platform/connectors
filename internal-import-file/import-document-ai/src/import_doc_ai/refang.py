@@ -325,10 +325,11 @@ def _merge_rewritten_relationships(
 
     OpenCTI identifies a relationship by its type, endpoints and time frame:
     once two spellings of an observable are merged, their relationships to the
-    same object are one relationship.
+    same object are one relationship. Every relationship sharing that identity
+    with a rewritten one is merged, whatever their order in the bundle; a group
+    the rewrite did not touch is left as it is.
     """
-    first_id_by_key: dict[tuple, str] = {}
-    duplicate_ids: dict[str, str] = {}
+    ids_by_key: dict[tuple, list[str]] = {}
     for obj in bundle.get("objects", []):
         if obj.get("type") != "relationship":
             continue
@@ -339,9 +340,13 @@ def _merge_rewritten_relationships(
             obj.get("start_time"),
             obj.get("stop_time"),
         )
-        first_id = first_id_by_key.setdefault(key, obj["id"])
-        if first_id != obj["id"] and rewritten_ids & {first_id, obj["id"]}:
-            duplicate_ids[obj["id"]] = first_id
+        ids_by_key.setdefault(key, []).append(obj["id"])
+    duplicate_ids = {
+        duplicate_id: ids[0]
+        for ids in ids_by_key.values()
+        if len(ids) > 1 and rewritten_ids.intersection(ids)
+        for duplicate_id in ids[1:]
+    }
     if not duplicate_ids:
         return bundle
     objects = [

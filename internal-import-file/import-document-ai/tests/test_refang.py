@@ -638,6 +638,47 @@ def test_relationships_made_identical_by_a_merge_are_merged():
     assert summary.merged_objects == 2
 
 
+@pytest.mark.parametrize("rewritten_position", [0, 1, 2])
+def test_relationships_sharing_the_identity_of_a_rewritten_one_merge_in_any_order(
+    rewritten_position,
+):
+    # Given an intrusion set related twice to an address and once to a
+    # defanged spelling of it, the rewritten relationship at any position
+    apt = intrusion_set("APT41")
+    clean = observable("email-addr", "admin@filigran.io")
+    defanged = observable("email-addr", ISSUE_EMAIL)
+    relationships = [
+        relationship("related-to", apt["id"], clean["id"]) for _ in range(2)
+    ]
+    relationships.insert(
+        rewritten_position, relationship("related-to", apt["id"], defanged["id"])
+    )
+    container = report(
+        [apt["id"], clean["id"], defanged["id"], *(r["id"] for r in relationships)]
+    )
+    bundle = make_bundle(apt, clean, defanged, *relationships, container)
+
+    # When refanging the bundle
+    refanged_bundle, summary = refang_bundle_observables(bundle)
+
+    # Then one relationship remains, under the first one's id, whatever the
+    # order, and the report follows
+    first_id = relationships[0]["id"]
+    assert [obj["id"] for obj in serialized_objects(refanged_bundle)] == [
+        apt["id"],
+        clean["id"],
+        first_id,
+        container["id"],
+    ]
+    assert object_with_id(refanged_bundle, container["id"])["object_refs"] == [
+        apt["id"],
+        clean["id"],
+        first_id,
+    ]
+    assert dangling_references(refanged_bundle) == set()
+    assert summary.merged_objects == 3
+
+
 def test_values_that_do_not_refang_into_a_valid_value_are_sent_unchanged():
     # Given a defanged address that is not an address once refanged
     email = observable("email-addr", "admin[at][dot]io", defanged=True)

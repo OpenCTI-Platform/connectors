@@ -127,9 +127,9 @@ flowchart TD
     B --> C[Send to Ariane AI Service]
     C --> D[Receive Extracted Data]
     D --> E[Deduplicate Entities]
-    E --> R[Refang Defanged Observables]
-    R --> F[Create STIX Objects]
-    F --> G{Context Entity?}
+    E --> F[Create STIX Objects]
+    F --> R[Refang Defanged Observables]
+    R --> G{Context Entity?}
     G -->|Yes| H[Add to Context Entity]
     G -->|No| I[Add file to first extracted Report OR Create New Report]
     H --> J[Validate Relationships]
