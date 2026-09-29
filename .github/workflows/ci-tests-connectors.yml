@@ -17,8 +17,42 @@ permissions:
   contents: read
 
 jobs:
+  detect-changes:
+    name: Detect relevant changes
+    runs-on: ubuntu-latest
+    outputs:
+      relevant: ${{ steps.filter.outputs.relevant }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Native git diff (no third-party action): on pull_request, only build the
+      # test matrix when a path that can affect connector tests changed.
+      # build_test_matrix.py treats any change outside the connector directories
+      # as "run everything", so docs-only or CI-only PRs must be cut off here.
+      # Any other event (merge_group, workflow_call) always runs the full check.
+      - name: Check if relevant paths changed
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          # Capture the full diff first: piping into `grep -q` can SIGPIPE git
+          # under `bash -eo pipefail` and wrongly yield relevant=false.
+          changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          if grep -qE '^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-import-file|stream|shared|templates)/|^run_test\.sh$' <<< "$changed_files"; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
   detect-test-files:
     name: Detect test files
+    needs: detect-changes
+    if: needs.detect-changes.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -140,6 +174,7 @@ jobs:
   tests-summary:
     name: Tests Summary
     needs:
+      - detect-changes
       - detect-test-files
       - test
     if: always()
@@ -148,7 +183,21 @@ jobs:
       - name: Check matrix result
         run: |
           result="${{ needs.test.result }}"
+          changes_result="${{ needs.detect-changes.result }}"
+          detect_result="${{ needs.detect-test-files.result }}"
           has_tests="${{ needs.detect-test-files.outputs.has_tests }}"
+
+          # A failed or cancelled detection job leaves has_tests empty; that
+          # must not be mistaken for a clean "no tests" outcome.
+          if [ "$changes_result" != "success" ]; then
+            echo "::error::Change detection did not succeed (result: $changes_result)."
+            exit 1
+          fi
+          # `skipped` is legitimate only when detect-changes found nothing relevant.
+          if [ "$detect_result" != "success" ] && [ "$detect_result" != "skipped" ]; then
+            echo "::error::Test detection did not succeed (result: $detect_result)."
+            exit 1
+          fi
 
           if [ "$has_tests" != "true" ]; then
             echo "No relevant test files changed, nothing to run."
