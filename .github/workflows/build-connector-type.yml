@@ -66,7 +66,8 @@ jobs:
     # runs of build-all-connectors.yml only dedupe/cancel each other here for
     # the SAME connector, so unrelated connectors changed by different
     # commits always build in full instead of one run silently losing to
-    # another (see build-all-connectors.yml for the full rationale).
+    # another. This is the only run-level dedupe for image builds (see
+    # build-all-connectors.yml for the full rationale).
     concurrency:
       group: build-image-${{ github.ref_name }}-${{ inputs.variant }}-${{ matrix.path }}-${{ inputs.build_mode }}-amd64
       cancel-in-progress: true
