@@ -592,6 +592,7 @@ For questions and community help:
 
 - **Slack Community**: [https://community.filigran.io](https://community.filigran.io)
 - **GitHub Issues**: [https://github.com/OpenCTI-Platform/connectors/issues](https://github.com/OpenCTI-Platform/connectors/issues)
+- **Open a documentation request**: [pre-filled documentation issue](https://github.com/OpenCTI-Platform/connectors/issues/new?template=3-documentation.yaml&title=docs%20%28contributing%20guide%29%3A%20)
 
 ### Contributing
 
