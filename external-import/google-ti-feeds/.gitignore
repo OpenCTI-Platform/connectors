@@ -3,4 +3,3 @@
 .ruff_cache
 .pytest_cache
 build
-uv.lock
