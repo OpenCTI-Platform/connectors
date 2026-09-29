@@ -154,8 +154,9 @@ def defanged_extraction(with_report: bool) -> dict:
 def clean_extraction(with_report: bool) -> dict:
     """What the extraction returns for a document quoting no defanged indicator.
 
-    Clean values holding brackets are included, and a file whose name looks
-    defanged: a file is not a network indicator.
+    Clean values holding brackets are included, URLs whose scheme and host are
+    clean but whose path or query holds a notation-like token, and a file
+    whose name looks defanged: a file is not a network indicator.
     """
     email = observable("email-addr", REFANGED_EMAIL)
     apt = intrusion_set("APT41")
@@ -165,6 +166,8 @@ def clean_extraction(with_report: bool) -> dict:
         observable("domain-name", "filigran.io"),
         observable("url", "http://[2001:db8::1]:8080/index.html"),
         observable("url", "https://en.wikipedia.org/wiki/Mercury_(planet)"),
+        observable("url", "https://example.com/search?q=(at)"),
+        observable("url", "https://example.com/a[.]b"),
         json.loads(
             stix2.File(
                 name="invoice[.]pdf[.]exe", hashes={"SHA-256": "a" * 64}
@@ -368,6 +371,7 @@ def test_process_message_sends_a_bundle_without_defanged_observables_as_before(
         pytest.param("email-addr", "admin[at][dot]io", id="invalid once refanged"),
         pytest.param("domain-name", "filigran[.}io", id="mismatched brackets"),
         pytest.param("domain-name", "evil[at]example.com", id="at in a domain name"),
+        pytest.param("url", "https://filigran{.)io/", id="mismatched pair in a host"),
     ],
 )
 def test_process_message_warns_about_values_that_do_not_refang(

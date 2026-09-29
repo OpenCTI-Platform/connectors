@@ -154,6 +154,7 @@ Reports often defang their indicators so that nobody follows them by mistake (`a
 | `hxxp` `hxxps` `fxp` `fxps` schemes | `http` `https` `ftp` `ftps` | URL |
 
 - Only the `value` of these observables is refanged: names, descriptions and any other free text keep their defanged spelling.
+- A URL is only refanged when its scheme or its host is defanged (`hxxps://filigran.io/about`, `https://filigran[.]io/about`, `https://filigran.io[:]8443/`, the addresses of `mailto:admin[at]filigran[dot]io`), and it is then refanged as a whole, path and query included. A URL whose scheme and host are clean is sent verbatim, even when its path, query or fragment holds a notation-like token (`https://example.com/search?q=(at)`): that token is part of the resource name.
 - Brackets must pair up (`[.]` is refanged, `[.}` is not), and a notation is only refanged in the types listed for it (`[at]` is not refanged in a domain name): a value holding a notation that is not refanged is sent unchanged and logged as a warning.
 - A refanged value is only kept when it is a valid value of its type: it must pass the checks OpenCTI applies to domain names, hostnames, email addresses and IP addresses, and a URL must be well-formed (a valid host, or valid addresses for a `mailto:` URL). Otherwise the observable is sent unchanged, as it was before, and logged as a warning.
 - Only the notations are refanged, with the whitespace inside and around them (`filigran [ . ] io`): any other whitespace is kept, so a value with stray leading or trailing whitespace does not refang.

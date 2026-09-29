@@ -34,6 +34,9 @@ _CLOSING_BRACKETS = {"[": "]", "(": ")", "{": "}"}
 _SPACED_DOT_RE = re.compile(r"(?<!\s)\s+dot\s+", re.IGNORECASE)
 _SPACED_AT_RE = re.compile(r"(?<!\s)\s+at\s+", re.IGNORECASE)
 _DEFANGED_SCHEME_RE = re.compile(r"^(?P<scheme>hxxps?|fxps?)(?=:)", re.IGNORECASE)
+_URL_SCHEME_RE = re.compile(r"\s*[A-Za-z][A-Za-z0-9+.-]*:")
+_AUTHORITY_END_RE = re.compile(r"[/?#]")
+_QUERY_START_RE = re.compile(r"[?#]")
 
 _SEPARATORS = {
     "://": "://",
@@ -146,6 +149,37 @@ _VALIDATORS = {
 }
 
 
+def _url_head(url: str) -> str:
+    """The scheme and host part of a URL.
+
+    The scheme and authority (``https://user@host:port``), the addresses of a
+    ``mailto:`` URL, the host of a URL without a scheme (``host/path``), or the
+    scheme alone for a URL without an authority.
+    """
+    scheme = _URL_SCHEME_RE.match(url)
+    if scheme is None:
+        end = _AUTHORITY_END_RE.search(url)
+        return url[: end.start()] if end else url
+    rest = url[scheme.end() :]
+    if scheme.group().strip().lower() == "mailto:":
+        end = _QUERY_START_RE.search(rest)
+    elif rest.startswith("//"):
+        end = _AUTHORITY_END_RE.search(rest, 2)
+    else:
+        return scheme.group()
+    return url[: scheme.end() + (end.start() if end else len(rest))]
+
+
+def _url_head_is_defanged(value: str, candidate: str) -> bool:
+    """Whether the scheme or host of a URL is defanged.
+
+    ``candidate`` is ``value`` with its notations substituted: the head is
+    defanged when the substitution changed it or left a notation in it.
+    """
+    head = _url_head(candidate)
+    return not value.startswith(head) or _holds_defang_notation(head.lstrip())
+
+
 def _substitute_defang_notations(observable_type: str, value: str) -> str:
     separators = _SEPARATORS_BY_TYPE[observable_type]
 
@@ -167,6 +201,10 @@ def _substitute_defang_notations(observable_type: str, value: str) -> str:
         refanged = _DEFANGED_SCHEME_RE.sub(
             lambda match: _SCHEMES[match.group("scheme").lower()], refanged
         )
+    # A URL whose scheme and host are clean is not defanged: a notation-like
+    # token in its path or query ("?q=(at)") is part of the resource name.
+    if observable_type == "url" and not _url_head_is_defanged(value, refanged):
+        return value
     # The patterns consume the whitespace around a notation; any other
     # whitespace belongs to the value and is kept for the validation to judge.
     return refanged
@@ -176,6 +214,15 @@ def _holds_defang_notation(value: str) -> bool:
     return bool(
         _BRACKETED_SEPARATOR_RE.search(value) or _DEFANGED_SCHEME_RE.match(value)
     )
+
+
+def _looks_defanged(observable_type: str, value: str, candidate: str) -> bool:
+    """Whether refanging changes a value or leaves a notation in it."""
+    if candidate != value:
+        return True
+    if observable_type == "url":
+        return _url_head_is_defanged(value, value)
+    return _holds_defang_notation(value)
 
 
 def _is_valid(observable_type: str, value: str) -> bool:
@@ -190,7 +237,9 @@ def refang_observable_value(observable_type: str, value: str) -> str:
     Handled notations, case-insensitive: ``[.]`` ``(.)`` ``{.}`` ``[dot]``
     ``(dot)`` ``{dot}`` and `` dot ``, ``[at]`` ``(at)`` ``{at}`` ``[@]`` and
     `` at `` (email addresses), ``[:]``, ``[://]``, ``[/]``, and the ``hxxp``,
-    ``hxxps``, ``fxp`` and ``fxps`` schemes (URLs); brackets must pair up. Only
+    ``hxxps``, ``fxp`` and ``fxps`` schemes (URLs); brackets must pair up. A
+    URL is only refanged, as a whole, when its scheme or host (its authority,
+    or its addresses for ``mailto:``) is defanged. Only
     the separators a value of the type can hold are refanged, and the refanged
     value is only returned when it is a valid value of the type: one OpenCTI
     accepts, and a well-formed URL for URLs, which OpenCTI does not check.
@@ -352,7 +401,7 @@ def refang_bundle_observables(
         # An unchanged value holding a notation left in place (brackets that do
         # not pair up, a separator its type cannot hold) is not a valid value,
         # so it is reported as not refanged below.
-        if candidate == value and not _holds_defang_notation(value):
+        if not _looks_defanged(observable_type, value, candidate):
             continue
         if not _is_valid(observable_type, candidate):
             summary.unrefanged.append(

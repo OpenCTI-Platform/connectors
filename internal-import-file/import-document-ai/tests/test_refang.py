@@ -126,6 +126,30 @@ NOTATIONS = [
         "https://filigran.io/",
         id="whitespace after a trailing notation",
     ),
+    pytest.param(
+        "url",
+        "hxxps://filigran.io/a[.]b",
+        "https://filigran.io/a.b",
+        id="defanged scheme, path refanged too",
+    ),
+    pytest.param(
+        "url",
+        "https://filigran[.]io/search?q=(at)",
+        "https://filigran.io/search?q=@",
+        id="defanged host, query refanged too",
+    ),
+    pytest.param(
+        "url",
+        "https://filigran.io[:]8443/login",
+        "https://filigran.io:8443/login",
+        id="defanged port",
+    ),
+    pytest.param(
+        "url",
+        "mailto:admin[at]filigran[dot]io?subject=(dot)",
+        "mailto:admin@filigran.io?subject=.",
+        id="defanged mailto address, query refanged too",
+    ),
 ]
 
 CLEAN_VALUES = [
@@ -174,6 +198,9 @@ STRAY_WHITESPACE_VALUES = [
     pytest.param("domain-name", " filigran[.]io", id="leading space"),
     pytest.param("ipv4-addr", "192[.]168[.]1[.]1\t", id="trailing tab"),
     pytest.param("url", " hxxps://filigran[.]io/", id="url leading space"),
+    pytest.param(
+        "url", " hxxps://filigran.io/a[.]b", id="url leading space, defanged scheme"
+    ),
 ]
 
 # Values holding a defang notation that is left in place: its brackets do not
@@ -186,6 +213,20 @@ NOTATIONS_LEFT_IN_PLACE = [
     pytest.param("hostname", "srv01[@]filigran.io", id="at in a hostname"),
     pytest.param("email-addr", "admin@filigran[:]io", id="colon in an email"),
     pytest.param("ipv4-addr", "192[:]168[:]1[:]1", id="colon in an ipv4"),
+    pytest.param("url", "http://evil(at]example.com/", id="url mismatched userinfo"),
+]
+
+# URLs whose scheme and host are clean: a notation-like token in their path,
+# query or fragment is part of the resource name, not a defanged separator.
+CLEAN_URLS_WITH_NOTATION_TOKENS = [
+    pytest.param("https://example.com/search?q=(at)", id="query"),
+    pytest.param("https://example.com/a[.]b", id="path"),
+    pytest.param("https://example.com/a[.}b", id="mismatched pair in path"),
+    pytest.param("https://example.com/page#section(dot)2", id="fragment"),
+    pytest.param("http://example.com:8080/x(dot)y", id="port"),
+    pytest.param("HTTPS://Example.com/a[.]b", id="uppercase scheme"),
+    pytest.param("example.com/a[.]b", id="no scheme"),
+    pytest.param("mailto:admin@filigran.io?subject=(at)", id="mailto query"),
 ]
 
 # Clean values that merely hold brackets or parentheses.
@@ -652,6 +693,25 @@ def test_notations_left_in_place_are_reported_as_not_refanged(observable_type, v
     assert summary.unrefanged == [
         UnrefangedObservable(observable_type, defanged["id"], value)
     ]
+
+
+@pytest.mark.parametrize("value", CLEAN_URLS_WITH_NOTATION_TOKENS)
+def test_urls_with_a_clean_scheme_and_host_are_sent_verbatim(value):
+    # Given a URL whose scheme and host are clean, and whose path, query or
+    # fragment holds a notation-like token
+    clean = observable("url", value)
+    bundle = make_bundle(clean, report([clean["id"]]))
+
+    # When refanging it
+    refanged_bundle, summary = refang_bundle_observables(bundle)
+
+    # Then it is not defanged: the value, its id and the bundle are left
+    # untouched, and nothing is reported
+    assert refang_observable_value("url", value) == value
+    assert refanged_bundle is bundle
+    assert serialized_objects(refanged_bundle)[0] == clean
+    assert summary.refanged == []
+    assert summary.unrefanged == []
 
 
 @pytest.mark.parametrize("observable_type, value", BRACKETED_CLEAN_VALUES)
