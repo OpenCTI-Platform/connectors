@@ -50,8 +50,20 @@ jobs:
         with:
           python-version: "3.12"
 
+      # The generation script still uses the legacy `$CIRCLE_BRANCH` /
+      # `$RELEASE_REF` variable names. Both are unset by default under GitHub
+      # Actions, which sends the script down its pull-request path
+      # (`git merge-base origin/master HEAD`) and makes it install
+      # connectors-sdk from master. On an LTS branch that diffs against master
+      # and generates the schemas with a connectors-sdk that no longer matches
+      # the connectors (master removed `connectors_sdk.models.octi`). Setting
+      # both to the current ref diffs the last commit (HEAD~1..HEAD) and
+      # installs the branch's own connectors-sdk, as master does.
       - name: Build connectors schemas
         shell: bash
+        env:
+          CIRCLE_BRANCH: ${{ github.ref_name }}
+          RELEASE_REF: ${{ github.ref_name }}
         run: |
           set -euo pipefail
           bash ./shared/tools/composer/generate_connectors_config_schemas/generate_connectors_config_json_schemas.sh
