@@ -3,53 +3,87 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal
 
 from pydantic import (
+    AfterValidator,
+    BeforeValidator,
     Field,
     PlainSerializer,
     PrivateAttr,
     SecretStr,
+    WithJsonSchema,
     field_validator,
     model_validator,
 )
 from virustotal.models.configs.base_settings import ConfigBaseSettings
 
-# Relative date floor syntax for `ip_resolutions_since`: a number of days, e.g. `90d`.
-_RELATIVE_SINCE_PATTERN = re.compile(r"^(\d+)d$", re.IGNORECASE)
 # Keyword disabling the date floor for `ip_resolutions_since`.
 NO_SINCE_FLOOR = "none"
 
 
-def resolve_since_floor(value: str, now: datetime) -> datetime | None:
+def _parse_none_keyword(value: object) -> object:
+    """Map the `none` keyword to ``None`` (env vars cannot carry a null) and reject bare numbers.
+
+    Pydantic would read a bare number as a Unix timestamp (`90` -> 1970-01-01T00:01:30Z),
+    silently disabling the floor instead of failing.
+    """
+    if isinstance(value, (int, float)):
+        raise ValueError(
+            f"Invalid date floor {value!r}: use an ISO-8601 duration such as 'P90D'."
+        )
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.lower() == NO_SINCE_FLOOR:
+            return None
+        if stripped.lstrip("+-").replace(".", "", 1).isdigit():
+            raise ValueError(
+                f"Invalid date floor '{value}': use an ISO-8601 duration such as 'P90D'."
+            )
+    return value
+
+
+def _check_date_floor(
+    value: timedelta | datetime | None,
+) -> timedelta | datetime | None:
+    """Reject non-positive durations and assume UTC for naive datetimes."""
+    if isinstance(value, timedelta) and value <= timedelta(0):
+        raise ValueError(
+            f"Invalid date floor duration {value}: it must be positive, such as 'P90D'."
+        )
+    if isinstance(value, datetime) and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+# Date floor: a duration (relative to each enrichment), an absolute datetime, or None (disabled).
+DateFloor = Annotated[
+    timedelta | datetime | None,
+    BeforeValidator(_parse_none_keyword),
+    AfterValidator(_check_date_floor),
+    # Plain string in the config schema: the `none` keyword fits neither ISO-8601 format.
+    WithJsonSchema({"type": "string"}),
+]
+
+
+def resolve_since_floor(
+    value: timedelta | datetime | None, now: datetime
+) -> datetime | None:
     """Resolve an `ip_resolutions_since` value to a UTC datetime.
 
     Parameters
     ----------
-    value : str
-        `none`, a relative number of days (`90d`) or an absolute date (`YYYY-MM-DD`).
+    value : timedelta | datetime | None
+        A duration relative to ``now``, an absolute datetime, or ``None`` (floor disabled).
     now : datetime
-        Reference time for relative values (timezone-aware, UTC).
+        Reference time for durations (timezone-aware, UTC), taken at each enrichment
+        so a long-running connector does not drift.
 
     Returns
     -------
     datetime | None
         The date floor, or ``None`` when the floor is disabled.
-
-    Raises
-    ------
-    ValueError
-        When the value matches none of the accepted formats.
     """
-    if value.lower() == NO_SINCE_FLOOR:
-        return None
-    relative = _RELATIVE_SINCE_PATTERN.match(value)
-    if relative:
-        return now - timedelta(days=int(relative.group(1)))
-    try:
-        return datetime.strptime(value, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-    except ValueError as err:
-        raise ValueError(
-            f"Invalid date floor '{value}': expected 'none', a number of days "
-            "such as '90d', or a date such as '2025-10-01'."
-        ) from err
+    if isinstance(value, timedelta):
+        return now - value
+    return value
 
 
 TLPToLower = Annotated[
@@ -141,12 +175,12 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
         "as Domain-Name observables linked with a dated `resolves-to` relationship. "
         "Off: no additional API call and no additional object.",
     )
-    ip_resolutions_since: str = Field(
-        default="90d",
+    ip_resolutions_since: DateFloor = Field(
+        default=timedelta(days=90),
         description="Date floor for IP resolutions: stop paging at the first resolution last seen before it. "
-        "Absolute date (`YYYY-MM-DD`), relative number of days (`90d`, resolved at each enrichment) "
+        "ISO-8601 duration relative to each enrichment (`P90D`), absolute ISO-8601 date (`2025-10-01`) "
         "or `none` to disable the floor (the entry and page caps still apply).",
-        examples=["90d", "2025-10-01", "none"],
+        examples=["P90D", "2025-10-01", "none"],
     )
     ip_resolutions_max_entries: int | None = Field(
         default=None,
@@ -220,13 +254,6 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
         default=False,
         description="Whether or not to include the attributes info in Note.",
     )
-
-    @field_validator("ip_resolutions_since")
-    @classmethod
-    def validate_ip_resolutions_since(cls, value: str) -> str:
-        """Check the date floor format at start-up; it is resolved at each enrichment."""
-        resolve_since_floor(value, datetime.now(timezone.utc))
-        return value
 
     @field_validator("ip_resolutions_keywords")
     @classmethod

@@ -30,7 +30,7 @@ virustotal:
 #  ip_indicator_detect: true # Whether or not to set detection for the indicator to true
 #  ip_add_relationships: false # Whether or not to add ASN and location resolution relationships
 #  ip_add_resolutions: false # Whether or not to import the domains resolving to the IP, with a dated resolves-to relationship
-#  ip_resolutions_since: 90d # Date floor: YYYY-MM-DD, a number of days (90d) or none
+#  ip_resolutions_since: P90D # Date floor: ISO-8601 duration (P90D), ISO-8601 date (2025-10-01) or none
 #  ip_resolutions_max_entries: 3 # Stop after this many resolutions fetched (unset: no entry cap)
 #  ip_resolutions_max_pages: 25 # Maximum pages (40 entries, one lookup each) per enrichment
 #  ip_resolutions_keywords: news|press|journal # Case-insensitive regex a resolved domain must match (unset: all)

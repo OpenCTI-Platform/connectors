@@ -23,7 +23,8 @@ from virustotal.processors import IPProcessor
 IP = "138.128.150.133"
 IP_ID = stix2.IPv4Address(value=IP).id
 # 2025-10-01T00:00:00Z
-FLOOR_TS = int(datetime(2025, 10, 1, tzinfo=timezone.utc).timestamp())
+FLOOR = datetime(2025, 10, 1, tzinfo=timezone.utc)
+FLOOR_TS = int(FLOOR.timestamp())
 DAY = 86400
 
 
@@ -78,7 +79,7 @@ def _make_processor(
 ) -> tuple[IPProcessor, MagicMock]:
     connector = _make_connector()
     connector.ip_add_resolutions = True
-    connector.ip_resolutions_since = "none"
+    connector.ip_resolutions_since = None
     connector.api_requests_per_minute = 0
     for key, value in settings.items():
         setattr(connector, key, value)
@@ -110,39 +111,52 @@ def _domains(objects: list) -> list[str]:
 class TestResolveSinceFloor(unittest.TestCase):
     NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
-    def test_relative_days(self):
+    def test_duration_is_relative_to_now(self):
         self.assertEqual(
-            resolve_since_floor("90d", self.NOW), self.NOW - timedelta(days=90)
+            resolve_since_floor(timedelta(days=90), self.NOW),
+            self.NOW - timedelta(days=90),
         )
 
     def test_absolute_date(self):
-        self.assertEqual(
-            resolve_since_floor("2025-10-01", self.NOW),
-            datetime(2025, 10, 1, tzinfo=timezone.utc),
-        )
+        floor = datetime(2025, 10, 1, tzinfo=timezone.utc)
+        self.assertEqual(resolve_since_floor(floor, self.NOW), floor)
 
     def test_none_disables_floor(self):
-        self.assertIsNone(resolve_since_floor("None", self.NOW))
-
-    def test_invalid_value(self):
-        for value in ["3w", "90", "2025/10/01", "yesterday"]:
-            with self.assertRaises(ValueError):
-                resolve_since_floor(value, self.NOW)
+        self.assertIsNone(resolve_since_floor(None, self.NOW))
 
 
 class TestResolutionsConfig(unittest.TestCase):
+    def _since(self, value):
+        return ConfigLoaderVirusTotal(
+            token="fake-token", ip_resolutions_since=value
+        ).ip_resolutions_since
+
     def test_defaults_keep_feature_off(self):
         config = ConfigLoaderVirusTotal(token="fake-token")
         self.assertFalse(config.ip_add_resolutions)
-        self.assertEqual(config.ip_resolutions_since, "90d")
+        self.assertEqual(config.ip_resolutions_since, timedelta(days=90))
         self.assertIsNone(config.ip_resolutions_max_entries)
         self.assertEqual(config.ip_resolutions_max_pages, 25)
         self.assertIsNone(config.ip_resolutions_keywords)
         self.assertEqual(config.api_requests_per_minute, 4)
 
+    def test_iso8601_duration(self):
+        self.assertEqual(self._since("P365D"), timedelta(days=365))
+
+    def test_iso8601_date_is_utc(self):
+        self.assertEqual(
+            self._since("2025-10-01"), datetime(2025, 10, 1, tzinfo=timezone.utc)
+        )
+
+    def test_none_keyword_disables_floor(self):
+        self.assertIsNone(self._since("None"))
+
     def test_invalid_since_rejected_at_start_up(self):
-        with self.assertRaises(ValidationError):
-            ConfigLoaderVirusTotal(token="fake-token", ip_resolutions_since="3 months")
+        # Bare numbers would otherwise be read as Unix timestamps; zero or
+        # negative durations would put the floor at or after the enrichment.
+        for value in ["3 months", "2025/10/01", "90", 90, "-P1D", "PT0S"]:
+            with self.subTest(value=value), self.assertRaises(ValidationError):
+                self._since(value)
 
     def test_invalid_keywords_rejected_at_start_up(self):
         with self.assertRaises(ValidationError):
@@ -344,7 +358,7 @@ class TestIPResolutionsLoop(unittest.TestCase):
             ),
             THREE_PAGES[2],
         ]
-        processor, helper = _make_processor(pages, ip_resolutions_since="2025-10-01")
+        processor, helper = _make_processor(pages, ip_resolutions_since=FLOOR)
         result = processor.process()
         created = [d for b in _sent_bundles(helper)[1:] for d in _domains(b)]
         self.assertNotIn("old-one.example", created)
@@ -358,7 +372,7 @@ class TestIPResolutionsLoop(unittest.TestCase):
 
     def test_resolution_on_floor_date_is_kept(self):
         pages = [_page([_resolution("edge.example", FLOOR_TS)])]
-        processor, helper = _make_processor(pages, ip_resolutions_since="2025-10-01")
+        processor, helper = _make_processor(pages, ip_resolutions_since=FLOOR)
         processor.process()
         self.assertEqual(_domains(_sent_bundles(helper)[1]), ["edge.example"])
 
@@ -462,7 +476,7 @@ class TestIPResolutionsLoop(unittest.TestCase):
                 _resolution("news.example", FLOOR_TS),
             ]
         )
-        processor, helper = _make_processor([page], ip_resolutions_since="2025-10-01")
+        processor, helper = _make_processor([page], ip_resolutions_since=FLOOR)
         result = processor.process()
         self.assertEqual(_domains(_sent_bundles(helper)[1]), ["news.example"])
         self.assertIn("kept 1 of 2 fetched", result)

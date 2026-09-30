@@ -28,7 +28,7 @@ services:
 #      - VIRUSTOTAL_IP_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
 #      - VIRUSTOTAL_IP_ADD_RELATIONSHIPS=false # Whether or not to add ASN and location resolution relationships
 #      - VIRUSTOTAL_IP_ADD_RESOLUTIONS=false # Whether or not to import the domains resolving to the IP, with a dated resolves-to relationship
-#      - VIRUSTOTAL_IP_RESOLUTIONS_SINCE=90d # Date floor: YYYY-MM-DD, a number of days (90d) or none
+#      - VIRUSTOTAL_IP_RESOLUTIONS_SINCE=P90D # Date floor: ISO-8601 duration (P90D), ISO-8601 date (2025-10-01) or none
 #      - VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES=3 # Stop after this many resolutions fetched (unset: no entry cap)
 #      - VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES=25 # Maximum pages (40 entries, one lookup each) per enrichment
 #      - VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS=news|press|journal # Case-insensitive regex a resolved domain must match (unset: all)

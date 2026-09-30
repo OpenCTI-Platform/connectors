@@ -87,7 +87,7 @@ Key features:
 | `virustotal_ip_indicator_create_positives` | `VIRUSTOTAL_IP_INDICATOR_CREATE_POSITIVES` | No | IP indicator creation threshold |
 | `virustotal_ip_add_relationships` | `VIRUSTOTAL_IP_ADD_RELATIONSHIPS` | No | Add ASN and location relationships |
 | `virustotal_ip_add_resolutions` | `VIRUSTOTAL_IP_ADD_RESOLUTIONS` | No | Import the domains resolving to the IP (default: false). See [IP Resolutions](#ip-resolutions) |
-| `virustotal_ip_resolutions_since` | `VIRUSTOTAL_IP_RESOLUTIONS_SINCE` | No | Date floor: `YYYY-MM-DD`, a number of days such as `90d` (resolved at each enrichment) or `none` (default: `90d`) |
+| `virustotal_ip_resolutions_since` | `VIRUSTOTAL_IP_RESOLUTIONS_SINCE` | No | Date floor: an ISO-8601 duration such as `P90D` (resolved at each enrichment), an ISO-8601 date such as `2025-10-01`, or `none` (default: `P90D`) |
 | `virustotal_ip_resolutions_max_entries` | `VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES` | No | Stop after this many resolutions fetched, counted before the keyword filter (default: unset, no entry cap) |
 | `virustotal_ip_resolutions_max_pages` | `VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES` | No | Maximum pages of 40 resolutions per enrichment, one API lookup each (default: 25) |
 | `virustotal_ip_resolutions_keywords` | `VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS` | No | Case-insensitive regex a resolved domain must match to be imported (default: unset, all) |

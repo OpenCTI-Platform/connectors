@@ -138,10 +138,10 @@
       "type": "boolean"
     },
     "VIRUSTOTAL_IP_RESOLUTIONS_SINCE": {
-      "default": "90d",
-      "description": "Date floor for IP resolutions: stop paging at the first resolution last seen before it. Absolute date (`YYYY-MM-DD`), relative number of days (`90d`, resolved at each enrichment) or `none` to disable the floor (the entry and page caps still apply).",
+      "default": "P90D",
+      "description": "Date floor for IP resolutions: stop paging at the first resolution last seen before it. ISO-8601 duration relative to each enrichment (`P90D`), absolute ISO-8601 date (`2025-10-01`) or `none` to disable the floor (the entry and page caps still apply).",
       "examples": [
-        "90d",
+        "P90D",
         "2025-10-01",
         "none"
       ],
