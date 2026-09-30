@@ -9,6 +9,12 @@ from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConfigConnector, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
+# TODO(manager-supported blocker) [minor]: the sdk settings loader already reads
+# ``.env`` by itself (only when no ``config.yml`` exists). This extra
+# ``load_dotenv()`` exports ``.env`` into ``os.environ``, and environment
+# variables outrank ``config.yml`` in the sdk precedence (env > yaml > default),
+# so a stray ``.env`` silently overrides ``config.yml`` - the opposite of what
+# the README promises ("config.yml wins"). Kept as-is to preserve behaviour.
 dotenv.load_dotenv()
 
 

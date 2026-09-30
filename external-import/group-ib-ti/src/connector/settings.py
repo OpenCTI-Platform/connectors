@@ -4,9 +4,8 @@ import re
 import warnings
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
-import yaml
 from _data.iso3166 import COUNTRIES as _ISO3166_COUNTRIES
 from ciaops.utils import FileHandler
 from connector.logging_config import (
@@ -21,14 +20,11 @@ from connectors_sdk.settings.base_settings import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from dotenv import load_dotenv
-from pycti import get_config_variable
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
     SecretStr,
-    ValidationError,
     create_model,
     model_validator,
 )
@@ -203,9 +199,8 @@ REPORT_NOTE_COLLECTIONS = frozenset({"apt/threat", "hi/threat"})
 # the framework fields; the whole ``TI_API__*`` surface was read by a legacy
 # loader in ``ConfigConnector`` (yaml + ``get_config_variable`` + a scan of
 # ``os.environ``) and validated *non-fatally* against a documentation-only
-# model. This commit only ADDS the validated ``ti_api`` section to
-# ``ConnectorSettings``; the next one makes ``ConfigConnector`` read it (until
-# then the legacy loader at the bottom of this module is still the runtime source).
+# model. ``ConfigConnector`` now just exposes the validated ``ti_api`` section
+# through the accessor API the rest of the code base already uses.
 #
 # TODO(manager-supported blocker) [BLOCKING -> resolved with a workaround,
 # needs a maintainer decision]: this connector's configuration is a tree
@@ -434,33 +429,6 @@ class ExtraSettings(_SettingsBase):
     log_file_backup_count: int | None = Field(
         default=None, description="Number of rotated log files to keep."
     )
-
-
-# ---- legacy documentation-only models, removed once ConfigConnector reads
-# ---- the validated settings (next commit) ----
-
-
-class OpenCTISettings(_SettingsBase):
-    url: str | None = Field(default=None, description="OpenCTI platform URL.")
-    token: str | None = Field(default=None, description="OpenCTI API token.")
-
-
-class TIApiSettings(_SettingsBase):
-    url: str | None = Field(default=None, description="Group-IB TI API URL.")
-    username: str | None = Field(
-        default=None, description="Group-IB TI portal profile email."
-    )
-    token: str | None = Field(default=None, description="Group-IB TI API token.")
-    proxy: ProxySettings = Field(default_factory=ProxySettings)
-    collections: dict[str, CollectionSettings] = Field(default_factory=dict)
-    extra_settings: ExtraSettings = Field(default_factory=ExtraSettings)
-
-
-class GroupIBConnectorSettings(_SettingsBase):
-    """Top-level connector configuration schema (Group-IB TI → OpenCTI)."""
-
-    opencti: OpenCTISettings = Field(default_factory=OpenCTISettings)
-    ti_api: TIApiSettings = Field(default_factory=TIApiSettings)
 
 
 # Keys every collection accepts.
@@ -774,27 +742,65 @@ class ConnectorSettings(BaseConnectorSettings):
 
 
 class ConfigConnector:
-    _config_validation_warned = False
+    """Read-only view of the validated ``ConnectorSettings.ti_api`` section.
 
-    def __init__(self):
-        self.load = self._load_config()
-        self.env_keys = self._load_env_keys()
-        self._initialize_configurations()
+    Historically this class *was* the configuration loader (yaml +
+    ``get_config_variable`` + an ``os.environ`` scan). It is now a thin adapter
+    over the sdk-validated ``ConnectorSettings``: every ``ti_api`` field is
+    re-exposed as a ``ti_api_<field>`` attribute so the ~60 call sites of
+    ``get_collection_settings`` / ``get_extra_settings_by_name`` /
+    ``get_setting_bool`` (and the ciaops ``TIAdapter``, which receives this
+    object as ``config_obj``) keep working unchanged. It also carries the
+    connector-wide STIX/lookup constants below.
+    """
+
+    # Settings shared by every ``ConfigConnector()`` built without an argument.
+    # See the TODO in ``__init__``.
+    _shared_settings: "ClassVar[ConnectorSettings | None]" = None
+
+    def __init__(self, settings: "ConnectorSettings | None" = None):
+        # TODO(manager-supported blocker) [needs decision]: besides
+        # ``ExternalImportConnector`` (which injects its settings), two library-
+        # level call sites build a bare ``ConfigConnector()`` themselves:
+        # ``models/_common.py::BaseEntity.__init__`` (once per STIX entity!) and
+        # ``adapters/stix_adapter_core_mixin.py::AdapterCoreMixin.__init__``.
+        # The legacy loader re-read the environment on each call (~0.3 ms).
+        # Re-running ``ConnectorSettings()`` each time costs ~5 ms (the sdk
+        # rebuilds an untyped 234-field loader model per call), which is a real
+        # slowdown at thousands of entities per run. Workaround: settings passed
+        # explicitly (or built lazily on first use) are kept as the process-wide
+        # default. The proper fix is to pass the config object down (dependency
+        # injection); that is a refactor, out of lite scope.
+        if settings is not None:
+            ConfigConnector._shared_settings = settings
+        elif ConfigConnector._shared_settings is None:
+            ConfigConnector._shared_settings = ConnectorSettings()
+        self.settings = ConfigConnector._shared_settings
+        self._apply_ti_api_settings(self.settings.ti_api)
         self._warn_unknown_collection_keys()
         self.collection_mapping_config = FileHandler().read_json_config(
             self.CONFIG_JSON
         )
-        # Validate the effective configuration against the Pydantic schema.
-        # Non-fatal by design: the loader above stays the runtime source of
-        # truth, so a schema quirk must never block ingestion.
-        self.settings = self._build_validated_settings()
+
+    def _apply_ti_api_settings(self, ti_api: BaseModel) -> None:
+        """Expose each validated ``ti_api`` field as ``self.ti_api_<field>``.
+
+        ``BaseModel.__iter__`` yields declared fields *and* extras, so a key
+        that no declared field owns (retired collection, typo, or a real but
+        undocumented key) is still applied - as an unvalidated raw value - and
+        can be reported by ``_warn_unknown_collection_keys``.
+        """
+        for name, value in ti_api:
+            if isinstance(value, SecretStr):
+                value = value.get_secret_value()
+            setattr(self, f"ti_api_{name}", value)
 
     def _warn_unknown_collection_keys(self) -> None:
-        """Warn about ``TI_API__COLLECTIONS__<NAME>__*`` keys no collection owns.
+        """Warn about ``TI_API_COLLECTIONS_<NAME>_*`` keys no collection owns.
 
-        Unmatched keys are silently dropped by the loader, so a collection
-        retired in 2.0 or a typo in a slug would otherwise look like a
-        collection that is configured but never runs.
+        Such keys are accepted (``ti_api`` allows extras) but nothing reads
+        them, so a collection retired in 2.0 or a typo in a slug would
+        otherwise look like a collection that is configured but never runs.
         """
         prefix = "ti_api_collections_"
         retired_hits: set[str] = set()
@@ -819,7 +825,7 @@ class ConfigConnector:
             logger.warning(
                 "Ignoring configuration for '%s': the collection was dropped in "
                 "connector 2.0 and 1.x never actually fetched it. Remove the "
-                "TI_API__COLLECTIONS__%s__* keys.",
+                "TI_API_COLLECTIONS_%s_* keys.",
                 self.RETIRED_COLLECTIONS[slug],
                 slug.upper(),
             )
@@ -831,142 +837,6 @@ class ConfigConnector:
                 len(unknown_keys),
                 ", ".join(sorted(unknown_keys)),
             )
-
-    @classmethod
-    def config_json_schema(cls) -> dict[str, Any]:
-        """JSON Schema for the connector configuration (docs tooling)."""
-        return GroupIBConnectorSettings.model_json_schema()
-
-    def _assemble_settings_dict(self) -> dict[str, Any]:
-        """Fold the flat ``ti_api_collections_<slug>_<key>`` / ``opencti_*`` /
-        ``ti_api_extra_settings_*`` attributes into the nested structure the
-        Pydantic models expect. Works for both the YAML and env-only paths
-        because both resolve to the same flat attribute namespace."""
-        env_slugs = sorted(self.COLLECTION_MAP.keys(), key=len, reverse=True)
-        opencti: dict[str, Any] = {}
-        ti_api: dict[str, Any] = {}
-        proxy: dict[str, Any] = {}
-        extra: dict[str, Any] = {}
-        collections: dict[str, dict[str, Any]] = {}
-        for attr, val in vars(self).items():
-            if attr.startswith("ti_api_collections_"):
-                rest = attr[len("ti_api_collections_") :]
-                for slug in env_slugs:
-                    if rest.startswith(slug + "_"):
-                        collections.setdefault(slug, {})[rest[len(slug) + 1 :]] = val
-                        break
-            elif attr.startswith("ti_api_extra_settings_"):
-                extra[attr[len("ti_api_extra_settings_") :]] = val
-            elif attr.startswith("ti_api_proxy_"):
-                proxy[attr[len("ti_api_proxy_") :]] = val
-            elif attr in ("ti_api_url", "ti_api_username", "ti_api_token"):
-                ti_api[attr[len("ti_api_") :]] = val
-            elif attr in ("opencti_url", "opencti_token"):
-                opencti[attr[len("opencti_") :]] = val
-        ti_api["proxy"] = proxy
-        ti_api["extra_settings"] = extra
-        ti_api["collections"] = collections
-        return {"opencti": opencti, "ti_api": ti_api}
-
-    def _build_validated_settings(self) -> "GroupIBConnectorSettings | None":
-        try:
-            return GroupIBConnectorSettings.model_validate(
-                self._assemble_settings_dict()
-            )
-        except ValidationError as exc:
-            if not ConfigConnector._config_validation_warned:
-                ConfigConnector._config_validation_warned = True
-                logging.getLogger(__name__).warning(
-                    "Connector configuration did not validate against the schema; "
-                    "continuing with the loaded values. Details: %s",
-                    exc,
-                )
-            return None
-        except Exception as exc:  # noqa: BLE001 - validation must never crash startup
-            if not ConfigConnector._config_validation_warned:
-                ConfigConnector._config_validation_warned = True
-                logging.getLogger(__name__).warning(
-                    "Unexpected error while validating configuration (ignored): %s",
-                    exc,
-                )
-            return None
-
-    def _load_config(self) -> dict:
-        # Probe order must match
-        # ``connectors_sdk.settings._settings_loader._get_config_yml_file_path``,
-        # or this loader and the sdk's could resolve to different files.
-        src_dir = Path(__file__).resolve().parent.parent
-        for config_file_path in (src_dir / "config.yml", src_dir.parent / "config.yml"):
-            if config_file_path.is_file():
-                with open(config_file_path, "r", encoding="utf-8") as file:
-                    return yaml.safe_load(file) or {}
-
-        return {}
-
-    def _load_env_keys(self) -> list[str]:
-        load_dotenv()
-        return list(os.environ.keys())
-
-    def _extract_config_keys(
-        self, data: Any, parent_keys: list[Any] | None = None
-    ) -> list[list[Any]]:
-        if parent_keys is None:
-            parent_keys = []
-
-        keys_list = []
-        if isinstance(data, dict):
-            for key, value in data.items():
-                new_keys = parent_keys + [key]
-                if isinstance(value, dict):
-                    keys_list.extend(self._extract_config_keys(value, new_keys))
-                else:
-                    keys_list.append(new_keys)
-        return keys_list
-
-    def _converting_keys_to_environment_keys(self, key: Any) -> str | None:
-        if not key or not isinstance(key, list):
-            return None
-
-        key = [str(k).upper().replace("-", "_") for k in key]
-
-        if key[0] in ["OPENCTI", "CONNECTOR"]:
-            return "_".join(key)
-
-        if key[0] == "TI_API":
-            if len(key) > 1 and key[1] == "COLLECTIONS":
-                modified_key = key[2:]
-                modified_key = [part.replace("/", "_") for part in modified_key]
-                return (
-                    f"{key[0]}__{key[1]}__{'__'.join(modified_key)}"
-                    if modified_key
-                    else f"{key[0]}__{key[1]}"
-                )
-            return "__".join(key)
-
-        return "_".join(key)
-
-    def _initialize_configurations(self) -> None:
-        if self.load:
-            for key in self._extract_config_keys(self.load):
-                if len(key) > 2 and key[1] == "collections":
-                    key[2] = key[2].replace("/", "_")
-                env_var = self._converting_keys_to_environment_keys(key)
-                attr_name = "__".join(key).lower().replace("__", "_")
-                attr_value = get_config_variable(
-                    env_var=env_var,
-                    yaml_path=key,
-                    config=self.load,
-                )
-                setattr(self, attr_name, attr_value)
-        else:
-            for env_key in self.env_keys:
-                attr_name = env_key.lower().replace("__", "_")
-                attr_value = get_config_variable(
-                    env_var=env_key,
-                    yaml_path=None,
-                    config=None,
-                )
-                setattr(self, attr_name, attr_value)
 
     @staticmethod
     def _to_bool(value: Any, default: bool = False) -> bool:
