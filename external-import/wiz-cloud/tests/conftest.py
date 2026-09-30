@@ -10,7 +10,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from connectors_sdk.models import OrganizationAuthor, System, TLPMarking  # noqa: E402
-from wiz_cloud.models import WizIssue  # noqa: E402
+from wiz_client.models import WizIssue  # noqa: E402
 from wiz_cloud.processors import (  # noqa: E402
     WizIssuesProcessor,
     WizVulnerabilitiesProcessor,
