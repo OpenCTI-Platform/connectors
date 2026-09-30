@@ -99,17 +99,17 @@ class GreyNoiseConnector:
         self.all_labels = []
         all_malwares = []
         entity_tags = data["internet_scanner_intelligence"].get("tags", [])
-        if data["internet_scanner_intelligence"]["classification"] == "benign":
+        if data["internet_scanner_intelligence"].get("classification", "unknown") == "benign":
             self._create_custom_label("gn-classification: benign", "#06c93a")
             self._create_custom_label(
                 f"gn-benign-actor: {data['internet_scanner_intelligence']['actor']} ",
                 "#06c93a",
             )
-        elif data["internet_scanner_intelligence"]["classification"] == "unknown":
+        elif data["internet_scanner_intelligence"].get("classification", "unknown") == "unknown":
             self._create_custom_label("gn-classification: unknown", "#a6a09f")
-        elif data["internet_scanner_intelligence"]["classification"] == "malicious":
+        elif data["internet_scanner_intelligence"].get("classification", "unknown") == "malicious":
             self._create_custom_label("gn-classification: malicious", "#ff8178")
-        elif data["internet_scanner_intelligence"]["classification"] == "suspicious":
+        elif data["internet_scanner_intelligence"].get("classification", "unknown") == "suspicious":
             self._create_custom_label("gn-classification: suspicious", "#e3d922")
         if data["business_service_intelligence"]["trust_level"] == "1":
             self._create_custom_label("gn-trust-level: reasonably ignore", "#90D5FF")
@@ -410,7 +410,7 @@ class GreyNoiseConnector:
             data["internet_scanner_intelligence"]["actor"]
             and data["internet_scanner_intelligence"]["actor"] != "unknown"
             and (data["internet_scanner_intelligence"]["actor"] != "")
-            and (data["internet_scanner_intelligence"]["classification"] != "benign")
+            and (data["internet_scanner_intelligence"].get("classification", "unknown") != "benign")
         ):
             stix_threat_actor = stix2.ThreatActor(
                 id=ThreatActorGroup.generate_id(
@@ -449,7 +449,7 @@ class GreyNoiseConnector:
 
         description = (
             "Internet Scanning IP detected by GreyNoise with classification `"
-            + data["internet_scanner_intelligence"]["classification"]
+            + data["internet_scanner_intelligence"].get("classification", "unknown")
             + "`."
         )
 
@@ -493,7 +493,7 @@ class GreyNoiseConnector:
 
         description = (
             "Internet Scanning IP detected by GreyNoise with classification `"
-            + data["internet_scanner_intelligence"]["classification"]
+            + data["internet_scanner_intelligence"].get("classification", "unknown")
             + "`."
         )
 
