@@ -75,6 +75,18 @@ class `infrastructure` (cloud ranges, CDNs, Tor exits, DNS resolvers), `policy`
 accuse it: they are kept as external references (`Listed as: …`) and
 summarised in the description as `Infrastructure: cloud, …`.
 
+A missing or invalid `riskScore.score` leaves the existing OpenCTI score
+unchanged. The connector does not invent a low score from `malicious=false`
+or derive a replacement risk score from detection ratios. With a positive
+`ISMALICIOUS_MIN_SCORE`, a response without a score is skipped because the
+threshold cannot be evaluated. At the default threshold of zero, its context
+is still reported without writing a score. A valid numeric score of zero is
+preserved.
+
+`malicious=false` is reported as "not flagged as malicious", not "clean" or
+"safe". Missing verdicts are reported as unknown. An absence of detections
+is not proof of safety.
+
 ## Supported Observable Types
 
 - `IPv4-Addr` - IPv4 addresses

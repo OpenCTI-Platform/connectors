@@ -2,6 +2,7 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 from connector import IsMaliciousConnector
 from connector.ismalicious import USER_AGENT
@@ -162,17 +163,29 @@ def test_score_uses_risk_score():
     assert connector._calculate_score({"riskScore": {"score": 140}}) == 100
 
 
-def test_score_falls_back_without_risk_score():
+@pytest.mark.parametrize(
+    "api_data",
+    [
+        {},
+        {"malicious": False},
+        {"malicious": True, "riskScore": None},
+        {"malicious": True, "reputation": {"malicious": 3, "harmless": 1}},
+        {"riskScore": {"score": True}},
+        {"riskScore": {"score": False}},
+        {"riskScore": {"score": "42"}},
+        {"riskScore": {"score": float("nan")}},
+        {"riskScore": {"score": float("inf")}},
+    ],
+)
+def test_missing_or_invalid_risk_score_is_unknown(api_data):
     connector, _helper = _make_connector()
+    assert connector._calculate_score(api_data) is None
 
-    assert connector._calculate_score({"malicious": False}) == 10
-    assert connector._calculate_score({"malicious": True, "riskScore": None}) == 50
-    assert (
-        connector._calculate_score(
-            {"malicious": True, "reputation": {"malicious": 3, "harmless": 1}}
-        )
-        == 75
-    )
+
+@pytest.mark.parametrize("score, expected", [(0, 0), (-5, 0), (42.8, 42), (101, 100)])
+def test_valid_score_including_zero_is_preserved(score, expected):
+    connector, _helper = _make_connector()
+    assert connector._calculate_score({"riskScore": {"score": score}}) == expected
 
 
 def test_labels_come_from_threat_listings_only():
@@ -238,7 +251,127 @@ def test_infrastructure_only_observable_is_not_reported_as_threat():
 
     result, description = _enrich(connector, INFRASTRUCTURE_ONLY_RESPONSE)
 
-    assert result == "Enrichment complete: 203.0.113.7 is clean (score: 12)"
-    assert description.startswith("No threats detected")
+    assert result == (
+        "Enrichment complete: 203.0.113.7 is not flagged as malicious (score: 12)"
+    )
+    assert "not proof of safety" in description
     assert "Infrastructure: cloud" in description
     assert "Detected by" not in description
+
+
+def _message(entity_type="IPv4-Addr", value="203.0.113.7"):
+    from connector.ismalicious import STIX_EXT_OCTI_SCO
+
+    entity = {
+        "id": "ipv4-addr--test",
+        "value": value,
+        "extensions": {STIX_EXT_OCTI_SCO: {"score": 85}},
+    }
+    return {
+        "enrichment_entity": {"entity_type": entity_type, "objectMarking": []},
+        "stix_entity": entity,
+        "stix_objects": [entity],
+    }
+
+
+@pytest.mark.parametrize(
+    "api_data, expected_verdict",
+    [({}, "unknown"), ({"malicious": False}, "not flagged as malicious")],
+)
+def test_unknown_score_does_not_downgrade_existing_score(api_data, expected_verdict):
+    from connector.ismalicious import STIX_EXT_OCTI_SCO
+
+    connector, helper = _make_connector()
+    message = _message()
+    with (
+        patch.object(connector, "_call_api", return_value=api_data),
+        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
+        patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
+    ):
+        helper_cls.check_max_tlp.return_value = True
+        result = connector._process_message(message)
+    assert message["stix_entity"]["extensions"][STIX_EXT_OCTI_SCO]["score"] == 85
+    assert all(
+        call.args[2] != "score"
+        for call in stix2_cls.put_attribute_in_extension.call_args_list
+    )
+    assert f"is {expected_verdict} (score: unavailable)" in result
+    assert "clean" not in result
+    assert "safe" not in connector._get_labels(api_data)
+    helper.send_stix2_bundle.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "api_data", [{"malicious": False}, {"riskScore": {"score": 59}}]
+)
+def test_missing_or_below_threshold_score_does_not_enrich(api_data):
+    connector, helper = _make_connector()
+    connector.config.ismalicious.min_score_to_report = 60
+    with (
+        patch.object(connector, "_call_api", return_value=api_data),
+        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
+        patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
+    ):
+        helper_cls.check_max_tlp.return_value = True
+        result = connector._process_message(_message())
+    assert "skipping" in result
+    stix2_cls.put_attribute_in_extension.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "entity_type, value",
+    [
+        ("IPv4-Addr", "203.0.113.7"),
+        ("IPv6-Addr", "2001:db8::1"),
+        ("Domain-Name", "example.org"),
+    ],
+)
+def test_non_malicious_response_keeps_api_score_for_supported_types(entity_type, value):
+    connector, helper = _make_connector()
+    with (
+        patch.object(
+            connector,
+            "_call_api",
+            return_value={"malicious": False, "riskScore": {"score": 42}},
+        ),
+        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
+        patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
+    ):
+        helper_cls.check_max_tlp.return_value = True
+        result = connector._process_message(_message(entity_type, value))
+    written_scores = [
+        call.args[3]
+        for call in stix2_cls.put_attribute_in_extension.call_args_list
+        if call.args[2] == "score"
+    ]
+    assert written_scores == [42]
+    assert "not flagged as malicious (score: 42)" in result
+    helper.send_stix2_bundle.assert_called_once()
+
+
+def test_tlp_exclusion_never_calls_api():
+    connector, helper = _make_connector()
+    with (
+        patch.object(connector, "_call_api") as api_call,
+        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
+    ):
+        helper_cls.check_max_tlp.return_value = False
+        result = connector._process_message(_message())
+    assert result == "TLP too high, skipping enrichment"
+    api_call.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+
+
+def test_api_failure_leaves_observable_unchanged():
+    connector, helper = _make_connector()
+    with (
+        patch.object(connector, "_call_api", return_value=None),
+        patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,
+        patch("connector.ismalicious.OpenCTIStix2") as stix2_cls,
+    ):
+        helper_cls.check_max_tlp.return_value = True
+        result = connector._process_message(_message())
+    assert result == "API call failed for 203.0.113.7"
+    stix2_cls.put_attribute_in_extension.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()

@@ -4,6 +4,7 @@ isMalicious OpenCTI Internal Enrichment Connector
 Enriches IP addresses and domains with threat intelligence from isMalicious.com
 """
 
+from math import isfinite
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -91,7 +92,6 @@ class IsMaliciousConnector:
             "scam": "#ff5722",  # Deep Orange
             "exploit-kit": "#b71c1c",  # Dark Red
             "suspicious": "#ffc107",  # Amber
-            "safe": "#4caf50",  # Green
         }
 
         for label, color in label_colors.items():
@@ -124,33 +124,22 @@ class IsMaliciousConnector:
             self.helper.log_error(f"API call failed for {observable_value}: {e}")
             return None
 
-    def _calculate_score(self, data: Dict[str, Any]) -> int:
-        """Calculate OpenCTI score (0-100) from isMalicious response."""
-        # riskScore.score is the API's 0-100 risk score (standard enrichment)
+    def _calculate_score(self, data: Dict[str, Any]) -> Optional[int]:
+        """Return the API risk score, or None when no usable score is available."""
         risk_score = data.get("riskScore")
         if isinstance(risk_score, dict):
             score = risk_score.get("score")
-            if isinstance(score, (int, float)):
+            # bool is an int in Python, but is not a numeric API risk score.
+            if (
+                isinstance(score, (int, float))
+                and not isinstance(score, bool)
+                and isfinite(score)
+            ):
                 return min(100, max(0, int(score)))
 
-        # Check if malicious
-        if not data.get("malicious", False):
-            return 10  # Low score for non-malicious
-
-        # Use reputation data if available
-        reputation = data.get("reputation") or {}
-        if reputation:
-            malicious = reputation.get("malicious", 0)
-            total = sum(
-                reputation.get(k, 0)
-                for k in ["malicious", "suspicious", "harmless", "undetected"]
-            )
-            if total > 0:
-                # Weight malicious heavily
-                score = int((malicious / total) * 100)
-                return min(100, max(0, score))
-
-        return 50
+        # A missing score or malicious=False is not evidence of low risk.
+        # Do not overwrite an existing OpenCTI score with a fabricated value.
+        return None
 
     def _get_labels(self, data: Dict[str, Any]) -> List[str]:
         """Extract labels from isMalicious response."""
@@ -288,12 +277,15 @@ class IsMaliciousConnector:
 
         # Calculate and set score
         score = self._calculate_score(api_data)
-        if score < self.config.ismalicious.min_score_to_report:
-            return f"Score {score} below threshold, skipping"
-
-        OpenCTIStix2.put_attribute_in_extension(
-            stix_entity, STIX_EXT_OCTI_SCO, "score", score
-        )
+        threshold = self.config.ismalicious.min_score_to_report
+        if score is None and threshold > 0:
+            return "Risk score unavailable; cannot evaluate minimum score, skipping"
+        if score is not None:
+            if score < threshold:
+                return f"Score {score} below threshold, skipping"
+            OpenCTIStix2.put_attribute_in_extension(
+                stix_entity, STIX_EXT_OCTI_SCO, "score", score
+            )
 
         # Add labels
         for label in self._get_labels(api_data):
@@ -308,7 +300,7 @@ class IsMaliciousConnector:
             )
 
         # Add description with summary
-        malicious = api_data.get("malicious", False)
+        malicious = api_data.get("malicious")
         detections = threat_sources(api_data)
         sources_count = len(detections)
         categories = []
@@ -318,12 +310,23 @@ class IsMaliciousConnector:
                 categories.append(category)
 
         description_parts = []
-        if malicious:
+        if malicious is True:
+            status = "malicious"
             description_parts.append(
                 f"**Malicious** - Detected by {sources_count} source(s)"
             )
+        elif malicious is False:
+            status = "not flagged as malicious"
+            description_parts.append(
+                "Not flagged as malicious by isMalicious; this is not proof of safety."
+            )
         else:
-            description_parts.append("No threats detected")
+            status = "unknown"
+            description_parts.append("No malicious verdict available from isMalicious.")
+        if score is None:
+            description_parts.append(
+                "Risk score unavailable; existing OpenCTI score left unchanged."
+            )
 
         if categories:
             description_parts.append(f"Categories: {', '.join(categories)}")
@@ -359,8 +362,11 @@ class IsMaliciousConnector:
         serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
         self.helper.send_stix2_bundle(serialized_bundle)
 
-        status = "malicious" if malicious else "clean"
-        return f"Enrichment complete: {observable_value} is {status} (score: {score})"
+        score_display = score if score is not None else "unavailable"
+        return (
+            f"Enrichment complete: {observable_value} is {status} "
+            f"(score: {score_display})"
+        )
 
     def run(self) -> None:
         """Start the connector and listen for enrichment requests."""
