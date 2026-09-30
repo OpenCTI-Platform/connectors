@@ -82,7 +82,7 @@ do
 
   echo 'Installing latest version of pycti'
   uv pip uninstall pycti
-  REF="${CIRCLE_TAG:-${RELEASE_REF:-"master"}}"
+  REF="${CIRCLE_TAG:-${RELEASE_REF:-"lts/7.260811.0"}}"
   uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
   uv pip freeze | grep "connectors-sdk\|pycti" || true
 
