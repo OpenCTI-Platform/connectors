@@ -542,6 +542,7 @@ def _flat_ti_api_fields() -> dict[str, Any]:
     """
     fields: dict[str, Any] = {}
 
+    annotation: Any
     for key, info in ProxySettings.model_fields.items():
         annotation = SecretStr | None if key == "password" else info.annotation
         fields[f"proxy_{key}"] = (
