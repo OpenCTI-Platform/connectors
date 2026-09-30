@@ -197,7 +197,7 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
         "fetched per enrichment, whatever the date floor says.",
         examples=[25],
     )
-    ip_resolutions_keywords: str | None = Field(
+    ip_resolutions_keywords_regex: str | None = Field(
         default=None,
         description="Case-insensitive regular expression a resolved domain must match to be imported. "
         "Filters the created objects, not the API quota. Unset: import all resolved domains.",
@@ -255,9 +255,9 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
         description="Whether or not to include the attributes info in Note.",
     )
 
-    @field_validator("ip_resolutions_keywords")
+    @field_validator("ip_resolutions_keywords_regex")
     @classmethod
-    def validate_ip_resolutions_keywords(cls, value: str | None) -> str | None:
+    def validate_ip_resolutions_keywords_regex(cls, value: str | None) -> str | None:
         """Check that the keyword filter is a valid regular expression."""
         if value is not None:
             try:

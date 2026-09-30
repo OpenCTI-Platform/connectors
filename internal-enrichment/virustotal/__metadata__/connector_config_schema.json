@@ -165,7 +165,7 @@
       "minimum": 1,
       "type": "integer"
     },
-    "VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS": {
+    "VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS_REGEX": {
       "default": null,
       "description": "Case-insensitive regular expression a resolved domain must match to be imported. Filters the created objects, not the API quota. Unset: import all resolved domains.",
       "examples": [

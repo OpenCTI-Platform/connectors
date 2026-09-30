@@ -49,7 +49,7 @@ def _make_connector() -> VirusTotalConnector:
     connector.ip_resolutions_since = timedelta(days=90)
     connector.ip_resolutions_max_entries = None
     connector.ip_resolutions_max_pages = 25
-    connector.ip_resolutions_keywords = None
+    connector.ip_resolutions_keywords_regex = None
     connector.api_requests_per_minute = 4
     connector.domain_add_relationships = config.virustotal.domain_add_relationships
     connector.url_upload_unseen = config.virustotal.url_upload_unseen

@@ -137,7 +137,7 @@ class TestResolutionsConfig(unittest.TestCase):
         self.assertEqual(config.ip_resolutions_since, timedelta(days=90))
         self.assertIsNone(config.ip_resolutions_max_entries)
         self.assertEqual(config.ip_resolutions_max_pages, 25)
-        self.assertIsNone(config.ip_resolutions_keywords)
+        self.assertIsNone(config.ip_resolutions_keywords_regex)
         self.assertEqual(config.api_requests_per_minute, 4)
 
     def test_iso8601_duration(self):
@@ -160,7 +160,9 @@ class TestResolutionsConfig(unittest.TestCase):
 
     def test_invalid_keywords_rejected_at_start_up(self):
         with self.assertRaises(ValidationError):
-            ConfigLoaderVirusTotal(token="fake-token", ip_resolutions_keywords="news(")
+            ConfigLoaderVirusTotal(
+                token="fake-token", ip_resolutions_keywords_regex="news("
+            )
 
     def test_caps_must_be_positive(self):
         with self.assertRaises(ValidationError):
@@ -336,7 +338,7 @@ class TestIPResolutionsLoop(unittest.TestCase):
     def test_keywords_filter_created_domains(self):
         processor, helper = _make_processor(
             THREE_PAGES,
-            ip_resolutions_keywords=re.compile("news|daily|press", re.IGNORECASE),
+            ip_resolutions_keywords_regex=re.compile("news|daily|press", re.IGNORECASE),
         )
         result = processor.process()
         created = [d for b in _sent_bundles(helper)[1:] for d in _domains(b)]
@@ -403,7 +405,7 @@ class TestIPResolutionsLoop(unittest.TestCase):
         processor, _ = _make_processor(
             THREE_PAGES,
             ip_resolutions_max_entries=3,
-            ip_resolutions_keywords=re.compile("press"),
+            ip_resolutions_keywords_regex=re.compile("press"),
         )
         # The cap falls on the second page: 2 entries, then 1.
         processor.client.get_ip_resolutions_page.side_effect = [

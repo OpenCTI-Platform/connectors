@@ -155,7 +155,7 @@ class IPProcessor(EntityProcessor):
                 in_window.append(resolution)
 
             objects = builder.build_resolved_domains(
-                in_window, self.connector.ip_resolutions_keywords
+                in_window, self.connector.ip_resolutions_keywords_regex
             )
             page_kept = sum(1 for o in objects if o["type"] == "domain-name")
             kept += page_kept

@@ -90,7 +90,7 @@ Key features:
 | `virustotal_ip_resolutions_since` | `VIRUSTOTAL_IP_RESOLUTIONS_SINCE` | No | Date floor: an ISO-8601 duration such as `P90D` (resolved at each enrichment), an ISO-8601 date such as `2025-10-01`, or `none` (default: `P90D`) |
 | `virustotal_ip_resolutions_max_entries` | `VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES` | No | Stop after this many resolutions fetched, counted before the keyword filter (default: unset, no entry cap) |
 | `virustotal_ip_resolutions_max_pages` | `VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES` | No | Maximum pages of 40 resolutions per enrichment, one API lookup each (default: 25) |
-| `virustotal_ip_resolutions_keywords` | `VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS` | No | Case-insensitive regex a resolved domain must match to be imported (default: unset, all) |
+| `virustotal_ip_resolutions_keywords_regex` | `VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS_REGEX` | No | Case-insensitive regex a resolved domain must match to be imported (default: unset, all) |
 | `virustotal_api_requests_per_minute` | `VIRUSTOTAL_API_REQUESTS_PER_MINUTE` | No | Spacing between resolutions pages; `0` disables the wait (default: 4) |
 | `virustotal_domain_indicator_create_positives` | `VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES` | No | Domain indicator creation threshold |
 | `virustotal_domain_add_relationships` | `VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS` | No | Add IP resolution relationships |
@@ -210,7 +210,7 @@ Paging stops at the first of:
 4. the end of the list;
 5. a failed page, including HTTP 429 after the client retries. What was already sent stays.
 
-`VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS` filters which resolutions are imported; it does not reduce the lookups spent.
+`VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS_REGEX` filters which resolutions are imported; it does not reduce the lookups spent.
 Each page is sent as its own bundle, so the first results appear before paging ends. In a playbook, all
 resolutions are added to the enrichment bundle and sent once. The work message ends with
 `resolutions: kept N of M fetched (P pages, stopped: date floor | entry cap | page cap | end of list | error)`.

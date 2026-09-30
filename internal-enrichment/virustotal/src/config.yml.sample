@@ -33,7 +33,7 @@ virustotal:
 #  ip_resolutions_since: P90D # Date floor: ISO-8601 duration (P90D), ISO-8601 date (2025-10-01) or none
 #  ip_resolutions_max_entries: 3 # Stop after this many resolutions fetched (unset: no entry cap)
 #  ip_resolutions_max_pages: 25 # Maximum pages (40 entries, one lookup each) per enrichment
-#  ip_resolutions_keywords: news|press|journal # Case-insensitive regex a resolved domain must match (unset: all)
+#  ip_resolutions_keywords_regex: news|press|journal # Case-insensitive regex a resolved domain must match (unset: all)
 #  api_requests_per_minute: 4 # Spacing between resolutions pages; 4 fits a free key, 0 disables the wait
 
   # Domain specific config settings

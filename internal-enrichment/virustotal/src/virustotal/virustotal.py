@@ -92,8 +92,8 @@ class VirusTotalConnector:
             self.config.virustotal.ip_resolutions_max_entries
         )
         self.ip_resolutions_max_pages = self.config.virustotal.ip_resolutions_max_pages
-        keywords = self.config.virustotal.ip_resolutions_keywords
-        self.ip_resolutions_keywords = (
+        keywords = self.config.virustotal.ip_resolutions_keywords_regex
+        self.ip_resolutions_keywords_regex = (
             re.compile(keywords, re.IGNORECASE) if keywords else None
         )
         self.api_requests_per_minute = self.config.virustotal.api_requests_per_minute
