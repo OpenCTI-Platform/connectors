@@ -99,17 +99,20 @@ class GreyNoiseConnector:
         self.all_labels = []
         all_malwares = []
         entity_tags = data["internet_scanner_intelligence"].get("tags", [])
-        if data["internet_scanner_intelligence"].get("classification", "unknown") == "benign":
+        classification = data["internet_scanner_intelligence"].get(
+            "classification", "unknown"
+        )
+        if classification == "benign":
             self._create_custom_label("gn-classification: benign", "#06c93a")
             self._create_custom_label(
                 f"gn-benign-actor: {data['internet_scanner_intelligence']['actor']} ",
                 "#06c93a",
             )
-        elif data["internet_scanner_intelligence"].get("classification", "unknown") == "unknown":
+        elif classification == "unknown":
             self._create_custom_label("gn-classification: unknown", "#a6a09f")
-        elif data["internet_scanner_intelligence"].get("classification", "unknown") == "malicious":
+        elif classification == "malicious":
             self._create_custom_label("gn-classification: malicious", "#ff8178")
-        elif data["internet_scanner_intelligence"].get("classification", "unknown") == "suspicious":
+        elif classification == "suspicious":
             self._create_custom_label("gn-classification: suspicious", "#e3d922")
         if data["business_service_intelligence"]["trust_level"] == "1":
             self._create_custom_label("gn-trust-level: reasonably ignore", "#90D5FF")
@@ -406,11 +409,14 @@ class GreyNoiseConnector:
             self.stix_objects.append(observable_to_malware)
 
     def _generate_stix_threat_actor_with_relationship(self, data: dict):
+        classification = data["internet_scanner_intelligence"].get(
+            "classification", "unknown"
+        )
         if (
             data["internet_scanner_intelligence"]["actor"]
             and data["internet_scanner_intelligence"]["actor"] != "unknown"
             and (data["internet_scanner_intelligence"]["actor"] != "")
-            and (data["internet_scanner_intelligence"].get("classification", "unknown") != "benign")
+            and (classification != "benign")
         ):
             stix_threat_actor = stix2.ThreatActor(
                 id=ThreatActorGroup.generate_id(
