@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -ex # exit on error and print executed command
+set -e  # exit on error
 
 venv_name=".temp_venv"
 
@@ -49,7 +49,7 @@ do
     continue
   fi
 
-  echo 'Running tests pipeline for project' "$project"
+  echo 'Running tests uv pipeline for project' "$project"
 
   # Per-connector outputs
   OUT_DIR="test_outputs/$(echo "$project" | tr '/ ' '__')"
@@ -66,15 +66,19 @@ do
   echo 'Installing requirements'
   uv pip install -q -r "$requirements_file"
 
-  uv pip freeze | grep "connectors-sdk\|pycti" || true
+  if uv pip show pytest-cov >/dev/null 2>&1; then
+    pytest_cov_installed_by_requirements="true"
+    echo 'pytest-cov is provided by test requirements'
+  else
+    pytest_cov_installed_by_requirements="false"
+    echo 'pytest-cov is not provided by test requirements'
+  fi
 
   if [ -n "$project_has_sdk_dependency" ] ; then
       echo 'Installing connectors-sdk local version'
       uv pip uninstall connectors-sdk
       uv pip install -q ./connectors-sdk
   fi
-
-  uv pip freeze | grep "connectors-sdk\|pycti" || true
 
   echo 'Installing latest version of pycti'
   uv pip uninstall pycti
@@ -85,7 +89,18 @@ do
   uv pip check || exit 1  # exit if dependencies are broken
 
   echo 'Running tests'
-  python -m pytest "$project" --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  if [ "$pytest_cov_installed_by_requirements" = "true" ]; then
+    echo 'Using project pytest configuration'
+    # --cov is not needed because already configured as addopts in pyproject.toml
+    # --cov-append is needed to merge coverage results from multiple test runs
+    python -m pytest "$project" --cov-append --cov-report=xml \
+      --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  else
+    echo 'Installing pytest-cov and using explicit coverage arguments'
+    uv pip install -q pytest-cov
+    python -m pytest "$project" --cov --cov-append \
+      --cov-report=xml --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  fi
 
   echo 'Removing virtual environment'
   deactivate

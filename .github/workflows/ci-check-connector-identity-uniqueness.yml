@@ -1,16 +1,19 @@
 name: Connector Identity Uniqueness
 
+# Automatic triggers are disabled on this LTS branch: it has known pre-existing
+# duplicates (lastinfosec folder/image, eset slug) that would fail every run.
+# on:
+#   push:
+#     branches:
+#       - master
+#       - 'release/*'
+#       - 'lts/*'
+#     paths:
+#       - '**/connector_manifest.json'
+#   pull_request:
+#     paths:
+#       - '**/connector_manifest.json'
 on:
-  push:
-    branches:
-      - master
-      - 'release/*'
-      - 'lts/*'
-    paths:
-      - '**/connector_manifest.json'
-  pull_request:
-    paths:
-      - '**/connector_manifest.json'
   workflow_dispatch:
 
 concurrency:

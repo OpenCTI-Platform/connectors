@@ -1,0 +1,44 @@
+FROM registry.access.redhat.com/ubi9/ubi-minimal
+
+ARG EXTRA_PACKAGES=""
+
+RUN set -eux; \
+    microdnf -y --setopt=install_weak_deps=0 install python3.12 ${EXTRA_PACKAGES}; \
+    microdnf clean all;
+
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Provide a dedicated HOME so tools that build per-user caches/config under "~"
+# (e.g. POST_INSTALL steps) have a valid writable location at build time and a
+# readable one at runtime for arbitrary non-root UIDs (OpenShift/Kubernetes).
+# HOME defaulting to "/" would otherwise fail with a PermissionError.
+ENV HOME=/opt/opencti-connector
+RUN mkdir -p "$HOME"
+
+ARG CONNECTOR_TYPE
+ENV CONNECTOR_TYPE=${CONNECTOR_TYPE}
+
+ARG CONNECTOR_CMD="main.py"
+ARG CONNECTOR_WORKDIR="/opt/connector/src"
+ARG POST_INSTALL=""
+
+ENV CONNECTOR_CMD=${CONNECTOR_CMD}
+
+COPY src /opt/connector/src
+
+RUN set -eux; \
+    microdnf -y --setopt=install_weak_deps=0 install python3.12-pip git-core; \
+    pip3.12 install --no-cache-dir -r /opt/connector/src/requirements.txt; \
+    if [ -n "${POST_INSTALL}" ]; then ${POST_INSTALL}; fi; \
+    # Make anything created under HOME at build time (e.g. POST_INSTALL caches)
+    # world-readable so the connector can read it as an arbitrary non-root UID.
+    chmod -R a+rX "$HOME"; \
+    microdnf -y remove python3.12-pip git-core ; \
+    microdnf clean all;
+
+WORKDIR ${CONNECTOR_WORKDIR}
+
+# exec ensures python3.12 replaces the shell process and receives OS signals 
+# (SIGTERM, SIGINT) directly as PID 1, while sh -c preserves the ${CONNECTOR_CMD} 
+#variable expansion needed for per-connector overrides.
+CMD ["sh", "-c", "exec python3.12 ${CONNECTOR_CMD}"]

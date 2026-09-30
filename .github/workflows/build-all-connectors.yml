@@ -77,17 +77,20 @@ jobs:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
-  build-ubi9:
-    needs: [resolve-build-mode, lint, tests]
-    uses: ./.github/workflows/build-ubi9.yml
-    permissions:
-      contents: read
-      packages: write
-    with:
-      build_mode: ${{ needs.resolve-build-mode.outputs.build_mode }}
-      push: true
-    secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_UBI9 }}
-      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS_UBI9 }}
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+  # UBI9 builds are disabled on this LTS branch: the connectors here predate the
+  # layout expected by Dockerfile_ubi9 (src/requirements.txt) and have no
+  # per-connector .build.env, so the images would be built or started wrong.
+  # build-ubi9:
+  #   needs: [resolve-build-mode, lint, tests]
+  #   uses: ./.github/workflows/build-ubi9.yml
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #   with:
+  #     build_mode: ${{ needs.resolve-build-mode.outputs.build_mode }}
+  #     push: true
+  #   secrets:
+  #     DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_UBI9 }}
+  #     DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS_UBI9 }}
+  #     GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+  #     GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
