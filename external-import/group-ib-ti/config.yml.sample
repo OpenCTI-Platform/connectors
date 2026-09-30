@@ -7,7 +7,6 @@ opencti:
 connector:
   # Generate one with uuidgen (https://www.uuidgenerator.net/version4)
   id: ""
-  type: "EXTERNAL_IMPORT"
   name: "Group-IB Connector"
   scope: "stix2,report,threat-actor,intrusion-set,malware,attack-pattern,vulnerability,indicator,location,identity,incident,note,relationship,ipv4-addr,ipv6-addr,domain,url,StixFile,email-addr,user-account,payment-card,bank-account"
   docker_container_name: "gib_connector"
