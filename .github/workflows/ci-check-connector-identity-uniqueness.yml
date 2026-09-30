@@ -1,0 +1,32 @@
+name: Connector Identity Uniqueness
+
+on:
+  push:
+    branches:
+      - master
+      - 'release/*'
+      - 'lts/*'
+    paths:
+      - '**/connector_manifest.json'
+  pull_request:
+    paths:
+      - '**/connector_manifest.json'
+  workflow_dispatch:
+
+concurrency:
+  group: check-connector-identity-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-connector-identity:
+    name: Check connector identity uniqueness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Validate connector manifest identity uniqueness
+        run: python3 .github/scripts/check_connector_identity_uniqueness.py

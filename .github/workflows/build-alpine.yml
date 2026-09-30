@@ -1,0 +1,165 @@
+name: Build Alpine Images
+
+on:
+  workflow_call:
+    inputs:
+      build_mode:
+        description: >
+          Build mode: "rolling" (master), "prerelease" (release/* branches),
+          or "release" (version tags like 7.260529.0).
+        required: true
+        type: string
+      push:
+        description: "Whether to push images to registries"
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_PASSWORD:
+        required: false
+      GHCR_USERNAME:
+        required: false
+      GHCR_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-matrix:
+    name: Generate build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix_external_import: ${{ steps.set-matrix.outputs.matrix_external_import }}
+      matrix_internal_enrichment: ${{ steps.set-matrix.outputs.matrix_internal_enrichment }}
+      matrix_internal_export_file: ${{ steps.set-matrix.outputs.matrix_internal_export_file }}
+      matrix_internal_import_file: ${{ steps.set-matrix.outputs.matrix_internal_import_file }}
+      matrix_stream: ${{ steps.set-matrix.outputs.matrix_stream }}
+      active_types: ${{ steps.set-matrix.outputs.active_types }}
+      has_connectors: ${{ steps.set-matrix.outputs.has_connectors }}
+      image_tags: ${{ steps.tags.outputs.image_tags }}
+      is_latest: ${{ steps.tags.outputs.is_latest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          
+
+      - name: Generate build matrix
+        id: set-matrix
+        env:
+          BUILD_MODE: ${{ inputs.build_mode }}
+        run: python3 .github/scripts/build_alpine_matrix.py
+
+      - name: Compute image tags
+        id: tags
+        run: |
+          BUILD_MODE="${{ inputs.build_mode }}"
+          IS_LATEST="false"
+
+          case "$BUILD_MODE" in
+            rolling)
+              IMAGE_TAGS="rolling,1.0.0"
+              ;;
+            prerelease)
+              IMAGE_TAGS="prerelease"
+              ;;
+            release)
+              TAG_NAME="${{ github.ref_name }}"
+              LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+
+              IMAGE_TAGS="${TAG_NAME}"
+              if [ "$TAG_NAME" = "$LATEST_TAG" ]; then
+                IMAGE_TAGS="${TAG_NAME},latest"
+                IS_LATEST="true"
+              fi
+              ;;
+            *)
+              echo "::error::Unknown build mode: $BUILD_MODE"
+              exit 1
+              ;;
+          esac
+
+          echo "image_tags=$IMAGE_TAGS" >> "$GITHUB_OUTPUT"
+          echo "is_latest=$IS_LATEST" >> "$GITHUB_OUTPUT"
+          echo "🏷️ Image tags: $IMAGE_TAGS (is_latest: $IS_LATEST)"
+
+  build-external-import:
+    needs: build-matrix
+    if: contains(fromJson(needs.build-matrix.outputs.active_types), 'external_import')
+    uses: ./.github/workflows/build-connector-type.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      type_name: external-import
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_external_import }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
+
+  build-internal-enrichment:
+    needs: build-matrix
+    if: contains(fromJson(needs.build-matrix.outputs.active_types), 'internal_enrichment')
+    uses: ./.github/workflows/build-connector-type.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      type_name: internal-enrichment
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_internal_enrichment }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
+
+  build-internal-export-file:
+    needs: build-matrix
+    if: contains(fromJson(needs.build-matrix.outputs.active_types), 'internal_export_file')
+    uses: ./.github/workflows/build-connector-type.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      type_name: internal-export-file
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_internal_export_file }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
+
+  build-internal-import-file:
+    needs: build-matrix
+    if: contains(fromJson(needs.build-matrix.outputs.active_types), 'internal_import_file')
+    uses: ./.github/workflows/build-connector-type.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      type_name: internal-import-file
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_internal_import_file }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
+
+  build-stream:
+    needs: build-matrix
+    if: contains(fromJson(needs.build-matrix.outputs.active_types), 'stream')
+    uses: ./.github/workflows/build-connector-type.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      type_name: stream
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_stream }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
+
