@@ -1,9 +1,10 @@
 import logging
 import os
 import re
-from datetime import datetime, timezone
+import warnings
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Optional
 
 import yaml
 from _data.iso3166 import COUNTRIES as _ISO3166_COUNTRIES
@@ -14,13 +15,23 @@ from connector.logging_config import (
     _DEFAULT_LOG_MAX_BYTES,
     FileLoggingConfig,
 )
+from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.base_settings import (
+    BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
 from dotenv import load_dotenv
 from pycti import get_config_variable
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    ValidationError,
+    create_model,
+    model_validator,
+)
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 from stix2.v21.vocab import MALWARE_TYPE
 
@@ -182,31 +193,53 @@ REPORT_NOTE_COLLECTIONS = frozenset({"apt/threat", "hi/threat"})
 # ============================================================================
 # Pydantic settings models
 # ----------------------------------------------------------------------------
-# These declare the connector's configuration surface with types, defaults and
-# human-readable descriptions. They serve two purposes:
-#   1. Validation — ``ConfigConnector`` validates the effective (env or YAML)
-#      configuration against ``GroupIBConnectorSettings`` at startup. Validation
-#      is non-fatal: the legacy loader remains the runtime source of truth, so a
-#      schema quirk never blocks ingestion; failures are logged as a warning.
-#   2. Documentation — ``ConfigConnector.config_json_schema()`` emits a JSON
-#      Schema (``model_json_schema()``) consumed by the docs tooling.
-# ``extra="ignore"`` keeps the models forward-compatible with keys handled
-# entirely by ciaops (e.g. server-side query knobs) or added later.
+# ``ConnectorSettings`` (bottom of this block) is the single validated source
+# of configuration for the whole connector: the standard ``opencti`` and
+# ``connector`` sections AND the connector-specific ``ti_api`` section. It is
+# what the connector manager reads (``connector_config_schema.json``) and what
+# ``main.py`` turns into the pycti helper config via ``to_helper_config()``.
 #
-# ``ConnectorSettings`` (below, near ``ConfigConnector``) is a separate,
-# additional layer for the standard OpenCTI/connector framework fields only
-# (id/name/scope/log_level/duration_period, opencti
-# url/token), built on ``connectors_sdk.settings.BaseConnectorSettings`` for
-# real Pydantic validation and ``to_helper_config()``. The Group-IB TI
-# surface (``ti_api.*``, including its per-collection settings) stays on
-# ``GroupIBConnectorSettings``/``ConfigConnector`` above: it is not part of
-# ``ConnectorSettings`` because that TI surface is unrelated to the standard
-# connector framework fields the SDK class models.
+# History: before the manager-supported migration this module only modelled
+# the framework fields; the whole ``TI_API__*`` surface was read by a legacy
+# loader in ``ConfigConnector`` (yaml + ``get_config_variable`` + a scan of
+# ``os.environ``) and validated *non-fatally* against a documentation-only
+# model. This commit only ADDS the validated ``ti_api`` section to
+# ``ConnectorSettings``; the next one makes ``ConfigConnector`` read it (until
+# then the legacy loader at the bottom of this module is still the runtime source).
+#
+# TODO(manager-supported blocker) [BLOCKING -> resolved with a workaround,
+# needs a maintainer decision]: this connector's configuration is a tree
+#     TI_API__COLLECTIONS__<SLUG>__<KEY>, TI_API__EXTRA_SETTINGS__<KEY>,
+#     TI_API__PROXY__<KEY>, TI_API__URL, ...
+# but the connectors-sdk loader (``_SettingsLoader``: ``env_nested_delimiter``
+# ``"_"`` with ``env_nested_max_split=1``) and the manager's schema generator
+# only understand ONE nesting level, ``<SECTION>_<FIELD>``. Consequences:
+#   * ``TI_API__URL`` (double underscore) is NOT parsed by the sdk: it lands in
+#     ``ti_api`` as an unknown ``_url`` extra and the real ``url`` stays unset.
+#   * ``proxy`` / ``extra_settings`` / ``collections`` cannot be nested models
+#     or dicts on the env-var side.
+# Workaround implemented below: ``ti_api`` is FLAT. Every leaf becomes its own
+# field named exactly like the legacy in-memory attribute (``proxy_ip``,
+# ``extra_settings_<key>``, ``collections_<slug>_<key>``), i.e. the env vars
+# become ``TI_API_PROXY_IP``, ``TI_API_EXTRA_SETTINGS_<KEY>``,
+# ``TI_API_COLLECTIONS_<SLUG>_<KEY>``. A ``mode="before"`` validator
+# (``_TIApiCoreConfig._normalize_keys``) keeps the old spellings working:
+# nested ``config.yml`` blocks are flattened and legacy ``TI_API__*`` env vars
+# are mapped (with a deprecation warning). Resulting schema: 234 flat
+# ``TI_API_*`` variables in the manager form (see the collection table below).
+# Alternatives to decide between: (a) accept the rename + long flat list (done
+# here); (b) one JSON-valued ``TI_API_COLLECTIONS`` variable; (c) teach the sdk
+# loader/schema generator about deeper nesting.
 # ============================================================================
 
 
 class _SettingsBase(BaseModel):
     model_config = ConfigDict(extra="ignore")
+
+
+# The three models below are FIELD CATALOGUES: they document the type and
+# meaning of every ``ti_api`` leaf. They are not validated directly any more;
+# ``_flat_ti_api_fields`` turns them into the flat ``TIApiConfig`` fields.
 
 
 class ProxySettings(_SettingsBase):
@@ -221,7 +254,8 @@ class ProxySettings(_SettingsBase):
 
 class CollectionSettings(_SettingsBase):
     """Per-collection settings. The union of every per-collection key; each
-    collection uses the subset its handler reads (unknown keys are ignored)."""
+    collection uses the subset listed in ``_COLLECTION_EXTRA_KEYS`` (the same
+    subset ``.env.sample`` and the README document)."""
 
     enable: bool = Field(
         default=False, description="Ingest this collection. Must be true to run."
@@ -241,13 +275,13 @@ class CollectionSettings(_SettingsBase):
         default=None,
         description="Extra bare label appended to every entity from this collection.",
     )
-    use_hunting_rules: bool = Field(
-        default=False,
+    use_hunting_rules: bool | None = Field(
+        default=None,
         description="Ask the Group-IB API to apply portal hunting rules "
         "server-side (only honored by collections that support it).",
     )
-    description_in_external_references: bool = Field(
-        default=False,
+    description_in_external_references: bool | None = Field(
+        default=None,
         description="Move the entity description into an external reference "
         "instead of the SDO description field.",
     )
@@ -286,7 +320,8 @@ class CollectionSettings(_SettingsBase):
         default=None, description="Emit commit-author emails as observables."
     )
     redact_message_text: bool | None = Field(
-        default=None, description="Redact chat message bodies in Notes."
+        default=None,
+        description="Omit the raw chat message body from the Note (keep metadata).",
     )
     store_report_labels_in_note: bool | None = Field(
         default=None, description="Write report labels to a Note instead of the SDO."
@@ -294,19 +329,67 @@ class CollectionSettings(_SettingsBase):
     add_threat_actor_label_to_observables: bool | None = Field(
         default=None, description="Attach the actor name as a label on observables."
     )
-    include_malware_labels: bool | None = Field(default=None)
-    include_threat_actor_labels: bool | None = Field(default=None)
-    include_malware_threat_actor_labels: bool | None = Field(default=None)
-    include_source_type_labels: bool | None = Field(default=None)
-    include_brand_labels: bool | None = Field(default=None)
-    include_expertise_labels: bool | None = Field(default=None)
-    include_nation_state_label: bool | None = Field(default=None)
-    include_cybercriminal_label: bool | None = Field(default=None)
-    include_context_label: bool | None = Field(default=None)
-    include_passwords: bool | None = Field(default=None)
-    include_text_in_note: bool | None = Field(default=None)
-    include_original_in_note: bool | None = Field(default=None)
-    include_translation_in_note: bool | None = Field(default=None)
+    include_malware_labels: bool | None = Field(
+        default=None,
+        description="Tag entities with the originating malware family name.",
+    )
+    include_threat_actor_labels: bool | None = Field(
+        default=None, description="Add labels naming the linked threat actors."
+    )
+    include_malware_threat_actor_labels: bool | None = Field(
+        default=None,
+        description="Add labels naming the threat actors linked to the malware.",
+    )
+    include_source_type_labels: bool | None = Field(
+        default=None, description="Add bare labels from the API `source_type` field."
+    )
+    include_brand_labels: bool | None = Field(
+        default=None, description="Add bare labels naming the impersonated brands."
+    )
+    include_expertise_labels: bool | None = Field(
+        default=None,
+        description="Add bare expertise labels from the report `expertise` field.",
+    )
+    include_nation_state_label: bool | None = Field(
+        default=None, description="Add the global `nation_state` label."
+    )
+    include_cybercriminal_label: bool | None = Field(
+        default=None, description="Add the global `cybercriminal` label."
+    )
+    include_context_label: bool | None = Field(
+        default=None,
+        description="Add labels derived from the payload (tailored, autogen, "
+        "raw labels).",
+    )
+    include_passwords: bool | None = Field(
+        default=None,
+        description="Include cleartext passwords in the account-group Note "
+        "(off by default for GDPR / compliance reasons).",
+    )
+    include_text_in_note: bool | None = Field(
+        default=None, description="Include the parsed text body in the Note."
+    )
+    include_original_in_note: bool | None = Field(
+        default=None, description="Include the raw original payload in the Note."
+    )
+    include_translation_in_note: bool | None = Field(
+        default=None,
+        description="Append the message translation (when present) to the Note.",
+    )
+    unique: bool | None = Field(
+        default=None,
+        description="Upstream API parameter: deduplicate by credential pair.",
+    )
+    combolist: bool | None = Field(
+        default=None,
+        description="Upstream API parameter: include records sourced from "
+        "combolists (vs. only stealer logs).",
+    )
+    probable_corporate_access: bool | None = Field(
+        default=None,
+        description="Upstream API parameter: prioritise records that look like "
+        "corporate access.",
+    )
 
 
 class ExtraSettings(_SettingsBase):
@@ -335,6 +418,10 @@ class ExtraSettings(_SettingsBase):
         description="strftime format for human-readable timestamps in logs.",
         examples=["%Y-%m-%d %H:%M:%S"],
     )
+    # TODO(manager-supported blocker) [minor]: file logging is a dev-only
+    # feature that needs a bind-mounted volume (``./logs`` in docker-compose).
+    # The connector manager does not mount volumes, so these four variables are
+    # exposed in the manager form but cannot be used meaningfully there.
     enable_file_logging: bool = Field(
         default=False, description="Write rotating file logs in addition to stdout."
     )
@@ -347,6 +434,10 @@ class ExtraSettings(_SettingsBase):
     log_file_backup_count: int | None = Field(
         default=None, description="Number of rotated log files to keep."
     )
+
+
+# ---- legacy documentation-only models, removed once ConfigConnector reads
+# ---- the validated settings (next commit) ----
 
 
 class OpenCTISettings(_SettingsBase):
@@ -372,6 +463,243 @@ class GroupIBConnectorSettings(_SettingsBase):
     ti_api: TIApiSettings = Field(default_factory=TIApiSettings)
 
 
+# Keys every collection accepts.
+_COMMON_COLLECTION_KEYS = ("enable", "default_date", "ttl", "local_custom_tag")
+
+# Extra per-collection keys, per collection (env-style slug, ``/`` -> ``_``).
+# This is the exact set ``.env.sample`` / the README document per collection.
+# TODO(manager-supported blocker) [needs decision]: 31 collections x (4 common
+# + up to 9 own) keys = 215 flat ``TI_API_COLLECTIONS_<SLUG>_<KEY>`` variables
+# in the manager schema. A key not listed here is still honoured at runtime
+# (it is kept as an unvalidated extra) but the manager cannot set it.
+_COLLECTION_EXTRA_KEYS: dict[str, str] = {
+    "apt_threat": (
+        "use_hunting_rules store_report_labels_in_note "
+        "add_threat_actor_label_to_observables "
+        "include_threat_actor_labels include_nation_state_label "
+        "include_context_label description_in_external_references "
+        "targeted_entities_as_sdo include_expertise_labels"
+    ),
+    "apt_threat_actor": (
+        "use_hunting_rules include_nation_state_label "
+        "description_in_external_references"
+    ),
+    "attacks_ddos": "use_hunting_rules cnc_as_indicator create_incident",
+    "attacks_deface": "create_incident",
+    "attacks_phishing_group": "use_hunting_rules brand_as_identity include_brand_labels",
+    "attacks_phishing_kit": "use_hunting_rules brand_as_identity include_brand_labels",
+    "compromised_access": (
+        "data_preview_max_len full_data "
+        "description_in_external_references cnc_as_indicator "
+        "target_observables"
+    ),
+    "compromised_account_group": (
+        "include_passwords include_malware_labels "
+        "include_malware_threat_actor_labels include_source_type_labels "
+        "description_in_external_references unique combolist "
+        "probable_corporate_access"
+    ),
+    "compromised_bank_card_group": "description_in_external_references",
+    "compromised_discord": (
+        "use_hunting_rules redact_message_text "
+        "include_translation_in_note full_data data_preview_max_len"
+    ),
+    "compromised_masked_card": (
+        "description_in_external_references include_malware_labels "
+        "include_threat_actor_labels include_source_type_labels"
+    ),
+    "compromised_messenger": (
+        "use_hunting_rules redact_message_text "
+        "include_translation_in_note full_data data_preview_max_len"
+    ),
+    "compromised_spd": "description_in_external_references",
+    "darkweb_forums": "use_hunting_rules",
+    "hi_open_threats": (
+        "use_hunting_rules description_in_external_references "
+        "data_preview_max_len full_data include_text_in_note "
+        "include_original_in_note observables_as_indicators"
+    ),
+    "hi_threat": (
+        "use_hunting_rules store_report_labels_in_note "
+        "add_threat_actor_label_to_observables "
+        "include_threat_actor_labels include_cybercriminal_label "
+        "include_context_label description_in_external_references "
+        "targeted_entities_as_sdo include_expertise_labels"
+    ),
+    "hi_threat_actor": (
+        "use_hunting_rules include_cybercriminal_label "
+        "description_in_external_references"
+    ),
+    "ioc_primary": "",
+    "malware_cnc": (
+        "include_malware_labels include_threat_actor_labels "
+        "all_observables_as_indicators"
+    ),
+    "malware_config": (
+        "use_hunting_rules description_in_external_references include_malware_labels"
+    ),
+    "malware_malware": "description_in_external_references",
+    "malware_signature": "",
+    "malware_yara": "",
+    "osi_git_repository": (
+        "use_hunting_rules description_in_external_references author_email_observables"
+    ),
+    "osi_public_leak": (
+        "use_hunting_rules data_preview_max_len full_data "
+        "description_in_external_references"
+    ),
+    "osi_vulnerability": "use_hunting_rules",
+    "suspicious_ip_open_proxy": "use_hunting_rules",
+    "suspicious_ip_scanner": "use_hunting_rules",
+    "suspicious_ip_socks_proxy": "use_hunting_rules",
+    "suspicious_ip_tor_node": "use_hunting_rules",
+    "suspicious_ip_vpn": "use_hunting_rules",
+}
+
+# env-style slug ("apt_threat") -> Group-IB collection slug ("apt/threat").
+_SLASH_SLUG_BY_ENV_SLUG = {
+    slug.replace("/", "_"): slug for slug in COLLECTION_DISPLAY_LABEL
+}
+
+
+def _flat_ti_api_fields() -> dict[str, Any]:
+    """Build the flat ``ti_api`` field definitions from the field catalogues.
+
+    Field names are the legacy in-memory attribute names minus the ``ti_api_``
+    prefix (``proxy_ip``, ``extra_settings_<key>``, ``collections_<slug>_<key>``),
+    so ``ConfigConnector`` re-exposes them 1:1 as ``ti_api_<name>`` and every
+    existing ``get_collection_settings`` / ``get_extra_settings_by_name`` call
+    keeps working untouched. The sdk env parser turns each field ``<name>`` into
+    the env var ``TI_API_<NAME>``.
+    """
+    fields: dict[str, Any] = {}
+
+    for key, info in ProxySettings.model_fields.items():
+        annotation = SecretStr | None if key == "password" else info.annotation
+        fields[f"proxy_{key}"] = (
+            annotation,
+            Field(default=None, description=info.description),
+        )
+
+    for key, info in ExtraSettings.model_fields.items():
+        fields[f"extra_settings_{key}"] = (
+            info.annotation,
+            Field(
+                default=info.default,
+                description=info.description,
+                examples=info.examples,
+            ),
+        )
+
+    for env_slug, extra_keys in _COLLECTION_EXTRA_KEYS.items():
+        for key in (*_COMMON_COLLECTION_KEYS, *extra_keys.split()):
+            info = CollectionSettings.model_fields[key]
+            if key == "enable":
+                annotation, default = bool, False
+            else:
+                # Unset (None) is meaningful: the call sites carry their own
+                # per-key defaults (``get_setting_bool(..., default=True)``) and
+                # the ciaops poller only forwards a filter when it is not None.
+                annotation, default = Optional[info.annotation], None
+            fields[f"collections_{env_slug}_{key}"] = (
+                annotation,
+                Field(
+                    default=default,
+                    description=(
+                        f"{info.description} "
+                        f"[collection: {_SLASH_SLUG_BY_ENV_SLUG[env_slug]}]"
+                    ),
+                    examples=info.examples,
+                ),
+            )
+    return fields
+
+
+def _normalize_ti_api_keys(data: dict[str, Any]) -> dict[str, Any]:
+    """Bring every accepted spelling of the ``ti_api`` config to flat field names.
+
+    Accepted inputs, in decreasing order of precedence:
+      1. flat names (``proxy_ip``, ``collections_apt_threat_ttl``): what the sdk
+         yields for the canonical ``TI_API_PROXY_IP`` / ``TI_API_COLLECTIONS_...``
+         env vars, and for flat keys in ``config.yml``;
+      2. legacy ``TI_API__<PATH>__<KEY>`` env vars: the sdk cannot split them, so
+         they arrive as ``_proxy__ip`` / ``_collections__apt_threat__ttl`` extras;
+      3. nested ``config.yml`` blocks (``proxy:``, ``extra_settings:``,
+         ``collections: {apt/threat: {...}}``), the documented YAML layout.
+    Blank values are dropped so "unset" and "empty" behave alike, which is what
+    ``pycti.get_config_variable`` did for the legacy loader.
+    """
+    flat: dict[str, Any] = {}
+    nested: dict[str, Any] = {}
+    legacy_names: list[str] = []
+
+    for key, value in data.items():
+        if key in ("proxy", "extra_settings", "collections") and isinstance(
+            value, dict
+        ):
+            nested[key] = value
+        elif key.startswith("_"):
+            # ``TI_API__COLLECTIONS__APT_THREAT__TTL`` -> ``_collections__apt_threat__ttl``
+            legacy_names.append(f"TI_API_{key}".upper())
+            flat.setdefault(key.lstrip("_").replace("__", "_"), value)
+        else:
+            flat[key] = value
+
+    for key, value in nested.get("proxy", {}).items():
+        flat.setdefault(f"proxy_{key}", value)
+    for key, value in nested.get("extra_settings", {}).items():
+        flat.setdefault(f"extra_settings_{key}", value)
+    for slug, settings in nested.get("collections", {}).items():
+        for key, value in (settings or {}).items():
+            flat.setdefault(f"collections_{str(slug).replace('/', '_')}_{key}", value)
+
+    if legacy_names:
+        warnings.warn(
+            "Deprecated double-underscore variable name(s) found "
+            f"({', '.join(sorted(legacy_names)[:3])}"
+            f"{', ...' if len(legacy_names) > 3 else ''}). "
+            "Use the single-underscore form instead, e.g. TI_API_URL, "
+            "TI_API_PROXY_IP, TI_API_EXTRA_SETTINGS_<KEY>, "
+            "TI_API_COLLECTIONS_<SLUG>_<KEY>.",
+            stacklevel=2,
+        )
+
+    return {k: v for k, v in flat.items() if not (isinstance(v, str) and v == "")}
+
+
+class _TIApiCoreConfig(BaseConfigModel):
+    """Hand-written part of the ``ti_api`` section: connection settings.
+
+    The 231 flat proxy / extra_settings / per-collection fields are appended by
+    ``_flat_ti_api_fields`` when ``TIApiConfig`` is built below.
+    """
+
+    url: str = Field(
+        default="https://tap.group-ib.com/api/v2/",
+        description="Group-IB Threat Intelligence API URL.",
+    )
+    username: str = Field(description="Group-IB TI portal profile email.")
+    token: SecretStr = Field(description="Group-IB TI API token.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_keys(cls, data: Any) -> Any:
+        return _normalize_ti_api_keys(data) if isinstance(data, dict) else data
+
+
+if TYPE_CHECKING:
+    TIApiConfig = _TIApiCoreConfig
+else:
+    # Built dynamically: the field list is data (see ``_COLLECTION_EXTRA_KEYS``),
+    # not code. Static checkers only see the hand-written core above.
+    TIApiConfig = create_model(
+        "TIApiConfig",
+        __base__=_TIApiCoreConfig,
+        __module__=__name__,
+        **_flat_ti_api_fields(),
+    )
+
+
 class _ConnectorFrameworkConfig(BaseExternalImportConnectorConfig):
     """The standard connectors-sdk external-import fields (id/name/scope/
     log_level/duration_period). Declared as a named subclass because the
@@ -380,19 +708,69 @@ class _ConnectorFrameworkConfig(BaseExternalImportConnectorConfig):
     that inheritance.
     """
 
+    # TODO(manager-supported blocker) [needs decision]: a default ``id`` is
+    # mandatory for catalog deployment (the sdk declares it required, the
+    # manager strips CONNECTOR_ID from the schema). Side effect: the
+    # multi-instance layout in ``docker-instances/`` used to force one
+    # CONNECTOR_ID per container; with a shared default, an instance that
+    # forgets to set it silently reuses this UUID and collides with the others.
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="24a9c578-c911-4a65-9bba-5e7c94b2e742",
+    )
+    name: str = Field(
+        description="The name of the connector.",
+        default="Group-IB Connector",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=[
+            "stix2",
+            "report",
+            "threat-actor",
+            "intrusion-set",
+            "malware",
+            "attack-pattern",
+            "vulnerability",
+            "indicator",
+            "location",
+            "identity",
+            "incident",
+            "note",
+            "relationship",
+            "ipv4-addr",
+            "ipv6-addr",
+            "domain",
+            "url",
+            "StixFile",
+            "email-addr",
+            "user-account",
+            "payment-card",
+            "bank-account",
+        ],
+    )
+    # Was required before; PT4H is the value ``.env.sample`` / the README ship.
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector.",
+        default=timedelta(hours=4),
+    )
+
 
 class ConnectorSettings(BaseConnectorSettings):
-    """Framework-level settings (see the module note above for the split
-    between this and :class:`GroupIBConnectorSettings`/:class:`ConfigConnector`).
-    Loads from the standard ``OPENCTI_URL``/``OPENCTI_TOKEN``/``CONNECTOR_*``
-    environment variables; raises
+    """All connector configuration: ``opencti``, ``connector`` and ``ti_api``.
+
+    Loads from ``OPENCTI_*`` / ``CONNECTOR_*`` / ``TI_API_*`` environment
+    variables (or ``config.yml``); raises
     ``connectors_sdk.settings.exceptions.ConfigValidationError`` at
-    construction if any required value is missing or malformed.
+    construction if any required value is missing or malformed. The
+    ``ti_api`` section is consumed through ``ConfigConnector`` (below), which
+    keeps the historic accessor API for the adapters.
     """
 
     connector: _ConnectorFrameworkConfig = Field(
         default_factory=_ConnectorFrameworkConfig
     )
+    ti_api: TIApiConfig = Field(default_factory=TIApiConfig)
 
 
 class ConfigConnector:
