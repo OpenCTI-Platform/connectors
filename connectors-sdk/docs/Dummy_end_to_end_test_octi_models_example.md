@@ -19,10 +19,12 @@ from connectors_sdk.models import (
     Relationship,
     TLPMarking,
 )
+from connectors_sdk import Logger
 
 if TYPE_CHECKING:
     from connectors_sdk.models import BaseObject
 
+logger = Logger("connector")
 
 class ConnectorExample:
     """Example OpenCTI connector using connectors-sdk."""
@@ -131,13 +133,13 @@ class ConnectorExample:
                 self.helper.api.work.to_processed(work_id, "Done")
 
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
+            logger.info(
                 "[CONNECTOR] Connector stopped...",
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            logger.error(str(err))
 
     def run(self) -> None:
         """Run the connector."""
