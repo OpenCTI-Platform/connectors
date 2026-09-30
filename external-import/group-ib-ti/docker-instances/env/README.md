@@ -13,7 +13,7 @@ For the full **collection → OpenCTI entity / relationship / TLP** mapping see 
    cp common.env.sample common.env
    ```
 
-   Then edit `env/common.env`: fill in `OPENCTI_TOKEN`, `TI_API__USERNAME`, `TI_API__TOKEN`. Tweak global settings as needed.
+   Then edit `env/common.env`: fill in `OPENCTI_TOKEN`, `TI_API_USERNAME`, `TI_API_TOKEN`. Tweak global settings as needed.
 
 2. **`env/groups/<profile>.env`** — copy from the matching `<profile>.env.sample` in `env/groups/`, set a unique `CONNECTOR_ID` (registered in OpenCTI), adjust `CONNECTOR_NAME` / `CONNECTOR_DOCKER_CONTAINER_NAME` as needed. Per-collection overrides (TTL, DEFAULT_DATE, INCLUDE_* labels, …) also belong in this file.
 
