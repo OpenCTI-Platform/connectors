@@ -31,6 +31,7 @@ run-name: >-
 #   3. Generate scoped release notes (git-cliff)
 #   4. Build & push Docker image (DockerHub + GHCR)
 #   5. Create GitHub Release with changelog + manifest/schema/fragment assets
+#      (DISABLED for now, see #7811: only the tag is created, no GitHub Release)
 #
 # The manifest is patched with the released `container_version` for the release
 # assets only — it is never committed back. `container_version` stays `rolling`
@@ -652,95 +653,101 @@ jobs:
           name: pinned-deps-${{ needs.resolve.outputs.connector_name }}
           path: ${{ runner.temp }}/pinned-deps
 
-      - name: Create release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CHANGELOG: ${{ needs.release-notes.outputs.changelog }}
-          MANIFEST_ONLY: ${{ needs.resolve.outputs.manifest_only }}
-        run: |
-          CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
-          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
-          VERSION="${{ needs.resolve.outputs.version }}"
-          TAG="${{ needs.resolve.outputs.tag }}"
-          TITLE="${CONNECTOR_NAME} ${VERSION}"
-
-          echo "📋 Creating release: $TITLE"
-
-          NOTES="$CHANGELOG"
-          if [ "$MANIFEST_ONLY" = "true" ]; then
-            NOTICE="> 🧩 **Manifest-only release** — no image was built by this workflow run for this tag; the Docker build/push is handled by the build workflow for this version."
-            NOTES="${NOTICE}"$'\n\n'"${NOTES}"
-          fi
-
-          # Bulk runs dispatch dozens/hundreds of connector releases in close
-          # succession, each issuing several mutating API calls (create +
-          # multiple uploads). That burst can trip GitHub's *secondary* rate
-          # limit for the installation token (distinct from the hourly quota).
-          # Retry with exponential backoff + jitter, since GitHub explicitly
-          # recommends this for secondary rate limits rather than treating
-          # them as hard failures.
-          gh_retry() {
-            local attempt=1
-            local max_attempts=6
-            local delay=5
-            until "$@"; do
-              if [ "$attempt" -ge "$max_attempts" ]; then
-                echo "::error::Command failed after ${attempt} attempts: $*"
-                return 1
-              fi
-              echo "::warning::Attempt ${attempt} failed, retrying in ${delay}s: $*"
-              sleep "$delay"
-              attempt=$((attempt + 1))
-              delay=$((delay * 2))
-            done
-          }
-
-          gh_retry gh release create "$TAG" \
-            --title "$TITLE" \
-            --notes "$NOTES" \
-            --target "${{ github.sha }}"
-
-          # Attach connector manifest, config schema, and manifest fragment as release assets
-          MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
-          CONFIG_SCHEMA="${CONNECTOR_DIR}/__metadata__/connector_config_schema.json"
-          FRAGMENT="${{ steps.fragment.outputs.fragment_path }}"
-
-          if [ -f "$MANIFEST" ]; then
-            gh_retry gh release upload "$TAG" "$MANIFEST" --clobber
-            echo "📎 Attached manifest: $MANIFEST"
-          fi
-
-          if [ -f "$CONFIG_SCHEMA" ]; then
-            gh_retry gh release upload "$TAG" "$CONFIG_SCHEMA" --clobber
-            echo "📎 Attached config schema: $CONFIG_SCHEMA"
-          fi
-
-          if [ -n "$FRAGMENT" ] && [ -f "$FRAGMENT" ]; then
-            gh_retry gh release upload "$TAG" "$FRAGMENT" --clobber
-            echo "📎 Attached manifest fragment: $FRAGMENT"
-          else
-            echo "ℹ️ No manifest fragment to attach"
-          fi
-
-          # Attach the pinned dependency files (connectors-sdk pinned to the release ref)
-          # to help reproduce the image manually. Paths are flattened into the asset name
-          # (e.g. src/requirements.txt → mitre-src-requirements.txt) to avoid collisions.
-          PINNED_DIR="${{ runner.temp }}/pinned-deps"
-          if [ -d "$PINNED_DIR" ]; then
-            while IFS= read -r file; do
-              rel="${file#"$PINNED_DIR"/}"
-              asset="${CONNECTOR_NAME}-$(echo "$rel" | tr '/' '-')"
-              if [ -f "$file" ]; then
-                cp "$file" "${RUNNER_TEMP}/${asset}"
-                gh_retry gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
-                echo "📎 Attached pinned dependency file: $asset"
-              fi
-            done < <(find "$PINNED_DIR" -type f \( -name requirements.txt -o -name pyproject.toml \))
-          else
-            echo "ℹ️ No pinned dependency files to attach"
-          fi
-
-          echo "✅ Release created: $TITLE"
+      # DISABLED (#7811): no GitHub Release is created per connector while connector
+      # versioning is not decoupled from the platform release, because every platform
+      # tag would otherwise create one release per connector (300+). The
+      # `{connector}/{version}` tag is still created by the "Create tag" step above,
+      # since the manifest fragment is built for that tag. Uncomment this step to
+      # re-enable release creation once the decoupling process is officialized.
+      # - name: Create release
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     CHANGELOG: ${{ needs.release-notes.outputs.changelog }}
+      #     MANIFEST_ONLY: ${{ needs.resolve.outputs.manifest_only }}
+      #   run: |
+      #     CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
+      #     CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
+      #     VERSION="${{ needs.resolve.outputs.version }}"
+      #     TAG="${{ needs.resolve.outputs.tag }}"
+      #     TITLE="${CONNECTOR_NAME} ${VERSION}"
+      #
+      #     echo "📋 Creating release: $TITLE"
+      #
+      #     NOTES="$CHANGELOG"
+      #     if [ "$MANIFEST_ONLY" = "true" ]; then
+      #       NOTICE="> 🧩 **Manifest-only release** — no image was built by this workflow run for this tag; the Docker build/push is handled by the build workflow for this version."
+      #       NOTES="${NOTICE}"$'\n\n'"${NOTES}"
+      #     fi
+      #
+      #     # Bulk runs dispatch dozens/hundreds of connector releases in close
+      #     # succession, each issuing several mutating API calls (create +
+      #     # multiple uploads). That burst can trip GitHub's *secondary* rate
+      #     # limit for the installation token (distinct from the hourly quota).
+      #     # Retry with exponential backoff + jitter, since GitHub explicitly
+      #     # recommends this for secondary rate limits rather than treating
+      #     # them as hard failures.
+      #     gh_retry() {
+      #       local attempt=1
+      #       local max_attempts=6
+      #       local delay=5
+      #       until "$@"; do
+      #         if [ "$attempt" -ge "$max_attempts" ]; then
+      #           echo "::error::Command failed after ${attempt} attempts: $*"
+      #           return 1
+      #         fi
+      #         echo "::warning::Attempt ${attempt} failed, retrying in ${delay}s: $*"
+      #         sleep "$delay"
+      #         attempt=$((attempt + 1))
+      #         delay=$((delay * 2))
+      #       done
+      #     }
+      #
+      #     gh_retry gh release create "$TAG" \
+      #       --title "$TITLE" \
+      #       --notes "$NOTES" \
+      #       --target "${{ github.sha }}"
+      #
+      #     # Attach connector manifest, config schema, and manifest fragment as release assets
+      #     MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
+      #     CONFIG_SCHEMA="${CONNECTOR_DIR}/__metadata__/connector_config_schema.json"
+      #     FRAGMENT="${{ steps.fragment.outputs.fragment_path }}"
+      #
+      #     if [ -f "$MANIFEST" ]; then
+      #       gh_retry gh release upload "$TAG" "$MANIFEST" --clobber
+      #       echo "📎 Attached manifest: $MANIFEST"
+      #     fi
+      #
+      #     if [ -f "$CONFIG_SCHEMA" ]; then
+      #       gh_retry gh release upload "$TAG" "$CONFIG_SCHEMA" --clobber
+      #       echo "📎 Attached config schema: $CONFIG_SCHEMA"
+      #     fi
+      #
+      #     if [ -n "$FRAGMENT" ] && [ -f "$FRAGMENT" ]; then
+      #       gh_retry gh release upload "$TAG" "$FRAGMENT" --clobber
+      #       echo "📎 Attached manifest fragment: $FRAGMENT"
+      #     else
+      #       echo "ℹ️ No manifest fragment to attach"
+      #     fi
+      #
+      #     # Attach the pinned dependency files (connectors-sdk pinned to the release ref)
+      #     # to help reproduce the image manually. Paths are flattened into the asset name
+      #     # (e.g. src/requirements.txt → mitre-src-requirements.txt) to avoid collisions.
+      #     PINNED_DIR="${{ runner.temp }}/pinned-deps"
+      #     if [ -d "$PINNED_DIR" ]; then
+      #       while IFS= read -r file; do
+      #         rel="${file#"$PINNED_DIR"/}"
+      #         asset="${CONNECTOR_NAME}-$(echo "$rel" | tr '/' '-')"
+      #         if [ -f "$file" ]; then
+      #           cp "$file" "${RUNNER_TEMP}/${asset}"
+      #           gh_retry gh release upload "$TAG" "${RUNNER_TEMP}/${asset}" --clobber
+      #           echo "📎 Attached pinned dependency file: $asset"
+      #         fi
+      #       done < <(find "$PINNED_DIR" -type f \( -name requirements.txt -o -name pyproject.toml \))
+      #     else
+      #       echo "ℹ️ No pinned dependency files to attach"
+      #     fi
+      #
+      #     echo "✅ Release created: $TITLE"
 
       # Runs on any failure in this job that happens after the overwrite guard
       # passed (guard failing itself means a real prior release exists and
@@ -785,7 +792,7 @@ jobs:
             echo "## 🚀 Release Connector — Summary"
             echo ""
             if [ "$MANIFEST_ONLY" = "true" ]; then
-              echo "> 🧩 **MANIFEST-ONLY** — Docker build/push was skipped (handled by the build workflow for this version); tag, GitHub Release, manifest fragment, and container_version commit-back were still produced normally."
+              echo "> 🧩 **MANIFEST-ONLY** — Docker build/push was skipped (handled by the build workflow for this version); tag and manifest fragment were still produced normally. GitHub Release creation is currently disabled (#7811)."
               echo ""
             elif [ "$DRY_RUN" = "true" ]; then
               echo "> ⚠️ **DRY RUN** — no images were pushed and no release was created."
