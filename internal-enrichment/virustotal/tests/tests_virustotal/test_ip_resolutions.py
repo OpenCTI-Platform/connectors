@@ -225,6 +225,12 @@ class TestBuildResolvedDomains(unittest.TestCase):
         )
         self.assertEqual(_domains(objects), ["NEWS.example"])
 
+    def test_null_attributes_are_skipped(self):
+        objects = self.builder.build_resolved_domains(
+            [{"type": "resolution", "id": "x", "attributes": None}], None
+        )
+        self.assertEqual(objects, [])
+
 
 class TestIPResolutionsLoop(unittest.TestCase):
     def test_flag_off_makes_no_resolutions_call(self):
@@ -430,6 +436,36 @@ class TestIPResolutionsLoop(unittest.TestCase):
         processor, _ = _make_processor([error_page])
         result = processor.process()
         self.assertTrue(result.endswith("(0 pages, stopped: error)"))
+
+    def test_null_data_is_an_empty_page(self):
+        processor, helper = _make_processor([{"data": None, "meta": None}])
+        result = processor.process()
+        self.assertEqual(helper.send_stix2_bundle.call_count, 1)
+        self.assertTrue(
+            result.endswith(
+                "resolutions: kept 0 of 0 fetched (1 pages, stopped: end of list)"
+            )
+        )
+
+    def test_null_meta_ends_the_list(self):
+        page = _page([_resolution("news.example", FLOOR_TS)])
+        page["meta"] = None
+        processor, helper = _make_processor([page])
+        result = processor.process()
+        self.assertEqual(_domains(_sent_bundles(helper)[1]), ["news.example"])
+        self.assertTrue(result.endswith("(1 pages, stopped: end of list)"))
+
+    def test_null_attributes_do_not_stop_the_loop(self):
+        page = _page(
+            [
+                {"type": "resolution", "id": "x", "attributes": None},
+                _resolution("news.example", FLOOR_TS),
+            ]
+        )
+        processor, helper = _make_processor([page], ip_resolutions_since="2025-10-01")
+        result = processor.process()
+        self.assertEqual(_domains(_sent_bundles(helper)[1]), ["news.example"])
+        self.assertIn("kept 1 of 2 fetched", result)
 
     @patch("virustotal.processors.ip_address.time.sleep")
     def test_requests_per_minute_spaces_pages(self, sleep: MagicMock):

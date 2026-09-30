@@ -141,13 +141,14 @@ class IPProcessor(EntityProcessor):
                 stopped = "error"
                 break
             pages += 1
-            resolutions = page["data"]
+            # VirusTotal may send `"data": null` for an IP without resolutions.
+            resolutions = page.get("data") or []
             fetched += len(resolutions)
 
             in_window = []
             below_floor = False
             for resolution in resolutions:
-                last_seen = resolution.get("attributes", {}).get("date")
+                last_seen = (resolution.get("attributes") or {}).get("date")
                 if floor and last_seen is not None and last_seen < floor.timestamp():
                     below_floor = True
                     break
@@ -171,7 +172,7 @@ class IPProcessor(EntityProcessor):
                 },
             )
 
-            cursor = page.get("meta", {}).get("cursor")
+            cursor = (page.get("meta") or {}).get("cursor")
             if below_floor:
                 stopped = "date floor"
                 break

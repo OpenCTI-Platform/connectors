@@ -330,7 +330,7 @@ class VirusTotalBuilder:
         """
         objects = []
         for resolution in resolutions:
-            attributes = resolution.get("attributes", {})
+            attributes = resolution.get("attributes") or {}
             host_name = attributes.get("host_name")
             if not host_name or (keywords and not keywords.search(host_name)):
                 continue
