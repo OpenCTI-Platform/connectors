@@ -42,7 +42,7 @@ Key features:
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260928.1
+- OpenCTI Platform >= 7.260930.0
 - Azure subscription with Microsoft Sentinel
 - Azure AD Application or Managed Identity with appropriate permissions
 
