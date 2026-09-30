@@ -1,17 +1,25 @@
-import sys
+import logging
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
 
-@pytest.fixture
-def mock_main_path(monkeypatch):
-    """Mock the path of `__main__.__file__` for `_SettingsLoader._get_connector_main_path` calls."""
+@pytest.fixture(autouse=True)
+def restore_sdk_namespaces_level():
+    """Put the SDK namespaces' log level back after each test.
 
-    monkeypatch.setitem(
-        sys.modules, "__main__", SimpleNamespace(__file__="/app/src/main.py")
-    )
+    `BaseConnectorSettings` changes that level for the whole process when it is
+    instantiated. Without this fixture, a test would leak its level into the next ones.
+    """
+    namespace_loggers = [
+        logging.getLogger(namespace) for namespace in ("connector", "connectors_sdk")
+    ]
+    levels = [logger.level for logger in namespace_loggers]
+
+    yield
+
+    for logger, level in zip(namespace_loggers, levels, strict=True):
+        logger.setLevel(level)
 
 
 @pytest.fixture
@@ -24,7 +32,7 @@ def mock_environment(monkeypatch):
     monkeypatch.setenv("CONNECTOR_NAME", "Test Connector")
     monkeypatch.setenv("CONNECTOR_SCOPE", "scope1,scope2")
     monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
-    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "error")
+    monkeypatch.setenv("CONNECTOR_LOG_LEVEL", "debug")
 
 
 @pytest.fixture
@@ -32,10 +40,10 @@ def mock_config_yml_file_presence(monkeypatch):
     """Mock the path of `config.yml` for `_SettingsLoader` and `BaseConnectorSettings` calls."""
 
     def get_config_yml_file_path():
-        return Path(__file__).parent / "data" / "config.test.yml"
+        return Path(__file__).parent.parent / "data" / "config.test.yml"
 
     monkeypatch.setattr(
-        "connectors_sdk.settings._settings_loader._SettingsLoader._get_config_yml_file_path",
+        "connectors_sdk.settings.base_settings._SettingsLoader._get_config_yml_file_path",
         get_config_yml_file_path,
     )
 
@@ -45,9 +53,9 @@ def mock_dot_env_file_presence(monkeypatch):
     """Mock the path of `.env` for `_SettingsLoader` and `BaseConnectorSettings` calls."""
 
     def get_dot_env_file_path():
-        return Path(__file__).parent / "data" / ".env.test"
+        return Path(__file__).parent.parent / "data" / ".env.test"
 
     monkeypatch.setattr(
-        "connectors_sdk.settings._settings_loader._SettingsLoader._get_dot_env_file_path",
+        "connectors_sdk.settings.base_settings._SettingsLoader._get_dot_env_file_path",
         get_dot_env_file_path,
     )

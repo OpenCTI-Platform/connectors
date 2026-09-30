@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 import pytest
+from connectors_sdk.logger import ExtendedLogger
 from connectors_sdk.states._base_state import BaseConnectorState
 from pydantic import BaseModel, ValidationError
 
@@ -20,6 +21,15 @@ def dummy_state(mock_opencti_connector_helper) -> DummyConnectorState:
     state = DummyConnectorState()
     state.inject_dependencies(mock_opencti_connector_helper)
     return state
+
+
+def test_base_connector_state_init_subclass():
+    class MyConnectorState(BaseConnectorState):
+        pass
+
+    assert isinstance(MyConnectorState.logger, ExtendedLogger)
+    assert MyConnectorState.logger.name.startswith("connector.")
+    assert MyConnectorState.logger.name.endswith(".MyConnectorState")
 
 
 def test_base_connector_state_is_pydantic_model() -> None:
