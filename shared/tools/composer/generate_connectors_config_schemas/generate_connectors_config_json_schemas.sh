@@ -99,8 +99,13 @@ fi
 # Find all parents directory of connector with __metadata__ directory
 connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY" | sed 's:/*'"$CONNECTOR_METADATA_DIRECTORY"'$::' | sort -u)
 
-# CircleCI uses a shallow clone by default, so we need to fetch the full history to compare with the base branch
-git fetch --unshallow || git fetch --depth=100
+# CI clones can be shallow, so we need to fetch the full history to compare with the base branch.
+# Only do it when the clone is actually shallow: on a complete clone `--unshallow` is fatal, and the
+# `--depth=100` fallback would re-shallow it. The merge-base with the base branch (far behind master
+# on an LTS branch) then disappears and `git merge-base` below aborts the script.
+if [[ "$(git rev-parse --is-shallow-repository)" == "true" ]]; then
+  git fetch --unshallow || git fetch --depth=100
+fi
 git fetch origin "+refs/heads/*:refs/remotes/origin/*"
 
 # Detect whether connectors-sdk changed (avoid storing full diff output)
