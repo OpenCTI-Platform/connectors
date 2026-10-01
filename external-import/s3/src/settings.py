@@ -11,6 +11,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
@@ -36,10 +37,7 @@ class S3ConnectorConfig(BaseExternalImportConnectorConfig):
         default=["s3"],
     )
     duration_period: timedelta = Field(
-        description=(
-            "The period of time to await between two runs of the connector. "
-            "The S3 connector schedules its runs with `S3_INTERVAL` (in seconds)."
-        ),
+        description="The period of time to await between two polls of the S3 bucket.",
         default=timedelta(seconds=30),
     )
 
@@ -96,9 +94,12 @@ class S3Config(BaseConfigModel):
         ),
         default="TLP:GREEN",
     )
-    interval: int = Field(
-        description="The interval, in seconds, between two polls of the S3 bucket.",
-        default=30,
+    interval: int | None = DeprecatedField(
+        default=None,
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(seconds=int(x)),
     )
     attach_original_file: bool = Field(
         description="Whether to attach the original JSON file to the vulnerabilities.",
