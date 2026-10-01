@@ -2,17 +2,36 @@
 
 | Status | Date | Comment |
 |--------|------|---------|
-| Community | - | Initial IPv4 version |
+| Community | - | IPv4 and ASN support |
 
-The Akamai connector synchronizes OpenCTI IPv4 indicators with Akamai Client Lists.
+The Akamai connector synchronizes OpenCTI IPv4 and ASN indicators with Akamai Client Lists.
 
 ## Introduction
 
-This STREAM connector listens to OpenCTI live stream and automatically updates an Akamai Client List based on IPv4 STIX Indicators.
+This STREAM connector listens to OpenCTI live stream and automatically updates Akamai Client Lists based on IPv4 and ASN STIX Indicators.
 
-Supported object:
+Supported objects:
 
 - IPv4 indicators
+- ASN indicators
+
+For ASN indicators, the connector supports STIX patterns such as:
+
+[autonomous-system:number = 64512]
+
+[autonomous-system:number = '64512']
+
+[autonomous-system:number = 'AS200651']
+
+The optional `AS` prefix is removed before the ASN is sent to Akamai.
+
+Example:
+
+AS200651
+
+is sent to Akamai as:
+
+200651
 
 ## Requirements
 
@@ -20,6 +39,7 @@ Supported object:
 - Akamai Client List API enabled
 - EdgeGrid credentials
 - Target Client List of type IP
+- Target Client List of type ASN
 
 ## Configuration variables
 
@@ -45,8 +65,8 @@ Supported object:
 | AKAMAI_CLIENT_SECRET | Yes | EdgeGrid client secret |
 | AKAMAI_ACCESS_TOKEN | Yes | EdgeGrid access token |
 | AKAMAI_CLIENT_LIST_ID | Yes | Target Client List ID |
+| AKAMAI_ASN_CLIENT_LIST_ID | Yes | Target ASN Client List ID |
 
 ## Deployment
-
 ```bash
 docker build -t opencti/connector-akamai-client-list:latest .

@@ -17,3 +17,4 @@ akamai:
   client_secret: 'ChangeMe'
   access_token: 'ChangeMe'
   client_list_id: 'ChangeMe'
+  asn_client_list_id: 'ChangeMe'
