@@ -155,6 +155,11 @@
       "description": "Enable or disable the automatic guessing of relationships between entities when processing analyst notes.",
       "type": "boolean"
     },
+    "RECORDED_FUTURE_ANALYST_NOTES_INCLUDE_CONTEXT_ENTITIES": {
+      "default": false,
+      "description": "Whether to also import the context entities of analyst notes, i.e. entities referenced in the note's context but not tagged as primary. Disabled by default as they can add a lot of noise and false positives.",
+      "type": "boolean"
+    },
     "RECORDED_FUTURE_PULL_RISK_LIST": {
       "default": false,
       "description": "Whether to import Recorded Future risk lists.",

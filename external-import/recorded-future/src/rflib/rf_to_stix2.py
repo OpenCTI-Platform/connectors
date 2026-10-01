@@ -1208,6 +1208,7 @@ class StixNote:
         risk_as_score=False,
         risk_threshold=None,
         analyst_notes_guess_relationships=False,
+        analyst_notes_include_context_entities=False,
     ):
         self.author = self._create_author()
         self.name = None
@@ -1227,6 +1228,9 @@ class StixNote:
         self.rfapi = rfapi
         self.attachments = None
         self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
+        self.analyst_notes_include_context_entities = (
+            analyst_notes_include_context_entities
+        )
 
     @staticmethod
     def _create_author():
@@ -1273,12 +1277,15 @@ class StixNote:
         # are the primary entities the note is directly about, while
         # "context_entities" are related/referenced entities (which can include
         # threat actors) discussed in the note's context but not tagged as
-        # primary. Both need to be converted, or a threat actor mentioned only
-        # in context is silently dropped from the resulting STIX bundle,
-        # producing an incomplete knowledge graph. Entities are deduplicated by
-        # id in case the same entity appears in both arrays.
+        # primary. They are only converted when explicitly enabled, as they can
+        # add a lot of noise and false positives, but without them a threat
+        # actor mentioned only in context is absent from the resulting STIX
+        # bundle. Entities are deduplicated by id in case the same entity
+        # appears in both arrays.
         seen_entity_ids = set()
-        all_entities = attr.get("note_entities", []) + attr.get("context_entities", [])
+        all_entities = list(attr.get("note_entities", []))
+        if self.analyst_notes_include_context_entities:
+            all_entities += attr.get("context_entities", [])
         for entity in all_entities:
             entity_id = entity.get("id")
             if entity_id is not None:

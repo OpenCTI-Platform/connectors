@@ -5,7 +5,6 @@ from .rf_to_stix2 import StixNote
 
 
 class AnalystNote(threading.Thread):
-
     def __init__(
         self,
         helper,
@@ -21,6 +20,7 @@ class AnalystNote(threading.Thread):
         risk_as_score,
         risk_threshold,
         analyst_notes_guess_relationships,
+        analyst_notes_include_context_entities=False,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
@@ -36,6 +36,9 @@ class AnalystNote(threading.Thread):
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
         self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
+        self.analyst_notes_include_context_entities = (
+            analyst_notes_include_context_entities
+        )
 
     def run(self):
         """
@@ -139,6 +142,7 @@ class AnalystNote(threading.Thread):
                     self.risk_as_score,
                     self.risk_threshold,
                     self.analyst_notes_guess_relationships,
+                    self.analyst_notes_include_context_entities,
                 )
                 stix_note.from_json(note, self.tlp)
                 if note.get("events"):
