@@ -398,3 +398,55 @@ def test_changed_since_handles_odd_timestamps_and_list_refs(connector):
     kept = DarkWebInformerConnector._changed_since(objects, cursor)
 
     assert [o["id"] for o in kept] == ["report--new", "indicator--ref"]
+
+
+def test_state_reset_from_opencti_triggers_full_import(connector, helper):
+    connector.sources = ["feed"]
+    connector.client.get_stix_bundle.return_value = TIMED_BUNDLE
+    helper.get_state.return_value = {"cursors": {"feed": "2026-02-01T00:00:00+00:00"}}
+    connector.process_message()
+    assert "indicator--old" not in _sent_ids(helper)
+
+    # "Reset state" in OpenCTI: the stored state comes back empty
+    helper.get_state.return_value = {}
+    connector.process_message()
+
+    assert {o["id"] for o in TIMED_BUNDLE["objects"]} <= _sent_ids(helper)
+
+
+def test_filtered_bundle_keeps_dwi_author_as_single_creator(connector, helper):
+    connector.sources = ["feed"]
+    helper.get_state.return_value = {"cursors": {"feed": "2026-02-01T00:00:00+00:00"}}
+    connector.client.get_stix_bundle.return_value = {
+        "type": "bundle",
+        "id": "bundle--1",
+        "objects": [
+            {
+                "type": "identity",
+                "id": "identity--dwi-own",
+                "name": "DarkWebInformer",
+                "identity_class": "organization",
+                "created": "2025-01-01T00:00:00Z",
+            },
+            {
+                "type": "indicator",
+                "id": "indicator--old",
+                "modified": "2026-01-01T00:00:00Z",
+                "created_by_ref": "identity--dwi-own",
+            },
+            # changed since the cursor, but declares no author
+            {
+                "type": "indicator",
+                "id": "indicator--new",
+                "modified": "2026-03-01T00:00:00Z",
+            },
+        ],
+    }
+
+    connector.process_message()
+
+    sent = json.loads(helper.send_stix2_bundle.call_args.args[0])["objects"]
+    by_id = {o["id"]: o for o in sent}
+    assert [o["id"] for o in sent if o["type"] == "identity"] == ["identity--dwi-own"]
+    assert by_id["indicator--new"]["created_by_ref"] == "identity--dwi-own"
+    assert "indicator--old" not in by_id

@@ -113,8 +113,7 @@ class DarkWebInformerConnector:
     ) -> None:
         self.helper = helper
         self.settings = settings
-        self.state = ConnectorState()
-        self.state.inject_dependencies(helper)
+        self.state = self._load_state()
         config = settings.dark_web_informer
 
         self.client = DarkWebInformerClient(
@@ -209,20 +208,29 @@ class DarkWebInformerConnector:
             return None
         return identities[refs.most_common(1)[0][0]]
 
-    def _with_provenance(self, bundle: dict, objects: list) -> dict:
+    def _with_provenance(
+        self, bundle: dict, objects: list, dwi_author: dict | None = None
+    ) -> dict:
         """Return the bundle with the author and TLP marking attached.
 
         DWI's objects are otherwise untouched: an object that already declares
         its own author or markings keeps them. When the bundle already carries
         DWI's own author identity, it is reused for the objects without one, so
         the ingested data only ever has a single creator.
+
+        ``dwi_author`` is the author resolved on the full snapshot: a filtered
+        bundle may no longer contain DWI's identity, which is then added back.
         """
-        dwi_author = self._bundle_author(objects)
+        dwi_author = dwi_author or self._bundle_author(objects)
         author_id = (dwi_author or self.author_stix)["id"]
         marking_id = self.marking_stix["id"]
         attributed: list = [self.marking_stix]
         if dwi_author is None:
             attributed.insert(0, self.author_stix)
+        elif not any(
+            isinstance(obj, dict) and obj.get("id") == author_id for obj in objects
+        ):
+            attributed.insert(0, dwi_author)
 
         for obj in objects:
             if not isinstance(obj, dict):
@@ -247,7 +255,9 @@ class DarkWebInformerConnector:
 
         return {**bundle, "objects": attributed}
 
-    def _send_bundle(self, bundle: dict, work_id: str) -> int:
+    def _send_bundle(
+        self, bundle: dict, work_id: str, dwi_author: dict | None = None
+    ) -> int:
         """Forward a native DWI STIX bundle to OpenCTI.
 
         Returns the number of DWI objects sent (0 if empty/invalid), excluding
@@ -259,11 +269,23 @@ class DarkWebInformerConnector:
         # DWI bundles are third-party payloads we do not rewrite, so let OpenCTI
         # drop dangling references instead of failing the whole bundle.
         self.helper.send_stix2_bundle(
-            json.dumps(self._with_provenance(bundle, objects)),
+            json.dumps(self._with_provenance(bundle, objects, dwi_author)),
             work_id=work_id,
             cleanup_inconsistent_bundle=True,
         )
         return len(objects)
+
+    def _load_state(self) -> ConnectorState:
+        """Load the persisted state into a fresh ConnectorState.
+
+        A new instance is built on every run: `load()` only overwrites the
+        fields returned by OpenCTI, so reusing an instance would keep stale
+        cursors after the state is reset from the platform.
+        """
+        state = ConnectorState()
+        state.inject_dependencies(self.helper)
+        state.load()
+        return state
 
     def _fetch_bundle(self, source: str) -> dict:
         if self.use_preview:
@@ -272,7 +294,7 @@ class DarkWebInformerConnector:
 
     def process_message(self) -> None:
         now = datetime.now(timezone.utc)
-        self.state.load(force=True)
+        self.state = self._load_state()
         cursors: dict[str, datetime] = dict(self.state.cursors or {})
         self.helper.connector_logger.info(
             "Starting Dark Web Informer run",
@@ -295,6 +317,9 @@ class DarkWebInformerConnector:
                     continue
 
                 bundle_cursor = self._bundle_cursor(objects)
+                # Resolved on the full snapshot: once filtered, the bundle may
+                # no longer reference DWI's author identity.
+                dwi_author = self._bundle_author(objects)
                 previous_cursor = cursors.get(source)
                 if previous_cursor is not None:
                     objects = self._changed_since(objects, previous_cursor)
@@ -314,7 +339,9 @@ class DarkWebInformerConnector:
                         work_id = self.helper.api.work.initiate_work(
                             self.helper.connect_id, "Dark Web Informer run"
                         )
-                    count = self._send_bundle({**bundle, "objects": objects}, work_id)
+                    count = self._send_bundle(
+                        {**bundle, "objects": objects}, work_id, dwi_author
+                    )
                     self.helper.connector_logger.info(
                         "Sent bundle", {"source": source, "objects": count}
                     )
