@@ -1,6 +1,7 @@
 """Tests for the passthrough ingestion logic."""
 
 import json
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -145,7 +146,7 @@ def test_process_message_records_last_run(connector):
     connector.process_message()
 
     state = connector.helper.set_state.call_args.args[0]
-    assert "last_run" in state
+    assert state["last_run"] is not None
 
 
 def test_process_message_uses_preview_endpoint(connector):
@@ -221,9 +222,179 @@ def test_process_message_initiates_work_only_once_across_sources(connector, help
     assert helper.send_stix2_bundle.call_count == 2
 
 
+TIMED_BUNDLE = {
+    "type": "bundle",
+    "id": "bundle--1",
+    "objects": [
+        {
+            "type": "indicator",
+            "id": "indicator--old",
+            "created": "2026-01-01T00:00:00.000Z",
+            "modified": "2026-01-01T00:00:00.000Z",
+        },
+        {"type": "domain-name", "id": "domain-name--old", "value": "old.test"},
+        {
+            "type": "relationship",
+            "id": "relationship--old",
+            "modified": "2026-01-01T00:00:00Z",
+            "source_ref": "indicator--old",
+            "target_ref": "domain-name--old",
+        },
+        {
+            "type": "indicator",
+            "id": "indicator--new",
+            "modified": "2026-03-01T12:00:00.123Z",
+            "created_by_ref": "identity--dwi",
+        },
+        {"type": "identity", "id": "identity--dwi", "created": "2025-01-01T00:00:00Z"},
+        {"type": "domain-name", "id": "domain-name--new", "value": "new.test"},
+        {
+            "type": "relationship",
+            "id": "relationship--new",
+            "modified": "2026-03-01T00:00:00Z",
+            "source_ref": "indicator--new",
+            "target_ref": "domain-name--new",
+        },
+    ],
+}
+
+
+NEWEST = datetime(2026, 3, 1, 12, 0, 0, 123000, tzinfo=timezone.utc)
+
+
+def _saved_cursors(helper):
+    saved = helper.set_state.call_args.args[0]["cursors"]
+    return {
+        k: datetime.fromisoformat(v.replace("Z", "+00:00")) for k, v in saved.items()
+    }
+
+
+def _sent_ids(helper):
+    sent = json.loads(helper.send_stix2_bundle.call_args.args[0])
+    return {o["id"] for o in sent["objects"]}
+
+
+def test_first_run_sends_everything_and_stores_cursor(connector, helper):
+    connector.sources = ["feed"]
+    connector.client.get_stix_bundle.return_value = TIMED_BUNDLE
+
+    connector.process_message()
+
+    assert {o["id"] for o in TIMED_BUNDLE["objects"]} <= _sent_ids(helper)
+    assert _saved_cursors(helper) == {"feed": NEWEST}
+    assert helper.set_state.call_args.args[0]["last_run"] is not None
+
+
+def test_next_run_only_sends_changed_objects_and_their_references(connector, helper):
+    connector.sources = ["feed"]
+    helper.get_state.return_value = {"cursors": {"feed": "2026-02-01T00:00:00+00:00"}}
+    connector.client.get_stix_bundle.return_value = TIMED_BUNDLE
+
+    connector.process_message()
+
+    sent = _sent_ids(helper) - {
+        connector.author_stix["id"],
+        connector.marking_stix["id"],
+    }
+    assert sent == {
+        "indicator--new",
+        "identity--dwi",  # referenced through created_by_ref
+        "relationship--new",
+        "domain-name--new",  # timestamp-less SCO pulled in by the relationship
+    }
+
+
+def test_run_with_nothing_new_sends_nothing(connector, helper):
+    connector.sources = ["feed"]
+    helper.get_state.return_value = {
+        "cursors": {"feed": "2026-03-01T12:00:00.123000+00:00"},
+        "last_run": "2026-03-01T13:00:00+00:00",
+    }
+    connector.client.get_stix_bundle.return_value = TIMED_BUNDLE
+
+    connector.process_message()
+
+    helper.send_stix2_bundle.assert_not_called()
+    helper.api.work.initiate_work.assert_not_called()
+    assert _saved_cursors(helper) == {"feed": NEWEST}
+
+
+def test_cursor_of_ingested_source_survives_later_failure(connector, helper):
+    connector.sources = ["feed", "iocs"]
+    connector.client.get_stix_bundle.side_effect = [
+        TIMED_BUNDLE,
+        RuntimeError("API down"),
+    ]
+
+    connector.process_message()
+
+    assert _saved_cursors(helper) == {"feed": NEWEST}
+    assert helper.set_state.call_args.args[0]["last_run"] is None
+
+
 def test_run_schedules_process_message(connector, helper, settings):
     connector.run()
 
     kwargs = helper.schedule_iso.call_args.kwargs
     assert kwargs["message_callback"] == connector.process_message
     assert kwargs["duration_period"] == settings.connector.duration_period
+
+
+def test_connector_state_starts_empty_and_is_json_serializable():
+    from connector import ConnectorState
+
+    assert ConnectorState().last_run is None
+    assert ConnectorState().cursors is None
+    json.dumps(
+        ConnectorState(last_run=NEWEST, cursors={"feed": NEWEST}).model_dump(
+            mode="json"
+        )
+    )
+
+
+def test_provenance_reuses_dwi_author_so_there_is_a_single_creator(connector):
+    bundle = {
+        "type": "bundle",
+        "objects": [
+            {
+                "type": "identity",
+                "id": "identity--dwi-own",
+                "name": "DarkWebInformer",
+                "identity_class": "organization",
+            },
+            {
+                "type": "indicator",
+                "id": "indicator--1",
+                "created_by_ref": "identity--dwi-own",
+            },
+            {"type": "indicator", "id": "indicator--2"},
+            {"type": "domain-name", "id": "domain-name--3", "value": "evil.test"},
+        ],
+    }
+
+    sent = connector._with_provenance(bundle, bundle["objects"])
+    by_id = {o["id"]: o for o in sent["objects"]}
+
+    assert connector.author_stix["id"] not in by_id
+    identities = [o for o in sent["objects"] if o["type"] == "identity"]
+    assert [i["id"] for i in identities] == ["identity--dwi-own"]
+    assert by_id["indicator--2"]["created_by_ref"] == "identity--dwi-own"
+    assert by_id["domain-name--3"]["x_opencti_created_by_ref"] == "identity--dwi-own"
+
+
+def test_changed_since_handles_odd_timestamps_and_list_refs(connector):
+    cursor = datetime(2026, 2, 1, tzinfo=timezone.utc)
+    objects = [
+        {
+            "type": "report",
+            "id": "report--new",
+            "modified": "2026-03-01T00:00:00",  # no timezone: read as UTC
+            "object_refs": ["indicator--ref", 42],
+        },
+        {"type": "indicator", "id": "indicator--ref", "modified": "not-a-date"},
+        {"type": "indicator", "id": "indicator--unreferenced", "modified": "garbage"},
+    ]
+
+    kept = DarkWebInformerConnector._changed_since(objects, cursor)
+
+    assert [o["id"] for o in kept] == ["report--new", "indicator--ref"]
