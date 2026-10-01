@@ -51,7 +51,6 @@ class StubConnectorSettings(ConnectorSettings):
                     "endpoint_url": "https://s3.example.org",
                     "bucket_prefixes": "ACI_TI, ACI_Vuln",
                     "marking": "TLP:AMBER",
-                    "interval": 60,
                     "attach_original_file": True,
                     "delete_after_import": False,
                     "no_split_bundles": False,
@@ -119,7 +118,7 @@ def test_connector_is_instantiated(monkeypatch, mock_opencti_connector_helper):
     assert connector.s3_attach_original_file is True
     assert connector.s3_delete_after_import is False
     assert connector.s3_no_split_bundles is False
-    assert connector.get_interval() == 60
+    assert connector.get_interval() == 30
 
     mocked_boto3_client.assert_called_once_with(
         "s3",

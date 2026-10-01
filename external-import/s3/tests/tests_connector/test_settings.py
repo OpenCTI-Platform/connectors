@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -46,7 +47,6 @@ MINIMAL_VALID_SETTINGS_DICT: dict[str, Any] = {
                     "bucket_prefixes": "ACI_TI, ACI_Vuln",
                     "author": "Test Author",
                     "marking": "TLP:AMBER",
-                    "interval": 60,
                     "attach_original_file": True,
                     "delete_after_import": False,
                     "no_split_bundles": False,
@@ -198,15 +198,63 @@ def test_settings_should_default_optional_fields():
     assert settings.connector.name == "S3 Bucket"
     assert settings.connector.scope == ["s3"]
     assert settings.connector.log_level == "error"
+    assert settings.connector.duration_period == timedelta(seconds=30)
     assert settings.s3.region == "us-east-1"
     assert settings.s3.endpoint_url is None
     assert settings.s3.bucket_prefixes == ["ACI_TI", "ACI_Vuln"]
     assert settings.s3.author is None
     assert settings.s3.marking == "TLP:GREEN"
-    assert settings.s3.interval == 30
     assert settings.s3.attach_original_file is False
     assert settings.s3.delete_after_import is True
     assert settings.s3.no_split_bundles is True
+
+
+def test_settings_should_migrate_deprecated_interval_to_duration_period():
+    """
+    Test that the deprecated `S3_INTERVAL` (in seconds) is migrated to
+    `CONNECTOR_DURATION_PERIOD`, with a deprecation warning.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "s3": {**MINIMAL_VALID_SETTINGS_DICT["s3"], "interval": 90},
+                }
+            )
+
+    with pytest.warns(
+        UserWarning,
+        match="Migrating to 'connector.duration_period'",
+    ):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(seconds=90)
+
+
+def test_settings_should_prefer_duration_period_when_deprecated_interval_is_also_set():
+    """
+    Test that `CONNECTOR_DURATION_PERIOD` wins over the deprecated `S3_INTERVAL`
+    when both are provided.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    **MINIMAL_VALID_SETTINGS_DICT,
+                    "connector": {"id": "connector-id", "duration_period": "PT5M"},
+                    "s3": {**MINIMAL_VALID_SETTINGS_DICT["s3"], "interval": 90},
+                }
+            )
+
+    with pytest.warns(UserWarning, match="Using only 'connector.duration_period'"):
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(minutes=5)
 
 
 def test_settings_should_hide_secrets():

@@ -114,7 +114,6 @@ class S3Connector:
                 f"Unrecognized marking definition {self.config.s3.marking}, defaulting to TLP:GREEN"
             )
             self.s3_marking = stix2.TLP_GREEN
-        self.s3_interval = self.config.s3.interval
         self.s3_attach_original_file = self.config.s3.attach_original_file
         self.s3_delete_after_import = self.config.s3.delete_after_import
         self.s3_no_split_bundles = self.config.s3.no_split_bundles
@@ -136,7 +135,7 @@ class S3Connector:
         )
 
     def get_interval(self):
-        return int(self.s3_interval)
+        return self.config.connector.duration_period.total_seconds()
 
     def note_exists_by_abstract(self, abstract):
         """
@@ -914,7 +913,7 @@ class S3Connector:
 
     def run(self):
         self.helper.log_info(
-            f"Starting S3 connector with {self.get_interval()} seconds interval"
+            f"Starting S3 connector with {self.get_interval():g} seconds interval"
         )
         if self.helper.get_run_and_terminate():
             self.process()

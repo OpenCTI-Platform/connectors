@@ -50,7 +50,7 @@
     },
     "CONNECTOR_DURATION_PERIOD": {
       "default": "PT30S",
-      "description": "The period of time to await between two runs of the connector. The S3 connector schedules its runs with `S3_INTERVAL` (in seconds).",
+      "description": "The period of time to await between two polls of the S3 bucket.",
       "format": "duration",
       "type": "string"
     },
@@ -99,12 +99,21 @@
     "S3_MARKING": {
       "default": "TLP:GREEN",
       "description": "The default TLP marking applied when the ingested data does not define one. Available values are: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
       "type": "string"
     },
     "S3_INTERVAL": {
-      "default": 30,
-      "description": "The interval, in seconds, between two polls of the S3 bucket.",
-      "type": "integer"
+      "default": null,
+      "deprecated": true,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     },
     "S3_ATTACH_ORIGINAL_FILE": {
       "default": false,

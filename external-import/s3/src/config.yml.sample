@@ -7,7 +7,7 @@ connector:
   # name: 'S3 Bucket'
   # scope: 's3'
   # log_level: 'error'
-  # duration_period: 'PT30S' # Unused, the connector schedules its runs with s3.interval
+  # duration_period: 'PT30S' # ISO8601 format in String, start with 'P...' for Period. Default PT30S
 
 s3:
   access_key_id: 'ChangeMe'
@@ -18,7 +18,6 @@ s3:
   # bucket_prefixes: 'ACI_TI,ACI_Vuln'
   # author: '' # Optional, organization name for created_by_ref
   # marking: 'TLP:GREEN' # Optional, default marking
-  # interval: 30 # Polling interval in seconds
   # attach_original_file: false # Attach original JSON to vulnerabilities
   # delete_after_import: true # Delete files from S3 after processing
   # no_split_bundles: true # No split
