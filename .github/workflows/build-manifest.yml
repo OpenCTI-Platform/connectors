@@ -65,6 +65,12 @@ jobs:
 
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3.6.3
 
+      - name: Remove existing generated schema/doc files
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f */*/__metadata__/connector_config_schema.json */*/__metadata__/CONNECTOR_CONFIG_DOC.md
+
       - name: Generate config schema
         shell: bash
         env:
