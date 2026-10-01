@@ -97,11 +97,9 @@ class VirusTotalBuilder:
         int
             Score, in percent, rounded.
         """
-        # Retrieve score from GTI assessment if it exists and GTI enrichment
-        # is enabled (gti_enrichment_enabled config flag).
+        # Retrieve score from GTI assessment if it exists
         if (
-            self.gti_enabled
-            and gti_assessment is not None
+            gti_assessment is not None
             and (threat_score := gti_assessment.get("threat_score")) is not None
         ):
             self.helper.log_debug(
