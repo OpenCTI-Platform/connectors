@@ -338,7 +338,7 @@ class VirusTotalClient:
         """
         return base64.b64encode(contents.encode()).decode().replace("=", "")
 
-    def get_url_related_objects(self, url, relationship):
+    def get_url_related_objects(self, url, relationship, extra_query=""):
         """
         Retrieve URL report based on the given URL.
 
@@ -348,17 +348,95 @@ class VirusTotalClient:
             Url.
         relationship : str
             Relationship to Url
+        extra_query : str
+            Additional query string to append to the request (e.g. "limit=10").
 
         Returns
         -------
         dict
             URL Object, see https://developers.virustotal.com/reference/url-object
         """
-        base64_url = f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}/{relationship}"
+        suffix = f"?{extra_query}" if extra_query else ""
+        base64_url = (
+            f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}"
+            f"/{relationship}{suffix}"
+        )
         results = self._query(base64_url)
         if results is None:
             return None
         if "error" in results:
-            sha256_url = f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}/{relationship}"
+            sha256_url = (
+                f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}"
+                f"/{relationship}{suffix}"
+            )
             results = self._query(sha256_url)
         return results
+
+    def get_gti_relationship(
+        self, endpoint_type: str, identifier: str, relationship: str, limit: int
+    ) -> dict | None:
+        """
+        Retrieve a GTI collection relationship (malware_families,
+        threat_actors, campaigns, or reports) for the given entity,
+        following pagination until `limit` items are collected.
+
+        Parameters
+        ----------
+        endpoint_type : str
+            VirusTotal endpoint path segment for the entity type
+            (`ip_addresses`, `domains`, `files`, or `urls`).
+        identifier : str
+            Entity identifier (IP, domain, file hash, or URL value).
+        relationship : str
+            Relationship name, e.g. `malware_families`.
+        limit : int
+            Maximum number of related objects to return.
+
+        Returns
+        -------
+        dict or None
+            VirusTotal list response with `data` truncated to `limit` items.
+        """
+        if limit <= 0:
+            return {"data": []}
+
+        page_size = min(limit, 40)
+        if endpoint_type == "urls":
+            first_page = self.get_url_related_objects(
+                identifier, relationship, extra_query=f"limit={page_size}"
+            )
+        else:
+            url = f"{self.url}/{endpoint_type}/{identifier}/{relationship}?limit={page_size}"
+            first_page = self._query(url)
+        return self._collect_paginated(first_page, limit)
+
+    def _collect_paginated(self, first_page: dict | None, limit: int) -> dict | None:
+        """
+        Follow `links.next` on a VirusTotal list response until `limit`
+        items have been collected or there are no more pages.
+
+        Parameters
+        ----------
+        first_page : dict, optional
+            First page of a VirusTotal list response.
+        limit : int
+            Maximum number of items to collect across all pages.
+
+        Returns
+        -------
+        dict or None
+            `first_page` with `data` extended across pages and truncated to `limit`.
+        """
+        if first_page is None or "error" in first_page:
+            return first_page
+
+        data = list(first_page.get("data", []))
+        page = first_page
+        while len(data) < limit and page.get("links", {}).get("next"):
+            page = self._query(page["links"]["next"])
+            if page is None or "error" in page:
+                break
+            data.extend(page.get("data", []))
+
+        first_page["data"] = data[:limit]
+        return first_page

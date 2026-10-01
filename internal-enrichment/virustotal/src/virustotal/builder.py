@@ -9,11 +9,15 @@ import stix2
 from pycti import (
     STIX_EXT_OCTI,
     STIX_EXT_OCTI_SCO,
+    Campaign,
     Indicator,
+    IntrusionSet,
     Location,
+    Malware,
     Note,
     OpenCTIConnectorHelper,
     OpenCTIStix2,
+    Report,
     StixCoreRelationship,
 )
 from virustotal.models.configs.virustotal_configs import IndicatorConfig
@@ -34,6 +38,7 @@ class VirusTotalBuilder:
         include_attributes_in_note: bool = False,
         url_related_object_data: dict = {},
         is_indicator: bool = False,
+        gti_enabled: bool = False,
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
@@ -43,6 +48,8 @@ class VirusTotalBuilder:
         self.opencti_entity = opencti_entity
         self.stix_entity = stix_entity
         self.attributes = data["attributes"]
+        # Read before _compute_score, which consults it.
+        self.gti_enabled = gti_enabled
         self.score = self._compute_score(
             self.attributes["last_analysis_stats"],
             self.attributes.get("gti_assessment"),
@@ -50,6 +57,10 @@ class VirusTotalBuilder:
         self.include_attributes_in_note = include_attributes_in_note
         self.url_related_object_data = url_related_object_data
         self.is_indicator = is_indicator
+        # Set by create_indicator_based_on if it creates a fresh Indicator
+        # this run; used to also link that Indicator to any GTI entities
+        # (see _gti_relationships_for).
+        self.indicator: stix2.Indicator | None = None
 
         # Indicators use STIX_EXT_OCTI (SDO extension); observables use STIX_EXT_OCTI_SCO.
         self._stix_ext = STIX_EXT_OCTI if is_indicator else STIX_EXT_OCTI_SCO
@@ -86,9 +97,11 @@ class VirusTotalBuilder:
         int
             Score, in percent, rounded.
         """
-        # Retrieve score from GTI assessment if it exists
+        # Retrieve score from GTI assessment if it exists and GTI enrichment
+        # is enabled (gti_enrichment_enabled config flag).
         if (
-            gti_assessment is not None
+            self.gti_enabled
+            and gti_assessment is not None
             and (threat_score := gti_assessment.get("threat_score")) is not None
         ):
             self.helper.log_debug(
@@ -192,13 +205,51 @@ class VirusTotalBuilder:
         )
         return external_reference
 
+    def _gti_verdict_is_malicious(self) -> bool:
+        """True when GTI's own assessment (not the legacy engine count) calls this malicious.
+
+        GTI's verdict/severity model is a richer signal than a raw
+        multi-engine detection count: a sample can be brand new (zero
+        traditional AV detections, since most engines haven't scanned it
+        yet) while GTI's ML scoring + Mandiant attribution already call it
+        malicious with high confidence. Relying on the legacy count alone
+        misses exactly these cases.
+        """
+        if not self.gti_enabled:
+            return False
+        gti_assessment = self.attributes.get("gti_assessment")
+        if not gti_assessment:
+            return False
+        verdict = gti_assessment.get("verdict") or {}
+        return verdict.get("value") == "VERDICT_MALICIOUS"
+
+    def _meets_indicator_threshold(self, indicator_config: IndicatorConfig) -> bool:
+        """Whether this observable warrants creating an Indicator.
+
+        A threshold of 0 is documented as fully disabling indicator
+        creation for this observable type, so that always wins. Otherwise,
+        an Indicator is created either when GTI's own verdict says
+        malicious, or (falling back to the legacy behavior) when the
+        multi-engine malicious count meets the configured threshold.
+        """
+        if indicator_config.threshold <= 0:
+            return False
+        if self._gti_verdict_is_malicious():
+            return True
+        return (
+            self.attributes["last_analysis_stats"]["malicious"]
+            >= indicator_config.threshold
+        )
+
     def create_indicator_based_on(
         self,
         indicator_config: IndicatorConfig,
         pattern: str,
     ):
         """
-        Create an Indicator if the positives hits >= threshold specified in the config.
+        Create an Indicator if the positive hits >= threshold specified in
+        the config, or if GTI's own verdict already calls this malicious
+        (see _meets_indicator_threshold).
 
         Objects created are added in the bundle.
 
@@ -219,12 +270,7 @@ class VirusTotalBuilder:
 
         now_time = datetime.datetime.now(datetime.timezone.utc)
 
-        # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
-        if (
-            self.attributes["last_analysis_stats"]["malicious"]
-            >= indicator_config.threshold
-            > 0
-        ):
+        if self._meets_indicator_threshold(indicator_config):
             self.helper.log_debug(
                 f"[VirusTotal] creating indicator with pattern {pattern}"
             )
@@ -239,8 +285,12 @@ class VirusTotalBuilder:
                 created_by_ref=self.author,
                 name=self.opencti_entity["observable_value"],
                 description=(
-                    "Created by VirusTotal connector as the positive count "
-                    f"was >= {indicator_config.threshold}"
+                    "Created by VirusTotal connector: GTI verdict is malicious"
+                    if self._gti_verdict_is_malicious()
+                    else (
+                        "Created by VirusTotal connector as the positive count "
+                        f"was >= {indicator_config.threshold}"
+                    )
                 ),
                 confidence=self.helper.connect_confidence_level,
                 pattern=pattern,
@@ -273,6 +323,7 @@ class VirusTotalBuilder:
                 allow_custom=True,
             )
             self.bundle += [indicator, relationship]
+            self.indicator = indicator
 
     def create_ip_resolves_to(self, ipv4: str):
         """
@@ -339,6 +390,245 @@ class VirusTotalBuilder:
                     "entity_value": self.stix_entity.get("value", None),
                 },
             )
+
+    def _create_gti_collection_external_reference(self, collection_data: dict) -> dict:
+        """
+        Build an external reference to a GTI collection object's page on
+        the VirusTotal GUI.
+
+        Unlike `_create_external_reference`, this does not mutate
+        `self.stix_entity` - it's meant for the new SDOs created from GTI
+        collection relationships (malware families, threat actors,
+        campaigns, reports), not the primary observable being enriched.
+
+        Parameters
+        ----------
+        collection_data : dict
+            A single object from a GTI collection relationship response.
+
+        Returns
+        -------
+        dict
+            External reference dict.
+        """
+        collection_id = collection_data.get("id", "")
+        attributes = collection_data.get("attributes", {})
+        return {
+            "source_name": "VirusTotal",
+            "url": f"https://www.virustotal.com/gui/collection/{collection_id}",
+            "description": attributes.get("name", collection_id),
+        }
+
+    def _build_relationship(
+        self, relationship_type: str, source_ref: str, target_ref: str
+    ) -> stix2.Relationship:
+        return stix2.Relationship(
+            id=StixCoreRelationship.generate_id(
+                relationship_type, source_ref, target_ref
+            ),
+            relationship_type=relationship_type,
+            created_by_ref=self.author,
+            source_ref=source_ref,
+            target_ref=target_ref,
+            confidence=self.helper.connect_confidence_level,
+            allow_custom=True,
+        )
+
+    def _gti_relationships_for(self, target_id: str) -> list:
+        """Build the relationship(s) linking this enrichment to a GTI-derived
+        entity (Malware/Intrusion-Set/Campaign).
+
+        - Enriching an Indicator directly (`is_indicator=True`): a single
+          `indicates` edge from the Indicator. `indicates` is the STIX
+          relationship for Indicator -> Malware/Intrusion-Set/Campaign
+          so it replaces `related-to` here rather than adding to it.
+        - Enriching an Observable: keep the existing `related-to` edge
+          from the observable, and *additionally* add an `indicates` edge
+          from any Indicator create_indicator_based_on already created
+          earlier in this same run. The two are different source
+          entities, so both edges carry distinct, non-redundant meaning.
+        """
+        if self.is_indicator:
+            return [
+                self._build_relationship("indicates", self.stix_entity["id"], target_id)
+            ]
+        relationships = [
+            self._build_relationship("related-to", self.stix_entity["id"], target_id)
+        ]
+        if self.indicator is not None:
+            relationships.append(
+                self._build_relationship("indicates", self.indicator.id, target_id)
+            )
+        return relationships
+
+    def create_malware_family(self, collection_data: dict):
+        """
+        Create a Malware SDO (is_family=True) from a GTI `malware_families`
+        relationship item and link it to the observable (and to the
+        Indicator, if one was created this run - see
+        _gti_relationships_for).
+
+        Parameters
+        ----------
+        collection_data : dict
+            A single object from the `malware_families` relationship response.
+        """
+        attributes = collection_data.get("attributes", {})
+        name = attributes.get("name")
+        if not name:
+            self.helper.log_debug(
+                f"[VirusTotal] skipping GTI malware family with no name: {collection_data}"
+            )
+            return
+
+        self.helper.log_debug(f"[VirusTotal] creating GTI malware family {name}")
+        malware = stix2.Malware(
+            id=Malware.generate_id(name),
+            name=name,
+            is_family=True,
+            description=attributes.get("description"),
+            created_by_ref=self.author,
+            confidence=self.helper.connect_confidence_level,
+            external_references=[
+                self._create_gti_collection_external_reference(collection_data)
+            ],
+            allow_custom=True,
+        )
+        self.bundle += [malware] + self._gti_relationships_for(malware.id)
+
+    def create_intrusion_set(self, collection_data: dict):
+        """
+        Create an Intrusion-Set SDO from a GTI `threat_actors` relationship
+        item and link it to the observable (and to the Indicator, if one
+        was created this run - see _gti_relationships_for).
+
+        GTI's "threat actor" concept is a tracked adversary group, which
+        maps onto OpenCTI's Intrusion-Set - matching how the
+        google-ti-feeds connector maps this same GTI data, so both
+        GTI-consuming connectors produce a consistent graph shape.
+
+        Parameters
+        ----------
+        collection_data : dict
+            A single object from the `threat_actors` relationship response.
+        """
+        attributes = collection_data.get("attributes", {})
+        name = attributes.get("name")
+        if not name:
+            self.helper.log_debug(
+                f"[VirusTotal] skipping GTI threat actor with no name: {collection_data}"
+            )
+            return
+
+        self.helper.log_debug(
+            f"[VirusTotal] creating GTI threat actor (intrusion-set) {name}"
+        )
+        intrusion_set = stix2.IntrusionSet(
+            id=IntrusionSet.generate_id(name),
+            name=name,
+            description=attributes.get("description"),
+            aliases=attributes.get("aliases"),
+            created_by_ref=self.author,
+            confidence=self.helper.connect_confidence_level,
+            external_references=[
+                self._create_gti_collection_external_reference(collection_data)
+            ],
+            allow_custom=True,
+        )
+        self.bundle += [intrusion_set] + self._gti_relationships_for(intrusion_set.id)
+
+    def create_campaign(self, collection_data: dict):
+        """
+        Create a Campaign SDO from a GTI `campaigns` relationship item and
+        link it to the observable (and to the Indicator, if one was
+        created this run - see _gti_relationships_for).
+
+        Parameters
+        ----------
+        collection_data : dict
+            A single object from the `campaigns` relationship response.
+        """
+        attributes = collection_data.get("attributes", {})
+        name = attributes.get("name")
+        if not name:
+            self.helper.log_debug(
+                f"[VirusTotal] skipping GTI campaign with no name: {collection_data}"
+            )
+            return
+
+        self.helper.log_debug(f"[VirusTotal] creating GTI campaign {name}")
+        campaign = stix2.Campaign(
+            id=Campaign.generate_id(name),
+            name=name,
+            description=attributes.get("description"),
+            created_by_ref=self.author,
+            confidence=self.helper.connect_confidence_level,
+            external_references=[
+                self._create_gti_collection_external_reference(collection_data)
+            ],
+            allow_custom=True,
+        )
+        self.bundle += [campaign] + self._gti_relationships_for(campaign.id)
+
+    def create_report(self, collection_data: dict):
+        """
+        Create a Report SDO from a GTI `reports` relationship item and add
+        the enriched observable (and the Indicator, if one was created
+        this run) to its `object_refs`.
+
+        Reports link via containment (`object_refs`), not a separate
+        relationship - that's how STIX Reports represent "this observable
+        is covered by this report". When an Indicator was also created for
+        this observable this run, it's added alongside it for the same
+        reason _gti_relationships_for adds an `indicates` edge for the
+        other GTI entities: the Indicator is otherwise left out of the
+        Report entirely.
+
+        Parameters
+        ----------
+        collection_data : dict
+            A single object from the `reports` relationship response.
+        """
+        attributes = collection_data.get("attributes", {})
+        name = attributes.get("name")
+        if not name:
+            self.helper.log_debug(
+                f"[VirusTotal] skipping GTI report with no name: {collection_data}"
+            )
+            return
+
+        # Report ids are (name, published)-keyed - a stable date is required
+        # so repeat enrichment runs merge into the same Report instead of
+        # spawning a new one every run. Fall back to a fixed epoch sentinel,
+        # never "now", when GTI doesn't provide a creation date.
+        creation_date = attributes.get("creation_date")
+        published = (
+            datetime.datetime.fromtimestamp(creation_date, datetime.timezone.utc)
+            if creation_date is not None
+            else datetime.datetime.fromtimestamp(0, datetime.timezone.utc)
+        )
+        published_str = self.helper.api.stix2.format_date(published)
+
+        object_refs = [self.stix_entity["id"]]
+        if self.indicator is not None:
+            object_refs.append(self.indicator.id)
+
+        self.helper.log_debug(f"[VirusTotal] creating GTI report {name}")
+        report = stix2.Report(
+            id=Report.generate_id(name, published_str),
+            name=name,
+            description=attributes.get("description"),
+            report_types=["threat-report"],
+            published=published_str,
+            object_refs=object_refs,
+            created_by_ref=self.author,
+            confidence=self.helper.connect_confidence_level,
+            external_references=[
+                self._create_gti_collection_external_reference(collection_data)
+            ],
+            allow_custom=True,
+        )
+        self.bundle.append(report)
 
     def create_note(self, abstract: str, content: str):
         """
@@ -547,26 +837,41 @@ class VirusTotalBuilder:
             self.helper.log_debug(f"[VirusTotal] sending bundle: {self.bundle}")
             self.helper.metric.inc("record_send", len(self.bundle))
             serialized_bundle = self.helper.stix2_create_bundle(self.bundle)
-            bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
+            # update=True is required so the worker overwrites scalar fields (e.g.
+            # x_opencti_score) on entities that already exist in the platform. With
+            # the default update=False, the worker only creates brand-new objects -
+            # updates to pre-existing entities are silently dropped with no audit
+            # trail. Every other internal-enrichment connector in this repo that
+            # needs to update existing data sets this explicitly (vulners,
+            # team-cymru-scout, osint-industries, anyrun-task, anyrun-lookup,
+            # polyswarm-enrichment, polyswarm-sandbox).
+            bundles_sent = self.helper.send_stix2_bundle(serialized_bundle, update=True)
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         return "Nothing to attach"
 
     def update_hashes(self):
         """Update the hashes (md5 and sha1) of the file."""
+        # VT omits individual hash fields for hashes it has only seen "in
+        # the wild" but never analysed - same root cause as update_size, see
+        # the comment there. Skip any algo VT didn't return instead of
+        # raising KeyError and aborting the rest of enrichment.
         for algo in ("MD5", "SHA-1", "SHA-256"):
-            self.helper.log_debug(
-                f"[VirusTotal] updating hash {algo}: {self.attributes[algo.lower().replace('-', '')]}"
-            )
-            self.stix_entity["hashes"][algo] = self.attributes[
-                algo.lower().replace("-", "")
-            ]
+            value = self.attributes.get(algo.lower().replace("-", ""))
+            if value is None:
+                self.helper.log_debug(
+                    f"[VirusTotal] no {algo} attribute in VT report; skipping"
+                )
+                continue
+            self.helper.log_debug(f"[VirusTotal] updating hash {algo}: {value}")
+            self.stix_entity["hashes"][algo] = value
 
     def update_labels(self):
         """Update the labels of the file using the tags."""
-        self.helper.log_debug(
-            f"[VirusTotal] updating labels with {self.attributes['tags']}"
-        )
-        for tag in self.attributes["tags"]:
+        # See update_size: VT may omit "tags" entirely for unanalysed
+        # hashes, so default to an empty list rather than raising KeyError.
+        tags = self.attributes.get("tags", [])
+        self.helper.log_debug(f"[VirusTotal] updating labels with {tags}")
+        for tag in tags:
             if self.is_indicator:
                 # Labels on Indicators are a standard STIX field, not an SCO extension.
                 if "labels" not in self.stix_entity:
@@ -591,10 +896,10 @@ class VirusTotalBuilder:
         main : bool
             If True, update the main name.
         """
-        self.helper.log_debug(
-            f"[VirusTotal] updating names with {self.attributes['names']}"
-        )
-        names = self.attributes["names"]
+        # See update_size: VT may omit "names" entirely for unanalysed
+        # hashes, so default to an empty list rather than raising KeyError.
+        names = self.attributes.get("names", [])
+        self.helper.log_debug(f"[VirusTotal] updating names with {names}")
         if len(names) > 0 and main:
             self.stix_entity["name"] = names[0]
             del names[0]
@@ -612,10 +917,23 @@ class VirusTotalBuilder:
 
     def update_size(self):
         """Update the size of the file."""
-        self.helper.log_debug(
-            f"[VirusTotal] updating size with {self.attributes['size']}"
-        )
-        self.stix_entity["size"] = self.attributes["size"]
+        # Pre-existing bug (present since this method was introduced): VT
+        # returns no "size" attribute for hashes it has only seen "in the
+        # wild" but never actually analysed (e.g. no scan engines have run).
+        # The unguarded dict access below used to raise KeyError here, which
+        # aborted _enrich() before any of the score/labels/external
+        # reference/note writes that follow it in FileProcessor._enrich, so
+        # the whole enrichment silently failed for any such file even though
+        # VT still had useful metadata (names, tags, first/last seen) to
+        # offer.
+        size = self.attributes.get("size")
+        if size is None:
+            self.helper.log_debug(
+                "[VirusTotal] no size attribute in VT report; skipping"
+            )
+            return
+        self.helper.log_debug(f"[VirusTotal] updating size with {size}")
+        self.stix_entity["size"] = size
 
     def create_notes_attributes_content(self):
         attributes_content = ""

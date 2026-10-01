@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 class IPProcessor(EntityProcessor):
     """Enriches IPv4-Addr observables and Indicators."""
 
+    _GTI_ENDPOINT_TYPE = "ip_addresses"
+
     def _fetch_data(self) -> dict:
         return self.client.get_ip_info(self.opencti_entity["observable_value"])
 

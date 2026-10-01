@@ -39,6 +39,13 @@ services:
 #      - VIRUSTOTAL_URL_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
 #      # Generic config settings for File, IP, Domain, URL
 #      - VIRUSTOTAL_INCLUDE_ATTRIBUTES_IN_NOTE=false # Whether or not to include the attributes info in Note
+#      # Google Threat Intelligence enrichment settings
+#      - VIRUSTOTAL_GTI_ENRICHMENT_ENABLED=false # Whether to use GTI assessment data (score/verdict) and enable GTI relationship enrichment. Requires a VirusTotal account with GTI access.
+#      - VIRUSTOTAL_GTI_INCLUDE_MALWARE_FAMILIES=false # Whether or not to enrich with related GTI malware families (created as Malware entities).
+#      - VIRUSTOTAL_GTI_INCLUDE_THREAT_ACTORS=false # Whether or not to enrich with related GTI threat actors (created as Intrusion-Set entities).
+#      - VIRUSTOTAL_GTI_INCLUDE_CAMPAIGNS=false # Whether or not to enrich with related GTI campaigns (created as Campaign entities).
+#      - VIRUSTOTAL_GTI_INCLUDE_REPORTS=false # Whether or not to enrich with related GTI reports (created as Report entities).
+#      - VIRUSTOTAL_GTI_RELATIONSHIP_LIMIT=10 # Maximum number of related objects to pull per GTI relationship, per observable.
     deploy:
       mode: replicated
       replicas: 1

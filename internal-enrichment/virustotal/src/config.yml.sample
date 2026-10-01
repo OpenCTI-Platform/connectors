@@ -44,3 +44,11 @@ virustotal:
 
   # Generic config settings for File, IP, Domain, URL
 #  include_attributes_in_note: false # Whether or not to include the attributes info in Note
+
+  # GTI collection enrichment settings (applies to File, IP, Domain, URL)
+#  gti_enrichment_enabled: false # Master switch for all GTI-driven behavior (score/verdict logic and the gti_include_* relationships below). Requires a VirusTotal account with GTI access.
+#  gti_include_malware_families: false # Whether or not to enrich with related GTI malware families (created as Malware entities)
+#  gti_include_threat_actors: false # Whether or not to enrich with related GTI threat actors (created as Intrusion-Set entities)
+#  gti_include_campaigns: false # Whether or not to enrich with related GTI campaigns (created as Campaign entities)
+#  gti_include_reports: false # Whether or not to enrich with related GTI reports (created as Report entities)
+#  gti_relationship_limit: 10 # Maximum number of related objects to pull per GTI relationship, per observable
