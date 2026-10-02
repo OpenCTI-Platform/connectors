@@ -74,14 +74,14 @@ Incremental behavior: on the first run, issues created within the `since` window
 
 ### Vulnerabilities
 
-When `WIZ_CLOUD_IMPORT_VULNERABILITIES` is enabled, the connector fetches the vulnerability findings (`vulnerabilityFindings`) of the cloud asset **while it converts each issue**, and sends them in the same bundle as that issue. Each finding becomes a `Vulnerability` named after its CVE, linked to the asset's `System` with a `has` relationship.
+When `WIZ_CLOUD_IMPORT_VULNERABILITIES` is enabled, the connector fetches the vulnerability findings (`vulnerabilityFindings`) of each issue's cloud asset **together with the issues**, page by page. Each finding becomes a `Vulnerability` named after its CVE, linked to the asset's `System` with a `has` relationship.
 
 ```mermaid
 graph LR
     A[Wiz issuesV2] --> B[Incident]
     A --> S[System<br/>entitySnapshot]
     B -- targets --> S
-    A -. per issue .-> F[Wiz vulnerabilityFindings<br/>assetIdV2 of that issue]
+    A -. once per asset .-> F[Wiz vulnerabilityFindings<br/>assetIdV2 of the issue]
     F --> V[Vulnerability<br/>CVE]
     S -- has --> V
 ```
@@ -96,9 +96,11 @@ graph LR
 | Vulnerability external reference | `portalUrl` + finding `id` |
 | Relationship | System `has` Vulnerability, `start_time` from `firstDetectedAt` |
 
-An issue and the vulnerabilities of its resource are therefore committed together, in one bundle, rather than in two separate phases. Only the assets seen during the current run are scanned, and each asset is queried once even when several issues share it, so a run that imports no issue performs no vulnerability call at all.
+Each page of issues is sent as **one bundle**, with the Incidents, Systems and relationships of its issues and the Vulnerabilities of their assets. An issue and the vulnerabilities of its asset are therefore always committed together, rather than in two separate phases. Only the assets seen during the current run are scanned, and each asset is queried once per run even when several issues share it: its findings convert to deterministic IDs, so a second query would only send the same objects again. A run that imports no issue performs no vulnerability call at all.
 
-If a vulnerability fetch fails, the issue is still imported but the incremental cursor is **not** advanced, so the whole window is imported again on the next run. Replaying is harmless because every entity ID is deterministic, whereas advancing would drop those vulnerabilities for good.
+A finding without a CVE id, or rejected by the OpenCTI `Vulnerability` model, is skipped and logged. The incident and the other findings of the page are still sent.
+
+**Errors stop the run.** If a call to Wiz fails, or if an issue or a finding returned by Wiz cannot be parsed, the run stops and the incremental cursor is **not** advanced. The next run imports the same window again. Replaying is harmless because every entity ID is deterministic, whereas advancing would drop those issues or vulnerabilities for good.
 
 **Volume warning:** a single virtual machine commonly carries several hundred findings, and severity filtering removes very few of them. Enable `WIZ_CLOUD_VULNERABILITY_HAS_EXPLOIT` to keep only the vulnerabilities with a known exploit, which is the filter that meaningfully reduces the volume.
 
