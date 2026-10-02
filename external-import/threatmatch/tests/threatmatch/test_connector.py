@@ -101,3 +101,67 @@ def test_connector_process_data_last_run(
     connector._process_data()
     collect_intelligence.assert_called_with(yesterday)
     mocked_helper.set_state.assert_called_with({"last_run": now.isoformat()})
+
+
+def test_connector_deduplicates_stix_objects_keeping_richer_entity() -> None:
+    connector = Connector(
+        helper=None,
+        config=None,
+        converter=None,
+    )
+    duplicate_id = "malware--01234567-89ab-cdef-0123-456789abcdef"
+    rich_object = {
+        "id": duplicate_id,
+        "type": "malware",
+        "name": "Example Malware",
+        "description": "Longer description",
+        "modified": "2025-01-02T00:00:00Z",
+    }
+    sparse_object = {
+        "id": duplicate_id,
+        "type": "malware",
+        "name": "Example Malware",
+    }
+    result = connector._deduplicate_processed_objects([sparse_object, rich_object])
+    assert len(result) == 1
+    assert result[0] == rich_object
+
+
+def test_connector_merges_labels_from_duplicate_indicator_sources() -> None:
+    # Simulates the same indicator coming from both a profile STIX export
+    # (rich context labels) and the TAXII IOC feed (different labels), as
+    # described in issue #4906.
+    connector = Connector(
+        helper=None,
+        config=None,
+        converter=None,
+    )
+    duplicate_id = "indicator--01234567-89ab-cdef-0123-456789abcdef"
+    profile_object = {
+        "id": duplicate_id,
+        "type": "indicator",
+        "pattern": "[file:hashes.'SHA-256'='abc']",
+        "labels": ["Downloader", "United States of America (USA)"],
+        "modified": "2025-01-01T00:00:00Z",
+    }
+    taxii_object = {
+        "id": duplicate_id,
+        "type": "indicator",
+        "pattern": "[file:hashes.'SHA-256'='abc']",
+        "labels": ["Ransom demand", "Ransomware"],
+        "valid_until": "2026-01-01T00:00:00Z",
+        "confidence": 80,
+        "modified": "2025-01-02T00:00:00Z",
+    }
+
+    result = connector._deduplicate_processed_objects([profile_object, taxii_object])
+    assert len(result) == 1
+    merged = result[0]
+    assert merged["valid_until"] == "2026-01-01T00:00:00Z"
+    assert merged["confidence"] == 80
+    assert merged["labels"] == [
+        "Downloader",
+        "United States of America (USA)",
+        "Ransom demand",
+        "Ransomware",
+    ]

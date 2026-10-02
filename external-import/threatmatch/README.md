@@ -5,7 +5,7 @@
 | Partner Verified | -    | -       |
 
 The **ThreatMatch Connector** imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. It
-authenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configured
+authenticates to the ThreatMatch Platform, fetches items since the last successful run (or a configured
 relative start date on first run), and maps them to STIX 2.1 objects and relationships in OpenCTI.
 
 ---
@@ -104,6 +104,12 @@ On each run (or according to `CONNECTOR_DURATION_PERIOD`):
 - **No destructive actions**: it does not delete/update items outside its scope.
 - **Error handling**: on 401 responses, the connector **refreshes the token and retries once**; other HTTP errors are
   logged and surfaced.
+- **STIX `object_refs` handling**: when profile entities (`threat-actor`, `intrusion-set`, `campaign`, `malware`, `tool`, `attack-pattern`) carry indicator references in `object_refs`, the connector creates explicit `indicator --indicates--> entity` relationships.
+- **Relationship normalization**: generic `associated-content`/`associated_content` links are normalized to `related-to` (the connector does not infer stronger semantics such as attribution from this source relation alone).
+- **TTP normalization**: labels matching ATT&CK techniques (for example `T1566.004 - Spearphishing Voice`) are converted into STIX `attack-pattern` objects, linked with `uses` from threat-actor/intrusion-set/campaign/malware/tool entities and with `indicates` from indicators, so they appear in OpenCTI TTP views.
+- **Description normalization**: HTML descriptions are converted to Markdown text and inline links are extracted into STIX `external_references`.
+- **Metadata propagation**: markings and creators from source entities are propagated to derived entities and relationships created by the connector.
+- **Label merging across sources**: the same indicator can be reported by both profile exports and the TAXII IOC feed with different labels; rather than keeping only one source's labels, the connector merges all labels observed for a given indicator in a run.
 
 ---
 
