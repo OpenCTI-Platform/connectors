@@ -18,11 +18,6 @@ on:
 
 env:
   UV_SYSTEM_PYTHON: 1
-  
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
