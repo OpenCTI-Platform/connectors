@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING
 
 from falconpy import Intel as CrowdstrikeIntel
 
+from crowdstrike_feeds_services.utils.errors import CrowdstrikeAPIError
+
 if TYPE_CHECKING:
     from crowdstrike_feeds_connector import ConnectorSettings
     from pycti import OpenCTIConnectorHelper
@@ -74,3 +76,5 @@ class BaseCrowdstrikeClient:
                 "[API] Error while querying CrowdStrike API",
                 {"error_message": error_message, "status_code": status_code},
             )
+
+        raise CrowdstrikeAPIError(message=error_message, status_code=status_code)

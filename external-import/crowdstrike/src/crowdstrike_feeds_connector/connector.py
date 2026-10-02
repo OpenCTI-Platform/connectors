@@ -370,6 +370,7 @@ class CrowdStrike:
 
         except Exception as e:  # noqa: B902
             self._error("CrowdStrike connector internal error: {0}", str(e))
+            raise e
 
     def run(self):
         self.helper.schedule_iso(
