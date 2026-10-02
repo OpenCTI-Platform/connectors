@@ -4,6 +4,8 @@ Validates that:
 - The sliding-window algorithm enforces the request cap.
 - Concurrent callers are properly serialised by the internal lock.
 - ``reset()`` clears state for cross-asyncio.run() safety.
+- ``invalidate_lock()`` drops the stale lock while keeping the rate window
+  continuous across asyncio.run() boundaries.
 """
 
 import asyncio
@@ -119,6 +121,62 @@ async def test_reset_invalidates_lock():
     # A new acquire should create a new lock
     await limiter.acquire()
     assert limiter._lock is not old_lock
+
+
+async def test_invalidate_lock_drops_lock_but_keeps_history():
+    """invalidate_lock() must clear the cached lock (so a fresh one is created
+    in the next event loop) while preserving the recorded request timestamps,
+    keeping the sliding window continuous across asyncio.run() boundaries."""
+    limiter = AsyncRateLimiter()
+    await limiter.acquire()
+    await limiter.acquire()
+
+    old_lock = limiter._lock
+    timestamps_before = list(limiter._timestamps)
+
+    limiter.invalidate_lock()
+
+    assert limiter._lock is None
+    # History is preserved, unlike reset().
+    assert list(limiter._timestamps) == timestamps_before
+
+    # A new acquire still creates a fresh lock for the new loop.
+    await limiter.acquire()
+    assert limiter._lock is not old_lock
+
+
+async def test_invalidate_lock_preserves_rate_window_across_runs():
+    """Filling the window then calling invalidate_lock() (as the connector does
+    between historical-backfill chunks) must NOT free the budget: the next
+    acquire still blocks until the window slides, preventing a burst at the
+    chunk boundary."""
+    limiter = AsyncRateLimiter()
+
+    for _ in range(NVD_MAX_REQUESTS):
+        await limiter.acquire()
+
+    # Simulate crossing an asyncio.run() boundary between two chunks.
+    limiter.invalidate_lock()
+
+    # The window is still full, so the next acquire must block.
+    acquired = asyncio.Event()
+
+    async def try_acquire():
+        await limiter.acquire()
+        acquired.set()
+
+    task = asyncio.create_task(try_acquire())
+
+    await asyncio.sleep(0.15)
+    assert (
+        not acquired.is_set()
+    ), "invalidate_lock() must not reset the window and allow a burst"
+
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 async def test_sliding_window_releases_slots():

@@ -33,6 +33,33 @@ def test_converter_tlp_marking(converter: ConnectorConverter) -> None:
     assert converter.tlp_marking.type == "marking-definition"
 
 
+def test_converter_default_report_type(converter: ConnectorConverter) -> None:
+    assert converter.report_type == "threat-report"
+
+
+def test_converter_configurable_report_type(mocked_helper: Mock) -> None:
+    converter = ConnectorConverter(
+        helper=mocked_helper,
+        author_name="Email Intel Microsoft",
+        author_description="Email Intel Microsoft Connector",
+        tlp_level="white",
+        report_type="malware",
+    )
+
+    published = datetime.datetime(2025, 4, 16, 10, 10, 10)
+    mocked_email = Mock(
+        subject="Test Report",
+        received_date_time=published,
+        body=Mock(content="Test Content"),
+        attachments=[],
+        from_=Mock(email_address=Mock(address="email@test.com")),
+    )
+
+    report = list(converter.to_stix_objects(entity=mocked_email))
+    assert len(report) == 1
+    assert report[0].report_types == ["malware"]
+
+
 def test_converter_to_stix(converter: ConnectorConverter) -> None:
     published = datetime.datetime(2025, 4, 16, 10, 10, 10)
     mocked_email = Mock(

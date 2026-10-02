@@ -27,6 +27,12 @@ services:
 #      - VIRUSTOTAL_IP_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes
 #      - VIRUSTOTAL_IP_INDICATOR_DETECT=true # Whether or not to set detection for the indicator to true
 #      - VIRUSTOTAL_IP_ADD_RELATIONSHIPS=false # Whether or not to add ASN and location resolution relationships
+#      - VIRUSTOTAL_IP_ADD_RESOLUTIONS=false # Whether or not to import the domains resolving to the IP, with a dated resolves-to relationship
+#      - VIRUSTOTAL_IP_RESOLUTIONS_SINCE=P90D # Date floor: ISO-8601 duration (P90D), ISO-8601 date (2025-10-01) or none
+#      - VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES=3 # Stop after this many resolutions fetched (unset: no entry cap)
+#      - VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES=25 # Maximum pages (40 entries, one lookup each) per enrichment
+#      - VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS_REGEX=news|press|journal # Case-insensitive regex a resolved domain must match (unset: all)
+#      - VIRUSTOTAL_API_REQUESTS_PER_MINUTE=4 # Spacing between resolutions pages; 4 fits a free key, 0 disables the wait
 #      # Domain specific config settings
 #      - VIRUSTOTAL_DOMAIN_INDICATOR_CREATE_POSITIVES=10 # Create an indicator for Domain based observables once this positive threshold is reached. Note: specify 0 to disable indicator creation
 #      - VIRUSTOTAL_DOMAIN_INDICATOR_VALID_MINUTES=2880 # How long the indicator is valid for in minutes

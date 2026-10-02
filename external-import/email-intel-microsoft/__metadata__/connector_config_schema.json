@@ -63,6 +63,24 @@
       "format": "duration",
       "type": "string"
     },
+    "EMAIL_INTEL_MICROSOFT_REPORT_TYPE": {
+      "default": "threat-report",
+      "description": "The report type to assign to imported reports (a value from the report_type_ov vocabulary).",
+      "enum": [
+        "attack-pattern",
+        "campaign",
+        "identity",
+        "indicator",
+        "intrusion-set",
+        "malware",
+        "observed-data",
+        "threat-actor",
+        "threat-report",
+        "tool",
+        "vulnerability"
+      ],
+      "type": "string"
+    },
     "EMAIL_INTEL_MICROSOFT_TENANT_ID": {
       "type": "string"
     },
