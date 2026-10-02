@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe' # Valid UUIDv4
+  # name: 'AbuseIPDB TAXII'
+  # scope: 'abuseipdb-taxii'
+  # log_level: 'error'
+  # duration_period: 'PT1H' # ISO 8601 duration between two runs
+
+abuseipdb_taxii:
+  # AbuseIPDB account email and one of its API keys (not the account password)
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  # url: 'https://taxii.abuseipdb.com/taxii2/abuseipdb-taxii2/'
+  # collection_id: 'ChangeMe' # Collection ID from My TAXII Feeds, only needed with more than one feed
+  # import_since: 'P30D' # ISO 8601 duration (relative) or datetime (absolute), first run only
+  # page_size: 1000
+  # verify_ssl: true
+  # request_timeout_seconds: 60

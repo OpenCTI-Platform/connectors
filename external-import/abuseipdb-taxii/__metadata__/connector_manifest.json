@@ -1,0 +1,27 @@
+{
+  "title": "AbuseIPDB TAXII",
+  "slug": "abuseipdb-taxii",
+  "description": "AbuseIPDB is a community-driven project dedicated to fighting hackers, spammers, and abusive activity on the internet. Its TAXII 2.1 feeds serve reported IP addresses as ready-made STIX 2.1 Indicators.\n\nThis connector authenticates to the AbuseIPDB TAXII 2.1 API with the account email and an API key, discovers the account's feed (or uses the feed chosen by its Collection ID when the account has several), and relays every STIX object the feed serves into OpenCTI unchanged, page by page, until the feed reports no more data. If a pull is interrupted, the next run resumes from the first page that was not yet handed to OpenCTI.",
+  "short_description": "Relays STIX 2.1 Indicators from an AbuseIPDB TAXII 2.1 feed into OpenCTI unchanged, page by page, and resumes an interrupted pull on the next run.",
+  "logo": "external-import/abuseipdb-taxii/__metadata__/logo.png",
+  "use_cases": [
+    "Infrastructure & Attack Surface Visibility",
+    "Detection & Response Enablement"
+  ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": "sales@abuseipdb.com",
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261117.0",
+  "subscription_link": "https://www.abuseipdb.com/pricing",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/abuseipdb-taxii",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-abuseipdb-taxii",
+  "container_type": "EXTERNAL_IMPORT"
+}
