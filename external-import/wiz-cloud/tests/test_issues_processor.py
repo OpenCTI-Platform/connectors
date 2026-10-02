@@ -2,7 +2,7 @@
 
 Covers the edge cases the sample proved real:
 - empty description
-- duplicated entitySnapshot across issues (System emitted once, targeted twice)
+- duplicated entitySnapshot across issues (System reused, emitted in both bundles)
 - actors: null inside threatDetectionDetails
 - tags with slashes in keys
 
@@ -13,8 +13,20 @@ the models are exercised here, no I/O.
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
-from connectors_sdk.models import OrganizationAuthor, TLPMarking, Vulnerability
+from connectors_sdk.models import (
+    AttackPattern,
+    Incident,
+    OrganizationAuthor,
+    Relationship,
+    System,
+    TLPMarking,
+    Vulnerability,
+)
 from wiz_cloud.processors.issues_processor import _utc
+
+
+def _of_type(objects: list, kind: type) -> list:
+    return [item for item in objects if isinstance(item, kind)]
 
 
 class TestCursorFormatting:
@@ -73,16 +85,19 @@ class TestConversion:
         assert "wiz" not in incident.labels
         assert "threat-detection" in incident.labels
 
-    def test_duplicate_snapshot_yields_one_system_two_relationships(
+    def test_duplicate_snapshot_reuses_one_system_object(
         self, processor, empty_description_issue, duplicate_snapshot_issue
     ):
         cache = {}
         first = processor._convert(empty_description_issue, cache)
         second = processor._convert(duplicate_snapshot_issue, cache)
-        # System appears in the first conversion only; both carry a relationship.
+        # Both conversions carry a System, but the cache reuses one object.
         assert len(first) == 3  # incident, system, relationship
-        assert len(second) == 2  # incident, relationship
+        assert len(second) == 3  # incident, system, relationship
         assert len(cache) == 1
+        first_system = _of_type(first, System)[0]
+        second_system = _of_type(second, System)[0]
+        assert first_system is second_system
 
 
 class TestTransformLogging:
@@ -259,7 +274,12 @@ class TestInterleavedVulnerabilities:
             for call in processor.logger.info.call_args_list
             if "Import finished" in call.args[0]
         )
-        assert summary == {"incidents": 2, "vulnerabilities": 1, "bundles": 2}
+        assert summary == {
+            "incidents": 2,
+            "vulnerabilities": 1,
+            "ttps": 0,
+            "bundles": 2,
+        }
 
     def test_the_cursor_advances_when_every_fetch_succeeded(
         self, processor, empty_description_issue_data
@@ -282,3 +302,131 @@ class TestInterleavedVulnerabilities:
         # replaying is harmless because every id is deterministic.
         assert processor.state.issues_last_created_at is None
         assert processor.logger.warning.called
+
+    def test_every_bundle_carries_the_system_it_references(
+        self, processor, empty_description_issue_data, duplicate_snapshot_issue_data
+    ):
+        """Bundles are ingested in any order, so refs must resolve locally."""
+        self._enable(processor, {})
+
+        bundles = list(
+            processor.transform(
+                iter([[empty_description_issue_data, duplicate_snapshot_issue_data]])
+            )
+        )
+
+        assert len(bundles) == 2
+        for bundle in bundles:
+            systems = _of_type(bundle, System)
+            targets = [
+                obj
+                for obj in bundle
+                if isinstance(obj, Relationship) and obj.type == "targets"
+            ]
+            assert len(systems) == 1
+            assert targets[0].target is systems[0]
+
+
+class TestTtps:
+    """MITRE techniques travel in the bundle of the issue that maps to them."""
+
+    @staticmethod
+    def _enable(processor, objects_by_issue: dict[str, list]) -> MagicMock:
+        """Attach a TTPs processor stub returning canned objects per issue.
+
+        Args:
+            processor: The issues processor under test.
+            objects_by_issue: Objects to return for each issue id.
+
+        Returns:
+            The stub, so calls can be asserted.
+        """
+        ttps = MagicMock()
+        ttps.objects_for_issue.side_effect = (
+            lambda issue, incident: objects_by_issue.get(issue.id, [])
+        )
+        processor._ttps = ttps
+        return ttps
+
+    def test_attack_patterns_are_added_to_the_issue_objects(
+        self, processor, signin_issue_data
+    ):
+        pattern = AttackPattern(
+            name="Develop Capabilities: Malware", mitre_id="T1587.001"
+        )
+        self._enable(processor, {signin_issue_data["id"]: [pattern]})
+
+        bundles = list(processor.transform(iter([[signin_issue_data]])))
+
+        assert any(obj is pattern for obj in bundles[0])
+
+    def test_nothing_is_added_when_ttps_are_disabled(
+        self, processor, signin_issue_data
+    ):
+        processor._ttps = None
+
+        bundles = list(processor.transform(iter([[signin_issue_data]])))
+
+        assert not _of_type(bundles[0], AttackPattern)
+
+    def test_the_incident_is_passed_to_the_ttps_processor(
+        self, processor, signin_issue_data
+    ):
+        ttps = self._enable(processor, {})
+
+        bundles = list(processor.transform(iter([[signin_issue_data]])))
+
+        incident = _of_type(bundles[0], Incident)[0]
+        assert ttps.objects_for_issue.call_args[0][1] is incident
+
+    def test_the_run_total_counts_the_attack_patterns(
+        self, processor, signin_issue_data
+    ):
+        pattern = AttackPattern(
+            name="Develop Capabilities: Malware", mitre_id="T1587.001"
+        )
+        self._enable(processor, {signin_issue_data["id"]: [pattern]})
+
+        list(processor.transform(iter([[signin_issue_data]])))
+
+        finished = [
+            call
+            for call in processor.logger.info.call_args_list
+            if "Import finished" in call[0][0]
+        ]
+        assert finished[0][0][1]["ttps"] == 1
+
+
+class TestBundleDeduplication:
+    """A bundle never carries the same object twice."""
+
+    def test_a_page_bundle_carries_a_shared_system_once(
+        self, processor, empty_description_issue_data, duplicate_snapshot_issue_data
+    ):
+        bundles = list(
+            processor.transform(
+                iter([[empty_description_issue_data, duplicate_snapshot_issue_data]])
+            )
+        )
+
+        assert len(bundles) == 1
+        assert len(_of_type(bundles[0], System)) == 1
+
+    def test_a_page_bundle_carries_a_shared_technique_once(
+        self, processor, empty_description_issue_data, duplicate_snapshot_issue_data
+    ):
+        # A distinct instance per issue, as the TTPs processor really builds
+        # them: only the deterministic id makes them the same object.
+        ttps = MagicMock()
+        ttps.objects_for_issue.side_effect = lambda issue, incident: [
+            AttackPattern(name="Develop Capabilities: Malware", mitre_id="T1587.001")
+        ]
+        processor._ttps = ttps
+
+        bundles = list(
+            processor.transform(
+                iter([[empty_description_issue_data, duplicate_snapshot_issue_data]])
+            )
+        )
+
+        assert len(_of_type(bundles[0], AttackPattern)) == 1
