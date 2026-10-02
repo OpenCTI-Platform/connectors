@@ -1,7 +1,7 @@
 """Tests for the passthrough ingestion logic."""
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -450,3 +450,44 @@ def test_filtered_bundle_keeps_dwi_author_as_single_creator(connector, helper):
     assert [o["id"] for o in sent if o["type"] == "identity"] == ["identity--dwi-own"]
     assert by_id["indicator--new"]["created_by_ref"] == "identity--dwi-own"
     assert "indicator--old" not in by_id
+
+
+def test_future_dated_object_does_not_push_cursor_past_now(connector, helper):
+    connector.sources = ["feed"]
+    connector.client.get_stix_bundle.return_value = {
+        "type": "bundle",
+        "id": "bundle--1",
+        "objects": [
+            {
+                "type": "indicator",
+                "id": "indicator--future",
+                "modified": "2099-01-01T00:00:00Z",
+            }
+        ],
+    }
+    connector.process_message()
+
+    saved = _saved_cursors(helper)["feed"]
+    assert saved <= datetime.now(timezone.utc)
+
+    # An object published right after the first run is still ingested
+    helper.get_state.return_value = {"cursors": {"feed": saved.isoformat()}}
+    connector.client.get_stix_bundle.return_value = {
+        "type": "bundle",
+        "id": "bundle--2",
+        "objects": [
+            {
+                "type": "indicator",
+                "id": "indicator--future",
+                "modified": "2099-01-01T00:00:00Z",
+            },
+            {
+                "type": "indicator",
+                "id": "indicator--new",
+                "modified": (saved + timedelta(seconds=1)).isoformat(),
+            },
+        ],
+    }
+    connector.process_message()
+
+    assert "indicator--new" in _sent_ids(helper)

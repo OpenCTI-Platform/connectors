@@ -317,6 +317,8 @@ class DarkWebInformerConnector:
                     continue
 
                 bundle_cursor = self._bundle_cursor(objects)
+                if bundle_cursor is not None:
+                    bundle_cursor = min(bundle_cursor, now)
                 # Resolved on the full snapshot: once filtered, the bundle may
                 # no longer reference DWI's author identity.
                 dwi_author = self._bundle_author(objects)
