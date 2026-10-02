@@ -70,7 +70,8 @@ def _make_case(title="Test Case", tlp=1, pap=0, severity=2, tags=None):
         "pap": pap,
         "severity": severity,
         "tags": tags or ["tag1"],
-        "extendedStatus": "Open",
+        "status": "Open",
+        "stage": "Open",
         "owner": "user@example.com",
     }
 
@@ -390,9 +391,42 @@ def test_process_main_case_with_status_mapping(connector):
         c.current_state = {}
 
     case = _make_case()
-    case["extendedStatus"] = "Open"
+    case["status"] = "Open"
     stix_case = c.process_main_case(case, [], [])
     assert stix_case is not None
+    assert stix_case.x_opencti_workflow_id == "wf-status-id-1"
+
+
+def test_process_main_case_status_mapping_value_with_colon(connector):
+    # A custom TheHive status literal maps to a value that itself contains a
+    # colon: partition(":") must keep the full value intact.
+    with patch.object(module, "TheHiveApi"):
+        c = module.TheHive(
+            _make_mock_config(
+                case_status_mapping=["Closed:wf:status:id"],
+            ),
+            MagicMock(),
+        )
+        c.current_state = {}
+
+    case = _make_case()
+    case["status"] = "Closed"
+    stix_case = c.process_main_case(case, [], [])
+    assert stix_case.x_opencti_workflow_id == "wf:status:id"
+
+
+def test_process_main_case_status_mapping_no_match(connector):
+    with patch.object(module, "TheHiveApi"):
+        c = module.TheHive(
+            _make_mock_config(case_status_mapping=["Open:wf-status-id-1"]),
+            MagicMock(),
+        )
+        c.current_state = {}
+
+    case = _make_case()
+    case["status"] = "1 - Malicious - Incident With Impact"
+    stix_case = c.process_main_case(case, [], [])
+    assert getattr(stix_case, "x_opencti_workflow_id", None) is None
 
 
 def test_process_main_case_with_user_mapping(connector):

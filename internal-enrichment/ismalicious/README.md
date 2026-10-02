@@ -19,7 +19,7 @@ Find below the detailed configuration options:
 | ------------------- | --------------------------- | --------- | -------------------------------------------------------------- |
 | OpenCTI URL         | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform                                |
 | OpenCTI Token       | `OPENCTI_TOKEN`             | Yes       | The token of the OpenCTI user                                  |
-| Connector ID        | `CONNECTOR_ID`              | No        | A unique `UUIDv4` for this connector (default: auto-generated) |
+| Connector ID        | `CONNECTOR_ID`              | No        | A unique `UUIDv4` for this connector (default: `ismalicious-enrichment`, set your own per deployment) |
 | Connector Name      | `CONNECTOR_NAME`            | No        | Name shown in OpenCTI (default: `isMalicious`)                 |
 | Connector Scope     | `CONNECTOR_SCOPE`           | No        | Observable types (default: `IPv4-Addr,IPv6-Addr,Domain-Name`)  |
 | Log Level           | `CONNECTOR_LOG_LEVEL`       | No        | Log level: `debug`, `info`, `warn`, `error` (default: `info`)  |
@@ -62,11 +62,30 @@ When an observable is enriched, the connector adds:
 
 | Data                | Description                                                                                                          |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Score               | Risk score (0-100) based on confidence and threat level                                                              |
+| Score               | Risk score (0-100) returned by the API in `riskScore.score`                                                          |
 | Labels              | Threat categories: `malicious`, `phishing`, `malware`, `command-and-control`, `botnet`, `ransomware`, `spam`, `scam` |
 | External References | Links to isMalicious report and original detection sources                                                           |
-| Description         | Summary of findings including source count and reputation breakdown                                                  |
+| Description         | Summary of findings: detection count, categories, infrastructure attributes and reputation breakdown                 |
 | Location + Sighting | Geographic information when available                                                                                |
+
+Each source listing returned by the API carries a `threatClass`. Only `threat`
+listings (the default) count as detections and produce labels. Listings of
+class `infrastructure` (cloud ranges, CDNs, Tor exits, DNS resolvers), `policy`
+(ads, tracking) or `allowlist` describe what the observable is rather than
+accuse it: they are kept as external references (`Listed as: …`) and
+summarised in the description as `Infrastructure: cloud, …`.
+
+A missing or invalid `riskScore.score` leaves the existing OpenCTI score
+unchanged. The connector does not invent a low score from `malicious=false`
+or derive a replacement risk score from detection ratios. With a positive
+`ISMALICIOUS_MIN_SCORE`, a response without a score is skipped because the
+threshold cannot be evaluated. At the default threshold of zero, its context
+is still reported without writing a score. A valid numeric score of zero is
+preserved.
+
+`malicious=false` is reported as "not flagged as malicious", not "clean" or
+"safe". Missing verdicts are reported as unknown. An absence of detections
+is not proof of safety.
 
 ## Supported Observable Types
 
@@ -81,6 +100,12 @@ The enrichment API expects:
 - **Base URL:** `https://api.ismalicious.com`
 - **Endpoint:** `GET /check?query=<value>&enrichment=standard`
 - **Authentication:** `X-API-KEY: <your-api-key>` header
+- **User-Agent:** `ismalicious-opencti/<version> (+https://ismalicious.com)`
+
+API keys are issued from the isMalicious dashboard; a free plan with a monthly
+lookup quota is available. A rejected key (HTTP 401) or an exhausted quota
+(HTTP 429) is reported in the connector logs and the observable is left
+unchanged.
 
 Example:
 

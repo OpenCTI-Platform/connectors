@@ -98,6 +98,13 @@ class HunterConfig(BaseConfigModel):
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        # The SDK declares `id` as required with no default, which would force
+        # every catalog deployment to supply one by hand. This connector-specific
+        # UUID v4 keeps CONNECTOR_ID optional for manager-supported deployments.
+        default="925c878a-d754-4ecd-b5d4-fcf8b22c767d",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="Intel 471 Hunter",

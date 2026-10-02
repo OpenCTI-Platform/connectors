@@ -15,7 +15,3 @@ class FindingRetrievalError(DataRetrievalError):
 
 class CVERetrievalError(DataRetrievalError):
     """Raised when an error occurs while retrieving an asset."""
-
-
-class ConfigLoaderError(BaseException):
-    """Exception for configuration loader errors."""
