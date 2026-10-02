@@ -350,9 +350,7 @@ def test_split_abandons_after_consecutive_analyst_lock_failures():
     assert entry["count"] == _SPLIT_FAILURE_SKIP_THRESHOLD
 
     helper.connector_logger.info.reset_mock()
-    connector._execute_split(
-        split, timestamp=1, obj_type="intrusion-sets", state=state
-    )
+    connector._execute_split(split, timestamp=1, obj_type="intrusion-sets", state=state)
     info_msgs = " ".join(
         str(c.args[0]) for c in helper.connector_logger.info.call_args_list if c.args
     )
@@ -402,9 +400,7 @@ def test_split_records_failure_when_opencti_push_fails():
     assert entry["count"] == _SPLIT_FAILURE_SKIP_THRESHOLD
     assert connector._batch_send.call_count == _SPLIT_FAILURE_SKIP_THRESHOLD
 
-    connector._execute_split(
-        split, timestamp=1, obj_type="intrusion-sets", state=state
-    )
+    connector._execute_split(split, timestamp=1, obj_type="intrusion-sets", state=state)
     assert connector._batch_send.call_count == _SPLIT_FAILURE_SKIP_THRESHOLD
 
 
