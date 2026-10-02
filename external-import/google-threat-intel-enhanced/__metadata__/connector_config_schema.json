@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/google-threat-intel-enhanced_config.schema.json",
+  "type": "object",
+  "properties": {
+    "CONNECTOR_NAME": {
+      "default": "Google Threat Intel Feeds",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "report",
+        "location",
+        "identity",
+        "attack_pattern",
+        "domain",
+        "file",
+        "ipv4",
+        "ipv6",
+        "malware",
+        "sector",
+        "intrusion_set",
+        "url",
+        "vulnerability"
+      ],
+      "description": "The scope of the connector, e.g. 'indicator, vulnerability'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT2H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_QUEUE_THRESHOLD": {
+      "default": 500,
+      "description": "Maximum number of messages in the connector queue before throttling.",
+      "type": "integer"
+    },
+    "CONNECTOR_TLP_LEVEL": {
+      "default": "AMBER+STRICT",
+      "description": "Traffic Light Protocol (TLP) marking for imported data.",
+      "enum": [
+        "WHITE",
+        "GREEN",
+        "AMBER",
+        "RED",
+        "WHITE+STRICT",
+        "GREEN+STRICT",
+        "AMBER+STRICT",
+        "RED+STRICT"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_ENRICHMENT_RESOLUTION": {
+      "default": "PT1M",
+      "description": "ISO 8601 duration between enrichment scheduler checks.",
+      "type": "string"
+    },
+    "CONNECTOR_RUN_AND_TERMINATE": {
+      "default": null,
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_QUEUE": {
+      "default": null,
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY": {
+      "default": null,
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
+      "default": null,
+      "type": "string"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
+      "default": null,
+      "type": "integer"
+    },
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "GTI_API_KEY": {
+      "type": "string"
+    },
+    "GTI_IMPORT_START_DATE": {
+      "default": "P1D",
+      "type": "string"
+    },
+    "GTI_API_URL": {
+      "default": "https://www.virustotal.com/api/v3",
+      "type": "string"
+    },
+    "GTI_X_TOOL": {
+      "default": "OpenCTI.GTIConnector.v1.0",
+      "type": "string"
+    },
+    "GTI_IMPORT_REPORTS": {
+      "default": true,
+      "type": "boolean"
+    },
+    "GTI_IMPORT_CAMPAIGNS": {
+      "default": false,
+      "type": "boolean"
+    },
+    "GTI_IMPORT_THREAT_ACTORS": {
+      "default": false,
+      "type": "boolean"
+    },
+    "GTI_IMPORT_MALWARE_FAMILIES": {
+      "default": false,
+      "type": "boolean"
+    },
+    "GTI_IMPORT_VULNERABILITIES": {
+      "default": false,
+      "type": "boolean"
+    },
+    "GTI_REPORT_TYPES": {
+      "default": [
+        "All"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_ORIGINS": {
+      "default": [
+        "All"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_CAMPAIGN_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_THREAT_ACTOR_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_MALWARE_FAMILY_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_VULNERABILITY_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_INDICATOR_SCORING": {
+      "default": "gti_derived",
+      "type": "string"
+    },
+    "GTI_ENRICH_IOCS_WITH_THREAT_ACTORS_AND_MALWARE": {
+      "default": false,
+      "type": "boolean"
+    },
+    "GTI_IOC_ENRICHMENT_THRESHOLD": {
+      "default": 250,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "GTI_API_KEY"
+  ],
+  "additionalProperties": true
+}
