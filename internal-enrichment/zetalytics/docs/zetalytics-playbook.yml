@@ -1,0 +1,35 @@
+opencti:
+  url: "${OPENCTI_URL}"
+  token: "${OPENCTI_TOKEN_ZETALYTICS_PLAYBOOK}"
+
+connector:
+  id: "00000000-0000-4000-8000-000000000102"
+  name: "Zetalytics DNS - Playbook"
+  type: "INTERNAL_ENRICHMENT"
+  scope: "Domain-Name,Hostname,IPv4-Addr,IPv6-Addr"
+  auto: false
+  log_level: "info"
+
+zetalytics:
+  token: "${ZETALYTICS_TOKEN}"
+  mode: "playbook"
+  max_tlp: "TLP:AMBER"
+  max_results: 100
+  max_subdomains: 0
+  max_whois_results: 0
+  max_ns_pivot_results: 0
+  max_mx_pivot_results: 0
+  lookback_days: 180
+  tsfield: "all"
+  include_live_dns: true
+  include_subdomains: false
+  include_d8s: false
+  include_historical_whois: false
+  include_ns_glue: false
+  include_ns2domain: false
+  include_mx2domain: false
+  include_email_pivots: false
+  confidence: 50
+  marking_definition: "TLP:AMBER"
+  create_note_when_no_results: false
+  include_portal_link: false
