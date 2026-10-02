@@ -6,7 +6,9 @@ from connector.utils import (
     _IOC_TAILORED_PATH,
     _VUL_GENERIC_PATH,
     _VUL_TAILORED_PATH,
+    TA_SEARCH_PATH,
     CYFIRMA_EXTENSION_DEFINITION_ID,
+    CYFIRMA_INDICATOR_EXTENSION_DEFINITION_ID,
     OPENCTI_EXTENSION_DEFINITION_ID,
     get_request_headers,
     get_request_params,
@@ -55,9 +57,7 @@ class CyfirmaClient:
         :return: Response object or None if an error occurs
         """
         try:
-            response =requests.get(
-                api_url, params=params, headers=headers, timeout=30
-            )
+            response = requests.get(api_url, params=params, headers=headers, timeout=30)
 
             self.helper.connector_logger.debug(
                 "CYFIRMA>> HTTP Get Request to endpoint", {"url_path": api_url}
@@ -70,9 +70,10 @@ class CyfirmaClient:
             return {}
 
         except requests.RequestException as err:
-            self.helper.connector_logger.error("[CONNECTOR] Request failed", {"error": str(err)})
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Request failed", {"error": str(err)}
+            )
             raise
-
 
     def get_indicators_feeds(self):
         try:
@@ -107,6 +108,31 @@ class CyfirmaClient:
             self.helper.connector_logger.info(
                 f"CYFIRMA connector -- Successfully fetched {len(return_data)} entities from API"
             )
+
+            ta_names = {
+                name.strip()
+                for indicator in return_data
+                if indicator.get("type") == "indicator"
+                for name in (
+                    (indicator.get("extensions") or {})
+                    .get(CYFIRMA_INDICATOR_EXTENSION_DEFINITION_ID, {})
+                    .get("threat_actors")
+                    or ""
+                ).split(",")
+                if name.strip()
+            }
+
+            if ta_names:
+                ta_res_data = self._request_data(
+                    TA_SEARCH_PATH,
+                    params={"values": list(ta_names)},
+                    headers=self.headers,
+                )
+                return_data.extend(
+                    obj
+                    for obj in (ta_res_data or {}).get("objects", [])
+                    if obj.get("type") != "threat-actor"
+                )
 
             return return_data
 
@@ -152,7 +178,7 @@ class CyfirmaClient:
 
             for vuln in return_data:
                 if vuln.get("type") == "vulnerability":
-                     self._convert_to_opencti_vulnerabilities(vuln)
+                    self._convert_to_opencti_vulnerabilities(vuln)
 
             return return_data
 
@@ -239,7 +265,6 @@ class CyfirmaClient:
                 )
                 # new_extension_props["x_opencti_cvss_v2_exploit_code_maturity"] = ext_props.get("exploitability_score", "0.0")
 
-            
             extensions = vuln.setdefault("extensions", {})
             extensions.pop(CYFIRMA_EXTENSION_DEFINITION_ID, None)
             opencti_extension = extensions.setdefault(

@@ -12,7 +12,7 @@ _VUL_PATH = f"{_BASE_PREFIX_PATH}{_STIX_PATH}/vulnerabilities"
 _VUL_TAILORED_PATH = f"{_BASE_PREFIX_PATH}{_STIX_PATH}/vulnerabilities/tailored"
 _VUL_GENERIC_PATH = f"{_BASE_PREFIX_PATH}{_STIX_PATH}/vulnerabilities/all"
 
-_ALERTS_API_PATH = f"{_BASE_PREFIX_PATH}/stix/2.1/observables/al/as"
+TA_SEARCH_PATH = f"{_BASE_PREFIX_PATH}{_STIX_PATH}/threat-actors/search"
 
 OPENCTI_EXTENSION_DEFINITION_ID = (
     "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
@@ -20,6 +20,8 @@ OPENCTI_EXTENSION_DEFINITION_ID = (
 CYFIRMA_EXTENSION_DEFINITION_ID = (
     "extension-definition--1f9c5b3e-8a2d-4e7b-9c6a-d1f5e3b2a470"
 )
+
+CYFIRMA_INDICATOR_EXTENSION_DEFINITION_ID = ("extension-definition--4e9c7b2d-8a3f-4c1e-9d6b-5f2a8e7c1b40")
 
 
 def get_request_headers(api_key: str) -> dict:
