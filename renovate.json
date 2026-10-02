@@ -104,7 +104,7 @@
       "automerge": false
     },
     {
-      "description": "Group lint and test tooling (PyPI packages and the flake8 pre-commit hook) into a single PR per base branch to cut noise. semanticCommitType is forced to chore because flake8 sits in runtime requirements files, which would otherwise make the group prefix fix or chore depending on which upgrade comes first. vulnerabilityAlerts keep their own PRs (groupName is null there).",
+      "description": "Group lint, formatting and test tooling (PyPI packages and the matching pre-commit hooks) into a single PR per base branch to cut noise. Hooks are grouped with their PyPI twin so the pre-commit version stays aligned with the one used in CI. semanticCommitType is forced to chore because flake8 sits in runtime requirements files, which would otherwise make the group prefix fix or chore depending on which upgrade comes first. vulnerabilityAlerts keep their own PRs (groupName is null there).",
       "matchPackageNames": [
         "mypy",
         "pylint",
@@ -113,10 +113,36 @@
         "ruff",
         "responses",
         "flake8",
-        "/^pycqa\\/flake8$/i"
+        "black",
+        "isort",
+        "/^pycqa\\/flake8$/i",
+        "/^psf\\/black-pre-commit-mirror$/i",
+        "/^pycqa\\/isort$/i"
       ],
       "groupName": "lint and test tools",
       "semanticCommitType": "chore"
+    },
+    {
+      "description": "Group pytest plugins and other test-only tooling into a single PR per base branch. The /^pytest-/ pattern covers future plugins; pytest-mock is excluded because it already belongs to the 'lint and test tools' group (a later rule would otherwise silently steal it). semanticCommitType is forced to chore for a stable group prefix.",
+      "matchPackageNames": [
+        "/^pytest-/",
+        "!pytest-mock",
+        "coverage",
+        "freezegun",
+        "requests-mock",
+        "factory-boy",
+        "faker",
+        "pre-commit"
+      ],
+      "groupName": "pytest plugins and test tools",
+      "semanticCommitType": "chore"
+    },
+    {
+      "description": "Group GitHub Actions updates into a single PR per base branch; they only affect CI, never the shipped connectors.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "groupName": "github actions"
     }
   ],
   "timezone": "Europe/Paris",
