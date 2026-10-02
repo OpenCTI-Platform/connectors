@@ -9,9 +9,7 @@ RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-de
     cd /opt/opencti-connector-import-document-ai && \
     pip3 install --no-cache-dir -r requirements.txt 
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh && chmod -R 0777 /opt/opencti-connector-import-document-ai
+RUN chmod -R 0777 /opt/opencti-connector-import-document-ai
 WORKDIR /opt/opencti-connector-import-document-ai
 ENV HOME=/opt/opencti-connector-import-document-ai
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["python", "main.py"]

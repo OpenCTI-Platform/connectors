@@ -3,6 +3,7 @@ opencti:
   token: "your-opencti-api-token"
 
 connector:
+  # Replace with a UUIDv4 unique to this deployment (e.g. `uuidgen`)
   id: "ismalicious-enrichment"
   type: "INTERNAL_ENRICHMENT"
   name: "isMalicious"

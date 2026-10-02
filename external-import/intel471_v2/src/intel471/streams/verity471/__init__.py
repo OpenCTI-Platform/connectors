@@ -1,3 +1,4 @@
+from .alerts import Verity471AlertsStream
 from .breach_alerts import Verity471BreachAlertsStream
 from .cves import Verity471CVEsStream
 from .fintel import Verity471FintelStream
@@ -16,4 +17,5 @@ __all__ = [
     "Verity471InfoReportsStream",
     "Verity471MalwareReportsStream",
     "Verity471SpotReportsStream",
+    "Verity471AlertsStream",
 ]

@@ -1,7 +1,6 @@
-pycti==7.260928.0
-antlr4-python3-runtime
+pycti==7.261002.0
 requests==2.33.0
 stix2==3.0.2
-PyYAML==6.0.3
+deprecation==2.1.0
 pydantic >=2.8.2, <3
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
