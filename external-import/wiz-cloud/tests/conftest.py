@@ -10,11 +10,13 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from connectors_sdk.models import OrganizationAuthor, System, TLPMarking  # noqa: E402
-from wiz_cloud.models import WizIssue  # noqa: E402
-from wiz_cloud.processors import (  # noqa: E402
-    WizIssuesProcessor,
-    WizVulnerabilitiesProcessor,
+from wiz_client.models import WizIssue, WizVulnerabilityFinding  # noqa: E402
+from wiz_cloud.processors import WizIssuesProcessor  # noqa: E402
+from wiz_cloud.processors.issues_processor.converters import (  # noqa: E402
+    IssueConverter,
+    VulnerabilityConverter,
 )
+from wiz_cloud.settings import WizCloudConfig  # noqa: E402
 from wiz_cloud.state import WizConnectorState  # noqa: E402
 
 
@@ -209,45 +211,84 @@ def empty_cve_description_finding_data(vulnerability_finding_data) -> dict:
 
 
 @pytest.fixture
-def processor() -> WizIssuesProcessor:
-    """A WizIssuesProcessor ready for conversion, with no I/O performed.
+def vulnerability_finding(vulnerability_finding_data) -> WizVulnerabilityFinding:
+    """The kernel CVE finding, parsed as a WizVulnerabilityFinding."""
+    return WizVulnerabilityFinding.model_validate(vulnerability_finding_data)
 
-    post_init() builds the HTTP client and reads settings, so it is skipped;
-    only the author and marking it would set are provided here, which is all
-    _convert() depends on. The logger and state are stubbed so transform()
-    can be exercised without a connector helper.
+
+@pytest.fixture
+def author() -> OrganizationAuthor:
+    """The Wiz author, added to every object."""
+    return OrganizationAuthor(name="Wiz")
+
+
+@pytest.fixture
+def marking() -> TLPMarking:
+    """The TLP marking, added to every object."""
+    return TLPMarking(level="amber+strict")
+
+
+@pytest.fixture
+def issue_converter(author, marking) -> IssueConverter:
+    """An IssueConverter with the default author and marking."""
+    return IssueConverter(author=author, marking=marking)
+
+
+@pytest.fixture
+def vulnerability_converter(author, marking) -> VulnerabilityConverter:
+    """A VulnerabilityConverter with the default author and marking."""
+    return VulnerabilityConverter(author=author, marking=marking)
+
+
+def _make_config(**overrides) -> WizCloudConfig:
+    """Build a WizCloudConfig with all required fields set.
+
+    Args:
+        **overrides: Fields to change from the default values.
+
+    Returns:
+        A validated WizCloudConfig.
+    """
+    return WizCloudConfig(
+        api_url="https://api.us17.app.wiz.io/graphql",
+        client_id="id",
+        client_secret="secret",
+        **overrides,
+    )
+
+
+@pytest.fixture
+def make_config():
+    """Function to build a WizCloudConfig, for tests that need other settings."""
+    return _make_config
+
+
+@pytest.fixture
+def processor(author, marking) -> WizIssuesProcessor:
+    """A WizIssuesProcessor for collect() and transform() tests, with no network calls.
+
+    post_init() is not called, because it creates the HTTP client and reads
+    the settings. This fixture sets the same attributes instead. The Wiz
+    client, the logger and the state are fakes.
+
+    Vulnerability import is off, like the default setting. To turn it on, set
+    processor._config = make_config(import_vulnerabilities=True).
     """
     processor = WizIssuesProcessor()
-    processor._author = OrganizationAuthor(name="Wiz")
-    processor._marking = TLPMarking(level="amber+strict")
+    processor._config = _make_config()
+    processor._client = MagicMock()
+    processor._author = author
+    processor._marking = marking
+    processor._issue_converter = IssueConverter(author=author, marking=marking)
+    processor._vulnerability_converter = VulnerabilityConverter(
+        author=author, marking=marking
+    )
     processor.logger = MagicMock()
     processor.state = WizConnectorState()
     return processor
 
 
 @pytest.fixture
-def vulnerabilities_processor() -> WizVulnerabilitiesProcessor:
-    """A WizVulnerabilitiesProcessor with a stubbed client and no I/O."""
-    from wiz_cloud.settings import WizCloudConfig
-
-    return WizVulnerabilitiesProcessor(
-        client=MagicMock(),
-        config=WizCloudConfig(
-            api_url="https://api.us17.app.wiz.io/graphql",
-            client_id="id",
-            client_secret="secret",
-        ),
-        logger=MagicMock(),
-        author=OrganizationAuthor(name="Wiz"),
-        marking=TLPMarking(level="amber+strict"),
-    )
-
-
-@pytest.fixture
-def system() -> System:
-    """The System an issue would have built for its cloud resource."""
-    return System(
-        name="tivan-eleonore-vm",
-        author=OrganizationAuthor(name="Wiz"),
-        markings=[TLPMarking(level="amber+strict")],
-    )
+def system(author, marking) -> System:
+    """The System that an issue creates for its cloud asset."""
+    return System(name="tivan-eleonore-vm", author=author, markings=[marking])

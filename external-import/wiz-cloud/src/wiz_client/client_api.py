@@ -1,8 +1,8 @@
 """Wiz GraphQL client on top of connectors_sdk BaseClientApi.
 
 BaseClientApi provides the session, retry strategy (honouring Retry-After),
-rate limiting and typed HTTP exceptions. Three Wiz-specific concerns are
-added here:
+rate limiting and typed HTTP exceptions. This client adds four things for
+Wiz:
 
 1. OAuth2 client-credentials token with refresh. session_headers is applied
    once at session creation and never refreshed, so per the SDK docstring the
@@ -10,25 +10,40 @@ added here:
    Wiz tokens last 24 h; a long-lived connector must refresh.
 
 2. GraphQL error handling. A failed query returns HTTP 200 with a populated
-   errors array and data: null, which sails past _raise_for_status. execute()
-   checks it explicitly.
+   errors array and data: null, which sails past _raise_for_status.
+   _execute() checks it explicitly.
 
 3. Cursor pagination with the cursor in the request body (after /
    pageInfo.endCursor), which neither _paginate_offset nor the ZeroFox
    next-URL paginator covers.
+
+4. Parsed results. paginate_issues() and paginate_vulnerabilities_findings()
+   read their GraphQL query from the wiz_client/queries folder, and convert
+   each result into a pydantic model. If a result cannot be parsed, they
+   raise pydantic.ValidationError. The result is not skipped.
 """
 
 import time
 from collections.abc import Iterator
+from datetime import datetime, timezone
+from importlib import resources
 from typing import Any
 
 import requests
 from connectors_sdk import ApiClientError, BaseClientApi
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from wiz_client.models import WizIssue, WizVulnerabilityFinding
 
 
 class WizGraphQLError(ApiClientError):
     """Raised on an HTTP 200 response carrying a populated GraphQL errors array."""
+
+
+def _utc(dt: datetime) -> str:
+    # Full precision matters: Wiz createdAt carries microseconds and the
+    # filter is exclusive, so truncating to the second would re-select the
+    # issue the cursor points at on every run.
+    return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 class WizApiClient(BaseClientApi):
@@ -91,7 +106,7 @@ class WizApiClient(BaseClientApi):
 
     # -- GraphQL ------------------------------------------------------------
 
-    def execute(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
+    def _execute(self, query: str, variables: dict[str, Any]) -> dict[str, Any]:
         """Run a single GraphQL query.
 
         Args:
@@ -113,7 +128,7 @@ class WizApiClient(BaseClientApi):
             raise WizGraphQLError("Wiz GraphQL response has no data")
         return data
 
-    def paginate(
+    def _paginate(
         self,
         query: str,
         variables: dict[str, Any],
@@ -136,7 +151,7 @@ class WizApiClient(BaseClientApi):
         variables = dict(variables)
         previous_cursor: str | None = None
         while True:
-            connection = self.execute(query, variables)[connection_key]
+            connection = self._execute(query, variables)[connection_key]
             nodes = connection.get("nodes") or []
             if nodes:
                 yield nodes
@@ -160,3 +175,126 @@ class WizApiClient(BaseClientApi):
                 return
             previous_cursor = cursor
             variables["after"] = cursor
+
+    def paginate_issues(
+        self,
+        first: int | None = None,
+        after: str | None = None,
+        type: list[str] | None = None,
+        severity: list[str] | None = None,
+        status: list[str] | None = None,
+        created_after: datetime | None = None,
+    ) -> Iterator[list[WizIssue]]:
+        """Get Wiz issues, page by page, oldest first.
+
+        With the oldest issues first, a run that stops in the middle has
+        still imported all issues up to a given date, with no gap.
+        Filters that are empty or None are not sent to Wiz.
+
+        Args:
+            first: Number of issues per page.
+            after: Cursor of the page to start from. None for the first page.
+            type: Issue types to get, e.g. ["THREAT_DETECTION"].
+            severity: Issue severities to get.
+            status: Issue statuses to get.
+            created_after: Only issues created after this date are returned.
+                The date is sent with microseconds.
+
+        Yields:
+            Lists of parsed issues, one list per page.
+
+        Raises:
+            pydantic.ValidationError: If an issue cannot be parsed as WizIssue.
+            WizGraphQLError: If Wiz returns GraphQL errors.
+        """
+        issues_query = (
+            resources.files("wiz_client.queries")
+            .joinpath("issues.graphql")
+            .read_text("utf-8")
+        )
+
+        filter_by = {}
+        if type:
+            filter_by["type"] = type
+        if severity:
+            filter_by["severity"] = severity
+        if status:
+            filter_by["status"] = status
+        if created_after:
+            filter_by["createdAt"] = {"after": _utc(created_after)}
+
+        pages = self._paginate(
+            query=issues_query,
+            variables={
+                "first": first,
+                "after": after,
+                "orderBy": {"field": "CREATED_AT", "direction": "ASC"},
+                "filterBy": filter_by,
+            },
+            connection_key="issues",
+        )
+
+        for page in pages:
+            yield [WizIssue.model_validate(raw) for raw in page]
+
+    def paginate_vulnerabilities_findings(
+        self,
+        first: int | None = None,
+        after: str | None = None,
+        severity: list[str] | None = None,
+        status: list[str] | None = None,
+        has_exploit: bool | None = None,
+        asset_id: str | None = None,
+    ) -> Iterator[list[WizVulnerabilityFinding]]:
+        """Get Wiz vulnerability findings, page by page, newest first.
+
+        Filters that are empty or None are not sent to Wiz. has_exploit is
+        sent when it is True or False. Be careful: False returns only the
+        findings WITHOUT a known exploit.
+
+        Args:
+            first: Number of findings per page.
+            after: Cursor of the page to start from. None for the first page.
+            severity: Finding severities to get.
+            status: Finding statuses to get.
+            has_exploit: True to get only findings with a known exploit,
+                False to get only findings without one, None for all.
+            asset_id: Only get the findings of this asset.
+
+        Yields:
+            Lists of parsed findings, one list per page.
+
+        Raises:
+            pydantic.ValidationError: If a finding cannot be parsed as
+                WizVulnerabilityFinding.
+            WizGraphQLError: If Wiz returns GraphQL errors.
+        """
+        vulnerabilities_query = (
+            resources.files("wiz_client.queries")
+            .joinpath("vulnerability_findings.graphql")
+            .read_text("utf-8")
+        )
+
+        filter_by = {}
+        if asset_id:
+            filter_by["assetIdV2"] = {"equals": [asset_id]}
+        if severity:
+            filter_by["severity"] = severity
+        if status:
+            filter_by["status"] = status
+        if has_exploit is not None:
+            filter_by["hasExploit"] = has_exploit
+
+        pages = self._paginate(
+            query=vulnerabilities_query,
+            variables={
+                "first": first,
+                "after": after,
+                "orderBy": {"field": "CREATED_AT", "direction": "DESC"},
+                "filterBy": filter_by,
+            },
+            connection_key="vulnerabilityFindings",
+        )
+
+        for page in pages:
+            yield [WizVulnerabilityFinding.model_validate(raw) for raw in page]
