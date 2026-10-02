@@ -323,6 +323,16 @@ def test_get_start_datetime_with_valid_state(
     assert result == expected  # noqa: S101
 
 
+def test_get_start_datetime_with_legacy_off_boundary_state(
+    gti_config: DummyConfig, caplog: Any
+) -> None:
+    """Off-boundary state (previous implementation) → retries the recorded hour."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    state = {"indicator_last_run_datetime": "2026-09-28T14:00:05.136020+00:00"}
+    result = ind_orch._get_start_datetime(state)
+    assert result == datetime(2026, 9, 28, 14, 0, 0, tzinfo=timezone.utc)  # noqa: S101
+
+
 def test_get_start_datetime_with_naive_datetime(
     gti_config: DummyConfig, caplog: Any
 ) -> None:
@@ -367,14 +377,179 @@ async def test_run_with_future_state_returns_immediately(
     )
 
 
-# --- _process_package with exception (orchestrator_indicator lines 142-143) ---
+# --- run only requests closed hours and resumes where it stopped ---
+
+
+FROZEN_NOW = datetime(2026, 9, 28, 14, 1, 37, tzinfo=timezone.utc)
+
+
+class _FrozenDatetime(datetime):
+    """datetime whose now() is pinned, so hour boundaries are deterministic."""
+
+    @classmethod
+    def now(cls, tz: Any = None) -> "datetime":  # type: ignore[override]
+        """Return the frozen instant."""
+        return FROZEN_NOW if tz else FROZEN_NOW.replace(tzinfo=None)
+
+
+@pytest.fixture
+def frozen_now(monkeypatch: Any) -> datetime:
+    """Pin the orchestrator's clock to FROZEN_NOW."""
+    from connector.src.custom.orchestrators.indicator import orchestrator_indicator
+
+    monkeypatch.setattr(orchestrator_indicator, "datetime", _FrozenDatetime)
+    return FROZEN_NOW
+
+
+def _record_fetches(monkeypatch: Any, unavailable: set[tuple[str, str]]) -> list:
+    """Replace the IOC delta fetch with a recorder.
+
+    Returns the list of (package_id, ioc_type) requests; pairs in ``unavailable``
+    raise GTIIndicatorPackageUnavailableError, every other file request returns
+    the sample entry.
+    """
+    from connector.src.custom.client_api.indicator.client_api_indicator import (
+        ClientAPIIndicator,
+    )
+    from connector.src.custom.exceptions import GTIIndicatorPackageUnavailableError
+
+    requests: list[tuple[str, str]] = []
+
+    async def _fake_fetch(self: Any, package_id: str, ioc_type: str) -> Any:
+        requests.append((package_id, ioc_type))
+        if (package_id, ioc_type) in unavailable:
+            raise GTIIndicatorPackageUnavailableError(
+                message="package not available yet",
+                package_id=package_id,
+                status_code="400",
+            )
+        return [SAMPLE_FILE_ENTRY] if ioc_type == "file" else []
+
+    monkeypatch.setattr(
+        ClientAPIIndicator, "fetch_ioc_delta_package", _fake_fetch, raising=True
+    )
+    return requests
 
 
 @pytest.mark.asyncio
-async def test_process_package_with_exception_logs_warning(
+async def test_run_never_requests_the_in_progress_hour(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any, frozen_now: datetime
+) -> None:
+    """The hour containing now() is left for a later run, not marked done.
+
+    Regression: the last iteration used to request the in-progress hour, whose
+    package does not exist yet, and still record it in state, so it was never
+    fetched once published.
+    """
+    requests = _record_fetches(monkeypatch, unavailable=set())
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+
+    await ind_orch.run({"indicator_last_run_datetime": "2026-09-28T12:00:00+00:00"})
+
+    assert requests == [("2026092813", "file")]  # noqa: S101
+    stored = ind_orch.work_manager.updated_state["indicator_last_run_datetime"]
+    assert stored == "2026-09-28T13:00:00+00:00"  # noqa: S101
+
+
+@pytest.mark.asyncio
+async def test_run_retries_hour_recorded_by_legacy_state(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any, frozen_now: datetime
+) -> None:
+    """Off-boundary state from the previous implementation retries its hour.
+
+    The old loop recorded the in-progress hour (e.g. 12:00:05 at 12:01) without
+    fetching it, so that hour is requested again before moving on.
+    """
+    requests = _record_fetches(monkeypatch, unavailable=set())
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+
+    await ind_orch.run({"indicator_last_run_datetime": "2026-09-28T12:00:05+00:00"})
+
+    assert requests == [  # noqa: S101
+        ("2026092812", "file"),
+        ("2026092813", "file"),
+    ]
+    stored = ind_orch.work_manager.updated_state["indicator_last_run_datetime"]
+    assert stored == "2026-09-28T13:00:00+00:00"  # noqa: S101
+
+
+@pytest.mark.asyncio
+async def test_run_first_run_floors_lookback_to_the_hour(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any, frozen_now: datetime
+) -> None:
+    """Without state, the lookback start is aligned to the package hour."""
+    requests = _record_fetches(monkeypatch, unavailable=set())
+    gti_config.indicator_import_start_date = timedelta(hours=3)
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+
+    await ind_orch.run(None)
+
+    assert [pkg for pkg, _ in requests] == [  # noqa: S101
+        "2026092811",
+        "2026092812",
+        "2026092813",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_run_stops_at_unavailable_package_without_advancing_state(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any, frozen_now: datetime
+) -> None:
+    """A closed hour that is not published yet is retried, and nothing of it is sent."""
+    gti_config.indicator_types = ["file", "ip"]
+    requests = _record_fetches(monkeypatch, unavailable={("2026092813", "ip")})
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    flush = MagicMock(wraps=ind_orch.batch_processor.flush)
+    monkeypatch.setattr(ind_orch.batch_processor, "flush", flush)
+
+    await ind_orch.run({"indicator_last_run_datetime": "2026-09-28T11:00:00+00:00"})
+
+    assert requests == [  # noqa: S101
+        ("2026092812", "file"),
+        ("2026092812", "ip"),
+        ("2026092813", "file"),
+        ("2026092813", "ip"),
+    ]
+    stored = ind_orch.work_manager.updated_state["indicator_last_run_datetime"]
+    assert stored == "2026-09-28T12:00:00+00:00"  # noqa: S101
+    assert flush.call_count == 1  # noqa: S101
+    assert ind_orch.batch_processor.get_current_batch_size() == 0  # noqa: S101
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any(  # noqa: S101
+        "IOC delta package unavailable, will retry on next run" in msg
+        for msg in all_messages
+    )
+
+
+@pytest.mark.asyncio
+async def test_run_does_not_advance_state_when_sending_fails(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any, frozen_now: datetime
+) -> None:
+    """State is written only after the hour's objects reach OpenCTI."""
+    _record_fetches(monkeypatch, unavailable=set())
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+
+    def _fail_flush() -> None:
+        raise RuntimeError("broker connection lost")
+
+    monkeypatch.setattr(ind_orch.batch_processor, "flush", _fail_flush)
+
+    with pytest.raises(RuntimeError, match="broker connection lost"):
+        await ind_orch.run({"indicator_last_run_datetime": "2026-09-28T12:00:00+00:00"})
+
+    assert (  # noqa: S101
+        "indicator_last_run_datetime" not in ind_orch.work_manager.updated_state
+    )
+
+
+# --- _fetch_package_entries error handling ---
+
+
+@pytest.mark.asyncio
+async def test_fetch_package_entries_with_exception_logs_warning(
     gti_config: DummyConfig, caplog: Any, monkeypatch: Any
 ) -> None:
-    """fetch raises an exception → logs warning without crashing."""
+    """Non-retryable fetch errors skip that IOC type with a warning."""
     from connector.src.custom.client_api.indicator.client_api_indicator import (
         ClientAPIIndicator,
     )
@@ -386,21 +561,19 @@ async def test_process_package_with_exception_logs_warning(
         ClientAPIIndicator, "fetch_ioc_delta_package", _raise_on_fetch, raising=True
     )
     ind_orch = _get_indicator_orchestrator(gti_config, caplog)
-    await ind_orch._process_package("2025010100", "file")
+    result = await ind_orch._fetch_package_entries("2025010100", "file")
+    assert result is None  # noqa: S101
     all_messages = [rec.getMessage() for rec in caplog.records]
     assert any(  # noqa: S101
         "Error processing IOC delta package" in msg for msg in all_messages
     )
 
 
-# --- _process_package with empty entries (orchestrator_indicator line 120) ---
-
-
 @pytest.mark.asyncio
-async def test_process_package_with_empty_entries_returns_early(
+async def test_fetch_package_skips_empty_ioc_types(
     gti_config: DummyConfig, caplog: Any, monkeypatch: Any
 ) -> None:
-    """fetch returns None → early return without processing."""
+    """Types with no entries are left out and not logged as fetched."""
     from connector.src.custom.client_api.indicator.client_api_indicator import (
         ClientAPIIndicator,
     )
@@ -412,9 +585,9 @@ async def test_process_package_with_empty_entries_returns_early(
         ClientAPIIndicator, "fetch_ioc_delta_package", _return_none, raising=True
     )
     ind_orch = _get_indicator_orchestrator(gti_config, caplog)
-    await ind_orch._process_package("2025010100", "file")
+    result = await ind_orch._fetch_package("2025010100")
+    assert result == {}  # noqa: S101
     all_messages = [rec.getMessage() for rec in caplog.records]
-    # Should NOT log "Fetched IOC delta entries" since entries were empty
     assert not any(  # noqa: S101
         "Fetched IOC delta entries" in msg for msg in all_messages
     )
