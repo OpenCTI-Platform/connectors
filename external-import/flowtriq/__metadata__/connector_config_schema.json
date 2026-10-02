@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/flowtriq_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Flowtriq DDoS Incidents",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "flowtriq"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "FLOWTRIQ_API_URL": {
+      "default": "https://app.flowtriq.com",
+      "description": "Flowtriq API base URL.",
+      "type": "string"
+    },
+    "FLOWTRIQ_API_KEY": {
+      "description": "Your Flowtriq deploy token (64-character hex string).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "FLOWTRIQ_INCIDENT_STATUS": {
+      "default": "resolved",
+      "description": "Filter incidents by status. Leave empty to fetch all statuses.",
+      "enum": [
+        "active",
+        "resolved",
+        "false_positive",
+        ""
+      ],
+      "type": "string"
+    },
+    "FLOWTRIQ_INCIDENT_SEVERITY": {
+      "default": [],
+      "description": "Comma-separated severity levels to import (critical, high, medium, low). Leave empty for all.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "FLOWTRIQ_CREATE_INDICATOR": {
+      "default": true,
+      "description": "Whether to create Indicator objects from observables.",
+      "type": "boolean"
+    },
+    "FLOWTRIQ_TLP_LEVEL": {
+      "default": "green",
+      "description": "TLP marking for imported data (`clear`, `green`, `amber`, `amber+strict`, `red`).",
+      "enum": [
+        "clear",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "FLOWTRIQ_IMPORT_LIMIT": {
+      "default": 100,
+      "description": "Maximum number of incidents to fetch per run.",
+      "type": "integer"
+    },
+    "FLOWTRIQ_MIN_SEVERITY": {
+      "default": "",
+      "description": "Minimum severity threshold. Incidents below this level are skipped.",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical",
+        ""
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "FLOWTRIQ_API_KEY"
+  ],
+  "additionalProperties": true
+}
