@@ -122,7 +122,7 @@ Three steps to a running connector. Run all commands from the connector director
    $EDITOR .env
    ```
 
-   At minimum set `OPENCTI_URL`, `OPENCTI_TOKEN`, `CONNECTOR_ID`, `TI_API__USERNAME`, `TI_API__TOKEN`, and enable at least one collection (`TI_API__COLLECTIONS__<NAME>__ENABLE=true` + `…__DEFAULT_DATE=YYYY-MM-DD`). See [Common environment variables](#common-environment-variables), [Recommended `DEFAULT_DATE` per collection](#recommended-default_date-per-collection), and the `.env.sample` file itself for the full list.
+   At minimum set `OPENCTI_URL`, `OPENCTI_TOKEN`, `CONNECTOR_ID`, `TI_API_USERNAME`, `TI_API_TOKEN`, and enable at least one collection (`TI_API_COLLECTIONS_<NAME>_ENABLE=true` + `…__DEFAULT_DATE=YYYY-MM-DD`). See [Common environment variables](#common-environment-variables), [Recommended `DEFAULT_DATE` per collection](#recommended-default_date-per-collection), and the `.env.sample` file itself for the full list.
 
 2. **Make sure the connector can reach OpenCTI and RabbitMQ.** The shipped `docker-compose.yml` follows the OpenCTI convention: it is a service definition, not a standalone stack. Pick one of:
 
@@ -162,6 +162,8 @@ Both files carry the same logical settings; `.env.sample` and `config.yml.sample
 > **Important — choose one source per deployment.**
 > Do not mix `.env` and `config.yml`. If both are present, `config.yml` wins and `.env` is silently ignored. Use whichever fits your operations team; we recommend `.env` because Docker Compose, secret managers, and `docker-instances/` all integrate with it cleanly.
 
+> **Variable naming.** Connector-specific variables are single-underscore `TI_API_<FIELD>` names: `TI_API_URL`, `TI_API_PROXY_IP`, `TI_API_EXTRA_SETTINGS_<KEY>` and `TI_API_COLLECTIONS_<COLLECTION>_<KEY>` (for example `TI_API_COLLECTIONS_APT_THREAT_ENABLE`). These are the names the connector manager exposes. The former double-underscore spelling (`TI_API__COLLECTIONS__APT_THREAT__ENABLE`, ...) is still accepted so existing deployments keep working, but it is deprecated and logs a warning at startup. In `config.yml` the nested `ti_api.collections.<slug>.<key>` layout is unchanged.
+
 Expected environment variables to be set in the `docker-compose.yml` that describe the connector itself. Most of the time, these values are NOT expected to be changed.
 
 | Parameter                  | Mandatory  | Description                                                        |
@@ -198,9 +200,9 @@ Below are the parameters you'll need to set for Threat Intelligence API:
 
 | Parameter            |  Mandatory | Description                                    |
 |----------------------|------------|-------------------------------------------------|
-| `TI_API__URL`        |  Yes       | Threat Intelligence API URL.                   |
-| `TI_API__USERNAME`   |  Yes       | Threat Intelligence Portal profile email.      |
-| `TI_API__TOKEN`      |  Yes       | Threat Intelligence API Token.                 |
+| `TI_API_URL`        |  Yes       | Threat Intelligence API URL.                   |
+| `TI_API_USERNAME`   |  Yes       | Threat Intelligence Portal profile email.      |
+| `TI_API_TOKEN`      |  Yes       | Threat Intelligence API Token.                 |
 
 
 ### Threat Intelligence API Proxy environment variables
@@ -209,11 +211,11 @@ Below are the parameters you'll need to set if you have proxy server (if necessa
 
 | Parameter                    | Mandatory | Description     |
 |------------------------------|-----------|-----------------|
-| `TI_API__PROXY__IP`          | No        | Proxy host or IP. |
-| `TI_API__PROXY__PORT`       | No        | Proxy port.     |
-| `TI_API__PROXY__PROTOCOL`   | No        | Proxy protocol. |
-| `TI_API__PROXY__USERNAME`   | No        | Proxy username. |
-| `TI_API__PROXY__PASSWORD`   | No        | Proxy password. |
+| `TI_API_PROXY_IP`          | No        | Proxy host or IP. |
+| `TI_API_PROXY_PORT`       | No        | Proxy port.     |
+| `TI_API_PROXY_PROTOCOL`   | No        | Proxy protocol. |
+| `TI_API_PROXY_USERNAME`   | No        | Proxy username. |
+| `TI_API_PROXY_PASSWORD`   | No        | Proxy password. |
 
 
 ### Single-container vs multi-instance
@@ -254,20 +256,20 @@ To re-seed a collection from scratch:
 
 To start ingesting a collection:
 
-1. Set `TI_API__COLLECTIONS__<NAME>__ENABLE=true`.
-2. Set `TI_API__COLLECTIONS__<NAME>__DEFAULT_DATE='YYYY-MM-DD'`. **Always specify an explicit date**. See the recommended lookback windows in the next subsection.
+1. Set `TI_API_COLLECTIONS_<NAME>_ENABLE=true`.
+2. Set `TI_API_COLLECTIONS_<NAME>_DEFAULT_DATE='YYYY-MM-DD'`. **Always specify an explicit date**. See the recommended lookback windows in the next subsection.
 
 Example in `.env`:
 
 ```bash
-TI_API__COLLECTIONS__APT_THREAT__ENABLE=true
-TI_API__COLLECTIONS__APT_THREAT__DEFAULT_DATE='2022-01-01'
+TI_API_COLLECTIONS_APT_THREAT_ENABLE=true
+TI_API_COLLECTIONS_APT_THREAT_DEFAULT_DATE='2022-01-01'
 
-TI_API__COLLECTIONS__ATTACKS_PHISHING_GROUP__ENABLE=true
-TI_API__COLLECTIONS__ATTACKS_PHISHING_GROUP__DEFAULT_DATE='2026-05-12'
+TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_ENABLE=true
+TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_DEFAULT_DATE='2026-05-12'
 
-TI_API__COLLECTIONS__IOC_PRIMARY__ENABLE=true
-TI_API__COLLECTIONS__IOC_PRIMARY__DEFAULT_DATE='2026-02-12'
+TI_API_COLLECTIONS_IOC_PRIMARY_ENABLE=true
+TI_API_COLLECTIONS_IOC_PRIMARY_DEFAULT_DATE='2026-02-12'
 ```
 
 Equivalent in `config.yml`:
@@ -296,37 +298,37 @@ Default date format.
 
 Use the following lookback windows to set a specific DEFAULT_DATE for the initial run. Convert each window into a calendar date in 'YYYY-MM-DD' (e.g., "5 days ago" → "2026-01-18" if today is 2026-01-23).
 
-- TI_API__COLLECTIONS__APT_THREAT__DEFAULT_DATE: 2–4 years ago
-- TI_API__COLLECTIONS__APT_THREAT_ACTOR__DEFAULT_DATE: 2–4 years ago
-- TI_API__COLLECTIONS__ATTACKS_DDOS__DEFAULT_DATE: 5–10 days ago
-- TI_API__COLLECTIONS__ATTACKS_DEFACE__DEFAULT_DATE: 5–10 days ago
-- TI_API__COLLECTIONS__ATTACKS_PHISHING_GROUP__DEFAULT_DATE: 3–5 days ago
-- TI_API__COLLECTIONS__ATTACKS_PHISHING_KIT__DEFAULT_DATE: 30 days ago
-- TI_API__COLLECTIONS__COMPROMISED_ACCESS__DEFAULT_DATE: 90 days ago
-- TI_API__COLLECTIONS__COMPROMISED_ACCOUNT_GROUP__DEFAULT_DATE: 2–4 years ago
-- TI_API__COLLECTIONS__COMPROMISED_BANK_CARD_GROUP__DEFAULT_DATE: 2 years ago
-- TI_API__COLLECTIONS__COMPROMISED_DISCORD__DEFAULT_DATE: 30 days ago
-- TI_API__COLLECTIONS__COMPROMISED_MASKED_CARD__DEFAULT_DATE: 90 days ago
-- TI_API__COLLECTIONS__COMPROMISED_MESSENGER__DEFAULT_DATE: 30 days ago
-- TI_API__COLLECTIONS__COMPROMISED_SPD__DEFAULT_DATE: 90 days ago
-- TI_API__COLLECTIONS__HI_OPEN_THREATS__DEFAULT_DATE: 30 days ago
-- TI_API__COLLECTIONS__HI_THREAT__DEFAULT_DATE: 2–4 years ago
-- TI_API__COLLECTIONS__HI_THREAT_ACTOR__DEFAULT_DATE: 2–4 years ago
-- TI_API__COLLECTIONS__MALWARE_CNC__DEFAULT_DATE: 90 days ago
-- TI_API__COLLECTIONS__MALWARE_MALWARE__DEFAULT_DATE: 2–4 years ago
-- TI_API__COLLECTIONS__MALWARE_CONFIG__DEFAULT_DATE: 30 days ago
-- TI_API__COLLECTIONS__MALWARE_SIGNATURE__DEFAULT_DATE: 30 days ago
-- TI_API__COLLECTIONS__MALWARE_YARA__DEFAULT_DATE: 30 days ago
-- TI_API__COLLECTIONS__IOC_PRIMARY__DEFAULT_DATE: 90 days ago
-- TI_API__COLLECTIONS__DARKWEB_FORUMS__DEFAULT_DATE: 90 days ago
-- TI_API__COLLECTIONS__OSI_GIT_REPOSITORY__DEFAULT_DATE: 30 days ago
-- TI_API__COLLECTIONS__OSI_PUBLIC_LEAK__DEFAULT_DATE: 30 days ago
-- TI_API__COLLECTIONS__OSI_VULNERABILITY__DEFAULT_DATE: 90 days ago
-- TI_API__COLLECTIONS__SUSPICIOUS_IP_OPEN_PROXY__DEFAULT_DATE: 5 days ago
-- TI_API__COLLECTIONS__SUSPICIOUS_IP_SCANNER__DEFAULT_DATE: 5 days ago
-- TI_API__COLLECTIONS__SUSPICIOUS_IP_SOCKS_PROXY__DEFAULT_DATE: 5 days ago
-- TI_API__COLLECTIONS__SUSPICIOUS_IP_TOR_NODE__DEFAULT_DATE: 5 days ago
-- TI_API__COLLECTIONS__SUSPICIOUS_IP_VPN__DEFAULT_DATE: 5 days ago
+- TI_API_COLLECTIONS_APT_THREAT_DEFAULT_DATE: 2–4 years ago
+- TI_API_COLLECTIONS_APT_THREAT_ACTOR_DEFAULT_DATE: 2–4 years ago
+- TI_API_COLLECTIONS_ATTACKS_DDOS_DEFAULT_DATE: 5–10 days ago
+- TI_API_COLLECTIONS_ATTACKS_DEFACE_DEFAULT_DATE: 5–10 days ago
+- TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_DEFAULT_DATE: 3–5 days ago
+- TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT_DEFAULT_DATE: 30 days ago
+- TI_API_COLLECTIONS_COMPROMISED_ACCESS_DEFAULT_DATE: 90 days ago
+- TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP_DEFAULT_DATE: 2–4 years ago
+- TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP_DEFAULT_DATE: 2 years ago
+- TI_API_COLLECTIONS_COMPROMISED_DISCORD_DEFAULT_DATE: 30 days ago
+- TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD_DEFAULT_DATE: 90 days ago
+- TI_API_COLLECTIONS_COMPROMISED_MESSENGER_DEFAULT_DATE: 30 days ago
+- TI_API_COLLECTIONS_COMPROMISED_SPD_DEFAULT_DATE: 90 days ago
+- TI_API_COLLECTIONS_HI_OPEN_THREATS_DEFAULT_DATE: 30 days ago
+- TI_API_COLLECTIONS_HI_THREAT_DEFAULT_DATE: 2–4 years ago
+- TI_API_COLLECTIONS_HI_THREAT_ACTOR_DEFAULT_DATE: 2–4 years ago
+- TI_API_COLLECTIONS_MALWARE_CNC_DEFAULT_DATE: 90 days ago
+- TI_API_COLLECTIONS_MALWARE_MALWARE_DEFAULT_DATE: 2–4 years ago
+- TI_API_COLLECTIONS_MALWARE_CONFIG_DEFAULT_DATE: 30 days ago
+- TI_API_COLLECTIONS_MALWARE_SIGNATURE_DEFAULT_DATE: 30 days ago
+- TI_API_COLLECTIONS_MALWARE_YARA_DEFAULT_DATE: 30 days ago
+- TI_API_COLLECTIONS_IOC_PRIMARY_DEFAULT_DATE: 90 days ago
+- TI_API_COLLECTIONS_DARKWEB_FORUMS_DEFAULT_DATE: 90 days ago
+- TI_API_COLLECTIONS_OSI_GIT_REPOSITORY_DEFAULT_DATE: 30 days ago
+- TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_DEFAULT_DATE: 30 days ago
+- TI_API_COLLECTIONS_OSI_VULNERABILITY_DEFAULT_DATE: 90 days ago
+- TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY_DEFAULT_DATE: 5 days ago
+- TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER_DEFAULT_DATE: 5 days ago
+- TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY_DEFAULT_DATE: 5 days ago
+- TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE_DEFAULT_DATE: 5 days ago
+- TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN_DEFAULT_DATE: 5 days ago
 
 ### Notes
 
@@ -545,7 +547,7 @@ These appear in OpenCTI on the actor's page under **Knowledge → Arsenal → Ma
 
 > The mapping for `stat.malware[]` and `stat.cve[]` is enabled out of the box (in `src/docs/configs/mapping.json`). Previously these two fields were sourced through a `__nested_dot_path_to_list: "stat"` workaround that happened to produce the same SDO graph but in a non-obvious way; the direct-path mapping is the canonical form going forward.
 
-**`description` field handling.** By default the upstream `description` is written verbatim to `Threat-Actor.description` (or `Intrusion-Set.description` when `INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR=true`). When `TI_API__COLLECTIONS__APT_THREAT_ACTOR__DESCRIPTION_IN_EXTERNAL_REFERENCES=true`, the SDO's `description` field is cleared and the body is mirrored into an external reference with `source_name="Threat actor description"` (or `"Intrusion set description"` for the intrusion-set variant). The TI-portal link continues to be added as a separate external reference regardless of this flag.
+**`description` field handling.** By default the upstream `description` is written verbatim to `Threat-Actor.description` (or `Intrusion-Set.description` when `INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR=true`). When `TI_API_COLLECTIONS_APT_THREAT_ACTOR_DESCRIPTION_IN_EXTERNAL_REFERENCES=true`, the SDO's `description` field is cleared and the body is mirrored into an external reference with `source_name="Threat actor description"` (or `"Intrusion set description"` for the intrusion-set variant). The TI-portal link continues to be added as a separate external reference regardless of this flag.
 
 #### `hi/threat` — Cybercrime threat reports
 
@@ -555,7 +557,7 @@ Routed via **default flow**. Identical schema to `apt/threat`, including all of 
 
 Routed via **default flow**. Same emission set as `apt/threat_actor` (Threat-Actor / Intrusion-Set + `Malware` × N from `stat.malware[]` + `Vulnerability` × N from `stat.cve[]` + base/targeted Locations + the `Note` ("Threat actor profile: …") with the structured targeting / expertise / activity statistics) with `cybercriminal` labels instead of `nation_state`. The `Threat-Actor —[uses]→ Malware` and `Threat-Actor —[targets]→ Vulnerability` relationships are built the same way, so the actor's arsenal shows up on the OpenCTI actor page (**Knowledge → Arsenal**, **Knowledge → Vulnerabilities**).
 
-`description` handling is identical to `apt/threat_actor`: `TI_API__COLLECTIONS__HI_THREAT_ACTOR__DESCRIPTION_IN_EXTERNAL_REFERENCES=true` moves the body from `Threat-Actor.description` / `Intrusion-Set.description` to an external reference (`source_name="Threat actor description"` or `"Intrusion set description"` respectively).
+`description` handling is identical to `apt/threat_actor`: `TI_API_COLLECTIONS_HI_THREAT_ACTOR_DESCRIPTION_IN_EXTERNAL_REFERENCES=true` moves the body from `Threat-Actor.description` / `Intrusion-Set.description` to an external reference (`source_name="Threat actor description"` or `"Intrusion set description"` respectively).
 
 #### `hi/open_threats` — Consolidated public reports
 
@@ -599,7 +601,7 @@ Routed via **special** handler `generate_ioc_primary`. Indicator-first feed — 
 
 Each emitted Indicator also carries up to **5** malware-family names and up to **5** threat-actor names as bare labels, plus any free-form strings from the event-level `tags[]` array — all filterable in the OpenCTI UI without traversing `indicates` relations.
 
-**TTL:** 90 days. Configure via `TI_API__COLLECTIONS__IOC_PRIMARY__TTL`.
+**TTL:** 90 days. Configure via `TI_API_COLLECTIONS_IOC_PRIMARY_TTL`.
 
 **TLP:** **strict `amber`** (overrides per-event TLP).
 
@@ -957,7 +959,7 @@ A single container ingests its enabled collections sequentially; the `docker-ins
 
 ## Parameter reference
 
-Full list of supported settings, grouped by what they affect. Each row gives the **environment-variable name** as it appears in `.env`; the equivalent dotted path inside `config.yml` is the same key lower-cased (e.g. `TI_API__EXTRA_SETTINGS__ENABLE_STATEMENT_MARKING` → `ti_api.extra_settings.enable_statement_marking`).
+Full list of supported settings, grouped by what they affect. Each row gives the **environment-variable name** as it appears in `.env`; the equivalent dotted path inside `config.yml` is the same key lower-cased (e.g. `TI_API_EXTRA_SETTINGS_ENABLE_STATEMENT_MARKING` → `ti_api.extra_settings.enable_statement_marking`).
 
 ### Incremental feeds (`seqUpdate`) and connector state
 
@@ -995,17 +997,17 @@ These are connector-wide settings under `ti_api.extra_settings`. Some label-rela
 
 | Environment variable / *YAML path* | Default | Description and behavior if unset |
 |---|---|---|
-| `TI_API__EXTRA_SETTINGS__INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR` *(ti_api.extra_settings.intrusion_set_instead_of_threat_actor)* | `false` | When `true`, every `Threat-Actor` SDO is replaced by an `Intrusion-Set` SDO (STIX 2.1 alternative actor representation). All `uses`/`targets` relationships re-target the new SDO. **Unset → defaults to `false`**; `Threat-Actor` SDOs are emitted. Switching mid-run creates duplicate actor records in OpenCTI — flip only on a clean workspace or with a hard reset of connector state. Note: STIX 2.1 `Intrusion-Set` has no `roles` field, so the payload's `roles[]` (e.g. `["agent","infrastructure-operator"]`) is dropped in this mode. |
-| `TI_API__EXTRA_SETTINGS__IGNORE_NON_MALWARE_DDOS` *(ti_api.extra_settings.ignore_non_malware_ddos)* | `true` | Drop `attacks/ddos` events that have no attributed malware family. **Unset → defaults to `false` in code**, but both sample configs set `true`; keep the sample value if you want the documented default filtering behavior. Disable only if you want raw DDoS observation noise. |
-| `TI_API__EXTRA_SETTINGS__IGNORE_NON_INDICATOR_THREATS` *(ti_api.extra_settings.ignore_non_indicator_threats)* | `false` | Drop `apt/threat` and `hi/threat` events whose `indicators[]` field is empty (analyst-prose-only reports). **Unset → defaults to `false`**; all threat reports flow through, even those without IoCs. |
-| `TI_API__EXTRA_SETTINGS__IGNORE_NON_INDICATOR_THREAT_REPORTS` *(ti_api.extra_settings.ignore_non_indicator_threat_reports)* | `false` | Reserved alias kept for backward compatibility with legacy v1.0 configs. Treats input similarly to `IGNORE_NON_INDICATOR_THREATS`, but uses an explicit parsed-list check internally. **Unset → defaults to `false`**. |
-| `TI_API__EXTRA_SETTINGS__ENABLE_STATEMENT_MARKING` *(ti_api.extra_settings.enable_statement_marking)* | `false` | When `true`, attaches a custom `Group-IB` statement-marking SDO to every emitted bundle (for downstream attribution). **Unset → defaults to `false`**; no statement marking is added. |
-| `TI_API__EXTRA_SETTINGS__PRESERVE_MANUAL_LABELS` *(ti_api.extra_settings.preserve_manual_labels)* | `false` | When `true`, omits `x_opencti_labels` custom properties from emitted SDO/SCO objects so the OpenCTI worker's update path cannot overwrite labels added manually by analysts. **Trade-off**: connector-supplied entity labels also stop being (re)applied on update. Native STIX `Note.labels` may still be present on connector-created Notes. **Unset → defaults to `false`**; connector controls entity labels. |
-| `TI_API__EXTRA_SETTINGS__TIME_OUTPUT_FORMAT` *(ti_api.extra_settings.time_output_format)* | `'%Y-%m-%d %H:%M:%S'` | Timestamp format used in connector log lines and work-entry titles (Python `strftime` syntax). **Unset → defaults to the value above**. |
-| `TI_API__EXTRA_SETTINGS__ENABLE_FILE_LOGGING` *(ti_api.extra_settings.enable_file_logging)* | `false` | Development only — when `true`, mirrors connector logs to a rotating file. **Unset → defaults to `false`**; logs only go to stdout. |
-| `TI_API__EXTRA_SETTINGS__LOG_FILE_DIR` *(ti_api.extra_settings.log_file_dir)* | `/opt/connector/logs` | Directory where rotating log files are written when `ENABLE_FILE_LOGGING=true`. **Unset → defaults to the value above**. Must be a Docker-mounted volume in production. |
-| `TI_API__EXTRA_SETTINGS__LOG_FILE_MAX_BYTES` *(ti_api.extra_settings.log_file_max_bytes)* | `10485760` (10 MiB) | Rotation threshold in bytes. **Unset → defaults to 10 MiB**. |
-| `TI_API__EXTRA_SETTINGS__LOG_FILE_BACKUP_COUNT` *(ti_api.extra_settings.log_file_backup_count)* | `5` | Number of rotated backups to keep. **Unset → defaults to `5`**. |
+| `TI_API_EXTRA_SETTINGS_INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR` *(ti_api.extra_settings.intrusion_set_instead_of_threat_actor)* | `false` | When `true`, every `Threat-Actor` SDO is replaced by an `Intrusion-Set` SDO (STIX 2.1 alternative actor representation). All `uses`/`targets` relationships re-target the new SDO. **Unset → defaults to `false`**; `Threat-Actor` SDOs are emitted. Switching mid-run creates duplicate actor records in OpenCTI — flip only on a clean workspace or with a hard reset of connector state. Note: STIX 2.1 `Intrusion-Set` has no `roles` field, so the payload's `roles[]` (e.g. `["agent","infrastructure-operator"]`) is dropped in this mode. |
+| `TI_API_EXTRA_SETTINGS_IGNORE_NON_MALWARE_DDOS` *(ti_api.extra_settings.ignore_non_malware_ddos)* | `true` | Drop `attacks/ddos` events that have no attributed malware family. **Unset → defaults to `false` in code**, but both sample configs set `true`; keep the sample value if you want the documented default filtering behavior. Disable only if you want raw DDoS observation noise. |
+| `TI_API_EXTRA_SETTINGS_IGNORE_NON_INDICATOR_THREATS` *(ti_api.extra_settings.ignore_non_indicator_threats)* | `false` | Drop `apt/threat` and `hi/threat` events whose `indicators[]` field is empty (analyst-prose-only reports). **Unset → defaults to `false`**; all threat reports flow through, even those without IoCs. |
+| `TI_API_EXTRA_SETTINGS_IGNORE_NON_INDICATOR_THREAT_REPORTS` *(ti_api.extra_settings.ignore_non_indicator_threat_reports)* | `false` | Reserved alias kept for backward compatibility with legacy v1.0 configs. Treats input similarly to `IGNORE_NON_INDICATOR_THREATS`, but uses an explicit parsed-list check internally. **Unset → defaults to `false`**. |
+| `TI_API_EXTRA_SETTINGS_ENABLE_STATEMENT_MARKING` *(ti_api.extra_settings.enable_statement_marking)* | `false` | When `true`, attaches a custom `Group-IB` statement-marking SDO to every emitted bundle (for downstream attribution). **Unset → defaults to `false`**; no statement marking is added. |
+| `TI_API_EXTRA_SETTINGS_PRESERVE_MANUAL_LABELS` *(ti_api.extra_settings.preserve_manual_labels)* | `false` | When `true`, omits `x_opencti_labels` custom properties from emitted SDO/SCO objects so the OpenCTI worker's update path cannot overwrite labels added manually by analysts. **Trade-off**: connector-supplied entity labels also stop being (re)applied on update. Native STIX `Note.labels` may still be present on connector-created Notes. **Unset → defaults to `false`**; connector controls entity labels. |
+| `TI_API_EXTRA_SETTINGS_TIME_OUTPUT_FORMAT` *(ti_api.extra_settings.time_output_format)* | `'%Y-%m-%d %H:%M:%S'` | Timestamp format used in connector log lines and work-entry titles (Python `strftime` syntax). **Unset → defaults to the value above**. |
+| `TI_API_EXTRA_SETTINGS_ENABLE_FILE_LOGGING` *(ti_api.extra_settings.enable_file_logging)* | `false` | Development only — when `true`, mirrors connector logs to a rotating file. **Unset → defaults to `false`**; logs only go to stdout. |
+| `TI_API_EXTRA_SETTINGS_LOG_FILE_DIR` *(ti_api.extra_settings.log_file_dir)* | `/opt/connector/logs` | Directory where rotating log files are written when `ENABLE_FILE_LOGGING=true`. **Unset → defaults to the value above**. Must be a Docker-mounted volume in production. |
+| `TI_API_EXTRA_SETTINGS_LOG_FILE_MAX_BYTES` *(ti_api.extra_settings.log_file_max_bytes)* | `10485760` (10 MiB) | Rotation threshold in bytes. **Unset → defaults to 10 MiB**. |
+| `TI_API_EXTRA_SETTINGS_LOG_FILE_BACKUP_COUNT` *(ti_api.extra_settings.log_file_backup_count)* | `5` | Number of rotated backups to keep. **Unset → defaults to `5`**. |
 
 > File-logging settings (`ENABLE_FILE_LOGGING`, `LOG_FILE_DIR`, `LOG_FILE_MAX_BYTES`, `LOG_FILE_BACKUP_COUNT`) are intended for development. See [`README_dev.md`](./README_dev.md) → *File logging*.
 
@@ -1017,12 +1019,12 @@ For each key the table below documents three things: what it controls, the defau
 
 | Environment variable | Default | Description and behavior if unset |
 |---|---|---|
-| `TI_API__COLLECTIONS__<NAME>__ENABLE` | `false` | Toggles ingestion for the collection. **Unset → collection is NOT ingested.** The connector loop skips it; no API calls, no state cursor, no work entries. Must be explicitly `true` to enable. |
-| `TI_API__COLLECTIONS__<NAME>__DEFAULT_DATE` | **strongly recommended when ENABLE=true** | Lookback start date for the **first** run only, format `YYYY-MM-DD`. After the first run the upstream `sequpdate` cursor stored in OpenCTI connector state takes over and this value is ignored. **Unset / empty on an enabled collection → the Group-IB API adapter uses today minus 3 days as the initial lookback.** Set an explicit date to make initial ingestion deterministic. |
-| `TI_API__COLLECTIONS__<NAME>__TTL` | per-collection default (see `.env.sample`; typical: 30/90/1460 days) | Validity period for emitted `Indicator` SDOs in days. The connector computes `valid_until = valid_from + TTL` when a handler creates Indicators and has a base timestamp. **Unset → default-flow helpers fall back to `DEFAULT_TTL_DAYS = 365`; several special handlers have their own code defaults (`malware/cnc` 90, `compromised/masked_card` 90, `attacks/phishing_group` 30, `attacks/phishing_kit` 30).** Keep the sample TTLs explicit if you need deterministic indicator expiry. |
-| `TI_API__COLLECTIONS__<NAME>__LOCAL_CUSTOM_TAG` | `null` | Optional extra label appended to every emitted entity from this collection. Useful for tenant-tagging (e.g. `tenant:acme`) or pipeline-stage tagging. **Unset / set to `null` → no extra label is appended.** |
-| `TI_API__COLLECTIONS__<NAME>__DESCRIPTION_IN_EXTERNAL_REFERENCES` | `false` | When `true`, supported handlers clear the entity's `description` field and move the description body into an `external_references` entry. Honored by: `apt/threat`, `hi/threat` (Report SDO); `apt/threat_actor`, `hi/threat_actor` (Threat-Actor / Intrusion-Set SDO); `malware/malware` (Malware SDO); `hi/open_threats` (Report SDO); and incident-style handlers that call `_apply_incident_description` (`compromised/access`, `compromised/account_group`, `compromised/bank_card_group`, `compromised/masked_card`, `compromised/spd`, `malware/config`, `osi/git_repository`, `osi/public_leak`). **Unset → defaults to `false`**; descriptions stay on the SDO. |
-| `TI_API__COLLECTIONS__<NAME>__USE_HUNTING_RULES` | `false` | When `true` and the upstream endpoint supports `apply_hunting_rules`, the connector asks the API to apply the tenant's portal-configured hunting rules **server-side**. Drastically reduces ingested volume for noisy collections (`osi/public_leak`, `compromised/messenger`, `darkweb/forums`, …). **Unset → defaults to `false`**; full feed is ingested. |
+| `TI_API_COLLECTIONS_<NAME>_ENABLE` | `false` | Toggles ingestion for the collection. **Unset → collection is NOT ingested.** The connector loop skips it; no API calls, no state cursor, no work entries. Must be explicitly `true` to enable. |
+| `TI_API_COLLECTIONS_<NAME>_DEFAULT_DATE` | **strongly recommended when ENABLE=true** | Lookback start date for the **first** run only, format `YYYY-MM-DD`. After the first run the upstream `sequpdate` cursor stored in OpenCTI connector state takes over and this value is ignored. **Unset / empty on an enabled collection → the Group-IB API adapter uses today minus 3 days as the initial lookback.** Set an explicit date to make initial ingestion deterministic. |
+| `TI_API_COLLECTIONS_<NAME>_TTL` | per-collection default (see `.env.sample`; typical: 30/90/1460 days) | Validity period for emitted `Indicator` SDOs in days. The connector computes `valid_until = valid_from + TTL` when a handler creates Indicators and has a base timestamp. **Unset → default-flow helpers fall back to `DEFAULT_TTL_DAYS = 365`; several special handlers have their own code defaults (`malware/cnc` 90, `compromised/masked_card` 90, `attacks/phishing_group` 30, `attacks/phishing_kit` 30).** Keep the sample TTLs explicit if you need deterministic indicator expiry. |
+| `TI_API_COLLECTIONS_<NAME>_LOCAL_CUSTOM_TAG` | `null` | Optional extra label appended to every emitted entity from this collection. Useful for tenant-tagging (e.g. `tenant:acme`) or pipeline-stage tagging. **Unset / set to `null` → no extra label is appended.** |
+| `TI_API_COLLECTIONS_<NAME>_DESCRIPTION_IN_EXTERNAL_REFERENCES` | `false` | When `true`, supported handlers clear the entity's `description` field and move the description body into an `external_references` entry. Honored by: `apt/threat`, `hi/threat` (Report SDO); `apt/threat_actor`, `hi/threat_actor` (Threat-Actor / Intrusion-Set SDO); `malware/malware` (Malware SDO); `hi/open_threats` (Report SDO); and incident-style handlers that call `_apply_incident_description` (`compromised/access`, `compromised/account_group`, `compromised/bank_card_group`, `compromised/masked_card`, `compromised/spd`, `malware/config`, `osi/git_repository`, `osi/public_leak`). **Unset → defaults to `false`**; descriptions stay on the SDO. |
+| `TI_API_COLLECTIONS_<NAME>_USE_HUNTING_RULES` | `false` | When `true` and the upstream endpoint supports `apply_hunting_rules`, the connector asks the API to apply the tenant's portal-configured hunting rules **server-side**. Drastically reduces ingested volume for noisy collections (`osi/public_leak`, `compromised/messenger`, `darkweb/forums`, …). **Unset → defaults to `false`**; full feed is ingested. |
 
 ### Collection-specific parameter matrix
 
@@ -1030,51 +1032,51 @@ Every collection supports `ENABLE`, `DEFAULT_DATE`, `TTL`, and `LOCAL_CUSTOM_TAG
 
 | Collection env prefix | Collection path | Default TTL | Additional parameters |
 |---|---|---:|---|
-| `TI_API__COLLECTIONS__APT_THREAT` | `apt/threat` | `1460` | `USE_HUNTING_RULES`, `STORE_REPORT_LABELS_IN_NOTE`, `ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES`, `INCLUDE_THREAT_ACTOR_LABELS`, `INCLUDE_NATION_STATE_LABEL`, `INCLUDE_CONTEXT_LABEL`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `TARGETED_ENTITIES_AS_SDO`, `INCLUDE_EXPERTISE_LABELS` |
-| `TI_API__COLLECTIONS__APT_THREAT_ACTOR` | `apt/threat_actor` | `1460` | `USE_HUNTING_RULES`, `INCLUDE_NATION_STATE_LABEL`, `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
-| `TI_API__COLLECTIONS__ATTACKS_DDOS` | `attacks/ddos` | `10` | `USE_HUNTING_RULES`, `CNC_AS_INDICATOR`, `CREATE_INCIDENT` |
-| `TI_API__COLLECTIONS__ATTACKS_DEFACE` | `attacks/deface` | `10` | `CREATE_INCIDENT` |
-| `TI_API__COLLECTIONS__ATTACKS_PHISHING_GROUP` | `attacks/phishing_group` | `5` | `USE_HUNTING_RULES`, `BRAND_AS_IDENTITY`, `INCLUDE_BRAND_LABELS` |
-| `TI_API__COLLECTIONS__ATTACKS_PHISHING_KIT` | `attacks/phishing_kit` | `30` | `USE_HUNTING_RULES`, `BRAND_AS_IDENTITY`, `INCLUDE_BRAND_LABELS` |
-| `TI_API__COLLECTIONS__COMPROMISED_ACCESS` | `compromised/access` | `1460` | `DATA_PREVIEW_MAX_LEN`, `FULL_DATA`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `CNC_AS_INDICATOR`, `TARGET_OBSERVABLES` |
-| `TI_API__COLLECTIONS__COMPROMISED_ACCOUNT_GROUP` | `compromised/account_group` | `1460` | `USE_HUNTING_RULES`, `INCLUDE_PASSWORDS`, `INCLUDE_MALWARE_LABELS`, `INCLUDE_MALWARE_THREAT_ACTOR_LABELS`, `INCLUDE_SOURCE_TYPE_LABELS`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `UNIQUE`, `COMBOLIST`, `PROBABLE_CORPORATE_ACCESS` |
-| `TI_API__COLLECTIONS__COMPROMISED_BANK_CARD_GROUP` | `compromised/bank_card_group` | `730` | `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
-| `TI_API__COLLECTIONS__COMPROMISED_DISCORD` | `compromised/discord` | `30` | `USE_HUNTING_RULES`, `REDACT_MESSAGE_TEXT`, `INCLUDE_TRANSLATION_IN_NOTE`, `FULL_DATA`, `DATA_PREVIEW_MAX_LEN` |
-| `TI_API__COLLECTIONS__COMPROMISED_MASKED_CARD` | `compromised/masked_card` | `90` | `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `INCLUDE_MALWARE_LABELS`, `INCLUDE_THREAT_ACTOR_LABELS`, `INCLUDE_SOURCE_TYPE_LABELS` |
-| `TI_API__COLLECTIONS__COMPROMISED_MESSENGER` | `compromised/messenger` | `30` | `USE_HUNTING_RULES`, `REDACT_MESSAGE_TEXT`, `INCLUDE_TRANSLATION_IN_NOTE`, `FULL_DATA`, `DATA_PREVIEW_MAX_LEN` |
-| `TI_API__COLLECTIONS__COMPROMISED_SPD` | `compromised/spd` | `90` | `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
-| `TI_API__COLLECTIONS__DARKWEB_FORUMS` | `darkweb/forums` | `90` | `USE_HUNTING_RULES` |
-| `TI_API__COLLECTIONS__HI_OPEN_THREATS` | `hi/open_threats` | `30` | `USE_HUNTING_RULES`, `DATA_PREVIEW_MAX_LEN`, `FULL_DATA`, `INCLUDE_TEXT_IN_NOTE`, `INCLUDE_ORIGINAL_IN_NOTE`, `OBSERVABLES_AS_INDICATORS` |
-| `TI_API__COLLECTIONS__HI_THREAT` | `hi/threat` | `1460` | `USE_HUNTING_RULES`, `STORE_REPORT_LABELS_IN_NOTE`, `ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES`, `INCLUDE_THREAT_ACTOR_LABELS`, `INCLUDE_CYBERCRIMINAL_LABEL`, `INCLUDE_CONTEXT_LABEL`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `TARGETED_ENTITIES_AS_SDO`, `INCLUDE_EXPERTISE_LABELS` |
-| `TI_API__COLLECTIONS__HI_THREAT_ACTOR` | `hi/threat_actor` | `1460` | `USE_HUNTING_RULES`, `INCLUDE_CYBERCRIMINAL_LABEL`, `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
-| `TI_API__COLLECTIONS__IOC_PRIMARY` | `ioc/primary` | `90` | None |
-| `TI_API__COLLECTIONS__MALWARE_CNC` | `malware/cnc` | `90` | `INCLUDE_MALWARE_LABELS`, `INCLUDE_THREAT_ACTOR_LABELS`, `ALL_OBSERVABLES_AS_INDICATORS` |
-| `TI_API__COLLECTIONS__MALWARE_CONFIG` | `malware/config` | `90` | `USE_HUNTING_RULES`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `INCLUDE_MALWARE_LABELS` |
-| `TI_API__COLLECTIONS__MALWARE_MALWARE` | `malware/malware` | `1460` | None |
-| `TI_API__COLLECTIONS__MALWARE_SIGNATURE` | `malware/signature` | `30` | None |
-| `TI_API__COLLECTIONS__MALWARE_YARA` | `malware/yara` | `30` | None |
-| `TI_API__COLLECTIONS__OSI_GIT_REPOSITORY` | `osi/git_repository` | `30` | `USE_HUNTING_RULES`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `AUTHOR_EMAIL_OBSERVABLES` |
-| `TI_API__COLLECTIONS__OSI_PUBLIC_LEAK` | `osi/public_leak` | `15` | `USE_HUNTING_RULES`, `DATA_PREVIEW_MAX_LEN`, `FULL_DATA`, `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
-| `TI_API__COLLECTIONS__OSI_VULNERABILITY` | `osi/vulnerability` | `90` | `USE_HUNTING_RULES` |
-| `TI_API__COLLECTIONS__SUSPICIOUS_IP_OPEN_PROXY` | `suspicious_ip/open_proxy` | `5` | `USE_HUNTING_RULES` |
-| `TI_API__COLLECTIONS__SUSPICIOUS_IP_SCANNER` | `suspicious_ip/scanner` | `5` | `USE_HUNTING_RULES` |
-| `TI_API__COLLECTIONS__SUSPICIOUS_IP_SOCKS_PROXY` | `suspicious_ip/socks_proxy` | `5` | `USE_HUNTING_RULES` |
-| `TI_API__COLLECTIONS__SUSPICIOUS_IP_TOR_NODE` | `suspicious_ip/tor_node` | `5` | `USE_HUNTING_RULES` |
-| `TI_API__COLLECTIONS__SUSPICIOUS_IP_VPN` | `suspicious_ip/vpn` | `5` | `USE_HUNTING_RULES` |
+| `TI_API_COLLECTIONS_APT_THREAT` | `apt/threat` | `1460` | `USE_HUNTING_RULES`, `STORE_REPORT_LABELS_IN_NOTE`, `ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES`, `INCLUDE_THREAT_ACTOR_LABELS`, `INCLUDE_NATION_STATE_LABEL`, `INCLUDE_CONTEXT_LABEL`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `TARGETED_ENTITIES_AS_SDO`, `INCLUDE_EXPERTISE_LABELS` |
+| `TI_API_COLLECTIONS_APT_THREAT_ACTOR` | `apt/threat_actor` | `1460` | `USE_HUNTING_RULES`, `INCLUDE_NATION_STATE_LABEL`, `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
+| `TI_API_COLLECTIONS_ATTACKS_DDOS` | `attacks/ddos` | `10` | `USE_HUNTING_RULES`, `CNC_AS_INDICATOR`, `CREATE_INCIDENT` |
+| `TI_API_COLLECTIONS_ATTACKS_DEFACE` | `attacks/deface` | `10` | `CREATE_INCIDENT` |
+| `TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP` | `attacks/phishing_group` | `5` | `USE_HUNTING_RULES`, `BRAND_AS_IDENTITY`, `INCLUDE_BRAND_LABELS` |
+| `TI_API_COLLECTIONS_ATTACKS_PHISHING_KIT` | `attacks/phishing_kit` | `30` | `USE_HUNTING_RULES`, `BRAND_AS_IDENTITY`, `INCLUDE_BRAND_LABELS` |
+| `TI_API_COLLECTIONS_COMPROMISED_ACCESS` | `compromised/access` | `1460` | `DATA_PREVIEW_MAX_LEN`, `FULL_DATA`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `CNC_AS_INDICATOR`, `TARGET_OBSERVABLES` |
+| `TI_API_COLLECTIONS_COMPROMISED_ACCOUNT_GROUP` | `compromised/account_group` | `1460` | `USE_HUNTING_RULES`, `INCLUDE_PASSWORDS`, `INCLUDE_MALWARE_LABELS`, `INCLUDE_MALWARE_THREAT_ACTOR_LABELS`, `INCLUDE_SOURCE_TYPE_LABELS`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `UNIQUE`, `COMBOLIST`, `PROBABLE_CORPORATE_ACCESS` |
+| `TI_API_COLLECTIONS_COMPROMISED_BANK_CARD_GROUP` | `compromised/bank_card_group` | `730` | `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
+| `TI_API_COLLECTIONS_COMPROMISED_DISCORD` | `compromised/discord` | `30` | `USE_HUNTING_RULES`, `REDACT_MESSAGE_TEXT`, `INCLUDE_TRANSLATION_IN_NOTE`, `FULL_DATA`, `DATA_PREVIEW_MAX_LEN` |
+| `TI_API_COLLECTIONS_COMPROMISED_MASKED_CARD` | `compromised/masked_card` | `90` | `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `INCLUDE_MALWARE_LABELS`, `INCLUDE_THREAT_ACTOR_LABELS`, `INCLUDE_SOURCE_TYPE_LABELS` |
+| `TI_API_COLLECTIONS_COMPROMISED_MESSENGER` | `compromised/messenger` | `30` | `USE_HUNTING_RULES`, `REDACT_MESSAGE_TEXT`, `INCLUDE_TRANSLATION_IN_NOTE`, `FULL_DATA`, `DATA_PREVIEW_MAX_LEN` |
+| `TI_API_COLLECTIONS_COMPROMISED_SPD` | `compromised/spd` | `90` | `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
+| `TI_API_COLLECTIONS_DARKWEB_FORUMS` | `darkweb/forums` | `90` | `USE_HUNTING_RULES` |
+| `TI_API_COLLECTIONS_HI_OPEN_THREATS` | `hi/open_threats` | `30` | `USE_HUNTING_RULES`, `DATA_PREVIEW_MAX_LEN`, `FULL_DATA`, `INCLUDE_TEXT_IN_NOTE`, `INCLUDE_ORIGINAL_IN_NOTE`, `OBSERVABLES_AS_INDICATORS` |
+| `TI_API_COLLECTIONS_HI_THREAT` | `hi/threat` | `1460` | `USE_HUNTING_RULES`, `STORE_REPORT_LABELS_IN_NOTE`, `ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES`, `INCLUDE_THREAT_ACTOR_LABELS`, `INCLUDE_CYBERCRIMINAL_LABEL`, `INCLUDE_CONTEXT_LABEL`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `TARGETED_ENTITIES_AS_SDO`, `INCLUDE_EXPERTISE_LABELS` |
+| `TI_API_COLLECTIONS_HI_THREAT_ACTOR` | `hi/threat_actor` | `1460` | `USE_HUNTING_RULES`, `INCLUDE_CYBERCRIMINAL_LABEL`, `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
+| `TI_API_COLLECTIONS_IOC_PRIMARY` | `ioc/primary` | `90` | None |
+| `TI_API_COLLECTIONS_MALWARE_CNC` | `malware/cnc` | `90` | `INCLUDE_MALWARE_LABELS`, `INCLUDE_THREAT_ACTOR_LABELS`, `ALL_OBSERVABLES_AS_INDICATORS` |
+| `TI_API_COLLECTIONS_MALWARE_CONFIG` | `malware/config` | `90` | `USE_HUNTING_RULES`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `INCLUDE_MALWARE_LABELS` |
+| `TI_API_COLLECTIONS_MALWARE_MALWARE` | `malware/malware` | `1460` | None |
+| `TI_API_COLLECTIONS_MALWARE_SIGNATURE` | `malware/signature` | `30` | None |
+| `TI_API_COLLECTIONS_MALWARE_YARA` | `malware/yara` | `30` | None |
+| `TI_API_COLLECTIONS_OSI_GIT_REPOSITORY` | `osi/git_repository` | `30` | `USE_HUNTING_RULES`, `DESCRIPTION_IN_EXTERNAL_REFERENCES`, `AUTHOR_EMAIL_OBSERVABLES` |
+| `TI_API_COLLECTIONS_OSI_PUBLIC_LEAK` | `osi/public_leak` | `15` | `USE_HUNTING_RULES`, `DATA_PREVIEW_MAX_LEN`, `FULL_DATA`, `DESCRIPTION_IN_EXTERNAL_REFERENCES` |
+| `TI_API_COLLECTIONS_OSI_VULNERABILITY` | `osi/vulnerability` | `90` | `USE_HUNTING_RULES` |
+| `TI_API_COLLECTIONS_SUSPICIOUS_IP_OPEN_PROXY` | `suspicious_ip/open_proxy` | `5` | `USE_HUNTING_RULES` |
+| `TI_API_COLLECTIONS_SUSPICIOUS_IP_SCANNER` | `suspicious_ip/scanner` | `5` | `USE_HUNTING_RULES` |
+| `TI_API_COLLECTIONS_SUSPICIOUS_IP_SOCKS_PROXY` | `suspicious_ip/socks_proxy` | `5` | `USE_HUNTING_RULES` |
+| `TI_API_COLLECTIONS_SUSPICIOUS_IP_TOR_NODE` | `suspicious_ip/tor_node` | `5` | `USE_HUNTING_RULES` |
+| `TI_API_COLLECTIONS_SUSPICIOUS_IP_VPN` | `suspicious_ip/vpn` | `5` | `USE_HUNTING_RULES` |
 
 ### Per-collection — APT / HI threat reports (`apt/threat`, `hi/threat`)
 
 | Environment-variable suffix | Full variables | Default | Description and behavior if unset |
 |---|---|---|---|
-| `STORE_REPORT_LABELS_IN_NOTE` | `TI_API__COLLECTIONS__APT_THREAT__STORE_REPORT_LABELS_IN_NOTE`, `TI_API__COLLECTIONS__HI_THREAT__STORE_REPORT_LABELS_IN_NOTE` | `false` | When `true`, the report's labels are moved into a `Note` attached to the report instead of populating `Report.labels` directly. Use this when the label list is too large to manage in the UI label index. **Unset → defaults to `false`**, labels go directly on the Report SDO. |
-| `ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES` | `TI_API__COLLECTIONS__APT_THREAT__ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES`, `TI_API__COLLECTIONS__HI_THREAT__ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES` | `true` in `.env.sample` | Tag every observable extracted from the report with the actor name (bare label) so pivots from an IoC back to the actor work. **Unset → defaults to `false` in code**; keep the sample value `true` if you want observables tagged. |
-| `INCLUDE_THREAT_ACTOR_LABELS` | `TI_API__COLLECTIONS__APT_THREAT__INCLUDE_THREAT_ACTOR_LABELS`, `TI_API__COLLECTIONS__HI_THREAT__INCLUDE_THREAT_ACTOR_LABELS` | `true` | Add labels naming the linked threat actor(s) on the Report SDO. **Unset → defaults to `true`**. Disable only when you want anonymized reports. |
-| `INCLUDE_NATION_STATE_LABEL` | `TI_API__COLLECTIONS__APT_THREAT__INCLUDE_NATION_STATE_LABEL` | `true` | Add the global `nation_state` label. **Unset → defaults to `true`**. |
-| `INCLUDE_CYBERCRIMINAL_LABEL` | `TI_API__COLLECTIONS__HI_THREAT__INCLUDE_CYBERCRIMINAL_LABEL` | `true` | Add the global `cybercriminal` label. **Unset → defaults to `true`**. |
-| `INCLUDE_CONTEXT_LABEL` | `TI_API__COLLECTIONS__APT_THREAT__INCLUDE_CONTEXT_LABEL`, `TI_API__COLLECTIONS__HI_THREAT__INCLUDE_CONTEXT_LABEL` | `true` | Gate the labels derived from the payload: `tailored` (when `is_tailored`), `autogen` (when `is_autogen`), native `raw_labels[]` (e.g. `hacker`, `spy`), and the bare expertise labels (which additionally require `INCLUDE_EXPERTISE_LABELS=true`). Sectors / regions / targeting are promoted into SDOs via `TARGETED_ENTITIES_AS_SDO`, not labels. **Unset → defaults to `true`**. |
-| `DESCRIPTION_IN_EXTERNAL_REFERENCES` | `TI_API__COLLECTIONS__APT_THREAT__DESCRIPTION_IN_EXTERNAL_REFERENCES`, `TI_API__COLLECTIONS__HI_THREAT__DESCRIPTION_IN_EXTERNAL_REFERENCES` | `false` | When `true`, clears `Report.description` and moves the full HTML body into an external reference (`source_name="Report description"`). Useful when long HTML bodies break the OpenCTI description panel layout. The `short_description` and report `sources` are always emitted as external references regardless of this flag. **Unset → defaults to `false`**; description stays on the Report SDO. |
-| `TARGETED_ENTITIES_AS_SDO` | `TI_API__COLLECTIONS__APT_THREAT__TARGETED_ENTITIES_AS_SDO`, `TI_API__COLLECTIONS__HI_THREAT__TARGETED_ENTITIES_AS_SDO` | `true` | Promote the report's victimology into searchable SDOs: `sectors[]` → `Identity` (Sector), `targetedCompany[]` / `targetedPartnersAndClients[]` → `Identity` (Organization), `regions[]` → `Location` (Region). Each entity is added to `Report.object_refs` and linked `<actor> —[targets]→ <entity>` when the report carries a threat actor. Enables queries like "threats against my sector / region / company". **Unset → defaults to `true`**; set `false` to keep this data in the Note only. |
-| `INCLUDE_EXPERTISE_LABELS` | `TI_API__COLLECTIONS__APT_THREAT__INCLUDE_EXPERTISE_LABELS`, `TI_API__COLLECTIONS__HI_THREAT__INCLUDE_EXPERTISE_LABELS` | `true` | Add bare expertise labels (e.g. `Leak`, `Hacktivism`) from the report's `expertise[]` field, so reports can be filtered by expertise type. Also gated by `INCLUDE_CONTEXT_LABEL`. **Unset → defaults to `true`**. |
+| `STORE_REPORT_LABELS_IN_NOTE` | `TI_API_COLLECTIONS_APT_THREAT_STORE_REPORT_LABELS_IN_NOTE`, `TI_API_COLLECTIONS_HI_THREAT_STORE_REPORT_LABELS_IN_NOTE` | `false` | When `true`, the report's labels are moved into a `Note` attached to the report instead of populating `Report.labels` directly. Use this when the label list is too large to manage in the UI label index. **Unset → defaults to `false`**, labels go directly on the Report SDO. |
+| `ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES` | `TI_API_COLLECTIONS_APT_THREAT_ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES`, `TI_API_COLLECTIONS_HI_THREAT_ADD_THREAT_ACTOR_LABEL_TO_OBSERVABLES` | `true` in `.env.sample` | Tag every observable extracted from the report with the actor name (bare label) so pivots from an IoC back to the actor work. **Unset → defaults to `false` in code**; keep the sample value `true` if you want observables tagged. |
+| `INCLUDE_THREAT_ACTOR_LABELS` | `TI_API_COLLECTIONS_APT_THREAT_INCLUDE_THREAT_ACTOR_LABELS`, `TI_API_COLLECTIONS_HI_THREAT_INCLUDE_THREAT_ACTOR_LABELS` | `true` | Add labels naming the linked threat actor(s) on the Report SDO. **Unset → defaults to `true`**. Disable only when you want anonymized reports. |
+| `INCLUDE_NATION_STATE_LABEL` | `TI_API_COLLECTIONS_APT_THREAT_INCLUDE_NATION_STATE_LABEL` | `true` | Add the global `nation_state` label. **Unset → defaults to `true`**. |
+| `INCLUDE_CYBERCRIMINAL_LABEL` | `TI_API_COLLECTIONS_HI_THREAT_INCLUDE_CYBERCRIMINAL_LABEL` | `true` | Add the global `cybercriminal` label. **Unset → defaults to `true`**. |
+| `INCLUDE_CONTEXT_LABEL` | `TI_API_COLLECTIONS_APT_THREAT_INCLUDE_CONTEXT_LABEL`, `TI_API_COLLECTIONS_HI_THREAT_INCLUDE_CONTEXT_LABEL` | `true` | Gate the labels derived from the payload: `tailored` (when `is_tailored`), `autogen` (when `is_autogen`), native `raw_labels[]` (e.g. `hacker`, `spy`), and the bare expertise labels (which additionally require `INCLUDE_EXPERTISE_LABELS=true`). Sectors / regions / targeting are promoted into SDOs via `TARGETED_ENTITIES_AS_SDO`, not labels. **Unset → defaults to `true`**. |
+| `DESCRIPTION_IN_EXTERNAL_REFERENCES` | `TI_API_COLLECTIONS_APT_THREAT_DESCRIPTION_IN_EXTERNAL_REFERENCES`, `TI_API_COLLECTIONS_HI_THREAT_DESCRIPTION_IN_EXTERNAL_REFERENCES` | `false` | When `true`, clears `Report.description` and moves the full HTML body into an external reference (`source_name="Report description"`). Useful when long HTML bodies break the OpenCTI description panel layout. The `short_description` and report `sources` are always emitted as external references regardless of this flag. **Unset → defaults to `false`**; description stays on the Report SDO. |
+| `TARGETED_ENTITIES_AS_SDO` | `TI_API_COLLECTIONS_APT_THREAT_TARGETED_ENTITIES_AS_SDO`, `TI_API_COLLECTIONS_HI_THREAT_TARGETED_ENTITIES_AS_SDO` | `true` | Promote the report's victimology into searchable SDOs: `sectors[]` → `Identity` (Sector), `targetedCompany[]` / `targetedPartnersAndClients[]` → `Identity` (Organization), `regions[]` → `Location` (Region). Each entity is added to `Report.object_refs` and linked `<actor> —[targets]→ <entity>` when the report carries a threat actor. Enables queries like "threats against my sector / region / company". **Unset → defaults to `true`**; set `false` to keep this data in the Note only. |
+| `INCLUDE_EXPERTISE_LABELS` | `TI_API_COLLECTIONS_APT_THREAT_INCLUDE_EXPERTISE_LABELS`, `TI_API_COLLECTIONS_HI_THREAT_INCLUDE_EXPERTISE_LABELS` | `true` | Add bare expertise labels (e.g. `Leak`, `Hacktivism`) from the report's `expertise[]` field, so reports can be filtered by expertise type. Also gated by `INCLUDE_CONTEXT_LABEL`. **Unset → defaults to `true`**. |
 
 ### Per-collection — Threat actors (`apt/threat_actor`, `hi/threat_actor`)
 
@@ -1152,10 +1154,10 @@ These mirror the OpenCTI connector framework and are NOT TI-specific.
 
 | Environment variable | Description |
 |---|---|
-| `TI_API__URL` | Base URL of the Group-IB TI API (default `https://tap.group-ib.com/api/v2/`). |
-| `TI_API__USERNAME` | TI portal account email. |
-| `TI_API__TOKEN` | API token generated in the TI portal profile settings. |
-| `TI_API__PROXY__IP`, `_PORT`, `_PROTOCOL`, `_USERNAME`, `_PASSWORD` | Optional outbound proxy. Leave empty to connect directly. |
+| `TI_API_URL` | Base URL of the Group-IB TI API (default `https://tap.group-ib.com/api/v2/`). |
+| `TI_API_USERNAME` | TI portal account email. |
+| `TI_API_TOKEN` | API token generated in the TI portal profile settings. |
+| `TI_API_PROXY_IP`, `_PORT`, `_PROTOCOL`, `_USERNAME`, `_PASSWORD` | Optional outbound proxy. Leave empty to connect directly. |
 
 ### OpenCTI platform
 
@@ -1179,8 +1181,8 @@ To append an extra label on entities from a collection, set `local_custom_tag` o
 `.env`:
 
 ```bash
-TI_API__COLLECTIONS__ATTACKS_DDOS__LOCAL_CUSTOM_TAG=my_ddos_tag
-TI_API__COLLECTIONS__ATTACKS_PHISHING_GROUP__LOCAL_CUSTOM_TAG=my_phishing_tag
+TI_API_COLLECTIONS_ATTACKS_DDOS_LOCAL_CUSTOM_TAG=my_ddos_tag
+TI_API_COLLECTIONS_ATTACKS_PHISHING_GROUP_LOCAL_CUSTOM_TAG=my_phishing_tag
 ```
 
 `config.yml`:
@@ -1205,7 +1207,7 @@ ti_api:
 `.env`:
 
 ```bash
-TI_API__EXTRA_SETTINGS__INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR=true
+TI_API_EXTRA_SETTINGS_INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR=true
 ```
 
 `config.yml`:
@@ -1221,7 +1223,7 @@ ti_api:
 `.env`:
 
 ```bash
-TI_API__EXTRA_SETTINGS__IGNORE_NON_MALWARE_DDOS=true
+TI_API_EXTRA_SETTINGS_IGNORE_NON_MALWARE_DDOS=true
 ```
 
 `config.yml`:
@@ -1237,7 +1239,7 @@ ti_api:
 `.env`:
 
 ```bash
-TI_API__EXTRA_SETTINGS__IGNORE_NON_INDICATOR_THREATS=true
+TI_API_EXTRA_SETTINGS_IGNORE_NON_INDICATOR_THREATS=true
 ```
 
 `config.yml`:
@@ -1253,7 +1255,7 @@ ti_api:
 `.env`:
 
 ```bash
-TI_API__EXTRA_SETTINGS__ENABLE_STATEMENT_MARKING=true
+TI_API_EXTRA_SETTINGS_ENABLE_STATEMENT_MARKING=true
 ```
 
 `config.yml`:
@@ -1287,8 +1289,8 @@ ti_api:
 Environment variable form:
 
 ```bash
-TI_API__COLLECTIONS__OSI_PUBLIC_LEAK__USE_HUNTING_RULES=true
-TI_API__COLLECTIONS__MALWARE_CONFIG__USE_HUNTING_RULES=true
+TI_API_COLLECTIONS_OSI_PUBLIC_LEAK_USE_HUNTING_RULES=true
+TI_API_COLLECTIONS_MALWARE_CONFIG_USE_HUNTING_RULES=true
 ```
 
 When the key is present, the connector passes it to the Group-IB API as `apply_hunting_rules`. Supported collections:
@@ -1316,7 +1318,7 @@ Set `preserve_manual_labels` to `true` to omit `x_opencti_labels` from emitted S
 `.env`:
 
 ```bash
-TI_API__EXTRA_SETTINGS__PRESERVE_MANUAL_LABELS=true
+TI_API_EXTRA_SETTINGS_PRESERVE_MANUAL_LABELS=true
 ```
 
 `config.yml`:
@@ -1384,7 +1386,7 @@ or
 [Service Desk](https://tap.group-ib.com/service_desk)
 ticket. Also, please provide your TI portal email address and public IP address of integration app instance
 (docker container IP / virtual machine IP).
-By default the connector logs to stdout. If `TI_API__EXTRA_SETTINGS__ENABLE_FILE_LOGGING=true`, rotating file logs are written to `/opt/connector/logs/connector.log` inside the container; `docker-compose.yml` mounts that directory to `./logs/` on the host.
+By default the connector logs to stdout. If `TI_API_EXTRA_SETTINGS_ENABLE_FILE_LOGGING=true`, rotating file logs are written to `/opt/connector/logs/connector.log` inside the container; `docker-compose.yml` mounts that directory to `./logs/` on the host.
 
     - Console output (run app from `src/` with redirecting output to file `app_logs.log`)
         ```bash
