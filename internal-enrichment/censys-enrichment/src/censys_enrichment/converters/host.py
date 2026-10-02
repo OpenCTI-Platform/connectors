@@ -57,7 +57,8 @@ class HostConverter(CensysConverter):
                         source=autonomous_system,
                         target=organization,
                         type=RelationshipType.RELATED_TO,
-                        **self.builder.common_props,
+                        author=self.builder.author,
+                        markings=[self.builder.marking],
                     )
                 )
             if country:
@@ -66,6 +67,7 @@ class HostConverter(CensysConverter):
                         source=autonomous_system,
                         target=country,
                         type=RelationshipType.RELATED_TO,
-                        **self.builder.common_props,
+                        author=self.builder.author,
+                        markings=[self.builder.marking],
                     )
                 )

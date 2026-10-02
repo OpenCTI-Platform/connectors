@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "CensysEnrichmentConnector"
+description = "Internal Enrichment connector for Censys."
+dynamic = ["version"]
+requires-python = ">=3.11"
+
+dependencies = [
+    "pycti==7.260921.0",
+    "censys-platform~=0.16.0",
+    "pydantic~=2.13.5",
+    "pydantic-settings~=2.15.0",
+    "requests~=2.32",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
+]
+
+[project.scripts]
+censys-enrichment-connector = "censys_enrichment.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.2",
+    "pytest-mock>=3.14",
+    "factory-boy>=3.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["./tests"]
+pythonpath = ["src"]

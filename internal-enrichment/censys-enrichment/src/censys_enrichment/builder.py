@@ -33,7 +33,6 @@ class CensysStixBuilder:
     def __init__(self) -> None:
         self.author = OrganizationAuthor(name="Censys Enrichment Connector")
         self.marking = TLPMarking(level=TLPLevel.CLEAR)
-        self.common_props = {"author": self.author, "markings": [self.marking]}
         self.bundle: list[BaseObject] = []
 
     def reset(self) -> None:
@@ -53,7 +52,8 @@ class CensysStixBuilder:
 
         city = City(
             name=name,
-            **self.common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         self.bundle.extend(
             [
@@ -62,7 +62,8 @@ class CensysStixBuilder:
                     source=observable,
                     target=city,
                     type=RelationshipType.LOCATED_AT,
-                    **self.common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 ),
             ]
         )
@@ -73,7 +74,8 @@ class CensysStixBuilder:
 
         country = Country(
             name=name,
-            **self.common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         self.bundle.extend(
             [
@@ -82,7 +84,8 @@ class CensysStixBuilder:
                     source=observable,
                     target=country,
                     type=RelationshipType.LOCATED_AT,
-                    **self.common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 ),
             ]
         )
@@ -94,7 +97,8 @@ class CensysStixBuilder:
 
         region = Region(
             name=name,
-            **self.common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         self.bundle.extend(
             [
@@ -103,7 +107,8 @@ class CensysStixBuilder:
                     source=observable,
                     target=region,
                     type=RelationshipType.LOCATED_AT,
-                    **self.common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 ),
             ]
         )
@@ -122,12 +127,14 @@ class CensysStixBuilder:
                 name=name,
                 latitude=coordinates.latitude,
                 longitude=coordinates.longitude,
-                **self.common_props,
+                author=self.author,
+                markings=[self.marking],
             )
             if coordinates
             else AdministrativeArea(
                 name=name,
-                **self.common_props,
+                author=self.author,
+                markings=[self.marking],
             )
         )
 
@@ -138,7 +145,8 @@ class CensysStixBuilder:
                     source=observable,
                     target=administrative_area,
                     type=RelationshipType.LOCATED_AT,
-                    **self.common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 ),
             ]
         )
@@ -150,7 +158,8 @@ class CensysStixBuilder:
         for name in dns.names or []:
             host_name = Hostname(
                 value=name,
-                **self.common_props,
+                author=self.author,
+                markings=[self.marking],
             )
             self.bundle.extend(
                 [
@@ -159,7 +168,8 @@ class CensysStixBuilder:
                         source=host_name,
                         target=observable,
                         type=RelationshipType.RESOLVES_TO,
-                        **self.common_props,
+                        author=self.author,
+                        markings=[self.marking],
                     ),
                 ]
             )
@@ -174,7 +184,8 @@ class CensysStixBuilder:
 
         organization = Organization(
             name=name,
-            **self.common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         self.bundle.extend(
             [
@@ -183,7 +194,8 @@ class CensysStixBuilder:
                     source=observable,
                     target=organization,
                     type=RelationshipType.RELATED_TO,
-                    **self.common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 ),
             ]
         )
@@ -203,7 +215,8 @@ class CensysStixBuilder:
             name=name,
             description=description,
             number=number,
-            **self.common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         self.bundle.extend(
             [
@@ -212,7 +225,8 @@ class CensysStixBuilder:
                     source=observable,
                     target=autonomous_system,
                     type=RelationshipType.BELONGS_TO,
-                    **self.common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 ),
             ]
         )
@@ -232,7 +246,8 @@ class CensysStixBuilder:
             name=name,
             vendor=vendor,
             cpe=cpe,
-            **self.common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         self.bundle.extend(
             [
@@ -241,7 +256,8 @@ class CensysStixBuilder:
                     source=observable,
                     target=software,
                     type=RelationshipType.RELATED_TO,
-                    **self.common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 ),
             ]
         )
@@ -317,7 +333,8 @@ class CensysStixBuilder:
         }
         certificate = X509Certificate(
             hashes=hashes or None,
-            **self.common_props,
+            author=self.author,
+            markings=[self.marking],
         )
         if cert.parsed:
             self._add_certificate_parsed_fields(certificate=certificate, cert=cert)
@@ -343,7 +360,8 @@ class CensysStixBuilder:
                 publication_date=datetime.datetime.fromisoformat(publication_date),
                 authors=[self.author.name],
                 objects=[observable],
-                **self.common_props,
+                author=self.author,
+                markings=[self.marking],
             )
         )
 
@@ -368,7 +386,8 @@ class CensysStixBuilder:
                             source=observable,
                             target=certificate,
                             type=RelationshipType.RELATED_TO,
-                            **self.common_props,
+                            author=self.author,
+                            markings=[self.marking],
                         )
                     )
             self.add_note(
@@ -381,9 +400,13 @@ class CensysStixBuilder:
     def add_ip(self, observable: Reference, ip: str) -> IPV4Address | IPV6Address:
         ip_version = ipaddress.ip_network(ip, strict=False).version
         if ip_version == 4:
-            ip_address = IPV4Address(value=ip, **self.common_props)
+            ip_address = IPV4Address(
+                value=ip, author=self.author, markings=[self.marking]
+            )
         else:
-            ip_address = IPV6Address(value=ip, **self.common_props)
+            ip_address = IPV6Address(
+                value=ip, author=self.author, markings=[self.marking]
+            )
         self.bundle.extend(
             [
                 ip_address,
@@ -391,7 +414,8 @@ class CensysStixBuilder:
                     source=observable,
                     target=ip_address,
                     type=RelationshipType.RELATED_TO,
-                    **self.common_props,
+                    author=self.author,
+                    markings=[self.marking],
                 ),
             ]
         )

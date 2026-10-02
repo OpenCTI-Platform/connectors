@@ -55,6 +55,7 @@ class DomainConverter(CensysConverter):
                         source=certificate,
                         target=observable,
                         type=RelationshipType.RELATED_TO,
-                        **self.builder.common_props,
+                        author=self.builder.author,
+                        markings=[self.builder.marking],
                     )
                 )
