@@ -6,11 +6,24 @@ to manage and validate configuration parameters using Pydantic.
 These models can be extended to create specific configurations for different types of connectors.
 """
 
+from __future__ import annotations
+
+import logging
 from abc import ABC
 from datetime import timedelta
 from types import UnionType
-from typing import Any, ClassVar, Literal, Self, Union, get_args, get_origin
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    ClassVar,
+    Literal,
+    Self,
+    Union,
+    get_args,
+    get_origin,
+)
 
+from connectors_sdk.logger import get_connector_logger, get_sdk_logger
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import (
@@ -38,6 +51,9 @@ from pydantic import (
     model_validator,
 )
 from pydantic.fields import FieldInfo
+
+if TYPE_CHECKING:
+    from connectors_sdk.logger import ExtendedLogger
 
 
 class BaseConfigModel(BaseModel, ABC):
@@ -160,6 +176,137 @@ class _BaseConnectorConfig(BaseConfigModel, ABC):
         return handler(value)  # type: ignore[no-any-return] # actually return `list[str]`
 
 
+class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
+    """Settings class for external import connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "EXTERNAL_IMPORT" for external import connectors.
+        duration_period (timedelta): The period of time to await between two runs of the connector.
+    """
+
+    type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector."
+    )
+
+
+class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
+    """Settings class for internal enrichment connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
+        auto (bool): Whether the connector should run automatically when an entity is created or updated.
+    """
+
+    type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
+    auto: bool = Field(
+        default=False,
+        description="Whether the connector should run automatically when an entity is created or updated.",
+    )
+
+
+class BaseStreamConnectorConfig(_BaseConnectorConfig):
+    """Settings class for stream connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "STREAM" for stream connectors
+        live_stream_id (str): The ID of the live stream to connect to.
+        live_stream_listen_delete (bool): Whether to listen for delete events on the live stream.
+        live_stream_no_dependencies (bool): Whether to ignore dependencies when processing events from the live stream.
+        live_stream_start_timestamp (int | None): Stream position to start from, as epoch milliseconds.
+        live_stream_recover (bool): Whether to replay historical events from the database on first start.
+        live_stream_recover_iso_date (AwareDatetime | None): ISO 8601 date up to which historical events are replayed.
+    """
+
+    type: Literal["STREAM"] = "STREAM"
+    live_stream_id: str = Field(
+        description="The ID of the live stream to connect to.",
+    )
+    live_stream_listen_delete: bool = Field(
+        default=True,
+        description="Whether to listen for delete events on the live stream.",
+    )
+    live_stream_no_dependencies: bool = Field(
+        default=True,
+        description="Whether to ignore dependencies when processing events from the live stream.",
+    )
+    live_stream_start_timestamp: int | None = Field(
+        default=None,
+        description=(
+            "Stream position to start from, as epoch milliseconds (13 digits). "
+            "Only applied on the connector's first run (no existing state)."
+        ),
+    )
+    live_stream_recover: bool = Field(
+        default=True,
+        description=(
+            "Whether to replay historical events from the database on first start (recover/backfill). "
+            "Enabled by default: on its first run the connector replays all existing data "
+            "(up to 'live_stream_recover_iso_date' if set) before switching to live events. "
+            "Set to false to only process new events from now on. "
+            "Only applied on the connector's first run (no existing state)."
+        ),
+    )
+    live_stream_recover_iso_date: AwareDatetime | None = Field(
+        default=None,
+        description=(
+            "ISO 8601 date up to which historical events are replayed when recover is enabled. "
+            "Leave empty to replay all existing data. Ignored when recover is disabled. "
+            "Only applied on the connector's first run (no existing state)."
+        ),
+    )
+
+    @field_validator("live_stream_start_timestamp")
+    @classmethod
+    def _validate_start_timestamp_is_milliseconds(cls, value: int | None) -> int | None:
+        """Ensure the start timestamp is an epoch in milliseconds (13 digits) and not seconds."""
+        if value is not None and not (10**12 <= value < 10**13):
+            raise ValueError(
+                "live_stream_start_timestamp must be an epoch timestamp in milliseconds (13 digits)"
+            )
+        return value
+
+    @field_serializer("live_stream_recover_iso_date", mode="wrap", when_used="json")
+    def _serialize_recover_iso_date(
+        self,
+        value: Any,
+        handler: SerializerFunctionWrapHandler,
+        info: FieldSerializationInfo,
+    ) -> Any:
+        """Map recovery to the value pycti expects when serializing for the helper.
+        A disabled recovery becomes the "none" keyword; otherwise the date (or nothing) is passed through.
+        """
+        mode = info.context.get("mode") if info.context else None
+        if mode == "pycti" and self.live_stream_recover is False:
+            return "none"
+        return handler(value)
+
+
+class BaseInternalExportFileConnectorConfig(_BaseConnectorConfig):
+    """Settings class for internal export file connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "INTERNAL_EXPORT_FILE" for internal export file connectors.
+    """
+
+    type: Literal["INTERNAL_EXPORT_FILE"] = "INTERNAL_EXPORT_FILE"
+
+
+class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
+    """Settings class for internal import file connectors.
+
+    Attributes:
+        type (str): The type of the connector, set to "INTERNAL_IMPORT_FILE" for internal import file connectors.
+        auto (bool): Whether the connector should run automatically when an entity is created or updated.
+    """
+
+    type: Literal["INTERNAL_IMPORT_FILE"] = "INTERNAL_IMPORT_FILE"
+    auto: bool = Field(
+        default=False,
+        description="Whether the connector should run automatically when an entity is created or updated.",
+    )
+
+
 class BaseConnectorSettings(BaseConfigModel, ABC):
     """Interface class for managing and loading the global configuration for connectors.
 
@@ -202,12 +349,41 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         description="Connector configurations.",
     )
 
+    logger: ClassVar[ExtendedLogger] = get_sdk_logger("BaseConnectorSettings")
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger child named after the concrete `BaseConnectorSettings` subclass."""
+        super().__init_subclass__(**kwargs)
+        package_name = cls.__module__.split(".")[0]
+        cls.logger = get_connector_logger(f"{package_name}.{cls.__name__}")
+
     def __init__(self) -> None:
         """Initialize the configuration model and handle validation errors."""
         try:
             super().__init__()
         except ValidationError as e:
             raise ConfigValidationError("Error validating configuration.") from e
+
+        self._set_loggers_level()
+
+        self.logger.debug(
+            f"{self.__class__.__name__} instantiated successfully",
+            meta={"settings": self.model_dump(mode="json")},
+        )
+
+    def _set_loggers_level(self) -> None:
+        """Set the validated log level on the SDK's two logging namespaces.
+
+        Until this point, loggers use the level `connectors_sdk.logger` read by itself,
+        from the environment or from a configuration file. That level cannot come from a
+        field default declared in Python, which pydantic has just applied here.
+        """
+        # `logging` only knows upper-cased level names, `log_level` holds a lower-cased one.
+        log_level = self.connector.log_level.upper()
+
+        for namespace in ("connector", "connectors_sdk"):
+            logging.getLogger(namespace).setLevel(log_level)
 
     @classmethod
     def config_json_schema(
@@ -399,6 +575,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
 
         # Get config/env vars as dict to send for validation
         config_dict: dict[str, Any] = settings_loader().model_dump()
+
         return handler(config_dict)
 
     def to_helper_config(self) -> dict[str, Any]:
@@ -406,135 +583,8 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         return self.model_dump(
             mode="json",
             context={"mode": "pycti"},
+            # # Deprecated fields can be set to `None` despite their type (due to `Deprecate` annotation).
+            # # To avoid `PydanticSerializationError`, we exclude all fields set to `None` during serialization.
+            # # OpenCTIConnectorHelper handles missing fields with default values or internal logic.
+            # exclude_none=True,
         )
-
-
-class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
-    """Settings class for external import connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "EXTERNAL_IMPORT" for external import connectors.
-        duration_period (timedelta): The period of time to await between two runs of the connector.
-    """
-
-    type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
-    duration_period: timedelta = Field(
-        description="The period of time to await between two runs of the connector."
-    )
-
-
-class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
-    """Settings class for internal enrichment connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
-        auto (bool): Whether the connector should run automatically when an entity is created or updated.
-    """
-
-    type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
-    auto: bool = Field(
-        default=False,
-        description="Whether the connector should run automatically when an entity is created or updated.",
-    )
-
-
-class BaseStreamConnectorConfig(_BaseConnectorConfig):
-    """Settings class for stream connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "STREAM" for stream connectors
-        live_stream_id (str): The ID of the live stream to connect to.
-        live_stream_listen_delete (bool): Whether to listen for delete events on the live stream.
-        live_stream_no_dependencies (bool): Whether to ignore dependencies when processing events from the live stream.
-        live_stream_start_timestamp (int | None): Stream position to start from, as epoch milliseconds.
-        live_stream_recover (bool): Whether to replay historical events from the database on first start.
-        live_stream_recover_iso_date (AwareDatetime | None): ISO 8601 date up to which historical events are replayed.
-    """
-
-    type: Literal["STREAM"] = "STREAM"
-    live_stream_id: str = Field(
-        description="The ID of the live stream to connect to.",
-    )
-    live_stream_listen_delete: bool = Field(
-        default=True,
-        description="Whether to listen for delete events on the live stream.",
-    )
-    live_stream_no_dependencies: bool = Field(
-        default=True,
-        description="Whether to ignore dependencies when processing events from the live stream.",
-    )
-    live_stream_start_timestamp: int | None = Field(
-        default=None,
-        description=(
-            "Stream position to start from, as epoch milliseconds (13 digits). "
-            "Only applied on the connector's first run (no existing state)."
-        ),
-    )
-    live_stream_recover: bool = Field(
-        default=True,
-        description=(
-            "Whether to replay historical events from the database on first start (recover/backfill). "
-            "Enabled by default: on its first run the connector replays all existing data "
-            "(up to 'live_stream_recover_iso_date' if set) before switching to live events. "
-            "Set to false to only process new events from now on. "
-            "Only applied on the connector's first run (no existing state)."
-        ),
-    )
-    live_stream_recover_iso_date: AwareDatetime | None = Field(
-        default=None,
-        description=(
-            "ISO 8601 date up to which historical events are replayed when recover is enabled. "
-            "Leave empty to replay all existing data. Ignored when recover is disabled. "
-            "Only applied on the connector's first run (no existing state)."
-        ),
-    )
-
-    @field_validator("live_stream_start_timestamp")
-    @classmethod
-    def _validate_start_timestamp_is_milliseconds(cls, value: int | None) -> int | None:
-        """Ensure the start timestamp is an epoch in milliseconds (13 digits) and not seconds."""
-        if value is not None and not (10**12 <= value < 10**13):
-            raise ValueError(
-                "live_stream_start_timestamp must be an epoch timestamp in milliseconds (13 digits)"
-            )
-        return value
-
-    @field_serializer("live_stream_recover_iso_date", mode="wrap", when_used="json")
-    def _serialize_recover_iso_date(
-        self,
-        value: Any,
-        handler: SerializerFunctionWrapHandler,
-        info: FieldSerializationInfo,
-    ) -> Any:
-        """Map recovery to the value pycti expects when serializing for the helper.
-        A disabled recovery becomes the "none" keyword; otherwise the date (or nothing) is passed through.
-        """
-        mode = info.context.get("mode") if info.context else None
-        if mode == "pycti" and self.live_stream_recover is False:
-            return "none"
-        return handler(value)
-
-
-class BaseInternalExportFileConnectorConfig(_BaseConnectorConfig):
-    """Settings class for internal export file connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "INTERNAL_EXPORT_FILE" for internal export file connectors.
-    """
-
-    type: Literal["INTERNAL_EXPORT_FILE"] = "INTERNAL_EXPORT_FILE"
-
-
-class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
-    """Settings class for internal import file connectors.
-
-    Attributes:
-        type (str): The type of the connector, set to "INTERNAL_IMPORT_FILE" for internal import file connectors.
-        auto (bool): Whether the connector should run automatically when an entity is created or updated.
-    """
-
-    type: Literal["INTERNAL_IMPORT_FILE"] = "INTERNAL_IMPORT_FILE"
-    auto: bool = Field(
-        default=False,
-        description="Whether the connector should run automatically when an entity is created or updated.",
-    )

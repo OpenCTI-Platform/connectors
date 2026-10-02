@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-import sys
 from copy import deepcopy
 from pathlib import Path
 from types import UnionType
-from typing import TYPE_CHECKING, Any, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Any, ClassVar, Union, get_args, get_origin
 
+from connectors_sdk._config_paths import (
+    get_config_yml_path,
+    get_connector_main_path,
+    get_dot_env_path,
+)
+from connectors_sdk.logger import get_sdk_logger
 from pydantic import BaseModel, create_model
 from pydantic_settings import (
     BaseSettings,
@@ -16,6 +21,7 @@ from pydantic_settings import (
 )
 
 if TYPE_CHECKING:
+    from connectors_sdk.logger import ExtendedLogger
     from connectors_sdk.settings.base_settings import BaseConnectorSettings
 
 
@@ -28,6 +34,8 @@ class _SettingsLoader(BaseSettings):
         enable_decoding=False,
     )
 
+    logger: ClassVar[ExtendedLogger] = get_sdk_logger("_SettingsLoader")
+
     @classmethod
     def _get_connector_main_path(cls) -> Path:
         """Locate the main module of the running connector.
@@ -39,35 +47,29 @@ class _SettingsLoader(BaseSettings):
             - At module import time, `__main__.__file__` might not be available yet,
             thus this method should be called at runtime only.
         """
-        main = sys.modules.get("__main__")
-        if main and getattr(main, "__file__", None):
-            return Path(main.__file__).resolve()  # type: ignore
-
-        raise RuntimeError(
-            "Cannot determine connector's location: __main__.__file__ is not available. "
-            "Ensure the connector is launched using `python -m <module>` or a file-backed entrypoint."
-        )
+        main_path = get_connector_main_path()
+        if main_path is None:
+            raise RuntimeError(
+                "Cannot determine connector's location: __main__.__file__ is not available. "
+                "Ensure the connector is launched using `python -m <module>` or a file-backed entrypoint."
+            )
+        return main_path
 
     @classmethod
     def _get_config_yml_file_path(cls) -> Path | None:
         """Locate the `config.yml` file of the running connector."""
-        main_path = cls._get_connector_main_path()
-        config_yml_legacy_file_path = main_path.parent / "config.yml"
-        config_yml_file_path = main_path.parent.parent / "config.yml"
-
-        if config_yml_legacy_file_path.is_file():
-            return config_yml_legacy_file_path
-        elif config_yml_file_path.is_file():
-            return config_yml_file_path
-        return None
+        # Resolve the entrypoint first so an unlocatable connector fails loudly here,
+        # rather than silently behaving as if it had no configuration file.
+        cls._get_connector_main_path()
+        return get_config_yml_path()
 
     @classmethod
     def _get_dot_env_file_path(cls) -> Path | None:
         """Locate the `.env` file of the running connector."""
-        main_path = cls._get_connector_main_path()
-        dot_env_file_path = main_path.parent.parent / ".env"
-
-        return dot_env_file_path if dot_env_file_path.is_file() else None
+        # Resolve the entrypoint first so an unlocatable connector fails loudly here,
+        # rather than silently behaving as if it had no configuration file.
+        cls._get_connector_main_path()
+        return get_dot_env_path()
 
     @classmethod
     def settings_customise_sources(
@@ -93,6 +95,10 @@ class _SettingsLoader(BaseSettings):
         """
         config_yml_file_path = cls._get_config_yml_file_path()
         if config_yml_file_path:
+            cls.logger.debug(
+                "Parsing connector's settings from config.yml file",
+                meta={"config_yml_file_path": str(config_yml_file_path)},
+            )
             return (
                 env_settings,
                 YamlConfigSettingsSource(settings_cls, yaml_file=config_yml_file_path),
@@ -100,10 +106,16 @@ class _SettingsLoader(BaseSettings):
 
         dot_env_file_path = cls._get_dot_env_file_path()
         if dot_env_file_path:
+            cls.logger.debug(
+                "Parsing connector's settings from .env file",
+                meta={"dot_env_file_path": str(dot_env_file_path)},
+            )
             return (
                 env_settings,
                 DotEnvSettingsSource(settings_cls, env_file=dot_env_file_path),
             )
+
+        cls.logger.debug("Parsing connector's settings from environment variables")
 
         return (env_settings,)
 

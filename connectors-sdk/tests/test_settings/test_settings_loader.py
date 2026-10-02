@@ -3,10 +3,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
+    _SettingsLoader,
 )
 from connectors_sdk.settings.deprecations import DeprecatedField
 from pydantic import Field
@@ -225,7 +225,7 @@ def test_settings_loader_should_parse_os_environ_from_model(mock_environment):
     assert settings_dict["connector"]["id"] == "connector-poc--uid"
     assert settings_dict["connector"]["name"] == "Test Connector"
     assert settings_dict["connector"]["scope"] == "scope1,scope2"
-    assert settings_dict["connector"]["log_level"] == "error"
+    assert settings_dict["connector"]["log_level"] == "debug"
 
 
 def test_settings_loader_should_parse_os_environ_from_model_with_deprecated_fields(
@@ -264,5 +264,5 @@ def test_settings_loader_should_parse_os_environ_from_model_with_deprecated_fiel
     assert settings_dict["connector"]["id"] == "connector-poc--uid"
     assert settings_dict["connector"]["name"] == "Test Connector"
     assert settings_dict["connector"]["scope"] == "scope1,scope2"
-    assert settings_dict["connector"]["log_level"] == "error"
+    assert settings_dict["connector"]["log_level"] == "debug"
     assert settings_dict["deprecated_namespace"]["test_field"] == "deprecated_value"
