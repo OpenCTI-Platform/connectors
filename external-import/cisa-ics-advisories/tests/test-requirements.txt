@@ -1,0 +1,3 @@
+# Main dependencies need to be installed so the CI is able to run the tests
+-r ../src/requirements.txt
+pytest>=7.4.0
