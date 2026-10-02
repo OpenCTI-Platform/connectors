@@ -23,7 +23,8 @@ rf:
   ta_to_intrusion_set: false # optional. Set to true to map Threat Actor entities to Intrusion Set.
   risk_as_score: True # optional
   risk_threshold: 60 # optional
-  analyst_notes_guess_relationships=False # optional
+  analyst_notes_guess_relationships: False # optional
+  analyst_notes_include_context_entities: False # optional. Set to true to also import analyst notes context entities (can be noisy).
   pull_risk_list: False
   riskrules_as_label: False # optional
   risk_list_threshold: 70 # optional
