@@ -48,7 +48,26 @@ class AsyncRateLimiter:
 
             await asyncio.sleep(wait_time)
 
+    def invalidate_lock(self) -> None:
+        """Drop the cached lock without discarding request history.
+
+        An ``asyncio.Lock`` is bound to the event loop that created it, so a
+        lock from a previous ``asyncio.run()`` call cannot be reused in a new
+        loop.  Setting ``_lock`` to ``None`` forces ``_get_lock()`` to create a
+        fresh lock in the next loop.  The ``time.monotonic()`` timestamps remain
+        valid across loops, so they are preserved here to keep the sliding
+        window continuous (e.g. across consecutive historical-backfill chunks,
+        each of which runs in its own ``asyncio.run()``).
+        """
+        self._lock = None
+
     def reset(self) -> None:
-        """Reset the limiter state (e.g. between asyncio.run() calls)."""
+        """Fully reset the limiter state, clearing both the cached lock and the
+        recorded request history.
+
+        Use this only when the request history should intentionally be
+        forgotten.  To merely cross an ``asyncio.run()`` boundary while keeping
+        the rate window continuous, use :meth:`invalidate_lock` instead.
+        """
         self._timestamps.clear()
         self._lock = None
