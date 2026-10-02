@@ -20,7 +20,7 @@ connector.
 | CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT | `boolean` | | `true`, `false` | `false` | Whether to create a dedicated Connectors-group service account on first start. |
 | CONNECTOR_AUTO_CREATE_SERVICE_ACCOUNT_CONFIDENCE_LEVEL | `integer` | | `0` to `100` | `50` | Maximum confidence level assigned to the auto-created service account. |
 | RST_THREAT_LIBRARY_BASEURL | `string` | | URL | `"https://api.rstcloud.net/v1"` | The RST Cloud Threat Library API base URL. |
-| RST_THREAT_LIBRARY_APIKEY | `string` | Yes | string | | The RST Cloud Threat Library API key. |
+| RST_THREAT_LIBRARY_APIKEY | `string` (password) | Yes | string | | The RST Cloud Threat Library API key. |
 | RST_THREAT_LIBRARY_AUTH_HEADER | `string` | | string | `"x-api-key"` | The HTTP header used to send the API key. |
 | RST_THREAT_LIBRARY_PROXY | `string` | | URL or empty string | `""` | Optional forward HTTP proxy URL. An empty value uses direct egress. |
 | RST_THREAT_LIBRARY_SSL_VERIFY | `boolean` | | `true`, `false` | `true` | Whether TLS certificates are verified for API requests. |
@@ -30,12 +30,12 @@ connector.
 | RST_THREAT_LIBRARY_MAX_RETRIES | `integer` | | Positive integer (≥ 1) | `3` | Maximum attempts when sending data to OpenCTI (at least one). |
 | RST_THREAT_LIBRARY_RETRY_DELAY | `integer` | | Non-negative integer | `10` | Initial delay in seconds before retrying an OpenCTI push. The connector sleeps at least 1 second between retries. |
 | RST_THREAT_LIBRARY_RETRY_BACKOFF_MULTIPLIER | `number` | | Positive number | `2.0` | Exponential backoff multiplier for OpenCTI push retries. |
-| RST_THREAT_LIBRARY_OPENCTI_PUSH_MODE | `string` | | `bundle`, `api` | `"bundle"` | The OpenCTI write path: worker bundle or GraphQL API import. |
+| RST_THREAT_LIBRARY_OPENCTI_BATCH_SIZE | `integer` | | Positive integer | `200` | Max STIX objects per OpenCTI worker bundle push. |
 | RST_THREAT_LIBRARY_OBJECT_TYPES | `string` | | Comma-separated string | `"intrusion-sets,malware,tools,campaigns"` | Threat-object API paths to poll. |
 | RST_THREAT_LIBRARY_ORDER_BY | `string` | | string | `"modified"` | Field used to order API results for incremental synchronization. |
 | RST_THREAT_LIBRARY_ORDER_MODE | `string` | | `asc`, `desc` | `"desc"` | Direction used to order API results. |
 | RST_THREAT_LIBRARY_PAGE_SIZE | `integer` | | Positive integer | `100` | Maximum number of threat objects requested per page. |
-| RST_THREAT_LIBRARY_MERGE_SPLIT | `boolean` | | `true`, `false` | `false` | Whether intrusion-set alias merge/split reconciliation is enabled. |
+| RST_THREAT_LIBRARY_MERGE_SPLIT | `boolean` | | `true`, `false` | `false` | Optional alias merge/split for intrusion sets, malware, tools, and campaigns. |
 | RST_THREAT_LIBRARY_RESPECT_USER_EDITS | `boolean` | | `true`, `false` | `false` | Whether higher-confidence OpenCTI edits are preserved. |
 | RST_THREAT_LIBRARY_INTRUSION_SET_DEFAULT_CONFIDENCE | `integer` | | `0` to `100` | | Optional confidence value that replaces upstream confidence on imported intrusion sets. |
 | RST_THREAT_LIBRARY_SYNC_LABELS | `string` | | Comma-separated string | `"RST Threat Library"` | Labels applied during import and used to scope merge/split reconciliation. |

@@ -150,3 +150,98 @@ def test_build_external_references_skips_missing_source_name(converter):
     assert payload["source_name"] == "RST Cloud"
     assert payload["url"] == "https://example.com/ok"
     assert payload["external_id"] == "abc"
+
+
+_UNSET_FIRST_SEEN = "1970-01-01T00:00:00.000Z"
+_UNSET_LAST_SEEN = "5138-11-16T09:46:40.000Z"
+_SID = "c8d782e1-6566-4c2b-a9f8-87a757c379a4"
+
+
+def test_intrusion_set_omits_unset_dates_and_keeps_real_ones(converter):
+    unset = converter.item_to_sdo(
+        {
+            "standard_id": f"intrusion-set--{_SID}",
+            "entity_type": "Intrusion-Set",
+            "name": "Papermill",
+            "first_seen": _UNSET_FIRST_SEEN,
+            "last_seen": _UNSET_LAST_SEEN,
+        },
+        "intrusion-sets",
+        [],
+    )
+    unset_payload = json.loads(unset.serialize())
+    assert "first_seen" not in unset_payload
+    assert "last_seen" not in unset_payload
+
+    dated = converter.item_to_sdo(
+        {
+            "standard_id": f"intrusion-set--{_SID}",
+            "entity_type": "Intrusion-Set",
+            "name": "Papermill",
+            "aliases": ["Paper Mill"],
+            "first_seen": "2020-03-01T00:00:00.000Z",
+            "last_seen": "",
+        },
+        "intrusion-sets",
+        [],
+    )
+    dated_payload = json.loads(dated.serialize())
+    assert dated_payload["aliases"] == ["Paper Mill"]
+    assert dated_payload["first_seen"].startswith("2020-03-01")
+    assert "last_seen" not in dated_payload
+
+
+def test_malware_copies_aliases_and_only_real_dates(converter):
+    sdo = converter.item_to_sdo(
+        {
+            "standard_id": f"malware--{_SID}",
+            "entity_type": "Malware",
+            "name": "Example Malware",
+            "is_family": True,
+            "aliases": ["ex-mal"],
+            "first_seen": _UNSET_FIRST_SEEN,
+            "last_seen": "2022-01-15T00:00:00.000Z",
+        },
+        "malware",
+        [],
+    )
+    payload = json.loads(sdo.serialize())
+    assert payload["aliases"] == ["ex-mal"]
+    assert "first_seen" not in payload
+    assert payload["last_seen"].startswith("2022-01-15")
+
+
+def test_tool_and_campaign_copy_aliases(converter):
+    tool = converter.item_to_sdo(
+        {
+            "standard_id": f"tool--{_SID}",
+            "entity_type": "Tool",
+            "name": "Example Tool",
+            "aliases": ["ex-tool"],
+        },
+        "tools",
+        [],
+    )
+    tool_payload = json.loads(tool.serialize())
+    assert tool_payload["aliases"] == ["ex-tool"]
+    assert "first_seen" not in tool_payload
+    assert "last_seen" not in tool_payload
+
+    campaign = converter.item_to_sdo(
+        {
+            "standard_id": f"campaign--{_SID}",
+            "entity_type": "Campaign",
+            "name": "Pasteswitch",
+            "aliases": ["Paste Switch"],
+            "first_seen": _UNSET_FIRST_SEEN,
+            "last_seen": _UNSET_LAST_SEEN,
+            "objective": "Initial access",
+        },
+        "campaigns",
+        [],
+    )
+    campaign_payload = json.loads(campaign.serialize())
+    assert campaign_payload["aliases"] == ["Paste Switch"]
+    assert campaign_payload["objective"] == "Initial access"
+    assert "first_seen" not in campaign_payload
+    assert "last_seen" not in campaign_payload

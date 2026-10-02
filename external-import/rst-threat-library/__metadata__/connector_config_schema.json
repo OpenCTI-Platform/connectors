@@ -126,7 +126,9 @@
       "examples": [
         "ChangeMe"
       ],
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "RST_THREAT_LIBRARY_AUTH_HEADER": {
       "default": "x-api-key",
@@ -261,22 +263,9 @@
       ],
       "type": "string"
     },
-    "RST_THREAT_LIBRARY_OPENCTI_PUSH_MODE": {
-      "default": "bundle",
-      "description": "OpenCTI write path: bundle (worker) or api (GraphQL import).",
-      "enum": [
-        "bundle",
-        "api"
-      ],
-      "examples": [
-        "bundle",
-        "api"
-      ],
-      "type": "string"
-    },
     "RST_THREAT_LIBRARY_OPENCTI_BATCH_SIZE": {
       "default": 200,
-      "description": "Max STIX objects per OpenCTI push. Large deltas are flushed in chunks to bound memory and avoid oversized bundles/imports.",
+      "description": "Max STIX objects per OpenCTI push. Large deltas are flushed in chunks to bound memory and avoid oversized bundles.",
       "examples": [
         100,
         200,
@@ -322,7 +311,7 @@
     },
     "RST_THREAT_LIBRARY_MERGE_SPLIT": {
       "default": false,
-      "description": "Enable intrusion-set merge/split against the full catalogue.",
+      "description": "Enable alias merge/split reconcile for intrusion sets, malware, tools, and campaigns via the OpenCTI API (stix.merge / alias field updates).",
       "examples": [
         false,
         true

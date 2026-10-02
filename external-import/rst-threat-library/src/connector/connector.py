@@ -16,7 +16,7 @@ from connector.converter_to_stix import ConverterToStix
 from connector.merge_split import (
     MergeCandidate,
     SplitCandidate,
-    analyze_intrusion_set_merge_split,
+    analyze_merge_split,
     identifiers_from_api_item,
     identifiers_from_opencti,
     pick_opencti_merge_survivor,
@@ -33,6 +33,14 @@ _MERGE_SURVIVOR_READ_ATTEMPTS = 8
 _MERGE_SURVIVOR_READ_DELAY_S = 2.0
 _OPENCTI_RETRY_MIN_DELAY_S = 1
 _MERGE_SPLIT_CATALOGUE_WARN = 10_000
+_MERGE_SPLIT_TYPES = frozenset(
+    {
+        ThreatObjectType.INTRUSION_SETS,
+        ThreatObjectType.MALWARE,
+        ThreatObjectType.TOOLS,
+        ThreatObjectType.CAMPAIGNS,
+    }
+)
 
 
 @dataclass
@@ -58,7 +66,7 @@ class RSTThreatLibrary:
 
         self._client_config = {
             "baseurl": str(tl.baseurl),
-            "apikey": tl.apikey,
+            "apikey": tl.apikey.get_secret_value(),
             "auth_header": tl.auth_header,
             "contimeout": int(tl.contimeout),
             "readtimeout": int(tl.readtimeout),
@@ -73,9 +81,6 @@ class RSTThreatLibrary:
         self._max_retries = int(tl.max_retries)
         self._retry_delay = int(tl.retry_delay)
         self._retry_backoff_multiplier = float(tl.retry_backoff_multiplier)
-
-        _push = (tl.opencti_push_mode or "bundle").strip().lower()
-        self.opencti_push_mode = _push if _push in ("bundle", "api") else "bundle"
         self._opencti_batch_size = max(1, int(tl.opencti_batch_size))
 
         self._sync_labels = [str(x).strip() for x in tl.sync_labels if str(x).strip()]
@@ -145,7 +150,7 @@ class RSTThreatLibrary:
     def run(self) -> None:
         self.helper.connector_logger.info("Starting RST Threat Library connector")
         self.helper.connector_logger.info(
-            f"OpenCTI push mode: {self.opencti_push_mode} "
+            f"OpenCTI push: send_stix2_bundle "
             f"(batch_size={self._opencti_batch_size}, "
             f"CONNECTOR_UPDATE_EXISTING_DATA={self.update_existing_data})"
         )
@@ -164,7 +169,9 @@ class RSTThreatLibrary:
                 f"{self._reconcile_allow_created_by}"
             )
         self.helper.connector_logger.info(
-            f"Intrusion-set merge/split at import: enabled={self.merge_split_enabled}"
+            "Alias merge/split at import "
+            "(intrusion sets, malware, tools, campaigns): "
+            f"enabled={self.merge_split_enabled}"
         )
         self.helper.connector_logger.info(
             "Retain local user edits (confidence lock): "
@@ -182,8 +189,9 @@ class RSTThreatLibrary:
             )
         if self.merge_split_enabled:
             self.helper.connector_logger.info(
-                "Intrusion-set duplicates use OpenCTI stix.merge (relationships, "
-                "sightings, notes preserved); merge/split runs after delta import."
+                "Duplicates use OpenCTI stix.merge (relationships, "
+                "sightings, notes preserved) for intrusion sets, malware, "
+                "tools, and campaigns; merge/split runs after delta import."
             )
 
         duration_period_s = self.config.connector.duration_period.total_seconds()
@@ -216,7 +224,7 @@ class RSTThreatLibrary:
             self._cycle_type(client, obj_type, state, timestamp, seed)
 
         if self.merge_split_enabled:
-            self._apply_intrusion_set_merge_split(client, state, timestamp)
+            self._apply_merge_split(client, state, timestamp)
 
     @staticmethod
     def _entity_label_values(entity: Dict[str, Any]) -> List[str]:
@@ -538,7 +546,7 @@ class RSTThreatLibrary:
         state: Dict[str, Any],
         api_items: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
-        """Intrusion sets to compare with the API catalogue for merge/split."""
+        """Entities to compare with the API catalogue for merge/split."""
         managed = set((state.get("managed_ids") or {}).get(obj_type_path, []))
         api_idents: Set[str] = set()
         if api_items:
@@ -655,7 +663,7 @@ class RSTThreatLibrary:
         if count >= _SPLIT_FAILURE_SKIP_THRESHOLD and not entry.get("skipped"):
             entry["skipped"] = True
             self.helper.connector_logger.info(
-                f"[{obj_type}] split: intrusion set skipped "
+                f"[{obj_type}] split: skipped "
                 f"{oc_sid} (name={oc.get('name')}) — abandoned after "
                 f"{count} consecutive failures ({reason})"
             )
@@ -666,14 +674,26 @@ class RSTThreatLibrary:
             )
         self.helper.set_state(state)
 
-    def _apply_intrusion_set_merge_split(
+    def _apply_merge_split(
         self,
         client: ThreatLibraryClient,
         state: Dict[str, Any],
         timestamp: int,
     ) -> None:
-        """Run merge/split after import against OpenCTI entities."""
-        obj_type = ThreatObjectType.INTRUSION_SETS
+        """Run alias merge/split for each configured threat-object type."""
+        for obj_type in self.object_types:
+            if obj_type not in _MERGE_SPLIT_TYPES:
+                continue
+            self._apply_merge_split_for_type(client, state, timestamp, obj_type)
+
+    def _apply_merge_split_for_type(
+        self,
+        client: ThreatLibraryClient,
+        state: Dict[str, Any],
+        timestamp: int,
+        obj_type: str,
+    ) -> None:
+        """Compare one catalogue with OpenCTI and apply split/merge."""
         api_items: List[Dict[str, Any]] = []
         try:
             for item in client.iter_all_items(obj_type):
@@ -697,7 +717,7 @@ class RSTThreatLibrary:
         opencti_entities = self._opencti_entities_for_merge_split(
             obj_type, state, api_items=api_items
         )
-        plan = analyze_intrusion_set_merge_split(api_items, opencti_entities)
+        plan = analyze_merge_split(api_items, opencti_entities)
 
         if not plan.splits and not plan.merges:
             self.helper.connector_logger.info(
@@ -712,12 +732,12 @@ class RSTThreatLibrary:
         )
 
         for split in plan.splits:
-            self._execute_intrusion_set_split(split, timestamp, obj_type, state)
+            self._execute_split(split, timestamp, obj_type, state)
 
         for merge in plan.merges:
-            self._execute_intrusion_set_merge(merge, timestamp, obj_type, state)
+            self._execute_merge(merge, timestamp, obj_type, state)
 
-    def _execute_intrusion_set_split(
+    def _execute_split(
         self,
         split: SplitCandidate,
         timestamp: int,
@@ -732,7 +752,7 @@ class RSTThreatLibrary:
 
         if self._should_skip_split_after_failures(split, obj_type, state):
             self.helper.connector_logger.debug(
-                f"[{obj_type}] split: intrusion set skipped {oc_sid} "
+                f"[{obj_type}] split: skipped {oc_sid} "
                 f"(name={oc.get('name')}) — previously abandoned"
             )
             return
@@ -839,14 +859,14 @@ class RSTThreatLibrary:
         else:
             self._clear_split_failure(state, obj_type, oc_sid)
 
-    def _opencti_fusion_merge_intrusion_sets(
+    def _opencti_fusion_merge(
         self,
         target_entity: Dict[str, Any],
         source_entities: List[Dict[str, Any]],
         obj_type: str,
         state: Dict[str, Any],
     ) -> List[str]:
-        """Fuse duplicate intrusion sets into target via OpenCTI UI merge."""
+        """Fuse duplicate objects into the target via OpenCTI merge."""
         target_internal_id = target_entity.get("id")
         target_sid = target_entity.get("standard_id")
         if not target_internal_id or not target_sid:
@@ -899,7 +919,7 @@ class RSTThreatLibrary:
                 )
         return merged
 
-    def _execute_intrusion_set_merge(
+    def _execute_merge(
         self,
         merge: MergeCandidate,
         timestamp: int,
@@ -1046,7 +1066,7 @@ class RSTThreatLibrary:
         if target_sid != fusion_target_sid and api_target:
             source_by_sid[target_sid] = api_target
 
-        merged_sids = self._opencti_fusion_merge_intrusion_sets(
+        merged_sids = self._opencti_fusion_merge(
             fusion_target,
             list(source_by_sid.values()),
             obj_type,
@@ -1162,8 +1182,7 @@ class RSTThreatLibrary:
 
                 if batch_item_count >= batch_size and not flush_batch():
                     self.helper.connector_logger.warning(
-                        f"[{obj_type}] OpenCTI push failed "
-                        f"({self.opencti_push_mode}); "
+                        f"[{obj_type}] OpenCTI push failed; "
                         f"cursor not advanced (will retry on next cycle)"
                     )
                     return
@@ -1181,7 +1200,7 @@ class RSTThreatLibrary:
 
         if not flush_batch():
             self.helper.connector_logger.warning(
-                f"[{obj_type}] OpenCTI push failed ({self.opencti_push_mode}); "
+                f"[{obj_type}] OpenCTI push failed; "
                 f"cursor not advanced (will retry on next cycle)"
             )
             return
@@ -1215,12 +1234,12 @@ class RSTThreatLibrary:
             return True
         batch_size = self._opencti_batch_size
         if len(stix_objects) <= batch_size:
-            return self._batch_send_one(stix_objects, timestamp, obj_type)
+            return self._batch_send_stix_bundle(stix_objects, timestamp, obj_type)
 
         identities, rest = self._partition_identities(stix_objects)
         ordered = identities + rest
         if len(ordered) <= batch_size:
-            return self._batch_send_one(ordered, timestamp, obj_type)
+            return self._batch_send_stix_bundle(ordered, timestamp, obj_type)
 
         total_chunks = (len(ordered) + batch_size - 1) // batch_size
         for chunk_idx, offset in enumerate(range(0, len(ordered), batch_size)):
@@ -1230,16 +1249,9 @@ class RSTThreatLibrary:
                 f"{chunk_idx + 1}/{total_chunks} "
                 f"({len(chunk)} object(s))"
             )
-            if not self._batch_send_one(chunk, timestamp, obj_type):
+            if not self._batch_send_stix_bundle(chunk, timestamp, obj_type):
                 return False
         return True
-
-    def _batch_send_one(
-        self, stix_objects: List[Any], timestamp: int, obj_type: str
-    ) -> bool:
-        if self.opencti_push_mode == "api":
-            return self._batch_send_via_api(stix_objects, timestamp, obj_type)
-        return self._batch_send_stix_bundle(stix_objects, timestamp, obj_type)
 
     def _sleep_before_retry(self, delay_s: int) -> int:
         """Sleep at least 1s between OpenCTI push retries, then return next delay."""
@@ -1336,12 +1348,6 @@ class RSTThreatLibrary:
         return False
 
     @staticmethod
-    def _stix_objects_to_api_order(stix_objects: List[Any]) -> List[Any]:
-        """Import identities before SDOs that reference created_by_ref."""
-        identities, rest = RSTThreatLibrary._partition_identities(stix_objects)
-        return identities + rest
-
-    @staticmethod
     def _stix_type_and_id(obj: Any) -> Tuple[Optional[str], Optional[str]]:
         obj_type = getattr(obj, "type", None)
         obj_id = getattr(obj, "id", None)
@@ -1372,61 +1378,3 @@ class RSTThreatLibrary:
             else:
                 rest.append(obj)
         return identities, rest
-
-    def _batch_send_via_api(
-        self, stix_objects: List[Any], timestamp: int, obj_type: str
-    ) -> bool:
-        now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-        friendly_name = (
-            f"RST Threat Library [{obj_type}] API @ "
-            f"{now.strftime('%Y-%m-%d %H:%M:%S')}"
-        )
-        ordered = self._stix_objects_to_api_order(stix_objects)
-        self.helper.connector_logger.debug(
-            f"[{obj_type}] start API import of {len(ordered)} object(s) "
-            f"(update_existing={self.update_existing_data})"
-        )
-
-        max_retries = max(1, int(self._max_retries))
-        retry_delay = self._retry_delay
-
-        for attempt in range(max_retries):
-            work_id: Optional[str] = None
-            try:
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-                for obj in ordered:
-                    data = json.loads(obj.serialize())
-                    self.helper.api.stix2.import_object(
-                        data, update=self.update_existing_data
-                    )
-                self.helper.connector_logger.info(
-                    f"[{obj_type}] API-imported {len(ordered)} object(s)"
-                )
-                self.helper.api.work.to_processed(
-                    work_id,
-                    f"API-imported {len(ordered)} object(s) for {obj_type}",
-                )
-                return True
-
-            except Exception as ex:
-                self._mark_work_failed(work_id, obj_type, ex)
-                if self._is_retryable_upload_error(ex):
-                    self.helper.connector_logger.error(
-                        f"[{obj_type}] API push attempt {attempt + 1}/{max_retries} "
-                        f"failed: {ex}"
-                    )
-                    if attempt < max_retries - 1:
-                        retry_delay = self._sleep_before_retry(retry_delay)
-                        continue
-                    self.helper.connector_logger.error(
-                        f"[{obj_type}] failed API import after {max_retries} attempts."
-                    )
-                    return False
-
-                error_message = f"[{obj_type}] unexpected error during API import: {ex}"
-                self.helper.connector_logger.error(error_message)
-                raise
-
-        return False

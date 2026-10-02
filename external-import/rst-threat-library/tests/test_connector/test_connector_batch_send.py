@@ -229,86 +229,6 @@ def test_batch_send_stix_bundle_performs_one_attempt_when_max_retries_zero(conne
     assert connector.helper.send_stix2_bundle.call_count == 1
 
 
-def test_batch_send_via_api_imports_objects_and_marks_work_processed(connector):
-    identity = MagicMock()
-    identity.serialize.return_value = (
-        '{"type":"identity","id":"identity--1","name":"Author"}'
-    )
-    malware = MagicMock()
-    malware.serialize.return_value = '{"type":"malware","id":"malware--1","name":"x"}'
-
-    ok = connector._batch_send_via_api(
-        [malware, identity], timestamp=1_700_000_000, obj_type="malware"
-    )
-
-    assert ok is True
-    assert connector.helper.api.stix2.import_object.call_count == 2
-    first_payload = connector.helper.api.stix2.import_object.call_args_list[0].args[0]
-    assert first_payload["type"] == "identity"
-    connector.helper.api.work.to_processed.assert_called_once()
-    assert (
-        connector.helper.api.work.to_processed.call_args.kwargs.get("in_error")
-        is not True
-    )
-
-
-def test_batch_send_via_api_retries_requests_exceptions(connector, monkeypatch):
-    import requests
-
-    stix_object = MagicMock()
-    stix_object.serialize.return_value = '{"type":"malware","id":"malware--1"}'
-    connector.helper.api.stix2.import_object.side_effect = [
-        requests.exceptions.ConnectionError("temporary"),
-        None,
-    ]
-    monkeypatch.setattr("connector.connector.time.sleep", lambda _: None)
-
-    ok = connector._batch_send_via_api(
-        [stix_object], timestamp=1_700_000_000, obj_type="malware"
-    )
-
-    assert ok is True
-    assert connector.helper.api.stix2.import_object.call_count == 2
-    assert connector.helper.api.work.to_processed.call_count == 2
-    first = connector.helper.api.work.to_processed.call_args_list[0]
-    second = connector.helper.api.work.to_processed.call_args_list[1]
-    assert first.kwargs.get("in_error") is True
-    assert second.kwargs.get("in_error") is not True
-
-
-def test_batch_send_via_api_returns_false_after_retry_budget(connector, monkeypatch):
-    stix_object = MagicMock()
-    stix_object.serialize.return_value = '{"type":"malware","id":"malware--1"}'
-    connector._max_retries = 2
-    connector.helper.api.stix2.import_object.side_effect = ConnectionError("temporary")
-    monkeypatch.setattr("connector.connector.time.sleep", lambda _: None)
-
-    ok = connector._batch_send_via_api(
-        [stix_object], timestamp=1_700_000_000, obj_type="malware"
-    )
-
-    assert ok is False
-    assert connector.helper.api.stix2.import_object.call_count == 2
-    for call in connector.helper.api.work.to_processed.call_args_list:
-        assert call.kwargs.get("in_error") is True
-
-
-def test_batch_send_via_api_reraises_non_retryable_after_marking_work(connector):
-    stix_object = MagicMock()
-    stix_object.serialize.return_value = '{"type":"malware","id":"malware--1"}'
-    connector.helper.api.stix2.import_object.side_effect = ValueError("bad payload")
-
-    with pytest.raises(ValueError, match="bad payload"):
-        connector._batch_send_via_api(
-            [stix_object], timestamp=1_700_000_000, obj_type="malware"
-        )
-
-    connector.helper.api.work.to_processed.assert_called_once()
-    assert (
-        connector.helper.api.work.to_processed.call_args.kwargs.get("in_error") is True
-    )
-
-
 def test_seed_cursor_warns_and_ignores_invalid_import_from_date(connector):
     connector.import_from_date = "not-a-date"
 
@@ -421,7 +341,7 @@ def test_split_abandons_after_consecutive_analyst_lock_failures():
     state: dict = {}
 
     for _ in range(_SPLIT_FAILURE_SKIP_THRESHOLD):
-        connector._execute_intrusion_set_split(
+        connector._execute_split(
             split, timestamp=1, obj_type="intrusion-sets", state=state
         )
 
@@ -430,7 +350,7 @@ def test_split_abandons_after_consecutive_analyst_lock_failures():
     assert entry["count"] == _SPLIT_FAILURE_SKIP_THRESHOLD
 
     helper.connector_logger.info.reset_mock()
-    connector._execute_intrusion_set_split(
+    connector._execute_split(
         split, timestamp=1, obj_type="intrusion-sets", state=state
     )
     info_msgs = " ".join(
@@ -473,7 +393,7 @@ def test_split_records_failure_when_opencti_push_fails():
     state: dict = {}
 
     for _ in range(_SPLIT_FAILURE_SKIP_THRESHOLD):
-        connector._execute_intrusion_set_split(
+        connector._execute_split(
             split, timestamp=1, obj_type="intrusion-sets", state=state
         )
 
@@ -482,7 +402,7 @@ def test_split_records_failure_when_opencti_push_fails():
     assert entry["count"] == _SPLIT_FAILURE_SKIP_THRESHOLD
     assert connector._batch_send.call_count == _SPLIT_FAILURE_SKIP_THRESHOLD
 
-    connector._execute_intrusion_set_split(
+    connector._execute_split(
         split, timestamp=1, obj_type="intrusion-sets", state=state
     )
     assert connector._batch_send.call_count == _SPLIT_FAILURE_SKIP_THRESHOLD

@@ -24,6 +24,34 @@ _STIX_IDENTITY_CLASSES = frozenset(
     }
 )
 
+# OpenCTI stores an unset first/last seen as these range sentinels.
+_UNSET_DATE_PREFIXES = (
+    "1970-01-01T00:00:00",
+    "5138-11-16T09:46:40",
+)
+
+
+def present_date(value: Any) -> Any:
+    """Return a real timestamp, or None when the API left the date unset."""
+    if value in (None, ""):
+        return None
+    text = str(value).strip()
+    if text.startswith(_UNSET_DATE_PREFIXES):
+        return None
+    return value
+
+
+def copy_aliases(item: Dict[str, Any], kwargs: Dict[str, Any]) -> None:
+    if item.get("aliases"):
+        kwargs["aliases"] = list(item["aliases"])
+
+
+def copy_seen_dates(item: Dict[str, Any], kwargs: Dict[str, Any]) -> None:
+    for field in ("first_seen", "last_seen"):
+        seen = present_date(item.get(field))
+        if seen is not None:
+            kwargs[field] = seen
+
 
 class ConverterToStix:
     """Build STIX 2.1 objects from Threat Library API payloads."""
@@ -161,16 +189,11 @@ class ConverterToStix:
 
     def build_intrusion_set(self, item: Dict[str, Any]) -> Any:
         kwargs = self._base_sdo_kwargs(item)
-        for field in (
-            "first_seen",
-            "last_seen",
-            "primary_motivation",
-            "resource_level",
-        ):
+        copy_seen_dates(item, kwargs)
+        for field in ("primary_motivation", "resource_level"):
             if item.get(field) not in (None, ""):
                 kwargs[field] = item[field]
-        if item.get("aliases"):
-            kwargs["aliases"] = list(item["aliases"])
+        copy_aliases(item, kwargs)
         if item.get("goals"):
             kwargs["goals"] = list(item["goals"])
         if item.get("secondary_motivations"):
@@ -180,6 +203,7 @@ class ConverterToStix:
 
     def build_malware(self, item: Dict[str, Any]) -> Any:
         kwargs = self._base_sdo_kwargs(item)
+        copy_seen_dates(item, kwargs)
         for field in (
             "malware_types",
             "capabilities",
@@ -188,8 +212,7 @@ class ConverterToStix:
         ):
             if item.get(field):
                 kwargs[field] = list(item[field])
-        if item.get("aliases"):
-            kwargs["aliases"] = list(item["aliases"])
+        copy_aliases(item, kwargs)
         if item.get("is_family") is not None:
             kwargs["is_family"] = bool(item["is_family"])
         stix_id = kwargs.pop("id")
@@ -201,13 +224,15 @@ class ConverterToStix:
             kwargs["tool_types"] = list(item["tool_types"])
         if item.get("tool_version"):
             kwargs["tool_version"] = item["tool_version"]
+        copy_aliases(item, kwargs)
         stix_id = kwargs.pop("id")
         return stix2.v21.Tool(id=stix_id, **kwargs)
 
     def build_campaign(self, item: Dict[str, Any]) -> Any:
         kwargs = self._base_sdo_kwargs(item)
-        for field in ("first_seen", "last_seen", "objective"):
-            if item.get(field) not in (None, ""):
-                kwargs[field] = item[field]
+        copy_seen_dates(item, kwargs)
+        if item.get("objective") not in (None, ""):
+            kwargs["objective"] = item["objective"]
+        copy_aliases(item, kwargs)
         stix_id = kwargs.pop("id")
         return stix2.v21.Campaign(id=stix_id, **kwargs)

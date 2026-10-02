@@ -8,7 +8,7 @@ from connectors_sdk import (
 )
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import migrate_deprecated_namespace
-from pydantic import Field, HttpUrl, model_validator
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -73,9 +73,13 @@ class RstThreatLibraryConfig(BaseConfigModel):
         default="https://api.rstcloud.net/v1",
         examples=["https://api.rstcloud.net/v1"],
     )
-    apikey: str = Field(
+    apikey: SecretStr = Field(
         description="RST Cloud Threat Library API key.",
         examples=["ChangeMe"],
+        json_schema_extra={
+            "format": "password",
+            "writeOnly": True,
+        },
     )
     auth_header: str = Field(
         description="HTTP header name used to send the API key.",
@@ -157,15 +161,10 @@ class RstThreatLibraryConfig(BaseConfigModel):
         default="",
         examples=["", "2024-01-01"],
     )
-    opencti_push_mode: Literal["bundle", "api"] = Field(
-        description="OpenCTI write path: bundle (worker) or api (GraphQL import).",
-        default="bundle",
-        examples=["bundle", "api"],
-    )
     opencti_batch_size: int = Field(
         description=(
             "Max STIX objects per OpenCTI push. Large deltas are flushed in "
-            "chunks to bound memory and avoid oversized bundles/imports."
+            "chunks to bound memory and avoid oversized bundles."
         ),
         default=200,
         gt=0,
@@ -187,7 +186,11 @@ class RstThreatLibraryConfig(BaseConfigModel):
         examples=["", "identity--11111111-1111-1111-1111-111111111111"],
     )
     merge_split: bool = Field(
-        description="Enable intrusion-set merge/split against the full catalogue.",
+        description=(
+            "Enable alias merge/split reconcile for intrusion sets, malware, "
+            "tools, and campaigns via the OpenCTI API "
+            "(stix.merge / alias field updates)."
+        ),
         default=False,
         examples=[False, True],
     )
@@ -231,7 +234,7 @@ class ConnectorSettings(BaseConnectorSettings):
     @model_validator(mode="after")
     def _require_api_key(self) -> "ConnectorSettings":
         threat_library_cfg = getattr(self, "rst_threat_library", None)
-        api_key = getattr(threat_library_cfg, "apikey", "")
-        if not api_key:
+        api_key = getattr(threat_library_cfg, "apikey", None)
+        if api_key is None or not api_key.get_secret_value():
             raise ValueError("rst_threat_library.apikey is required.")
         return self

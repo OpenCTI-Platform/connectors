@@ -1,5 +1,5 @@
 from connector.merge_split import (
-    analyze_intrusion_set_merge_split,
+    analyze_merge_split,
     opencti_alias_count,
     pick_opencti_merge_survivor,
 )
@@ -26,7 +26,7 @@ def test_merge_split_detects_duplicate_opencti_entities_for_single_upstream_surv
         },
     ]
 
-    plan = analyze_intrusion_set_merge_split(api_items, opencti_entities)
+    plan = analyze_merge_split(api_items, opencti_entities)
 
     assert len(plan.merges) == 1
     assert plan.merges[0].target_api_item["standard_id"] == api_items[0]["standard_id"]
@@ -54,7 +54,7 @@ def test_merge_split_detects_alias_conflict_for_split_candidate():
         }
     ]
 
-    plan = analyze_intrusion_set_merge_split(api_items, opencti_entities)
+    plan = analyze_merge_split(api_items, opencti_entities)
 
     assert len(plan.splits) == 1
     assert "Shared Alias" in plan.splits[0].aliases_to_remove
@@ -81,7 +81,7 @@ def test_split_does_not_put_opencti_name_into_aliases_to_remove():
         }
     ]
 
-    plan = analyze_intrusion_set_merge_split(api_items, opencti_entities)
+    plan = analyze_merge_split(api_items, opencti_entities)
 
     for split in plan.splits:
         assert "Group B" not in split.aliases_to_remove
@@ -113,6 +113,25 @@ def test_pick_opencti_merge_survivor_prefers_more_aliases():
     assert survivor is not None
     assert survivor["standard_id"] == muddy["standard_id"]
     assert opencti_alias_count(muddy) > opencti_alias_count(unc)
+
+
+def test_merge_split_applies_to_malware_tools_and_campaigns():
+    for stix_type, name, alias in (
+        ("malware", "Example Malware", "ex-mal"),
+        ("tool", "Example Tool", "ex-tool"),
+        ("campaign", "Pasteswitch", "Paste Switch"),
+    ):
+        sid = f"{stix_type}--aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        other = f"{stix_type}--bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+        plan = analyze_merge_split(
+            [{"standard_id": sid, "name": name, "aliases": [alias]}],
+            [
+                {"standard_id": other, "name": alias, "aliases": []},
+                {"standard_id": sid, "name": name, "aliases": []},
+            ],
+        )
+        assert len(plan.merges) == 1
+        assert plan.merges[0].target_api_item["standard_id"] == sid
 
 
 def test_pick_opencti_merge_survivor_ties_break_to_api_standard_id():

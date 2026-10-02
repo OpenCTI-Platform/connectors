@@ -1,4 +1,8 @@
-"""Detect intrusion-set merge/split candidates by comparing alias ownership."""
+"""Detect merge/split candidates by comparing alias ownership.
+
+Applies to every threat object that carries a name and aliases:
+intrusion sets, malware, tools, and campaigns.
+"""
 
 from __future__ import annotations
 
@@ -52,7 +56,7 @@ def build_identifier_index(
 
 @dataclass
 class SplitCandidate:
-    """OpenCTI intrusion set spans aliases owned by multiple upstream objects."""
+    """OpenCTI object spans aliases owned by multiple upstream objects."""
 
     opencti_entity: Dict[str, Any]
     keep_api_item: Optional[Dict[str, Any]]
@@ -62,7 +66,7 @@ class SplitCandidate:
 
 @dataclass
 class MergeCandidate:
-    """Multiple OpenCTI intrusion sets should fuse into one upstream survivor."""
+    """Multiple OpenCTI objects should fuse into one upstream survivor."""
 
     target_api_item: Dict[str, Any]
     opencti_entities_to_merge: List[Dict[str, Any]] = field(default_factory=list)
@@ -74,11 +78,15 @@ class MergeSplitPlan:
     merges: List[MergeCandidate] = field(default_factory=list)
 
 
-def analyze_intrusion_set_merge_split(
+def analyze_merge_split(
     api_items: List[Dict[str, Any]],
     opencti_entities: List[Dict[str, Any]],
 ) -> MergeSplitPlan:
-    """Compare catalogue vs OpenCTI and classify split/merge/normal paths."""
+    """Compare catalogue vs OpenCTI and classify split/merge/normal paths.
+
+    The comparison uses name and aliases only, so the same plan works for
+    intrusion sets, malware, tools, and campaigns.
+    """
     plan = MergeSplitPlan()
     api_by_sid: Dict[str, Dict[str, Any]] = {}
     for item in api_items:
@@ -191,7 +199,7 @@ def _raw_alias_value(entity: Dict[str, Any], normalized_ident: str) -> Optional[
 
 
 def opencti_alias_count(entity: Dict[str, Any]) -> int:
-    """Count aliases on an OpenCTI intrusion set (name is not counted)."""
+    """Count aliases on an OpenCTI object (name is not counted)."""
     return len([a for a in (entity.get("aliases") or []) if a])
 
 
@@ -218,3 +226,6 @@ def pick_opencti_merge_survivor(
         )
 
     return max(unique.values(), key=sort_key)
+
+
+analyze_intrusion_set_merge_split = analyze_merge_split
