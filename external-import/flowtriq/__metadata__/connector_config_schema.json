@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "Flowtriq DDoS Incidents",
@@ -30,7 +32,7 @@
       "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
-      "default": "info",
+      "default": "error",
       "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
