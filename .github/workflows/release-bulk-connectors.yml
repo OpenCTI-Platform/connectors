@@ -94,8 +94,8 @@ on:
       force:
         description: >
           Force — for every dispatched connector, delete any existing GitHub
-          Release for this version before recreating it. If the tag already
-          exists, it is reused as-is (it is not deleted/recreated).
+          Release and tag for this version before recreating them (the tag is
+          recreated on the commit this run was dispatched from).
         required: false
         type: boolean
         default: false
