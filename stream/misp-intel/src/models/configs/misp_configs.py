@@ -81,6 +81,22 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
         description="Prefix for OpenCTI tags in MISP.",
     )
 
+    # Marking conversion configuration
+    marking_types_to_convert: str = Field(
+        default="TLP,PAP",
+        alias="MISP_MARKING_TYPES_TO_CONVERT",
+        description=(
+            "Comma-separated allow-list of marking-definition `definition_type` values "
+            "(case-insensitive, e.g. TLP, PAP) that are converted to MISP tags, at both "
+            "the event level (container's object_marking_refs, plus report_types) and "
+            "the attribute/object level (indicator's and observable's object_marking_refs). "
+            "Any marking whose definition_type is not in this list (e.g. custom/internal "
+            "distribution-control markings) is skipped and never reaches MISP. This is an "
+            "allow-list (fails closed): newly created custom marking types are NOT converted "
+            "by default, unlike a deny-list which would leak them until explicitly excluded."
+        ),
+    )
+
     # Deletion configuration
     hard_delete: bool = Field(
         default=True,
@@ -108,6 +124,18 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
     def clean_url(cls, value: str) -> str:
         """Remove trailing slashes from the URL."""
         return value.rstrip("/")
+
+    def get_marking_types_allowlist(self) -> set:
+        """
+        Parse marking_types_to_convert into a normalized (upper-case) set.
+
+        :return: Set of allowed definition_type values, upper-cased.
+        """
+        return {
+            marking_type.strip().upper()
+            for marking_type in self.marking_types_to_convert.split(",")
+            if marking_type.strip()
+        }
 
 
 class _ConfigLoaderProxy(ConfigBaseSettings):

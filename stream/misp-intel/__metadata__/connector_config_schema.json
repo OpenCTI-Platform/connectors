@@ -141,6 +141,11 @@
       "description": "Prefix for OpenCTI tags in MISP.",
       "type": "string"
     },
+    "MISP_MARKING_TYPES_TO_CONVERT": {
+      "default": "TLP,PAP",
+      "description": "Comma-separated allow-list of marking-definition `definition_type` values (case-insensitive, e.g. TLP, PAP) that are converted to MISP tags, at both the event level (container's object_marking_refs, plus report_types) and the attribute/object level (indicator's and observable's object_marking_refs). Any marking whose definition_type is not in this list (e.g. custom/internal distribution-control markings) is skipped and never reaches MISP.",
+      "type": "string"
+    },
     "MISP_HARD_DELETE": {
       "default": true,
       "description": "Perform hard deletion of MISP events (permanent deletion without blocklisting). If False, deleted events are added to the blocklist to prevent re-importation. If True, events are permanently deleted and can be re-imported later.",
