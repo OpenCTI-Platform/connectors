@@ -7,9 +7,9 @@ image. There is no root `pyproject.toml`: never add one (see the comment in
 `.isort.cfg` for why).
 
 This file is the single source of instructions for AI coding agents working
-in this repository, whatever the tool. Tool-specific files (`CLAUDE.md`,
-`.github/copilot-instructions.md`) only point here: put new rules in this
-file, not in them.
+in this repository, whatever the tool. Do not add a tool-specific copy:
+`.github/copilot-instructions.md` only points here, and new rules go in this
+file.
 
 ## Layout
 
