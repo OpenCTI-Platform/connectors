@@ -1,11 +1,11 @@
 # OpenCTI connectors: Copilot instructions
 
-The repository instructions for AI assistants live in
-[`CLAUDE.md`](../CLAUDE.md) at the repository root. Read that file first and
+The repository instructions for AI coding agents live in
+[`AGENTS.md`](../AGENTS.md) at the repository root. Read that file first and
 follow it: it covers the repository layout, connector patterns, validation
 commands, generated files and CI.
 
-Keep this file as a pointer only. Update `CLAUDE.md` instead of duplicating
+Keep this file as a pointer only. Update `AGENTS.md` instead of duplicating
 content here, so the two never drift apart.
 
 <!-- filigran-conventions:start -->
