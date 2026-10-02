@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-censys-collections:
+    image: opencti/connector-censys-collections:latest
+    environment:
+      # OpenCTI configuration
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common connector configuration
+      - CONNECTOR_ID=ChangeMe                   # Unique UUID v4 identifying this connector instance in OpenCTI
+      - CONNECTOR_NAME=Censys Collections       # Display name shown in the OpenCTI connectors list
+      - CONNECTOR_LOG_LEVEL=error               # Minimum log level: debug | info | warn | error
+      - CONNECTOR_DURATION_PERIOD=PT1H          # ISO 8601 duration between ingestion runs (e.g. PT1H = 1 hour)
+      # Censys configuration
+      - CENSYS_COLLECTIONS_ORGANISATION_ID=ChangeMe  # Censys organisation ID (required)
+      - CENSYS_COLLECTIONS_TOKEN=ChangeMe            # Censys API token (required)
+      # - CENSYS_COLLECTIONS_COLLECTION_IDS=         # Optional – comma-separated collection IDs to ingest (allow-list); empty = all collections
+      # - CENSYS_COLLECTIONS_EXCLUDED_COLLECTION_IDS=  # Optional – comma-separated collection IDs to exclude (deny-list); ignored if COLLECTION_IDS is set
+      # - CENSYS_COLLECTIONS_TLP_LEVEL=TLP:AMBER     # Optional – TLP marking for ingested objects (default: TLP:AMBER)
+      # - CENSYS_COLLECTIONS_INDICATOR_SCORE=50      # Optional – observable/indicator score 0-100 (default: 50)
+      # - CENSYS_COLLECTIONS_AUTO_INDICATOR_BY_SCORE=false     # Optional – toggle: only auto-create indicators when score >= threshold (default: false = always create)
+      # - CENSYS_COLLECTIONS_INDICATOR_SCORE_THRESHOLD=50      # Optional – minimum score required to auto-create an indicator when the toggle above is enabled
+      # - CENSYS_COLLECTIONS_REQUEST_TIMEOUT_SECONDS=60  # Optional – per-request timeout to the Censys API; increase for large collections
+    restart: always
