@@ -1,0 +1,29 @@
+services:
+  connector-cyfirma:
+    build: .
+    container_name: connector-cyfirma
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN:-ChangeMe}
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=${CONNECTOR_ID:-ChangeMe}
+      - CONNECTOR_NAME=CYFIRMA
+      - CONNECTOR_SCOPE=cyfirma
+      - CONNECTOR_LOG_LEVEL=debug
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      # Custom parameters for connector-cyfirma
+      - CYFIRMA_API_BASE_URL=${CYFIRMA_API_BASE_URL:-https://api.cyfirma.com}
+      - CYFIRMA_API_KEY=${CYFIRMA_API_KEY:-ChangeMe}
+      - CYFIRMA_TLP_LEVEL=clear
+      - CYFIRMA_TAILORED_IOCS=false
+      - CYFIRMA_LOOK_BACK_DAYS=2
+      - CYFIRMA_TAILORED_VULNERABILITIES=false
+
+    restart: always
+    networks:
+      - opencti_default
+
+networks:
+  opencti_default:
+    external: true
