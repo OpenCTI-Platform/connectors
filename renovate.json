@@ -16,7 +16,8 @@
     "master",
     "/^lts\\/.*/"
   ],
-  "branchConcurrentLimit": 5,
+  "prHourlyLimit": 5,
+  "branchConcurrentLimit": 10,
   "ignorePaths": [
     "**/node_modules/**",
     "**/bower_components/**",
@@ -101,6 +102,21 @@
       "prConcurrentLimit": 0,
       "rangeStrategy": "pin",
       "automerge": false
+    },
+    {
+      "description": "Group lint and test tooling (PyPI packages and the flake8 pre-commit hook) into a single PR per base branch to cut noise. semanticCommitType is forced to chore because flake8 sits in runtime requirements files, which would otherwise make the group prefix fix or chore depending on which upgrade comes first. vulnerabilityAlerts keep their own PRs (groupName is null there).",
+      "matchPackageNames": [
+        "mypy",
+        "pylint",
+        "pytest",
+        "pytest-mock",
+        "ruff",
+        "responses",
+        "flake8",
+        "/^pycqa\\/flake8$/i"
+      ],
+      "groupName": "lint and test tools",
+      "semanticCommitType": "chore"
     }
   ],
   "timezone": "Europe/Paris",
