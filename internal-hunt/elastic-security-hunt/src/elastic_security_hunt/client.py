@@ -238,11 +238,20 @@ class ElasticsearchClient(HuntApiClient):
         )
         hits = answer.get("hits") or {}
         events = list(hits.get("events") or [])
-        for sequence in hits.get("sequences") or []:
+        sequences = hits.get("sequences") or []
+        for sequence in sequences:
             events.extend(sequence.get("events") or [])
         rows = [_source(event) for event in events]
-        total, relation = _total(hits, len(hits.get("sequences") or []) or len(rows))
-        partial = bool(answer.get("is_partial")) or relation == "gte"
+        total, relation = _total(hits, len(sequences) or len(rows))
+        if sequences:
+            # hits.total counts sequences while the result reports their events: every fetched event is a hit
+            total = max(total, len(rows))
+        # Sequences can hold more events than the cap: the events cut here make the result partial
+        partial = (
+            bool(answer.get("is_partial"))
+            or relation == "gte"
+            or len(rows) > max_results
+        )
         return SearchResult(rows[:max_results], total, partial)
 
     # ------------------------------------------------------------------

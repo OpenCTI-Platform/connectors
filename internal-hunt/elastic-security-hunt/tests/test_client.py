@@ -229,6 +229,27 @@ def test_eql_reads_events_and_sequences(requests_mock):
     assert (result.total, result.partial) == (3, False)
 
 
+def test_eql_counts_sequence_events_and_flags_the_ones_cut(requests_mock):
+    # Given two sequences of three events each, more events than the cap
+    sequence = {"events": [{"_source": {"step": step}} for step in range(3)]}
+    requests_mock.post(
+        EQL_URL,
+        json={
+            "hits": {
+                "total": {"value": 2, "relation": "eq"},
+                "sequences": [sequence, sequence],
+            }
+        },
+    )
+
+    # When the query runs with a cap of four events
+    result = _client().eql(["logs-*"], "q", START, END, 4, RunDeadline(30), "k")
+
+    # Then every fetched event counts and the cut ones make the result partial
+    assert len(result.rows) == 4
+    assert (result.total, result.partial) == (6, True)
+
+
 def test_eql_flags_lower_bound_totals(requests_mock):
     # Given an EQL total that is a lower bound
     requests_mock.post(
