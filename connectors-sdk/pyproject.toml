@@ -13,6 +13,7 @@ dependencies = [
     "pycti==7.261002.0",
     "pydantic>=2.8.2,<3", # ISO pycti https://github.com/OpenCTI-Platform/client-python/blob/master/requirements.txt#L8
     "pydantic_settings>= 2.9.1,<3", # Actual minimal version used in the connectors
+    "regex>=2024.11.6", # Time-bounded matching of the hunt benign patterns; already required by pycti (datefinder)
     "requests>=2.31.0,<3",
 ]
 
@@ -145,8 +146,8 @@ exclude = [
 plugins = ['pydantic.mypy']
 
 [[tool.mypy.overrides]]
-module = ["pycti.*", "stix2.*", "requests.*", "limits.*"]
-ignore_missing_imports = true  # pycti, stix2, requests, and limits do not provide stubs
+module = ["pycti.*", "stix2.*", "requests.*", "limits.*", "regex.*"]
+ignore_missing_imports = true  # pycti, stix2, requests, limits and regex do not provide stubs
 
 [tool.sphinx]
 project = "Connectors SDK"

@@ -2,14 +2,18 @@
 # type: ignore
 """Tests of the hunt result post-processing helpers."""
 
+import time
 from datetime import datetime, timezone
 
+import pytest
 from connectors_sdk.connectors.internal_hunt import (
     BenignMatcher,
     HuntEvent,
     HuntLimits,
     HuntResult,
+    HuntTimeoutError,
     HuntTimeWindow,
+    RunDeadline,
     build_evidence,
     count_distinct_entities,
     event_time_bounds,
@@ -22,6 +26,10 @@ from connectors_sdk.connectors.internal_hunt import (
 
 def _events(*field_sets):
     return [HuntEvent(fields=fields) for fields in field_sets]
+
+
+def _deadline():
+    return RunDeadline(60)
 
 
 def test_flatten_fields_uses_dotted_names():
@@ -52,7 +60,9 @@ def test_sha256_hex():
 
 def test_benign_matcher_substrings_and_regexes():
     # Given substrings, a regex and an invalid regex
-    matcher = BenignMatcher(["SCCM", "/^svc_backup[0-9]+$/", "/[unclosed/", " "])
+    matcher = BenignMatcher(
+        ["SCCM", "/^svc_backup[0-9]+$/", "/[unclosed/", " "], _deadline()
+    )
 
     # When/Then events matching any of them are benign
     assert bool(matcher) is True
@@ -60,7 +70,28 @@ def test_benign_matcher_substrings_and_regexes():
     assert matcher.matches(HuntEvent(fields={"user": "SVC_BACKUP01"}))
     assert matcher.matches(HuntEvent(fields={"x": "a /[unclosed/ b"}))
     assert not matcher.matches(HuntEvent(fields={"user": "alice", "n": None}))
-    assert bool(BenignMatcher(["", "  "])) is False
+    assert bool(BenignMatcher(["", "  "], _deadline())) is False
+
+
+def test_benign_matcher_bounds_regexes_by_the_run_deadline():
+    # Given a backtracking regex and a value that makes it explode
+    matcher = BenignMatcher(["/(a|aa)+$/"], RunDeadline(0.2))
+    event = HuntEvent(fields={"user": "a" * 60 + "!"})
+
+    # When/Then matching stops at the deadline with a run timeout
+    started = time.monotonic()
+    with pytest.raises(HuntTimeoutError, match=r"/\(a\|aa\)\+\$/ did not complete"):
+        matcher.matches(event)
+    assert time.monotonic() - started < 5
+
+
+def test_benign_matcher_refuses_regexes_once_the_deadline_is_reached():
+    # Given an expired run deadline
+    matcher = BenignMatcher(["/^svc/"], RunDeadline(0))
+
+    # When/Then no regular expression runs past it
+    with pytest.raises(HuntTimeoutError, match="run timeout"):
+        matcher.matches(HuntEvent(fields={"user": "svc_backup"}))
 
 
 def test_suppress_benign_without_patterns_returns_the_result():
@@ -68,8 +99,8 @@ def test_suppress_benign_without_patterns_returns_the_result():
     result = HuntResult(events=_events({"a": "x"}))
 
     # When/Then the result is unchanged
-    assert suppress_benign(result, []) is result
-    assert suppress_benign(result, ["nomatch"]) is result
+    assert suppress_benign(result, [], _deadline()) is result
+    assert suppress_benign(result, ["nomatch"], _deadline()) is result
 
 
 def test_suppress_benign_removes_matching_events():
@@ -77,7 +108,7 @@ def test_suppress_benign_removes_matching_events():
     result = HuntResult(events=_events({"u": "alice"}, {"u": "svc"}), total_hits=2)
 
     # When benign events are suppressed
-    suppressed = suppress_benign(result, ["svc"])
+    suppressed = suppress_benign(result, ["svc"], _deadline())
 
     # Then the hit count only counts the remaining events
     assert [e.fields["u"] for e in suppressed.events] == ["alice"]
@@ -91,7 +122,7 @@ def test_suppress_benign_on_truncated_results_reports_the_verified_hits_only():
     )
 
     # When benign events are suppressed
-    suppressed = suppress_benign(result, ["svc"])
+    suppressed = suppress_benign(result, ["svc"], _deadline())
 
     # Then the unknowable post-suppression total is not derived from the sample:
     # the hit count is the non-benign returned events
@@ -107,7 +138,7 @@ def test_suppress_benign_keeps_the_total_of_a_truncated_result_without_benign_ev
     )
 
     # When/Then nothing is suppressed and the platform total stands
-    assert suppress_benign(result, ["svc"]) is result
+    assert suppress_benign(result, ["svc"], _deadline()) is result
     assert result.hits_count == 50
 
 

@@ -118,8 +118,10 @@ CI and the image builds rewrite the `connectors-sdk @ git+...` requirement line 
 - **Thread-based timeout**: a Python thread cannot be killed. A timed out `execute` keeps running until its own HTTP
   timeouts expire; connectors bound their calls with `HuntApiClient.hunt_request()` and cancel platform jobs in
   `on_timeout`.
-- **Benign suppression on returned events**: when results are truncated, suppressed events are subtracted from the
-  platform total, which is an approximation of the benign-free hit count.
+- **Benign suppression on returned events**: when results are truncated and suppression removed returned events, the
+  benign-free total is unknown: the platform total is dropped and the hit count is the non-benign returned events, a
+  verified lower bound. Benign regular expressions run on the `regex` engine within the run deadline, so a
+  backtracking pattern ends the run as a timeout.
 
 <br>
 

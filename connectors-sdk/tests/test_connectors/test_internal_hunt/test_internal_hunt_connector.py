@@ -477,6 +477,23 @@ def test_timeout_cancels_and_fails_the_run(connector_factory, hunt_event, hunt_h
     assert kwargs["error"].startswith("HuntTimeoutError")
 
 
+def test_benign_suppression_counts_within_the_run_timeout(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given a benign regex that backtracks on the returned value
+    connector = connector_factory(_results({"user": "a" * 60 + "!"}))
+    event = hunt_event(
+        hunt={"benign_patterns": ["/(a|aa)+$/"]}, limits={"timeout_seconds": 1}
+    )
+
+    # When/Then the run is reported as a timeout instead of blocking
+    with pytest.raises(HuntTimeoutError, match="benign pattern"):
+        connector.process_message(event)
+    args, _ = _report_kwargs(hunt_helper)
+    assert args == ("run-1", "timeout")
+    hunt_helper.send_stix2_bundle.assert_not_called()
+
+
 def test_timeout_survives_cancellation_errors(connector_factory, hunt_event):
     # Given a cancellation hook that fails
     connector = connector_factory(HuntResult())

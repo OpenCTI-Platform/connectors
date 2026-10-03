@@ -8,12 +8,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
+import regex
+from connectors_sdk.connectors.internal_hunt.errors import HuntTimeoutError
 from connectors_sdk.connectors.internal_hunt.models import (
     HuntEvent,
     HuntEvidence,
@@ -21,6 +22,7 @@ from connectors_sdk.connectors.internal_hunt.models import (
     HuntResult,
     HuntTimeWindow,
 )
+from connectors_sdk.connectors.internal_hunt.timing import RunDeadline
 
 DEFAULT_ENTITY_FIELDS: tuple[str, ...] = (
     # Hosts
@@ -130,26 +132,34 @@ class BenignMatcher:
     A pattern is a case-insensitive substring, or a case-insensitive regular
     expression when written between slashes (``/^svc_backup[0-9]+$/``). A pattern
     that is not a valid regular expression is matched as a substring.
+
+    Regular expressions run on the ``regex`` engine, bounded by the run
+    deadline: a pattern that backtracks past it stops the run with a timeout
+    instead of blocking the report of the run.
     """
 
-    def __init__(self, patterns: Sequence[str]) -> None:
+    def __init__(self, patterns: Sequence[str], deadline: RunDeadline) -> None:
         """Compile the benign patterns.
 
         Args:
             patterns: The benign patterns of the hunt.
+            deadline: Run deadline bounding the regular expression matching.
         """
+        self._deadline = deadline
         self._substrings: list[str] = []
-        self._regexes: list[re.Pattern[str]] = []
+        self._regexes: list[tuple[str, Any]] = []
         for pattern in patterns:
             text = pattern.strip()
             if not text:
                 continue
             if len(text) > 2 and text.startswith("/") and text.endswith("/"):
                 try:
-                    self._regexes.append(re.compile(text[1:-1], re.IGNORECASE))
-                    continue
-                except re.error:
+                    compiled = regex.compile(text[1:-1], regex.IGNORECASE)
+                except regex.error:
                     pass
+                else:
+                    self._regexes.append((text, compiled))
+                    continue
             self._substrings.append(text.lower())
 
     def __bool__(self) -> bool:
@@ -164,18 +174,33 @@ class BenignMatcher:
 
         Returns:
             True if the event is benign.
+
+        Raises:
+            HuntTimeoutError: If a regular expression runs past the run deadline.
         """
         for value in event.fields.values():
             for text in value_strings(value):
                 lowered = text.lower()
                 if any(sub in lowered for sub in self._substrings):
                     return True
-                if any(regex.search(text) for regex in self._regexes):
+                if any(self._search(item, text) for item in self._regexes):
                     return True
         return False
 
+    def _search(self, item: tuple[str, Any], text: str) -> bool:
+        """Search a value with a regular expression within the run deadline."""
+        pattern, compiled = item
+        try:
+            return compiled.search(text, timeout=self._deadline.remaining()) is not None
+        except TimeoutError as err:
+            raise HuntTimeoutError(
+                f"The benign pattern {pattern} did not complete within the run timeout."
+            ) from err
 
-def suppress_benign(result: HuntResult, patterns: Sequence[str]) -> HuntResult:
+
+def suppress_benign(
+    result: HuntResult, patterns: Sequence[str], deadline: RunDeadline
+) -> HuntResult:
     """Remove the benign events of a result.
 
     Suppression applies to the events returned by the platform. When the result
@@ -187,11 +212,15 @@ def suppress_benign(result: HuntResult, patterns: Sequence[str]) -> HuntResult:
     Args:
         result: Raw hunt result.
         patterns: Benign patterns of the hunt.
+        deadline: Run deadline bounding the regular expression matching.
 
     Returns:
         The result without benign events.
+
+    Raises:
+        HuntTimeoutError: If a regular expression runs past the run deadline.
     """
-    matcher = BenignMatcher(patterns)
+    matcher = BenignMatcher(patterns, deadline)
     if not matcher:
         return result
     kept = [event for event in result.events if not matcher.matches(event)]

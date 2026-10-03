@@ -88,7 +88,9 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
    no knowledge is sent.
 4. **Execution**: `execute()` runs in a worker thread bounded by `timeout_seconds`; on timeout `on_timeout()` cancels
    the platform job and the run fails. Results beyond `max_results` are dropped, the total hit count is kept.
-5. **Suppression**: events matching a benign pattern (case-insensitive substring, or `/regex/`) are removed.
+5. **Suppression**: events matching a benign pattern (case-insensitive substring, or `/regex/`) are removed. Regular
+   expressions run on the `regex` engine within what is left of `timeout_seconds`: a pattern that backtracks past it
+   ends the run as a `timeout` instead of blocking its report.
 6. **Knowledge**: `to_stix()` maps the results; the bundle is sent with the run work id.
 7. **Report**: `completed` with hits, distinct entities, evidence, translated query, language, cost and result ids, or
    `failed` with the error (the error is then raised so that OpenCTI marks the work in error).

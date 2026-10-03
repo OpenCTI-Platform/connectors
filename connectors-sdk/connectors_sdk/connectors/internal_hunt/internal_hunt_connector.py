@@ -55,6 +55,7 @@ from connectors_sdk.connectors.internal_hunt.observables import extract_observab
 from connectors_sdk.connectors.internal_hunt.stix_mapping import (
     build_telemetry_objects,
 )
+from connectors_sdk.connectors.internal_hunt.timing import RunDeadline
 from connectors_sdk.connectors.internal_hunt.translation import (
     convert_sigma,
     detection_fields,
@@ -516,8 +517,9 @@ class InternalHuntConnector(ABC):
         self, request: HuntRequest, native_query: NativeQuery, started: float
     ) -> str:
         """Execute the query, send the knowledge and report the completed run."""
-        raw_result = self._execute_within_limits(request, native_query)
-        result = suppress_benign(raw_result, request.hunt.benign_patterns)
+        deadline = RunDeadline(request.limits.timeout_seconds)
+        raw_result = self._execute_within_limits(request, native_query, deadline)
+        result = suppress_benign(raw_result, request.hunt.benign_patterns, deadline)
         result_ids = self.send_bundle(self.to_stix(request, result))
         hits_count = result.hits_count
         self.report(
@@ -555,9 +557,9 @@ class InternalHuntConnector(ABC):
         )
 
     def _execute_within_limits(
-        self, request: HuntRequest, native_query: NativeQuery
+        self, request: HuntRequest, native_query: NativeQuery, deadline: RunDeadline
     ) -> HuntResult:
-        """Run ``execute`` with the run timeout and cap the results to ``max_results``.
+        """Run ``execute`` within the run deadline and cap the results to ``max_results``.
 
         Raises:
             HuntTimeoutError: If the execution exceeds ``limits.timeout_seconds``.
@@ -577,7 +579,7 @@ class InternalHuntConnector(ABC):
             target=_run, name=f"hunt-run-{request.hunt_run.id}", daemon=True
         )
         worker.start()
-        worker.join(request.limits.timeout_seconds)
+        worker.join(deadline.remaining())
         if worker.is_alive():
             try:
                 self.on_timeout(native_query)
