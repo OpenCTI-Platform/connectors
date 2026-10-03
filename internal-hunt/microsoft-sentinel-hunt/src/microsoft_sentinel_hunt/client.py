@@ -119,15 +119,23 @@ class LogAnalyticsClient(HuntApiClient):
         if self._additional_workspaces:
             body["workspaces"] = list(self._additional_workspaces)
         server_wait = max(1, min(SERVER_WAIT_MAX_SECONDS, int(deadline.remaining())))
-        response = self.hunt_request(
-            "POST",
-            f"/v1/workspaces/{quote(self._workspace_id, safe='')}/query",
-            deadline,
-            "The Log Analytics query",
-            max_timeout=SERVER_WAIT_MAX_SECONDS + 30,
-            json=body,
-            headers={"Prefer": f"wait={server_wait}"},
-        )
+        try:
+            response = self.hunt_request(
+                "POST",
+                f"/v1/workspaces/{quote(self._workspace_id, safe='')}/query",
+                deadline,
+                "The Log Analytics query",
+                max_timeout=SERVER_WAIT_MAX_SECONDS + 30,
+                json=body,
+                headers={"Prefer": f"wait={server_wait}"},
+            )
+        except HuntExecutionError as err:
+            details = _error_chain(getattr(err.__cause__, "response_body", None))
+            if not details:
+                raise
+            raise HuntExecutionError(
+                f"The Log Analytics query failed ({err.__cause__}): {details}"
+            ) from err.__cause__
         if not isinstance(response, dict):
             raise HuntExecutionError("Log Analytics returned an unexpected answer.")
         tables = response.get("tables") or []
@@ -150,6 +158,18 @@ class LogAnalyticsClient(HuntApiClient):
                 row[name] = value
             rows.append(row)
         return rows
+
+
+def _error_chain(body: Any) -> str | None:
+    """Join the messages of a Log Analytics error and of its nested inner errors."""
+    error = body.get("error") if isinstance(body, dict) else None
+    messages: list[str] = []
+    while isinstance(error, dict) and len(messages) < 5:
+        message = error.get("message")
+        if isinstance(message, str) and message.strip():
+            messages.append(message.strip())
+        error = error.get("innererror")
+    return api_error_message(" - ".join(messages)) if messages else None
 
 
 def _decode_dynamic(value: Any) -> Any:
