@@ -632,6 +632,27 @@ def test_adapter_push_errors(adapter_client):
         adapter.push_indicator(make_indicator())
 
 
+def test_adapter_hits_use_the_creation_time_the_listing_is_ordered_by(
+    adapter_client,
+):
+    """The alerts are listed by creation time: an alert created after `since` for an
+    older event is a hit at its creation time, never dropped by its event time."""
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    adapter_client.iter_alerts.return_value = iter(
+        [
+            {
+                "timestamp": "2026-10-03T10:30:00Z",
+                "created_timestamp": "2026-10-03T11:05:00Z",
+                "ioc_value": "198.51.100.7",
+            }
+        ]
+    )
+
+    hits = list(make_adapter(adapter_client).collect_hits([make_deployment()], since))
+
+    assert [hit.timestamp for hit in hits] == [since + timedelta(minutes=5)]
+
+
 def test_adapter_collects_hits_from_alerts(adapter_client):
     since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
     adapter_client.iter_alerts.return_value = iter(

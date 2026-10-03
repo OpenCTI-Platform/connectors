@@ -146,7 +146,9 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
         """Read the Falcon alerts raised by deployed indicators since a date.
 
         An alert counts as one hit of every deployed indicator whose value is the
-        alert IOC value (``ioc_value``, ``ioc_values`` or ``ioc_context``).
+        alert IOC value (``ioc_value``, ``ioc_values`` or ``ioc_context``), at the
+        alert creation time: the listing is filtered and ordered by it, so the
+        reading cursor and the hit times never diverge.
 
         Args:
             deployments: The live deployments.
@@ -175,7 +177,7 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
         ):
             read += 1
             timestamp = parse_datetime(
-                alert.get("timestamp") or alert.get("created_timestamp")
+                alert.get("created_timestamp") or alert.get("timestamp")
             )
             if timestamp is None or timestamp <= since:
                 identifier = alert_id(alert)
