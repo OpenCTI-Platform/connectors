@@ -1,7 +1,10 @@
+from unittest.mock import MagicMock
+
 import pytest
 from connectors_sdk import ConfigValidationError
 from connectors_sdk.connectors.stream.deployment import DeploymentAssuranceOptions
 from settings import ConnectorSettings
+from splunk_deployment import build_deployment_assurance
 
 
 def test_settings_load_the_existing_variables(splunk_environment):
@@ -79,3 +82,48 @@ def test_config_schema_documents_the_deployment_variables():
         "SECURITY_PLATFORM_NAME",
         "SPLUNK_HITS_SAVED_SEARCH",
     } & set(schema["required"])
+
+
+def test_build_deployment_assurance_with_hits(splunk_environment, monkeypatch):
+    monkeypatch.setenv("SPLUNK_HITS_SAVED_SEARCH", "OpenCTI indicator matches")
+    helper = MagicMock()
+    push = MagicMock()
+
+    assurance = build_deployment_assurance(
+        helper, ConnectorSettings(), MagicMock(), push
+    )
+
+    assert assurance.enabled is True
+    assert assurance.reporter.hits_enabled is True
+    assert assurance.reconciler is not None
+    assert assurance.reconciler._adapter.hits_supported is True
+    helper.log_info.assert_not_called()
+
+
+def test_build_deployment_assurance_without_saved_search_logs_it(
+    splunk_environment,
+):
+    helper = MagicMock()
+
+    assurance = build_deployment_assurance(
+        helper, ConnectorSettings(), MagicMock(), MagicMock()
+    )
+
+    assert assurance.reconciler._adapter.hits_supported is False
+    helper.log_info.assert_called_once_with(
+        "hits are not collected (SPLUNK_HITS_SAVED_SEARCH is not configured)"
+    )
+
+
+def test_build_deployment_assurance_disabled(splunk_environment, monkeypatch):
+    monkeypatch.setenv("DEPLOYMENT_REPORTING_ENABLED", "false")
+    helper = MagicMock()
+
+    assurance = build_deployment_assurance(
+        helper, ConnectorSettings(), MagicMock(), MagicMock()
+    )
+
+    assert assurance.enabled is False
+    assert assurance.start() is False
+    helper.log_info.assert_not_called()
+    helper.api.query.assert_not_called()

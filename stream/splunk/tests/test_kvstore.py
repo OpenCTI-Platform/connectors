@@ -10,7 +10,9 @@ from splunk_test_support import DATA_URL, SEARCH_URL, SPLUNK_URL
 
 @pytest.fixture
 def kvstore():
-    return KVStore(SPLUNK_URL, "splunk-token", "Bearer", "search", "nobody", "opencti", True)
+    return KVStore(
+        SPLUNK_URL, "splunk-token", "Bearer", "search", "nobody", "opencti", True
+    )
 
 
 def query_params(request):

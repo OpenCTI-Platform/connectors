@@ -25,8 +25,16 @@ services:
       - SPLUNK_APP=search
       - SPLUNK_KV_STORE_NAME=opencti
       - SPLUNK_IGNORE_TYPES="attack-pattern,campaign,course-of-action,data-component,data-source,external-reference,identity,intrusion-set,kill-chain-phase,label,location,malware,marking-definition,relationship,threat-actor,tool,vocabulary,vulnerability"
+      # - "SPLUNK_HITS_SAVED_SEARCH=OpenCTI indicator matches" # optional - saved search returning the indicator matches (hits)
       # Prometheus metrics parameters
       # - METRICS_ENABLE=false # optional (default: false)
       # - METRICS_PORT=9113 # optional (default: 9113)
       # - METRICS_ADDR=0.0.0.0 # optional (default: '0.0.0.0')
+      # Dissemination assurance (deployment write-back to OpenCTI)
+      # - DEPLOYMENT_REPORTING_ENABLED=true # optional (default: true)
+      # - DEPLOYMENT_RECONCILIATION_INTERVAL=60 # optional (default: 60 minutes, 0 disables the reconciliation)
+      # - HITS_REPORTING_ENABLED=true # optional (default: true)
+      # - SECURITY_PLATFORM_NAME=Splunk # optional (default: 'Splunk')
+      # - SECURITY_PLATFORM_TYPE=SIEM # optional (default: 'SIEM')
+      # - SECURITY_PLATFORM_ID=ChangeMe # optional - existing Security Platform entity id
     restart: always

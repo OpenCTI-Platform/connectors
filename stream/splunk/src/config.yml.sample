@@ -24,7 +24,20 @@ splunk:
   kv_store_name: 'opencti'
   ignore_types: 'attack-pattern,campaign,course-of-action,data-component,data-source,external-reference,identity,intrusion-set,kill-chain-phase,label,location,malware,marking-definition,relationship,threat-actor,tool,vocabulary,vulnerability'
 
+  # hits_saved_search: 'OpenCTI indicator matches' # optional - saved search returning the indicator matches (hits)
+
 metrics:
   enable: false # optional (default: false) - set to true to expose prometheus metrics
   port: 9113 # optional (default: 9113) - port on which metrics should be exposed
   addr: 0.0.0.0 # optional (default: '0.0.0.0') - ip on which metrics should be exposed
+
+# Dissemination assurance (deployment write-back to OpenCTI)
+# deployment:
+#   reporting_enabled: true # optional (default: true)
+#   reconciliation_interval: 60 # optional (default: 60 minutes, 0 disables the reconciliation)
+# hits:
+#   reporting_enabled: true # optional (default: true)
+# security_platform:
+#   name: 'Splunk' # optional (default: 'Splunk')
+#   type: 'SIEM' # optional (default: 'SIEM')
+#   id: 'ChangeMe' # optional - existing Security Platform entity id
