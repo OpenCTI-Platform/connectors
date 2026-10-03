@@ -184,6 +184,53 @@ def test_process_rule_success(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
+def test_process_rule_sends_enriched_sigma_rules(
+    mock_session: MagicMock, connector: SiemrulesConnector
+) -> None:
+    """The rule bundle carries the rule metadata and ATT&CK indicates links"""
+    connector.helper.api.attack_pattern.list.return_value = []
+    rule = {
+        "metadata": {"id": "rule-1", "name": "Rule", "modified": "2026"},
+        "rule_type": "base",
+    }
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "total_results_count": 1,
+        "objects": [
+            {
+                "type": "indicator",
+                "id": "indicator--5b3d4a2c-0000-4000-8000-000000000001",
+                "pattern_type": "sigma",
+                "pattern": "title: x\nlevel: low\ntags:\n  - attack.t1003\n",
+            }
+        ],
+    }
+    mock_session.get.return_value = mock_response
+
+    connector.process_rule("pack-1", rule, "work-id")
+
+    bundle = json.loads(connector.helper.send_stix2_bundle.call_args[0][0])
+    indicator = bundle["objects"][0]
+    assert indicator["x_opencti_rule_level"] == "low"
+    relationships = [o for o in bundle["objects"] if o["type"] == "relationship"]
+    assert [r["relationship_type"] for r in relationships] == ["indicates"]
+
+
+@freezegun.freeze_time("2026-02-18T15:24:00Z")
+def test_run_once_resets_the_technique_cache(
+    mocker: MockerFixture, connector: SiemrulesConnector
+) -> None:
+    """Each run asks the platform again which techniques it holds"""
+    mocker.patch.object(connector, "list_detection_packs", return_value=[])
+    mocker.patch.object(connector, "update_state")
+    reset = mocker.patch.object(connector.enricher, "reset")
+
+    connector.run_once()
+
+    reset.assert_called_once()
+
+
+@freezegun.freeze_time("2026-02-18T15:24:00Z")
 def test_process_rule_base_type(
     mock_session: MagicMock, connector: SiemrulesConnector
 ) -> None:
