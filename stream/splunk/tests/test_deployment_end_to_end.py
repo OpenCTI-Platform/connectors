@@ -64,7 +64,6 @@ def connector(splunk_environment, no_atexit, opencti_helper):
             kvstore,
             push_indicator=connector.push_indicator,
             hits_saved_search="OpenCTI indicator matches",
-            logger=opencti_helper.connector_logger,
         ),
         reporter_kwargs={"flush_interval": 3600.0},
     )
