@@ -28,6 +28,7 @@ __all__ = [
     "Permission",
     "Platform",
     "ProcessorArchitecture",
+    "ProvenanceSourceKind",
     "RelationshipType",
     "Reliability",
     "ReportType",
@@ -53,6 +54,9 @@ class _PermissiveEnum(StrEnum):
         # Return a dynamically created instance
         obj = str.__new__(cls, _value)
         obj._value_ = _value
+        # Enum.__repr__ and Enum.name read _name_: without it, logging a model
+        # holding an out-of-vocabulary value raises AttributeError.
+        obj._name_ = _value
         return obj
 
 
@@ -459,6 +463,30 @@ class ProcessorArchitecture(_PermissiveEnum):
     SPARC = "sparc"
     X86 = "x86"
     X86_64 = "x86-64"
+
+
+class ProvenanceSourceKind(_PermissiveEnum):
+    """Provenance Source Kind Enum.
+
+    Kind of source that asserted a fact in OpenCTI, as counted in the
+    `sources_by_kind` field of a provenance summary:
+
+    - connector: an OpenCTI connector.
+    - feed: a built-in ingestion feed (TAXII, RSS, CSV, JSON).
+    - author: the author (created by) identity of a human write.
+    - user: a human user writing without author.
+    - inference: the OpenCTI inference rule engine.
+    - emulation: an OpenAEV coverage result.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/provenance/provenance-types.ts
+    """
+
+    CONNECTOR = "connector"
+    FEED = "feed"
+    AUTHOR = "author"
+    USER = "user"
+    INFERENCE = "inference"
+    EMULATION = "emulation"
 
 
 class RelationshipType(_PermissiveEnum):
