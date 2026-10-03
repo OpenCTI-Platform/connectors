@@ -8,16 +8,29 @@ snapshot to a Cloudflare Rules List (snapshot/replace model).
 import json
 import re
 import sys
+import threading
 import time
-from typing import Optional
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, Optional
 
+from cloudflare_rules_list.client import CloudflareAPIError, CloudflareRulesListClient
+from cloudflare_rules_list.settings import ConnectorSettings
+from connectors_sdk.connectors.stream.deployment import (
+    DeploymentReport,
+    DeploymentStatus,
+    get_opencti_indicator_id,
+    normalize_value,
+)
 from pycti import OpenCTIConnectorHelper
 
-from .client import CloudflareAPIError, CloudflareRulesListClient
-from .settings import ConnectorSettings
+if TYPE_CHECKING:
+    from connectors_sdk import DeploymentAssurance
 
 # STIX pattern for an IPv4 indicator: [ipv4-addr:value = '...']
 _IPV4_PATTERN_RE = re.compile(r"\[ipv4-addr:value\s*=\s*'([^']+)'\]", re.IGNORECASE)
+
+# Prefix of the list item comments, followed by the OpenCTI id of the object.
+COMMENT_PREFIX = "OpenCTI: "
 
 
 class Connector:
@@ -39,7 +52,15 @@ class Connector:
 
         # Snapshot of IPv4 values keyed by OpenCTI id.
         self._indicator_cache: dict[str, str] = {}
+        # Keys of the snapshot that are indicators (observables are pushed, not reported).
+        self._indicator_keys: set[str] = set()
+        # Indicators of the last snapshot uploaded, for the deployment write-back.
+        self._synced: dict[str, str] = {}
+        # The stream and the deployment reconciliation both change the snapshot.
+        self._lock = threading.RLock()
         self._last_sync_time = 0.0
+        # Deployment write-back (dissemination assurance), set by `main.py`.
+        self.assurance: "DeploymentAssurance | None" = None
 
     # ------------------------------------------------------------------ #
     # IPv4 extraction
@@ -61,7 +82,7 @@ class Connector:
         entity_type = data.get("entity_type", "")
 
         # Indicator (stream: type=="indicator"; API: entity_type=="Indicator").
-        if stix_type == "indicator" or entity_type == "Indicator":
+        if self._is_indicator(data):
             pattern = data.get("pattern", "")
             match = _IPV4_PATTERN_RE.search(pattern) if pattern else None
             return match.group(1) if match else None
@@ -77,6 +98,11 @@ class Connector:
     def _object_id(data: dict) -> Optional[str]:
         """Return the OpenCTI id for a stream/STIX object."""
         return data.get("id") or data.get("x_opencti_id")
+
+    @staticmethod
+    def _is_indicator(data: dict) -> bool:
+        """Tell whether a stream or API object is an indicator (deployment reported)."""
+        return data.get("type") == "indicator" or data.get("entity_type") == "Indicator"
 
     # ------------------------------------------------------------------ #
     # Stream handling
@@ -116,7 +142,10 @@ class Connector:
         if not indicator_id:
             return
 
-        self._indicator_cache[indicator_id] = value
+        with self._lock:
+            self._indicator_cache[indicator_id] = value
+            if self._is_indicator(data):
+                self._indicator_keys.add(indicator_id)
         self.logger.debug(
             "Cached IPv4 indicator", meta={"id": indicator_id, "value": value}
         )
@@ -124,10 +153,13 @@ class Connector:
 
     def _handle_delete(self, data: dict) -> None:
         indicator_id = self._object_id(data)
-        if indicator_id and indicator_id in self._indicator_cache:
+        with self._lock:
+            if not indicator_id or indicator_id not in self._indicator_cache:
+                return
             del self._indicator_cache[indicator_id]
-            self.logger.debug("Removed indicator from cache", meta={"id": indicator_id})
-            self._check_sync()
+            self._indicator_keys.discard(indicator_id)
+        self.logger.debug("Removed indicator from cache", meta={"id": indicator_id})
+        self._check_sync()
 
     # ------------------------------------------------------------------ #
     # Sync to Cloudflare
@@ -139,41 +171,140 @@ class Connector:
 
     def _sync_to_cloudflare(self) -> None:
         """Push the full IPv4 snapshot to the Cloudflare Rules List."""
-        if not self._indicator_cache:
-            # Nothing to push -- do not open the throttle window, otherwise the
-            # first real indicator to arrive could be delayed by up to
-            # sync_interval before it is synced.
-            self.logger.info("No indicators to sync")
-            return
+        with self._lock:
+            if not self._indicator_cache:
+                # Nothing to push -- do not open the throttle window, otherwise the
+                # first real indicator to arrive could be delayed by up to
+                # sync_interval before it is synced.
+                self.logger.info("No indicators to sync")
+                return
+            try:
+                self._upload_snapshot()
+            except CloudflareAPIError as exc:
+                self.logger.error(
+                    "Failed to sync to Cloudflare", meta={"error": str(exc)}
+                )
 
-        self._last_sync_time = time.monotonic()
+    def _upload_snapshot(self) -> None:
+        """Replace the Cloudflare Rules List with the snapshot, then report the
+        indicators added (`deployed`), dropped (`removed`) or not uploaded (`failed`).
 
-        self.logger.info(
-            "Syncing indicators to Cloudflare",
-            meta={"count": len(self._indicator_cache), "list_id": self.list_id},
-        )
+        Raises:
+            CloudflareAPIError: When Cloudflare refuses the snapshot.
+        """
+        with self._lock:
+            self._last_sync_time = time.monotonic()
+            snapshot = dict(self._indicator_cache)
+            indicators = {
+                key: value
+                for key, value in snapshot.items()
+                if key in self._indicator_keys
+            }
 
-        items = [
-            {"ip": value, "comment": f"OpenCTI: {indicator_id}"}
-            for indicator_id, value in self._indicator_cache.items()
+            self.logger.info(
+                "Syncing indicators to Cloudflare",
+                meta={"count": len(snapshot), "list_id": self.list_id},
+            )
+
+            items = [
+                {"ip": value, "comment": f"{COMMENT_PREFIX}{indicator_id}"}
+                for indicator_id, value in snapshot.items()
+            ]
+
+            try:
+                result = self.client.replace_list_items(self.list_id, items)
+                operation_id = result.get("operation_id")
+                if operation_id:
+                    self.logger.info(
+                        "Bulk operation started", meta={"operation_id": operation_id}
+                    )
+                    final_status = self.client.wait_for_operation(operation_id)
+                    self.logger.info(
+                        "Snapshot uploaded",
+                        meta={
+                            "count": len(items),
+                            "status": final_status.get("status"),
+                        },
+                    )
+                else:
+                    self.logger.info("Snapshot uploaded", meta={"count": len(items)})
+            except CloudflareAPIError as exc:
+                self._report(
+                    self._changed(indicators),
+                    DeploymentStatus.FAILED,
+                    error_message=str(exc) or type(exc).__name__,
+                )
+                raise
+            self._report(self._changed(indicators), DeploymentStatus.DEPLOYED)
+            self._report(
+                [key for key in self._synced if key not in indicators],
+                DeploymentStatus.REMOVED,
+            )
+            self._synced = indicators
+
+    def _changed(self, indicators: dict[str, str]) -> list[str]:
+        """Return the indicators whose value differs from the last uploaded snapshot."""
+        return [
+            key for key, value in indicators.items() if self._synced.get(key) != value
         ]
 
-        try:
-            result = self.client.replace_list_items(self.list_id, items)
+    def _report(
+        self, indicator_ids: Iterable[str], status: DeploymentStatus, **fields: Any
+    ) -> None:
+        """Queue a deployment report per indicator (no-op without write-back)."""
+        if self.assurance is None:
+            return
+        for indicator_id in indicator_ids:
+            self.assurance.reporter.enqueue(
+                DeploymentReport(indicator_id=indicator_id, status=status, **fields)
+            )
+
+    # ------------------------------------------------------------------ #
+    # Deployment reconciliation
+    # ------------------------------------------------------------------ #
+    def push_indicator(self, indicator: dict[str, Any]) -> None:
+        """Add an OpenCTI indicator to the snapshot and upload it (reconciliation re-push).
+
+        Args:
+            indicator: The indicator, in the stream event shape.
+
+        Raises:
+            ValueError: When the indicator has no IPv4 pattern.
+            CloudflareAPIError: When Cloudflare refuses the snapshot.
+        """
+        value = self._extract_ipv4(indicator)
+        indicator_id = get_opencti_indicator_id(indicator)
+        if not value or not indicator_id:
+            raise ValueError("The indicator has no IPv4 pattern for Cloudflare")
+        with self._lock:
+            self._indicator_cache[indicator_id] = value
+            self._indicator_keys.add(indicator_id)
+            self._upload_snapshot()
+
+    def withdraw_item(self, item_id: str, identifiers: Iterable[str]) -> None:
+        """Delete a list item and drop its indicator from the snapshot.
+
+        Args:
+            item_id: The Cloudflare list item id.
+            identifiers: The normalized identifiers of the indicator (OpenCTI ids).
+
+        Raises:
+            CloudflareAPIError: When Cloudflare refuses the deletion.
+        """
+        identifiers = set(identifiers)
+        with self._lock:
+            result = self.client.delete_list_items(self.list_id, [item_id])
             operation_id = result.get("operation_id")
             if operation_id:
-                self.logger.info(
-                    "Bulk operation started", meta={"operation_id": operation_id}
-                )
-                final_status = self.client.wait_for_operation(operation_id)
-                self.logger.info(
-                    "Snapshot uploaded",
-                    meta={"count": len(items), "status": final_status.get("status")},
-                )
-            else:
-                self.logger.info("Snapshot uploaded", meta={"count": len(items)})
-        except CloudflareAPIError as exc:
-            self.logger.error("Failed to sync to Cloudflare", meta={"error": str(exc)})
+                self.client.wait_for_operation(operation_id)
+            for key in [
+                key
+                for key in self._indicator_cache
+                if normalize_value(key) in identifiers
+            ]:
+                del self._indicator_cache[key]
+                self._indicator_keys.discard(key)
+                self._synced.pop(key, None)
 
     # ------------------------------------------------------------------ #
     # Full sync (startup)
@@ -181,7 +312,8 @@ class Connector:
     def _full_sync(self) -> None:
         """Load all IPv4 indicators and observables from OpenCTI, then sync."""
         self.logger.info("Starting full sync from OpenCTI")
-        self._indicator_cache = {}
+        cache: dict[str, str] = {}
+        indicator_keys: set[str] = set()
 
         indicators = self.helper.api.indicator.list(getAll=True)
         self.logger.info(
@@ -191,7 +323,8 @@ class Connector:
             value = self._extract_ipv4(indicator)
             indicator_id = indicator.get("id")
             if value and indicator_id:
-                self._indicator_cache[indicator_id] = value
+                cache[indicator_id] = value
+                indicator_keys.add(indicator_id)
 
         try:
             observables = self.helper.api.stix_cyber_observable.list(
@@ -201,15 +334,18 @@ class Connector:
                 value = self._extract_ipv4(observable)
                 obs_id = observable.get("id")
                 if value and obs_id:
-                    self._indicator_cache[obs_id] = value
+                    cache[obs_id] = value
         except Exception as exc:  # noqa: BLE001
             self.logger.warning(
                 "Could not fetch IPv4 observables", meta={"error": str(exc)}
             )
 
+        with self._lock:
+            self._indicator_cache = cache
+            self._indicator_keys = indicator_keys
         self.logger.info(
             "Loaded IPv4 indicators for sync",
-            meta={"count": len(self._indicator_cache)},
+            meta={"count": len(cache)},
         )
         self._sync_to_cloudflare()
 
@@ -237,6 +373,9 @@ class Connector:
                 meta={"list_id": self.list_id, "error": str(exc)},
             )
             raise
+
+        if self.assurance is not None:
+            self.assurance.start()
 
         try:
             self._full_sync()
