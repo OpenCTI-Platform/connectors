@@ -664,12 +664,17 @@ class InternalHuntConnector(ABC):
         started: float,
         error: BaseException,
     ) -> None:
-        """Report a failed run without masking the original error."""
+        """Report a failed or timed out run without masking the original error."""
+        status = (
+            HuntRunStatus.TIMEOUT
+            if isinstance(error, HuntTimeoutError)
+            else HuntRunStatus.FAILED
+        )
         try:
             self.report(
                 run_id,
                 HuntRunReport(
-                    status=HuntRunStatus.FAILED,
+                    status=status,
                     translated_query=native_query.query if native_query else None,
                     query_language=native_query.language if native_query else None,
                     cost_ms=self._elapsed_ms(started),

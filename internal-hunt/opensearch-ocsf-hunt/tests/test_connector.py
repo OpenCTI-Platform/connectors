@@ -343,14 +343,14 @@ def test_process_message_times_out(connector_factory, helper, hunt_event):
     connector.client.ppl.side_effect = lambda *args: release.wait(5)
     hunt_event["limits"]["timeout_seconds"] = 1
 
-    # When/Then the run times out and is reported failed
+    # When/Then the run times out and is reported as a timeout
     try:
         with pytest.raises(HuntTimeoutError):
             connector.process_message(hunt_event)
     finally:
         release.set()
     args, kwargs = helper.report_hunt_run.call_args
-    assert args == ("run-1", "failed")
+    assert args == ("run-1", "timeout")
     assert "1 seconds" in kwargs["error"]
 
 

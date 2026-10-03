@@ -95,5 +95,8 @@ def test_native_query_and_report_models():
     assert query.translated is False
     assert query.fields == ()
     assert report.status == "failed"
+    assert HuntRunReport(status=HuntRunStatus.TIMEOUT).status == "timeout"
+    with pytest.raises(ValidationError):
+        HuntRunReport(status=HuntRunStatus.RUNNING)
     with pytest.raises(ValidationError):
         NativeQuery(language="spl", query="")
