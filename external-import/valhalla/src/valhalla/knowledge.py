@@ -10,8 +10,12 @@ import requests
 from pycti import StixCoreRelationship
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import Bundle, ExternalReference, Identity, Indicator, Relationship
-
-from .models import ApiResponse, StixEnterpriseAttack
+from valhalla.attack_patterns import (
+    AttackPatternResolver,
+    attack_pattern_id,
+    technique_id,
+)
+from valhalla.models import ApiResponse, StixEnterpriseAttack, YaraRule
 
 if TYPE_CHECKING:
     from stix2 import MarkingDefinition
@@ -22,8 +26,8 @@ class KnowledgeImporter:
     """Valhalla Knowledge importer."""
 
     _ENTERPRISE_ATTACK_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
-    _ATTACK_MAPPING = {}
     _KNOWLEDGE_IMPORTER_STATE = "knowledge_importer_state"
+    _GROUP_TAG_RE = re.compile(r"^G\d{4}$")
 
     def __init__(
         self,
@@ -43,12 +47,16 @@ class KnowledgeImporter:
             identity_class="organization",
             description="THOR APT scanner and Valhalla Yara Rule API Provider",
         )
+        self.attack_patterns = AttackPatternResolver(helper)
+        # MITRE ATT&CK id (``G0032``) -> STIX id of the intrusion set.
+        self._attack_mapping: dict[str, str] = {}
+        # MITRE ATT&CK id (``T1059``) -> technique name.
+        self._technique_names: dict[str, str] = {}
         self.bundle_objects = []
 
     def run(self, work_id: int) -> Mapping[str, Any]:
         """Run importer."""
-
-        self.bundle_objects.append(self.organization)
+        self.bundle_objects = [self.organization]
 
         self._build_attack_group_mapping()
         self.process_yara_rules()
@@ -66,7 +74,7 @@ class KnowledgeImporter:
         # Convert the timezone-aware datetime object to a timestamp
         state_timestamp = int(current_time_utc.timestamp())
 
-        self.helper.log_info("knowledge importer completed")
+        self.helper.connector_logger.info("knowledge importer completed")
         return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
 
     def process_yara_rules(self) -> None:
@@ -74,9 +82,24 @@ class KnowledgeImporter:
             rules_json = self.valhalla_client.get_rules_json()
             response = ApiResponse.parse_obj(rules_json)
         except Exception as err:
-            self.helper.log_error(f"error downloading rules: {err}")
+            self.helper.connector_logger.error(
+                "error downloading rules", {"error": str(err)}
+            )
             self.helper.metric.inc("client_error_count")
             return None
+
+        # One platform lookup for every technique tagged in the feed, so the
+        # ``indicates`` targets MITRE ATT&CK already imported are referenced
+        # as they are (see ``AttackPatternResolver``).
+        self.attack_patterns.load(
+            {
+                mitre_id
+                for rule in response.rules
+                for mitre_id in map(technique_id, rule.tags)
+                if mitre_id
+            }
+        )
+        emitted_attack_patterns: set[str] = set()
 
         for yr in response.rules:
             # Handle reference URLs supplied by the Valhalla API
@@ -90,9 +113,12 @@ class KnowledgeImporter:
                         description="Rule Reference: " + san_url.geturl(),
                     )
                     refs.append(ref)
-                except Exception:
+                except Exception as err:
                     self.helper.metric.inc("error_count")
-                    self.helper.log_error(f"error parsing ref url: {yr.reference}")
+                    self.helper.connector_logger.error(
+                        "error parsing ref url",
+                        {"reference": yr.reference, "error": str(err)},
+                    )
                     continue
 
             indicator = Indicator(
@@ -109,68 +135,96 @@ class KnowledgeImporter:
                 custom_properties={
                     "x_opencti_main_observable_type": "StixFile",
                     "x_opencti_score": yr.score,
+                    "x_opencti_rule_level": yr.rule_level,
                 },
             )
 
             self.bundle_objects.append(indicator)
+            self._process_tags(yr, indicator, emitted_attack_patterns)
 
-            # Handle Tags - those include MITRE ATT&CK tags that we want to
-            # create relationships for
-            for tag in yr.tags:
-                # handle Mitre ATT&CK relation indicator <-> attack-pattern
-                if re.search(r"^T\d{4}$", tag):
-                    attack_pattern_id = self._ATTACK_MAPPING.get(tag)
-
-                    if attack_pattern_id is None or attack_pattern_id == "":
-                        self.helper.log_info(f"no attack_pattern found for {tag}")
-                        return None
-
-                    ap_rel = Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "indicates", indicator.id, attack_pattern_id
-                        ),
-                        relationship_type="indicates",
-                        source_ref=indicator.id,
-                        target_ref=attack_pattern_id,
-                        description="Yara Rule from Valhalla API",
-                        created_by_ref=self.organization,
-                        object_marking_refs=[self.default_marking],
+    def _process_tags(
+        self,
+        yr: YaraRule,
+        indicator: Indicator,
+        emitted_attack_patterns: set[str],
+    ) -> None:
+        """Link the rule Indicator to the techniques and groups in its tags."""
+        for tag in yr.tags:
+            # handle Mitre ATT&CK relation indicator <-> attack-pattern
+            mitre_id = technique_id(tag)
+            if mitre_id is not None:
+                target_id = attack_pattern_id(mitre_id)
+                if target_id not in emitted_attack_patterns:
+                    attack_pattern = self.attack_patterns.build(
+                        mitre_id,
+                        self._technique_names.get(mitre_id),
+                        self.organization,
+                        self.default_marking,
                     )
-                    self.bundle_objects.append(ap_rel)
+                    if attack_pattern is not None:
+                        self.bundle_objects.append(attack_pattern)
+                    emitted_attack_patterns.add(target_id)
 
-                # handle Mitre ATT&CK group relation indicator <-> intrusion-set
-                if re.search(r"^G\d{4}$", tag):
-                    intrusion_set_id = self._ATTACK_MAPPING.get(tag)
+                ap_rel = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "indicates", indicator.id, target_id
+                    ),
+                    relationship_type="indicates",
+                    source_ref=indicator.id,
+                    target_ref=target_id,
+                    description="Yara Rule from Valhalla API",
+                    created_by_ref=self.organization,
+                    object_marking_refs=[self.default_marking],
+                )
+                self.bundle_objects.append(ap_rel)
+                continue
 
-                    if intrusion_set_id == "" or intrusion_set_id is None:
-                        self.helper.log_info(f"no intrusion_set found for {tag}")
-                        return None
+            # handle Mitre ATT&CK group relation indicator <-> intrusion-set
+            if self._GROUP_TAG_RE.search(tag):
+                intrusion_set_id = self._attack_mapping.get(tag)
 
-                    is_rel = Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "indicates", indicator.id, intrusion_set_id
-                        ),
-                        relationship_type="indicates",
-                        source_ref=indicator.id,
-                        target_ref=intrusion_set_id,
-                        description="Yara Rule from Valhalla API",
-                        created_by_ref=self.organization,
-                        object_marking_refs=[self.default_marking],
+                if not intrusion_set_id:
+                    self.helper.connector_logger.info(
+                        "no intrusion_set found for tag", {"tag": tag}
                     )
-                    self.bundle_objects.append(is_rel)
+                    continue
+
+                is_rel = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "indicates", indicator.id, intrusion_set_id
+                    ),
+                    relationship_type="indicates",
+                    source_ref=indicator.id,
+                    target_ref=intrusion_set_id,
+                    description="Yara Rule from Valhalla API",
+                    created_by_ref=self.organization,
+                    object_marking_refs=[self.default_marking],
+                )
+                self.bundle_objects.append(is_rel)
 
     def _build_attack_group_mapping(self) -> None:
+        self._attack_mapping = {}
+        self._technique_names = {}
         try:
-            attack_data = requests.get(self._ENTERPRISE_ATTACK_URL)
+            attack_data = requests.get(self._ENTERPRISE_ATTACK_URL, timeout=120)
             response = StixEnterpriseAttack.parse_obj(attack_data.json())
         except Exception as err:
-            self.helper.log_error(f"error downloading attack data: {err}")
+            self.helper.connector_logger.error(
+                "error downloading attack data", {"error": str(err)}
+            )
             self.helper.metric.inc("client_error_count")
             return None
 
         for obj in response.objects:
-            if obj.type in {"attack-pattern", "intrusion-set"}:
-                if obj.external_references[0].external_id and obj.id:
-                    self._ATTACK_MAPPING[obj.external_references[0].external_id] = (
-                        obj.id
-                    )
+            if obj.type not in {"attack-pattern", "intrusion-set"}:
+                continue
+            if not obj.external_references or not obj.id:
+                continue
+            external_id = obj.external_references[0].external_id
+            if not external_id:
+                continue
+            if obj.type == "attack-pattern":
+                if obj.name:
+                    self._technique_names[external_id.upper()] = obj.name
+            else:
+                self._attack_mapping[external_id] = obj.id
