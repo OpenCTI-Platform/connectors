@@ -15,17 +15,17 @@ class CVEPort(ABC):
 
     @property
     @abstractmethod
-    def description(self) -> str:
+    def description(self) -> Optional[str]:
         """Description of the CVE."""
 
     @property
     @abstractmethod
-    def publication_datetime(self) -> datetime.datetime:
+    def publication_datetime(self) -> Optional[datetime.datetime]:
         """Published date of the CVE."""
 
     @property
     @abstractmethod
-    def last_modified_datetime(self) -> datetime.datetime:
+    def last_modified_datetime(self) -> Optional[datetime.datetime]:
         """Last modified date of the CVE."""
 
     @property

@@ -66,9 +66,55 @@ class MockCVE(CVEPort):
         return None
 
 
+class MockDegradedCVE(CVEPort):
+    """A CVE for which Tenable Security Center returned no details, only its id.
+
+    See https://github.com/OpenCTI-Platform/connectors/issues (empty response
+    from the CVE endpoint must still produce a Vulnerability/relationship).
+    """
+
+    @property
+    def name(self):
+        return "CVE-9999-0000"
+
+    @property
+    def description(self):
+        return None
+
+    @property
+    def publication_datetime(self):
+        return None
+
+    @property
+    def last_modified_datetime(self):
+        return None
+
+    @property
+    def cpes(self):
+        return None
+
+    @property
+    def cvss_v3_score(self):
+        return None
+
+    @property
+    def cvss_v3_vector(self):
+        return None
+
+    @property
+    def epss_percentile(self):
+        return None
+
+    @property
+    def epss_score(self):
+        return None
+
+
 class MockVulnerability(FindingPort):
-    def __init__(self, has_cves=False):
-        if has_cves:
+    def __init__(self, has_cves=False, degraded_cve=False):
+        if degraded_cve:
+            self._cves = [MockDegradedCVE()]
+        elif has_cves:
             self._cves = [MockCVE()]
         else:
             self._cves = None
@@ -291,10 +337,14 @@ class MockVulnerability(FindingPort):
 
 
 class MockAsset(AssetPort):
-    def __init__(self, findings: bool, with_cves: bool) -> None:
+    def __init__(
+        self, findings: bool, with_cves: bool, degraded_cve: bool = False
+    ) -> None:
         self._findings = []
         if findings:
-            self._findings.append(MockVulnerability(has_cves=with_cves))
+            self._findings.append(
+                MockVulnerability(has_cves=with_cves, degraded_cve=degraded_cve)
+            )
 
     @property
     def id(self):
@@ -350,13 +400,20 @@ class MockAsset(AssetPort):
 
 
 class MockAssetsChunk(AssetsChunkPort):
-    def __init__(self, findings=False, with_cves=False) -> None:
+    def __init__(self, findings=False, with_cves=False, degraded_cve=False) -> None:
         self._findings = findings
         self._with_cves = with_cves
+        self._degraded_cve = degraded_cve
 
     @property
     def assets(self):
-        return [MockAsset(findings=self._findings, with_cves=self._with_cves)]
+        return [
+            MockAsset(
+                findings=self._findings,
+                with_cves=self._with_cves,
+                degraded_cve=self._degraded_cve,
+            )
+        ]
 
 
 @pytest.fixture()
@@ -372,6 +429,11 @@ def mock_assets_chunk_with_finding():
 @pytest.fixture()
 def mock_assets_chunk_with_finding_and_cves():
     return MockAssetsChunk(findings=True, with_cves=True)
+
+
+@pytest.fixture()
+def mock_assets_chunk_with_finding_and_degraded_cve():
+    return MockAssetsChunk(findings=True, with_cves=True, degraded_cve=True)
 
 
 def test_constructor(mock_logger):
@@ -468,5 +530,144 @@ def test_converter_should_process_an_asset_with_finding_and_cves(
             and value.get("source_ref", "").startswith("identity--")
             and value.get("target_ref", "").startswith("vulnerability--")
         )
+        for _, value in results.items()
+    )
+
+
+def test_converter_should_process_an_asset_with_finding_and_degraded_cve(
+    mock_logger, mock_assets_chunk_with_finding_and_degraded_cve
+):
+    """Regression test: a CVE for which Tenable Security Center returned no
+    details (only its id was known, e.g. an empty response from the CVE
+    endpoint) must still produce a Vulnerability node named after the CVE id
+    and a relationship to the system, not be dropped.
+    """
+    # Given a mock logger
+    logger = mock_logger
+    # a ConverterToStix Instance
+    converter = ConverterToStix(logger=logger, tlp_marking=TLP_WHITE)
+    # an assets_chunk containing an asset with a finding whose CVE has no details
+    assets_chunk = mock_assets_chunk_with_finding_and_degraded_cve
+
+    # When processing an asset chunk
+    results = converter.process_assets_chunk(
+        assets_chunk=assets_chunk, process_systems_without_vulnerabilities=False
+    )
+    # Then the results should still contain a vulnerability named after the CVE id...
+    assert any(
+        value["type"] == "vulnerability" and value["name"] == "CVE-9999-0000"
+        for _, value in results.items()
+    )
+    # ...and a relationship from the system to that vulnerability
+    assert any(
+        (
+            value["type"] == "relationship"
+            and value.get("source_ref", "").startswith("identity--")
+            and value.get("target_ref", "").startswith("vulnerability--")
+        )
+        for _, value in results.items()
+    )
+
+
+# --- CPE handling on the CVE path ---------------------------------------------------
+
+NVD_CPE = "cpe:/a:nvd_vendor:nvd_product"
+PLUGIN_CPE = "cpe:/a:apache:http_server"
+
+
+class MockCVEWithCpes(MockCVE):
+    """A CVE carrying its generic NVD applicability CPE list."""
+
+    @property
+    def cpes(self):
+        return [NVD_CPE]
+
+
+class MockVulnerabilityWithCpes(MockVulnerability):
+    """A finding with a CVE (carrying NVD CPEs) and its own plugin CPEs."""
+
+    def __init__(self, finding_cpes):
+        super().__init__()
+        self._cves = [MockCVEWithCpes()]
+        self._finding_cpes = finding_cpes
+
+    @property
+    def cpes(self):
+        return self._finding_cpes
+
+
+class MockSingleFindingAssetsChunk(AssetsChunkPort):
+    """An assets chunk with a single asset carrying the provided finding."""
+
+    def __init__(self, finding):
+        self._finding = finding
+
+    @property
+    def assets(self):
+        asset = MockAsset(findings=False, with_cves=False)
+        asset._findings = [self._finding]
+        return [asset]
+
+
+def _softwares_cpes(results):
+    return {
+        value.get("cpe")
+        for _, value in results.items()
+        if value["type"] == "software" and value.get("cpe")
+    }
+
+
+def test_converter_should_not_create_softwares_from_cve_cpes(mock_logger):
+    """The CVE's generic NVD CPE list must not be turned into Software objects."""
+    # Given a finding with a CVE carrying NVD CPEs, and no plugin CPE
+    converter = ConverterToStix(logger=mock_logger, tlp_marking=TLP_WHITE)
+    assets_chunk = MockSingleFindingAssetsChunk(
+        MockVulnerabilityWithCpes(finding_cpes=None)
+    )
+
+    # When processing the assets chunk
+    results = converter.process_assets_chunk(
+        assets_chunk=assets_chunk, process_systems_without_vulnerabilities=False
+    )
+
+    # Then the CVE is imported but no Software is created from its NVD CPEs
+    assert any(
+        value["type"] == "vulnerability" and value["name"] == "CVE-2021-1234"
+        for _, value in results.items()
+    )
+    assert NVD_CPE not in _softwares_cpes(results)
+
+
+def test_converter_should_create_softwares_from_finding_cpes_on_cve_path(mock_logger):
+    """On the CVE path, Softwares come from the CPEs of the plugin that triggered the finding."""
+    # Given a finding with a CVE carrying NVD CPEs, and its own plugin CPE
+    converter = ConverterToStix(logger=mock_logger, tlp_marking=TLP_WHITE)
+    assets_chunk = MockSingleFindingAssetsChunk(
+        MockVulnerabilityWithCpes(finding_cpes=[PLUGIN_CPE])
+    )
+
+    # When processing the assets chunk
+    results = converter.process_assets_chunk(
+        assets_chunk=assets_chunk, process_systems_without_vulnerabilities=False
+    )
+
+    # Then only the plugin CPE is turned into a Software...
+    assert _softwares_cpes(results) == {PLUGIN_CPE}
+    # ...linked to the CVE vulnerability with a "has" relationship
+    software_ids = {
+        key
+        for key, value in results.items()
+        if value["type"] == "software" and value.get("cpe") == PLUGIN_CPE
+    }
+    vulnerability_ids = {
+        key
+        for key, value in results.items()
+        if value["type"] == "vulnerability" and value["name"] == "CVE-2021-1234"
+    }
+    assert any(
+        value["type"] == "relationship"
+        and value["relationship_type"] == "has"
+        and value["source_ref"] in software_ids
+        and value["target_ref"] in vulnerability_ids
         for _, value in results.items()
     )
