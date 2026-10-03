@@ -6,6 +6,7 @@ its deployment on the Security Platform (``active`` when enabled,
 ``deployed`` when disabled). Rules seen in the previous run and gone now,
 or whose logic changed (new Indicator), get the ``removed`` status: the
 connector state keeps the Indicator of every rule of the previous run.
+Rules sharing the same logic share one Indicator and one deployment.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from connector.stix_builder import RuleStixBuilder
 from connectors_sdk import BaseDataProcessor
 
 if TYPE_CHECKING:
+    import stix2
     from connector.state import ConnectorState
     from connectors_sdk import BaseConnectorSettings, ExternalImportConnectorState
     from pycti import OpenCTIConnectorHelper
@@ -99,13 +101,17 @@ class DeployedRulesProcessor(BaseDataProcessor):
         linked_techniques: set[str] = set()
         last_run = self.state.last_run
 
-        for start in range(0, len(rules), RULES_PER_BUNDLE):
+        groups = self._group_by_indicator(rules, run_time)
+        for start in range(0, len(groups), RULES_PER_BUNDLE):
             objects: list[Any] = list(self.builder.common_objects)
             emitted: set[str] = set()
-            for rule in rules[start : start + RULES_PER_BUNDLE]:
-                indicator = self.builder.indicator(rule, run_time)
+            for indicator, rule, group in groups[start : start + RULES_PER_BUNDLE]:
                 objects.append(indicator)
-                for mitre_id, name in rule.techniques.items():
+                techniques: dict[str, str | None] = {}
+                for member in group:
+                    for mitre_id, name in member.techniques.items():
+                        techniques.setdefault(mitre_id, name)
+                for mitre_id, name in techniques.items():
                     target_id = attack_pattern_id(mitre_id)
                     if target_id not in emitted:
                         attack_pattern = self.attack_patterns.build(
@@ -130,12 +136,14 @@ class DeployedRulesProcessor(BaseDataProcessor):
                         deployed_at=rule.created_at,
                     )
                 )
-                statuses[status] += 1
-                current[rule.key] = indicator.id
+                for member in group:
+                    statuses[STATUS_ACTIVE if member.enabled else STATUS_DEPLOYED] += 1
+                    current[member.key] = indicator.id
             yield objects
 
         removed, still_pending = self._removed_rules(previous, current, pending)
-        if removed:
+        removals = list(removed.items())
+        for start in range(0, len(removals), RULES_PER_BUNDLE):
             yield list(self.builder.common_objects) + [
                 self.builder.deployment(
                     indicator_id=indicator_id,
@@ -145,7 +153,9 @@ class DeployedRulesProcessor(BaseDataProcessor):
                     deployed_on_supported=deployed_on_supported,
                     removed_at=run_time,
                 )
-                for indicator_id, external_id in removed.items()
+                for indicator_id, external_id in removals[
+                    start : start + RULES_PER_BUNDLE
+                ]
             ]
 
         self.state.deployed_rules = current
@@ -198,6 +208,30 @@ class DeployedRulesProcessor(BaseDataProcessor):
             keys.add(rule.key)
             rules.append(rule)
         return rules, skipped
+
+    def _group_by_indicator(
+        self, rules: list[DetectionRule], run_time: datetime
+    ) -> list[tuple[stix2.Indicator, DetectionRule, list[DetectionRule]]]:
+        """Group the rules sharing one Indicator (same logic, same pattern).
+
+        The Indicator id derives from the pattern only, as everywhere in
+        OpenCTI, so rules with the same logic are one Indicator with one
+        deployment on the platform. Returns, per Indicator, the Indicator,
+        the rule describing its deployment (the first enabled one, else the
+        first one: the deployment is ``active`` when any rule is enabled)
+        and every rule of the group.
+        """
+        groups: dict[str, list[tuple[stix2.Indicator, DetectionRule]]] = {}
+        for rule in rules:
+            indicator = self.builder.indicator(rule, run_time)
+            groups.setdefault(indicator.id, []).append((indicator, rule))
+        result = []
+        for members in groups.values():
+            indicator, rule = next(
+                (member for member in members if member[1].enabled), members[0]
+            )
+            result.append((indicator, rule, [member[1] for member in members]))
+        return result
 
     def _removed_rules(
         self,

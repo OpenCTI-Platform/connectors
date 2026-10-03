@@ -182,6 +182,62 @@ def test_indicator_still_deployed_through_another_rule_is_not_removed(helper):
     helper.api.indicator.list.assert_not_called()
 
 
+def test_rules_sharing_their_logic_share_one_deployment(helper):
+    disabled_twin = rule(
+        KUERY_RULE,
+        rule_id="twin-rule",
+        id="twin-saved-object",
+        enabled=False,
+        threat=EQL_RULE["threat"],
+    )
+    processor = _processor(helper, [disabled_twin, KUERY_RULE])
+    objects = _run(processor)[0]
+
+    indicator_id = _indicator_id(KUERY_RULE)
+    (indicator,) = _of_type(objects, "indicator")
+    assert indicator.id == indicator_id
+    # The enabled rule describes the shared Indicator and its deployment.
+    assert indicator.external_references[0].external_id == KUERY_RULE["rule_id"]
+    (deployment,) = _of_type(objects, "relationship", "deployed-on")
+    assert deployment.deployment_status == "active"
+    assert deployment.external_id == KUERY_RULE["rule_id"]
+    assert {r.target_ref for r in _of_type(objects, "relationship", "indicates")} == {
+        attack_pattern_id("T1059"),
+        attack_pattern_id("T1059.001"),
+        attack_pattern_id("T1003"),
+    }
+    assert processor.state.deployed_rules == {
+        "twin-rule": indicator_id,
+        KUERY_RULE["rule_id"]: indicator_id,
+    }
+
+
+def test_large_removals_are_split_into_bundles(helper):
+    gone = {
+        f"gone-{index}": Indicator.generate_id(f"gone rule {index}")
+        for index in range(RULES_PER_BUNDLE + 1)
+    }
+    helper.api.indicator.list.side_effect = lambda **kwargs: [
+        {"standard_id": indicator_id, "x_opencti_stix_ids": []}
+        for indicator_id in kwargs["filters"]["filters"][0]["values"]
+    ]
+    processor = _processor(
+        helper, [KUERY_RULE], state=ConnectorState(deployed_rules=gone)
+    )
+    bundles = _run(processor)
+
+    assert [len(_of_type(b, "relationship", "deployed-on")) for b in bundles] == [
+        1,
+        RULES_PER_BUNDLE,
+        1,
+    ]
+    for bundle in bundles[1:]:
+        assert bundle[:3] == processor.builder.common_objects
+        assert {
+            r.deployment_status for r in _of_type(bundle, "relationship", "deployed-on")
+        } == {"removed"}
+
+
 def test_removals_are_retried_when_the_platform_cannot_be_asked(helper):
     helper.api.indicator.list.side_effect = RuntimeError("platform down")
     state = ConnectorState(deployed_rules={"gone-rule": GONE_INDICATOR})
