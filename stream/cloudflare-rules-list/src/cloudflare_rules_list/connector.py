@@ -132,9 +132,14 @@ class Connector:
                 event_type = "create"
 
             if event_type in ("create", "update"):
-                self._handle_upsert(data)
+                changed = self._handle_upsert(data)
             elif event_type == "delete":
-                self._handle_delete(data)
+                changed = self._handle_delete(data)
+            else:
+                changed = False
+            # Until a full sync succeeds, every stream event retries it.
+            if changed or not self._full_sync_done:
+                self._check_sync()
         except (KeyboardInterrupt, SystemExit):
             self.logger.info("Connector stopped")
             sys.exit(0)
@@ -143,14 +148,19 @@ class Connector:
                 "Error processing stream message", meta={"error": str(exc)}
             )
 
-    def _handle_upsert(self, data: dict) -> None:
+    def _handle_upsert(self, data: dict) -> bool:
+        """Cache the IPv4 value of a created or updated object.
+
+        Returns:
+            Whether the snapshot was updated.
+        """
         value = self._extract_ipv4(data)
         if not value:
-            return
+            return False
 
         indicator_id = self._object_id(data)
         if not indicator_id:
-            return
+            return False
 
         with self._lock:
             self._indicator_cache[indicator_id] = value
@@ -159,17 +169,22 @@ class Connector:
         self.logger.debug(
             "Cached IPv4 indicator", meta={"id": indicator_id, "value": value}
         )
-        self._check_sync()
+        return True
 
-    def _handle_delete(self, data: dict) -> None:
+    def _handle_delete(self, data: dict) -> bool:
+        """Drop a deleted object from the snapshot.
+
+        Returns:
+            Whether the snapshot was updated.
+        """
         indicator_id = self._object_id(data)
         with self._lock:
             if not indicator_id or indicator_id not in self._indicator_cache:
-                return
+                return False
             del self._indicator_cache[indicator_id]
             self._indicator_keys.discard(indicator_id)
         self.logger.debug("Removed indicator from cache", meta={"id": indicator_id})
-        self._check_sync()
+        return True
 
     # ------------------------------------------------------------------ #
     # Sync to Cloudflare
@@ -198,16 +213,10 @@ class Connector:
         if self.assurance is not None:
             self.assurance.start()
 
-    def _sync_to_cloudflare(self, force: bool = False) -> None:
-        """Push the full IPv4 snapshot to the Cloudflare Rules List.
-
-        Args:
-            force: Upload the snapshot even when it is empty. The startup full sync
-                is authoritative: an empty snapshot clears the items a previous run
-                of the connector left in the list.
-        """
+    def _sync_to_cloudflare(self) -> None:
+        """Push the full IPv4 snapshot to the Cloudflare Rules List."""
         with self._lock:
-            if not force and not self._indicator_cache and not self._list_has_items:
+            if not self._indicator_cache and not self._list_has_items:
                 # Nothing to push -- do not open the throttle window, otherwise the
                 # first real indicator to arrive could be delayed by up to
                 # sync_interval before it is synced. An empty snapshot is only
@@ -347,10 +356,14 @@ class Connector:
     # Full sync (startup)
     # ------------------------------------------------------------------ #
     def _full_sync(self) -> None:
-        """Load all IPv4 indicators and observables from OpenCTI, then sync.
+        """Load all IPv4 indicators and observables from OpenCTI, then upload them.
 
-        The uploaded snapshot replaces the list: when either listing fails, the full
-        sync fails and nothing is uploaded.
+        The snapshot replaces the list, even when empty (the items a previous run left
+        are cleared). The full sync only succeeds once Cloudflare accepted it: when a
+        listing fails nothing is uploaded, and a rejected upload raises.
+
+        Raises:
+            CloudflareAPIError: When Cloudflare refuses the snapshot.
         """
         self.logger.info("Starting full sync from OpenCTI")
         cache: dict[str, str] = {}
@@ -376,15 +389,15 @@ class Connector:
             if value and obs_id:
                 cache[obs_id] = value
 
-        with self._lock:
-            self._indicator_cache = cache
-            self._indicator_keys = indicator_keys
-            self._full_sync_done = True
         self.logger.info(
             "Loaded IPv4 indicators for sync",
             meta={"count": len(cache)},
         )
-        self._sync_to_cloudflare(force=True)
+        with self._lock:
+            self._indicator_cache = cache
+            self._indicator_keys = indicator_keys
+            self._upload_snapshot()
+            self._full_sync_done = True
 
     # ------------------------------------------------------------------ #
     # Lifecycle
