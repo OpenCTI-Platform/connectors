@@ -411,7 +411,7 @@ def remove_from_object_refs(
         if "object_refs" in obj:
             # as we cannot reassign stix object properties,
             # we use dict representation not to alter other ones
-            object_dict = json.loads(obj.serialize())
+            object_dict = stix_object_to_dict(obj)
             object_dict["object_refs"] = [
                 ref for ref in obj["object_refs"] if ref not in references
             ]
@@ -727,7 +727,7 @@ def extend_bundle(
     )
 
 
-def _as_dict(stix_object: stix2.v21._STIXBase21 | dict) -> dict:
+def stix_object_to_dict(stix_object: stix2.v21._STIXBase21 | dict) -> dict:
     """Return a mutable, JSON-shaped copy of a STIX object."""
     if isinstance(stix_object, stix2.v21._STIXBase21):
         return json.loads(stix_object.serialize())
@@ -801,7 +801,7 @@ def remap_references(
     """
     if not id_mapping or not _references_any(stix_object, id_mapping):
         return stix_object
-    object_dict = _remap_reference_values(_as_dict(stix_object), id_mapping)
+    object_dict = _remap_reference_values(stix_object_to_dict(stix_object), id_mapping)
     return stix2.parse(object_dict, allow_custom=True)
 
 
@@ -837,9 +837,9 @@ def _union_preserving_order(first: list, second: list) -> list:
 def _merge_stix_objects(
     stix_objects: list[stix2.v21._STIXBase21],
 ) -> stix2.v21._STIXBase21:
-    merged = _as_dict(stix_objects[0])
+    merged = stix_object_to_dict(stix_objects[0])
     for duplicate in stix_objects[1:]:
-        for name, value in _as_dict(duplicate).items():
+        for name, value in stix_object_to_dict(duplicate).items():
             if name not in merged:
                 merged[name] = value
             elif isinstance(merged[name], list) and isinstance(value, list):
@@ -878,6 +878,91 @@ def merge_duplicate_objects(bundle: stix2.Bundle) -> stix2.Bundle:
         for objects in objects_by_id.values()
     ]
     return stix2.Bundle(type=bundle["type"], objects=merged_objects, allow_custom=True)
+
+
+def with_id(
+    stix_object: stix2.v21._STIXBase21 | dict, object_id: str
+) -> stix2.v21._STIXBase21 | dict:
+    """Return a copy of a STIX object under another id."""
+    object_dict = stix_object_to_dict(stix_object)
+    object_dict["id"] = object_id
+    return stix2.parse(object_dict, allow_custom=True)
+
+
+def merge_rewritten_relationships(
+    bundle: stix2.Bundle, rewritten_ids: set[str]
+) -> stix2.Bundle:
+    """Give the relationships a rewrite made identical their first one's id.
+
+    OpenCTI identifies a relationship by its type, endpoints and time frame:
+    once two objects are merged, their relationships to the same object are
+    one relationship. Every relationship sharing that identity with a
+    rewritten one is merged, whatever their order in the bundle; a group the
+    rewrite did not touch is left as it is.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+        rewritten_ids (set[str]): The ids of the relationships whose
+            endpoints were rewritten.
+
+    Returns:
+        (stix2.Bundle): The STIX bundle where the relationships made
+            identical share one id (``bundle`` itself when there are none),
+            the duplicates still to be merged by ``merge_duplicate_objects``.
+    """
+    ids_by_key: dict[tuple, list[str]] = {}
+    for obj in bundle.get("objects", []):
+        if obj.get("type") != "relationship":
+            continue
+        key = (
+            obj.get("relationship_type"),
+            obj.get("source_ref"),
+            obj.get("target_ref"),
+            obj.get("start_time"),
+            obj.get("stop_time"),
+        )
+        ids_by_key.setdefault(key, []).append(obj["id"])
+    duplicate_ids = {
+        duplicate_id: ids[0]
+        for ids in ids_by_key.values()
+        if len(ids) > 1 and rewritten_ids.intersection(ids)
+        for duplicate_id in ids[1:]
+    }
+    if not duplicate_ids:
+        return bundle
+    objects = [
+        with_id(obj, duplicate_ids[obj["id"]]) if obj["id"] in duplicate_ids else obj
+        for obj in bundle.get("objects", [])
+    ]
+    return remap_references_in_bundle(
+        stix2.Bundle(type=bundle["type"], objects=objects, allow_custom=True),
+        duplicate_ids,
+    )
+
+
+def remove_objects_from_bundle(
+    bundle: stix2.Bundle, object_ids: set[str]
+) -> stix2.Bundle:
+    """Remove objects from a STIX bundle, and from every container referencing them.
+
+    Args:
+        bundle (stix2.Bundle): The STIX bundle to process.
+        object_ids (set[str]): The ids of the objects to remove.
+
+    Returns:
+        (stix2.Bundle): The STIX bundle without those objects (``bundle``
+            itself when ``object_ids`` is empty).
+    """
+    if not object_ids:
+        return bundle
+    bundle = remove_from_object_refs(bundle, references=list(object_ids))
+    return stix2.Bundle(
+        type=bundle["type"],
+        objects=[
+            obj for obj in bundle.get("objects", []) if obj["id"] not in object_ids
+        ],
+        allow_custom=True,
+    )
 
 
 def convert_location_to_octi_location(
