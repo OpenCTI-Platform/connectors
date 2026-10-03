@@ -1,11 +1,15 @@
 """Elastic Security detection rule -> ``DetectionRule``."""
 
 from collections.abc import Callable
-from datetime import datetime
 from typing import Any
 
 from connector.attack_patterns import normalize_technique_id
-from connector.detection_rule import DetectionRule, RuleSkippedError, normalize_level
+from connector.detection_rule import (
+    DetectionRule,
+    RuleSkippedError,
+    normalize_level,
+    parse_timestamp,
+)
 
 # Rule ``language`` -> ``pattern_type`` of the rule Indicator.
 PATTERN_TYPES = {"kuery": "kuery", "lucene": "lucene", "eql": "eql", "esql": "esql"}
@@ -14,12 +18,6 @@ _DEFAULT_LANGUAGES = {"eql": "eql", "esql": "esql"}
 # ``OS: <name>`` rule tags -> MITRE ATT&CK platform.
 _OS_PLATFORMS = {"windows": "windows", "linux": "linux", "macos": "macos"}
 _ATTACK_FRAMEWORK = "MITRE ATT&CK"
-
-
-def _parse_time(value: Any) -> datetime | None:
-    if not value:
-        return None
-    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
 
 
 def _techniques(threats: Any) -> dict[str, str | None]:
@@ -79,8 +77,8 @@ def map_rule(raw: dict[str, Any], rule_url: Callable[[str], str]) -> DetectionRu
         pattern=str(query),
         pattern_type=pattern_type,
         enabled=bool(raw.get("enabled")),
-        created_at=_parse_time(raw.get("created_at")),
-        modified_at=_parse_time(raw.get("updated_at")),
+        created_at=parse_timestamp(raw.get("created_at")),
+        modified_at=parse_timestamp(raw.get("updated_at")),
         level=normalize_level(raw.get("severity")),
         logsource={"product": platforms[0]} if len(platforms) == 1 else None,
         platforms=platforms,

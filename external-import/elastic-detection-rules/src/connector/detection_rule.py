@@ -1,12 +1,33 @@
 """Vendor-neutral view of a detection rule deployed in a security platform."""
 
-from datetime import datetime
+import re
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
 # Values of ``x_opencti_rule_level``.
 RULE_LEVELS = ("informational", "low", "medium", "high", "critical")
 _LEVEL_SYNONYMS = {"info": "informational", "moderate": "medium"}
+# Fractions of a second beyond microseconds (Azure returns 7 digits).
+_EXTRA_FRACTION_DIGITS_RE = re.compile(r"(\.\d{6})\d+")
+
+
+def parse_timestamp(value: object) -> datetime | None:
+    """Parse an ISO 8601 timestamp or epoch seconds into an aware datetime.
+
+    Timestamps without an offset are taken as UTC. Returns ``None`` for an
+    empty value and raises ``ValueError`` for an unparsable one.
+    """
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
+        parsed = datetime.fromtimestamp(value, tz=timezone.utc)
+    else:
+        text = _EXTRA_FRACTION_DIGITS_RE.sub(r"\1", str(value).strip())
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
 def normalize_level(value: object) -> str | None:
