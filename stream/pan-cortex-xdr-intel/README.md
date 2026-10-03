@@ -127,8 +127,8 @@ does not exist), and detection hits are counted with a sighting of the indicator
   live. Cortex XDR does not store the OpenCTI id, so deployments are matched by `rule_id`, then by value. A read-back
   error, or a page repeated by the API, skips the run: indicators are never reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the IOC alerts created since the previous run are read with their events
-  (`alerts/get_alerts_multi_events`, newest first, at most 10,000 per run: beyond that the oldest alerts of the window
-  are not counted and a warning is logged, the latest hit of every indicator is kept). An alert counts one hit for every deployed indicator whose
+  (`alerts/get_alerts_multi_events`, oldest first, at most 10,000 per run: a capped read is complete until the newest
+  alert read and the next run resumes there, so no alert is lost). An alert counts one hit for every deployed indicator whose
   value is one of its IP addresses, host names, DNS queries, email addresses or file hashes (domain indicators match the
   host of a URL value); hits already reported are never counted twice.
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;

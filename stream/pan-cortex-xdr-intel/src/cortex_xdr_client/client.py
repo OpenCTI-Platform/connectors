@@ -243,8 +243,8 @@ class CortexXdrClient(BaseClientApi):
     ) -> list[dict[str, Any]]:
         """List the IOC alerts (`alert_source` "XDR IOC") created since a date, with their events.
 
-        Alerts are read newest first: when more than `max_alerts` alerts match, the
-        oldest ones are left out, so the most recent hit of every indicator is kept.
+        Alerts are read oldest first: when `max_alerts` alerts are returned, the read
+        is complete until the newest alert returned.
 
         Raises:
             CortexXdrApiError: On any API error or an unexpected payload.
@@ -276,7 +276,7 @@ class CortexXdrClient(BaseClientApi):
                             ],
                             "search_from": len(alerts),
                             "search_to": len(alerts) + size,
-                            "sort": {"field": "creation_time", "keyword": "desc"},
+                            "sort": {"field": "creation_time", "keyword": "asc"},
                         }
                     },
                 )

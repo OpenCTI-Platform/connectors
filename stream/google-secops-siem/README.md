@@ -285,8 +285,9 @@ does not exist), and detection hits are counted with a sighting of the indicator
   OpenCTI flags the deployment `expired`).
 - **Periodic run**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the `pending` deployments (retry requested by an
   analyst in OpenCTI) are ingested again and the hits are collected.
-- **Hits**: the IoC matches of the instance (`legacySearchEnterpriseWideIoCs`, at most 10,000 per run) matched since the
-  previous run are read. A match counts one hit for every deployed indicator whose value is its artifact (domain,
+- **Hits**: the IoC matches of the instance (`legacySearchEnterpriseWideIoCs`, at most 10,000 per request) matched since
+  the previous run are read. A truncated time window is halved and read oldest first (at most 8 requests per run); when
+  the budget runs out, the next run resumes at the first window left unread, so no match is lost. A match counts one hit for every deployed indicator whose value is its artifact (domain,
   destination IP address, MD5, SHA-1 or SHA-256 hash), at the time Google SecOps last saw the artifact in the
   environment; hits already reported are never counted twice. URL indicators have no IoC match artifact and get no hit.
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
