@@ -64,7 +64,7 @@ def test_search_runs_a_job_and_reads_paginated_results(requests_mock, monkeypatc
     client = _client()
 
     # When the search runs
-    total, rows = client.search("search x", START, END, 10, RunDeadline(30))
+    total, rows = client.search("search x", START, END, 10, RunDeadline(30), "k")
 
     # Then the job is created over the window, polled, read, and deleted
     create = requests_mock.request_history[0]
@@ -74,7 +74,7 @@ def test_search_runs_a_job_and_reads_paginated_results(requests_mock, monkeypatc
     assert total == 3
     assert rows == [{"host": "a"}, {"host": "b"}, {"host": "c"}]
     assert requests_mock.request_history[-1].method == "DELETE"
-    assert client.active_sid is None
+    assert client._active_jobs == {}
 
 
 def test_search_caps_results_and_stops_on_empty_page(requests_mock):
@@ -85,7 +85,7 @@ def test_search_caps_results_and_stops_on_empty_page(requests_mock):
     requests_mock.delete(JOB, json={})
 
     # When/Then the total is kept and only the allowed results are requested
-    total, rows = _client().search("search x", START, END, 5, RunDeadline(30))
+    total, rows = _client().search("search x", START, END, 5, RunDeadline(30), "k")
     assert (total, rows) == (500, [])
     results_request = requests_mock.request_history[2]
     assert results_request.qs["count"] == ["5"]
@@ -99,7 +99,7 @@ def test_search_uses_basic_authentication(requests_mock):
     client = _client(token=None, username="hunter", password="pw")
 
     # When/Then basic authentication is used and a failed deletion is only logged
-    assert client.search("search x", START, END, 5, RunDeadline(30)) == (0, [])
+    assert client.search("search x", START, END, 5, RunDeadline(30), "k") == (0, [])
     assert requests_mock.request_history[0].headers["Authorization"] == (
         "Basic aHVudGVyOnB3"
     )
@@ -121,7 +121,7 @@ def test_search_reports_failed_jobs(requests_mock):
 
     # When/Then the Splunk messages are reported
     with pytest.raises(HuntExecutionError, match="Unknown command"):
-        _client().search("search x", START, END, 5, RunDeadline(30))
+        _client().search("search x", START, END, 5, RunDeadline(30), "k")
 
 
 def test_search_reports_failed_jobs_without_message(requests_mock):
@@ -132,7 +132,7 @@ def test_search_reports_failed_jobs_without_message(requests_mock):
 
     # When/Then a generic error is reported
     with pytest.raises(HuntExecutionError, match="no details"):
-        _client().search("search x", START, END, 5, RunDeadline(30))
+        _client().search("search x", START, END, 5, RunDeadline(30), "k")
 
 
 class _FakeClock:
@@ -158,7 +158,12 @@ def test_search_times_out_while_polling(requests_mock):
     # When/Then the run times out and the job is deleted
     with pytest.raises(HuntTimeoutError, match="Splunk search job"):
         _client(poll_interval=1).search(
-            "search x", START, END, 5, RunDeadline(3, clock=clock, sleeper=clock.sleep)
+            "search x",
+            START,
+            END,
+            5,
+            RunDeadline(3, clock=clock, sleeper=clock.sleep),
+            "k",
         )
     assert clock.now == 3
     assert requests_mock.request_history[-1].method == "DELETE"
@@ -168,7 +173,7 @@ def test_search_never_starts_without_time_left(requests_mock):
     # Given an expired deadline
     # When/Then no search job is created
     with pytest.raises(HuntTimeoutError, match="job creation"):
-        _client().search("search x", START, END, 5, RunDeadline(0))
+        _client().search("search x", START, END, 5, RunDeadline(0), "k")
     assert requests_mock.call_count == 0
 
 
@@ -185,7 +190,7 @@ def test_search_requires_a_job_id(requests_mock, response):
 
     # When/Then the search fails
     with pytest.raises(HuntExecutionError, match="search job id"):
-        _client().search("search x", START, END, 5, RunDeadline(30))
+        _client().search("search x", START, END, 5, RunDeadline(30), "k")
 
 
 def test_search_wraps_http_errors(requests_mock):
@@ -200,7 +205,7 @@ def test_search_wraps_http_errors(requests_mock):
     with pytest.raises(
         HuntExecutionError, match="job creation failed.*Error in 'search' command"
     ):
-        _client().search("search x", START, END, 5, RunDeadline(30))
+        _client().search("search x", START, END, 5, RunDeadline(30), "k")
 
 
 @pytest.mark.parametrize(
@@ -220,7 +225,7 @@ def test_search_maps_network_errors(requests_mock, error, expected):
 
     # When/Then the network failure is a hunt error
     with pytest.raises(expected):
-        _client().search("search x", START, END, 5, RunDeadline(30))
+        _client().search("search x", START, END, 5, RunDeadline(30), "k")
 
 
 def test_search_deletes_the_job_when_polling_fails(requests_mock):
@@ -231,35 +236,36 @@ def test_search_deletes_the_job_when_polling_fails(requests_mock):
 
     # When/Then the search fails and the job is still deleted
     with pytest.raises(HuntExecutionError, match="job status failed"):
-        _client().search("search x", START, END, 5, RunDeadline(30))
+        _client().search("search x", START, END, 5, RunDeadline(30), "k")
     assert requests_mock.request_history[-1].method == "DELETE"
 
 
-def test_cancel_active_job(requests_mock):
-    # Given a running job
+def test_cancel_only_the_job_of_the_run(requests_mock):
+    # Given the running jobs of two runs
     requests_mock.post(f"{JOB}/control", json={})
     client = _client(owner="admin user", app="my app")
     client._namespace = "/servicesNS/nobody/search"
+    client._active_jobs.update({"run-a": "sid-1", "run-b": "sid-2"})
 
-    # When/Then only an active job is cancelled
-    client.cancel_active_job()
+    # When/Then a run without job cancels nothing, and a run cancels its own job
+    client.cancel("run-c")
     assert requests_mock.call_count == 0
-    client.active_sid = "sid-1"
-    client.cancel_active_job()
+    client.cancel("run-a")
+    assert requests_mock.call_count == 1
     assert "action=cancel" in requests_mock.last_request.text
     client._logger.info.assert_called_with(
         "[SPLUNK] Search job cancelled", {"sid": "sid-1"}
     )
 
 
-def test_cancel_active_job_logs_failures(requests_mock):
+def test_cancel_logs_failures(requests_mock):
     # Given a job that cannot be cancelled
     requests_mock.post(f"{JOB}/control", status_code=404)
     client = _client()
-    client.active_sid = "sid-1"
+    client._active_jobs["k"] = "sid-1"
 
     # When/Then the failure is logged, never raised
-    client.cancel_active_job()
+    client.cancel("k")
     message, meta = client._logger.warning.call_args.args
     assert "cancellation failed" in message
     assert meta == {"sid": "sid-1"}
