@@ -238,6 +238,47 @@ def test_large_removals_are_split_into_bundles(helper):
         } == {"removed"}
 
 
+def test_renamed_platform_gets_the_previous_deployments_removed(helper):
+    former_platform = "identity--3a9e2b6c-5a51-5d3c-9b07-4f1f3c1d9a10"
+    helper.api.indicator.list.return_value = [
+        {"standard_id": _indicator_id(KUERY_RULE), "x_opencti_stix_ids": []}
+    ]
+    state = ConnectorState(
+        deployed_rules={KUERY_RULE["rule_id"]: _indicator_id(KUERY_RULE)},
+        platform_id=former_platform,
+    )
+    processor = _processor(helper, [KUERY_RULE], state=state)
+    bundles = _run(processor)
+
+    assert len(bundles) == 2
+    (current,) = _of_type(bundles[0], "relationship", "deployed-on")
+    assert current.target_ref == processor.builder.platform.id
+    assert current.deployment_status == "active"
+    (removed,) = _of_type(bundles[1], "relationship", "deployed-on")
+    assert removed.target_ref == former_platform
+    assert removed.source_ref == _indicator_id(KUERY_RULE)
+    assert removed.deployment_status == "removed"
+    assert processor.state.platform_id == processor.builder.platform.id
+
+
+def test_renamed_platform_keeps_its_state_until_removals_are_sent(helper):
+    former_platform = "identity--3a9e2b6c-5a51-5d3c-9b07-4f1f3c1d9a10"
+    helper.api.indicator.list.side_effect = RuntimeError("platform down")
+    previous = {"gone-rule": GONE_INDICATOR}
+    state = ConnectorState(deployed_rules=previous, platform_id=former_platform)
+    processor = _processor(helper, [KUERY_RULE], state=state)
+    assert len(_run(processor)) == 1
+    assert processor.state.platform_id == former_platform
+    assert processor.state.deployed_rules == previous
+    assert processor.state.pending_removals is None
+
+
+def test_first_run_records_the_platform(helper):
+    processor = _processor(helper, [KUERY_RULE])
+    _run(processor)
+    assert processor.state.platform_id == processor.builder.platform.id
+
+
 def test_removals_are_retried_when_the_platform_cannot_be_asked(helper):
     helper.api.indicator.list.side_effect = RuntimeError("platform down")
     state = ConnectorState(deployed_rules={"gone-rule": GONE_INDICATOR})

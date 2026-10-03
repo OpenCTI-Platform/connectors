@@ -141,7 +141,14 @@ class DeployedRulesProcessor(BaseDataProcessor):
                     current[member.key] = indicator.id
             yield objects
 
-        removed, still_pending = self._removed_rules(previous, current, pending)
+        former_platform = self.state.platform_id
+        if former_platform in (None, self.builder.platform.id):
+            former_platform = None
+            removed, still_pending = self._removed_rules(previous, current, pending)
+        else:
+            # Renamed platform: every deployment of the previous run targets
+            # the former identity and is removed from it.
+            removed, still_pending = self._removed_rules(previous, {}, pending)
         removals = list(removed.items())
         for start in range(0, len(removals), RULES_PER_BUNDLE):
             yield list(self.builder.common_objects) + [
@@ -152,15 +159,19 @@ class DeployedRulesProcessor(BaseDataProcessor):
                     last_sync_at=run_time,
                     deployed_on_supported=deployed_on_supported,
                     removed_at=run_time,
+                    platform_id=former_platform,
                 )
                 for indicator_id, external_id in removals[
                     start : start + RULES_PER_BUNDLE
                 ]
             ]
 
-        self.state.deployed_rules = current
-        # Removals that could not be checked are retried on the next run.
-        self.state.pending_removals = still_pending or None
+        # A former platform keeps its state until its removals are sent.
+        if former_platform is None or not still_pending:
+            self.state.deployed_rules = current
+            # Removals that could not be checked are retried on the next run.
+            self.state.pending_removals = still_pending or None
+            self.state.platform_id = self.builder.platform.id
         self.logger.info(
             "Detection rules reconciled",
             {

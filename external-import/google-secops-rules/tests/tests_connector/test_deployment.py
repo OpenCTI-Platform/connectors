@@ -31,7 +31,10 @@ def test_platform_without_deployed_on():
         None,
         {},
         {"data": None},
+        ["not-a-response"],
+        {"data": ["not-a-data-object"]},
         {"data": {"schemaRelationsTypesMapping": None}},
+        {"data": {"schemaRelationsTypesMapping": {"key": "not-a-list"}}},
         {"data": {"schemaRelationsTypesMapping": ["not-an-entry"]}},
         {
             "data": {

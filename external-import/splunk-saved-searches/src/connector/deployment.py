@@ -41,9 +41,12 @@ def is_deployed_on_supported(helper: OpenCTIConnectorHelper) -> bool:
             {"error": str(err)},
         )
         return False
-    mapping = ((result or {}).get("data") or {}).get(
-        "schemaRelationsTypesMapping"
-    ) or []
+    data = result.get("data") if isinstance(result, dict) else None
+    mapping = (
+        data.get("schemaRelationsTypesMapping") if isinstance(data, dict) else None
+    )
+    if not isinstance(mapping, list):
+        return False
     return any(
         entry.get("key") == _INDICATOR_TO_PLATFORM
         and DEPLOYED_ON in (entry.get("values") or [])

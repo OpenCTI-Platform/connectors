@@ -112,22 +112,30 @@ class RuleStixBuilder:
         deployed_on_supported: bool,
         deployed_at: datetime | None = None,
         removed_at: datetime | None = None,
+        platform_id: str | None = None,
     ) -> stix2.Relationship:
         """Build the deployment of a rule Indicator on the Security Platform.
 
         ``deployed-on`` with the deployment properties when the platform
         defines it, otherwise ``related-to`` describing the deployment.
+        ``platform_id`` targets another platform identity (a former name).
         """
+        target_id = platform_id or self.platform.id
         if not deployed_on_supported:
+            platform_name = (
+                self.platform.name
+                if target_id == self.platform.id
+                else "the former Security Platform"
+            )
             return stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    RELATED_TO, indicator_id, self.platform.id
+                    RELATED_TO, indicator_id, target_id
                 ),
                 relationship_type=RELATED_TO,
                 source_ref=indicator_id,
-                target_ref=self.platform.id,
+                target_ref=target_id,
                 description=(
-                    f"Deployed on {self.platform.name} "
+                    f"Deployed on {platform_name} "
                     f"(status: {status}, rule id: {external_id})"
                 ),
                 created_by_ref=self.author.id,
@@ -143,12 +151,10 @@ class RuleStixBuilder:
         if removed_at is not None:
             properties["removed_at"] = stix_timestamp(removed_at)
         return stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                DEPLOYED_ON, indicator_id, self.platform.id
-            ),
+            id=StixCoreRelationship.generate_id(DEPLOYED_ON, indicator_id, target_id),
             relationship_type=DEPLOYED_ON,
             source_ref=indicator_id,
-            target_ref=self.platform.id,
+            target_ref=target_id,
             created_by_ref=self.author.id,
             object_marking_refs=[self.marking.id],
             custom_properties=properties,
