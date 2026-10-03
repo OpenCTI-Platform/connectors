@@ -233,7 +233,16 @@ class ConnectorClient:
                 ),
             )
         )
-        entities = body.get("entities") or []
+        entities = body.get("entities")
+        if not isinstance(entities, list):
+            # Never read as "no match": the hit window would move past this incident.
+            raise ConnectorClientError(
+                message="[API] Unexpected response format: missing 'entities' list",
+                metadata={
+                    "incident_id": incident_id,
+                    "response_body": str(body)[:1000],
+                },
+            )
         return [entity for entity in entities if isinstance(entity, dict)]
 
     def upload_stix_objects(

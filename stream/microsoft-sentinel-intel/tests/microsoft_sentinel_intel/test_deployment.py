@@ -641,6 +641,22 @@ def test_list_incident_entities(mocker: MockerFixture, connector: Connector) -> 
     )
 
 
+@pytest.mark.parametrize("body", [{}, {"entities": None}, {"entities": {"kind": "Ip"}}])
+def test_list_incident_entities_rejects_a_malformed_response(
+    mocker: MockerFixture, connector: Connector, body: dict
+) -> None:
+    """Never read as "no match": the hit window would move past the incident."""
+    mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=response(body),
+    )
+
+    with pytest.raises(ConnectorClientError) as raised:
+        connector.client.list_incident_entities("incident-1")
+    assert "entities" in raised.value.message
+    assert raised.value.metadata["incident_id"] == "incident-1"
+
+
 def test_delete_ti_object(mocker: MockerFixture, connector: Connector) -> None:
     send = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
@@ -902,6 +918,41 @@ def test_adapter_hits_inspect_a_bounded_number_of_incidents(
     assert (
         adapter_connector.client.list_incident_entities.call_count == MAX_HIT_INCIDENTS
     )
+
+
+def test_adapter_hits_capped_at_their_start_continue_after_the_incidents_inspected(
+    adapter, adapter_connector, monkeypatch
+) -> None:
+    """More incidents share the start time than the limit: the next read skips the
+    incidents already inspected there instead of moving past that time."""
+    monkeypatch.setattr("microsoft_sentinel_intel.deployment.MAX_HIT_INCIDENTS", 2)
+    since = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=1)
+    adapter_connector.client.iter_incidents.return_value = iter(
+        {
+            "id": f"incident-{index}",
+            "properties": {
+                "lastActivityTimeUtc": since.isoformat(),
+                "lastModifiedTimeUtc": since.isoformat(),
+            },
+        }
+        for index in range(5)
+    )
+    adapter_connector.client.list_incident_entities.return_value = [
+        {"kind": "Ip", "properties": {"address": "198.51.100.7"}}
+    ]
+
+    collection = adapter.collect_hits(
+        [make_deployment()], since, resume=frozenset({"incident-0"})
+    )
+
+    assert isinstance(collection, HitCollection)
+    assert collection.complete_until == since
+    assert collection.resume == frozenset({"incident-0", "incident-1", "incident-2"})
+    assert len(collection.hits) == 2
+    assert [
+        call.args[0]
+        for call in adapter_connector.client.list_incident_entities.call_args_list
+    ] == ["incident-1", "incident-2"]
 
 
 # End to end: stream processing and reconciliation through GraphQL

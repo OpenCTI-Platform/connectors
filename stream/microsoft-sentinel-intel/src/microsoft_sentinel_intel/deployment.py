@@ -201,7 +201,11 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         return None
 
     def collect_hits(
-        self, deployments: Sequence[IndicatorDeployment], since: datetime
+        self,
+        deployments: Sequence[IndicatorDeployment],
+        since: datetime,
+        *,
+        resume: frozenset[str] | None = None,
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the Sentinel incidents whose entities match deployed indicators.
 
@@ -212,8 +216,11 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         The read stops at the first incident beyond `MAX_HIT_INCIDENTS` inspected
         incidents or whose entities cannot be read, and after `INCIDENTS_MAX_PAGES`
         pages: the collection is then complete until that incident's modification
-        time, where the next run resumes.
+        time, where the next run resumes. When that time is `since` itself, the
+        next run skips the incidents already inspected there (`resume`).
 
+        :param resume: Ids of the incidents already inspected at `since`, when the
+            previous read stopped there.
         :raises SentinelDeploymentError: When the incidents cannot be listed.
         """
         deployed_values = set().union(
@@ -221,6 +228,8 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         )
         if not deployed_values:
             return []
+        already_inspected = resume or frozenset()
+        inspected_at_start: set[str] = set(already_inspected)
         hits: list[VendorHit] = []
         inspected = 0
         listed = 0
@@ -242,7 +251,12 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                     or modified_time
                 )
                 incident_id = incident.get("id") or incident.get("name")
+                if incident_id and str(incident_id) in already_inspected:
+                    continue
+                at_start = modified_time is None or modified_time <= since
                 if activity_time is None or activity_time < since or not incident_id:
+                    if incident_id and at_start:
+                        inspected_at_start.add(str(incident_id))
                     continue
                 if inspected >= MAX_HIT_INCIDENTS:
                     self._logger.warning(
@@ -263,6 +277,8 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                     stopped_at = modified_time or since
                     break
                 inspected += 1
+                if at_start:
+                    inspected_at_start.add(str(incident_id))
                 matched = self._entity_values(entities) & deployed_values
                 hits.extend(
                     VendorHit(timestamp=activity_time, value=value)
@@ -271,6 +287,12 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         if stopped_at is None and listed >= INCIDENTS_PAGE_SIZE * INCIDENTS_MAX_PAGES:
             stopped_at = modified_time or since
         if stopped_at is not None:
+            if stopped_at <= since:
+                return HitCollection(
+                    hits=hits,
+                    complete_until=since,
+                    resume=frozenset(inspected_at_start),
+                )
             return HitCollection(hits=hits, complete_until=stopped_at)
         return hits
 
