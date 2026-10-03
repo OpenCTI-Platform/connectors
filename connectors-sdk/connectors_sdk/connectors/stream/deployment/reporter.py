@@ -205,7 +205,7 @@ class DeploymentReporter:
         self._send_lock = threading.Lock()
         self._flush_timer: threading.Timer | None = None
         self._waiting_for_write_back = False
-        self._unsent_since: dict[str, float] = {}
+        self._unsent_since: dict[str, tuple[DeploymentReport, float]] = {}
         self._unsent_retry_delay = 0.0
         self._closed = False
         self._exit_handler_registered = False
@@ -707,7 +707,9 @@ class DeploymentReporter:
         """Queue again the reports that never reached OpenCTI (outage, transport error).
 
         Rejections by OpenCTI are final and dropped. Undelivered reports are sent
-        again with a growing delay, for at most ``MAX_UNSENT_AGE`` seconds.
+        again with a growing delay, for at most ``MAX_UNSENT_AGE`` seconds. The age
+        belongs to the report itself: a newer report of the same indicator, which
+        replaced it in the queue, starts its own.
 
         Args:
             sent: The reports of the flush.
@@ -724,11 +726,15 @@ class DeploymentReporter:
         retried: list[DeploymentReport] = []
         expired = 0
         for report in unsent:
-            first_failure = self._unsent_since.setdefault(report.indicator_id, now)
+            tracked = self._unsent_since.get(report.indicator_id)
+            first_failure = (
+                tracked[1] if tracked is not None and tracked[0] is report else now
+            )
             if now - first_failure > MAX_UNSENT_AGE:
                 del self._unsent_since[report.indicator_id]
                 expired += 1
             else:
+                self._unsent_since[report.indicator_id] = (report, first_failure)
                 retried.append(report)
         if expired:
             self._logger.warning(

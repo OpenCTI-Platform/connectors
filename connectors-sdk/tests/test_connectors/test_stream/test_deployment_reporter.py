@@ -582,6 +582,31 @@ def test_undelivered_reports_are_dropped_after_the_maximum_age(
     )
 
 
+def test_a_newer_report_replacing_an_undelivered_one_starts_its_own_age(
+    graphql_helper, make_reporter, router
+):
+    """Near the maximum age, the latest outcome of an indicator is not dropped with
+    the age of the older report it replaced in the queue."""
+    now = [0.0]
+    router.handlers["IndicatorReportDeployments("] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper, monotonic=lambda: now[0])
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="active"))
+    reporter.flush()
+
+    now[0] = MAX_UNSENT_AGE + 1
+    newer = DeploymentReport(indicator_id="a", status="removed")
+    reporter.enqueue(newer)
+    reporter.flush()
+
+    assert reporter._unsent_since["a"] == (newer, MAX_UNSENT_AGE + 1)
+    assert reporter._buffer["a"] is newer
+    assert all(
+        call.args[0]
+        != "[DEPLOYMENT] Dropping deployment reports undelivered for too long."
+        for call in graphql_helper.connector_logger.warning.call_args_list
+    )
+
+
 def test_pycti_folded_call_failures_are_sent_again(pycti_helper, make_reporter):
     reporter = make_reporter(pycti_helper)
     pycti_helper.report_indicator_deployments.return_value = {
