@@ -12,11 +12,13 @@ access to Microsoft Sentinel:
 """
 
 from collections.abc import Iterable, Iterator, Sequence
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from azure.core.exceptions import ResourceNotFoundError
 from connectors_sdk import (
+    DeploymentAssurance,
     DeploymentVendorAdapter,
     IndicatorDeployment,
     VendorHit,
@@ -28,7 +30,8 @@ from connectors_sdk.connectors.stream.deployment import (
     parse_datetime,
 )
 from microsoft_sentinel_intel.client import ConnectorClient
-from microsoft_sentinel_intel.errors import ConnectorClientError
+from microsoft_sentinel_intel.errors import ConnectorClientError, ConnectorError
+from microsoft_sentinel_intel.utils import describe_error
 
 if TYPE_CHECKING:
     from microsoft_sentinel_intel.connector import Connector
@@ -76,6 +79,23 @@ def _is_not_found(error: ConnectorClientError) -> bool:
     )
 
 
+class SentinelDeploymentError(Exception):
+    """A Microsoft Sentinel API error raised to the reconciliation, with a readable message."""
+
+
+@contextmanager
+def _readable_errors() -> Iterator[None]:
+    """Re-raise connector errors with their message and API error.
+
+    `ConnectorError` keeps its message in an attribute (`str()` is empty); the SDK
+    logs `str(error)` and stores it as the `error_message` of failed deployments.
+    """
+    try:
+        yield
+    except ConnectorError as err:
+        raise SentinelDeploymentError(describe_error(err)) from err
+
+
 class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
     """Vendor operations of the deployment reconciliation for Microsoft Sentinel."""
 
@@ -104,17 +124,18 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         Revoked indicators and indicators whose `valid_until` is in the past are not
         live in Sentinel and are not returned.
 
-        :raises ConnectorClientError: On any API error (never a partial listing).
+        :raises SentinelDeploymentError: On any API error (never a partial listing).
         """
         now = datetime.now(UTC)
-        for ti_object in self._client.iter_indicators(
-            source_system=self._source_system,
-            page_size=TI_QUERY_PAGE_SIZE,
-            max_pages=TI_QUERY_MAX_PAGES,
-        ):
-            vendor_indicator = self._to_vendor_indicator(ti_object, now)
-            if vendor_indicator is not None:
-                yield vendor_indicator
+        with _readable_errors():
+            for ti_object in self._client.iter_indicators(
+                source_system=self._source_system,
+                page_size=TI_QUERY_PAGE_SIZE,
+                max_pages=TI_QUERY_MAX_PAGES,
+            ):
+                vendor_indicator = self._to_vendor_indicator(ti_object, now)
+                if vendor_indicator is not None:
+                    yield vendor_indicator
 
     @staticmethod
     def _to_vendor_indicator(
@@ -151,28 +172,31 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
     ) -> None:
         """Delete an indicator from Sentinel (withdrawal, revocation or expiry).
 
-        :raises ConnectorClientError: When Sentinel refuses the deletion.
+        :raises SentinelDeploymentError: When Sentinel refuses the deletion.
         """
         resource_id = vendor_indicator.raw.get("id")
-        if not resource_id:
-            self._client.delete_indicator_by_id(
-                deployment.indicator_standard_id or str(vendor_indicator.indicator_id),
-                source_system=self._source_system,
-            )
-            return
-        try:
-            self._client.delete_ti_object(str(resource_id))
-        except ConnectorClientError as err:
-            if not _is_not_found(err):
-                raise
+        with _readable_errors():
+            if not resource_id:
+                self._client.delete_indicator_by_id(
+                    deployment.indicator_standard_id
+                    or str(vendor_indicator.indicator_id),
+                    source_system=self._source_system,
+                )
+                return
+            try:
+                self._client.delete_ti_object(str(resource_id))
+            except ConnectorClientError as err:
+                if not _is_not_found(err):
+                    raise
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
         """Upload an indicator again, with the stream upload path.
 
         :return: `None`: the upload API returns no id (the indicator keeps its STIX id).
-        :raises ConnectorClientError: When the upload API rejects the indicator.
+        :raises SentinelDeploymentError: When the upload API rejects the indicator.
         """
-        self._connector.push_indicator(stix_indicator)
+        with _readable_errors():
+            self._connector.push_indicator(stix_indicator)
         return None
 
     def collect_hits(
@@ -185,48 +209,52 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         `MAX_HIT_INCIDENTS` incidents are read. Each incident counts one hit per
         matching indicator value, at the incident last activity time.
 
-        :raises ConnectorClientError: When the incidents cannot be listed.
+        :raises SentinelDeploymentError: When the incidents cannot be listed.
         """
-        deployed_values = set().union(*(deployment.values for deployment in deployments))
+        deployed_values = set().union(
+            *(deployment.values for deployment in deployments)
+        )
         if not deployed_values:
             return []
         hits: list[VendorHit] = []
         inspected = 0
-        for incident in self._client.iter_incidents(
-            modified_since=since,
-            page_size=INCIDENTS_PAGE_SIZE,
-            max_pages=INCIDENTS_MAX_PAGES,
-        ):
-            properties = incident.get("properties") or {}
-            activity_time = (
-                parse_datetime(properties.get("lastActivityTimeUtc"))
-                or parse_datetime(properties.get("createdTimeUtc"))
-                or parse_datetime(properties.get("lastModifiedTimeUtc"))
-            )
-            incident_id = incident.get("id") or incident.get("name")
-            if activity_time is None or activity_time < since or not incident_id:
-                continue
-            if inspected >= MAX_HIT_INCIDENTS:
-                self._logger.warning(
-                    f"{_LOG_PREFIX} Incident limit reached, the remaining incidents "
-                    "are not inspected for hits during this run.",
-                    {"limit": MAX_HIT_INCIDENTS},
+        with _readable_errors():
+            # Lazy iteration: the next incident pages are read only while needed.
+            for incident in self._client.iter_incidents(
+                modified_since=since,
+                page_size=INCIDENTS_PAGE_SIZE,
+                max_pages=INCIDENTS_MAX_PAGES,
+            ):
+                properties = incident.get("properties") or {}
+                activity_time = (
+                    parse_datetime(properties.get("lastActivityTimeUtc"))
+                    or parse_datetime(properties.get("createdTimeUtc"))
+                    or parse_datetime(properties.get("lastModifiedTimeUtc"))
                 )
-                break
-            inspected += 1
-            try:
-                entities = self._client.list_incident_entities(str(incident_id))
-            except ConnectorClientError as err:
-                self._logger.warning(
-                    f"{_LOG_PREFIX} Cannot read the entities of an incident.",
-                    {"incident_id": incident_id, "error": str(err.metadata or err)},
+                incident_id = incident.get("id") or incident.get("name")
+                if activity_time is None or activity_time < since or not incident_id:
+                    continue
+                if inspected >= MAX_HIT_INCIDENTS:
+                    self._logger.warning(
+                        f"{_LOG_PREFIX} Incident limit reached, the remaining "
+                        "incidents are not inspected for hits during this run.",
+                        {"limit": MAX_HIT_INCIDENTS},
+                    )
+                    break
+                inspected += 1
+                try:
+                    entities = self._client.list_incident_entities(str(incident_id))
+                except ConnectorClientError as err:
+                    self._logger.warning(
+                        f"{_LOG_PREFIX} Cannot read the entities of an incident.",
+                        {"incident_id": incident_id, "error": describe_error(err)},
+                    )
+                    continue
+                matched = self._entity_values(entities) & deployed_values
+                hits.extend(
+                    VendorHit(timestamp=activity_time, value=value)
+                    for value in sorted(matched)
                 )
-                continue
-            matched = self._entity_values(entities) & deployed_values
-            hits.extend(
-                VendorHit(timestamp=activity_time, value=value)
-                for value in sorted(matched)
-            )
         return hits
 
     @staticmethod
@@ -239,3 +267,17 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                 if normalized := normalize_value(properties.get(property_name)):
                     values.add(normalized)
         return values
+
+
+def build_deployment_assurance(connector: "Connector") -> DeploymentAssurance:
+    """Build the deployment write-back of the connector, reconciliation and hits included.
+
+    :param connector: The connector (settings `deployment`, `hits` and `security_platform`).
+    :return: The deployment write-back, a no-op when `DEPLOYMENT_REPORTING_ENABLED` is false.
+    """
+    return DeploymentAssurance.from_settings(
+        connector.helper,
+        connector.config,
+        adapter=MicrosoftSentinelIntelDeploymentAdapter(connector),
+        max_vendor_indicators=MAX_VENDOR_INDICATORS,
+    )

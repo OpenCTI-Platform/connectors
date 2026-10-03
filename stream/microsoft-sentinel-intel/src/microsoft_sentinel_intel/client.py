@@ -82,7 +82,11 @@ class ConnectorClient:
         return body
 
     def _iter_pages(
-        self, request: HttpRequest, api_version: str, max_pages: int
+        self,
+        request: HttpRequest,
+        api_version: str,
+        max_pages: int,
+        complete: bool = True,
     ) -> Iterator[dict[str, Any]]:
         """Yield the items of a paginated management API response.
 
@@ -92,8 +96,11 @@ class ConnectorClient:
         :param request: The request of the first page.
         :param api_version: API version added to a `nextLink` that does not carry it.
         :param max_pages: Maximum number of pages read.
-        :raises ConnectorClientError: On any error, a missing `value` key or when the
-            listing exceeds `max_pages` (a partial listing is never returned silently).
+        :param complete: When `True`, exceeding `max_pages` raises (the listing must be
+            complete); otherwise the iteration stops after `max_pages` pages.
+        :raises ConnectorClientError: On any error, a missing `value` key, a repeated
+            `nextLink` or, for complete listings, when the listing exceeds `max_pages`
+            (a partial listing is never returned silently).
         """
         pages = 0
         seen_links: set[str] = set()
@@ -109,6 +116,12 @@ class ConnectorClient:
             yield from (item for item in items if isinstance(item, dict))
             next_link = body.get("nextLink")
             if not next_link:
+                return
+            if pages >= max_pages and not complete:
+                self.helper.connector_logger.warning(
+                    message="[API] Listing stopped after the maximum number of pages",
+                    meta={"max_pages": max_pages},
+                )
                 return
             if pages >= max_pages or next_link in seen_links:
                 raise ConnectorClientError(
@@ -180,7 +193,7 @@ class ConnectorClient:
 
         :param modified_since: Only incidents with `lastModifiedTimeUtc` on or after it.
         :param page_size: The `$top` of each page.
-        :param max_pages: Maximum number of pages read.
+        :param max_pages: Maximum number of pages read (the most recent incidents first).
         """
         api_version = self.config.microsoft_sentinel_intel.management_api_version
         since = (
@@ -197,7 +210,7 @@ class ConnectorClient:
                 "$top": str(page_size),
             },
         )
-        return self._iter_pages(request, api_version, max_pages)
+        return self._iter_pages(request, api_version, max_pages, complete=False)
 
     def list_incident_entities(self, incident_id: str) -> list[dict[str, Any]]:
         """Return the entities of an incident.
