@@ -84,7 +84,7 @@ def test_suppress_benign_removes_matching_events():
     assert suppressed.hits_count == 1
 
 
-def test_suppress_benign_on_truncated_results_adjusts_the_total():
+def test_suppress_benign_on_truncated_results_reports_the_verified_hits_only():
     # Given a truncated result whose returned events include a benign one
     result = HuntResult(
         events=_events({"u": "alice"}, {"u": "svc"}), total_hits=50, truncated=True
@@ -93,9 +93,22 @@ def test_suppress_benign_on_truncated_results_adjusts_the_total():
     # When benign events are suppressed
     suppressed = suppress_benign(result, ["svc"])
 
-    # Then the platform total is reduced by the suppressed events
-    assert suppressed.hits_count == 49
+    # Then the unknowable post-suppression total is not derived from the sample:
+    # the hit count is the non-benign returned events
+    assert suppressed.total_hits is None
+    assert suppressed.hits_count == 1
     assert suppressed.truncated is True
+
+
+def test_suppress_benign_keeps_the_total_of_a_truncated_result_without_benign_events():
+    # Given a truncated result whose returned events are all relevant
+    result = HuntResult(
+        events=_events({"u": "alice"}, {"u": "bob"}), total_hits=50, truncated=True
+    )
+
+    # When/Then nothing is suppressed and the platform total stands
+    assert suppress_benign(result, ["svc"]) is result
+    assert result.hits_count == 50
 
 
 def test_build_evidence_hashes_truncates_and_spreads_over_fields():

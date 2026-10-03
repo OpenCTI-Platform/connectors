@@ -94,7 +94,7 @@ For every hunt run:
 1. The native query of the hunt for the platform is executed verbatim; otherwise the Sigma rule is translated with
    the configured pySigma pipeline (a native query with an empty query only selects the pipeline).
 2. The query runs over the time window of the run, bounded by the run timeout and `max_results`.
-3. Events matching a benign pattern of the hunt are suppressed.
+3. Events matching a benign pattern of the hunt are suppressed. When the platform returned only part of the results and some returned events were benign, the run reports the non-benign returned events as its hits: the platform total cannot be corrected from a sample.
 4. When there are hits, the connector sends a sighting of every technique and indicator of the hunt on the Security
    Platform identity, and an observed-data referencing the IOC observables found in the results (only for the
    observable types the hunt expects). Objects inherit the markings and the author of the hunt and have deterministic

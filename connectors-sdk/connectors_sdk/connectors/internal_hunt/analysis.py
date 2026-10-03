@@ -179,8 +179,10 @@ def suppress_benign(result: HuntResult, patterns: Sequence[str]) -> HuntResult:
     """Remove the benign events of a result.
 
     Suppression applies to the events returned by the platform. When the result
-    is truncated, the hit count is the platform total minus the suppressed
-    returned events.
+    is truncated and suppression removed some of them, the post-suppression
+    total is unknown (any unreturned event may be benign too): the platform
+    total is dropped and the hit count is the non-benign returned events, a
+    verified lower bound that never inflates escalation or sighting counts.
 
     Args:
         result: Raw hunt result.
@@ -193,13 +195,9 @@ def suppress_benign(result: HuntResult, patterns: Sequence[str]) -> HuntResult:
     if not matcher:
         return result
     kept = [event for event in result.events if not matcher.matches(event)]
-    suppressed = len(result.events) - len(kept)
-    if suppressed == 0:
+    if len(kept) == len(result.events):
         return result
-    total = None
-    if result.total_hits is not None and result.truncated:
-        total = max(result.total_hits - suppressed, len(kept))
-    return HuntResult(events=kept, total_hits=total, truncated=result.truncated)
+    return HuntResult(events=kept, total_hits=None, truncated=result.truncated)
 
 
 def _ordered_fields(
