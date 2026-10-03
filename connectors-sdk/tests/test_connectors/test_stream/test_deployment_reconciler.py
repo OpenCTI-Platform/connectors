@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from connectors_sdk.connectors.stream.deployment.models import (
+    HitCollection,
     IndicatorDeployment,
     VendorHit,
     VendorIndicator,
@@ -661,6 +662,68 @@ def test_hits_lookback_follows_the_interval(
     assert adapter.hits_calls[0][1] == NOW - timedelta(hours=4)
 
 
+def test_capped_hit_collection_resumes_where_it_stopped(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """Only the hits before ``complete_until`` are reported, and the next run reads
+    from there instead of skipping the capped detections."""
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    complete_until = NOW - timedelta(minutes=30)
+    adapter = FakeAdapter(vendor=[VendorIndicator(indicator_id="a")])
+    adapter.hits = HitCollection(
+        hits=[
+            VendorHit(timestamp=NOW - timedelta(minutes=50), indicator_id="a"),
+            VendorHit(timestamp=complete_until, indicator_id="a"),
+            VendorHit(timestamp=NOW - timedelta(minutes=10), indicator_id="a"),
+        ],
+        complete_until=complete_until,
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 1
+    (hits,) = router.calls_of("IndicatorReportHits(")
+    assert hits["count"] == 1
+    assert hits["lastHit"] == "2026-10-03T11:10:00.000Z"
+    assert reconciler._hits_since == complete_until
+
+    adapter.hits = []
+    reconciler.run_once()
+    assert adapter.hits_calls[1][1] == complete_until
+
+
+def test_hit_collection_capped_at_its_start_is_a_lower_bound(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """Without progress possible, the capped hits are reported as they are."""
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(vendor=[VendorIndicator(indicator_id="a")])
+    since = NOW - timedelta(hours=1)
+    adapter.hits = HitCollection(
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+        complete_until=since,
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 1
+    assert adapter.hits_calls[0][1] == since
+    assert reconciler._hits_since == since
+    graphql_helper.connector_logger.warning.assert_called_once()
+
+
+def test_complete_hit_collection_advances_the_window(
+    graphql_helper, make_reporter, list_nodes, node_factory
+):
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(vendor=[VendorIndicator(indicator_id="a")])
+    adapter.hits = HitCollection(
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")]
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 1
+    assert reconciler._hits_since == NOW - reconciler._hits_lookback
+
+
 def test_failed_hit_reports_are_not_counted(
     graphql_helper, make_reporter, router, list_nodes, node_factory
 ):
@@ -690,7 +753,7 @@ def test_hits_collection_errors_never_raise(
     assert summary.hits_reported == 0
     assert not summary.skipped
     graphql_helper.connector_logger.warning.assert_called_once()
-    assert reconciler._last_hits_run is None
+    assert reconciler._hits_since is None
 
 
 def test_hits_without_live_deployments(graphql_helper, make_reporter, list_nodes):
@@ -700,7 +763,7 @@ def test_hits_without_live_deployments(graphql_helper, make_reporter, list_nodes
     reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
     assert reconciler.run_once().hits_reported == 0
     assert adapter.hits_calls == []
-    assert reconciler._last_hits_run == NOW
+    assert reconciler._hits_since == NOW - reconciler._hits_lookback
 
 
 def test_hits_disabled_by_configuration(
