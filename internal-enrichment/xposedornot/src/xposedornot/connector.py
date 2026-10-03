@@ -224,7 +224,11 @@ def materialize_marking(marking: dict[str, Any]) -> dict[str, Any] | None:
     pycti's importer reads them straight back out for anything but TLP, so a
     PAP:RED entry would return as `pap` / `pap:red` and no longer match the
     canonical definition its id points at. Statement markings keep the
-    prepare_export shape, which already round-trips intact.
+    prepare_export shape, except that the statement text keeps its case: the
+    id was derived from the text as written, and pycti reads the text back
+    verbatim, so lowercasing it would publish a different statement under the
+    source's identifier. Only a TLP value is normalised, since pycti upper-cases
+    it on import anyway.
     """
     identifier = marking_id(marking)
     if identifier is None:
@@ -269,8 +273,10 @@ def materialize_marking(marking: dict[str, Any]) -> dict[str, Any] | None:
         }
     if definition_type.upper() == "TLP":
         created = TLP_MARKING_CREATED
+        value = definition.lower().replace("tlp:", "")
     else:
         created = marking.get("created") or TLP_MARKING_CREATED
+        value = definition
     return {
         "type": "marking-definition",
         "spec_version": "2.1",
@@ -278,7 +284,7 @@ def materialize_marking(marking: dict[str, Any]) -> dict[str, Any] | None:
         "created": created,
         "definition_type": definition_type.lower(),
         "name": definition,
-        "definition": {definition_type.lower(): definition.lower().replace("tlp:", "")},
+        "definition": {definition_type.lower(): value},
     }
 
 

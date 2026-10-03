@@ -249,7 +249,8 @@ class ConverterToStix:
         ]
         first_year, latest_year = self.years(breaches)
         counts = [_record_count(breach.get("records")) for breach in breaches]
-        total_records = sum(count for count in counts if count is not None)
+        known_counts = [count for count in counts if count is not None]
+        total_records = sum(known_counts)
 
         lines = [
             "## XposedOrNot — breach exposure summary",
@@ -260,7 +261,7 @@ class ConverterToStix:
             lines.append(
                 f"**First exposure:** {first_year} — **Latest:** {latest_year}  "
             )
-        if total_records:
+        if known_counts:
             lines.append(f"**Total records across breaches:** {total_records:,}  ")
         risk_label = _one_line(result.get("risk_label") or "")
         score = usable_score(result.get("risk_score"))

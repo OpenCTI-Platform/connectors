@@ -1344,9 +1344,13 @@ def test_non_tlp_markings_use_the_canonical_custom_shape():
     tlp = materialize_marking({"definition_type": "TLP", "definition": "TLP:RED"})
     assert tlp["definition_type"] == "tlp" and tlp["name"] == "TLP:RED"
     statement = materialize_marking(
-        {"definition_type": "statement", "definition": "internal only"}
+        {"definition_type": "statement", "definition": "Internal Only"}
     )
-    assert statement["definition"] == {"statement": "internal only"}
+    assert statement["definition"] == {"statement": "Internal Only"}
+    assert statement["name"] == "Internal Only"
+    assert statement["id"] == PyctiMarkingDefinition.generate_id(
+        "statement", "Internal Only"
+    )
 
 
 def test_no_status_message_can_carry_the_address():
@@ -1866,7 +1870,7 @@ def test_materialize_marking_mirrors_the_platform_shape():
         }
     )
     assert statement["created"] == "2024-01-01T00:00:00.000Z"
-    assert statement["definition"] == {"statement": "internal only"}
+    assert statement["definition"] == {"statement": "Internal only"}
     assert materialize_marking({"definition_type": "TLP"}) is None
     assert materialize_marking({}) is None
 

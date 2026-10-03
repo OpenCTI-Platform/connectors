@@ -581,3 +581,19 @@ def test_boolean_record_counts_are_neither_summed_nor_rendered():
     assert "**Total records across breaches:** 4  " in note.content
     rows = [line for line in note.content.splitlines() if line.startswith("| A ")]
     assert rows and rows[0].split("|")[3].strip() == "—"
+
+
+def test_a_known_zero_total_is_reported_and_an_unknown_one_is_not():
+    """Zero records is a fact the API stated; no readable count is not."""
+    converter = ConverterToStix(author=ConverterToStix.make_author())
+    source = "email-addr--11111111-1111-4111-8111-111111111111"
+    stated = converter.build_note(
+        source, {"breaches": [{"name": "A", "records": 0}]}, markings=[]
+    )
+    assert "**Total records across breaches:** 0  " in stated.content
+    unknown = converter.build_note(
+        source,
+        {"breaches": [{"name": "A", "records": None}, {"name": "B", "records": "n/a"}]},
+        markings=[],
+    )
+    assert "Total records" not in unknown.content
