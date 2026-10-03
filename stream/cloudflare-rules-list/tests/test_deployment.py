@@ -311,6 +311,19 @@ def test_run_starts_the_write_back_after_the_full_sync(connector, assurance):
     assert order == ["full sync", "assurance", "stream"]
 
 
+def test_failed_full_sync_does_not_start_the_reconciliation(connector, assurance):
+    connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
+
+    connector.run()
+
+    assurance.start.assert_not_called()
+    assurance.reporter.start.assert_called_once()
+    connector.helper.listen_stream.assert_called_once()
+    connector.logger.warning.assert_called_once_with(
+        "Deployment reconciliation not started: the initial full sync failed"
+    )
+
+
 def test_push_indicator_uploads_the_snapshot(connector, assurance):
     connector.process_message(
         make_message("create", make_indicator(stix_id=OTHER_STIX_ID, ip="203.0.113.9"))

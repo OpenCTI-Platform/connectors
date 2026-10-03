@@ -576,8 +576,16 @@ def test_adapter_capped_read_is_complete_until_the_newest_alert(monkeypatch):
         return int(datetime(2026, 10, 3, 11, minute, tzinfo=UTC).timestamp() * 1000)
 
     connector.client.get_ioc_alerts.return_value = [
-        {"detection_timestamp": at(5), "action_remote_ip": "198.51.100.7"},
-        {"detection_timestamp": at(9), "action_remote_ip": "203.0.113.9"},
+        {
+            "local_insert_ts": at(5),
+            "detection_timestamp": at(20),
+            "action_remote_ip": "198.51.100.7",
+        },
+        {
+            "local_insert_ts": at(9),
+            "detection_timestamp": at(8),
+            "action_remote_ip": "203.0.113.9",
+        },
     ]
 
     collected = CortexXdrDeploymentAdapter(connector).collect_hits(
@@ -586,8 +594,28 @@ def test_adapter_capped_read_is_complete_until_the_newest_alert(monkeypatch):
 
     assert isinstance(collected, HitCollection)
     assert collected.complete_until == datetime(2026, 10, 3, 11, 9, tzinfo=UTC)
-    assert [hit.indicator_id for hit in collected.hits] == [INDICATOR_ID]
+    assert [(hit.indicator_id, hit.timestamp.minute) for hit in collected.hits] == [
+        (INDICATOR_ID, 5)
+    ]
     assert connector.client.get_ioc_alerts.call_args.args == (since, 2)
+
+
+def test_adapter_capped_read_without_creation_time_uses_the_detection(monkeypatch):
+    monkeypatch.setattr("connector.deployment.MAX_HIT_ALERTS", 2)
+    connector = build_connector()
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    detection = int(datetime(2026, 10, 3, 11, 7, tzinfo=UTC).timestamp() * 1000)
+    connector.client.get_ioc_alerts.return_value = [
+        {"detection_timestamp": detection, "action_remote_ip": "198.51.100.7"},
+        {"severity": "high"},
+    ]
+
+    collected = CortexXdrDeploymentAdapter(connector).collect_hits(
+        [make_deployment()], since
+    )
+
+    assert collected.complete_until == datetime(2026, 10, 3, 11, 7, tzinfo=UTC)
+    assert [hit.indicator_id for hit in collected.hits] == [INDICATOR_ID]
 
 
 def test_adapter_hits_without_values_read_no_alert():

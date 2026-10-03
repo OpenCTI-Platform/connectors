@@ -385,12 +385,21 @@ class Connector:
 
         try:
             self._full_sync()
+            full_sync_done = True
         except Exception as exc:  # noqa: BLE001
             self.logger.error("Initial full sync failed", meta={"error": str(exc)})
+            full_sync_done = False
 
-        # The reconciliation changes the snapshot: it starts once the full sync built
-        # it (the full sync reports are queued until then).
+        # The reconciliation uploads the snapshot: it only starts on a snapshot built by
+        # the full sync (the full sync reports are queued until then). After a failed
+        # full sync, the stream outcomes are still reported.
         if self.assurance is not None:
-            self.assurance.start()
+            if full_sync_done:
+                self.assurance.start()
+            else:
+                self.logger.warning(
+                    "Deployment reconciliation not started: the initial full sync failed"
+                )
+                self.assurance.reporter.start()
 
         self.helper.listen_stream(message_callback=self.process_message)
