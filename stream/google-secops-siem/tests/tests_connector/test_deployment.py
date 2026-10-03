@@ -21,7 +21,11 @@ from secops_siem_connector.deployment import (
     build_deployment_assurance,
 )
 from secops_siem_services import SecOpsApiError, SecOpsEntitiesClient
-from secops_siem_services.api_client import describe_response, format_timestamp
+from secops_siem_services.api_client import (
+    REQUEST_TIMEOUT,
+    describe_response,
+    format_timestamp,
+)
 
 OPENCTI_EXTENSION_ID = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
 PLATFORM_ID = "6c3b0f4e-2d41-4a77-8f0d-3e1c9b5a7d21"
@@ -291,6 +295,7 @@ def test_ingest_returns_true_when_the_entities_are_accepted(secops_client):
 
     kwargs = secops_client.chronicle_http_session.request.call_args.kwargs
     assert kwargs["method"] == "POST"
+    assert kwargs["timeout"] == REQUEST_TIMEOUT
     assert kwargs["url"].endswith("/instances/test-instance/entities:import")
     assert kwargs["json"]["inline_source"]["log_type"] == "OPENCTI"
 
@@ -358,6 +363,7 @@ def test_list_ioc_matches_sends_the_time_range(secops_client):
     assert more_available is True
     kwargs = secops_client.chronicle_http_session.request.call_args.kwargs
     assert kwargs["method"] == "GET"
+    assert kwargs["timeout"] == REQUEST_TIMEOUT
     assert kwargs["url"].endswith(
         "/instances/test-instance/legacy:legacySearchEnterpriseWideIoCs"
     )

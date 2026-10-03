@@ -101,6 +101,12 @@ class Connector:
         return data.get("id") or data.get("x_opencti_id")
 
     @staticmethod
+    def _api_object_id(data: dict) -> Optional[str]:
+        """Return the snapshot key of an OpenCTI API object: its STIX standard id, the
+        `id` of the same object in the live stream, else its internal id."""
+        return data.get("standard_id") or data.get("id")
+
+    @staticmethod
     def _is_indicator(data: dict) -> bool:
         """Tell whether a stream or API object is an indicator (deployment reported)."""
         return data.get("type") == "indicator" or data.get("entity_type") == "Indicator"
@@ -324,7 +330,7 @@ class Connector:
         )
         for indicator in indicators:
             value = self._extract_ipv4(indicator)
-            indicator_id = indicator.get("id")
+            indicator_id = self._api_object_id(indicator)
             if value and indicator_id:
                 cache[indicator_id] = value
                 indicator_keys.add(indicator_id)
@@ -335,7 +341,7 @@ class Connector:
             )
             for observable in observables:
                 value = self._extract_ipv4(observable)
-                obs_id = observable.get("id")
+                obs_id = self._api_object_id(observable)
                 if value and obs_id:
                     cache[obs_id] = value
         except Exception as exc:  # noqa: BLE001

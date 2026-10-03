@@ -231,19 +231,57 @@ def test_full_sync_reports_the_indicators_only(connector, assurance):
     connector.helper.api.indicator.list.return_value = [
         {
             "id": INDICATOR_ID,
+            "standard_id": STIX_ID,
             "entity_type": "Indicator",
             "pattern": "[ipv4-addr:value = '198.51.100.7']",
-        }
+        },
+        {
+            "id": OTHER_ID,
+            "entity_type": "Indicator",
+            "pattern": "[ipv4-addr:value = '203.0.113.9']",
+        },
     ]
     connector.helper.api.stix_cyber_observable.list.return_value = [
-        {"id": "observable-id", "entity_type": "IPv4-Addr", "value": "192.0.2.1"}
+        {
+            "id": "observable-id",
+            "standard_id": "ipv4-addr--1",
+            "entity_type": "IPv4-Addr",
+            "value": "192.0.2.1",
+        }
     ]
 
     connector._full_sync()
 
     reports = enqueued(assurance)
-    assert set(reports) == {INDICATOR_ID}
-    assert connector._indicator_keys == {INDICATOR_ID}
+    assert set(reports) == {STIX_ID, OTHER_ID}
+    assert connector._indicator_keys == {STIX_ID, OTHER_ID}
+    assert set(connector._indicator_cache) == {STIX_ID, OTHER_ID, "ipv4-addr--1"}
+
+
+def test_stream_events_after_a_full_sync_share_its_keys(connector, assurance):
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": INDICATOR_ID,
+            "standard_id": STIX_ID,
+            "entity_type": "Indicator",
+            "pattern": "[ipv4-addr:value = '198.51.100.7']",
+        },
+        {
+            "id": OTHER_ID,
+            "standard_id": OTHER_STIX_ID,
+            "entity_type": "Indicator",
+            "pattern": "[ipv4-addr:value = '203.0.113.9']",
+        },
+    ]
+    connector.helper.api.stix_cyber_observable.list.return_value = []
+    connector._full_sync()
+
+    connector.process_message(make_message("update", make_indicator()))
+    connector.process_message(
+        make_message("delete", make_indicator(stix_id=OTHER_STIX_ID, ip="203.0.113.9"))
+    )
+
+    assert connector._indicator_cache == {STIX_ID: "198.51.100.7"}
 
 
 def test_connector_works_without_write_back():
