@@ -18,3 +18,14 @@ microsoft_defender_intel:
   #action: 'Alert' # Optional (default: 'Alert')
   #expire_time: 30 # Optional (default: 30)
   #passive_only: false # Optional (default: false)
+
+# Dissemination assurance (deployment write-back to OpenCTI)
+#deployment:
+  #reporting_enabled: true # Optional (default: true)
+  #reconciliation_interval: 60 # Optional (default: 60 minutes, 0 disables the reconciliation)
+#hits:
+  #reporting_enabled: true # Optional (default: true, requires the Alert.Read.All permission)
+#security_platform:
+  #name: 'Microsoft Defender for Endpoint' # Optional (default: 'Microsoft Defender for Endpoint')
+  #type: 'EDR' # Optional (default: 'EDR')
+  #id: 'ChangeMe' # Optional (existing Security Platform entity id)
