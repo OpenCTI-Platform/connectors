@@ -34,6 +34,7 @@ ENUMS = OCTI_ENUMS | {
     "IncidentSeverity",
     "IncidentType",
     "InfrastructureType",
+    "ProvenanceSourceKind",
     "RelationshipType",
     "ToolType",
 }
@@ -57,6 +58,30 @@ def test_permissive_enum() -> None:
         "Value 'not-a-real-motivation' is out of AttackMotivation defined values."
         == str(caught[0].message)
     )
+
+
+def test_permissive_enum_unknown_value_is_printable() -> None:
+    """Test that out-of-vocabulary values can be logged (repr and name)."""
+    # Given an out-of-vocabulary value of a permissive enum
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        unknown_kind = enums.ProvenanceSourceKind("sandbox")
+    # Then its repr and name do not raise
+    assert repr(unknown_kind) == "<ProvenanceSourceKind.sandbox: 'sandbox'>"
+    assert unknown_kind.name == "sandbox"
+    assert unknown_kind == "sandbox"
+
+
+def test_provenance_source_kind_values() -> None:
+    """Test the source kinds of the OpenCTI provenance extension contract."""
+    assert {kind.value for kind in enums.ProvenanceSourceKind} == {
+        "connector",
+        "feed",
+        "author",
+        "user",
+        "inference",
+        "emulation",
+    }
 
 
 def test_public_enums_are_present() -> None:
