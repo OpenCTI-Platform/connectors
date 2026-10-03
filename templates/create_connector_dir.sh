@@ -71,7 +71,7 @@ if [ -z "$TYPE" ] || [ -z "$NAME" ]; then
 fi
 
 # Define accepted types
-VALID_TYPES=("external-import" "internal-enrichment" "internal-export-file" "internal-import-file" "stream")
+VALID_TYPES=("external-import" "internal-enrichment" "internal-export-file" "internal-hunt" "internal-import-file" "stream")
 
 # Validate the connector type
 TYPE_IS_VALID=false

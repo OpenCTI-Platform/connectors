@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Template Hunt' # optional (default: 'Template Hunt')
+  # scope: 'opensearch' # optional, hunt platform slug (default: 'opensearch')
+  # log_level: 'error' # optional (default: 'error')
+  # security_platform_name: 'Template SIEM' # optional (default: 'Template SIEM')
+  # security_platform_type: 'SIEM' # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'SIEM')
+  # max_concurrent_runs: 2 # optional, connector-side limit of concurrent hunt runs (default: none)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+template:
+  api_base_url: 'ChangeMe'
+  api_key: 'ChangeMe'
+  # verify_ssl: true # optional (default: true)
+  # sigma_pipeline: 'none' # optional, pySigma pipeline(s) chained with '+' (default: 'none')
+  # indices: '*' # optional (default: '*')
