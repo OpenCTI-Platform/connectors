@@ -29,6 +29,7 @@ _SDK_BASE_CONFIG_CLASSES = {
     "BaseInternalEnrichmentConnectorConfig",
     "BaseStreamConnectorConfig",
     "BaseInternalExportFileConnectorConfig",
+    "BaseInternalHuntConnectorConfig",
     "BaseInternalImportFileConnectorConfig",
 }
 

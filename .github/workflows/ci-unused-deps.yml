@@ -6,6 +6,7 @@ on:
       - 'external-import/**'
       - 'internal-enrichment/**'
       - 'internal-export-file/**'
+      - 'internal-hunt/**'
       - 'internal-import-file/**'
       - 'stream/**'
 
@@ -38,7 +39,7 @@ jobs:
         run: |
           pr_files=$(gh pr diff "$PR_NUMBER" --name-only)
           conns=()
-          for dir in external-import internal-enrichment internal-import-file internal-export-file stream; do
+          for dir in external-import internal-enrichment internal-import-file internal-export-file internal-hunt stream; do
             for connector in "$dir"/*/; do
               connector="${connector%/}"
               # A connector is scannable if it declares dependencies via a

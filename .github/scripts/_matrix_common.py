@@ -29,6 +29,7 @@ CONNECTOR_TYPE_DIRS = [
     "external-import",
     "internal-enrichment",
     "internal-export-file",
+    "internal-hunt",
     "internal-import-file",
     "stream",
 ]
