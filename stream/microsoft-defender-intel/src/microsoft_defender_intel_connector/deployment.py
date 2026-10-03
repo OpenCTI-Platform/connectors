@@ -190,13 +190,19 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         return defender_ids[0]
 
     def collect_hits(
-        self, deployments: Sequence[IndicatorDeployment], since: datetime
+        self,
+        deployments: Sequence[IndicatorDeployment],
+        since: datetime,
+        *,
+        resume: int | None = None,
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the Defender alerts whose evidence matches deployed indicators.
 
         Each alert counts one hit per matching indicator, at the alert creation time;
         a value shared by several indicators credits each of them.
 
+        :param resume: Number of alerts already read in the `MIN_HIT_WINDOW` window
+            starting at `since`, when that window was still capped.
         :raises DefenderDeploymentError: When the alerts cannot be listed.
         """
         by_value: dict[str, list[IndicatorDeployment]] = {}
@@ -206,7 +212,12 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         if not by_value:
             return []
         with _readable_errors():
-            alerts, complete_until = self._read_alerts(since)
+            if resume:
+                alerts, complete_until, next_resume = self._read_capped_window(
+                    since, resume
+                )
+            else:
+                alerts, complete_until, next_resume = self._read_alerts(since)
         hits: list[VendorHit] = []
         for alert in alerts:
             timestamp = parse_datetime(
@@ -224,21 +235,25 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
                 for indicator_id in sorted(matched)
             )
         if complete_until is not None:
-            return HitCollection(hits=hits, complete_until=complete_until)
+            return HitCollection(
+                hits=hits, complete_until=complete_until, resume=next_resume
+            )
         return hits
 
     def _read_alerts(
         self, since: datetime
-    ) -> tuple[list[dict[str, Any]], datetime | None]:
+    ) -> tuple[list[dict[str, Any]], datetime | None, int | None]:
         """Read the alerts created since a date, by time windows.
 
         The alerts API has no ordering: a window whose read reaches `MAX_HIT_ALERTS`
         is halved and its halves are read, oldest first, so the alerts read are
         complete up to a known date. A window of `MIN_HIT_WINDOW` still capped is
-        kept as read (its count is a lower bound).
+        never read as complete: the read stops at its start, and when that start is
+        `since` the next read continues inside it after the alerts already read.
 
-        :return: The alerts, and `None` when every window was read, otherwise the
-            start of the first window left unread after `MAX_HIT_WINDOW_READS` reads.
+        :return: The alerts; `None` when every window was read, otherwise the start
+            of the first window left unread; and the number of alerts already read
+            in the capped window starting at `since`, if any.
         """
         alerts: list[dict[str, Any]] = []
         windows = [(since, self._clock())]
@@ -246,15 +261,35 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         while windows:
             start, end = windows.pop()
             if reads >= MAX_HIT_WINDOW_READS:
-                return alerts, start
+                return alerts, start, None
             window_alerts = self._api.list_alerts(start, MAX_HIT_ALERTS, until=end)
             reads += 1
-            if len(window_alerts) < MAX_HIT_ALERTS or end - start <= MIN_HIT_WINDOW:
+            if len(window_alerts) < MAX_HIT_ALERTS:
                 alerts.extend(window_alerts)
                 continue
+            if end - start <= MIN_HIT_WINDOW:
+                if start <= since:
+                    return alerts + window_alerts, since, len(window_alerts)
+                return alerts, start, None
             middle = start + (end - start) / 2
             windows.extend([(middle, end), (start, middle)])
-        return alerts, None
+        return alerts, None, None
+
+    def _read_capped_window(
+        self, since: datetime, skip: int
+    ) -> tuple[list[dict[str, Any]], datetime, int | None]:
+        """Continue reading the capped `MIN_HIT_WINDOW` window starting at `since`.
+
+        :return: The next alerts of the window, then either `since` and the number of
+            alerts read so far (still capped) or the end of the window (complete).
+        """
+        end = min(since + MIN_HIT_WINDOW, self._clock())
+        window_alerts = self._api.list_alerts(
+            since, MAX_HIT_ALERTS, until=end, skip=skip
+        )
+        if len(window_alerts) >= MAX_HIT_ALERTS:
+            return window_alerts, since, skip + len(window_alerts)
+        return window_alerts, end, None
 
 
 def build_deployment_assurance(
