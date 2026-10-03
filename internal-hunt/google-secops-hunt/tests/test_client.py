@@ -66,8 +66,8 @@ def test_udm_search_calls_the_regional_endpoint(requests_mock):
     request = requests_mock.last_request
     assert query_params(request) == {
         "query": 'metadata.event_type = "PROCESS_LAUNCH"',
-        "timeRange.start_time": "2026-10-03T00:00:00.000Z",
-        "timeRange.end_time": "2026-10-04T00:00:00.000Z",
+        "timeRange.startTime": "2026-10-03T00:00:00.000Z",
+        "timeRange.endTime": "2026-10-04T00:00:00.000Z",
         "limit": "50",
     }
     assert request.headers["Authorization"] == "Bearer token-1"

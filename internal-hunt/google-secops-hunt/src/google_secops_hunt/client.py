@@ -161,8 +161,8 @@ class SecOpsClient(HuntApiClient):
             max_timeout=deadline.remaining(),
             params={
                 "query": query,
-                "timeRange.start_time": rfc3339(start),
-                "timeRange.end_time": rfc3339(end),
+                "timeRange.startTime": rfc3339(start),
+                "timeRange.endTime": rfc3339(end),
                 "limit": min(max_results, MAX_RESULTS),
             },
         )
