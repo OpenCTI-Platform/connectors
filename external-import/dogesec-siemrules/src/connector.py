@@ -12,6 +12,7 @@ from urllib.parse import urljoin
 import requests
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from rule_enrichment import RuleEnricher
 
 
 class SiemrulesException(Exception):
@@ -45,6 +46,7 @@ class SiemrulesConnector:
         self.session.headers = {
             "API-KEY": self.api_key,
         }
+        self.enricher = RuleEnricher(self.helper)
 
     def _get_param(
         self, param_name: str, is_number: bool = False, default_value: str = None
@@ -97,7 +99,7 @@ class SiemrulesConnector:
             path = f"v1/base-rules/{indicator_id}/objects/"
 
         try:
-            objects = self.retrieve(path, list_key="objects")
+            objects = self.enricher.enrich(self.retrieve(path, list_key="objects"))
             bundle = dict(
                 type="bundle",
                 id=f"bundle--{indicator_id}",
@@ -126,6 +128,7 @@ class SiemrulesConnector:
 
     def _run_once(self):
         self.helper.log_info("running as scheduled")
+        self.enricher.reset()
         self.update_state(last_run_start=datetime.now(UTC).isoformat())
         for dpack in self.list_detection_packs():
             pack_id = dpack["id"]
