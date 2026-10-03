@@ -47,6 +47,64 @@ The SDK includes custom exceptions to handle errors gracefully. Use these except
 
 See [docs/HOW-TO-Handle-errors-in-connectors.md](docs/HOW-TO-Handle-errors-in-connectors.md) for more details.
 
+### Reporting deployment status from stream connectors
+
+Stream connectors can report to OpenCTI whether each indicator they push is actually live on the security platform
+(dissemination assurance). OpenCTI stores the lifecycle on a `deployed-on` relationship between the indicator and a
+`Security Platform` entity (`deployed`, `active`, `failed`, `removed`...) and counts detection hits as a sighting.
+
+1. Add the settings namespaces (they give the `DEPLOYMENT_*`, `HITS_*` and `SECURITY_PLATFORM_*` variables):
+
+```python
+from connectors_sdk import (
+    BaseConnectorSettings,
+    DeploymentConfig,
+    HitsConfig,
+    SecurityPlatformConfig,
+)
+from pydantic import Field
+
+
+class MyEdrSecurityPlatformConfig(SecurityPlatformConfig):
+    name: str = Field(default="My EDR", min_length=2, description="Name of the Security Platform entity.")
+    type: str | None = Field(default="EDR", description="Type of the Security Platform entity.")
+
+
+class ConnectorSettings(BaseConnectorSettings):
+    connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    hits: HitsConfig = Field(default_factory=HitsConfig)  # only when the vendor exposes detections
+    security_platform: MyEdrSecurityPlatformConfig = Field(default_factory=MyEdrSecurityPlatformConfig)
+```
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DEPLOYMENT_REPORTING_ENABLED` | `true` | Report the deployment status of every pushed indicator. |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60` | Minutes between two reconciliations with the vendor (`0` disables). |
+| `HITS_REPORTING_ENABLED` | `true` | Report detection hits (connectors able to read detections only). |
+| `SECURITY_PLATFORM_NAME` | per connector | Security Platform entity, created if missing (upsert by name). |
+| `SECURITY_PLATFORM_TYPE` | per connector | `EDR`, `XDR`, `SIEM`, `SOAR`, `NDR`, `ISPM`... |
+| `SECURITY_PLATFORM_ID` | | Bind an existing Security Platform entity instead of resolving it by name. |
+
+2. Implement a `DeploymentVendorAdapter` when the vendor API can read the pushed indicators back (`list_vendor_indicators`,
+   `remove_vendor_indicator`, `push_indicator`, and `collect_hits` when detections are available).
+
+3. Wire the facade and report after each vendor call (reports are queued and sent in batches, never raise):
+
+```python
+from connectors_sdk import DeploymentAssurance
+
+assurance = DeploymentAssurance.from_settings(helper, settings, adapter=MyEdrAdapter(client))
+assurance.start()  # feature detection, platform resolution, periodic reconciliation
+
+assurance.report_pushed(stix_indicator, external_id=vendor_id)
+assurance.report_push_failed(stix_indicator, error)
+assurance.report_removed(stix_indicator)
+```
+
+On OpenCTI platforms without the write-back API, the module logs once and becomes a no-op. See the
+[TDR](TDRs/2026-10-03-Deployment_write_back_for_stream_connectors.md) for the design and the reconciliation algorithm.
+
 ### Documentation
 
 You can generate full Read the Docs-style documentation using Sphinx. This will provide comprehensive information about the SDK's features, usage, and API.  
