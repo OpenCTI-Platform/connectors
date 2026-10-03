@@ -538,3 +538,143 @@ class BaseInternalImportFileConnectorConfig(_BaseConnectorConfig):
         default=False,
         description="Whether the connector should run automatically when an entity is created or updated.",
     )
+
+
+HUNT_PLATFORMS: tuple[str, ...] = (
+    "splunk",
+    "microsoft-sentinel",
+    "elastic-security",
+    "crowdstrike-logscale",
+    "google-secops",
+    "opensearch",
+    "clickhouse",
+    "s3-ocsf",
+    "internet",
+)
+"""Hunt platform slugs accepted as `CONNECTOR_SCOPE` by internal hunt connectors."""
+
+HUNT_INTERNET_PLATFORM = "internet"
+"""Platform slug of the outside-in hunt connectors (no Security Platform identity)."""
+
+HUNT_IOC_OBSERVABLE_TYPES: tuple[str, ...] = (
+    "IPv4-Addr",
+    "IPv6-Addr",
+    "Domain-Name",
+    "Url",
+    "StixFile",
+    "Email-Addr",
+)
+"""Observable types a hunt connector creates from results by default (IOC types only)."""
+
+HUNT_SUPPORTED_OBSERVABLE_TYPES: tuple[str, ...] = (
+    *HUNT_IOC_OBSERVABLE_TYPES,
+    "Hostname",
+    "User-Account",
+    "Mac-Addr",
+)
+"""Observable types a hunt connector can create when its configuration widens the IOC default."""
+
+
+class BaseInternalHuntConnectorConfig(_BaseConnectorConfig):
+    """Settings class for internal hunt connectors.
+
+    An internal hunt connector executes the hunts dispatched by OpenCTI against exactly one
+    telemetry platform (a SIEM, an EDR, a data lake) or against internet scanning APIs.
+
+    Attributes:
+        type (str): The type of the connector, set to "INTERNAL_HUNT" for internal hunt connectors.
+        scope (ListFromString): Exactly one hunt platform slug (see `HUNT_PLATFORMS`).
+        security_platform_name (str | None): Name of the OpenCTI Security Platform identity the connector
+            executes against. Created by OpenCTI when missing. Must be empty only for the "internet" platform.
+        security_platform_type (str): Type of the Security Platform identity.
+        max_concurrent_runs (int | None): Connector-side limit of concurrent hunt runs.
+        observable_types (ListFromString): Observable types the connector may create from hunt results.
+        max_observables (int): Maximum number of observables created per hunt run.
+    """
+
+    type: Literal["INTERNAL_HUNT"] = "INTERNAL_HUNT"
+    scope: ListFromString = Field(
+        description=(
+            "The hunt platform the connector executes against, exactly one of: "
+            f"{', '.join(HUNT_PLATFORMS)}."
+        ),
+    )
+    security_platform_name: str | None = Field(
+        default=None,
+        description=(
+            "Name of the OpenCTI Security Platform the hunts are executed against "
+            "(created when missing). Leave empty only for the 'internet' platform."
+        ),
+    )
+    security_platform_type: Literal["SIEM", "EDR", "XDR", "SOAR", "NDR", "ISPM"] = (
+        Field(
+            default="SIEM",
+            description="Type of the OpenCTI Security Platform the hunts are executed against.",
+        )
+    )
+    max_concurrent_runs: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Maximum number of hunt runs OpenCTI may dispatch to this connector at the same time. "
+            "The platform budget is the minimum of its own setting and this value."
+        ),
+    )
+    observable_types: ListFromString = Field(
+        default=list(HUNT_IOC_OBSERVABLE_TYPES),
+        description=(
+            "Observable types the connector may create from hunt results, intersected with the "
+            "types expected by each hunt. Defaults to IOC types only; supported values: "
+            f"{', '.join(HUNT_SUPPORTED_OBSERVABLE_TYPES)}."
+        ),
+    )
+    max_observables: int = Field(
+        default=100,
+        ge=0,
+        description="Maximum number of observables created per hunt run (the most frequent first).",
+    )
+
+    @field_validator("scope")
+    @classmethod
+    def _validate_hunt_platform(cls, value: list[str]) -> list[str]:
+        """Ensure the scope holds exactly one known hunt platform slug."""
+        if len(value) != 1 or value[0] not in HUNT_PLATFORMS:
+            raise ValueError(
+                "scope must contain exactly one hunt platform among: "
+                f"{', '.join(HUNT_PLATFORMS)} (got {value})."
+            )
+        return value
+
+    @field_validator("observable_types")
+    @classmethod
+    def _validate_observable_types(cls, value: list[str]) -> list[str]:
+        """Ensure only observable types the hunt mapping supports are configured."""
+        unsupported = [v for v in value if v not in HUNT_SUPPORTED_OBSERVABLE_TYPES]
+        if unsupported:
+            raise ValueError(
+                f"Unsupported observable types {unsupported}, supported values: "
+                f"{', '.join(HUNT_SUPPORTED_OBSERVABLE_TYPES)}."
+            )
+        return value
+
+    @model_validator(mode="after")
+    def _validate_security_platform(self) -> Self:
+        """Require a Security Platform name for every platform except 'internet'."""
+        is_internet = self.scope[0] == HUNT_INTERNET_PLATFORM
+        has_name = bool(
+            self.security_platform_name and self.security_platform_name.strip()
+        )
+        if not is_internet and not has_name:
+            raise ValueError(
+                f"security_platform_name is required for the '{self.scope[0]}' hunt platform."
+            )
+        if is_internet and has_name:
+            raise ValueError(
+                "security_platform_name must be empty for the 'internet' hunt platform."
+            )
+        return self
+
+    @property
+    def platform(self) -> str:
+        """Return the hunt platform slug of the connector."""
+        return self.scope[0]

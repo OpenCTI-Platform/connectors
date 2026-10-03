@@ -71,7 +71,7 @@ if [ -z "$TYPE" ] || [ -z "$NAME" ]; then
 fi
 
 # Define accepted types
-VALID_TYPES=("external-import" "internal-enrichment" "internal-export-file" "internal-import-file" "stream")
+VALID_TYPES=("external-import" "internal-enrichment" "internal-export-file" "internal-hunt" "internal-import-file" "stream")
 
 # Validate the connector type
 TYPE_IS_VALID=false
@@ -117,7 +117,8 @@ mkdir -p "$NEW_CONNECTOR_DIR"
 
 # Copy template files to the new directory
 echo "Copying template files..."
-cp -r "$TEMPLATE_DIR/"* "$NEW_CONNECTOR_DIR"
+# "/." also copies the dotfiles (.dockerignore), which a "/*" glob skips
+cp -r "$TEMPLATE_DIR/." "$NEW_CONNECTOR_DIR"
 
 # Update placeholders in the copied files
 echo "Customizing connector files..."

@@ -21,6 +21,9 @@ dev = [
     "black==26.5.1",  # Aligned with ci-requirements
     "isort==7.0.0",  # Aligned with ci-requirements
 ]
+hunt = [
+    "pysigma>=1.5.1,<2",  # Sigma translation of the internal hunt connectors (InternalHuntConnector)
+]
 test = [
     "freezegun>=1.5.5,<2",
     "pip-audit==2.10.1",
@@ -29,6 +32,7 @@ test = [
     "pydocstyle>=6.3.0,<7",
     "mypy>=1.15.0,<2",
     "ruff>=0.14.0,<1",
+    "pysigma>=1.5.1,<2",  # Same as the hunt extra, to test and type check the internal hunt package
 ]
 doc = [
     "sphinx>=7.0",

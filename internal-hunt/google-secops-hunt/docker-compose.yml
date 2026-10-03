@@ -1,0 +1,34 @@
+version: '3'
+services:
+  connector-google-secops-hunt:
+    image: opencti/connector-google-secops-hunt:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_HUNT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Google SecOps Hunt # optional (default: 'Google SecOps Hunt')
+      # - CONNECTOR_SCOPE=google-secops # optional, hunt platform slug (default: 'google-secops')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_SECURITY_PLATFORM_NAME=Google SecOps # optional, Security Platform the hunts run against (default: 'Google SecOps')
+      # - CONNECTOR_SECURITY_PLATFORM_TYPE=SIEM # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'SIEM')
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=2 # optional, connector-side limit of concurrent hunt runs (default: none)
+      # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional (default: IOC types)
+      # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
+      # Google SecOps instance and service account
+      - GOOGLE_SECOPS_HUNT_PROJECT_ID=ChangeMe # Google Cloud project ID of the SecOps instance
+      - GOOGLE_SECOPS_HUNT_PROJECT_REGION=ChangeMe # region of the SecOps instance, e.g. 'us' or 'europe'
+      - GOOGLE_SECOPS_HUNT_PROJECT_INSTANCE=ChangeMe # customer ID (instance UUID) of SecOps
+      - GOOGLE_SECOPS_HUNT_PRIVATE_KEY=ChangeMe # service account private key (PEM)
+      - GOOGLE_SECOPS_HUNT_PRIVATE_KEY_ID=ChangeMe # service account private key ID
+      - GOOGLE_SECOPS_HUNT_CLIENT_EMAIL=ChangeMe # service account client email
+      - GOOGLE_SECOPS_HUNT_CLIENT_ID=ChangeMe # service account client ID
+      # - GOOGLE_SECOPS_HUNT_CLIENT_CERT_URL= # optional, service account client certificate URL
+      # - GOOGLE_SECOPS_HUNT_BASE_URL=https://chronicle.googleapis.com # optional, the region is prefixed at runtime
+      # - GOOGLE_SECOPS_HUNT_AUTH_URI=https://accounts.google.com/o/oauth2/auth # optional
+      # - GOOGLE_SECOPS_HUNT_TOKEN_URI=https://oauth2.googleapis.com/token # optional
+      # - GOOGLE_SECOPS_HUNT_AUTH_PROVIDER_CERT=https://www.googleapis.com/oauth2/v1/certs # optional
+      # - GOOGLE_SECOPS_HUNT_QUERY_LANGUAGE=udm # optional, language of the translated Sigma rules: 'udm' or 'yara-l'
+      # - GOOGLE_SECOPS_HUNT_SIGMA_PIPELINE=secops_udm # optional, pySigma pipeline(s) chained with '+', or 'none'
+    restart: always

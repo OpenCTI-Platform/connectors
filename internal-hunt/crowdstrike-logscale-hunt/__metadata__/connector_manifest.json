@@ -1,0 +1,27 @@
+{
+  "title": "CrowdStrike LogScale Hunt",
+  "slug": "crowdstrike-logscale-hunt",
+  "description": "Executes OpenCTI hunts on CrowdStrike Falcon Next-Gen SIEM or on a Falcon LogScale cluster. OpenCTI dispatches one hunt run per hunt and time window; the connector translates the canonical Sigma rule of the hunt into a LogScale query with pySigma (Falcon telemetry or Falcon Data Replicator pipelines) or runs the native LogScale query written for CrowdStrike, executes it as a LogScale query job over the run window within the run timeout and result limits, and reports the run to OpenCTI. When the hunt matches, the techniques and indicators of the hunt are sighted on the CrowdStrike Falcon Security Platform and the IOC observables found in the results are sent as observed-data. Raw events never leave CrowdStrike: OpenCTI only receives counts and a hashed, truncated evidence sample.",
+  "short_description": "Runs OpenCTI hunts (Sigma translated to LogScale, or native LogScale queries) on Falcon Next-Gen SIEM or LogScale and reports sightings, observed IOCs and redacted evidence.",
+  "logo": "internal-hunt/crowdstrike-logscale-hunt/__metadata__/logo.png",
+  "use_cases": [
+    "Detection & Response Enablement",
+    "Adversary & Campaign Insights"
+  ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.261002.0",
+  "subscription_link": "https://www.crowdstrike.com/platform/next-gen-siem/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-hunt/crowdstrike-logscale-hunt",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-crowdstrike-logscale-hunt",
+  "container_type": "INTERNAL_HUNT"
+}

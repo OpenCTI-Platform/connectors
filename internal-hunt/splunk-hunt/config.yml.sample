@@ -1,0 +1,27 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Splunk Hunt' # optional (default: 'Splunk Hunt')
+  # scope: 'splunk' # optional, hunt platform slug (default: 'splunk')
+  # log_level: 'error' # optional (default: 'error')
+  # security_platform_name: 'Splunk' # optional (default: 'Splunk')
+  # security_platform_type: 'SIEM' # optional (default: 'SIEM')
+  # max_concurrent_runs: 2 # optional (default: none)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+splunk_hunt:
+  url: 'ChangeMe' # e.g. https://splunk.example.com:8089
+  token: 'ChangeMe' # Splunk authentication token (or use username/password)
+  # username: 'ChangeMe' # optional, used when no token is set
+  # password: 'ChangeMe' # optional, used when no token is set
+  # verify_ssl: true # optional (default: true)
+  # app: 'search' # optional (default: 'search')
+  # owner: 'nobody' # optional (default: 'nobody')
+  # search_prefix: 'index=wineventlog' # optional (default: none)
+  # sigma_pipeline: 'splunk_windows' # optional (default: 'splunk_windows')
+  # output_format: 'default' # optional, 'default' or 'data_model' (default: 'default')
+  # poll_interval: 2 # optional (default: 2)

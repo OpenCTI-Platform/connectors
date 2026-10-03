@@ -1,0 +1,31 @@
+version: '3'
+services:
+  connector-splunk-hunt:
+    image: opencti/connector-splunk-hunt:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_HUNT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Splunk Hunt # optional (default: 'Splunk Hunt')
+      # - CONNECTOR_SCOPE=splunk # optional, hunt platform slug (default: 'splunk')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_SECURITY_PLATFORM_NAME=Splunk # optional, Security Platform the hunts run against (default: 'Splunk')
+      # - CONNECTOR_SECURITY_PLATFORM_TYPE=SIEM # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'SIEM')
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=2 # optional, connector-side limit of concurrent hunt runs (default: none)
+      # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional (default: IOC types)
+      # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
+      # Splunk REST API
+      - SPLUNK_HUNT_URL=ChangeMe # e.g. https://splunk.example.com:8089
+      - SPLUNK_HUNT_TOKEN=ChangeMe # Splunk authentication token (or use SPLUNK_HUNT_USERNAME/SPLUNK_HUNT_PASSWORD)
+      # - SPLUNK_HUNT_USERNAME=ChangeMe # optional, used when no token is set
+      # - SPLUNK_HUNT_PASSWORD=ChangeMe # optional, used when no token is set
+      # - SPLUNK_HUNT_VERIFY_SSL=true # optional (default: true)
+      # - SPLUNK_HUNT_APP=search # optional, app namespace of the search jobs (default: 'search')
+      # - SPLUNK_HUNT_OWNER=nobody # optional, user namespace of the search jobs (default: 'nobody')
+      # - SPLUNK_HUNT_SEARCH_PREFIX=index=wineventlog # optional, SPL constraint added to every search (default: none)
+      # - SPLUNK_HUNT_SIGMA_PIPELINE=splunk_windows # optional, 'splunk_windows', 'splunk_sysmon_acceleration', 'splunk_cim' or 'none'
+      # - SPLUNK_HUNT_OUTPUT_FORMAT=default # optional, 'default' or 'data_model' (default: 'default')
+      # - SPLUNK_HUNT_POLL_INTERVAL=2 # optional, seconds between search job status checks (default: 2)
+    restart: always

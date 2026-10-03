@@ -6,8 +6,10 @@ from unittest.mock import patch
 import pytest
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.base_settings import (
+    HUNT_IOC_OBSERVABLE_TYPES,
     BaseConfigModel,
     BaseConnectorSettings,
+    BaseInternalHuntConnectorConfig,
     BaseStreamConnectorConfig,
 )
 from connectors_sdk.settings.deprecations import Deprecate, DeprecatedField
@@ -552,3 +554,114 @@ def test_base_stream_connector_config_json_schema_exposes_recovery_vars():
     assert "CONNECTOR_LIVE_STREAM_START_TIMESTAMP" in schema["properties"]
     assert "CONNECTOR_LIVE_STREAM_RECOVER" in schema["properties"]
     assert "CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE" in schema["properties"]
+
+
+def test_base_internal_hunt_connector_config_defaults():
+    """Test that `BaseInternalHuntConnectorConfig` exposes the hunt defaults."""
+
+    # Given: A hunt connector config with the mandatory values only
+    config = BaseInternalHuntConnectorConfig(
+        id="connector--uid",
+        name="Test",
+        scope=["splunk"],
+        security_platform_name="Splunk prod",
+    )
+
+    # When/Then: The connector type, platform and defaults are set
+    assert config.type == "INTERNAL_HUNT"
+    assert config.platform == "splunk"
+    assert config.security_platform_type == "SIEM"
+    assert config.max_concurrent_runs is None
+    assert config.observable_types == list(HUNT_IOC_OBSERVABLE_TYPES)
+    assert config.max_observables == 100
+
+
+def test_base_internal_hunt_connector_config_accepts_internet_without_platform_name():
+    """Test that the 'internet' hunt platform needs no Security Platform name."""
+
+    # Given/When: An internet hunt connector config without Security Platform name
+    config = BaseInternalHuntConnectorConfig(
+        id="connector--uid", name="Test", scope="internet"
+    )
+
+    # Then: The config is valid
+    assert config.platform == "internet"
+    assert config.security_platform_name is None
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        pytest.param({"scope": ["unknown"]}, id="unknown_platform"),
+        pytest.param({"scope": ["splunk", "opensearch"]}, id="several_platforms"),
+        pytest.param({"security_platform_name": None}, id="missing_platform_name"),
+        pytest.param({"security_platform_name": "  "}, id="blank_platform_name"),
+        pytest.param({"scope": ["internet"]}, id="platform_name_for_internet_platform"),
+        pytest.param({"observable_types": ["Process"]}, id="unsupported_observable"),
+        pytest.param({"max_concurrent_runs": 0}, id="null_concurrency"),
+        pytest.param({"max_observables": -1}, id="negative_observables"),
+    ],
+)
+def test_base_internal_hunt_connector_config_rejects_invalid_values(overrides):
+    """Test that `BaseInternalHuntConnectorConfig` rejects invalid hunt settings."""
+
+    # Given: Hunt connector values with one invalid setting
+    values = {
+        "id": "connector--uid",
+        "name": "Test",
+        "scope": ["splunk"],
+        "security_platform_name": "Splunk prod",
+        **overrides,
+    }
+
+    # When/Then: The config is rejected
+    with pytest.raises(ValidationError):
+        BaseInternalHuntConnectorConfig(**values)
+
+
+def test_base_internal_hunt_connector_config_serializes_scope_for_pycti():
+    """Test that the hunt platform is sent to pycti as the connector scope."""
+
+    # Given: A hunt connector config
+    config = BaseInternalHuntConnectorConfig(
+        id="connector--uid",
+        name="Test",
+        scope=["microsoft-sentinel"],
+        security_platform_name="Sentinel",
+        observable_types="IPv4-Addr,Hostname",
+    )
+
+    # When: The config is serialized for the pycti helper
+    dumped = config.model_dump(mode="json", context={"mode": "pycti"})
+
+    # Then: The scope is the platform slug and the type is INTERNAL_HUNT
+    assert dumped["scope"] == "microsoft-sentinel"
+    assert dumped["type"] == "INTERNAL_HUNT"
+    assert config.observable_types == ["IPv4-Addr", "Hostname"]
+
+
+def test_base_internal_hunt_connector_config_json_schema_exposes_hunt_vars():
+    """Test that the generated config JSON schema exposes the hunt env vars."""
+
+    # Given: A hunt connector settings class
+    class _HuntConfig(BaseInternalHuntConnectorConfig):
+        scope: list[str] = Field(default=["splunk"], description="Hunt platform.")
+        security_platform_name: str | None = Field(
+            default="Splunk", description="Security Platform."
+        )
+
+    class _HuntSettings(BaseConnectorSettings):
+        connector: _HuntConfig = Field(
+            default_factory=_HuntConfig  # type: ignore[arg-type]
+        )
+
+    # When: The config JSON schema is generated
+    schema = _HuntSettings.config_json_schema(connector_name="test-hunt")
+
+    # Then: The hunt env vars are exposed with simple types
+    properties = schema["properties"]
+    assert properties["CONNECTOR_TYPE"]["const"] == "INTERNAL_HUNT"
+    assert properties["CONNECTOR_SECURITY_PLATFORM_TYPE"]["type"] == "string"
+    assert properties["CONNECTOR_MAX_CONCURRENT_RUNS"]["type"] == "integer"
+    assert properties["CONNECTOR_OBSERVABLE_TYPES"]["type"] == "array"
+    assert properties["CONNECTOR_MAX_OBSERVABLES"]["default"] == 100

@@ -1,0 +1,30 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Google SecOps Hunt' # optional (default: 'Google SecOps Hunt')
+  # scope: 'google-secops' # optional, hunt platform slug (default: 'google-secops')
+  # log_level: 'error' # optional (default: 'error')
+  # security_platform_name: 'Google SecOps' # optional (default: 'Google SecOps')
+  # security_platform_type: 'SIEM' # optional (default: 'SIEM')
+  # max_concurrent_runs: 2 # optional (default: none)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+google_secops_hunt:
+  project_id: 'ChangeMe' # Google Cloud project ID of the SecOps instance
+  project_region: 'ChangeMe' # region of the SecOps instance, e.g. 'us' or 'europe'
+  project_instance: 'ChangeMe' # customer ID (instance UUID) of SecOps
+  private_key: 'ChangeMe' # service account private key (PEM)
+  private_key_id: 'ChangeMe' # service account private key ID
+  client_email: 'ChangeMe' # service account client email
+  client_id: 'ChangeMe' # service account client ID
+  # client_cert_url: '' # optional, service account client certificate URL
+  # base_url: 'https://chronicle.googleapis.com' # optional, the region is prefixed at runtime
+  # auth_uri: 'https://accounts.google.com/o/oauth2/auth' # optional
+  # token_uri: 'https://oauth2.googleapis.com/token' # optional
+  # auth_provider_cert: 'https://www.googleapis.com/oauth2/v1/certs' # optional
+  # query_language: 'udm' # optional, language of the translated Sigma rules: 'udm' or 'yara-l'
+  # sigma_pipeline: 'secops_udm' # optional, pySigma pipeline(s) chained with '+', or 'none'

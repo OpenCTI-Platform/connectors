@@ -41,6 +41,7 @@ CONNECTOR_DIRS = [
     REPO_ROOT / "external-import",
     REPO_ROOT / "internal-enrichment",
     REPO_ROOT / "internal-export-file",
+    REPO_ROOT / "internal-hunt",
     REPO_ROOT / "internal-import-file",
     REPO_ROOT / "stream",
 ]
