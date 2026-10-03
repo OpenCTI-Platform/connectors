@@ -152,9 +152,11 @@ def test_on_timeout_cancels_the_active_job(connector_factory):
     connector = connector_factory()
     connector.client = MagicMock()
 
-    # When/Then the job is cancelled, and nothing happens without client
-    connector.on_timeout(NativeQuery(language="spl", query="x"))
-    connector.client.cancel_active_job.assert_called_once()
+    query = NativeQuery(language="spl", query="x")
+
+    # When/Then the job of that query is cancelled, and nothing happens without client
+    connector.on_timeout(query)
+    connector.client.cancel.assert_called_once_with(id(query))
     connector.client = None
     connector.on_timeout(NativeQuery(language="spl", query="x"))
 
@@ -253,7 +255,7 @@ def test_process_message_times_out_and_cancels_the_job(
             connector.process_message(hunt_event)
     finally:
         release.set()
-    connector.client.cancel_active_job.assert_called_once()
+    connector.client.cancel.assert_called_once()
     args, kwargs = helper.report_hunt_run.call_args
     assert args == ("run-1", "failed")
     assert "1 seconds" in kwargs["error"]

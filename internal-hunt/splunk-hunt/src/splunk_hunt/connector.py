@@ -198,6 +198,7 @@ class SplunkHuntConnector(InternalHuntConnector):
             time_window.end,
             limits.max_results,
             deadline,
+            id(native_query),
         )
         events = [
             HuntEvent(timestamp=parse_timestamp(row.get("_time")), fields=row)
@@ -214,4 +215,4 @@ class SplunkHuntConnector(InternalHuntConnector):
             native_query: Query that timed out.
         """
         if self.client is not None:
-            self.client.cancel_active_job()
+            self.client.cancel(id(native_query))

@@ -1,6 +1,8 @@
 """Splunk REST API client running hunt searches as search jobs."""
 
 import base64
+import threading
+from collections.abc import Hashable
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
@@ -61,7 +63,8 @@ class SplunkClient(HuntApiClient):
         self._namespace = f"/servicesNS/{quote(owner, safe='')}/{quote(app, safe='')}"
         self._poll_interval = poll_interval
         self._logger = logger
-        self.active_sid: str | None = None
+        self._lock = threading.Lock()
+        self._active_jobs: dict[Hashable, str] = {}
 
     @property
     def session_headers(self) -> dict[str, str]:
@@ -78,6 +81,7 @@ class SplunkClient(HuntApiClient):
         end: datetime,
         max_results: int,
         deadline: RunDeadline,
+        job_key: Hashable,
     ) -> tuple[int, list[dict[str, Any]]]:
         """Run a search over a time window.
 
@@ -87,6 +91,7 @@ class SplunkClient(HuntApiClient):
             end: End of the time window.
             max_results: Maximum number of results to fetch.
             deadline: Run deadline.
+            job_key: Key of the run, used to cancel its search job.
 
         Returns:
             The total number of results and at most ``max_results`` results.
@@ -96,19 +101,26 @@ class SplunkClient(HuntApiClient):
             HuntTimeoutError: If the job does not complete before the deadline.
         """
         sid = self._create_job(search, start, end, deadline)
-        self.active_sid = sid
+        with self._lock:
+            self._active_jobs[job_key] = sid
         try:
             content = self._wait_for_job(sid, deadline)
             total = int(content.get("resultCount") or 0)
             results = self._fetch_results(sid, min(total, max_results), deadline)
             return max(total, len(results)), results
         finally:
-            self.active_sid = None
+            with self._lock:
+                self._active_jobs.pop(job_key, None)
             self._delete_job(sid)
 
-    def cancel_active_job(self) -> None:
-        """Cancel the search job of the running hunt, if any."""
-        sid = self.active_sid
+    def cancel(self, job_key: Hashable) -> None:
+        """Cancel the running search job of a run, if any.
+
+        Args:
+            job_key: Key of the run.
+        """
+        with self._lock:
+            sid = self._active_jobs.get(job_key)
         if sid is None:
             return
         error = self.cleanup_request(
