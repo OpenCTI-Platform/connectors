@@ -5,6 +5,7 @@
   "short_description": "Tracks adversary infrastructure fingerprints (JARM, JA4X, certificates, HTTP banners, ASN) on Censys, Silent Push, urlscan.io, Team Cymru Scout and Shodan InternetDB for OpenCTI infrastructure hunts.",
   "logo": "internal-hunt/infrastructure-tracker/__metadata__/logo.png",
   "use_cases": [
+    "Detection & Response Enablement",
     "Infrastructure & Attack Surface Visibility",
     "Adversary & Campaign Insights"
   ],
