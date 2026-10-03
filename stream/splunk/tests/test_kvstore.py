@@ -89,7 +89,7 @@ def test_run_saved_search_runs_a_bounded_oneshot_job(kvstore, requests_mock):
     assert results == [{"opencti_id": "a"}]
     request = requests_mock.request_history[0]
     assert form_fields(request) == {
-        "search": '| savedsearch "OpenCTI \\"matches\\"" | head 50',
+        "search": '| savedsearch "OpenCTI \\"matches\\"" | sort 0 _time | head 50',
         "exec_mode": "oneshot",
         "output_mode": "json",
         "earliest_time": f"{earliest.timestamp():.3f}",

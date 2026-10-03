@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentVendorAdapter,
+    HitCollection,
     IndicatorDeployment,
     VendorHit,
     VendorIndicator,
@@ -106,7 +107,6 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
         push_indicator: Callable[[dict[str, Any]], str | None],
         hits_saved_search: str | None = None,
         hits_max_results: int = HITS_MAX_RESULTS,
-        logger: Any = None,
     ) -> None:
         """Initialize the adapter.
 
@@ -115,13 +115,11 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
             push_indicator: The stream create path of the connector.
             hits_saved_search: The saved search returning the matches, if any.
             hits_max_results: Maximum number of saved search results per collection.
-            logger: The connector logger.
         """
         self._kvstore = kvstore
         self._push_indicator = push_indicator
         self._hits_saved_search = (hits_saved_search or "").strip() or None
         self._hits_max_results = hits_max_results
-        self._logger = logger
 
     @property
     def hits_supported(self) -> bool:
@@ -181,7 +179,7 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
 
     def collect_hits(
         self, deployments: Sequence[IndicatorDeployment], since: datetime
-    ) -> list[VendorHit]:
+    ) -> list[VendorHit] | HitCollection:
         """Read the matches of the KV store indicators from the saved search.
 
         Args:
@@ -189,7 +187,9 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
             since: Start of the time range of the search.
 
         Returns:
-            The hits, identified by OpenCTI id (KV store key) or matched value.
+            The hits, identified by OpenCTI id (KV store key) or matched value. When
+            the result limit is reached, the results being sorted oldest first, the
+            collection is complete until the newest result read.
 
         Raises:
             requests.HTTPError: When the saved search cannot be run.
@@ -199,19 +199,15 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
         rows = self._kvstore.run_saved_search(
             self._hits_saved_search, since, self._hits_max_results
         )
-        if len(rows) >= self._hits_max_results and self._logger is not None:
-            self._logger.warning(
-                "[DEPLOYMENT] Hits saved search result limit reached, the hits of "
-                "this run are partial.",
-                {"limit": self._hits_max_results},
-            )
         hits: list[VendorHit] = []
+        newest = since
         for row in rows:
             if not isinstance(row, Mapping):
                 continue
             timestamp = parse_splunk_time(row.get("_time"))
             if timestamp is None or timestamp < since:
                 continue
+            newest = max(newest, timestamp)
             opencti_id = _text(row.get("opencti_id"))
             value = _text(row.get("value"))
             if opencti_id is None and value is None:
@@ -225,6 +221,8 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
                     count=_count(row.get("count")),
                 )
             )
+        if len(rows) >= self._hits_max_results:
+            return HitCollection(hits=hits, complete_until=newest)
         return hits
 
 
@@ -262,6 +260,5 @@ def build_deployment_assurance(
             kvstore,
             push_indicator=push_indicator,
             hits_saved_search=hits_saved_search,
-            logger=helper.connector_logger,
         ),
     )

@@ -3,7 +3,12 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-from connectors_sdk import IndicatorDeployment, VendorHit, VendorIndicator
+from connectors_sdk import (
+    HitCollection,
+    IndicatorDeployment,
+    VendorHit,
+    VendorIndicator,
+)
 from splunk_deployment import (
     SplunkKVStoreDeploymentAdapter,
     describe_error,
@@ -141,17 +146,21 @@ def test_collect_hits_maps_the_saved_search_results(kvstore):
     ]
 
 
-def test_collect_hits_warns_when_the_result_limit_is_reached(kvstore):
-    logger = MagicMock()
+def test_collect_hits_is_complete_until_the_newest_result_when_capped(kvstore):
+    """Results are sorted oldest first: when the limit is reached, the next run
+    resumes at the newest result read instead of losing the results beyond it."""
+    newest = SINCE + timedelta(minutes=5)
     kvstore.run_saved_search.return_value = [
-        {"opencti_id": INDICATOR_ID, "_time": SINCE.isoformat()}
-    ] * 2
-    adapter = make_adapter(
-        kvstore, hits_saved_search="matches", hits_max_results=2, logger=logger
-    )
+        {"opencti_id": INDICATOR_ID, "_time": SINCE.isoformat()},
+        {"opencti_id": INDICATOR_ID, "_time": newest.isoformat()},
+    ]
+    adapter = make_adapter(kvstore, hits_saved_search="matches", hits_max_results=2)
 
-    assert len(adapter.collect_hits([DEPLOYMENT], SINCE)) == 2
-    logger.warning.assert_called_once()
+    collection = adapter.collect_hits([DEPLOYMENT], SINCE)
+
+    assert isinstance(collection, HitCollection)
+    assert collection.complete_until == newest
+    assert len(collection.hits) == 2
 
 
 def test_collect_hits_propagates_search_errors(kvstore):

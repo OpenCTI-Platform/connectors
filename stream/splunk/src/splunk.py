@@ -184,8 +184,10 @@ class KVStore:
         """Run a saved search as a oneshot search job and return its results.
 
         The `savedsearch` command uses the time range of the request instead of
-        the time range saved with the search. Results are bounded twice: by `head`
-        in the search and by the `count` of the oneshot output (100 by default).
+        the time range saved with the search. Results are sorted oldest first, so a
+        bounded read is complete up to its newest result, and bounded twice: by
+        `head` in the search and by the `count` of the oneshot output (100 by
+        default).
 
         Args:
             name: The saved search name, visible in the owner/app namespace.
@@ -203,7 +205,9 @@ class KVStore:
         r = requests.post(
             f"{self.splunk_url}/servicesNS/{self.splunk_owner}/{self.splunk_app}/search/jobs",
             data={
-                "search": f'| savedsearch "{escaped_name}" | head {max_results}',
+                "search": (
+                    f'| savedsearch "{escaped_name}" | sort 0 _time | head {max_results}'
+                ),
                 "exec_mode": "oneshot",
                 "output_mode": "json",
                 "earliest_time": f"{earliest.timestamp():.3f}",
