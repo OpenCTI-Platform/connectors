@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
+from connectors_sdk.connectors.stream.deployment import reconciler as reconciler_module
 from connectors_sdk.connectors.stream.deployment.models import (
     DeploymentReport,
     DeploymentStatus,
@@ -17,6 +18,7 @@ from connectors_sdk.connectors.stream.deployment.models import (
     VendorIndicator,
 )
 from connectors_sdk.connectors.stream.deployment.reconciler import (
+    CAPPED_INSTANT_STEP,
     LISTED_STATUSES,
     DeploymentReconciler,
     DeploymentVendorAdapter,
@@ -696,7 +698,8 @@ def test_capped_hit_collection_resumes_where_it_stopped(
 def test_hit_collection_capped_at_its_start_is_a_lower_bound(
     graphql_helper, make_reporter, router, list_nodes, node_factory
 ):
-    """Without progress possible, the capped hits are reported as they are."""
+    """Without a continuation, the capped hits are reported as they are and the next
+    run starts just after the capped instant, never at the end of the lookback."""
     list_nodes(node_factory(indicator_id="a", status="active"))
     adapter = FakeAdapter(vendor=[VendorIndicator(indicator_id="a")])
     since = NOW - timedelta(hours=1)
@@ -708,8 +711,194 @@ def test_hit_collection_capped_at_its_start_is_a_lower_bound(
 
     assert reconciler.run_once().hits_reported == 1
     assert adapter.hits_calls[0][1] == since
-    assert reconciler._hits_since == since
+    assert reconciler._hits_since == since + CAPPED_INSTANT_STEP
     graphql_helper.connector_logger.warning.assert_called_once()
+
+
+class ResumingAdapter(FakeAdapter):
+    """Vendor whose reads are scripted, recording the continuation of each call."""
+
+    def __init__(self, collections, **kwargs):
+        super().__init__(**kwargs)
+        self.collections = list(collections)
+        self.resumes = []
+
+    def collect_hits(self, deployments, since, *, resume=None):
+        self.hits_calls.append((list(deployments), since))
+        self.resumes.append(resume)
+        collected = self.collections.pop(0)
+        if self.hits_error:
+            raise self.hits_error
+        return collected
+
+
+def test_capped_instant_is_read_further_with_the_continuation(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """The detections of an instant capped by the vendor read are held until the
+    instant is read completely, then reported together."""
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    since = NOW - timedelta(hours=1)
+    later = NOW - timedelta(minutes=10)
+    adapter = ResumingAdapter(
+        [
+            HitCollection(
+                hits=[VendorHit(timestamp=since, indicator_id="a")] * 2,
+                complete_until=since,
+                resume=2,
+            ),
+            HitCollection(
+                hits=[VendorHit(timestamp=since, indicator_id="a")] * 2,
+                complete_until=since,
+                resume=4,
+            ),
+            HitCollection(
+                hits=[
+                    VendorHit(timestamp=since, indicator_id="a"),
+                    VendorHit(timestamp=later, indicator_id="a"),
+                ]
+            ),
+        ],
+        vendor=[VendorIndicator(indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 0
+    assert reconciler._hits_since == since
+    assert reconciler.run_once().hits_reported == 0
+    assert reconciler._hits_since == since
+    assert router.calls_of("IndicatorReportHits(") == []
+
+    assert reconciler.run_once().hits_reported == 1
+    assert adapter.resumes == [None, 2, 4]
+    assert [call[1] for call in adapter.hits_calls] == [since, since, since]
+    (hits,) = router.calls_of("IndicatorReportHits(")
+    assert hits["count"] == 6
+    assert hits["lastHit"] == "2026-10-03T11:50:00.000Z"
+    assert reconciler._hits_since == NOW - reconciler._hits_lookback
+    assert reconciler._hits_resume is None
+    assert reconciler._held_hits == []
+
+
+def test_capped_instant_continued_until_a_later_complete_until(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    since = NOW - timedelta(hours=1)
+    complete_until = NOW - timedelta(minutes=30)
+    adapter = ResumingAdapter(
+        [
+            HitCollection(
+                hits=[VendorHit(timestamp=since, indicator_id="a")],
+                complete_until=since,
+                resume="page-2",
+            ),
+            HitCollection(
+                hits=[
+                    VendorHit(timestamp=since, indicator_id="a"),
+                    VendorHit(timestamp=complete_until, indicator_id="a"),
+                ],
+                complete_until=complete_until,
+            ),
+        ],
+        vendor=[VendorIndicator(indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    reconciler.run_once()
+    assert reconciler.run_once().hits_reported == 1
+    (hits,) = router.calls_of("IndicatorReportHits(")
+    assert hits["count"] == 2
+    assert reconciler._hits_since == complete_until
+
+
+def test_capped_instant_without_progress_moves_past_it(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """A continuation returned twice (nothing more read) is not followed forever."""
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    since = NOW - timedelta(hours=1)
+    capped = HitCollection(
+        hits=[VendorHit(timestamp=since, indicator_id="a")],
+        complete_until=since,
+        resume="same",
+    )
+    adapter = ResumingAdapter(
+        [capped, capped], vendor=[VendorIndicator(indicator_id="a")]
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 0
+    assert reconciler.run_once().hits_reported == 1
+    (hits,) = router.calls_of("IndicatorReportHits(")
+    assert hits["count"] == 2
+    assert reconciler._hits_since == since + CAPPED_INSTANT_STEP
+    assert reconciler._hits_resume is None
+
+
+def test_capped_instant_held_hits_are_bounded(
+    graphql_helper, make_reporter, router, list_nodes, node_factory, monkeypatch
+):
+    monkeypatch.setattr(reconciler_module, "MAX_HELD_HITS", 3)
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    since = NOW - timedelta(hours=1)
+    adapter = ResumingAdapter(
+        [
+            HitCollection(
+                hits=[VendorHit(timestamp=since, indicator_id="a")] * 2,
+                complete_until=since,
+                resume=2,
+            ),
+            HitCollection(
+                hits=[VendorHit(timestamp=since, indicator_id="a")] * 2,
+                complete_until=since,
+                resume=4,
+            ),
+        ],
+        vendor=[VendorIndicator(indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    reconciler.run_once()
+    assert reconciler.run_once().hits_reported == 1
+    (hits,) = router.calls_of("IndicatorReportHits(")
+    assert hits["count"] == 4
+    assert reconciler._hits_since == since + CAPPED_INSTANT_STEP
+
+
+def test_capped_instant_read_again_from_its_start_after_a_vendor_error(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """A failed continued read (stale continuation) drops the held hits: the instant
+    is read again from its start, so nothing is counted twice."""
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    since = NOW - timedelta(hours=1)
+    adapter = ResumingAdapter(
+        [
+            HitCollection(
+                hits=[VendorHit(timestamp=since, indicator_id="a")],
+                complete_until=since,
+                resume="token",
+            ),
+            [],
+            [VendorHit(timestamp=since, indicator_id="a")],
+        ],
+        vendor=[VendorIndicator(indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    reconciler.run_once()
+    adapter.hits_error = RuntimeError("continuation expired")
+    assert reconciler.run_once().hits_reported == 0
+    assert reconciler._hits_resume is None
+    assert reconciler._held_hits == []
+    assert reconciler._hits_since == since
+
+    adapter.hits_error = None
+    assert reconciler.run_once().hits_reported == 1
+    assert adapter.resumes == [None, "token", None]
+    (hits,) = router.calls_of("IndicatorReportHits(")
+    assert hits["count"] == 1
 
 
 def test_complete_hit_collection_advances_the_window(

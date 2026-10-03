@@ -60,7 +60,18 @@ MAX_ERROR_MESSAGE_LENGTH = 2000
 MAX_QUEUED_REPORTS = 10_000
 """Maximum number of reports kept while the write-back is not available yet."""
 
+MAX_UNSENT_AGE = 24 * 3600.0
+"""Seconds during which a report that never reached OpenCTI is sent again."""
+
+MAX_RETRY_DELAY = 300.0
+"""Longest delay between two sends of undelivered reports (doubled from the flush interval)."""
+
 _LOG_PREFIX = "[DEPLOYMENT]"
+
+# Outcomes of the delivery of one report.
+_SENT = "sent"
+_REJECTED = "rejected"
+_UNSENT = "unsent"
 
 
 class DeploymentListingError(Exception):
@@ -77,6 +88,53 @@ def is_rate_limit_error(error: BaseException) -> bool:
         ``True`` for ``Too many requests`` errors.
     """
     return "too many requests" in str(error).lower()
+
+
+def is_rejection_error(error: BaseException) -> bool:
+    """Tell whether OpenCTI answered and rejected a call, as opposed to a call that never completed.
+
+    pycti raises ``ValueError`` carrying the GraphQL error (a mapping with its
+    ``name``) when OpenCTI rejects a call, and a text or transport error otherwise.
+
+    Args:
+        error: The exception raised by ``helper.api.query``.
+
+    Returns:
+        ``True`` for a GraphQL error other than a rate limit: sending it again
+        cannot succeed.
+    """
+    if is_rate_limit_error(error):
+        return False
+    return (
+        isinstance(error, ValueError)
+        and bool(error.args)
+        and isinstance(error.args[0], Mapping)
+        and "name" in error.args[0]
+    )
+
+
+def _is_folded_call_failure(
+    chunk: Sequence[DeploymentReport], result: DeploymentBatchResult
+) -> bool:
+    """Tell whether a pycti batch result stands for a call that never completed.
+
+    The pycti helper turns a failed call into one identical error per report: the
+    text of a transport error, or of the GraphQL error that rejected the whole call
+    (a rate limit is the only one worth sending again).
+
+    Args:
+        chunk: The reports of the call.
+        result: The result returned by the helper.
+
+    Returns:
+        ``True`` when nothing was processed and every report carries the same
+        transport or rate limit error.
+    """
+    messages = {error.message for error in result.errors}
+    if result.processed != 0 or len(result.errors) != len(chunk) or len(messages) != 1:
+        return False
+    message = next(iter(messages))
+    return "'name':" not in message or "too many requests" in message.lower()
 
 
 class DeploymentReporter:
@@ -143,6 +201,8 @@ class DeploymentReporter:
         self._send_lock = threading.Lock()
         self._flush_timer: threading.Timer | None = None
         self._waiting_for_write_back = False
+        self._unsent_since: dict[str, float] = {}
+        self._unsent_retry_delay = 0.0
         self._closed = False
         self._exit_handler_registered = False
 
@@ -316,7 +376,7 @@ class DeploymentReporter:
         platform_id = self._ready(REPORT_DEPLOYMENT_MUTATION)
         if platform_id is None:
             return False
-        return self._send_report(platform_id, report)
+        return self._send_report(platform_id, report) == _SENT
 
     def report_indicator_deployments(
         self, reports: Iterable[DeploymentReport | Mapping[str, Any]]
@@ -600,10 +660,51 @@ class DeploymentReporter:
         if not reports:
             return DeploymentBatchResult()
         if self._awaiting_write_back():
-            self._requeue(reports)
+            self._requeue(reports, write_back_unavailable=True)
             return DeploymentBatchResult()
         self._waiting_for_write_back = False
-        return self.report_indicator_deployments(reports)
+        result = self.report_indicator_deployments(reports)
+        self._retry_unsent(reports, result.unsent)
+        return result
+
+    def _retry_unsent(
+        self, sent: list[DeploymentReport], unsent: Sequence[DeploymentReport]
+    ) -> None:
+        """Queue again the reports that never reached OpenCTI (outage, transport error).
+
+        Rejections by OpenCTI are final and dropped. Undelivered reports are sent
+        again with a growing delay, for at most ``MAX_UNSENT_AGE`` seconds.
+
+        Args:
+            sent: The reports of the flush.
+            unsent: The reports of the flush that were not delivered.
+        """
+        now = self._monotonic()
+        unsent_ids = {report.indicator_id for report in unsent}
+        for report in sent:
+            if report.indicator_id not in unsent_ids:
+                self._unsent_since.pop(report.indicator_id, None)
+        if not unsent:
+            self._unsent_retry_delay = 0.0
+            return
+        retried: list[DeploymentReport] = []
+        expired = 0
+        for report in unsent:
+            first_failure = self._unsent_since.setdefault(report.indicator_id, now)
+            if now - first_failure > MAX_UNSENT_AGE:
+                del self._unsent_since[report.indicator_id]
+                expired += 1
+            else:
+                retried.append(report)
+        if expired:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Dropping deployment reports undelivered for too long.",
+                {"dropped": expired, "max_age_seconds": MAX_UNSENT_AGE},
+            )
+        self._unsent_retry_delay = min(
+            max(self._flush_interval, self._unsent_retry_delay * 2), MAX_RETRY_DELAY
+        )
+        self._requeue(retried, delay=self._unsent_retry_delay)
 
     def _awaiting_write_back(self) -> bool:
         """Tell whether the write-back is expected to become available later.
@@ -621,11 +722,20 @@ class DeploymentReporter:
             return False
         return self.security_platform_id is None
 
-    def _requeue(self, reports: list[DeploymentReport]) -> None:
+    def _requeue(
+        self,
+        reports: list[DeploymentReport],
+        *,
+        write_back_unavailable: bool = False,
+        delay: float | None = None,
+    ) -> None:
         """Put reports back in the queue, behind nothing newer for the same indicator.
 
         Args:
             reports: The reports that could not be sent yet, oldest first.
+            write_back_unavailable: ``True`` while the write-back itself is not
+                available yet (feature detection or platform resolution pending).
+            delay: Seconds before the next flush (the flush interval by default).
         """
         with self._buffer_lock:
             merged = {
@@ -644,9 +754,13 @@ class DeploymentReporter:
                     {"dropped": overflow, "queued": MAX_QUEUED_REPORTS},
                 )
             self._buffer = merged
-            self._waiting_for_write_back = True
-            if self._flush_timer is None:
-                timer = threading.Timer(self._flush_interval, self._flush_on_timer)
+            if write_back_unavailable:
+                self._waiting_for_write_back = True
+            if self._flush_timer is None and self._buffer:
+                timer = threading.Timer(
+                    self._flush_interval if delay is None else delay,
+                    self._flush_on_timer,
+                )
                 timer.daemon = True
                 self._flush_timer = timer
                 timer.start()
@@ -907,7 +1021,7 @@ class DeploymentReporter:
             )
             return None
 
-    def _send_report(self, platform_id: str, report: DeploymentReport) -> bool:
+    def _send_report(self, platform_id: str, report: DeploymentReport) -> str:
         """Send one report with ``indicatorReportDeployment``.
 
         Args:
@@ -915,19 +1029,20 @@ class DeploymentReporter:
             report: The report.
 
         Returns:
-            ``True`` when OpenCTI accepted the report.
+            ``_SENT``, ``_REJECTED`` (OpenCTI answered with an error) or ``_UNSENT``
+            (the call did not complete; the pycti helper does not tell them apart).
         """
         try:
             if hasattr(self._helper, "report_indicator_deployment"):
                 result = self._helper.report_indicator_deployment(
                     platform_id=platform_id, **report.to_helper_kwargs()
                 )
-                return result is not None
+                return _SENT if result is not None else _UNSENT
             self._execute(
                 _graphql.REPORT_DEPLOYMENT_MUTATION,
                 {"platformId": platform_id, **report.to_graphql_input()},
             )
-            return True
+            return _SENT
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot report the deployment status.",
@@ -937,7 +1052,7 @@ class DeploymentReporter:
                     "error": str(err),
                 },
             )
-            return False
+            return _REJECTED if is_rejection_error(err) else _UNSENT
 
     def _send_reports_one_by_one(
         self, platform_id: str, reports: Sequence[DeploymentReport]
@@ -952,16 +1067,25 @@ class DeploymentReporter:
             The aggregated result.
         """
         processed = 0
-        failed: list[DeploymentReport] = []
+        rejected: list[DeploymentReport] = []
+        unsent: list[DeploymentReport] = []
         for report in reports:
-            if self._send_report(platform_id, report):
+            outcome = self._send_report(platform_id, report)
+            if outcome == _SENT:
                 processed += 1
+            elif outcome == _REJECTED:
+                rejected.append(report)
             else:
-                failed.append(report)
+                unsent.append(report)
         result = DeploymentBatchResult(processed=processed)
-        if failed:
+        if rejected:
+            rejection = DeploymentBatchResult.failure(
+                rejected, "Report rejected by OpenCTI"
+            )
+            result = result.merge(DeploymentBatchResult(errors=rejection.errors))
+        if unsent:
             result = result.merge(
-                DeploymentBatchResult.failure(failed, "Report not accepted by OpenCTI")
+                DeploymentBatchResult.failure(unsent, "Report not accepted by OpenCTI")
             )
         return result
 
@@ -994,7 +1118,12 @@ class DeploymentReporter:
                     return DeploymentBatchResult.failure(
                         chunk, "Reports not accepted by OpenCTI"
                     )
-                return DeploymentBatchResult.from_graphql(data)
+                result = DeploymentBatchResult.from_graphql(data)
+                if _is_folded_call_failure(chunk, result):
+                    return DeploymentBatchResult.failure(
+                        chunk, result.errors[0].message
+                    )
+                return result
             response = self._execute(
                 _graphql.REPORT_DEPLOYMENTS_MUTATION,
                 {
@@ -1010,7 +1139,10 @@ class DeploymentReporter:
                 f"{_LOG_PREFIX} Cannot report a batch of deployment statuses.",
                 {"reports": len(chunk), "error": str(err)},
             )
-            return DeploymentBatchResult.failure(chunk, str(err))
+            failure = DeploymentBatchResult.failure(chunk, str(err))
+            if is_rejection_error(err):
+                return DeploymentBatchResult(errors=failure.errors)
+            return failure
 
     def _execute(
         self, query: str, variables: dict[str, Any] | None = None

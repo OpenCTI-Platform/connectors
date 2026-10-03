@@ -17,9 +17,11 @@ from connectors_sdk.connectors.stream.deployment.models import (
 from connectors_sdk.connectors.stream.deployment.reporter import (
     MAX_BATCH_SIZE,
     MAX_ERROR_MESSAGE_LENGTH,
+    MAX_UNSENT_AGE,
     DeploymentListingError,
     DeploymentReporter,
     is_rate_limit_error,
+    is_rejection_error,
 )
 from connectors_sdk.connectors.stream.deployment.settings import (
     SecurityPlatformConfig,
@@ -452,6 +454,168 @@ def test_report_indicator_deployments_one_by_one_without_the_batch_mutation(
     assert result.processed == 1
     assert [error.indicator_id for error in result.errors] == ["b"]
     assert router.calls_of("IndicatorReportDeployments(") == []
+
+
+GRAPHQL_REJECTION = ValueError({"name": "VALIDATION_ERROR", "error_message": "bad"})
+
+
+def test_rejection_errors_are_told_apart_from_undelivered_calls():
+    assert is_rejection_error(GRAPHQL_REJECTION)
+    assert not is_rejection_error(
+        ValueError({"name": "TOO_MANY_REQUESTS", "error_message": "Too many requests"})
+    )
+    assert not is_rejection_error(ValueError("<html>502 Bad Gateway</html>"))
+    assert not is_rejection_error(ConnectionError("unreachable"))
+
+
+def test_one_by_one_reports_separate_rejections_from_undelivered_ones(
+    graphql_helper, make_reporter, router, router_factory
+):
+    router.handlers.update(
+        router_factory(mutations=("indicatorReportDeployment",)).handlers
+    )
+    outcomes = iter([GRAPHQL_REJECTION, ConnectionError("unreachable")])
+    router.handlers["IndicatorReportDeployment("] = lambda _variables: next(outcomes)
+    reporter = make_reporter(graphql_helper)
+
+    result = reporter.report_indicator_deployments(
+        [
+            DeploymentReport(indicator_id="rejected", status="active"),
+            DeploymentReport(indicator_id="undelivered", status="active"),
+        ]
+    )
+
+    assert sorted(error.indicator_id for error in result.errors) == [
+        "rejected",
+        "undelivered",
+    ]
+    assert [report.indicator_id for report in result.unsent] == ["undelivered"]
+
+
+def test_undelivered_queued_reports_are_sent_again_with_a_growing_delay(
+    graphql_helper, make_reporter, router
+):
+    """An OpenCTI outage never loses a queued stream outcome."""
+    router.handlers["IndicatorReportDeployments("] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper, flush_interval=5.0)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="failed"))
+
+    first = reporter.flush()
+    assert [report.indicator_id for report in first.unsent] == ["a"]
+    assert reporter._unsent_retry_delay == 5.0
+    reporter.flush()
+    assert reporter._unsent_retry_delay == 10.0
+
+    router.handlers["IndicatorReportDeployments("] = lambda variables: {
+        "data": {"indicatorReportDeployments": {"processed": len(variables["reports"])}}
+    }
+    delivered = reporter.flush()
+
+    assert delivered.processed == 1
+    assert reporter._unsent_retry_delay == 0.0
+    assert reporter._unsent_since == {}
+    assert reporter.flush().processed == 0
+    reporter.close()
+
+
+def test_rejected_queued_reports_are_not_sent_again(
+    graphql_helper, make_reporter, router
+):
+    router.handlers["IndicatorReportDeployments("] = GRAPHQL_REJECTION
+    reporter = make_reporter(graphql_helper)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="failed"))
+
+    result = reporter.flush()
+
+    assert [error.indicator_id for error in result.errors] == ["a"]
+    assert result.unsent == ()
+    assert reporter.flush().errors == ()
+
+
+def test_newer_queued_report_wins_over_an_undelivered_one(
+    graphql_helper, make_reporter, router
+):
+    reporter = make_reporter(graphql_helper)
+
+    def outage(_variables):
+        reporter.enqueue(DeploymentReport(indicator_id="a", status="removed"))
+        return ConnectionError("unreachable")
+
+    router.handlers["IndicatorReportDeployments("] = outage
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="active"))
+    reporter.flush()
+
+    router.handlers["IndicatorReportDeployments("] = lambda variables: {
+        "data": {"indicatorReportDeployments": {"processed": len(variables["reports"])}}
+    }
+    reporter.flush()
+    (batch,) = router.calls_of("IndicatorReportDeployments(")[-1:]
+    assert [(r["indicatorId"], r["status"]) for r in batch["reports"]] == [
+        ("a", "removed")
+    ]
+
+
+def test_undelivered_reports_are_dropped_after_the_maximum_age(
+    graphql_helper, make_reporter, router
+):
+    now = [0.0]
+    router.handlers["IndicatorReportDeployments("] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper, monotonic=lambda: now[0])
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="failed"))
+    reporter.flush()
+
+    now[0] = MAX_UNSENT_AGE + 1
+    reporter.flush()
+
+    assert reporter.flush().processed == 0
+    assert (
+        router.calls_of("IndicatorReportDeployments(")[-1]["reports"][0]["indicatorId"]
+        == "a"
+    )
+    assert reporter._unsent_since == {}
+    graphql_helper.connector_logger.warning.assert_any_call(
+        "[DEPLOYMENT] Dropping deployment reports undelivered for too long.",
+        {"dropped": 1, "max_age_seconds": MAX_UNSENT_AGE},
+    )
+
+
+def test_pycti_folded_call_failures_are_sent_again(pycti_helper, make_reporter):
+    reporter = make_reporter(pycti_helper)
+    pycti_helper.report_indicator_deployments.return_value = {
+        "processed": 0,
+        "errors": [{"indicatorId": "a", "message": "Connection refused"}],
+    }
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="failed"))
+    assert [r.indicator_id for r in reporter.flush().unsent] == ["a"]
+
+    pycti_helper.report_indicator_deployments.return_value = {
+        "processed": 0,
+        "errors": [
+            {
+                "indicatorId": "a",
+                "message": "{'name': 'FUNCTIONAL_ERROR', 'error_message': 'gone'}",
+            }
+        ],
+    }
+    assert reporter.flush().unsent == ()
+
+
+def test_pycti_folded_rate_limits_are_sent_again(pycti_helper, make_reporter):
+    reporter = make_reporter(pycti_helper)
+    pycti_helper.report_indicator_deployments.return_value = {
+        "processed": 0,
+        "errors": [
+            {
+                "indicatorId": indicator_id,
+                "message": "{'name': 'FUNCTIONAL_ERROR', 'error_message': 'Too many requests'}",
+            }
+            for indicator_id in ("a", "b")
+        ],
+    }
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+    reporter.enqueue(DeploymentReport(indicator_id="b", status="failed"))
+
+    assert sorted(r.indicator_id for r in reporter.flush().unsent) == ["a", "b"]
 
 
 def test_report_indicator_deployments_logs_rejected_reports(

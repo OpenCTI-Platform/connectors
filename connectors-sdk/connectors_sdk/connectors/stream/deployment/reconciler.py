@@ -55,6 +55,12 @@ vendor after their expiry are withdrawn and their removal confirmed.
 DEFAULT_MAX_VENDOR_INDICATORS = 1_000_000
 """Default read-back limit of a reconciliation run."""
 
+MAX_HELD_HITS = 100_000
+"""Maximum detections held while an instant capped by the vendor read is read over several runs."""
+
+CAPPED_INSTANT_STEP = timedelta(seconds=1)
+"""Step past an instant capped by the vendor read when the adapter cannot continue reading it."""
+
 _LOG_PREFIX = "[DEPLOYMENT]"
 
 
@@ -106,7 +112,11 @@ class DeploymentVendorAdapter(ABC):
         """
 
     def collect_hits(
-        self, deployments: Sequence[IndicatorDeployment], since: datetime
+        self,
+        deployments: Sequence[IndicatorDeployment],
+        since: datetime,
+        *,
+        resume: Any = None,
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the detections of deployed indicators observed since a date.
 
@@ -116,10 +126,15 @@ class DeploymentVendorAdapter(ABC):
         Args:
             deployments: The live deployments (``deployed`` or ``active``).
             since: Only return detections that happened after this date.
+            resume: The ``HitCollection.resume`` returned by the previous call, only
+                passed to adapters that return one.
 
         Returns:
             The hits, matched to deployments by indicator id, vendor id or value. A
             capped read returns a ``HitCollection`` telling how far it is complete.
+            An adapter returning ``HitCollection.resume`` also accepts the keyword
+            argument ``resume``: it is called again with it to continue a read capped
+            at its very start.
         """
         return ()
 
@@ -248,6 +263,8 @@ class DeploymentReconciler:
         self._initial_delay = initial_delay
         self._clock = clock or (lambda: datetime.now(UTC))
         self._hits_since: datetime | None = None
+        self._hits_resume: Any = None
+        self._held_hits: list[VendorHit] = []
         self._run_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -668,27 +685,31 @@ class DeploymentReconciler:
             The hits to report and the start of the next read, or ``None`` when the
             vendor could not be read.
         """
+        resume = self._hits_resume
         try:
-            collected = self._adapter.collect_hits(deployments, since)
+            if resume is None:
+                collected = self._adapter.collect_hits(deployments, since)
+            else:
+                collected = self._adapter.collect_hits(
+                    deployments, since, resume=resume
+                )
             if not isinstance(collected, HitCollection):
-                return list(collected), next_since
+                return self._release_held_hits(list(collected)), next_since
             hits = list(collected.hits)
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot read the detections from the vendor.",
                 {"error": str(err)},
             )
+            # The continuation may be stale: the capped instant is read again from its start.
+            self._hits_resume = None
+            self._held_hits = []
             return None
         complete_until = collected.complete_until
         if complete_until is None:
-            return hits, next_since
+            return self._release_held_hits(hits), next_since
         if complete_until <= since:
-            self._logger.warning(
-                f"{_LOG_PREFIX} Detection read capped at the start of its window, "
-                "the hits of this run are a lower bound.",
-                {"since": since.isoformat()},
-            )
-            return hits, next_since
+            return self._continue_capped_instant(since, hits, collected.resume)
         self._logger.warning(
             f"{_LOG_PREFIX} Detection read capped by the vendor, the next run "
             "resumes where this one stopped.",
@@ -696,10 +717,63 @@ class DeploymentReconciler:
         )
         return [
             hit
-            for hit in hits
+            for hit in self._release_held_hits(hits)
             if (timestamp := parse_datetime(hit.timestamp)) is not None
             and timestamp < complete_until
         ], complete_until
+
+    def _continue_capped_instant(
+        self, since: datetime, hits: list[VendorHit], resume: Any
+    ) -> tuple[list[VendorHit], datetime]:
+        """Handle a read capped at its very start: more detections share ``since`` than the read limit.
+
+        With a continuation that progresses, the hits are held (reporting them would
+        move the ``last_hit_at`` watermark to that instant and hide the detections
+        still to read there) and the next run reads the same instant further. Without
+        one, the instant cannot be read further: the next run starts just after it
+        and the hits of that instant are a lower bound.
+
+        Args:
+            since: Start of the read, the capped instant.
+            hits: The detections read by this run.
+            resume: The continuation returned by the adapter.
+
+        Returns:
+            The hits to report and the start of the next read.
+        """
+        progressed = resume is not None and resume != self._hits_resume
+        if progressed and len(self._held_hits) + len(hits) <= MAX_HELD_HITS:
+            self._logger.info(
+                f"{_LOG_PREFIX} Detection read capped at the start of its window, the "
+                "next run continues reading the same instant.",
+                {"since": since.isoformat(), "held": len(self._held_hits) + len(hits)},
+            )
+            self._hits_resume = resume
+            self._held_hits.extend(hits)
+            return [], since
+        self._logger.warning(
+            f"{_LOG_PREFIX} Detection read capped at the start of its window and not "
+            "continued, the detections of that instant are a lower bound.",
+            {
+                "since": since.isoformat(),
+                "next_since": (since + CAPPED_INSTANT_STEP).isoformat(),
+            },
+        )
+        return self._release_held_hits(hits), since + CAPPED_INSTANT_STEP
+
+    def _release_held_hits(self, hits: list[VendorHit]) -> list[VendorHit]:
+        """End the reading of a capped instant: return its held hits with the new ones.
+
+        Args:
+            hits: The detections read by this run.
+
+        Returns:
+            The held detections followed by ``hits``.
+        """
+        held = self._held_hits
+        self._hits_resume = None
+        self._held_hits = []
+        return held + hits
 
     def _report_hits(
         self, deployments: list[IndicatorDeployment], now: datetime
@@ -716,6 +790,7 @@ class DeploymentReconciler:
         next_since = now - self._hits_lookback
         if not deployments:
             self._hits_since = next_since
+            self._release_held_hits([])
             return 0
         since = self._hits_since if self._hits_since is not None else next_since
         collected = self._read_hits(deployments, since, next_since)

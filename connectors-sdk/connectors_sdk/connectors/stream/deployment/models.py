@@ -171,6 +171,8 @@ class DeploymentBatchResult:
         updated: Relationships whose status or external id changed.
         unchanged: Relationships whose ``last_sync_at`` only was refreshed.
         errors: Reports rejected by OpenCTI or not sent because of an error.
+        unsent: Reports never delivered because the whole call failed (transport
+            error, OpenCTI unavailable); unlike rejections they can be sent again.
     """
 
     processed: int = 0
@@ -178,6 +180,7 @@ class DeploymentBatchResult:
     updated: int = 0
     unchanged: int = 0
     errors: tuple[DeploymentReportError, ...] = ()
+    unsent: tuple[DeploymentReport, ...] = ()
 
     @classmethod
     def from_graphql(cls, data: Mapping[str, Any] | None) -> "DeploymentBatchResult":
@@ -217,13 +220,14 @@ class DeploymentBatchResult:
             message: The reason.
 
         Returns:
-            A result with one error per report.
+            A result with one error per report, the reports being ``unsent``.
         """
         return cls(
             errors=tuple(
                 DeploymentReportError(indicator_id=report.indicator_id, message=message)
                 for report in reports
-            )
+            ),
+            unsent=tuple(reports),
         )
 
     def merge(self, other: "DeploymentBatchResult") -> "DeploymentBatchResult":
@@ -241,6 +245,7 @@ class DeploymentBatchResult:
             updated=self.updated + other.updated,
             unchanged=self.unchanged + other.unchanged,
             errors=self.errors + other.errors,
+            unsent=self.unsent + other.unsent,
         )
 
 
@@ -422,10 +427,18 @@ class HitCollection:
             later ones may be missing: only the hits before it are reported and the
             next run resumes at it, so capped detections are read later instead of
             being lost.
+        resume: Adapter-defined continuation of a read capped at its very start
+            (``complete_until`` at or before the requested date: more detections
+            share that instant than the read limit), for example an offset or the
+            ids already read. The next run reads from the same date and receives it
+            as ``collect_hits(deployments, since, resume=...)``, so the detections
+            of that instant are read instead of skipped. Without it, the next run
+            starts one second after that instant.
     """
 
     hits: Sequence[VendorHit] = ()
     complete_until: datetime | None = None
+    resume: Any = None
 
 
 @dataclass(slots=True)
