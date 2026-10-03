@@ -1,5 +1,6 @@
 """Infrastructure tracker: hunts adversary infrastructure on internet scanning sources."""
 
+import math
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, NoReturn
 
@@ -195,7 +196,10 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
     ) -> HuntResult:
         """Run the source queries of a plan and merge the hosts they find.
 
-        A failing source is logged and skipped; the run fails only when every
+        The queries share one budget of ``limits.max_results`` records: each
+        query reads at most an equal share of what is left of it, so the run
+        never reads more than the budget whatever the number of queries. A
+        failing source is logged and skipped; the run fails only when every
         query fails.
 
         Args:
@@ -213,12 +217,18 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
         answered = 0
         truncated = False
         reported_total = 0
+        remaining = limits.max_results
+        pending = sum(len(queries) for queries in plan.values())
+        skipped = 0
         for source, queries in plan.items():
             for query in queries:
+                share = math.ceil(remaining / pending) if remaining > 0 else 0
+                pending -= 1
+                if share == 0:
+                    skipped += 1
+                    continue
                 try:
-                    result = self._search(
-                        source, query, time_window, limits.max_results, deadline
-                    )
+                    result = self._search(source, query, time_window, share, deadline)
                 except HuntTimeoutError:
                     raise
                 except HuntExecutionError as err:
@@ -229,7 +239,8 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
                     )
                     continue
                 answered += 1
-                if result.total is not None and result.total > len(result.hosts):
+                remaining -= result.read
+                if result.total is not None and result.total > result.read:
                     truncated = True
                     reported_total = max(reported_total, result.total)
                 for host in result.hosts:
@@ -239,6 +250,12 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
                         hosts[host.key] = host
                     else:
                         truncated = True
+        if skipped:
+            truncated = True
+            self.logger.info(
+                "[TRACKER] Result budget of the run spent, source queries skipped",
+                {"max_results": limits.max_results, "skipped_queries": skipped},
+            )
         if errors and not answered:
             raise errors[0]
         self._enrich(list(hosts.values()), deadline)

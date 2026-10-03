@@ -8,22 +8,28 @@ For a run with hits, the bundle holds:
   ``consists-of`` the infrastructure;
 - one detection ``indicator`` per observable, ``based-on`` it;
 - ``related-to`` relationships from the infrastructure and ``indicates``
-  relationships from every indicator to the threats the hunt targets.
+  relationships from every indicator to the threats the hunt targets;
+- one ``observed-data`` per number of hosts, referencing the observables that
+  many hosts hold, stamped with the hunt run.
 
-Every object inherits the markings and the author of the hunt, with
-deterministic identifiers so that re-runs upsert the same objects.
+Every object inherits the markings and the author of the hunt. The
+infrastructure, its observables, indicators and relationships keep their
+standard deterministic identifiers, so every run of the hunt grows the same
+infrastructure; the observed-data record what each run observed, with
+identifiers scoped to the run.
 """
 
 import json
 from collections import Counter
-from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable, Iterator, Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Any
 
 from connectors_sdk.connectors.internal_hunt import (
     HuntEvent,
     HuntRequest,
+    build_observed_data,
     hunt_author,
     hunt_markings,
     is_public_domain,
@@ -58,12 +64,36 @@ class TrackedObservable:
         value: IP address, domain name or certificate SHA-256 fingerprint.
         subject: Subject of a certificate.
         issuer: Issuer of a certificate.
+        count: Number of hosts holding the observable.
     """
 
     observable_type: str
     value: str
     subject: str | None = None
     issuer: str | None = None
+    count: int = field(default=1, compare=False)
+
+
+def _host_observables(
+    fields: Mapping[str, Any], allowed_types: Sequence[str]
+) -> Iterator[TrackedObservable]:
+    """Yield the public IPv4 address, domains and certificates of a host."""
+    ip = fields.get("ip")
+    if IPV4 in allowed_types and isinstance(ip, str) and is_public_ip(ip) == IPV4:
+        yield TrackedObservable(IPV4, ip)
+    if DOMAIN in allowed_types:
+        for domain in fields.get("domain") or []:
+            if isinstance(domain, str) and is_public_domain(domain):
+                yield TrackedObservable(DOMAIN, domain)
+    if CERTIFICATE in allowed_types:
+        for cert in fields.get(CERTIFICATES_FIELD) or []:
+            if isinstance(cert, dict) and cert.get("sha256"):
+                yield TrackedObservable(
+                    CERTIFICATE,
+                    str(cert["sha256"]),
+                    cert.get("subject"),
+                    cert.get("issuer"),
+                )
 
 
 def collect_observables(
@@ -77,40 +107,29 @@ def collect_observables(
         max_items: Maximum number of observables.
 
     Returns:
-        The observables (public IPv4 addresses and domains only).
+        The observables (public IPv4 addresses and domains only), each with the
+        number of hosts holding it; a certificate seen with several subjects or
+        issuers keeps the most frequent ones.
     """
-    counts: Counter[TrackedObservable] = Counter()
+    hosts: Counter[tuple[str, str]] = Counter()
+    variants: Counter[TrackedObservable] = Counter()
     for event in events:
-        fields = event.fields
-        ip = fields.get("ip")
-        if IPV4 in allowed_types and isinstance(ip, str) and is_public_ip(ip) == IPV4:
-            counts[TrackedObservable(IPV4, ip)] += 1
-        if DOMAIN in allowed_types:
-            for domain in fields.get("domain") or []:
-                if isinstance(domain, str) and is_public_domain(domain):
-                    counts[TrackedObservable(DOMAIN, domain)] += 1
-        if CERTIFICATE in allowed_types:
-            for cert in fields.get(CERTIFICATES_FIELD) or []:
-                if isinstance(cert, dict) and cert.get("sha256"):
-                    observable = TrackedObservable(
-                        CERTIFICATE,
-                        str(cert["sha256"]),
-                        cert.get("subject"),
-                        cert.get("issuer"),
-                    )
-                    counts[observable] += 1
+        found = set(_host_observables(event.fields, allowed_types))
+        variants.update(found)
+        hosts.update({(o.observable_type, o.value) for o in found})
+    representatives: dict[tuple[str, str], TrackedObservable] = {}
+    for observable, _ in sorted(variants.items(), key=lambda item: -item[1]):
+        representatives.setdefault(
+            (observable.observable_type, observable.value), observable
+        )
     ordered = sorted(
-        counts.items(),
-        key=lambda item: (
-            -item[1],
-            TRACKED_TYPES.index(item[0].observable_type),
-            item[0].value,
-        ),
+        hosts.items(),
+        key=lambda item: (-item[1], TRACKED_TYPES.index(item[0][0]), item[0][1]),
     )
-    unique: dict[tuple[str, str], TrackedObservable] = {}
-    for observable, _ in ordered:
-        unique.setdefault((observable.observable_type, observable.value), observable)
-    return list(unique.values())[: max(max_items, 0)]
+    return [
+        replace(representatives[key], count=count)
+        for key, count in ordered[: max(max_items, 0)]
+    ]
 
 
 def _pattern_value(value: str) -> str:
@@ -174,10 +193,12 @@ def build_infrastructure_objects(
     )
     targets = [Reference(id=target.standard_id) for target in hunt.targets]
     objects: list[BaseIdentifiedEntity | dict[str, Any]] = [infrastructure]
+    observations: list[tuple[BaseIdentifiedEntity, int]] = []
     for target in targets:
         objects.append(_relationship("related-to", infrastructure, target, request))
     for observable in observables:
         model = _observable_model(observable, author, markings)
+        observations.append((model, observable.count))
         indicator = Indicator(
             name=_indicator_name(observable),
             description=f"Infrastructure tracked by the hunt '{hunt.name}'.",
@@ -194,6 +215,7 @@ def build_infrastructure_objects(
         objects.append(_relationship("based-on", indicator, model, request))
         for target in targets:
             objects.append(_relationship("indicates", indicator, target, request))
+    objects.extend(build_observed_data(request, observations, first_seen, last_seen))
     return objects
 
 

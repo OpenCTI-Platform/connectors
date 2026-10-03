@@ -162,6 +162,15 @@ def test_process_message_maps_the_infrastructure(
         "x509-certificate": 1,
         "indicator": 3,
         "relationship": 2 + 3 * 2 + 3 * 2,
+        "observed-data": 1,
+    }
+    (observed,) = [obj for obj in sent if obj["type"] == "observed-data"]
+    assert observed["x_opencti_hunt_run_id"] == "run-1"
+    assert observed["number_observed"] == 1
+    assert set(observed["object_refs"]) == {
+        obj["id"]
+        for obj in sent
+        if obj["type"] in ("ipv4-addr", "domain-name", "x509-certificate")
     }
     (infrastructure,) = [obj for obj in sent if obj["type"] == "infrastructure"]
     assert infrastructure["name"] == "Cobalt Strike team servers"
@@ -233,7 +242,56 @@ def test_process_message_restricts_the_observable_types(
         "ipv4-addr": 1,
         "indicator": 1,
         "relationship": 2,
+        "observed-data": 1,
     }
+
+
+def test_process_message_records_what_each_run_observed(
+    connector_factory, helper, requests_mock, hunt_event
+):
+    # Given two hosts sharing a domain and a certificate
+    requests_mock.post(
+        CENSYS_URL,
+        json=censys_answer(
+            [
+                censys_host("8.8.8.8", ["c2.update-cdn.net"]),
+                censys_host("9.9.9.9", ["c2.update-cdn.net"]),
+            ]
+        ),
+    )
+    connector = connector_factory()
+
+    # When the hunt runs twice, as two runs
+    connector.process_message(hunt_event)
+    first = helper.stix2_create_bundle.call_args.args[0]
+    hunt_event["hunt_run"]["id"] = "run-2"
+    connector.process_message(hunt_event)
+    second = helper.stix2_create_bundle.call_args.args[0]
+
+    # Then each run records one observed-data per number of hosts
+    ids = {obj["id"]: obj for obj in first}
+    most, least = [obj for obj in first if obj["type"] == "observed-data"]
+    assert most["number_observed"] == 2
+    assert [ids[ref]["type"] for ref in most["object_refs"]] == [
+        "domain-name",
+        "x509-certificate",
+    ]
+    assert least["number_observed"] == 1
+    assert sorted(ids[ref]["value"] for ref in least["object_refs"]) == [
+        "8.8.8.8",
+        "9.9.9.9",
+    ]
+
+    # And the runs share the tracked infrastructure, never their observed-data
+    def ids_of(bundle, kind):
+        return {obj["id"] for obj in bundle if obj["type"] == kind}
+
+    assert ids_of(first, "infrastructure") == ids_of(second, "infrastructure")
+    assert ids_of(first, "indicator") == ids_of(second, "indicator")
+    assert ids_of(first, "observed-data").isdisjoint(ids_of(second, "observed-data"))
+    assert {
+        obj["x_opencti_hunt_run_id"] for obj in second if obj["type"] == "observed-data"
+    } == {"run-2"}
 
 
 def test_process_message_without_hits_sends_nothing(
@@ -368,15 +426,67 @@ def test_execute_flags_truncation(connector_factory, requests_mock):
     )
     connector = connector_factory()
 
-    # When the plan runs twice on the same source with a one host limit
+    # When two queries share a budget of two results
     result = connector.execute(
         plan_query({"censys": ["q1", "q2"]}), WINDOW, HuntLimits(max_results=2)
     )
 
-    # Then the extra hosts are dropped and the source total reported
+    # Then each query reads one host and the source total is reported
+    assert [
+        request.json()["page_size"] for request in requests_mock.request_history
+    ] == [
+        1,
+        1,
+    ]
     assert result.truncated is True
     assert result.total_hits == 500
-    assert len(result.events) == 2
+    assert [event.fields["ip"] for event in result.events] == ["8.8.8.8"]
+
+
+def test_execute_shares_the_result_budget_across_queries(connector_factory):
+    # Given three queries, the first one reading less than its share
+    connector = connector_factory()
+    connector.clients["censys"] = MagicMock()
+    connector.clients["censys"].search.side_effect = [
+        SourceResult([Host(key="a")], records=1),
+        SourceResult([Host(key="b")], total=5, records=5),
+        SourceResult([Host(key="c")], records=4),
+    ]
+
+    # When the plan runs with a budget of ten records
+    result = connector.execute(
+        plan_query({"censys": ["q1", "q2", "q3"]}), WINDOW, HuntLimits(max_results=10)
+    )
+
+    # Then every query reads an equal share of what is left of the budget
+    limits = [
+        call.args[1] for call in connector.clients["censys"].search.call_args_list
+    ]
+    assert limits == [4, 5, 4]
+    assert len(result.events) == 3 and result.truncated is False
+
+
+def test_execute_skips_the_queries_once_the_budget_is_spent(connector_factory):
+    # Given more queries than records in the budget
+    connector = connector_factory()
+    connector.clients["censys"] = MagicMock()
+    connector.clients["censys"].search.side_effect = [
+        SourceResult([Host(key="a")]),
+        SourceResult([Host(key="b")]),
+    ]
+
+    # When the plan runs with a budget of two records
+    result = connector.execute(
+        plan_query({"censys": ["q1", "q2", "q3"]}), WINDOW, HuntLimits(max_results=2)
+    )
+
+    # Then the last query is skipped and the run reported as truncated
+    assert connector.clients["censys"].search.call_count == 2
+    assert result.truncated is True
+    connector.logger.info.assert_called_once_with(
+        "[TRACKER] Result budget of the run spent, source queries skipped",
+        {"max_results": 2, "skipped_queries": 1},
+    )
 
 
 def test_execute_caps_the_merged_hosts(connector_factory):

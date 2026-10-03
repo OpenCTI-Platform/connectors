@@ -155,10 +155,18 @@ class SourceResult:
     Attributes:
         hosts: Hosts read (at most the requested limit).
         total: Number of matches reported by the source, when it reports one.
+        records: Number of records read (hits, scans or IP addresses), whether
+            they map to a host or not, when it differs from the number of hosts.
     """
 
     hosts: list[Host]
     total: int | None = None
+    records: int | None = None
+
+    @property
+    def read(self) -> int:
+        """Number of records the query read from the source."""
+        return len(self.hosts) if self.records is None else self.records
 
 
 def _text(value: Any) -> str:
@@ -247,10 +255,11 @@ class CensysClient(HuntApiClient):
         hosts: list[Host] = []
         total: int | None = None
         token: str | None = None
-        while len(hosts) < limit:
+        read = 0
+        while read < limit:
             body: dict[str, Any] = {
                 "query": query,
-                "page_size": min(CENSYS_PAGE_SIZE, limit - len(hosts)),
+                "page_size": min(CENSYS_PAGE_SIZE, limit - read),
             }
             if token:
                 body["page_token"] = token
@@ -268,15 +277,16 @@ class CensysClient(HuntApiClient):
             result = _dict(answer.get("result"))
             if isinstance(result.get("total_hits"), (int, float)):
                 total = int(result["total_hits"])
-            hits = _list(result.get("hits"))
-            for hit in hits[: limit - len(hosts)]:
+            hits = _list(result.get("hits"))[: limit - read]
+            read += len(hits)
+            for hit in hits:
                 host = _censys_host(_dict(hit))
                 if host is not None:
                     hosts.append(host)
             token = _text(result.get("next_page_token")) or None
             if not hits or not token:
                 break
-        return SourceResult(hosts, total)
+        return SourceResult(hosts, total, read)
 
 
 def _censys_host(hit: dict[str, Any]) -> Host | None:
@@ -386,7 +396,7 @@ class SilentPushClient(HuntApiClient):
                     hosts.append(host)
             if len(scans) < size:
                 break
-        return SourceResult(hosts)
+        return SourceResult(hosts, records=read)
 
 
 def _silentpush_host(scan: dict[str, Any]) -> Host | None:
@@ -480,7 +490,7 @@ class UrlscanClient(HuntApiClient):
             search_after = ",".join(str(value) for value in sort) or None
             if not answer.get("has_more") or not search_after:
                 break
-        return SourceResult(hosts, total)
+        return SourceResult(hosts, total, read)
 
 
 def _urlscan_host(item: dict[str, Any]) -> Host | None:
@@ -552,12 +562,13 @@ class ScoutClient(HuntApiClient):
             ),
             "The Team Cymru Scout search",
         )
+        items = _list(answer.get("ips"))[:limit]
         hosts = []
-        for item in _list(answer.get("ips"))[:limit]:
+        for item in items:
             host = _scout_host(_dict(item))
             if host is not None:
                 hosts.append(host)
-        return SourceResult(hosts)
+        return SourceResult(hosts, records=len(items))
 
 
 def _scout_host(item: dict[str, Any]) -> Host | None:

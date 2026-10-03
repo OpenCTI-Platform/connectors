@@ -169,8 +169,10 @@ configured source supports its fingerprints.
    view of the internet; urlscan.io searches the scans of the run window; Team Cymru Scout searches the most recent 30
    days of the run window within its 90 days of history (a window older than that is skipped).
 2. A failing source is logged and skipped; the run fails only when every query fails. A source timeout fails the run.
-3. Hosts are merged by IP address (or host name for web properties without one) and capped to the run
-   `max_results`; the run is reported as truncated when a source holds more matches than were read.
+3. The queries share the run `max_results`: each query reads at most an equal share of what is left of it, so the run
+   never reads more than `max_results` records in total, whatever the number of queries. Hosts are merged by IP
+   address (or host name for web properties without one); the run is reported as truncated when a source holds more
+   matches than were read, or when the budget is spent before every query ran.
 4. Up to `INFRASTRUCTURE_TRACKER_INTERNETDB_MAX_LOOKUPS` public IP addresses are enriched with Shodan InternetDB. The
    enrichment is best effort: an error is logged, and it stops when the run timeout is close.
 5. Hosts matching a benign pattern of the hunt are suppressed.
@@ -181,10 +183,14 @@ configured source supports its fingerprints.
      observable types the hunt expects and to `INFRASTRUCTURE_TRACKER_CREATE_CERTIFICATES`;
    - one indicator per observable (STIX pattern, `x_opencti_detection` set, main observable type) `based-on` it;
    - `related-to` relationships from the infrastructure and `indicates` relationships from every indicator to the
-     threats the hunt targets.
+     threats the hunt targets;
+   - one observed-data per number of hosts, referencing the observables that many hosts hold, stamped with the hunt
+     run (`x_opencti_hunt_run_id`).
 
-   Every object inherits the markings and the author of the hunt and has a deterministic identifier, so re-runs update
-   the same objects.
+   Every object inherits the markings and the author of the hunt and has a deterministic identifier. The
+   infrastructure, observables, indicators and relationships keep their standard identifiers, so every run of the hunt
+   grows the same infrastructure; the identifiers of the observed-data derive from the hunt run too, so each run
+   records what it observed and a retry of a run updates its own observed-data.
 7. The run is reported with the number of hosts, the distinct IP addresses and domains, the queries run and an evidence
    sample of the fingerprints matched (values hashed and truncated).
 
@@ -192,7 +198,7 @@ configured source supports its fingerprints.
 
 | Limit | Value |
 |---|---|
-| Hosts per run | `limits.max_results` of the run (set by OpenCTI), per source query and after merging. Censys pages hold 100 hosts, Silent Push 1,000 scans, urlscan.io 100 scans; Team Cymru Scout returns at most 5,000 IP addresses. |
+| Records per run | `limits.max_results` of the run (set by OpenCTI), shared by all the source queries of the run; hosts are capped to the same limit after merging. Censys pages hold 100 hits, Silent Push 1,000 scans, urlscan.io 100 scans; Team Cymru Scout returns at most 5,000 IP addresses. |
 | Run timeout | `limits.timeout_seconds` of the run: every call is bounded by the time left. |
 | Enrichment | `INFRASTRUCTURE_TRACKER_INTERNETDB_MAX_LOOKUPS` IP addresses per run, 15 seconds per lookup at most. |
 | Evidence | `limits.evidence_max_items` values, previews truncated to `limits.evidence_max_value_length`. |

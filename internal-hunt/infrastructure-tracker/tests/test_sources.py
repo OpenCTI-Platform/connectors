@@ -157,6 +157,7 @@ def test_censys_search_paginates_and_maps_hosts(requests_mock, deadline):
     assert second.json()["page_token"] == "page-2"
     assert second.json()["page_size"] == 8
     assert result.total == 5
+    assert result.read == 5
     host, web, web_ip = result.hosts
     assert host.key == "8.8.8.8" and host.asn == 20473 and host.as_name == "AS-CHOOPA"
     assert host.domains == ["evil.example"] and host.ports == [443]
@@ -189,6 +190,27 @@ def test_censys_search_stops_at_the_limit(requests_mock, deadline):
     assert requests_mock.call_count == 1
     assert requests_mock.last_request.qs == {}
     assert [host.key for host in result.hosts] == ["8.8.8.8"]
+    assert result.read == 1
+
+
+def test_censys_search_limits_the_hits_read_not_the_hosts_kept(requests_mock, deadline):
+    # Given a first page holding a hit that maps to no host
+    requests_mock.post(
+        CENSYS_URL,
+        [
+            {"json": censys_answer([{}, censys_host("8.8.8.8")], "next", total=9)},
+            {"json": censys_answer([censys_host("1.1.1.1")], "last", total=9)},
+        ],
+    )
+    client = CensysClient("https://api.platform.censys.io", "token", None)
+
+    # When searching with a limit of two hits
+    result = client.search("q", 2, deadline)
+
+    # Then the unusable hit counts against the limit
+    assert requests_mock.call_count == 1
+    assert [host.key for host in result.hosts] == ["8.8.8.8"]
+    assert result.read == 2
 
 
 def test_censys_search_rejects_unexpected_answers(requests_mock, deadline):
@@ -236,6 +258,7 @@ def test_silentpush_search_pages_with_skip(requests_mock, deadline):
     assert first.json() == {"query": 'jarm = "x"'}
     assert second.qs == {"limit": ["500"], "skip": ["1000"]}
     assert len(result.hosts) == 1001 and result.total is None
+    assert result.read == 1002
     host = result.hosts[0]
     assert host.domains == ["c2.evil.example", "evil.example"]
     assert host.certificates[0].subject == "CN=evil.example"
@@ -292,7 +315,7 @@ def test_urlscan_search_dates_the_query_and_follows_search_after(
     assert second.qs["search_after"] == ["1759478400000,abc"]
     assert second.qs["size"] == ["9"]
     assert result.total == 3
-    assert len(result.hosts) == 2
+    assert len(result.hosts) == 2 and result.read == 3
     host = result.hosts[0]
     assert host.asn == 15169 and host.as_name == "GOOGLE"
     assert host.fingerprints == {
@@ -354,6 +377,7 @@ def test_scout_search_maps_ips(requests_mock, deadline):
         "size": ["5000"],
     }
     first, second = result.hosts
+    assert result.read == 3
     assert first.asn == 15169 and first.domains == ["evil.example"]
     assert first.ports == [443] and first.tags == ["cobalt-strike"]
     assert first.last_seen == datetime(2026, 10, 3, tzinfo=timezone.utc)
