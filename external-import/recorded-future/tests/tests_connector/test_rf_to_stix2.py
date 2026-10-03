@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from pycti import Identity as PyctiIdentity
+from pycti import Indicator as PyctiIndicator
 from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER
 from rflib.rf_to_stix2 import IntrusionSet as RFIntrusionSet
 from rflib.rf_to_stix2 import IPAddress as RFIPAddress
@@ -497,6 +498,41 @@ def test_create_event_relations_skips_adversary_resolved_as_identity():
     assert note.objects == objects_before
     relationships = [obj for obj in note.objects if obj["type"] == "relationship"]
     assert len(relationships) == 0
+
+
+@pytest.mark.parametrize(
+    "file_hash, expected_pattern",
+    [
+        (
+            "e1d9c90de2568f34ad689c71dac09c62",
+            "[file:hashes.MD5 = 'e1d9c90de2568f34ad689c71dac09c62']",
+        ),
+        (
+            "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            "[file:hashes.'SHA-1' = 'da39a3ee5e6b4b0d3255bfef95601890afd80709']",
+        ),
+        (
+            "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            "[file:hashes.'SHA-256' = '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08']",
+        ),
+    ],
+)
+# Scenario: File hash patterns only quote the hash key when it requires it (issue #7671)
+def test_file_hash_pattern_quotes_hash_key_only_when_required(
+    file_hash, expected_pattern
+):
+    # Given a file hash indicator
+    author = _given_author()
+    tlp = _given_tlp()
+    indicator = _given_rf_entity("Hash", file_hash, author, tlp)
+
+    # When the indicator is created
+    stix_indicator = indicator._create_indicator()
+
+    # Then the pattern matches the form OpenCTI normalizes patterns to
+    assert stix_indicator.pattern == expected_pattern
+    # And the indicator id is derived from that pattern
+    assert stix_indicator.id == PyctiIndicator.generate_id(expected_pattern)
 
 
 # ── Given helpers ────────────────────────────────────────────────────────────
