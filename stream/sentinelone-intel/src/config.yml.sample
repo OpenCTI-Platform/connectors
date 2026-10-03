@@ -20,3 +20,12 @@ sentinelone_intel:
   # account_id: 'ChangeMeOrEmpty'
   # site_id: 'ChangeMeOrEmpty'
   # group_id: 'ChangeMeOrEmpty'
+
+# Dissemination assurance (deployment write-back to OpenCTI)
+#deployment:
+#  reporting_enabled: true # Optional (default: true)
+#  reconciliation_interval: 60 # Optional (default: 60 minutes, 0 disables the reconciliation)
+#security_platform:
+#  name: 'SentinelOne' # Optional (default: 'SentinelOne')
+#  type: 'EDR' # Optional (default: 'EDR')
+#  id: 'ChangeMe' # Optional (existing Security Platform entity id)
