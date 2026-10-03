@@ -652,6 +652,36 @@ def test_adapter_collects_hits_from_alert_evidence():
     connector.api.list_alerts.assert_called_once_with(since, 10_000, until=until)
 
 
+def test_adapter_credits_every_indicator_sharing_an_evidence_value():
+    connector = build_connector()
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    connector.api.list_alerts = MagicMock(
+        return_value=[
+            {
+                "alertCreationTime": "2026-10-03T11:10:00Z",
+                "evidence": [{"entityType": "Ip", "ipAddress": "198.51.100.7"}],
+            }
+        ]
+    )
+    deployments = [
+        make_deployment(),
+        IndicatorDeployment(
+            relationship_id="r2",
+            status="active",
+            indicator_id=OTHER_ID,
+            pattern="[ipv4-addr:value = '198.51.100.7']",
+            pattern_type="stix",
+        ),
+    ]
+    adapter = MicrosoftDefenderDeploymentAdapter(
+        connector, clock=lambda: datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    )
+
+    hits = list(adapter.collect_hits(deployments, since))
+
+    assert sorted(hit.indicator_id for hit in hits) == sorted([INDICATOR_ID, OTHER_ID])
+
+
 def serve_alerts(minutes):
     """Fake `list_alerts`: the alerts created at `11:<minute>` within the window,
     capped like the API (in no particular order)."""

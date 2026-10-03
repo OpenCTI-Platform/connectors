@@ -194,14 +194,15 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the Defender alerts whose evidence matches deployed indicators.
 
-        Each alert counts one hit per matching indicator, at the alert creation time.
+        Each alert counts one hit per matching indicator, at the alert creation time;
+        a value shared by several indicators credits each of them.
 
         :raises DefenderDeploymentError: When the alerts cannot be listed.
         """
-        by_value: dict[str, IndicatorDeployment] = {}
+        by_value: dict[str, list[IndicatorDeployment]] = {}
         for deployment in deployments:
             for value in deployment.values:
-                by_value.setdefault(value, deployment)
+                by_value.setdefault(value, []).append(deployment)
         if not by_value:
             return []
         with _readable_errors():
@@ -214,9 +215,9 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
             if timestamp is None or timestamp < since:
                 continue
             matched = {
-                by_value[value].indicator_id
+                deployment.indicator_id
                 for value in _evidence_values(alert)
-                if value in by_value
+                for deployment in by_value.get(value, ())
             }
             hits.extend(
                 VendorHit(timestamp=timestamp, indicator_id=indicator_id)
