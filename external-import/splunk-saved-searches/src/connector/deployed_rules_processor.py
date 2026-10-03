@@ -6,6 +6,8 @@ its deployment on the Security Platform (``active`` when enabled,
 ``deployed`` when disabled). Rules seen in the previous run and gone now,
 or whose logic changed (new Indicator), get the ``removed`` status: the
 connector state keeps the Indicator of every rule of the previous run.
+When a rule fails to map, the rules missing from the run are not removed:
+they cannot be told apart from it, and the next complete run reconciles them.
 Rules sharing the same logic share one Indicator and one deployment.
 """
 
@@ -38,6 +40,8 @@ if TYPE_CHECKING:
 RULES_PER_BUNDLE = 100
 # Ids per GraphQL ``ids`` filter when checking removed rule Indicators.
 _LOOKUP_BATCH_SIZE = 100
+# Skip reason of a rule whose mapping failed unexpectedly (not a deliberate exclusion).
+SKIP_INVALID = "invalid"
 
 
 class DeployedRulesProcessor(BaseDataProcessor):
@@ -163,10 +167,23 @@ class DeployedRulesProcessor(BaseDataProcessor):
                     current[member.key] = indicator.id
             yield objects
 
+        # A rule that could not be mapped is still on the platform, and the rules
+        # missing from this run cannot be told apart from it: none of them is
+        # removed, their state is kept until a run maps every rule.
+        complete = skipped[SKIP_INVALID] == 0
+        carried: dict[str, str] = {}
         former_platform = self.state.platform_id
         if former_platform in (None, self.builder.platform_id):
             former_platform = None
-            removed, still_pending = self._removed_rules(previous, current, pending)
+            if not complete:
+                carried = {k: v for k, v in previous.items() if k not in current}
+                self.logger.warning(
+                    "Some rules could not be mapped: the rules missing from this "
+                    "run keep their deployment until a complete run",
+                    {"platform": self.platform_label, "kept": len(carried)},
+                )
+            reconciled = {k: v for k, v in previous.items() if k not in carried}
+            removed, still_pending = self._removed_rules(reconciled, current, pending)
         else:
             # Renamed platform: every deployment of the previous run targets
             # the former identity and is removed from it.
@@ -190,7 +207,7 @@ class DeployedRulesProcessor(BaseDataProcessor):
 
         # A former platform keeps its state until its removals are sent.
         if former_platform is None or not still_pending:
-            self.state.deployed_rules = current
+            self.state.deployed_rules = {**carried, **current}
             # Removals that could not be checked are retried on the next run.
             self.state.pending_removals = still_pending or None
             self.state.platform_id = self.builder.platform_id
@@ -210,6 +227,7 @@ class DeployedRulesProcessor(BaseDataProcessor):
                 ),
                 "techniques": len(linked_techniques),
                 "skipped": dict(skipped),
+                "complete": complete,
                 "relationship": (
                     "deployed-on" if deployed_on_supported else "related-to"
                 ),
@@ -233,7 +251,7 @@ class DeployedRulesProcessor(BaseDataProcessor):
                     "Could not map a rule, skipping it",
                     {"platform": self.platform_label, "error": str(err)},
                 )
-                skipped["invalid"] += 1
+                skipped[SKIP_INVALID] += 1
                 continue
             if rule.key in keys:
                 skipped["duplicate"] += 1

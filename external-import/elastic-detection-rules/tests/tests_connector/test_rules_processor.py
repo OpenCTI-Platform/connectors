@@ -421,3 +421,39 @@ def test_configured_platform_id_must_be_a_security_platform(helper, found):
     processor = _processor(helper, [EQL_RULE], platform_id="unknown")
     with pytest.raises(ValueError, match="is not a Security Platform"):
         _run(processor)
+
+
+UNMAPPED_GONE_KEY = "gone-rule"
+UNMAPPED_GONE_INDICATOR = Indicator.generate_id("gone rule pattern")
+
+
+def test_unmapped_rule_keeps_the_deployments_missing_from_the_run(helper):
+    helper.api.indicator.list.return_value = [
+        {"standard_id": UNMAPPED_GONE_INDICATOR, "x_opencti_stix_ids": []}
+    ]
+    state = ConnectorState(deployed_rules={UNMAPPED_GONE_KEY: UNMAPPED_GONE_INDICATOR})
+    processor = _processor(helper, [EQL_RULE, KUERY_RULE], state=state)
+    map_rule = processor.to_detection_rule
+    calls = []
+
+    def to_detection_rule(raw_rule):
+        calls.append(raw_rule)
+        if len(calls) == 1:
+            raise ValueError("unexpected payload shape")
+        return map_rule(raw_rule)
+
+    processor.to_detection_rule = to_detection_rule
+    bundles = _run(processor)
+    statuses = [
+        deployment.deployment_status
+        for bundle in bundles
+        for deployment in _of_type(bundle, "relationship", "deployed-on")
+    ]
+    # The unmapped rule cannot be told apart from the gone one: nothing is removed
+    assert statuses
+    assert "removed" not in statuses
+    assert processor.state.deployed_rules[UNMAPPED_GONE_KEY] == UNMAPPED_GONE_INDICATOR
+    assert len(processor.state.deployed_rules) > 1
+    summary = helper.connector_logger.info.call_args_list[-1].args[1]
+    assert summary["complete"] is False
+    assert summary["skipped"]["invalid"] == 1
