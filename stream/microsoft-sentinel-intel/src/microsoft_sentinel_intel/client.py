@@ -185,7 +185,7 @@ class ConnectorClient:
     def iter_incidents(
         self, modified_since: datetime, page_size: int, max_pages: int
     ) -> Iterator[dict[str, Any]]:
-        """Yield the Microsoft Sentinel incidents modified since a date, most recent first.
+        """Yield the Microsoft Sentinel incidents modified since a date, oldest first.
 
         Uses the `Microsoft.SecurityInsights/incidents` list API
         (`management_api_version`) with `$filter`, `$orderby` and `$top`, paginated
@@ -193,7 +193,7 @@ class ConnectorClient:
 
         :param modified_since: Only incidents with `lastModifiedTimeUtc` on or after it.
         :param page_size: The `$top` of each page.
-        :param max_pages: Maximum number of pages read (the most recent incidents first).
+        :param max_pages: Maximum number of pages read (the oldest incidents first).
         """
         api_version = self.config.microsoft_sentinel_intel.management_api_version
         since = (
@@ -206,7 +206,7 @@ class ConnectorClient:
                 "$filter": quote(
                     f"properties/lastModifiedTimeUtc ge {since}", safe="/:"
                 ),
-                "$orderby": quote("properties/lastModifiedTimeUtc desc", safe="/"),
+                "$orderby": quote("properties/lastModifiedTimeUtc asc", safe="/"),
                 "$top": str(page_size),
             },
         )

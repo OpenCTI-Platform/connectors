@@ -230,9 +230,10 @@ it does not exist), and detection hits are counted with a sighting of the indica
   and expired Sentinel indicators are not considered live. A read-back error skips the run: indicators are never
   reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the incidents modified since the previous run are listed with the incidents API
-  (`management_api_version`), most recent first, and the entities of at most 200 incidents are read. Each incident
+  (`management_api_version`), oldest first, and the entities of at most 200 incidents are read. Each incident
   counts one hit per matching indicator, at the incident last activity time; hits already reported are never counted
-  twice.
+  twice. When the 200 incidents are reached or the entities of an incident cannot be read, the next run resumes at
+  that incident instead of skipping the remaining ones.
 - **Permissions**: the **Microsoft Sentinel Contributor** role already required by the connector covers the read-back,
   the deletion and the incidents read (Microsoft Sentinel Reader is enough for the read-only parts).
 - **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged

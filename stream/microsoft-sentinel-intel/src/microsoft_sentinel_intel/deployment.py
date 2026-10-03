@@ -20,6 +20,7 @@ from azure.core.exceptions import ResourceNotFoundError
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentVendorAdapter,
+    HitCollection,
     IndicatorDeployment,
     VendorHit,
     VendorIndicator,
@@ -201,13 +202,17 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
 
     def collect_hits(
         self, deployments: Sequence[IndicatorDeployment], since: datetime
-    ) -> Iterable[VendorHit]:
+    ) -> Iterable[VendorHit] | HitCollection:
         """Read the Sentinel incidents whose entities match deployed indicators.
 
-        Incidents modified since `since` are listed (most recent first); those whose
-        last activity is older than `since` are skipped. The entities of at most
-        `MAX_HIT_INCIDENTS` incidents are read. Each incident counts one hit per
+        Incidents modified since `since` are listed (oldest first); those whose last
+        activity is older than `since` are skipped. Each incident counts one hit per
         matching indicator value, at the incident last activity time.
+
+        The read stops at the first incident beyond `MAX_HIT_INCIDENTS` inspected
+        incidents or whose entities cannot be read, and after `INCIDENTS_MAX_PAGES`
+        pages: the collection is then complete until that incident's modification
+        time, where the next run resumes.
 
         :raises SentinelDeploymentError: When the incidents cannot be listed.
         """
@@ -218,6 +223,9 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
             return []
         hits: list[VendorHit] = []
         inspected = 0
+        listed = 0
+        modified_time: datetime | None = None
+        stopped_at: datetime | None = None
         with _readable_errors():
             # Lazy iteration: the next incident pages are read only while needed.
             for incident in self._client.iter_incidents(
@@ -225,36 +233,45 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                 page_size=INCIDENTS_PAGE_SIZE,
                 max_pages=INCIDENTS_MAX_PAGES,
             ):
+                listed += 1
                 properties = incident.get("properties") or {}
+                modified_time = parse_datetime(properties.get("lastModifiedTimeUtc"))
                 activity_time = (
                     parse_datetime(properties.get("lastActivityTimeUtc"))
                     or parse_datetime(properties.get("createdTimeUtc"))
-                    or parse_datetime(properties.get("lastModifiedTimeUtc"))
+                    or modified_time
                 )
                 incident_id = incident.get("id") or incident.get("name")
                 if activity_time is None or activity_time < since or not incident_id:
                     continue
                 if inspected >= MAX_HIT_INCIDENTS:
                     self._logger.warning(
-                        f"{_LOG_PREFIX} Incident limit reached, the remaining "
-                        "incidents are not inspected for hits during this run.",
+                        f"{_LOG_PREFIX} Incident limit reached, the next run resumes "
+                        "at the first incident not inspected.",
                         {"limit": MAX_HIT_INCIDENTS},
                     )
+                    stopped_at = modified_time or since
                     break
-                inspected += 1
                 try:
                     entities = self._client.list_incident_entities(str(incident_id))
                 except ConnectorClientError as err:
                     self._logger.warning(
-                        f"{_LOG_PREFIX} Cannot read the entities of an incident.",
+                        f"{_LOG_PREFIX} Cannot read the entities of an incident, the "
+                        "next run resumes at it.",
                         {"incident_id": incident_id, "error": describe_error(err)},
                     )
-                    continue
+                    stopped_at = modified_time or since
+                    break
+                inspected += 1
                 matched = self._entity_values(entities) & deployed_values
                 hits.extend(
                     VendorHit(timestamp=activity_time, value=value)
                     for value in sorted(matched)
                 )
+        if stopped_at is None and listed >= INCIDENTS_PAGE_SIZE * INCIDENTS_MAX_PAGES:
+            stopped_at = modified_time or since
+        if stopped_at is not None:
+            return HitCollection(hits=hits, complete_until=stopped_at)
         return hits
 
     @staticmethod
