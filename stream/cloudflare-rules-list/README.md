@@ -120,7 +120,9 @@ IPv4 values are extracted from three shapes: STIX indicators with an
 OpenCTI observables with `entity_type: "IPv4-Addr"`.
 
 Each entry written to the Cloudflare list is tagged with a comment of the form
-`OpenCTI: <id>`, recording the source OpenCTI object ID.
+`OpenCTI: <id>`, recording the STIX id of the source OpenCTI object (the same id
+for the startup full sync and the live stream; the internal id for an API object
+without one).
 
 ### Dissemination assurance (deployment write-back)
 

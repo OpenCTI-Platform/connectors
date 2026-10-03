@@ -403,6 +403,7 @@ def test_get_ioc_alerts_filters_ioc_alerts_since_a_date(xdr_client, monkeypatch)
         {"field": "alert_source", "operator": "in", "value": ["XDR IOC"]},
     ]
     assert (request_data["search_from"], request_data["search_to"]) == (0, 2)
+    assert request_data["sort"] == {"field": "creation_time", "keyword": "desc"}
     assert second.kwargs["json"]["request_data"]["search_to"] == 3
 
 
@@ -563,6 +564,19 @@ def test_adapter_credits_every_indicator_sharing_a_value():
     )
 
     assert sorted(hit.indicator_id for hit in hits) == sorted([INDICATOR_ID, OTHER_ID])
+
+
+def test_adapter_warns_when_the_alert_cap_is_reached(monkeypatch):
+    monkeypatch.setattr("connector.deployment.MAX_HIT_ALERTS", 2)
+    connector = build_connector()
+    connector.client.get_ioc_alerts.return_value = [{}, {}]
+
+    adapter = CortexXdrDeploymentAdapter(connector)
+
+    assert adapter.collect_hits([make_deployment()], datetime.now(UTC)) == []
+    connector.client.get_ioc_alerts.assert_called_once()
+    assert connector.client.get_ioc_alerts.call_args.args[1] == 2
+    connector.helper.connector_logger.warning.assert_called_once()
 
 
 def test_adapter_hits_without_values_read_no_alert():

@@ -15,6 +15,8 @@ SECOPS_SIEM_API_BASE_URL = "https://chronicle.googleapis.com"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 MAX_ERROR_DETAIL_LENGTH = 500
 """Maximum length of the Google SecOps response body kept in an error message."""
+REQUEST_TIMEOUT = 60
+"""Timeout of a Google SecOps request, in seconds."""
 
 
 class SecOpsApiError(Exception):
@@ -198,7 +200,7 @@ class SecOpsEntitiesClient:
         for attempt in range(total):
             body = {"inline_source": {"entities": entities, "log_type": "OPENCTI"}}
             response = self.chronicle_http_session.request(
-                method="POST", url=self.url, json=body
+                method="POST", url=self.url, json=body, timeout=REQUEST_TIMEOUT
             )
 
             if response.status_code in retry_status_forcelist:
@@ -279,7 +281,10 @@ class SecOpsEntitiesClient:
         }
         try:
             response = self.chronicle_http_session.request(
-                method="GET", url=self.ioc_matches_url, params=params
+                method="GET",
+                url=self.ioc_matches_url,
+                params=params,
+                timeout=REQUEST_TIMEOUT,
             )
         except Exception as err:
             raise SecOpsApiError(f"Cannot list the IoC matches: {err}") from err

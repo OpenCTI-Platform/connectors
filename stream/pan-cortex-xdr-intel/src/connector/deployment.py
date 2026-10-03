@@ -243,6 +243,12 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
             return []
         with _readable_errors():
             alerts = self._client.get_ioc_alerts(since, MAX_HIT_ALERTS)
+        if len(alerts) >= MAX_HIT_ALERTS:
+            self._connector.helper.connector_logger.warning(
+                "[DEPLOYMENT] More IOC alerts than read by one hit collection, "
+                "the oldest ones are not counted.",
+                {"limit": MAX_HIT_ALERTS},
+            )
         hits: list[VendorHit] = []
         for alert in alerts:
             timestamp = _timestamp(alert.get("detection_timestamp")) or _timestamp(

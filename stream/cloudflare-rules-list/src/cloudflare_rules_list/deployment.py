@@ -58,9 +58,9 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
         """Read back the IP address items of the list.
 
-        Only comments carrying a STIX indicator id identify an indicator: the
-        internal ids written by the full sync cannot be told apart from observable
-        ids, so those items are matched by IP address.
+        Only comments carrying a STIX indicator id identify an indicator; other
+        items (observables, or comments carrying an internal id) are matched by IP
+        address.
 
         :raises CloudflareAPIError: On any API error (never a partial listing).
         """
