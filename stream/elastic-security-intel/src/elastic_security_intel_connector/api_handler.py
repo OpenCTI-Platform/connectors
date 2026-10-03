@@ -415,10 +415,18 @@ class ElasticApiHandler:
             )
             return False
 
-    def _find_siem_rule_by_opencti_id(self, opencti_id: str) -> Optional[str]:
-        """Find SIEM rule by OpenCTI ID reference"""
+    def _find_siem_rule_by_opencti_id(
+        self, opencti_id: str, strict: bool = False
+    ) -> Optional[str]:
+        """Find SIEM rule by OpenCTI ID reference
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :param strict: Raise when the lookup fails instead of returning None
+        :return: ID of the SIEM rule, None when the indicator has no rule
+        """
         try:
-            url = f"{self.elastic_url}/api/detection_engine/rules/_find"
+            # The detection engine is a Kibana API, like the other SIEM rule calls
+            url = f"{self._get_kibana_url()}/api/detection_engine/rules/_find"
             params = {
                 "filter": f'alert.attributes.references:"opencti-id:{opencti_id}"'
             }
@@ -431,17 +439,33 @@ class ElasticApiHandler:
                 cert=self.cert,
                 timeout=30,
             )
-
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("data") and len(result["data"]) > 0:
-                    return result["data"][0]["id"]
-
-            return None
+            response.raise_for_status()
+            rules = response.json().get("data") or []
+            return rules[0]["id"] if rules else None
 
         except Exception as e:
+            if strict:
+                raise
             self.helper.connector_logger.debug(f"Error finding SIEM rule: {str(e)}")
             return None
+
+    def _delete_siem_rule_of_indicator(self, opencti_id: str) -> bool:
+        """Delete the SIEM rule of an indicator, if it has one.
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: False when the rule lookup or deletion failed (a rule may remain)
+        """
+        try:
+            rule_id = self._find_siem_rule_by_opencti_id(opencti_id, strict=True)
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "Cannot look up the SIEM rule of the indicator",
+                {"opencti_id": opencti_id, "error": str(e)},
+            )
+            return False
+        if rule_id is None:
+            return True
+        return self._delete_siem_rule(rule_id)
 
     def _calculate_risk_score(self, indicator_data: dict) -> int:
         """Calculate risk score based on indicator confidence and severity"""
@@ -951,13 +975,8 @@ class ElasticApiHandler:
                             )
 
                 elif operation == "delete":
-                    rule_id = self._find_siem_rule_by_opencti_id(opencti_id)
-                    if rule_id:
-                        if self._delete_siem_rule(rule_id):
-                            self.helper.connector_logger.info(
-                                f"Deleted SIEM rule for {pattern_type} pattern",
-                                {"opencti_id": opencti_id},
-                            )
+                    if not self._delete_siem_rule_of_indicator(opencti_id):
+                        success = False
 
             if operation == "create":
                 result = self.create_indicator(indicator_data)
