@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/google-secops-rules_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Google SecOps Detection Rules",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Indicator",
+        "Attack-Pattern",
+        "SecurityPlatform"
+      ],
+      "description": "The scope of the connector, i.e. the entity types it imports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT6H",
+      "description": "Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT6H` for six hours). Every run reads the full rule set.",
+      "format": "duration",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_PROJECT_ID": {
+      "description": "Google Cloud project bound to the Google SecOps instance (project id or number).",
+      "minLength": 1,
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_PROJECT_REGION": {
+      "description": "Region of the Google SecOps instance, e.g. `us`, `europe`, `europe-west2` or `asia-southeast1`.",
+      "minLength": 1,
+      "pattern": "^[a-z0-9-]+$",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_PROJECT_INSTANCE": {
+      "description": "Google SecOps instance (customer) id, a UUID shown in **SIEM Settings -> Profile**.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_CLIENT_EMAIL": {
+      "description": "Email of the service account. It needs the `Chronicle API Viewer` role (`roles/chronicle.viewer`) on the project.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_PRIVATE_KEY": {
+      "description": "Private key of the service account (PEM, the `private_key` of its JSON key file). Literal `\\n` sequences are turned into line breaks.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "GOOGLE_SECOPS_RULES_PRIVATE_KEY_ID": {
+      "default": null,
+      "description": "Id of that private key (the `private_key_id` of the JSON key file).",
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_TOKEN_URI": {
+      "default": "https://oauth2.googleapis.com/token",
+      "description": "OAuth 2.0 token endpoint of the service account.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_BASE_URL": {
+      "default": "https://chronicle.googleapis.com/",
+      "description": "Chronicle API endpoint. The region is prefixed to its host at runtime (`https://<region>-chronicle.googleapis.com`).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_API_VERSION": {
+      "default": "v1alpha",
+      "description": "Chronicle API version serving the rules and rule deployments.",
+      "enum": [
+        "v1",
+        "v1beta",
+        "v1alpha"
+      ],
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_IMPORT_DISABLED_RULES": {
+      "default": true,
+      "description": "Import rules that are not live too, with the deployment status `deployed` (live rules get `active`). When false, they are left out and count as removed.",
+      "type": "boolean"
+    },
+    "GOOGLE_SECOPS_RULES_PAGE_SIZE": {
+      "default": 1000,
+      "description": "Rules and rule deployments requested per page.",
+      "maximum": 1000,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "GOOGLE_SECOPS_RULES_REQUEST_TIMEOUT": {
+      "default": 60,
+      "description": "Timeout of each HTTP request, in seconds.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "GOOGLE_SECOPS_RULES_MAX_RETRIES": {
+      "default": 5,
+      "description": "Retries of a request failing with a rate limit (429), a server error (5xx) or a network error, with exponential backoff.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "GOOGLE_SECOPS_RULES_PLATFORM_NAME": {
+      "default": "Google SecOps",
+      "description": "Name of the Security Platform the rules are deployed on in OpenCTI.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_PLATFORM_TYPE": {
+      "default": "SIEM",
+      "description": "Type of that Security Platform (`security_platform_type`).",
+      "enum": [
+        "SIEM",
+        "EDR",
+        "XDR",
+        "SOAR",
+        "NDR",
+        "ISPM"
+      ],
+      "type": "string"
+    },
+    "GOOGLE_SECOPS_RULES_TLP_LEVEL": {
+      "description": "TLP marking applied to every object this connector creates.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "GOOGLE_SECOPS_RULES_PROJECT_ID",
+    "GOOGLE_SECOPS_RULES_PROJECT_REGION",
+    "GOOGLE_SECOPS_RULES_PROJECT_INSTANCE",
+    "GOOGLE_SECOPS_RULES_CLIENT_EMAIL",
+    "GOOGLE_SECOPS_RULES_PRIVATE_KEY"
+  ],
+  "additionalProperties": true
+}
