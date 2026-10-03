@@ -7,7 +7,12 @@ from typing import Any
 from unittest.mock import MagicMock, call
 
 import pytest
-from connectors_sdk import DeploymentAssurance, IndicatorDeployment, VendorIndicator
+from connectors_sdk import (
+    DeploymentAssurance,
+    HitCollection,
+    IndicatorDeployment,
+    VendorIndicator,
+)
 from crowdstrike_connector import ConnectorSettings, CrowdstrikeConnector
 from crowdstrike_connector.deployment import (
     CrowdstrikeDeploymentAdapter,
@@ -589,6 +594,27 @@ def test_adapter_collects_hits_from_alerts(adapter_client):
         (INDICATOR_ID, 30),
     ]
     adapter_client.iter_alerts.assert_called_once_with(since, 10_000)
+
+
+def test_adapter_capped_hit_read_is_complete_until_the_newest_alert(adapter_client):
+    """Alerts are read oldest first: when the cap is reached, the next run resumes at
+    the newest alert read instead of losing the alerts beyond the cap."""
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    adapter_client.iter_alerts.return_value = iter(
+        [
+            {"timestamp": "2026-10-03T11:10:00Z", "ioc_value": "198.51.100.7"},
+            {"timestamp": "2026-10-03T11:20:00Z", "ioc_value": "198.51.100.7"},
+        ]
+    )
+    adapter = CrowdstrikeDeploymentAdapter(
+        adapter_client, SimpleNamespace(permanent_delete=False), max_alerts=2
+    )
+
+    collection = adapter.collect_hits([make_deployment()], since)
+
+    assert isinstance(collection, HitCollection)
+    assert collection.complete_until == datetime(2026, 10, 3, 11, 20, tzinfo=UTC)
+    assert [hit.timestamp.minute for hit in collection.hits] == [10, 20]
 
 
 def test_adapter_hits_without_values_read_no_alert(adapter_client):

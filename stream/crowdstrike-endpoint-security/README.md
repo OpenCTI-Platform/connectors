@@ -209,8 +209,8 @@ it does not exist), and detection hits are counted with a sighting of the indica
   otherwise the IOC is kept, tagged `TO_DELETE` and its action set to `no_action` so that it stops detecting. A
   read-back error skips the run: IOCs are never reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the Falcon alerts created since the previous run are read (at most 10,000 per
-  run, oldest first). An alert counts one hit for every deployed indicator whose value is the alert IOC value; hits
-  already reported are never counted twice. The API client needs the **Alerts: Read** scope; without it, set
+  run, oldest first; when the limit is reached the next run resumes at the newest alert read). An alert counts one hit
+  for every deployed indicator whose value is the alert IOC value; hits already reported are never counted twice. The API client needs the **Alerts: Read** scope; without it, set
   `HITS_REPORTING_ENABLED=false`.
 - **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
   once). Write-back errors are logged as warnings and never block the dissemination.
