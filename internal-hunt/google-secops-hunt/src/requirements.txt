@@ -1,0 +1,7 @@
+google-auth==2.59.0
+pycti==7.261002.0
+pydantic~=2.13.5
+pysigma==1.5.1
+pysigma-backend-secops==1.0.0
+requests~=2.33.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
