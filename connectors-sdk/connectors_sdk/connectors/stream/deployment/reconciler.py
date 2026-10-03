@@ -22,10 +22,12 @@ adapter can read detections, hits observed since the previous run are reported.
 import threading
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from connectors_sdk.connectors.stream.deployment.models import (
+    LIVE_STATUSES,
     RECONCILED_STATUSES,
     DeploymentReport,
     DeploymentStatus,
@@ -36,6 +38,8 @@ from connectors_sdk.connectors.stream.deployment.models import (
     VendorIndicator,
 )
 from connectors_sdk.connectors.stream.deployment.reporter import (
+    REPORT_SENT,
+    REPORT_UNSENT,
     DeploymentListingError,
     DeploymentReporter,
 )
@@ -60,6 +64,20 @@ MAX_HELD_HITS = 100_000
 
 CAPPED_INSTANT_STEP = timedelta(seconds=1)
 """Step past an instant capped by the vendor read when the adapter cannot continue reading it."""
+
+MAX_PENDING_HITS_AGE = timedelta(hours=24)
+"""How long a hit report that never reached OpenCTI is sent again with the following runs."""
+
+
+@dataclass(slots=True)
+class _PendingHits:
+    """Hits of one indicator read from the vendor but not delivered to OpenCTI yet."""
+
+    count: int
+    first_hit: datetime
+    last_hit: datetime
+    failing_since: datetime
+
 
 _LOG_PREFIX = "[DEPLOYMENT]"
 
@@ -216,12 +234,6 @@ class _Index:
                 return self.by_value[value][:1]
         return []
 
-    def find(
-        self, identifiers: Iterable[str], external_id: Any, values: Iterable[str]
-    ) -> Any:
-        matches = self.find_all(identifiers, external_id, values)
-        return matches[0] if matches else None
-
 
 class DeploymentReconciler:
     """Reconcile deployment statuses with the security platform, periodically.
@@ -265,6 +277,7 @@ class DeploymentReconciler:
         self._hits_since: datetime | None = None
         self._hits_resume: Any = None
         self._held_hits: list[VendorHit] = []
+        self._pending_hits: dict[str, _PendingHits] = {}
         self._run_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -410,10 +423,19 @@ class DeploymentReconciler:
             summary.report_errors = len(result.errors)
 
         if reporter.hits_enabled:
+            # A deployment this run reports as no longer live is not credited with
+            # the hits of a value it shares with a live one.
+            withdrawn = {
+                report.indicator_id
+                for report in reports
+                if report.status not in LIVE_STATUSES
+            }
             live = [
                 deployment
                 for deployment in deployments
-                if deployment.is_live and not deployment.requires_removal(now)
+                if deployment.is_live
+                and not deployment.requires_removal(now)
+                and deployment.indicator_id not in withdrawn
             ]
             summary.hits_reported = self._report_hits(live, now)
         return summary
@@ -805,39 +827,75 @@ class DeploymentReconciler:
                 continue
             identifier = normalize_value(hit.indicator_id)
             value = normalize_value(hit.value)
-            deployment = index.find(
-                [identifier] if identifier else [],
-                hit.external_id,
-                [value] if value else [],
+            matched = index.find_all(
+                [identifier] if identifier else [], hit.external_id, []
             )
-            if deployment is None:
-                continue
-            if (
-                deployment.last_hit_at is not None
-                and timestamp <= deployment.last_hit_at
-            ):
-                continue
-            entry = aggregated.setdefault(
-                deployment.indicator_id, [0, timestamp, timestamp]
-            )
-            entry[0] += hit.count
-            entry[1] = min(entry[1], timestamp)
-            entry[2] = max(entry[2], timestamp)
-        reported = 0
-        for indicator_id, (count, first_hit, last_hit) in aggregated.items():
-            if self._reporter.report_indicator_hits(
-                indicator_id, count, last_hit=last_hit, first_hit=first_hit
-            ):
-                reported += 1
-        if aggregated and reported == 0:
-            # Nothing accepted (OpenCTI unavailable): read the same detections again on
-            # the next run. A single rejected indicator (deleted, no longer readable)
-            # does not hold the window back, or it would block every other detection.
-            self._logger.warning(
-                f"{_LOG_PREFIX} No hit report was accepted, the detections are read "
-                "again on the next run.",
-                {"since": since.isoformat(), "indicators": len(aggregated)},
-            )
-            return 0
+            if not matched and value:
+                # A matched value is a hit of every indicator carrying it.
+                matched = index.by_value.get(value, [])
+            for deployment in matched:
+                if (
+                    deployment.last_hit_at is not None
+                    and timestamp <= deployment.last_hit_at
+                ):
+                    continue
+                entry = aggregated.setdefault(
+                    deployment.indicator_id, [0, timestamp, timestamp]
+                )
+                entry[0] += hit.count
+                entry[1] = min(entry[1], timestamp)
+                entry[2] = max(entry[2], timestamp)
         self._hits_since = next_since
+        return self._send_hit_reports(aggregated, now)
+
+    def _send_hit_reports(self, aggregated: dict[str, list[Any]], now: datetime) -> int:
+        """Send the hit reports of a run with the ones not delivered by earlier runs.
+
+        A report OpenCTI rejects (deleted or unreadable indicator) is dropped; one that
+        was not delivered (outage, timeout, rate limit) is kept and merged into the
+        report of the next run, for at most ``MAX_PENDING_HITS_AGE``, so the hit window
+        moves on without losing the detections it already read.
+
+        Args:
+            aggregated: Per indicator: count, first hit and last hit of this run.
+            now: The reference time.
+
+        Returns:
+            The number of indicators whose report was accepted.
+        """
+        previous = self._pending_hits
+        self._pending_hits = {}
+        for indicator_id, pending in previous.items():
+            entry = aggregated.setdefault(
+                indicator_id, [0, pending.first_hit, pending.last_hit]
+            )
+            entry[0] += pending.count
+            entry[1] = min(entry[1], pending.first_hit)
+            entry[2] = max(entry[2], pending.last_hit)
+        reported = 0
+        dropped = 0
+        for indicator_id, (count, first_hit, last_hit) in aggregated.items():
+            outcome = self._reporter.report_indicator_hits_outcome(
+                indicator_id, count, last_hit=last_hit, first_hit=first_hit
+            )
+            if outcome == REPORT_SENT:
+                reported += 1
+            elif outcome == REPORT_UNSENT:
+                failing_since = (
+                    previous[indicator_id].failing_since
+                    if indicator_id in previous
+                    else now
+                )
+                if now - failing_since <= MAX_PENDING_HITS_AGE:
+                    self._pending_hits[indicator_id] = _PendingHits(
+                        count, first_hit, last_hit, failing_since
+                    )
+                else:
+                    dropped += 1
+        if self._pending_hits or dropped:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Some hit reports were not delivered, they are sent "
+                "again with the next run.",
+                {"kept": len(self._pending_hits), "dropped": dropped},
+            )
         return reported

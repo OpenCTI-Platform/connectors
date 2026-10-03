@@ -68,10 +68,14 @@ MAX_RETRY_DELAY = 300.0
 
 _LOG_PREFIX = "[DEPLOYMENT]"
 
-# Outcomes of the delivery of one report.
-_SENT = "sent"
-_REJECTED = "rejected"
-_UNSENT = "unsent"
+REPORT_SENT = "sent"
+"""Outcome of a report accepted by OpenCTI."""
+
+REPORT_REJECTED = "rejected"
+"""Outcome of a report refused by OpenCTI or that cannot be sent: sending it again cannot succeed."""
+
+REPORT_UNSENT = "unsent"
+"""Outcome of a report whose call did not complete (or was rate limited): it can be sent again."""
 
 
 class DeploymentListingError(Exception):
@@ -376,7 +380,7 @@ class DeploymentReporter:
         platform_id = self._ready(REPORT_DEPLOYMENT_MUTATION)
         if platform_id is None:
             return False
-        return self._send_report(platform_id, report) == _SENT
+        return self._send_report(platform_id, report) == REPORT_SENT
 
     def report_indicator_deployments(
         self, reports: Iterable[DeploymentReport | Mapping[str, Any]]
@@ -448,17 +452,47 @@ class DeploymentReporter:
         Returns:
             ``True`` when OpenCTI accepted the report.
         """
+        return (
+            self.report_indicator_hits_outcome(
+                indicator_id, count, last_hit=last_hit, first_hit=first_hit
+            )
+            == REPORT_SENT
+        )
+
+    def report_indicator_hits_outcome(
+        self,
+        indicator_id: str,
+        count: int,
+        *,
+        last_hit: datetime | str | None = None,
+        first_hit: datetime | str | None = None,
+    ) -> str:
+        """Report new hits of an indicator and tell what became of the report.
+
+        Args:
+            indicator_id: OpenCTI internal id, standard id or STIX id of the indicator.
+            count: Number of new hits (at least 1).
+            last_hit: Time of the last hit (defaults to now on the platform side).
+            first_hit: Time of the first hit (defaults to ``last_hit``).
+
+        Returns:
+            ``REPORT_SENT`` when OpenCTI accepted it, ``REPORT_REJECTED`` when it was
+            refused or cannot be sent (hits disabled, empty report, write-back not
+            available), ``REPORT_UNSENT`` when the call did not complete or was rate
+            limited and can be sent again. The pycti helper does not tell a rejection
+            from a failed call: a report it does not accept is ``REPORT_UNSENT``.
+        """
         if not self.hits_enabled:
-            return False
+            return REPORT_REJECTED
         if not indicator_id or count < 1:
             self._logger.debug(
                 f"{_LOG_PREFIX} Ignoring an empty hit report.",
                 {"indicator_id": indicator_id, "count": count},
             )
-            return False
+            return REPORT_REJECTED
         platform_id = self._ready(REPORT_HITS_MUTATION)
         if platform_id is None:
-            return False
+            return REPORT_UNSENT if self._awaiting_write_back() else REPORT_REJECTED
         try:
             if hasattr(self._helper, "report_indicator_hits"):
                 result = self._helper.report_indicator_hits(
@@ -468,7 +502,7 @@ class DeploymentReporter:
                     last_hit=format_datetime(last_hit),
                     first_hit=format_datetime(first_hit),
                 )
-                return result is not None
+                return REPORT_SENT if result is not None else REPORT_UNSENT
             variables: dict[str, Any] = {
                 "indicatorId": indicator_id,
                 "platformId": platform_id,
@@ -479,13 +513,13 @@ class DeploymentReporter:
             if first_hit is not None:
                 variables["firstHit"] = format_datetime(first_hit)
             self._execute(_graphql.REPORT_HITS_MUTATION, variables)
-            return True
+            return REPORT_SENT
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot report indicator hits.",
                 {"indicator_id": indicator_id, "count": count, "error": str(err)},
             )
-            return False
+            return REPORT_REJECTED if is_rejection_error(err) else REPORT_UNSENT
 
     def list_indicator_deployments(
         self, statuses: Iterable[DeploymentStatus | str] | None = None
@@ -1029,20 +1063,21 @@ class DeploymentReporter:
             report: The report.
 
         Returns:
-            ``_SENT``, ``_REJECTED`` (OpenCTI answered with an error) or ``_UNSENT``
-            (the call did not complete; the pycti helper does not tell them apart).
+            ``REPORT_SENT``, ``REPORT_REJECTED`` (OpenCTI answered with an error) or
+            ``REPORT_UNSENT`` (the call did not complete; the pycti helper does not
+            tell them apart).
         """
         try:
             if hasattr(self._helper, "report_indicator_deployment"):
                 result = self._helper.report_indicator_deployment(
                     platform_id=platform_id, **report.to_helper_kwargs()
                 )
-                return _SENT if result is not None else _UNSENT
+                return REPORT_SENT if result is not None else REPORT_UNSENT
             self._execute(
                 _graphql.REPORT_DEPLOYMENT_MUTATION,
                 {"platformId": platform_id, **report.to_graphql_input()},
             )
-            return _SENT
+            return REPORT_SENT
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot report the deployment status.",
@@ -1052,7 +1087,7 @@ class DeploymentReporter:
                     "error": str(err),
                 },
             )
-            return _REJECTED if is_rejection_error(err) else _UNSENT
+            return REPORT_REJECTED if is_rejection_error(err) else REPORT_UNSENT
 
     def _send_reports_one_by_one(
         self, platform_id: str, reports: Sequence[DeploymentReport]
@@ -1071,9 +1106,9 @@ class DeploymentReporter:
         unsent: list[DeploymentReport] = []
         for report in reports:
             outcome = self._send_report(platform_id, report)
-            if outcome == _SENT:
+            if outcome == REPORT_SENT:
                 processed += 1
-            elif outcome == _REJECTED:
+            elif outcome == REPORT_REJECTED:
                 rejected.append(report)
             else:
                 unsent.append(report)

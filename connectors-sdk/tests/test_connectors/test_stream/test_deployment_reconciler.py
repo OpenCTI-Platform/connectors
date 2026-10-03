@@ -957,10 +957,11 @@ def test_queued_reports_are_held_without_blocking(
     assert batch["reports"][0]["indicatorId"] == "a"
 
 
-def test_hit_window_is_kept_when_no_report_is_accepted(
+def test_undelivered_hit_reports_are_sent_with_the_next_run(
     graphql_helper, make_reporter, router, list_nodes, node_factory
 ):
-    """An OpenCTI outage longer than the lookback window loses no detection."""
+    """An OpenCTI outage loses no detection: the window moves on and the hits already
+    read are merged into the report of the next run."""
     router.handlers["IndicatorReportHits("] = ValueError("unavailable")
     list_nodes(node_factory(indicator_id="a", status="active"))
     adapter = FakeAdapter(
@@ -969,11 +970,100 @@ def test_hit_window_is_kept_when_no_report_is_accepted(
     )
     reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
 
-    reconciler.run_once()
-    assert reconciler._hits_since is None
+    assert reconciler.run_once().hits_reported == 0
+    assert reconciler._hits_since == NOW - reconciler._hits_lookback
+    assert list(reconciler._pending_hits) == ["a"]
+
+    router.handlers["IndicatorReportHits("] = {
+        "data": {"indicatorReportHits": {"id": "sighting"}}
+    }
+    adapter.hits = [VendorHit(timestamp=NOW - timedelta(minutes=1), indicator_id="a")]
+    assert reconciler.run_once().hits_reported == 1
+    delivered = router.calls_of("IndicatorReportHits(")[-1]
+    assert delivered["count"] == 2
+    assert delivered["firstHit"] == "2026-10-03T11:55:00.000Z"
+    assert delivered["lastHit"] == "2026-10-03T11:59:00.000Z"
+    assert reconciler._pending_hits == {}
+
+
+def test_hit_reports_rejected_by_opencti_are_not_sent_again(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    router.handlers["IndicatorReportHits("] = ValueError(
+        {"name": "FUNCTIONAL_ERROR", "error_message": "Indicator not found"}
+    )
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 0
+    assert reconciler._pending_hits == {}
+
+
+def test_undelivered_hit_reports_are_dropped_after_the_maximum_age(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    router.handlers["IndicatorReportHits("] = ValueError("unavailable")
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+    )
+    clock = {"now": NOW}
+    reconciler = make_reconciler(
+        make_reporter(graphql_helper), adapter, clock=lambda: clock["now"]
+    )
 
     reconciler.run_once()
-    assert adapter.hits_calls[1][1] == adapter.hits_calls[0][1]
+    assert list(reconciler._pending_hits) == ["a"]
+    adapter.hits = []
+    clock["now"] = NOW + reconciler_module.MAX_PENDING_HITS_AGE + timedelta(minutes=1)
+    reconciler.run_once()
+    assert reconciler._pending_hits == {}
+
+
+def test_a_hit_matched_by_value_credits_every_indicator_carrying_it(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    list_nodes(
+        node_factory(indicator_id="a", status="active", standard_id="indicator--a"),
+        node_factory(indicator_id="b", status="active", standard_id="indicator--b"),
+    )
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a"), VendorIndicator(indicator_id="b")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), value="198.51.100.7")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 2
+    assert sorted(
+        call["indicatorId"] for call in router.calls_of("IndicatorReportHits(")
+    ) == ["a", "b"]
+
+
+def test_a_deployment_removed_by_the_run_gets_no_hit_of_a_shared_value(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    list_nodes(
+        node_factory(indicator_id="a", status="active", standard_id="indicator--a"),
+        node_factory(indicator_id="b", status="active", standard_id="indicator--b"),
+    )
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), value="198.51.100.7")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    summary = reconciler.run_once()
+
+    assert summary.marked_removed == 1
+    assert summary.hits_reported == 1
+    assert [
+        call["indicatorId"] for call in router.calls_of("IndicatorReportHits(")
+    ] == ["a"]
 
 
 def test_hit_window_advances_past_a_single_rejected_indicator(

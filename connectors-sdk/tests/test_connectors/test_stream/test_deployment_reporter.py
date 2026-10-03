@@ -18,6 +18,9 @@ from connectors_sdk.connectors.stream.deployment.reporter import (
     MAX_BATCH_SIZE,
     MAX_ERROR_MESSAGE_LENGTH,
     MAX_UNSENT_AGE,
+    REPORT_REJECTED,
+    REPORT_SENT,
+    REPORT_UNSENT,
     DeploymentListingError,
     DeploymentReporter,
     is_rate_limit_error,
@@ -761,6 +764,61 @@ def test_report_indicator_hits_errors_never_raise(
     reporter = make_reporter(graphql_helper)
     assert reporter.report_indicator_hits("indicator-id", 1) is False
     graphql_helper.connector_logger.warning.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("error", "outcome"),
+    [
+        (
+            ValueError({"name": "FUNCTIONAL_ERROR", "error_message": "gone"}),
+            REPORT_REJECTED,
+        ),
+        (
+            ValueError(
+                {"name": "FUNCTIONAL_ERROR", "error_message": "Too many requests"}
+            ),
+            REPORT_UNSENT,
+        ),
+        (ValueError("Connection refused"), REPORT_UNSENT),
+    ],
+)
+def test_report_indicator_hits_outcome_tells_rejections_from_undelivered_calls(
+    graphql_helper, make_reporter, router, error, outcome
+):
+    router.handlers["IndicatorReportHits("] = error
+    reporter = make_reporter(graphql_helper)
+    assert reporter.report_indicator_hits_outcome("indicator-id", 1) == outcome
+
+
+def test_report_indicator_hits_outcome(
+    graphql_helper, pycti_helper, make_reporter, router, router_factory
+):
+    reporter = make_reporter(graphql_helper)
+    assert reporter.report_indicator_hits_outcome("indicator-id", 1) == REPORT_SENT
+    assert reporter.report_indicator_hits_outcome("indicator-id", 0) == REPORT_REJECTED
+
+    pycti_helper.report_indicator_hits.return_value = None
+    assert (
+        make_reporter(pycti_helper).report_indicator_hits_outcome("indicator-id", 1)
+        == REPORT_UNSENT
+    )
+
+    router.handlers.update(
+        router_factory(mutations=("indicatorReportDeployment",)).handlers
+    )
+    assert (
+        make_reporter(graphql_helper).report_indicator_hits_outcome("indicator-id", 1)
+        == REPORT_REJECTED
+    )
+
+
+def test_report_indicator_hits_outcome_while_the_write_back_is_awaited(
+    graphql_helper, make_reporter, router
+):
+    """OpenCTI unreachable at detection time: the report can be sent later."""
+    router.handlers["DeploymentWriteBackFeatures"] = ValueError("Connection refused")
+    reporter = make_reporter(graphql_helper)
+    assert reporter.report_indicator_hits_outcome("indicator-id", 1) == REPORT_UNSENT
 
 
 # --- listing ---------------------------------------------------------------------------
