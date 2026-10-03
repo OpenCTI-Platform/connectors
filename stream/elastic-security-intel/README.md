@@ -249,6 +249,9 @@ does not exist). Observables streamed directly (not as indicators) are pushed as
   (documents carrying an `opencti_doc_id` in `ELASTIC_SECURITY_INDEX_NAME`) are read back through a point in time, 500
   per page. Each one keeps the OpenCTI id of the indicator in its `stix` copy. A read-back error skips the run:
   indicators are never reported `removed` from a partial listing.
+- **Detection rules**: an indicator with a native Elastic pattern is removed rule first. When its SIEM rule cannot be
+  looked up or deleted, its threat intel document is kept: the indicator is never reported `removed` while the rule may
+  still detect, and the next removal (delete event or reconciliation) tries the rule again.
 - **Hits**: not reported. Elastic records indicator matches as alerts of its detection rules, which this connector does
   not read.
 - **Permissions**: the API key needs the `read` and `view_index_metadata` privileges on the index (point in time and

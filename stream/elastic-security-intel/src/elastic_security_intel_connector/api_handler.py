@@ -994,7 +994,14 @@ class ElasticApiHandler:
 
                 elif operation == "delete":
                     if not self._delete_siem_rule_of_indicator(opencti_id):
-                        success = False
+                        # The threat intel document is the trace the deployment
+                        # read-back sees: it stays while the rule may remain, so
+                        # the next removal retries the rule cleanup.
+                        self.helper.connector_logger.warning(
+                            "SIEM rule of the indicator not removed, threat intel entry kept",
+                            {"opencti_id": opencti_id},
+                        )
+                        return False
 
             if operation == "create":
                 result = self.create_indicator(indicator_data)

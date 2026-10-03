@@ -186,13 +186,18 @@ def test_delete_without_siem_rule_succeeds(
 def test_delete_fails_when_the_siem_rule_remains(
     kibana_handler, native_indicator, requests_mock
 ):
-    """A rule that could not be deleted keeps detecting: the deletion failed,
-    even though the threat intel document is still removed."""
+    """A rule that could not be deleted keeps detecting: the deletion failed and
+    the threat intel document stays, so the next removal retries the rule."""
     requests_mock.get(FIND_RULES_URL, json={"data": [{"id": "rule-1"}]})
     requests_mock.delete(RULES_URL, status_code=500, text="boom")
     requests_mock.post(DELETE_URL, json={"deleted": 1})
 
     assert kibana_handler.process_indicator(native_indicator, "delete") is False
+    assert _delete_by_query_requests(requests_mock) == []
+
+    requests_mock.delete(RULES_URL, json={"id": "rule-1"})
+
+    assert kibana_handler.process_indicator(native_indicator, "delete") is True
     assert len(_delete_by_query_requests(requests_mock)) == 1
 
 
@@ -203,7 +208,7 @@ def test_delete_fails_when_the_siem_rule_lookup_fails(
     requests_mock.post(DELETE_URL, json={"deleted": 1})
 
     assert kibana_handler.process_indicator(native_indicator, "delete") is False
-    assert len(_delete_by_query_requests(requests_mock)) == 1
+    assert _delete_by_query_requests(requests_mock) == []
 
 
 def test_lenient_siem_rule_lookup_returns_none_on_errors(kibana_handler, requests_mock):
