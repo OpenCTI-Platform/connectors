@@ -247,6 +247,44 @@ class TestProcessMessageConvertError:
         connector.helper.send_stix2_bundle.assert_called_once()
 
 
+class TestAttackPatternPreparation:
+    """Techniques are resolved against the platform once per package."""
+
+    def test_prepare_runs_once_before_conversion(self):
+        connector = _make_connector()
+        rules = [
+            {"filename": "a.yml", "rule_content": "title: A\n"},
+            {"filename": "b.yml", "rule_content": "title: B\n"},
+        ]
+        connector.client.download_and_convert_package.return_value = rules
+        calls = []
+        connector.converter_to_stix.prepare_attack_patterns.side_effect = (
+            lambda r: calls.append(("prepare", len(r)))
+        )
+        connector.converter_to_stix.convert_sigma_rule.side_effect = (
+            lambda r: calls.append(("convert", r["filename"])) or []
+        )
+
+        connector._collect_intelligence(
+            {
+                "assets": [
+                    {
+                        "name": "sigma_core.zip",
+                        "browser_download_url": "https://example.invalid/sigma_core.zip",
+                    }
+                ]
+            },
+            "sigma_core",
+        )
+
+        assert calls == [("prepare", 2), ("convert", "a.yml"), ("convert", "b.yml")]
+
+    def test_no_lookup_without_rules(self):
+        connector = _make_connector()
+        connector._collect_intelligence({"assets": []}, "sigma_core")
+        connector.converter_to_stix.prepare_attack_patterns.assert_not_called()
+
+
 class TestRun:
     """Smoke test for the ``run()`` method wiring."""
 

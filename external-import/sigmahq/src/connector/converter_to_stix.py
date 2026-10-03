@@ -1,17 +1,21 @@
 import datetime
-from typing import Literal
+from typing import Any, Literal
 
 import pycti
 import stix2
+from connector.attack_patterns import AttackPatternResolver
 from connector.utils import is_valid_technique_id
 from pycti import (
-    AttackPattern,
     Identity,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     Vulnerability,
 )
 from sigma.rule import SigmaRule
+
+# Sigma ``logsource`` keys carried by the ``x_opencti_rule_logsource``
+# property of rule Indicators.
+_LOGSOURCE_KEYS = ("category", "product", "service")
 
 
 class ConverterToStix:
@@ -40,6 +44,7 @@ class ConverterToStix:
         self.helper = helper
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
         self.author = self.create_author()
+        self.attack_patterns = AttackPatternResolver(helper)
         # Per-bundle SDO dedup. The same MITRE technique id (and the
         # same CVE) commonly appears on many Sigma rules — without these
         # sets every ``convert_sigma_rule`` call would re-emit the same
@@ -135,6 +140,57 @@ class ConverterToStix:
         }
         return mapping[level]
 
+    @staticmethod
+    def technique_ids(parsed_rule: SigmaRule) -> list[str]:
+        """Return the uppercase ATT&CK technique ids tagged on the rule.
+
+        Tactic tags (``attack.execution``) and malformed ids are ignored.
+        """
+        return [
+            tag.name.upper()
+            for tag in parsed_rule.tags
+            if tag.namespace == "attack" and is_valid_technique_id(tag.name)
+        ]
+
+    def prepare_attack_patterns(self, rules: list[dict[str, str]]) -> None:
+        """Resolve, in one pass, the techniques tagged on ``rules``.
+
+        Rules that do not parse are skipped here: ``convert_sigma_rule``
+        reports them when it converts them.
+        """
+        mitre_ids: set[str] = set()
+        for rule in rules:
+            try:
+                mitre_ids.update(
+                    self.technique_ids(SigmaRule.from_yaml(rule["rule_content"]))
+                )
+            except Exception:  # noqa: BLE001 - reported at conversion time
+                continue
+        self.attack_patterns.load(mitre_ids)
+
+    @staticmethod
+    def rule_metadata(parsed_rule: SigmaRule) -> dict[str, Any]:
+        """Return the rule metadata properties of the rule Indicator.
+
+        ``x_opencti_rule_status`` and ``x_opencti_rule_level`` carry the
+        Sigma ``status`` / ``level``, ``x_opencti_rule_logsource`` the
+        ``logsource`` keys present in the rule, lowercased. A property is
+        omitted when the rule does not define it.
+        """
+        metadata: dict[str, Any] = {}
+        if parsed_rule.status is not None:
+            metadata["x_opencti_rule_status"] = str(parsed_rule.status).lower()
+        if parsed_rule.level is not None:
+            metadata["x_opencti_rule_level"] = str(parsed_rule.level).lower()
+        logsource = {
+            key: str(value).lower()
+            for key in _LOGSOURCE_KEYS
+            if (value := getattr(parsed_rule.logsource, key, None))
+        }
+        if logsource:
+            metadata["x_opencti_rule_logsource"] = logsource
+        return metadata
+
     def convert_sigma_rule(self, rule: dict[str, str]) -> list:
         """Convert one Sigma rule into its STIX representation.
 
@@ -150,35 +206,27 @@ class ConverterToStix:
 
         related_techniques = []
         related_vulnerabilities = []
+        for mitre_id in dict.fromkeys(self.technique_ids(parsed_rule)):
+            # A technique the platform does not hold yet carries the
+            # Indicator's author / TLP marking; one it already holds keeps
+            # its own name, author and markings (see
+            # :class:`AttackPatternResolver`).
+            technique = self.attack_patterns.build(
+                mitre_id, self.author, self.tlp_marking
+            )
+            related_techniques.append(technique)
+            # Only emit each unique AttackPattern once per *bundle* — the
+            # dedup sets are reset at the start of every
+            # ``_collect_intelligence`` run via :meth:`reset_dedup_state`
+            # (see ``__init__`` for the per-bundle scope rationale). The
+            # ``related_techniques`` list is still populated so the
+            # per-rule ``indicates`` relationship below references the
+            # same STIX id even when the SDO was already emitted earlier
+            # in this bundle.
+            if technique.id not in self._seen_attack_pattern_ids:
+                self._seen_attack_pattern_ids.add(technique.id)
+                stix_objects.append(technique)
         for tag in parsed_rule.tags:
-            if tag.namespace == "attack":
-                if is_valid_technique_id(tag.name):
-                    name = tag.name.upper()
-                    # ``created_by_ref`` + ``object_marking_refs`` mirror the
-                    # Indicator below so the AttackPattern carries the same
-                    # author / TLP marking — without them OpenCTI ingests an
-                    # unmarked / unattributed AttackPattern that breaks
-                    # marking-based access control downstream.
-                    technique = stix2.AttackPattern(
-                        id=AttackPattern.generate_id(name, name),
-                        name=name,
-                        custom_properties={"x_mitre_id": name},
-                        created_by_ref=self.author.id,
-                        object_marking_refs=[self.tlp_marking.id],
-                    )
-                    related_techniques.append(technique)
-                    # Only emit each unique AttackPattern once per
-                    # *bundle* — the dedup sets are reset at the start
-                    # of every ``_collect_intelligence`` run via
-                    # :meth:`reset_dedup_state` (see ``__init__`` for
-                    # the per-bundle scope rationale). The
-                    # ``related_techniques`` list is still populated so
-                    # the per-rule ``indicates`` relationship below
-                    # references the same STIX id even when the SDO
-                    # was already emitted earlier in this bundle.
-                    if technique.id not in self._seen_attack_pattern_ids:
-                        self._seen_attack_pattern_ids.add(technique.id)
-                        stix_objects.append(technique)
             if tag.namespace == "cve":
                 name = "CVE-" + tag.name
                 # Same rationale as the AttackPattern above — the
@@ -209,6 +257,7 @@ class ConverterToStix:
             object_marking_refs=[self.tlp_marking.id],
             valid_from=datetime.datetime.now(datetime.timezone.utc),
             valid_until=None,
+            custom_properties=self.rule_metadata(parsed_rule),
         )
         stix_objects.append(indicator)
 
