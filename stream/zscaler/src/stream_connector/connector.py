@@ -344,7 +344,16 @@ class ZscalerConnector:
         self.request_zscaler(self.session.put, base_url, json=payload)
         msg = f"Successfully sent {event_type} for {domain}."
         self.helper.connector_logger.info(msg)
-        self.activate_zscaler_changes()
+        try:
+            activated = self.activate_zscaler_changes()
+        except Exception as err:
+            raise ZscalerApiError(
+                f"Zscaler configuration activation failed: {err}"
+            ) from err
+        if not activated:
+            raise ZscalerApiError(
+                "Zscaler configuration activation failed after all retries"
+            )
 
     def push_indicator(self, indicator: dict[str, Any]) -> None:
         """Add the domain of an OpenCTI indicator to the blacklist (reconciliation re-push).

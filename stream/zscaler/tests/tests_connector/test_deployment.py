@@ -414,6 +414,29 @@ def test_transport_error_on_create_is_reported_failed(connector):
     assert "timed out" in str(error)
 
 
+@pytest.mark.parametrize(
+    "activation, message",
+    [
+        ({"return_value": False}, "activation failed after all retries"),
+        (
+            {"side_effect": Exception("Activation failed: 503")},
+            "Activation failed: 503",
+        ),
+    ],
+)
+def test_activation_failure_is_reported_failed(connector, activation, message):
+    FakeZscaler().install(connector)
+    connector.activate_zscaler_changes = MagicMock(**activation)
+    indicator = make_indicator()
+
+    connector._apply_and_report(indicator, "create")
+
+    (reported, error), _ = connector.assurance.report_push_failed.call_args
+    assert reported == indicator
+    assert message in str(error)
+    connector.assurance.report_pushed.assert_not_called()
+
+
 def test_rejected_request_message_is_truncated(connector):
     connector.session = MagicMock()
     connector.session.put.return_value = response(500, text="x" * 2000)
