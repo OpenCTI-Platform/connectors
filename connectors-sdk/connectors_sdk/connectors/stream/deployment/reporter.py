@@ -193,6 +193,10 @@ class DeploymentReporter:
         self._monotonic = monotonic
 
         self._lock = threading.RLock()
+        # One OpenCTI call of each kind at a time, never under `_lock`: the stream
+        # thread takes `_lock` to queue its outcomes and must not wait for the network.
+        self._detection_lock = threading.Lock()
+        self._resolution_lock = threading.Lock()
         self._mutations: frozenset[str] | None = None
         self._next_detection_at = 0.0
         self._detection_failure_logged = False
@@ -318,28 +322,36 @@ class DeploymentReporter:
 
         The entity is resolved once through ``securityPlatformAdd`` (upsert by name)
         unless ``SECURITY_PLATFORM_ID`` is configured. A failed resolution is retried
-        after ``retry_delay`` seconds.
+        after ``retry_delay`` seconds; while another thread resolves it, ``None`` is
+        returned at once.
         """
-        with self._lock:
-            if self._platform_id:
+        if not self._resolution_lock.acquire(blocking=False):
+            with self._lock:
                 return self._platform_id
-            now = self._monotonic()
-            if now < self._next_resolution_at:
-                return None
+        try:
+            with self._lock:
+                if self._platform_id:
+                    return self._platform_id
+                now = self._monotonic()
+                if now < self._next_resolution_at:
+                    return None
             platform_id = self._resolve_security_platform()
-            if platform_id is None:
-                self._next_resolution_at = now + self._retry_delay
-                return None
-            self._platform_id = platform_id
-            self._logger.info(
-                f"{_LOG_PREFIX} Security platform resolved.",
-                {
-                    "security_platform_id": platform_id,
-                    "security_platform_name": self.options.security_platform_name,
-                    "security_platform_type": self.options.security_platform_type,
-                },
-            )
-            return platform_id
+            with self._lock:
+                if platform_id is None:
+                    self._next_resolution_at = now + self._retry_delay
+                    return None
+                self._platform_id = platform_id
+        finally:
+            self._resolution_lock.release()
+        self._logger.info(
+            f"{_LOG_PREFIX} Security platform resolved.",
+            {
+                "security_platform_id": platform_id,
+                "security_platform_name": self.options.security_platform_name,
+                "security_platform_type": self.options.security_platform_type,
+            },
+        )
+        return platform_id
 
     def report_indicator_deployment(
         self,
@@ -990,39 +1002,45 @@ class DeploymentReporter:
 
         Returns:
             The mutation names, or ``None`` when the detection failed (retried after
-            ``retry_delay`` seconds).
+            ``retry_delay`` seconds) or is running in another thread.
         """
-        with self._lock:
-            if self._mutations is not None:
+        if not self._detection_lock.acquire(blocking=False):
+            with self._lock:
                 return self._mutations
-            now = self._monotonic()
-            if now < self._next_detection_at:
-                return None
+        try:
+            with self._lock:
+                if self._mutations is not None:
+                    return self._mutations
+                now = self._monotonic()
+                if now < self._next_detection_at:
+                    return None
             try:
                 response = self._helper.api.query(_graphql.MUTATION_FIELDS_QUERY)
                 fields = ((response.get("data") or {}).get("__type") or {}).get(
                     "fields"
                 ) or []
-                self._mutations = frozenset(
+                mutations = frozenset(
                     str(field["name"])
                     for field in fields
                     if isinstance(field, Mapping) and field.get("name")
                 )
-                return self._mutations
             except Exception as err:
-                self._next_detection_at = now + self._retry_delay
-                log = (
-                    self._logger.debug
-                    if self._detection_failure_logged
-                    else self._logger.warning
-                )
-                self._detection_failure_logged = True
+                with self._lock:
+                    self._next_detection_at = now + self._retry_delay
+                    already_logged = self._detection_failure_logged
+                    self._detection_failure_logged = True
+                log = self._logger.debug if already_logged else self._logger.warning
                 log(
                     f"{_LOG_PREFIX} Cannot detect the deployment write-back support of "
                     "the OpenCTI platform, retrying later.",
                     {"error": str(err), "retry_in_seconds": self._retry_delay},
                 )
                 return None
+            with self._lock:
+                self._mutations = mutations
+            return mutations
+        finally:
+            self._detection_lock.release()
 
     def _resolve_security_platform(self) -> str | None:
         """Resolve the Security Platform entity by name (upsert).

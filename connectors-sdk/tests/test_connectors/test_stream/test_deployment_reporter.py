@@ -101,6 +101,48 @@ def test_start_detects_support_and_resolves_the_platform(
     assert no_atexit == [reporter.close]
 
 
+def test_detection_and_resolution_calls_never_hold_the_state_lock(
+    graphql_helper, make_reporter, router, no_atexit
+):
+    """The stream thread takes the state lock to queue its outcomes: a slow OpenCTI
+    call detecting the write-back or resolving the platform never makes it wait."""
+    reporter = make_reporter(graphql_helper)
+    lock_free = []
+
+    def probe():
+        acquired = reporter._lock.acquire(timeout=5)
+        if acquired:
+            reporter._lock.release()
+        lock_free.append(acquired)
+
+    def query(*args, **kwargs):
+        thread = threading.Thread(target=probe)
+        thread.start()
+        thread.join()
+        return router(*args, **kwargs)
+
+    graphql_helper.api.query.side_effect = query
+
+    assert reporter.start() is True
+    assert lock_free == [True, True]
+
+
+def test_detection_and_resolution_running_in_another_thread_are_not_awaited(
+    graphql_helper, make_reporter, router, no_atexit, ids
+):
+    reporter = make_reporter(graphql_helper)
+    with reporter._detection_lock, reporter._resolution_lock:
+        assert reporter.is_supported() is False
+        assert reporter.security_platform_id is None
+    assert router.calls_of("DeploymentWriteBackFeatures") == []
+    assert router.calls_of("DeploymentSecurityPlatformAdd") == []
+
+    assert reporter.start() is True
+    with reporter._detection_lock, reporter._resolution_lock:
+        assert reporter.is_supported() is True
+        assert reporter.security_platform_id == ids.platform
+
+
 def test_start_on_a_platform_without_the_write_back(
     graphql_helper, make_reporter, router, router_factory
 ):
