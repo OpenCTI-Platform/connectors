@@ -152,8 +152,19 @@ class ElasticApiHandler:
                             {"response": response.text[:500]},
                         )
                     result = response.json()
+                    hits_block = (
+                        result.get("hits") if isinstance(result, dict) else None
+                    )
+                    hits = (
+                        hits_block.get("hits") if isinstance(hits_block, dict) else None
+                    )
+                    if not isinstance(hits, list):
+                        # Never read as an empty page: every deployment would look absent.
+                        raise ElasticApiHandlerError(
+                            "Failed to read the indicators back: unexpected search response",
+                            {"response": response.text[:500]},
+                        )
                     pit_id = result.get("pit_id", pit_id)
-                    hits = result.get("hits", {}).get("hits", [])
                     for hit in hits:
                         yield hit.get("_source") or {}
                     if len(hits) < READ_BACK_PAGE_SIZE:

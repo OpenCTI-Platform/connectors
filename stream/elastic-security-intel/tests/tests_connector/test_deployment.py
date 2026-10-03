@@ -128,6 +128,21 @@ class TestReadBack:
                 list(handler.iter_connector_documents())
             assert close.call_count == 1
 
+    @pytest.mark.parametrize(
+        "payload", [{}, {"hits": None}, {"hits": {}}, {"hits": {"hits": None}}, []]
+    )
+    def test_an_unexpected_search_payload_raises_instead_of_an_empty_page(
+        self, handler, payload
+    ):
+        """Never read as an empty page: every deployment would be reported removed."""
+        with rm_module.Mocker() as m:
+            m.post(PIT_URL, json={"id": "pit-1"})
+            m.post(SEARCH_URL, json=payload)
+            close = m.delete(CLOSE_PIT_URL, json={})
+            with pytest.raises(ElasticApiHandlerError, match="unexpected search"):
+                list(handler.iter_connector_documents())
+            assert close.call_count == 1
+
     def test_a_refused_point_in_time_raises(self, handler):
         with rm_module.Mocker() as m:
             m.post(PIT_URL, status_code=403, text="forbidden")
