@@ -137,6 +137,11 @@ def test_pattern_observable_values_without_file_hashes():
         ("HTTPS://Evil.Example/Admin?Id=A#Top", "https://evil.example/Admin?Id=A#Top"),
         ("http://Evil.Example", "http://evil.example"),
         ("http://Evil.Example?Q=1", "http://evil.example?Q=1"),
+        (
+            "HTTPS://User:Secret@Evil.Example:8443/X",
+            "https://User:Secret@evil.example:8443/X",
+        ),
+        ("ftp://Us@er@Evil.Example", "ftp://Us@er@evil.example"),
     ],
 )
 def test_normalize_value(value, expected):
