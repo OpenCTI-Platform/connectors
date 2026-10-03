@@ -10,7 +10,9 @@ vendor, and report detection hits as sightings.
 - ``DeploymentReporter``: feature detection, security platform resolution, single,
   batch and hit reports, listing of the deployments of the platform.
 - ``DeploymentReconciler`` and ``DeploymentVendorAdapter``: reconciliation runner
-  and the vendor operations a connector implements for it.
+  and the vendor operations a connector implements for it
+  (``DeploymentPushAdapter`` when the vendor API cannot list the indicators: re-push
+  of ``pending`` deployments and hits only).
 - ``DeploymentConfig``, ``HitsConfig``, ``SecurityPlatformConfig``: settings
   namespaces (``DEPLOYMENT_*``, ``HITS_*``, ``SECURITY_PLATFORM_*`` variables).
 """
@@ -32,6 +34,7 @@ from connectors_sdk.connectors.stream.deployment.models import (
 )
 from connectors_sdk.connectors.stream.deployment.reconciler import (
     LISTED_STATUSES,
+    DeploymentPushAdapter,
     DeploymentReconciler,
     DeploymentVendorAdapter,
 )
@@ -71,6 +74,7 @@ __all__ = [
     "DeploymentBatchResult",
     "DeploymentConfig",
     "DeploymentListingError",
+    "DeploymentPushAdapter",
     "DeploymentReconciler",
     "DeploymentReport",
     "DeploymentReportError",
