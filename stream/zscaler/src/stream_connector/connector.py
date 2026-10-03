@@ -448,12 +448,9 @@ class ZscalerConnector:
 
         # Only process indicators with pattern_type 'stix'
         if data.get("type") == "indicator" and data.get("pattern_type") == "stix":
+            # Each change of the blacklist is activated by `send_to_zscaler`.
             if msg.event in ("create", "delete"):
                 self._apply_and_report(data, msg.event)
-
-            # Always trigger activation after processing an event
-            self.activate_zscaler_changes()
-
         else:
             msg = "Ignoring non-STIX indicator."
             self.helper.connector_logger.info(msg)

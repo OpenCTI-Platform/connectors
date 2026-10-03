@@ -147,8 +147,9 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
   reported `removed` from a partial listing.
 - **Withdrawal safety**: a withdrawal deletes the list item (`DELETE /rules/lists/{id}/items`, never an empty snapshot)
   only when its comment carries an id of the indicator, and drops the indicator from the snapshot.
-- **Startup**: the reconciliation starts after the initial full sync; when the full sync fails, it is not started (a
-  re-push would upload a partial snapshot) and only the stream outcomes are reported until the next restart.
+- **Startup**: the initial full sync always uploads its snapshot, even an empty one, so the items a previous run left
+  in the list are cleared. The reconciliation starts after it; when the full sync fails, it is not started (a re-push
+  would upload a partial snapshot) and only the stream outcomes are reported until the next restart.
 - **Hits**: not reported. Hits of a list are the firewall events of the rules referencing it, which the connector does
   not manage.
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;

@@ -600,6 +600,30 @@ def test_adapter_capped_read_is_complete_until_the_newest_alert(monkeypatch):
     assert connector.client.get_ioc_alerts.call_args.args == (since, 2)
 
 
+def test_adapter_counts_alerts_created_in_the_window_but_detected_before():
+    connector = build_connector()
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    connector.client.get_ioc_alerts.return_value = [
+        {
+            "local_insert_ts": int(
+                datetime(2026, 10, 3, 11, 2, tzinfo=UTC).timestamp() * 1000
+            ),
+            "detection_timestamp": int(
+                datetime(2026, 10, 3, 10, 40, tzinfo=UTC).timestamp() * 1000
+            ),
+            "action_remote_ip": "198.51.100.7",
+        }
+    ]
+
+    hits = CortexXdrDeploymentAdapter(connector).collect_hits(
+        [make_deployment()], since
+    )
+
+    assert [(hit.indicator_id, hit.timestamp.minute) for hit in hits] == [
+        (INDICATOR_ID, 2)
+    ]
+
+
 def test_adapter_capped_read_without_creation_time_uses_the_detection(monkeypatch):
     monkeypatch.setattr("connector.deployment.MAX_HIT_ALERTS", 2)
     connector = build_connector()

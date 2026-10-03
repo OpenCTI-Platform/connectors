@@ -226,7 +226,8 @@ graph LR
 3. **Classification Lookup**: Check current Zscaler classification
 4. **Membership Check**: Skip the addition of a domain already in the blacklist, and the removal of a domain absent from it
 5. **Add/Remove**: Add or remove domain from URL category
-6. **Activation**: Automatically activate Zscaler configuration changes
+6. **Activation**: Activate the Zscaler configuration after each addition or removal (no activation when the blacklist
+   did not change); a failed activation after an addition reports the deployment `failed`
 
 ### Dissemination assurance (deployment write-back)
 

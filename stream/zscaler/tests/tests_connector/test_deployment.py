@@ -187,7 +187,7 @@ def test_created_domain_is_added_and_reported_deployed(connector):
         )
     ]
     connector.assurance.report_pushed.assert_called_once_with(indicator)
-    assert connector.activate_zscaler_changes.call_count == 2
+    connector.activate_zscaler_changes.assert_called_once()
 
 
 def test_already_listed_domain_is_reported_deployed(connector):
@@ -198,6 +198,7 @@ def test_already_listed_domain_is_reported_deployed(connector):
 
     assert zscaler.puts == []
     connector.assurance.report_pushed.assert_called_once_with(indicator)
+    connector.activate_zscaler_changes.assert_not_called()
 
 
 def test_refused_domain_is_reported_failed(connector):

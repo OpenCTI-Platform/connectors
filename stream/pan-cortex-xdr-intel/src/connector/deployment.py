@@ -232,10 +232,12 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the IOC alerts whose events match deployed indicators.
 
-        Each alert counts one hit per matching indicator, at its detection time (its
-        creation time when the detection is reported later). Alerts are read by creation time (`local_insert_ts`), oldest first: when
-        `MAX_HIT_ALERTS` alerts were read, the collection is complete until the
-        creation time of the newest alert read and the next run resumes there.
+        Each alert counts one hit per matching indicator, at its creation time
+        (`local_insert_ts`, the detection time when Cortex XDR gives none), so the
+        query window, the continuation and the hit dates share one axis. Alerts are
+        read by creation time, oldest first: when `MAX_HIT_ALERTS` alerts were read,
+        the collection is complete until the creation time of the newest alert read
+        and the next run resumes there.
 
         :raises CortexXdrDeploymentError: When the alerts cannot be listed.
         """
@@ -250,14 +252,12 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         hits: list[VendorHit] = []
         newest_created = since
         for alert in alerts:
-            created = _timestamp(alert.get("local_insert_ts"))
-            detected = _timestamp(alert.get("detection_timestamp"))
-            # A hit never lands after the creation time the continuation is based on.
-            timestamp = min(detected, created) if detected and created else None
-            timestamp = timestamp or detected or created
+            timestamp = _timestamp(alert.get("local_insert_ts")) or _timestamp(
+                alert.get("detection_timestamp")
+            )
             if timestamp is None:
                 continue
-            newest_created = max(newest_created, created or timestamp)
+            newest_created = max(newest_created, timestamp)
             if timestamp < since:
                 continue
             matched = {

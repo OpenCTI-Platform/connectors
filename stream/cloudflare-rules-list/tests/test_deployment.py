@@ -258,6 +258,20 @@ def test_full_sync_reports_the_indicators_only(connector, assurance):
     assert set(connector._indicator_cache) == {STIX_ID, OTHER_ID, "ipv4-addr--1"}
 
 
+def test_empty_full_sync_clears_the_items_of_a_previous_run(connector, assurance):
+    connector.helper.api.indicator.list.return_value = []
+    connector.helper.api.stix_cyber_observable.list.return_value = []
+
+    connector._full_sync()
+
+    connector.client.replace_list_items.assert_called_once_with("list-123", [])
+    assert enqueued(assurance) == {}
+    assert connector._list_has_items is False
+
+    connector._sync_to_cloudflare()
+    connector.client.replace_list_items.assert_called_once()
+
+
 def test_stream_events_after_a_full_sync_share_its_keys(connector, assurance):
     connector.helper.api.indicator.list.return_value = [
         {

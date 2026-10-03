@@ -176,10 +176,16 @@ class Connector:
         if time.monotonic() - self._last_sync_time >= self.sync_interval:
             self._sync_to_cloudflare()
 
-    def _sync_to_cloudflare(self) -> None:
-        """Push the full IPv4 snapshot to the Cloudflare Rules List."""
+    def _sync_to_cloudflare(self, force: bool = False) -> None:
+        """Push the full IPv4 snapshot to the Cloudflare Rules List.
+
+        Args:
+            force: Upload the snapshot even when it is empty. The startup full sync
+                is authoritative: an empty snapshot clears the items a previous run
+                of the connector left in the list.
+        """
         with self._lock:
-            if not self._indicator_cache and not self._list_has_items:
+            if not force and not self._indicator_cache and not self._list_has_items:
                 # Nothing to push -- do not open the throttle window, otherwise the
                 # first real indicator to arrive could be delayed by up to
                 # sync_interval before it is synced. An empty snapshot is only
@@ -356,7 +362,7 @@ class Connector:
             "Loaded IPv4 indicators for sync",
             meta={"count": len(cache)},
         )
-        self._sync_to_cloudflare()
+        self._sync_to_cloudflare(force=True)
 
     # ------------------------------------------------------------------ #
     # Lifecycle

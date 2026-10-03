@@ -128,9 +128,10 @@ does not exist), and detection hits are counted with a sighting of the indicator
   error, or a page repeated by the API, skips the run: indicators are never reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the IOC alerts created since the previous run are read with their events
   (`alerts/get_alerts_multi_events`, oldest creation time first, at most 10,000 per run: a capped read is complete until
-  the creation time of the newest alert read and the next run resumes there, so no alert is lost). An alert counts one hit for every deployed indicator whose
-  value is one of its IP addresses, host names, DNS queries, email addresses or file hashes (domain indicators match the
-  host of a URL value); hits already reported are never counted twice.
+  the creation time of the newest alert read and the next run resumes there, so no alert is lost). An alert counts one
+  hit, dated at its creation time, for every deployed indicator whose value is one of its IP addresses, host names, DNS
+  queries, email addresses or file hashes (domain indicators match the host of a URL value); an alert detected before
+  the previous run but created after it is counted; hits already reported are never counted twice.
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
   the requests only target indicators this connector reports `deployed` or `active`. The two analyst requests carried by
   a deployment are handled by the reconciliation: a retry (`pending`) upserts the indicator again, a withdrawal deletes
