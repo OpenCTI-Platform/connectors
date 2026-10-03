@@ -2,6 +2,7 @@ import json
 import sys
 import traceback
 
+from connectors_sdk import DeploymentAssurance
 from filigran_sseclient.sseclient import Event
 from microsoft_sentinel_intel.client import ConnectorClient
 from microsoft_sentinel_intel.errors import (
@@ -10,7 +11,11 @@ from microsoft_sentinel_intel.errors import (
     ConnectorWarning,
 )
 from microsoft_sentinel_intel.settings import ConnectorSettings
-from microsoft_sentinel_intel.utils import is_stix_identity, is_stix_indicator
+from microsoft_sentinel_intel.utils import (
+    describe_error,
+    is_stix_identity,
+    is_stix_indicator,
+)
 from pycti import OpenCTIConnectorHelper
 
 
@@ -21,10 +26,13 @@ class Connector:
         helper: OpenCTIConnectorHelper,
         config: ConnectorSettings,
         client: ConnectorClient,
+        assurance: DeploymentAssurance | None = None,
     ) -> None:
         self.helper = helper
         self.config = config
         self.client = client
+        # Deployment write-back (dissemination assurance), wired by `main.py`.
+        self.assurance = assurance
 
     def _prepare_stix_object(self, stix_object: dict) -> dict:
         stix_object = dict(stix_object)
@@ -55,6 +63,52 @@ class Connector:
             return True
         return False
 
+    def push_indicator(self, stix_object: dict) -> None:
+        """Upload one STIX object to Microsoft Sentinel.
+
+        Shared by the stream create/update path and the reconciliation re-push.
+
+        :param stix_object: STIX object data dict (stream event shape).
+        :raises ConnectorClientError: If the upload API rejects the object.
+        """
+        self.client.upload_stix_objects(
+            stix_objects=[self._prepare_stix_object(stix_object)],
+            source_system=self.config.microsoft_sentinel_intel.source_system,
+        )
+
+    def _report_uploaded(self, stix_objects: list[dict]) -> None:
+        """Report the indicators accepted by the upload API.
+
+        A revoked indicator uploaded to Sentinel is no longer valid there (revocation
+        propagated), so it is reported `removed`; others are reported `deployed`.
+        Sentinel returns no per-object id: the indicator keeps its STIX id.
+        """
+        if self.assurance is None:
+            return
+        for stix_object in stix_objects:
+            if not is_stix_indicator(stix_object):
+                continue
+            if stix_object.get("revoked") is True:
+                self.assurance.report_removed(stix_object)
+            else:
+                self.assurance.report_pushed(stix_object)
+
+    def _report_upload_failed(
+        self, stix_objects: list[dict], error: BaseException
+    ) -> None:
+        """Report the indicators rejected by the upload API."""
+        if self.assurance is None:
+            return
+        message = describe_error(error)
+        for stix_object in stix_objects:
+            if is_stix_indicator(stix_object):
+                self.assurance.report_push_failed(stix_object, message)
+
+    def _report_deleted(self, stix_object: dict) -> None:
+        """Report an indicator removed from Sentinel (or already absent)."""
+        if self.assurance is not None:
+            self.assurance.report_removed(stix_object)
+
     def _process_event(self, event_type: str, stix_object: dict) -> bool:
         """Process a single STIX event by dispatching to the appropriate API call.
 
@@ -75,11 +129,12 @@ class Connector:
 
         match event_type:
             case "create" | "update":
-                prepared = self._prepare_stix_object(stix_object)
-                self.client.upload_stix_objects(
-                    stix_objects=[prepared],
-                    source_system=self.config.microsoft_sentinel_intel.source_system,
-                )
+                try:
+                    self.push_indicator(stix_object)
+                except Exception as err:
+                    self._report_upload_failed([stix_object], err)
+                    raise
+                self._report_uploaded([stix_object])
             case "delete":
                 if not is_stix_indicator(stix_object):
                     self.helper.connector_logger.info(
@@ -94,6 +149,7 @@ class Connector:
                     stix_object["id"],
                     source_system=self.config.microsoft_sentinel_intel.source_system,
                 )
+                self._report_deleted(stix_object)
             case _:
                 raise ConnectorWarning(
                     message=f"Unsupported event type: {event_type}, Skipping..."
@@ -204,10 +260,15 @@ class Connector:
                 self.helper.connector_logger.info(
                     message=f"[BATCH] Uploading {len(prepared_objects)} objects",
                 )
-                self.client.upload_stix_objects(
-                    stix_objects=prepared_objects,
-                    source_system=self.config.microsoft_sentinel_intel.source_system,
-                )
+                try:
+                    self.client.upload_stix_objects(
+                        stix_objects=prepared_objects,
+                        source_system=self.config.microsoft_sentinel_intel.source_system,
+                    )
+                except Exception as err:
+                    self._report_upload_failed(objects_to_upload, err)
+                    raise
+                self._report_uploaded(objects_to_upload)
 
             for data in objects_to_delete:
                 try:
@@ -219,6 +280,7 @@ class Connector:
                         data["id"],
                         source_system=self.config.microsoft_sentinel_intel.source_system,
                     )
+                    self._report_deleted(data)
                 except ConnectorClientError as err:
                     self.helper.connector_logger.error(
                         message=f"[BATCH] Failed to delete indicator {data['id']}",
@@ -245,6 +307,8 @@ class Connector:
         The connector have the capability to listen a live stream from the platform.
         The helper provide an easy way to listen to the events.
         """
+        if self.assurance is not None:
+            self.assurance.start()
         if self.config.microsoft_sentinel_intel.batch_mode:
             self.helper.connector_logger.info(
                 message=f"[BATCH] Batch mode enabled (batch_size={self.config.microsoft_sentinel_intel.batch_size}, batch_timeout={self.config.microsoft_sentinel_intel.batch_timeout}s, max_per_minute=100)",
