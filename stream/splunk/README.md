@@ -22,6 +22,7 @@ The Splunk connector streams OpenCTI threat intelligence to Splunk KV Store for 
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
+    - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -35,6 +36,7 @@ Key features:
 - Support for Bearer and Basic authentication
 - Entity type filtering
 - Optional Prometheus metrics for monitoring
+- Dissemination assurance: deployment status, periodic KV Store reconciliation and saved search hits reported back to OpenCTI
 
 ## Installation
 
@@ -80,6 +82,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Splunk App         | splunk.app           | `SPLUNK_APP`                |         | Yes       | Splunk app name for the KV Store.                          |
 | Splunk KV Store Name| splunk.kv_store_name| `SPLUNK_KV_STORE_NAME`      |         | Yes       | Name of the KV Store.                                      |
 | Splunk Ignore Types| splunk.ignore_types  | `SPLUNK_IGNORE_TYPES`       |         | Yes       | Comma-separated list of entity types to ignore.            |
+| Splunk Hits Saved Search | splunk.hits_saved_search | `SPLUNK_HITS_SAVED_SEARCH` |  | No | Saved search returning the matches of the KV Store indicators (see [Dissemination assurance](#dissemination-assurance-deployment-write-back)). |
 | Metrics Enable     | metrics.enable       | `METRICS_ENABLE`            | false   | No        | Whether to enable Prometheus metrics.                      |
 | Metrics Address    | metrics.addr         | `METRICS_ADDR`              | 0.0.0.0 | No        | Bind IP address for metrics endpoint.                      |
 | Metrics Port       | metrics.port         | `METRICS_PORT`              | 9113    | No        | Port for metrics endpoint.                                 |
@@ -200,6 +203,53 @@ graph LR
 | ipv4-addr   | `_key,type,value,created_at,updated_at,score,labels,created_by`               |
 | file        | `_key,type,hashes,created_at,updated_at,score,labels,created_by`              |
 | indicator   | `_key,type,pattern,created_at,updated_at,score,labels,splunk_queries.queries,created_by` |
+
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each indicator is actually present in the Splunk KV Store. The status is
+stored on the `deployed-on` relationship between the indicator and the `Splunk` Security Platform entity (created if it
+does not exist), and hits are counted with a sighting of the indicator on that entity.
+
+| When                                      | Reported to OpenCTI                                                                                      |
+|-------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| KV Store write accepted (create, update)  | `deployed`, with the KV Store `_key` (the OpenCTI id of the indicator) as external id                    |
+| KV Store write rejected                   | `failed`, with the Splunk error and response body                                                        |
+| Delete event processed                    | `removed` (also when the item was already absent)                                                        |
+| Reconciliation, item present              | `active`                                                                                                 |
+| Reconciliation, item absent               | `removed`                                                                                                |
+| Reconciliation, `pending` (analyst retry) | The indicator is written again with the stream path and reported `deployed` or `failed`                  |
+| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from the KV Store and reported `removed` |
+| Reconciliation, unknown item              | KV Store indicators with no deployment yet are reported `active` (backfill)                              |
+| Hits                                      | Results of the saved search `SPLUNK_HITS_SAVED_SEARCH`                                                   |
+
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the indicator items of the collection are read
+  back page by page (`_key` keyset pagination). A read-back error skips the run: items are never reported `removed`
+  from a partial listing.
+- **Hits**: Splunk does not match the KV Store content against your events by itself. Hits are read from a saved search
+  you define, visible in the `SPLUNK_OWNER` / `SPLUNK_APP` namespace, run as a oneshot job over the time range of each
+  hit collection (since the previous run). Each result carries `opencti_id` (the KV Store `_key`) or `value` (the
+  matched observable value), `_time` and optionally `count`; at most 10,000 results are read per run. Example, with a
+  lookup definition `opencti_lookup` on the KV Store collection:
+
+  ```spl
+  search index=network
+  | lookup opencti_lookup values AS dest_ip OUTPUTNEW _key AS opencti_id
+  | where isnotnull(opencti_id)
+  | stats count min(_time) AS _time BY opencti_id
+  ```
+
+  Without `SPLUNK_HITS_SAVED_SEARCH`, deployment statuses are reported and no hit is collected.
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+| Environment variable                 | Default  | Description                                                           |
+|--------------------------------------|----------|-----------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `true`   | Report the deployment status of the pushed indicators.                |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60`     | Minutes between two reconciliations, `0` disables the reconciliation. |
+| `HITS_REPORTING_ENABLED`             | `true`   | Report the hits returned by `SPLUNK_HITS_SAVED_SEARCH`.               |
+| `SECURITY_PLATFORM_NAME`             | `Splunk` | Name of the Security Platform entity in OpenCTI.                      |
+| `SECURITY_PLATFORM_TYPE`             | `SIEM`   | Type of the Security Platform entity (`security_platform_type_ov`).    |
+| `SECURITY_PLATFORM_ID`               |          | Id of an existing Security Platform entity, used instead of the name. |
 
 ## Debugging
 

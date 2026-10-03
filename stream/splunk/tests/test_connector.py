@@ -8,6 +8,7 @@ from connectors_sdk import DeploymentAssurance
 from splunk import SplunkConnector
 from splunk_test_support import (
     INDICATOR_ID,
+    INDICATOR_STIX_ID,
     OPENCTI_EXTENSION_ID,
     make_indicator,
     make_message,
@@ -112,13 +113,28 @@ def test_filtered_items_are_not_reported(connector, kvstore, assurance):
     assurance.report_pushed.assert_not_called()
 
 
-def test_items_without_opencti_id_are_not_reported(connector, kvstore, assurance):
+def test_items_without_extension_are_keyed_and_reported_by_stix_id(
+    connector, kvstore, assurance
+):
     indicator = make_indicator()
     del indicator["extensions"]
 
     connector.process_message(make_message("create", indicator))
 
     kvstore.create.assert_called_once()
+    assert kvstore.create.call_args.args[0] == INDICATOR_STIX_ID
+    assurance.report_pushed.assert_called_once_with(
+        indicator, external_id=INDICATOR_STIX_ID
+    )
+
+
+def test_items_without_any_id_are_not_reported(connector, kvstore, assurance):
+    indicator = make_indicator()
+    del indicator["extensions"]
+    del indicator["id"]
+
+    connector.process_message(make_message("create", indicator))
+
     assurance.report_pushed.assert_not_called()
 
 

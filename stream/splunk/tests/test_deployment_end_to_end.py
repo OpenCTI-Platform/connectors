@@ -131,7 +131,11 @@ def test_reconciliation_and_hits_are_reported(
         SEARCH_URL,
         json={
             "results": [
-                {"opencti_id": INDICATOR_ID, "_time": hit_time.isoformat(), "count": "2"}
+                {
+                    "opencti_id": INDICATOR_ID,
+                    "_time": hit_time.isoformat(),
+                    "count": "2",
+                }
             ]
         },
     )

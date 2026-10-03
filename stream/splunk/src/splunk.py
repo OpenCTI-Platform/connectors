@@ -17,7 +17,7 @@ from connectors_sdk import DeploymentAssurance
 from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper
 from settings import ConnectorSettings
-from splunk_deployment import SplunkKVStoreDeploymentAdapter, describe_error
+from splunk_deployment import build_deployment_assurance, describe_error
 from stix_shifter.stix_translation import stix_translation
 
 KV_STORE_PAGE_SIZE = 1000
@@ -575,20 +575,8 @@ if __name__ == "__main__":
         )
 
         # deployment write-back (deployed-on relationships, reconciliation, hits)
-        hits_saved_search = config.splunk.hits_saved_search
-        if config.hits.reporting_enabled and not hits_saved_search:
-            helper.log_info(
-                "hits are not collected (SPLUNK_HITS_SAVED_SEARCH is not configured)"
-            )
-        connector.assurance = DeploymentAssurance.from_settings(
-            helper,
-            config,
-            adapter=SplunkKVStoreDeploymentAdapter(
-                kvstore,
-                push_indicator=connector.push_indicator,
-                hits_saved_search=hits_saved_search,
-                logger=helper.connector_logger,
-            ),
+        connector.assurance = build_deployment_assurance(
+            helper, config, kvstore, connector.push_indicator
         )
         connector.start()
     except Exception:

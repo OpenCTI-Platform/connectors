@@ -137,9 +137,7 @@ def test_collect_hits_maps_the_saved_search_results(kvstore):
             count=3,
         ),
         VendorHit(timestamp=recent, value="198.51.100.7"),
-        VendorHit(
-            timestamp=recent, indicator_id="bad-count", external_id="bad-count"
-        ),
+        VendorHit(timestamp=recent, indicator_id="bad-count", external_id="bad-count"),
     ]
 
 

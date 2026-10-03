@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from connectors_sdk import (
+    DeploymentAssurance,
     DeploymentVendorAdapter,
     IndicatorDeployment,
     VendorHit,
@@ -13,6 +14,8 @@ from connectors_sdk import (
 from connectors_sdk.connectors.stream.deployment import parse_datetime
 
 if TYPE_CHECKING:
+    from pycti import OpenCTIConnectorHelper
+    from settings import ConnectorSettings
     from splunk import KVStore
 
 HITS_MAX_RESULTS = 10000
@@ -223,3 +226,42 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
                 )
             )
         return hits
+
+
+def build_deployment_assurance(
+    helper: "OpenCTIConnectorHelper",
+    settings: "ConnectorSettings",
+    kvstore: "KVStore",
+    push_indicator: Callable[[dict[str, Any]], str | None],
+) -> DeploymentAssurance:
+    """Build the deployment write-back of the connector (reconciliation and hits).
+
+    Args:
+        helper: The connector helper.
+        settings: The connector settings (`deployment`, `hits`, `security_platform`
+            and `splunk.hits_saved_search`).
+        kvstore: The KV store client of the connector.
+        push_indicator: The stream create path of the connector (re-push).
+
+    Returns:
+        The deployment write-back, a no-op when `DEPLOYMENT_REPORTING_ENABLED` is false.
+    """
+    hits_saved_search = settings.splunk.hits_saved_search
+    if (
+        settings.deployment.reporting_enabled
+        and settings.hits.reporting_enabled
+        and not hits_saved_search
+    ):
+        helper.log_info(
+            "hits are not collected (SPLUNK_HITS_SAVED_SEARCH is not configured)"
+        )
+    return DeploymentAssurance.from_settings(
+        helper,
+        settings,
+        adapter=SplunkKVStoreDeploymentAdapter(
+            kvstore,
+            push_indicator=push_indicator,
+            hits_saved_search=hits_saved_search,
+            logger=helper.connector_logger,
+        ),
+    )
