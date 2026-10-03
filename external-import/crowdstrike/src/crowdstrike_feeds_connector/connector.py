@@ -10,6 +10,7 @@ import stix2
 import yaml
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
 from crowdstrike_feeds_services.utils import (
+    CrowdStrikeAPIError,
     create_organization,
     get_tlp_string_marking_definition,
     timestamp_to_datetime,
@@ -346,7 +347,17 @@ class CrowdStrike:
             for importer in self.importers:
                 importer_name = importer.name or importer.__class__.__name__
                 work_id = self._initiate_work(timestamp, importer_name)
-                importer_state = importer.start(work_id, new_state)
+
+                try:
+                    importer_state = importer.start(work_id, new_state)
+                except CrowdStrikeAPIError as e:
+                    self.helper.api.work.to_processed(
+                        work_id,
+                        str(e),
+                        in_error=True,
+                    )
+                    return
+
                 new_state.update(importer_state)
 
                 self._info("Storing updated new state: {0}", new_state)
