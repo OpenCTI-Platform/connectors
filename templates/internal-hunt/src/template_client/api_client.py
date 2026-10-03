@@ -8,11 +8,11 @@
 
 What this example demonstrates:
     - All networking concerns (base URL, authentication, errors, timeouts)
-      live in one place, built on `BaseClientApi` (from `connectors-sdk`),
-      which already provides retries with backoff on 429/5xx and typed
-      `ApiClientError` exceptions.
-    - Every call is bounded by the run timeout so that a slow platform
-      never blocks the connector beyond the hunt run limits.
+      live in one place, built on `HuntApiClient` (from `connectors-sdk`),
+      which provides retries with backoff on 429/5xx and turns HTTP and
+      network failures into hunt errors carrying the platform message.
+    - Every call is bounded by the run deadline (`RunDeadline`) so that a
+      slow platform never blocks the connector beyond the hunt run limits.
     - The response is reduced to what the connector needs: the total
       number of hits and at most `max_results` events.
 
@@ -26,25 +26,22 @@ TODO:
 from datetime import datetime
 from typing import Any
 
-from connectors_sdk import ApiClientError, BaseClientApi
-from connectors_sdk.connectors.internal_hunt import HuntExecutionError
+from connectors_sdk.connectors.internal_hunt import HuntApiClient, RunDeadline
 
 
-class TemplateClient(BaseClientApi):
+class TemplateClient(HuntApiClient):
     """EXAMPLE client of a platform search API -- rewrite it for your platform."""
 
-    def __init__(self, base_url: str, api_key: str, verify_ssl: bool, logger: Any):
+    def __init__(self, base_url: str, api_key: str, verify_ssl: bool):
         """Initialize the client.
 
         Args:
             base_url: Base URL of the platform search API.
             api_key: API key used to authenticate.
             verify_ssl: Whether to verify the TLS certificate of the API.
-            logger: The connector logger.
         """
         super().__init__(base_url=base_url, ssl_verify=verify_ssl)
         self._api_key = api_key
-        self._logger = logger
 
     @property
     def session_headers(self) -> dict[str, str]:
@@ -61,7 +58,7 @@ class TemplateClient(BaseClientApi):
         start: datetime,
         end: datetime,
         max_results: int,
-        timeout: int,
+        deadline: RunDeadline,
     ) -> dict[str, Any]:
         """Run a search over a time window.
 
@@ -71,13 +68,14 @@ class TemplateClient(BaseClientApi):
             start: Start of the time window.
             end: End of the time window.
             max_results: Maximum number of events to return.
-            timeout: Maximum duration of the call in seconds.
+            deadline: Run deadline bounding the call.
 
         Returns:
             The `total` number of hits and at most `max_results` `events`.
 
         Raises:
             HuntExecutionError: If the platform rejects the search.
+            HuntTimeoutError: If the search does not answer before the deadline.
         """
         body = {
             "query": query,
@@ -86,13 +84,8 @@ class TemplateClient(BaseClientApi):
             "to": end.isoformat(),
             "size": max_results,
         }
-        try:
-            response = self._post("/search", json=body, timeout=timeout)
-        except ApiClientError as err:
-            self._logger.error(
-                "[API] Search failed",
-                {"status_code": err.status_code, "error": str(err)},
-            )
-            raise HuntExecutionError(f"The platform search failed: {err}") from err
-        events = list(response.get("events") or [])
+        response = self.hunt_request(
+            "POST", "/search", deadline, "The platform search", json=body
+        )
+        events = [event for event in response.get("events") or [] if event]
         return {"total": int(response.get("total", len(events))), "events": events}

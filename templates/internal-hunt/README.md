@@ -109,8 +109,10 @@ and internal domain names are never turned into observables.
 
 1. **Settings** (`src/connector/settings.py`): set the `scope` default to the platform slug, the Security Platform
    name, and replace the API settings of `TemplateConfig`.
-2. **Client** (`src/template_client/api_client.py`): implement authentication and the search API of the platform
-   (create the search job, poll it within the run timeout, fetch at most `max_results` events, cancel it on timeout).
+2. **Client** (`src/template_client/api_client.py`): implement authentication and the search API of the platform on
+   `HuntApiClient` (create the search job, poll it within the run deadline, fetch at most `max_results` events, cancel
+   it on timeout). `hunt_request()` bounds each call with the `RunDeadline` of the run and raises hunt errors carrying
+   the platform message.
 3. **Connector** (`src/connector/connector.py`): set `languages`, the pySigma backend and pipelines, and map the
    platform events in `execute()`. Override `on_timeout()` when the platform runs asynchronous jobs.
 4. **Requirements**: add the pySigma backend package of the platform to `src/requirements.txt`.

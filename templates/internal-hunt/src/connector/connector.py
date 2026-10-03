@@ -18,10 +18,9 @@ TODO:
         (e.g. `SplunkBackend` from `pysigma-backend-splunk`) and register its
         pipelines in `SIGMA_PIPELINES`.
     - [ ] Map the events returned by your platform in `execute()`: the event time
-        and the event fields (flattened with `flatten_fields`).
+        (parsed with `parse_timestamp`) and the event fields (flattened with
+        `flatten_fields`).
 """
-
-from datetime import datetime
 
 from connector.settings import ConnectorSettings
 from connectors_sdk import InternalHuntConnector
@@ -31,8 +30,10 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntResult,
     HuntTimeWindow,
     NativeQuery,
+    RunDeadline,
     build_pipeline,
     flatten_fields,
+    parse_timestamp,
 )
 from sigma.backends.test import TextQueryTestBackend
 from sigma.pipelines.windows import windows_logsource_pipeline
@@ -61,12 +62,11 @@ class TemplateConnector(InternalHuntConnector):
         self.client: TemplateClient | None = None
 
     def post_init(self) -> None:
-        """Create the platform API client once the logger exists."""
+        """Create the platform API client once the helper exists."""
         self.client = TemplateClient(
             base_url=str(self.template_config.api_base_url),
             api_key=self.template_config.api_key.get_secret_value(),
             verify_ssl=self.template_config.verify_ssl,
-            logger=self.logger,
         )
 
     def sigma_backend(self, pipeline: str | None) -> TextQueryTestBackend:
@@ -108,11 +108,11 @@ class TemplateConnector(InternalHuntConnector):
             start=time_window.start,
             end=time_window.end,
             max_results=limits.max_results,
-            timeout=limits.timeout_seconds,
+            deadline=RunDeadline(limits.timeout_seconds),
         )
         events = [
             HuntEvent(
-                timestamp=_event_time(event.get("@timestamp")),
+                timestamp=parse_timestamp(event.get("@timestamp")),
                 fields=flatten_fields(event),
             )
             for event in response["events"][: limits.max_results]
@@ -122,11 +122,3 @@ class TemplateConnector(InternalHuntConnector):
             total_hits=response["total"],
             truncated=response["total"] > len(events),
         )
-
-
-def _event_time(value: object) -> datetime | None:
-    """Parse the ISO 8601 time of an event, if any."""
-    if not isinstance(value, str) or not value:
-        return None
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return parsed if parsed.tzinfo else None
