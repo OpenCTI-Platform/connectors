@@ -1,6 +1,9 @@
 """Log Analytics query API client of the Microsoft Sentinel hunt connector."""
 
 import json
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import quote
@@ -8,15 +11,61 @@ from urllib.parse import quote
 import requests
 from azure.core.credentials import TokenCredential
 from azure.core.exceptions import AzureError
+from azure.core.pipeline.transport import RequestsTransport
 from connectors_sdk.connectors.internal_hunt import (
     HuntApiClient,
     HuntExecutionError,
+    HuntTimeoutError,
     RunDeadline,
     api_error_message,
 )
 
 SERVER_WAIT_MAX_SECONDS = 600
 """Longest server-side execution time the Log Analytics query API accepts."""
+
+TOKEN_TIMEOUT_SECONDS = 30.0
+"""Longest wait of a single Microsoft Entra token request."""
+
+AUTHENTICATION_OPERATION = "The Microsoft Entra authentication"
+
+
+class TokenRequestTransport(RequestsTransport):
+    """Azure transport of the credential whose token requests are bounded by the run deadline.
+
+    Every request, retries included, waits at most the time left before the run
+    deadline (and at most ``TOKEN_TIMEOUT_SECONDS``), and no request is sent once
+    the deadline is reached, so a stalled authentication never outlives its run.
+    """
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize the transport (``RequestsTransport`` options)."""
+        super().__init__(**kwargs)
+        self._deadline: RunDeadline | None = None
+
+    @property
+    def deadline(self) -> RunDeadline | None:
+        """Deadline bounding the token requests in progress, if any."""
+        return self._deadline
+
+    @contextmanager
+    def bounded_by(self, deadline: RunDeadline | None) -> Iterator[None]:
+        """Bound the token requests sent in the block by ``deadline``."""
+        self._deadline = deadline
+        try:
+            yield
+        finally:
+            self._deadline = None
+
+    def send(self, request: Any, **kwargs: Any) -> Any:  # type: ignore[override]
+        """Send a token request with a timeout bounded by the run deadline."""
+        deadline = self._deadline
+        timeout = TOKEN_TIMEOUT_SECONDS
+        if deadline is not None:
+            deadline.check(AUTHENTICATION_OPERATION)
+            timeout = deadline.request_timeout(TOKEN_TIMEOUT_SECONDS)
+        kwargs["connection_timeout"] = timeout
+        kwargs["read_timeout"] = timeout
+        return super().send(request, **kwargs)
 
 
 def iso_time(value: datetime) -> str:
@@ -48,7 +97,8 @@ class LogAnalyticsClient(HuntApiClient):
     """Client of the Log Analytics query API (the data plane of Microsoft Sentinel).
 
     Every request carries a Microsoft Entra access token for the query API,
-    refreshed by the Azure credential when it expires.
+    refreshed by the Azure credential when it expires. Token requests are
+    serialized and bounded by the deadline of the run that needs them.
     """
 
     def __init__(
@@ -58,6 +108,7 @@ class LogAnalyticsClient(HuntApiClient):
         credential: TokenCredential,
         additional_workspaces: list[str],
         raw_columns: frozenset[str],
+        token_transport: TokenRequestTransport | None = None,
     ) -> None:
         """Initialize the client.
 
@@ -67,6 +118,8 @@ class LogAnalyticsClient(HuntApiClient):
             credential: Azure credential issuing the access tokens.
             additional_workspaces: Other workspaces queried with the main one.
             raw_columns: Columns holding raw payloads, never decoded.
+            token_transport: Transport the credential sends its token requests
+                with, bounded by the run deadline during each token acquisition.
         """
         super().__init__(base_url=api_url)
         self._scope = f"{api_url.rstrip('/')}/.default"
@@ -74,24 +127,43 @@ class LogAnalyticsClient(HuntApiClient):
         self._credential = credential
         self._additional_workspaces = additional_workspaces
         self._raw_columns = {name.lower() for name in raw_columns}
+        self._token_transport = token_transport
+        self._token_lock = threading.Lock()
+        self._run = threading.local()
 
-    def _access_token(self) -> str:
+    def _access_token(self, deadline: RunDeadline | None) -> str:
         """Return a valid access token for the Log Analytics query API.
+
+        Args:
+            deadline: Deadline of the run needing the token, if any.
 
         Raises:
             HuntExecutionError: If Microsoft Entra refuses the credentials.
+            HuntTimeoutError: If no token is obtained before the deadline.
         """
-        try:
-            return self._credential.get_token(self._scope).token
-        except AzureError as err:
-            raise HuntExecutionError(
-                f"Microsoft Entra authentication failed: {api_error_message(str(err))}"
-            ) from err
+        with self._token_lock:
+            if deadline is not None:
+                deadline.check(AUTHENTICATION_OPERATION)
+            try:
+                if self._token_transport is None:
+                    return self._credential.get_token(self._scope).token
+                with self._token_transport.bounded_by(deadline):
+                    return self._credential.get_token(self._scope).token
+            except AzureError as err:
+                # Credential chains report the deadline expiry of a member as an authentication error
+                if deadline is not None and deadline.expired():
+                    raise HuntTimeoutError(
+                        f"{AUTHENTICATION_OPERATION} did not complete within the run timeout."
+                    ) from err
+                raise HuntExecutionError(
+                    f"Microsoft Entra authentication failed: {api_error_message(str(err))}"
+                ) from err
 
     def _raw_request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
         """Send a request with a fresh access token."""
         headers = dict(kwargs.pop("headers", None) or {})
-        headers["Authorization"] = f"Bearer {self._access_token()}"
+        deadline = getattr(self._run, "deadline", None)
+        headers["Authorization"] = f"Bearer {self._access_token(deadline)}"
         return super()._raw_request(method, path, headers=headers, **kwargs)
 
     def query(
@@ -119,6 +191,7 @@ class LogAnalyticsClient(HuntApiClient):
         if self._additional_workspaces:
             body["workspaces"] = list(self._additional_workspaces)
         server_wait = max(1, min(SERVER_WAIT_MAX_SECONDS, int(deadline.remaining())))
+        self._run.deadline = deadline
         try:
             response = self.hunt_request(
                 "POST",
@@ -136,6 +209,8 @@ class LogAnalyticsClient(HuntApiClient):
             raise HuntExecutionError(
                 f"The Log Analytics query failed ({err.__cause__}): {details}"
             ) from err.__cause__
+        finally:
+            self._run.deadline = None
         if not isinstance(response, dict):
             raise HuntExecutionError("Log Analytics returned an unexpected answer.")
         tables = response.get("tables") or []
