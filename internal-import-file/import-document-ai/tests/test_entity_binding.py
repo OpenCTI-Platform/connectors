@@ -23,6 +23,7 @@ from import_doc_ai.entity_binding import (
     ExistingEntityBinder,
     ResolutionCache,
     is_schema_error,
+    is_stix_id,
     resolve_entity_type,
 )
 from import_doc_ai.util import (
@@ -88,6 +89,7 @@ def resolution(
 def build_helper(platform: FakePlatform, applicant_id: str = APPLICANT_ID) -> Mock:
     helper = Mock()
     helper.applicant_id = applicant_id
+    helper.draft_id = ""
     helper.api_impersonate.query.side_effect = platform.query
     return helper
 
@@ -812,9 +814,26 @@ def test_cached_resolutions_expire():
     assert len(platform.calls) == 2
 
 
+def test_bind_scopes_the_cache_to_the_draft_of_the_import():
+    # Given a user importing documents into two drafts and into the live
+    # knowledge, which may each hold other entities
+    platform = FakePlatform()
+    binder, helper = build_binder(platform)
+    bundle = bundle_of(malware("Clop"))
+
+    for draft_id in ("draft-a", "draft-b", "", "draft-a", None, "draft-b"):
+        helper.draft_id = draft_id
+        binder.bind(bundle)
+
+    # Then each draft and the live knowledge are looked up once
+    assert len(platform.calls) == 3
+
+
 def test_resolution_cache_evicts_the_least_recently_used_entry():
     cache = ResolutionCache(max_size=2, ttl_seconds=60, clock=FakeClock())
-    first = EntityResolution.from_payload(resolution("Malware", "A", "malware--a"))
+    first = EntityResolution.from_payload(
+        resolution("Malware", "A", pycti.Malware.generate_id("A"))
+    )
     cache.put("a", first)
     cache.put("b", None)
     assert cache.get("a") == (True, first)
@@ -945,6 +964,42 @@ def test_bind_turns_itself_off_on_a_platform_without_curation_resolve(
             Response({"data": {"curationResolve": "Cl0p"}}),
             id="resolution not an object",
         ),
+        pytest.param(
+            Response(
+                {
+                    "data": {
+                        "curationResolve": resolution(
+                            "Malware", "Cl0p", "malware--invalid"
+                        )
+                    }
+                }
+            ),
+            id="standard id without uuid",
+        ),
+        pytest.param(
+            Response(
+                {
+                    "data": {
+                        "curationResolve": resolution(
+                            "Malware", "Cl0p", pycti.Malware.generate_id("Cl0p").upper()
+                        )
+                    }
+                }
+            ),
+            id="standard id not canonical",
+        ),
+        pytest.param(
+            Response(
+                {
+                    "data": {
+                        "curationResolve": resolution(
+                            "Malware", "", pycti.Malware.generate_id("Cl0p")
+                        )
+                    }
+                }
+            ),
+            id="resolution without name",
+        ),
     ],
 )
 def test_bind_imports_a_name_whose_lookup_fails_as_extracted(error: object):
@@ -1042,6 +1097,28 @@ def test_is_schema_error_rejects_any_other_failure(error: Exception):
     assert is_schema_error(error) is False
 
 
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        (pycti.Malware.generate_id("Cl0p"), True),
+        (pycti.Location.generate_id("United States", "Country"), True),
+        ("x-opencti-channel--0f6b9b34-8d6c-4c55-9b43-6f0e1c3f8a11", True),
+        ("malware--invalid", False),
+        ("malware--", False),
+        ("--0f6b9b34-8d6c-4c55-9b43-6f0e1c3f8a11", False),
+        ("Malware--0f6b9b34-8d6c-4c55-9b43-6f0e1c3f8a11", False),
+        ("malware--0F6B9B34-8D6C-4C55-9B43-6F0E1C3F8A11", False),
+        ("malware--{0f6b9b34-8d6c-4c55-9b43-6f0e1c3f8a11}", False),
+        ("malware--0f6b9b348d6c4c559b436f0e1c3f8a11", False),
+        ("malware 0f6b9b34-8d6c-4c55-9b43-6f0e1c3f8a11", False),
+        (None, False),
+        (42, False),
+    ],
+)
+def test_is_stix_id(value: object, expected: bool):
+    assert is_stix_id(value) is expected
+
+
 def test_entity_resolution_reads_the_platform_payload():
     payload = resolution(
         "Intrusion-Set",
@@ -1062,7 +1139,11 @@ def test_entity_resolution_reads_the_platform_payload():
         matched_value="Cozy Bear",
     )
     minimal = EntityResolution.from_payload(
-        {"standard_id": "malware--x", "entity_type": "Malware", "name": "Cl0p"}
+        {
+            "standard_id": pycti.Malware.generate_id("Cl0p"),
+            "entity_type": "Malware",
+            "name": "Cl0p",
+        }
     )
     assert (minimal.match_type, minimal.score, minimal.matched_value) == (
         "",
