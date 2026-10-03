@@ -169,7 +169,14 @@ class ElasticApiHandler:
                         yield hit.get("_source") or {}
                     if len(hits) < READ_BACK_PAGE_SIZE:
                         return
-                    search_after = hits[-1].get("sort")
+                    last = hits[-1]
+                    search_after = last.get("sort") if isinstance(last, dict) else None
+                    if not search_after:
+                        # Without a cursor the next request would read the first page again forever.
+                        raise ElasticApiHandlerError(
+                            "Failed to read the indicators back: a full page carries no sort cursor",
+                            {"response": response.text[:500]},
+                        )
             finally:
                 try:
                     requests.delete(

@@ -143,6 +143,20 @@ class TestReadBack:
                 list(handler.iter_connector_documents())
             assert close.call_count == 1
 
+    def test_a_full_page_without_sort_cursor_raises_instead_of_looping(
+        self, handler, monkeypatch
+    ):
+        monkeypatch.setattr(api_module, "READ_BACK_PAGE_SIZE", 2)
+        page = [document(stix_indicator("indicator--a")), {"_source": {}}]
+        with rm_module.Mocker() as m:
+            m.post(PIT_URL, json={"id": "pit-1"})
+            search = m.post(SEARCH_URL, json={"hits": {"hits": page}})
+            close = m.delete(CLOSE_PIT_URL, json={})
+            with pytest.raises(ElasticApiHandlerError, match="no sort cursor"):
+                list(handler.iter_connector_documents())
+            assert search.call_count == 1
+            assert close.call_count == 1
+
     def test_a_refused_point_in_time_raises(self, handler):
         with rm_module.Mocker() as m:
             m.post(PIT_URL, status_code=403, text="forbidden")
