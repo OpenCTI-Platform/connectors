@@ -149,7 +149,7 @@ class TestReadBack:
 
 
 class TestAdapter:
-    def test_lists_the_live_indicators_with_their_opencti_id(self, connector):
+    def test_lists_the_indicators_with_their_opencti_id(self, connector):
         live = stix_indicator()
         connector.api = MagicMock()
         connector.api.iter_connector_documents.return_value = [
@@ -164,9 +164,25 @@ class TestAdapter:
             ],
         ]
         listed = list(ElasticDeploymentAdapter(connector).list_vendor_indicators())
-        assert [v.indicator_id for v in listed] == [INDICATOR_ID, "indicator--future"]
+        assert [v.indicator_id for v in listed] == [
+            INDICATOR_ID,
+            None,
+            "indicator--future",
+        ]
         assert listed[0].external_id == f"doc-{INDICATOR_ID}"
         assert listed[0].raw == {"stix": live}
+
+    def test_lists_expired_documents_by_document_id_only(self, connector):
+        expired = stix_indicator("indicator--expired")
+        connector.api = MagicMock()
+        connector.api.iter_connector_documents.return_value = [
+            document(expired, "2000-01-01T00:00:00Z")["_source"],
+        ]
+        [listed] = ElasticDeploymentAdapter(connector).list_vendor_indicators()
+        # Still in the index: listed for removal, but never backfilled as active
+        assert listed.indicator_id is None
+        assert listed.external_id == "doc-indicator--expired"
+        assert listed.raw == {"stix": expired}
 
     def test_listing_errors_are_readable(self, connector):
         connector.api = MagicMock()
