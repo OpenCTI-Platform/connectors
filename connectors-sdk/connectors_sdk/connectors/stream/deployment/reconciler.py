@@ -186,7 +186,9 @@ class DeploymentVendorAdapter(DeploymentPushAdapter):
 
         Adapters pushing one vendor item per observable override it, so that an
         indicator only partly on the vendor is pushed again instead of being
-        confirmed ``active``. By default, any vendor item confirms the deployment.
+        confirmed ``active``. By default, any vendor item confirms the deployment,
+        unless the adapter declares ``expected_values``: a vendor item must then
+        hold each of them.
 
         Args:
             deployment: The deployment.
@@ -195,7 +197,32 @@ class DeploymentVendorAdapter(DeploymentPushAdapter):
         Returns:
             ``False`` when an observable of the indicator has no vendor item.
         """
-        return True
+        expected = self.expected_values(deployment)
+        if not expected:
+            return True
+        return expected <= {
+            value
+            for vendor_indicator in vendor_matches
+            if (value := normalize_value(vendor_indicator.value))
+        }
+
+    def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str] | None:
+        """Return the values the connector pushes to the vendor for a deployment.
+
+        Vendors keeping one item per observable value without the OpenCTI id
+        override it with the normalized values they push for the indicator: the
+        deployment then matches every vendor item holding one of them, so that each
+        one is removed on withdrawal (except an item a deployment staying on the
+        vendor shares) and the indicator is pushed again while one of them is
+        missing. By default, value matching keeps a single vendor item.
+
+        Args:
+            deployment: A deployment of the platform.
+
+        Returns:
+            The expected normalized values, or ``None``.
+        """
+        return None
 
 
 class _Index:
@@ -274,6 +301,12 @@ class _Index:
             if value in self.by_value:
                 return self.by_value[value][:1]
         return []
+
+    def find_values(self, values: Iterable[str]) -> list[Any]:
+        """Return every object holding one of the values."""
+        return [
+            item for value in sorted(values) for item in self.by_value.get(value, ())
+        ]
 
 
 class DeploymentReconciler:
@@ -517,10 +550,8 @@ class DeploymentReconciler:
                 deployment,
                 [
                     vendor
-                    for vendor in vendor_index.find_all(
-                        deployment.identifiers,
-                        deployment.external_id,
-                        deployment.values,
+                    for vendor in self._vendor_matches(
+                        adapter, vendor_index, deployment
                     )
                     # A retained inactive object is only removed, never live.
                     if vendor.active or self._must_remove(deployment, now)
@@ -550,6 +581,36 @@ class DeploymentReconciler:
             self._discover(vendor_indicators, deployments, matched, now, summary)
         )
         return reports
+
+    @staticmethod
+    def _vendor_matches(
+        adapter: DeploymentVendorAdapter,
+        vendor_index: _Index,
+        deployment: IndicatorDeployment,
+    ) -> list[VendorIndicator]:
+        """Return the vendor items of a deployment.
+
+        Args:
+            adapter: The vendor adapter.
+            vendor_index: The vendor indicators of the run.
+            deployment: The deployment.
+
+        Returns:
+            The items matched by OpenCTI id, vendor id or value, plus every item
+            holding one of the ``expected_values`` of the adapter.
+        """
+        vendor_matches: list[VendorIndicator] = vendor_index.find_all(
+            deployment.identifiers, deployment.external_id, deployment.values
+        )
+        expected = adapter.expected_values(deployment)
+        if not expected:
+            return vendor_matches
+        return list(
+            {
+                id(vendor): vendor
+                for vendor in (*vendor_matches, *vendor_index.find_values(expected))
+            }.values()
+        )
 
     def _repush_pending(
         self,

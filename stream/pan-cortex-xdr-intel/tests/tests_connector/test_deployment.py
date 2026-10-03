@@ -468,7 +468,7 @@ def test_adapter_read_back_errors_are_readable():
         list(CortexXdrDeploymentAdapter(connector).list_vendor_indicators())
 
 
-def test_adapter_removes_every_value_of_the_indicator():
+def test_adapter_removes_the_ioc_read_back():
     connector = build_connector()
     adapter = CortexXdrDeploymentAdapter(connector)
     deployment = make_deployment(
@@ -481,13 +481,7 @@ def test_adapter_removes_every_value_of_the_indicator():
     adapter.remove_vendor_indicator(vendor_indicator, deployment)
 
     connector.client.delete_iocs.assert_called_once_with(
-        [
-            {
-                "field": "indicator",
-                "operator": "IN",
-                "value": [SHA256.upper(), SHA256, MD5],
-            }
-        ]
+        [{"field": "indicator", "operator": "IN", "value": [SHA256.upper()]}]
     )
 
     connector.client.delete_iocs.side_effect = api_error(ValueError("refused"))
@@ -829,6 +823,95 @@ def test_reconciliation_and_hits_are_reported(e2e_connector, router):
     (hits,) = router.calls_of("IndicatorReportHits(")
     assert hits["indicatorId"] == INDICATOR_ID
     assert hits["count"] == 1
+
+
+FILE_PATTERN = f"[file:hashes.'SHA-256' = '{SHA256}' OR file:hashes.MD5 = '{MD5}']"
+
+
+def file_deployment_node(indicator_id, pattern, revoked=False):
+    node = deployment_node(indicator_id, "active", "unused")
+    node["revoked"] = revoked
+    node["from"]["pattern"] = pattern
+    return node
+
+
+def test_adapter_expects_one_ioc_per_pushed_value():
+    adapter = CortexXdrDeploymentAdapter(build_connector())
+
+    assert adapter.expected_values(
+        make_deployment(
+            pattern=(
+                f"[file:hashes.'SHA-256' = '{SHA256.upper()}' OR file:name = 'x.exe'"
+                " OR domain-name:value = 'Evil.Example'"
+                " OR email-addr:value = 'a@evil.example'"
+                " OR url:value = 'http://evil.example/a' OR ipv4-addr:value = '1.2.3.4']"
+            )
+        )
+    ) == {SHA256, "evil.example", "a@evil.example", "http://evil.example/a", "1.2.3.4"}
+    assert (
+        adapter.expected_values(make_deployment(pattern="[file:name = 'x.exe']"))
+        is None
+    )
+
+
+def test_reconciliation_pushes_again_an_indicator_missing_an_ioc(e2e_connector, router):
+    router.deployments = [file_deployment_node(INDICATOR_ID, FILE_PATTERN)]
+    e2e_connector.client.iter_iocs.return_value = [
+        {"rule_id": 5, "indicator": MD5, "type": "HASH"}
+    ]
+    exported = make_indicator()
+    exported["pattern"] = FILE_PATTERN
+    exported["extensions"][OPENCTI_EXTENSION_ID]["observable_values"] = [
+        {"type": "StixFile", "hashes": {"SHA-256": SHA256, "MD5": MD5}}
+    ]
+    e2e_connector.helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = (
+        exported
+    )
+    e2e_connector.client.get_iocs.return_value = {
+        "objects": [{"rule_id": 5, "indicator": MD5, "type": "HASH"}]
+    }
+    e2e_connector.client.insert_iocs.return_value = {
+        "added_objects": [{"id": 6}],
+        "updated_objects": [{"id": 5}],
+    }
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert (summary.incomplete, summary.repushed, summary.confirmed_active) == (
+        1,
+        1,
+        0,
+    )
+    (pushed,) = e2e_connector.client.insert_iocs.call_args.args
+    assert sorted(ioc["indicator"] for ioc in pushed) == sorted([SHA256, MD5])
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    (report,) = batch["reports"]
+    assert report["status"] == "deployed"
+    assert report["externalId"] == "6"
+
+
+def test_reconciliation_withdrawal_keeps_the_iocs_of_live_indicators(
+    e2e_connector, router
+):
+    router.deployments = [
+        file_deployment_node(INDICATOR_ID, FILE_PATTERN, revoked=True),
+        file_deployment_node(OTHER_ID, f"[file:hashes.MD5 = '{MD5}']"),
+    ]
+    e2e_connector.client.iter_iocs.return_value = [
+        {"rule_id": 5, "indicator": MD5, "type": "HASH"},
+        {"rule_id": 6, "indicator": SHA256, "type": "HASH"},
+    ]
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    e2e_connector.client.delete_iocs.assert_called_once_with(
+        [{"field": "indicator", "operator": "IN", "value": [SHA256]}]
+    )
+    assert summary.withdrawn == 1
+    assert summary.confirmed_active == 1
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    reports = {report["indicatorId"]: report["status"] for report in batch["reports"]}
+    assert reports == {INDICATOR_ID: "removed", OTHER_ID: "active"}
 
 
 def test_read_back_failure_skips_the_reconciliation(e2e_connector, router):

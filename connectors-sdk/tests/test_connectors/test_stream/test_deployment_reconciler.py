@@ -712,6 +712,99 @@ def test_vendor_adapters_confirm_any_vendor_item_by_default():
     assert FakeAdapter().is_complete(None, [VendorIndicator(indicator_id="a")])
 
 
+class EveryValueAdapter(FakeAdapter):
+    """Vendor keeping one item per value, without the OpenCTI id."""
+
+    def expected_values(self, deployment):
+        return deployment.values
+
+
+FILE_PATTERN = "[file:hashes.MD5 = 'aa' OR file:hashes.'SHA-256' = 'bb']"
+
+
+def test_every_expected_value_confirms_the_deployment_active(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a", status="deployed", pattern=FILE_PATTERN, external_id="1"
+        )
+    )
+    adapter = EveryValueAdapter(
+        vendor=[
+            VendorIndicator(value="aa", external_id="1"),
+            VendorIndicator(value="bb", external_id="2"),
+        ]
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert summary.confirmed_active == 1
+    assert summary.incomplete == 0
+    assert reported()["a"]["status"] == "active"
+    assert reported()["a"]["externalId"] == "1"
+
+
+def test_a_missing_expected_value_pushes_the_deployment_again(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """The vendor id of one item does not confirm an indicator with several values."""
+    list_nodes(
+        node_factory(
+            indicator_id="a", status="active", pattern=FILE_PATTERN, external_id="1"
+        )
+    )
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--a",
+        "pattern": FILE_PATTERN,
+    }
+    adapter = EveryValueAdapter(vendor=[VendorIndicator(value="aa", external_id="1")])
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert (summary.incomplete, summary.repushed, summary.confirmed_active) == (
+        1,
+        1,
+        0,
+    )
+    assert len(adapter.pushed) == 1
+    assert reported()["a"]["status"] == "deployed"
+
+
+def test_withdrawal_removes_every_expected_value_but_the_shared_ones(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            standard_id="indicator--a",
+            status="active",
+            revoked=True,
+            pattern=FILE_PATTERN,
+            external_id="1",
+        ),
+        node_factory(
+            indicator_id="b",
+            standard_id="indicator--b",
+            status="active",
+            pattern="[file:hashes.MD5 = 'aa']",
+        ),
+    )
+    adapter = EveryValueAdapter(
+        vendor=[
+            VendorIndicator(value="aa", external_id="1"),
+            VendorIndicator(value="bb", external_id="2"),
+        ]
+    )
+
+    make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert [vendor.external_id for vendor, _deployment in adapter.removed] == ["2"]
+    assert reported()["a"]["status"] == "removed"
+    assert reported()["b"]["status"] == "active"
+
+
 def test_truncated_read_back_skips_absence_decisions(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):

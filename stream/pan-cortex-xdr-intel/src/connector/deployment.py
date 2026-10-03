@@ -4,8 +4,11 @@ The `CortexXdrDeploymentAdapter` gives the connectors SDK reconciliation access 
 Palo Alto Cortex XDR:
 
 - read-back: the IOCs of the tenant (`indicators/get`, paginated), matched with the
-  deployments by value (Cortex XDR does not store the OpenCTI id);
-- removal: deletion of the IOCs carrying the values of the indicator;
+  deployments by `rule_id` and by value (Cortex XDR does not store the OpenCTI id); an
+  indicator is only `active` when Cortex XDR holds an IOC for each of its values, and
+  is upserted again otherwise;
+- removal: deletion of each IOC of the indicator, except the ones another live
+  indicator shares;
 - re-push: the stream upsert path;
 - hits: the IOC alerts (`alert_source` "XDR IOC") whose events carry the value of a
   deployed indicator.
@@ -42,6 +45,9 @@ if TYPE_CHECKING:
 
 MAX_HIT_ALERTS = 10_000
 """Maximum number of IOC alerts read by one hit collection."""
+
+PUSHED_OBSERVABLE_TYPES = frozenset({"domain-name", "ipv4-addr", "email-addr", "url"})
+"""STIX observable types whose `value` the connector pushes as an IOC (besides hashes)."""
 
 MAX_ERROR_DETAIL_LENGTH = 500
 """Maximum length of the Cortex XDR response appended to a deployment error."""
@@ -196,25 +202,46 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
                     raw={"indicator": value, "type": ioc.get("type")},
                 )
 
+    def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str] | None:
+        """Return the normalized values pushed for an indicator, one Cortex XDR IOC each.
+
+        Cortex XDR does not store the OpenCTI id: the reconciliation matches every IOC
+        holding one of these values, removes each of them on withdrawal and only
+        confirms the indicator `active` when Cortex XDR holds all of them (it is
+        upserted again otherwise).
+
+        :param deployment: A deployment of the platform.
+        :return: The hashes, domain names, IPv4 addresses, email addresses and URLs of
+            the pattern, or None when it has none.
+        """
+        values = frozenset(
+            normalized
+            for pattern_value in extract_pattern_values(deployment.pattern)
+            if (
+                pattern_value.hash_algorithm is not None
+                or (
+                    pattern_value.object_type in PUSHED_OBSERVABLE_TYPES
+                    and pattern_value.object_path == "value"
+                )
+            )
+            and (normalized := normalize_value(pattern_value.value))
+        )
+        return values or None
+
     def remove_vendor_indicator(
         self, vendor_indicator: VendorIndicator, deployment: IndicatorDeployment
     ) -> None:
-        """Delete the IOCs of an indicator from Cortex XDR (withdrawal, revocation or expiry).
+        """Delete an IOC from Cortex XDR (withdrawal, revocation or expiry).
 
-        Every value of the indicator pattern is deleted (a file indicator has one IOC
-        per hash), with the value read back from Cortex XDR.
+        The reconciliation calls it for each IOC of the indicator (a file indicator has
+        one IOC per hash), except the IOCs another live indicator shares.
 
         :raises CortexXdrDeploymentError: When Cortex XDR refuses the deletion.
         """
-        values = [vendor_indicator.raw.get("indicator") or vendor_indicator.value]
-        values.extend(
-            pattern_value.value
-            for pattern_value in extract_pattern_values(deployment.pattern)
-        )
-        unique_values = list(dict.fromkeys(value for value in values if value))
+        value = vendor_indicator.raw.get("indicator") or vendor_indicator.value
         with _readable_errors():
             self._client.delete_iocs(
-                [{"field": "indicator", "operator": "IN", "value": unique_values}]
+                [{"field": "indicator", "operator": "IN", "value": [value]}]
             )
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
