@@ -373,7 +373,13 @@ def test_rate_limited_calls_are_retried_with_backoff(
 ):
     """``Too many requests`` errors are retried with an exponential backoff."""
     sleeps = []
-    responses = iter([RATE_LIMITED, RATE_LIMITED, {"data": {}}])
+    responses = iter(
+        [
+            RATE_LIMITED,
+            RATE_LIMITED,
+            {"data": {"indicatorReportDeployment": {"id": "relationship"}}},
+        ]
+    )
 
     def handler(_variables):
         return next(responses)
@@ -485,7 +491,12 @@ def test_report_indicator_deployments_one_by_one_without_the_batch_mutation(
     router.handlers.update(
         router_factory(mutations=("indicatorReportDeployment",)).handlers
     )
-    outcomes = iter([{"data": {}}, ValueError("boom")])
+    outcomes = iter(
+        [
+            {"data": {"indicatorReportDeployment": {"id": "relationship"}}},
+            ValueError("boom"),
+        ]
+    )
     router.handlers["IndicatorReportDeployment("] = lambda _variables: next(outcomes)
     reporter = make_reporter(graphql_helper)
 
@@ -756,6 +767,65 @@ def test_report_indicator_deployments_with_the_pycti_helper(
         [DeploymentReport(indicator_id="a", status="deployed")]
     )
     assert result.errors[0].message == "Reports not accepted by OpenCTI"
+
+    pycti_helper.report_indicator_deployments.return_value = {"errors": []}
+    result = reporter.report_indicator_deployments(
+        [DeploymentReport(indicator_id="a", status="deployed")]
+    )
+    assert [report.indicator_id for report in result.unsent] == ["a"]
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"data": None},
+        {"data": {"indicatorReportDeployments": None}},
+        {"data": {"indicatorReportDeployments": {"errors": []}}},
+    ],
+)
+def test_a_batch_answered_without_its_result_is_sent_again(
+    graphql_helper, make_reporter, router, response
+):
+    """An HTTP success without the batch result never drops the queued reports."""
+    router.handlers["IndicatorReportDeployments("] = response
+    reporter = make_reporter(graphql_helper)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="removed"))
+
+    result = reporter.flush()
+
+    assert [report.indicator_id for report in result.unsent] == ["a"]
+    assert list(reporter._buffer) == ["a"]
+
+
+@pytest.mark.parametrize(
+    "response", [{"data": None}, {"data": {"indicatorReportDeployment": None}}]
+)
+def test_a_single_report_answered_without_its_result_is_undelivered(
+    graphql_helper, make_reporter, router, router_factory, response
+):
+    router.handlers.update(
+        router_factory(mutations=("indicatorReportDeployment",)).handlers
+    )
+    router.handlers["IndicatorReportDeployment("] = response
+    reporter = make_reporter(graphql_helper)
+
+    result = reporter.report_indicator_deployments(
+        [DeploymentReport(indicator_id="a", status="active")]
+    )
+
+    assert [report.indicator_id for report in result.unsent] == ["a"]
+
+
+def test_a_hit_report_answered_without_its_result_is_undelivered(
+    graphql_helper, make_reporter, router
+):
+    router.handlers["IndicatorReportHits("] = {"data": {"indicatorReportHits": None}}
+    reporter = make_reporter(graphql_helper)
+
+    assert (
+        reporter.report_indicator_hits_outcome("a", 1, last_hit="2026-10-03T10:00:00Z")
+        == REPORT_UNSENT
+    )
 
 
 # --- hits ----------------------------------------------------------------------------

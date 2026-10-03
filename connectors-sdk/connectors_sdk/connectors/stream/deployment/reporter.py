@@ -117,6 +117,43 @@ def is_rejection_error(error: BaseException) -> bool:
     )
 
 
+class _NoMutationResultError(Exception):
+    """A mutation answered without its result: the call is treated as undelivered."""
+
+
+def _mutation_result(response: Any, field: str) -> Any:
+    """Return the result of a mutation from a GraphQL response.
+
+    Args:
+        response: The GraphQL response.
+        field: The mutation field.
+
+    Returns:
+        The non-null result of the mutation.
+
+    Raises:
+        _NoMutationResultError: When the response carries no result for the field
+            (``{"data": null}`` or a null field without any error).
+    """
+    data = response.get("data") if isinstance(response, Mapping) else None
+    result = data.get(field) if isinstance(data, Mapping) else None
+    if result is None:
+        raise _NoMutationResultError(f"OpenCTI returned no {field} result")
+    return result
+
+
+def _is_batch_result(data: Any) -> bool:
+    """Tell whether a batch payload carries its result (the ``processed`` count).
+
+    Args:
+        data: The ``indicatorReportDeployments`` payload.
+
+    Returns:
+        ``True`` for a mapping with a ``processed`` count.
+    """
+    return isinstance(data, Mapping) and data.get("processed") is not None
+
+
 def _is_folded_call_failure(
     chunk: Sequence[DeploymentReport], result: DeploymentBatchResult
 ) -> bool:
@@ -524,7 +561,10 @@ class DeploymentReporter:
                 variables["lastHit"] = format_datetime(last_hit)
             if first_hit is not None:
                 variables["firstHit"] = format_datetime(first_hit)
-            self._execute(_graphql.REPORT_HITS_MUTATION, variables)
+            _mutation_result(
+                self._execute(_graphql.REPORT_HITS_MUTATION, variables),
+                "indicatorReportHits",
+            )
             return REPORT_SENT
         except Exception as err:
             self._logger.warning(
@@ -1097,9 +1137,12 @@ class DeploymentReporter:
                     platform_id=platform_id, **report.to_helper_kwargs()
                 )
                 return REPORT_SENT if result is not None else REPORT_UNSENT
-            self._execute(
-                _graphql.REPORT_DEPLOYMENT_MUTATION,
-                {"platformId": platform_id, **report.to_graphql_input()},
+            _mutation_result(
+                self._execute(
+                    _graphql.REPORT_DEPLOYMENT_MUTATION,
+                    {"platformId": platform_id, **report.to_graphql_input()},
+                ),
+                "indicatorReportDeployment",
             )
             return REPORT_SENT
         except Exception as err:
@@ -1173,7 +1216,7 @@ class DeploymentReporter:
                         for report in chunk
                     ],
                 )
-                if data is None:
+                if not _is_batch_result(data):
                     return DeploymentBatchResult.failure(
                         chunk, "Reports not accepted by OpenCTI"
                     )
@@ -1183,16 +1226,21 @@ class DeploymentReporter:
                         chunk, result.errors[0].message
                     )
                 return result
-            response = self._execute(
-                _graphql.REPORT_DEPLOYMENTS_MUTATION,
-                {
-                    "platformId": platform_id,
-                    "reports": [report.to_graphql_input() for report in chunk],
-                },
+            payload = _mutation_result(
+                self._execute(
+                    _graphql.REPORT_DEPLOYMENTS_MUTATION,
+                    {
+                        "platformId": platform_id,
+                        "reports": [report.to_graphql_input() for report in chunk],
+                    },
+                ),
+                "indicatorReportDeployments",
             )
-            return DeploymentBatchResult.from_graphql(
-                (response.get("data") or {}).get("indicatorReportDeployments")
-            )
+            if not _is_batch_result(payload):
+                raise _NoMutationResultError(
+                    "OpenCTI returned no indicatorReportDeployments result"
+                )
+            return DeploymentBatchResult.from_graphql(payload)
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot report a batch of deployment statuses.",
