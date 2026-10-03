@@ -1,5 +1,6 @@
-from datetime import datetime, timedelta
-from typing import Literal
+from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
+from typing import Any, Literal
 from urllib.parse import quote
 
 import requests
@@ -15,6 +16,15 @@ from pydantic import HttpUrl
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
+
+APPLICATION_NAME = "OpenCTI Microsoft Defender Intel"
+"""`application` of every indicator created by the connector."""
+
+ALERTS_RESOURCE_PATH = "api/alerts"
+"""Path of the alerts API, relative to the base URL."""
+
+MAX_PAGE_SIZE = 10_000
+"""Maximum `$top` accepted by the indicators and alerts APIs."""
 
 
 class DefenderApiHandlerError(Exception):
@@ -161,7 +171,7 @@ class DefenderApiHandler:
             body = {
                 "indicatorType": IOC_TYPES[observable["type"]],
                 "indicatorValue": observable["value"],
-                "application": "OpenCTI Microsoft Defender Intel",
+                "application": APPLICATION_NAME,
                 "action": self.action or get_action(observable),
                 "title": observable["value"],
                 "description": get_description(observable),
@@ -276,3 +286,76 @@ class DefenderApiHandler:
             f"{self.base_url}/{self.resource_path.strip('/')}/{indicator_id}",
         )
         return True
+
+    def _get_page(self, url: str, params: str) -> list[dict[str, Any]]:
+        """
+        Read one page of an OData collection.
+        :param url: Collection URL
+        :param params: Encoded query string
+        :return: Items of the page
+        :raise DefenderApiHandlerError: On any error or an unexpected payload
+        """
+        data = self._send_request("get", url, params=params)
+        items = data.get("value") if isinstance(data, dict) else None
+        if not isinstance(items, list):
+            raise DefenderApiHandlerError(
+                "[API] Unexpected response format: missing 'value' list",
+                {"url_path": f"GET {url}"},
+            )
+        return [item for item in items if isinstance(item, dict)]
+
+    def iter_application_indicators(
+        self,
+        application: str = APPLICATION_NAME,
+        page_size: int = MAX_PAGE_SIZE,
+        max_pages: int = 100,
+    ) -> Iterator[dict[str, Any]]:
+        """
+        Iterate over the active indicators of an application, paginated with `$top` and `$skip`.
+        :param application: The `application` of the indicators (the connector's by default)
+        :param page_size: `$top` of each page (10,000 at most)
+        :param max_pages: Safety bound of the number of pages
+        :return: Indicator entities
+        :raise DefenderApiHandlerError: On any error, never yield a partial listing silently
+        """
+        url = f"{self.base_url}/{self.resource_path.strip('/')}"
+        odata_application = application.replace("'", "''")
+        query_filter = quote(f"application eq '{odata_application}'", safe="")
+        for page in range(max_pages):
+            items = self._get_page(
+                url,
+                f"$filter={query_filter}&$top={page_size}&$skip={page * page_size}",
+            )
+            yield from items
+            if len(items) < page_size:
+                return
+        raise DefenderApiHandlerError(
+            "[API] Indicator read-back stopped before reaching the end",
+            {"max_pages": max_pages, "page_size": page_size},
+        )
+
+    def list_alerts(
+        self, since: datetime, max_alerts: int = MAX_PAGE_SIZE
+    ) -> list[dict[str, Any]]:
+        """
+        List the alerts created since a date, with their evidence.
+        :param since: Only alerts created at or after this date
+        :param max_alerts: Maximum number of alerts returned (10,000 at most per request)
+        :return: Alert entities
+        :raise DefenderApiHandlerError: On any error or an unexpected payload
+        """
+        since_utc = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        query_filter = quote(f"alertCreationTime ge {since_utc}", safe="")
+        url = f"{self.base_url}/{ALERTS_RESOURCE_PATH}"
+        alerts: list[dict[str, Any]] = []
+        while len(alerts) < max_alerts:
+            top = min(MAX_PAGE_SIZE, max_alerts - len(alerts))
+            items = self._get_page(
+                url,
+                f"$filter={query_filter}&$expand=evidence&$top={top}"
+                f"&$skip={len(alerts)}",
+            )
+            alerts.extend(items[:top])
+            if len(items) < top:
+                break
+        return alerts
