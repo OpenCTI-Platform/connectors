@@ -240,7 +240,7 @@ Platform entity (created if it does not exist).
 | Domain added (or already listed)          | `deployed`                                                                                             |
 | Domain rejected by Zscaler                | `failed`, with the HTTP status and the Zscaler response                                                |
 | Invalid domain pattern                    | Nothing: the indicator is never pushed                                                                 |
-| Delete event processed                    | `removed` (also when the domain was already absent); nothing when the blacklist cannot be read         |
+| Delete event processed                    | `removed` (also when the domain was already absent, or kept for another indicator); nothing when the blacklist or the other indicators cannot be read |
 | Reconciliation, domain present            | `active`                                                                                               |
 | Reconciliation, domain absent             | `removed` (removed from the category outside of OpenCTI)                                               |
 | Reconciliation, `pending` (analyst retry) | The domain is added again and reported `deployed` or `failed`                                          |
@@ -250,6 +250,10 @@ Platform entity (created if it does not exist).
   read back (`GET /urlCategories/{id}`, one request). The category does not store the OpenCTI id, so deployments are
   matched by value. A read-back error skips the run: indicators are never reported `removed` from a partial listing.
   Each change made by the reconciliation is activated like the stream changes (mind the 400 requests per hour limit).
+- **Shared domains**: the category only holds values, so a domain shared by several OpenCTI indicators stays listed
+  while one of them is not revoked. Before removing a domain (delete event or withdrawal), the connector looks for
+  another indicator with the same `[domain-name:value = '...']` pattern in OpenCTI; when one exists, the domain is kept
+  and the removed indicator is reported `removed`.
 - **Hits**: not reported. The ZIA API exposes no hit of a URL category (web logs are exported through Nanolog Streaming
   Service feeds).
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;

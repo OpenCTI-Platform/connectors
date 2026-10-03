@@ -229,6 +229,98 @@ def test_deleted_domain_is_removed_and_reported(connector):
     connector.assurance.report_removed.assert_called_once_with(indicator)
 
 
+def test_deleted_domain_blocked_by_another_indicator_stays_listed(connector):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": OTHER_ID,
+            "standard_id": "indicator--other",
+            "pattern": "[domain-name:value = 'evil.example']",
+        }
+    ]
+    indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    assert zscaler.puts == []
+    assert zscaler.urls == ["evil.example"]
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+    connector.helper.api.indicator.list.assert_called_once_with(
+        filters={
+            "mode": "and",
+            "filters": [
+                {
+                    "key": "pattern",
+                    "values": ["'evil.example'"],
+                    "operator": "contains",
+                },
+                {"key": "revoked", "values": ["false"]},
+            ],
+            "filterGroups": [],
+        },
+        getAll=True,
+    )
+
+
+def test_deleted_indicator_and_other_patterns_do_not_keep_the_domain(connector):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
+    indicator = make_indicator()
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": INDICATOR_ID,
+            "standard_id": "indicator--deleted",
+            "pattern": "[domain-name:value = 'evil.example']",
+        },
+        {
+            "id": "other-internal-id",
+            "standard_id": indicator["id"].upper(),
+            "pattern": "[domain-name:value = 'evil.example']",
+        },
+        {
+            "id": OTHER_ID,
+            "standard_id": "indicator--other",
+            "pattern": "[email-addr:value = 'evil.example']",
+        },
+    ]
+
+    connector._process_message(make_message("delete", indicator))
+
+    assert zscaler.urls == []
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
+def test_delete_without_the_other_indicators_is_not_applied(connector):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
+    connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
+
+    connector._process_message(make_message("delete", make_indicator()))
+
+    assert zscaler.puts == []
+    connector.assurance.report_removed.assert_not_called()
+    connector.helper.connector_logger.error.assert_called_with(
+        "Failed to send delete event: Cannot read the OpenCTI indicators of "
+        "evil.example: OpenCTI down"
+    )
+
+
+def test_adapter_keeps_a_domain_blocked_by_another_indicator(connector):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": OTHER_ID,
+            "standard_id": "indicator--other",
+            "pattern": "[domain-name:value = 'evil.example']",
+        }
+    ]
+
+    ZscalerDeploymentAdapter(connector).remove_vendor_indicator(
+        VendorIndicator(value="evil.example", raw={"domain": "evil.example"}),
+        make_deployment(),
+    )
+
+    assert zscaler.puts == []
+
+
 def test_deleted_domain_already_absent_is_reported_removed(connector):
     zscaler = FakeZscaler(urls=["other.example"]).install(connector)
     indicator = make_indicator()

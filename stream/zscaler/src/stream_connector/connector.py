@@ -1,6 +1,7 @@
 import json
 import re
 import time
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 import requests
@@ -26,6 +27,10 @@ MAX_ERROR_DETAIL_LENGTH = 500
 
 class ZscalerApiError(Exception):
     """Error raised when Zscaler rejects a request or cannot be reached."""
+
+
+class SharedDomainLookupError(Exception):
+    """Error raised when OpenCTI cannot tell whether another indicator blocks a domain."""
 
 
 class ZscalerConnector:
@@ -268,13 +273,17 @@ class ZscalerConnector:
             return response.json().get("configuredName")
         return None
 
-    def check_and_send_to_zscaler(self, data, event_type):
+    def check_and_send_to_zscaler(self, data, event_type, indicator_ids=()):
         """Verify the classification of a domain, then add it to (create) or remove it from
         (delete) the blacklist.
 
+        :param indicator_ids: The OpenCTI ids of the indicator (delete), never counted
+            as another indicator blocking the domain.
         :return: The domain when the blacklist holds it (create) or no longer holds it
-            (delete), None for an invalid domain pattern or an unsupported event type.
+            for this indicator (delete), None for an invalid domain pattern or an
+            unsupported event type.
         :raises ZscalerApiError: When Zscaler refuses the change or the blacklist cannot be read.
+        :raises SharedDomainLookupError: When the other indicators of the domain cannot be read.
         """
         domain = self.is_valid_domain(data["pattern"])
         if not domain:
@@ -290,7 +299,7 @@ class ZscalerConnector:
         if event_type == "create":
             self.deploy_domain(domain)
         elif event_type == "delete":
-            self.withdraw_domain(domain)
+            self.withdraw_domain(domain, indicator_ids)
         else:
             self.helper.connector_logger.error("Unsupported event type.")
             return None
@@ -309,16 +318,71 @@ class ZscalerConnector:
         self.helper.connector_logger.info(msg)
         self.send_to_zscaler(domain, "create")
 
-    def withdraw_domain(self, domain: str) -> None:
-        """Remove a domain from the blacklist, when it is listed.
+    def withdraw_domain(self, domain: str, indicator_ids: Iterable[str]) -> None:
+        """Remove the domain of an indicator from the blacklist, when it is listed.
 
+        :param indicator_ids: The OpenCTI ids of the indicator.
         :raises ZscalerApiError: When the blacklist cannot be read or Zscaler refuses the change.
+        :raises SharedDomainLookupError: When the other indicators of the domain cannot be read.
         """
         if domain not in self.list_blocked_domains():
             msg = f"The domain {domain} is not in the Blacklist."
             self.helper.connector_logger.info(msg)
             return
+        self.remove_domain(domain, indicator_ids)
+
+    def remove_domain(self, domain: str, indicator_ids: Iterable[str]) -> None:
+        """Remove a listed domain from the blacklist, unless another indicator blocks it.
+
+        The blacklist only holds values: a domain shared by several OpenCTI indicators
+        stays listed while one of them is not revoked.
+
+        :param indicator_ids: The OpenCTI ids of the indicator removed.
+        :raises ZscalerApiError: When Zscaler refuses the change.
+        :raises SharedDomainLookupError: When the other indicators of the domain cannot be read.
+        """
+        if self.is_blocked_by_another_indicator(domain, indicator_ids):
+            msg = f"The domain {domain} stays in the Blacklist: another OpenCTI indicator blocks it."
+            self.helper.connector_logger.info(msg)
+            return
         self.send_to_zscaler(domain, "delete")
+
+    def is_blocked_by_another_indicator(
+        self, domain: str, indicator_ids: Iterable[str]
+    ) -> bool:
+        """Tell whether an OpenCTI indicator not revoked, other than the given one, has the
+        `[domain-name:value = '<domain>']` pattern.
+
+        :param indicator_ids: The OpenCTI ids (internal or STIX) of the indicator removed.
+        :raises SharedDomainLookupError: When OpenCTI cannot be queried.
+        """
+        excluded = {str(indicator_id).lower() for indicator_id in indicator_ids}
+        try:
+            indicators = self.helper.api.indicator.list(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "pattern",
+                            "values": [f"'{domain}'"],
+                            "operator": "contains",
+                        },
+                        {"key": "revoked", "values": ["false"]},
+                    ],
+                    "filterGroups": [],
+                },
+                getAll=True,
+            )
+        except Exception as err:
+            raise SharedDomainLookupError(
+                f"Cannot read the OpenCTI indicators of {domain}: {err}"
+            ) from err
+        return any(
+            str(indicator.get("id")).lower() not in excluded
+            and str(indicator.get("standard_id")).lower() not in excluded
+            and self.extract_domain(indicator.get("pattern") or "") == domain
+            for indicator in indicators or []
+        )
 
     def send_to_zscaler(self, domain, event_type):
         """Send creation or deletion events to Zscaler, then activate the configuration.
@@ -371,14 +435,22 @@ class ZscalerConnector:
         """Apply a create or delete event and report the outcome to OpenCTI.
 
         A create is reported `deployed` (or `failed` with the Zscaler error), a delete
-        `removed` once the domain is out of the blacklist; nothing is reported for an
-        invalid domain pattern.
+        `removed` once the domain is out of the blacklist or only kept for another
+        indicator; nothing is reported for an invalid domain pattern.
         """
+        indicator_ids = [
+            indicator_id
+            for indicator_id in (
+                data.get("id"),
+                self.helper.get_attribute_in_extension("id", data),
+            )
+            if indicator_id
+        ]
         try:
             domain = self.check_and_send_to_zscaler(
-                {"pattern": data.get("pattern")}, event_type
+                {"pattern": data.get("pattern")}, event_type, indicator_ids
             )
-        except ZscalerApiError as err:
+        except (ZscalerApiError, SharedDomainLookupError) as err:
             self.helper.connector_logger.error(
                 f"Failed to send {event_type} event: {err}"
             )
