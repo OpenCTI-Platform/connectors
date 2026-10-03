@@ -1,0 +1,44 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe' # Valid UUIDv4
+  name: 'RST Threat Feed'
+  scope: 'application/json'
+  log_level: 'info'
+  duration_period: 'PT24H' # ISO-8601; replaces legacy rst_threat_feed.interval
+  queue_threshold: 500
+  update_existing_data: true
+  auto_create_service_account: true
+  auto_create_service_account_confidence_level: 50
+
+rst_threat_feed:
+  baseurl: 'https://api.rstcloud.net/v1'
+  apikey: 'ChangeMe'
+  ssl_verify: true
+  contimeout: 30
+  readtimeout: 120
+  retry: 2
+  proxy: '' # optional override; empty = use HTTP_PROXY/HTTPS_PROXY/NO_PROXY
+  # interval: 86400  # deprecated; prefer connector.duration_period
+  max_retries: 3
+  retry_delay: 10
+  retry_backoff_multiplier: 2.0
+  opencti_batch_size: 200
+  latest: day # day, 1h, 4h, 12h
+  ip: true
+  domain: true
+  url: true
+  hash: true
+  min_score_import: 20
+  min_score_detection_ip: 45
+  min_score_detection_domain: 45
+  min_score_detection_url: 45
+  min_score_detection_hash: 45
+  only_new: true
+  only_attributed: false
+  keep_named_vulns: true
+  create_mitre_ttps: false
+  create_custom_ttps: true
