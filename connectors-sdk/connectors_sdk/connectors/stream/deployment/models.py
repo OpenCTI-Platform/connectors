@@ -422,6 +422,8 @@ class ReconciliationSummary:
         confirmed_active: Deployments confirmed live (reported ``active``).
         discovered: Vendor indicators reported ``active`` with no previous deployment.
         marked_removed: Deployments found absent and reported ``removed``.
+        deferred: Absent deployments confirmed after the read-back started (pushed
+            meanwhile by the stream), left to the next run.
         repushed: ``pending`` deployments pushed again successfully.
         repush_failed: ``pending`` deployments whose push failed again.
         withdrawn: Indicators removed from the platform (withdrawal or expiry).
@@ -438,6 +440,7 @@ class ReconciliationSummary:
     confirmed_active: int = 0
     discovered: int = 0
     marked_removed: int = 0
+    deferred: int = 0
     repushed: int = 0
     repush_failed: int = 0
     withdrawn: int = 0
@@ -456,6 +459,7 @@ class ReconciliationSummary:
             "confirmed_active": self.confirmed_active,
             "discovered": self.discovered,
             "marked_removed": self.marked_removed,
+            "deferred": self.deferred,
             "repushed": self.repushed,
             "repush_failed": self.repush_failed,
             "withdrawn": self.withdrawn,

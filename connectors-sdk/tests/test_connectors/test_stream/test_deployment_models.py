@@ -287,6 +287,7 @@ def test_reconciliation_summary_log_meta():
         "confirmed_active",
         "discovered",
         "marked_removed",
+        "deferred",
         "repushed",
         "repush_failed",
         "withdrawn",

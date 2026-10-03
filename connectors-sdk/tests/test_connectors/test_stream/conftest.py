@@ -102,6 +102,7 @@ def deployment_node(
     valid_until=None,
     last_hit_at=None,
     standard_id=INDICATOR_STIX_ID,
+    last_sync_at="2026-10-01T00:00:00.000Z",
 ):
     """Build a ``stixCoreRelationships`` node of a deployed-on relationship."""
     return {
@@ -109,7 +110,7 @@ def deployment_node(
         "deployment_status": status,
         "external_id": external_id,
         "revoked": revoked,
-        "last_sync_at": "2026-10-01T00:00:00.000Z",
+        "last_sync_at": last_sync_at,
         "last_hit_at": last_hit_at,
         "hit_count": 0,
         "from": {
