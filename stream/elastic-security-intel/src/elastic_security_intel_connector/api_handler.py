@@ -13,6 +13,15 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 READ_BACK_PAGE_SIZE = 500
 READ_BACK_KEEP_ALIVE = "2m"
 READ_BACK_FIELDS = ["opencti_doc_id", "stix", "threat.indicator.valid_until"]
+SIEM_RULE_TYPES = {"eql": "eql", "esql": "esql"}
+SIEM_RULE_INDICES = ["logs-*", "filebeat-*", "packetbeat-*", "winlogbeat-*"]
+SIEM_RULE_LOOKUP_PAGE_SIZE = 100
+
+
+def _kql_string(value: str) -> str:
+    """Quote a value for a KQL filter."""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
 class ElasticApiHandlerError(Exception):
@@ -261,6 +270,7 @@ class ElasticApiHandler:
             query_config = self._convert_elastic_pattern_to_query(pattern, pattern_type)
 
             # Build the rule
+            rule_type = SIEM_RULE_TYPES.get(pattern_type, "query")
             rule = {
                 "name": f"OpenCTI: {indicator_data.get('name', 'Threat Indicator')}",
                 "description": indicator_data.get(
@@ -268,26 +278,23 @@ class ElasticApiHandler:
                 ),
                 "risk_score": self._calculate_risk_score(indicator_data),
                 "severity": self._get_severity(indicator_data),
-                "type": "query",
+                "type": rule_type,
                 "query": query_config["query"],
                 "language": query_config["language"],
-                "index": [
-                    "logs-*",
-                    "filebeat-*",
-                    "packetbeat-*",
-                    "winlogbeat-*",
-                ],  # Default indices
                 "interval": "5m",
                 "from": "now-6m",
                 "enabled": True,
                 "tags": ["opencti", "threat-intel"],
-                "references": [f"{self.opencti_url}/dashboard/id/{opencti_id}"],
+                "references": [self._rule_reference(opencti_id)],
                 "meta": {
                     "opencti_id": opencti_id,
                     "pattern_type": pattern_type,
                     "original_pattern": pattern,
                 },
             }
+            if rule_type != "esql":
+                # ES|QL rules read the indices named in their query
+                rule["index"] = list(SIEM_RULE_INDICES)
 
             # Add threat mapping if available
             if "kill_chain_phases" in indicator_data:
@@ -333,7 +340,11 @@ class ElasticApiHandler:
             return None
 
     def _update_siem_rule(self, indicator_data: dict, rule_id: str) -> Optional[dict]:
-        """Update an existing SIEM rule"""
+        """Update the fields of an existing SIEM rule derived from the indicator.
+
+        A partial update (PATCH): the indices, schedule, tags and references of
+        the rule are kept.
+        """
         try:
             opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
                 "id", indicator_data
@@ -369,7 +380,7 @@ class ElasticApiHandler:
             kibana_url = self._get_kibana_url()
             url = f"{kibana_url}/api/detection_engine/rules"
 
-            response = requests.put(
+            response = requests.patch(
                 url,
                 headers=self.headers,
                 json=rule_update,
@@ -433,57 +444,101 @@ class ElasticApiHandler:
             )
             return False
 
-    def _find_siem_rule_by_opencti_id(
-        self, opencti_id: str, strict: bool = False
-    ) -> Optional[str]:
-        """Find SIEM rule by OpenCTI ID reference
+    def _rule_reference(self, opencti_id: str) -> str:
+        """Return the reference a SIEM rule carries to its OpenCTI indicator."""
+        return f"{self.opencti_url}/dashboard/id/{opencti_id}"
+
+    def _find_siem_rule_ids(self, opencti_id: str) -> List[str]:
+        """Find the SIEM rules created from an indicator.
+
+        Rule parameters are stored under ``alert.attributes.params``: a rule is
+        matched by the indicator reference it was created with, or by the
+        ``meta.opencti_id`` it carries until the rule is edited in Kibana.
 
         :param opencti_id: OpenCTI ID of the indicator
-        :param strict: Raise when the lookup fails instead of returning None
-        :return: ID of the SIEM rule, None when the indicator has no rule
+        :return: The ids of the rules, every page read
+        :raises Exception: When Kibana cannot be queried (the rules are unknown)
         """
-        try:
-            # The detection engine is a Kibana API, like the other SIEM rule calls
-            url = f"{self._get_kibana_url()}/api/detection_engine/rules/_find"
-            params = {
-                "filter": f'alert.attributes.references:"opencti-id:{opencti_id}"'
-            }
-
+        # The detection engine is a Kibana API, like the other SIEM rule calls
+        url = f"{self._get_kibana_url()}/api/detection_engine/rules/_find"
+        rule_filter = (
+            "alert.attributes.params.references:"
+            f"{_kql_string(self._rule_reference(opencti_id))}"
+            " or alert.attributes.params.meta.opencti_id:"
+            f"{_kql_string(opencti_id)}"
+        )
+        rule_ids: List[str] = []
+        page = 1
+        while True:
             response = requests.get(
                 url,
                 headers=self.headers,
-                params=params,
+                params={
+                    "filter": rule_filter,
+                    "page": page,
+                    "per_page": SIEM_RULE_LOOKUP_PAGE_SIZE,
+                },
                 verify=self._get_verify_config(),
                 cert=self.cert,
                 timeout=30,
             )
             response.raise_for_status()
-            rules = response.json().get("data") or []
-            return rules[0]["id"] if rules else None
+            body = response.json()
+            rules = body.get("data") or []
+            rule_ids.extend(str(rule["id"]) for rule in rules)
+            if not rules or len(rule_ids) >= int(body.get("total") or 0):
+                return rule_ids
+            page += 1
 
-        except Exception as e:
-            if strict:
-                raise
-            self.helper.connector_logger.debug(f"Error finding SIEM rule: {str(e)}")
-            return None
-
-    def _delete_siem_rule_of_indicator(self, opencti_id: str) -> bool:
-        """Delete the SIEM rule of an indicator, if it has one.
+    def _lookup_siem_rule_ids(self, opencti_id: str) -> Optional[List[str]]:
+        """Find the SIEM rules of an indicator, logging a failed lookup.
 
         :param opencti_id: OpenCTI ID of the indicator
-        :return: False when the rule lookup or deletion failed (a rule may remain)
+        :return: The ids of the rules, None when the lookup failed
         """
         try:
-            rule_id = self._find_siem_rule_by_opencti_id(opencti_id, strict=True)
+            return self._find_siem_rule_ids(opencti_id)
         except Exception as e:
             self.helper.connector_logger.warning(
                 "Cannot look up the SIEM rule of the indicator",
                 {"opencti_id": opencti_id, "error": str(e)},
             )
+            return None
+
+    def _write_siem_rules_of_indicator(
+        self, indicator_data: dict, opencti_id: str
+    ) -> bool:
+        """Update the SIEM rules created from an indicator, or create its rule.
+
+        Looking the rules up first keeps a replayed or pushed again indicator
+        from creating a second rule.
+
+        :param indicator_data: STIX indicator data with a native Elastic pattern
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: False when the rule lookup, creation or an update failed
+        """
+        rule_ids = self._lookup_siem_rule_ids(opencti_id)
+        if rule_ids is None:
             return False
-        if rule_id is None:
-            return True
-        return self._delete_siem_rule(rule_id)
+        if not rule_ids:
+            return self._create_siem_rule(indicator_data) is not None
+        return all(
+            [
+                self._update_siem_rule(indicator_data, rule_id) is not None
+                for rule_id in rule_ids
+            ]
+        )
+
+    def _delete_siem_rule_of_indicator(self, opencti_id: str) -> bool:
+        """Delete the SIEM rules created from an indicator, if it has any.
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: False when the rule lookup or a deletion failed (a rule may remain)
+        """
+        rule_ids = self._lookup_siem_rule_ids(opencti_id)
+        if rule_ids is None:
+            return False
+        return all([self._delete_siem_rule(rule_id) for rule_id in rule_ids])
 
     def _calculate_risk_score(self, indicator_data: dict) -> int:
         """Calculate risk score based on indicator confidence and severity"""
@@ -966,31 +1021,17 @@ class ElasticApiHandler:
             if "pattern" in indicator_data and self._is_elastic_native_pattern(
                 pattern_type
             ):
-                if operation == "create":
-                    rule = self._create_siem_rule(indicator_data)
-                    if rule:
-                        self.helper.connector_logger.info(
-                            f"Created SIEM rule for {pattern_type} pattern",
-                            {"opencti_id": opencti_id},
+                if operation in ("create", "update"):
+                    if not self._write_siem_rules_of_indicator(
+                        indicator_data, opencti_id
+                    ):
+                        # The threat intel document is the trace the deployment
+                        # read-back sees: it is only written once the rule is.
+                        self.helper.connector_logger.warning(
+                            "SIEM rule of the indicator not written, threat intel entry not written",
+                            {"opencti_id": opencti_id, "operation": operation},
                         )
-
-                elif operation == "update":
-                    rule_id = self._find_siem_rule_by_opencti_id(opencti_id)
-                    if rule_id:
-                        rule = self._update_siem_rule(indicator_data, rule_id)
-                        if rule:
-                            self.helper.connector_logger.info(
-                                f"Updated SIEM rule for {pattern_type} pattern",
-                                {"opencti_id": opencti_id},
-                            )
-                    else:
-                        # Rule doesn't exist, create it
-                        rule = self._create_siem_rule(indicator_data)
-                        if rule:
-                            self.helper.connector_logger.info(
-                                f"Created SIEM rule for {pattern_type} pattern",
-                                {"opencti_id": opencti_id},
-                            )
+                        return False
 
                 elif operation == "delete":
                     if not self._delete_siem_rule_of_indicator(opencti_id):

@@ -7,6 +7,8 @@ runs every ``_delete_by_query`` with ``conflicts=proceed`` so a version conflict
 can no longer abort the deletion and leave stale duplicates behind.
 """
 
+from urllib.parse import parse_qs, urlparse
+
 import pytest
 import requests_mock as rm_module
 from elastic_security_intel_connector.api_handler import ElasticApiHandler
@@ -211,10 +213,147 @@ def test_delete_fails_when_the_siem_rule_lookup_fails(
     assert _delete_by_query_requests(requests_mock) == []
 
 
-def test_lenient_siem_rule_lookup_returns_none_on_errors(kibana_handler, requests_mock):
+def _query(request):
+    return parse_qs(urlparse(request.url).query)
+
+
+def _rule_requests(mock, method):
+    return [
+        r
+        for r in mock.request_history
+        if r.method == method and r.path.endswith("/api/detection_engine/rules")
+    ]
+
+
+def test_siem_rule_lookup_matches_the_rule_parameters_and_reads_every_page(
+    kibana_handler, native_indicator, requests_mock
+):
+    """Rule parameters live under alert.attributes.params: the lookup matches the
+    reference written at creation, or the meta.opencti_id, on every page."""
+    requests_mock.get(
+        FIND_RULES_URL,
+        [
+            {"json": {"data": [{"id": "rule-1"}], "total": 2}},
+            {"json": {"data": [{"id": "rule-2"}], "total": 2}},
+        ],
+    )
+    opencti_id = native_indicator["id"]
+
+    assert kibana_handler._find_siem_rule_ids(opencti_id) == ["rule-1", "rule-2"]
+
+    first, second = requests_mock.request_history
+    assert _query(first)["filter"] == [
+        "alert.attributes.params.references:"
+        f'"http://opencti.test/dashboard/id/{opencti_id}"'
+        f' or alert.attributes.params.meta.opencti_id:"{opencti_id}"'
+    ]
+    assert _query(first)["page"] == ["1"]
+    assert _query(second)["page"] == ["2"]
+
+
+def test_siem_rule_lookup_raises_on_errors(kibana_handler, requests_mock):
     requests_mock.get(FIND_RULES_URL, status_code=503, text="unavailable")
 
-    assert kibana_handler._find_siem_rule_by_opencti_id("indicator--x") is None
+    with pytest.raises(Exception):
+        kibana_handler._find_siem_rule_ids("indicator--x")
+
+
+def test_delete_removes_every_siem_rule_of_the_indicator(
+    kibana_handler, native_indicator, requests_mock
+):
+    requests_mock.get(FIND_RULES_URL, json={"data": [{"id": "a"}, {"id": "b"}]})
+    requests_mock.delete(RULES_URL, json={})
+    requests_mock.post(DELETE_URL, json={"deleted": 1})
+
+    assert kibana_handler.process_indicator(native_indicator, "delete") is True
+    assert [_query(r)["id"] for r in _rule_requests(requests_mock, "DELETE")] == [
+        ["a"],
+        ["b"],
+    ]
+
+
+@pytest.mark.parametrize(
+    "pattern_type, rule_type, language, has_index",
+    [
+        ("kql", "query", "kuery", True),
+        ("lucene", "query", "lucene", True),
+        ("eql", "eql", "eql", True),
+        ("esql", "esql", "esql", False),
+    ],
+)
+def test_create_writes_the_siem_rule_then_the_threat_intel_document(
+    kibana_handler,
+    native_indicator,
+    requests_mock,
+    pattern_type,
+    rule_type,
+    language,
+    has_index,
+):
+    requests_mock.get(FIND_RULES_URL, json={"data": [], "total": 0})
+    requests_mock.post(RULES_URL, json={"id": "rule-1"})
+    requests_mock.post(DELETE_URL, json={"deleted": 0})
+    requests_mock.post(DOC_URL, json={"_id": "abc", "result": "created"})
+    indicator = {**native_indicator, "pattern_type": pattern_type}
+
+    assert kibana_handler.process_indicator(indicator, "create") is True
+
+    rule = _rule_requests(requests_mock, "POST")[0].json()
+    assert (rule["type"], rule["language"]) == (rule_type, language)
+    assert ("index" in rule) is has_index
+    assert rule["references"] == [f"http://opencti.test/dashboard/id/{indicator['id']}"]
+    assert len(_doc_requests(requests_mock)) == 1
+
+
+@pytest.mark.parametrize(
+    "find, create",
+    [
+        ({"status_code": 503, "text": "unavailable"}, None),
+        ({"json": {"data": [], "total": 0}}, {"status_code": 400, "text": "bad"}),
+    ],
+    ids=["lookup failed", "creation refused"],
+)
+def test_create_fails_without_a_threat_intel_document_when_the_rule_is_not_written(
+    kibana_handler, native_indicator, requests_mock, find, create
+):
+    """A threat intel document without its rule would be read back as active."""
+    requests_mock.get(FIND_RULES_URL, **find)
+    if create is not None:
+        requests_mock.post(RULES_URL, **create)
+
+    assert kibana_handler.process_indicator(native_indicator, "create") is False
+    assert _doc_requests(requests_mock) == []
+    assert _delete_by_query_requests(requests_mock) == []
+
+
+@pytest.mark.parametrize("operation", ["create", "update"])
+def test_existing_siem_rules_are_updated_instead_of_created_again(
+    kibana_handler, native_indicator, requests_mock, operation
+):
+    """A replayed or pushed again indicator updates its rules (partial update)."""
+    requests_mock.get(FIND_RULES_URL, json={"data": [{"id": "rule-1"}], "total": 1})
+    requests_mock.patch(RULES_URL, json={"id": "rule-1"})
+    requests_mock.post(DELETE_URL, json={"deleted": 1})
+    requests_mock.post(DOC_URL, json={"_id": "abc", "result": "created"})
+
+    assert kibana_handler.process_indicator(native_indicator, operation) is True
+
+    assert _rule_requests(requests_mock, "POST") == []
+    patch = _rule_requests(requests_mock, "PATCH")[0].json()
+    assert patch["id"] == "rule-1"
+    assert patch["query"] == native_indicator["pattern"]
+    assert len(_doc_requests(requests_mock)) == 1
+
+
+def test_update_leaves_the_threat_intel_document_when_the_rule_update_fails(
+    kibana_handler, native_indicator, requests_mock
+):
+    requests_mock.get(FIND_RULES_URL, json={"data": [{"id": "rule-1"}], "total": 1})
+    requests_mock.patch(RULES_URL, status_code=500, text="boom")
+
+    assert kibana_handler.process_indicator(native_indicator, "update") is False
+    assert _doc_requests(requests_mock) == []
+    assert _delete_by_query_requests(requests_mock) == []
 
 
 def test_delete_docs_by_opencti_id_query_targets_doc_id(handler, requests_mock):
