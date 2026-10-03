@@ -1,0 +1,333 @@
+"""Infrastructure tracker: hunts adversary infrastructure on internet scanning sources."""
+
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, NoReturn
+
+from connectors_sdk import InternalHuntConnector
+from connectors_sdk.connectors.internal_hunt import (
+    HuntEvent,
+    HuntExecutionError,
+    HuntLimits,
+    HuntRequest,
+    HuntResult,
+    HuntTimeoutError,
+    HuntTimeWindow,
+    HuntTranslationError,
+    NativeQuery,
+    RunDeadline,
+    event_time_bounds,
+    is_public_ip,
+)
+from infrastructure_tracker.rule import (
+    FingerprintRule,
+    build_plan,
+    load_plan,
+    parse_rule,
+    render_plan,
+)
+from infrastructure_tracker.settings import ConnectorSettings
+from infrastructure_tracker.sources import (
+    CERTIFICATES_FIELD,
+    CensysClient,
+    Host,
+    InternetDbClient,
+    ScoutClient,
+    SilentPushClient,
+    SourceResult,
+    UrlscanClient,
+)
+from infrastructure_tracker.stix import (
+    CERTIFICATE,
+    DOMAIN,
+    IPV4,
+    build_infrastructure_objects,
+    collect_observables,
+)
+
+LANGUAGE = "internet"
+
+FINGERPRINT_FIELDS = {
+    "jarm": "jarm",
+    "ja4x": "ja4x",
+    "ja4s": "ja4s",
+    "certificate_sha256": "certificate.sha256",
+    "certificate_subject": "certificate.subject",
+    "certificate_issuer": "certificate.issuer",
+    "http_title": "http.title",
+    "http_body_sha256": "http.body_sha256",
+    "http_server": "http.server",
+    "banner_sha256": "banner_sha256",
+    "asn": "asn",
+}
+"""Host event field holding each fingerprint kind."""
+
+SCOUT_MAX_AGE_DAYS = 89
+SCOUT_MAX_RANGE_DAYS = 29
+ENRICHMENT_MARGIN_SECONDS = 5.0
+
+
+def scout_window(window: HuntTimeWindow, today: date) -> tuple[date, date] | None:
+    """Clamp a run window to the dates Team Cymru Scout searches.
+
+    Scout searches the last 90 days, at most 30 days at a time: the most
+    recent part of the window is kept.
+
+    Args:
+        window: Time window of the run.
+        today: Current UTC date.
+
+    Returns:
+        The first and last days to search, or ``None`` when the window is too old.
+    """
+    end = min(window.end.astimezone(timezone.utc).date(), today)
+    start = max(
+        window.start.astimezone(timezone.utc).date(),
+        today - timedelta(days=SCOUT_MAX_AGE_DAYS),
+        end - timedelta(days=SCOUT_MAX_RANGE_DAYS),
+    )
+    return (start, end) if start <= end else None
+
+
+def describe_rule(rule: FingerprintRule, max_items: int = 5) -> str:
+    """Describe the fingerprints of a rule in a few words."""
+    parts = [f"{fp.kind} {fp.value}" for fp in rule.fingerprints[:max_items]]
+    if len(rule.fingerprints) > max_items:
+        parts.append(f"{len(rule.fingerprints) - max_items} more")
+    if rule.queries:
+        parts.append(f"queries on {', '.join(sorted(rule.queries))}")
+    return ", ".join(parts)
+
+
+def _today() -> date:
+    """Return the current UTC date."""
+    return datetime.now(timezone.utc).date()
+
+
+class InfrastructureTrackerConnector(InternalHuntConnector):
+    """Hunt connector tracking infrastructure fingerprints on the internet."""
+
+    languages = (LANGUAGE,)
+    entity_fields = ("ip", "domain")
+    evidence_excluded_fields = frozenset({CERTIFICATES_FIELD})
+
+    def __init__(self, settings: ConnectorSettings) -> None:
+        """Initialize the connector (the helper is created by ``start()``).
+
+        Args:
+            settings: The connector settings.
+        """
+        super().__init__(settings)
+        self.tracker_config = settings.infrastructure_tracker
+        self.clients: dict[str, Any] = {}
+        self.internetdb: InternetDbClient | None = None
+
+    def post_init(self) -> None:
+        """Create the clients of the configured sources."""
+        config = self.tracker_config
+        secrets = {
+            "censys": config.censys_token,
+            "silentpush": config.silentpush_api_key,
+            "urlscan": config.urlscan_api_key,
+            "cymru_scout": config.cymru_scout_api_key,
+        }
+        for source in config.sources:
+            secret = secrets[source]
+            key = secret.get_secret_value().strip() if secret else ""
+            if source == "censys":
+                self.clients[source] = CensysClient(
+                    str(config.censys_api_url), key, config.censys_organisation_id
+                )
+            elif source == "silentpush":
+                self.clients[source] = SilentPushClient(
+                    str(config.silentpush_api_url), key
+                )
+            elif source == "urlscan":
+                self.clients[source] = UrlscanClient(str(config.urlscan_api_url), key)
+            else:
+                self.clients[source] = ScoutClient(str(config.cymru_scout_api_url), key)
+        if config.internetdb_enabled and config.internetdb_max_lookups > 0:
+            self.internetdb = InternetDbClient(base_url=str(config.internetdb_url))
+
+    def sigma_backend(self, pipeline: str | None) -> NoReturn:
+        """Reject Sigma rules: infrastructure hunts search fingerprints.
+
+        Raises:
+            HuntTranslationError: Always.
+        """
+        raise HuntTranslationError(
+            "Sigma rules describe telemetry and are not translated for the 'internet' "
+            "platform: give the hunt a native query in the 'internet' language "
+            "listing the infrastructure fingerprints."
+        )
+
+    def translate(self, sigma_rule: str, pipeline: str | None) -> NativeQuery:
+        """Reject Sigma rules (see :meth:`sigma_backend`)."""
+        self.sigma_backend(pipeline)
+
+    def resolve_query(self, request: HuntRequest) -> NativeQuery:
+        """Plan the source queries of the fingerprint rule of a hunt.
+
+        The plan (the queries of every source, as JSON) is the query reported to
+        OpenCTI, in preview as in execution.
+
+        Args:
+            request: The hunt run request.
+
+        Returns:
+            The query plan.
+
+        Raises:
+            HuntTranslationError: If the rule is invalid or no configured source runs it.
+        """
+        native = super().resolve_query(request)
+        rule = parse_rule(native.query)
+        plan = build_plan(rule, self.tracker_config.sources)
+        fields = tuple(
+            dict.fromkeys(FINGERPRINT_FIELDS[fp.kind] for fp in rule.fingerprints)
+        )
+        return NativeQuery(language=LANGUAGE, query=render_plan(plan), fields=fields)
+
+    def execute(
+        self,
+        native_query: NativeQuery,
+        time_window: HuntTimeWindow,
+        limits: HuntLimits,
+    ) -> HuntResult:
+        """Run the source queries of a plan and merge the hosts they find.
+
+        A failing source is logged and skipped; the run fails only when every
+        query fails.
+
+        Args:
+            native_query: Query plan.
+            time_window: Time window of the run.
+            limits: Run limits.
+
+        Returns:
+            One event per host (IP address, else host name).
+        """
+        plan = load_plan(native_query.query)
+        deadline = RunDeadline(limits.timeout_seconds)
+        hosts: dict[str, Host] = {}
+        errors: list[HuntExecutionError] = []
+        answered = 0
+        truncated = False
+        reported_total = 0
+        for source, queries in plan.items():
+            for query in queries:
+                try:
+                    result = self._search(
+                        source, query, time_window, limits.max_results, deadline
+                    )
+                except HuntTimeoutError:
+                    raise
+                except HuntExecutionError as err:
+                    errors.append(err)
+                    self.logger.warning(
+                        "[TRACKER] Source query failed",
+                        {"source": source, "error": str(err)},
+                    )
+                    continue
+                answered += 1
+                if result.total is not None and result.total > len(result.hosts):
+                    truncated = True
+                    reported_total = max(reported_total, result.total)
+                for host in result.hosts:
+                    if host.key in hosts:
+                        hosts[host.key].merge(host)
+                    elif len(hosts) < limits.max_results:
+                        hosts[host.key] = host
+                    else:
+                        truncated = True
+        if errors and not answered:
+            raise errors[0]
+        self._enrich(list(hosts.values()), deadline)
+        events = [
+            HuntEvent(timestamp=host.last_seen, fields=host.fields())
+            for host in hosts.values()
+        ]
+        return HuntResult(
+            events=events,
+            total_hits=max(len(events), reported_total),
+            truncated=truncated,
+        )
+
+    def _search(
+        self,
+        source: str,
+        query: str,
+        window: HuntTimeWindow,
+        limit: int,
+        deadline: RunDeadline,
+    ) -> SourceResult:
+        """Run one query on a source."""
+        client = self.clients.get(source)
+        if client is None:
+            raise HuntExecutionError(f"The '{source}' source is not configured.")
+        if source == "urlscan":
+            start = window.start.astimezone(timezone.utc).date()
+            end = window.end.astimezone(timezone.utc).date()
+            return client.search(query, start, end, limit, deadline)
+        if source == "cymru_scout":
+            dates = scout_window(window, _today())
+            if dates is None:
+                self.logger.info(
+                    "[TRACKER] Run window older than the Team Cymru Scout history, skipped",
+                    {"start": window.start.isoformat()},
+                )
+                return SourceResult([])
+            return client.search(query, dates[0], dates[1], limit, deadline)
+        return client.search(query, limit, deadline)
+
+    def _enrich(self, hosts: list[Host], deadline: RunDeadline) -> None:
+        """Add the Shodan InternetDB data of the IP addresses found (best effort)."""
+        if self.internetdb is None:
+            return
+        candidates = [h for h in hosts if h.ip and is_public_ip(h.ip)]
+        for host in candidates[: self.tracker_config.internetdb_max_lookups]:
+            if deadline.remaining() < ENRICHMENT_MARGIN_SECONDS:
+                self.logger.info(
+                    "[TRACKER] Run timeout close, InternetDB enrichment stopped", {}
+                )
+                return
+            try:
+                if self.internetdb.lookup(host, deadline):
+                    host.sources.append("internetdb")
+            except HuntTimeoutError as err:
+                self.logger.warning(
+                    "[TRACKER] InternetDB enrichment stopped", {"error": str(err)}
+                )
+                return
+            except HuntExecutionError as err:
+                self.logger.warning(
+                    "[TRACKER] InternetDB lookup failed",
+                    {"ip": host.ip, "error": str(err)},
+                )
+
+    def to_stix(self, request: HuntRequest, result: HuntResult) -> list[Any]:
+        """Map the hosts found to an infrastructure, its observables and indicators.
+
+        Args:
+            request: The hunt run request.
+            result: The host events, after benign suppression.
+
+        Returns:
+            connectors-sdk models and STIX dictionaries.
+        """
+        allowed = [t for t in (IPV4, DOMAIN) if t in self.config.observable_types]
+        if self.tracker_config.create_certificates:
+            allowed.append(CERTIFICATE)
+        expected = request.hunt.expected_observables
+        if expected:
+            allowed = [t for t in allowed if t in expected]
+        first_seen, last_seen = event_time_bounds(result.events, request.time_window)
+        native = request.hunt.native_query
+        rule = parse_rule(native.query) if native else FingerprintRule()
+        return build_infrastructure_objects(
+            request,
+            result.hits_count,
+            first_seen,
+            last_seen,
+            collect_observables(result.events, allowed, self.config.max_observables),
+            describe_rule(rule),
+        )
