@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'OpenSearch OCSF Hunt' # optional (default: 'OpenSearch OCSF Hunt')
+  # scope: 'opensearch' # optional, hunt platform slug (default: 'opensearch')
+  # log_level: 'error' # optional (default: 'error')
+  # security_platform_name: 'OpenSearch' # optional (default: 'OpenSearch')
+  # security_platform_type: 'SIEM' # optional (default: 'SIEM')
+  # max_concurrent_runs: 2 # optional (default: none)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+opensearch_ocsf_hunt:
+  url: 'ChangeMe' # URL of the OpenSearch cluster, e.g. 'https://opensearch.example.com:9200'
+  username: 'ChangeMe' # leave username and password empty for a cluster without the security plugin
+  password: 'ChangeMe'
+  # verify_ssl: true # optional (default: true)
+  # ca_cert: '' # optional, path to a CA certificate bundle
+  # indices: 'ocsf-*' # optional, index patterns holding the OCSF events
+  # query_language: 'ppl' # optional, language of the translated Sigma rules: 'ppl' or 'opensearch-lucene'
+  # sigma_pipeline: 'ocsf' # optional, pySigma pipeline(s) chained with '+', or 'none'
+  # timestamp_field: 'time' # optional, field holding the event time
+  # timestamp_format: 'epoch_millis' # optional, 'epoch_millis' or 'date'
