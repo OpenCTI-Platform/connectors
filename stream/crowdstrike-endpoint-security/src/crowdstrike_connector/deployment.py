@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentVendorAdapter,
+    HitCollection,
     IndicatorDeployment,
     VendorHit,
     VendorIndicator,
@@ -136,7 +137,7 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
 
     def collect_hits(
         self, deployments: Sequence[IndicatorDeployment], since: datetime
-    ) -> Iterable[VendorHit]:
+    ) -> Iterable[VendorHit] | HitCollection:
         """Read the Falcon alerts raised by deployed indicators since a date.
 
         An alert counts as one hit of every deployed indicator whose value is the
@@ -147,7 +148,8 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
             since: Only alerts created after this date are read.
 
         Returns:
-            The hits.
+            The hits. When ``max_alerts`` alerts were read (oldest first), the
+            collection is complete until the newest alert read.
         """
         by_value: dict[str, IndicatorDeployment] = {}
         for deployment in deployments:
@@ -156,12 +158,16 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
         if not by_value:
             return []
         hits: list[VendorHit] = []
+        read = 0
+        newest: datetime = since
         for alert in self._client.iter_alerts(since, self._max_alerts):
+            read += 1
             timestamp = parse_datetime(
                 alert.get("timestamp") or alert.get("created_timestamp")
             )
             if timestamp is None or timestamp < since:
                 continue
+            newest = max(newest, timestamp)
             matched = {
                 by_value[value].indicator_id
                 for value in self._alert_values(alert)
@@ -171,6 +177,8 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
                 VendorHit(timestamp=timestamp, indicator_id=indicator_id)
                 for indicator_id in sorted(matched)
             )
+        if read >= self._max_alerts:
+            return HitCollection(hits=hits, complete_until=newest)
         return hits
 
     @staticmethod
