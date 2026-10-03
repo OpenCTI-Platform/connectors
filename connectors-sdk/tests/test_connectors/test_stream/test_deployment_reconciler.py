@@ -1025,6 +1025,52 @@ def test_undelivered_hit_reports_are_dropped_after_the_maximum_age(
     assert reconciler._pending_hits == {}
 
 
+def test_undelivered_hit_reports_are_sent_when_the_vendor_cannot_be_read(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    router.handlers["IndicatorReportHits("] = ValueError("unavailable")
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+    reconciler.run_once()
+    assert list(reconciler._pending_hits) == ["a"]
+
+    router.handlers["IndicatorReportHits("] = {
+        "data": {"indicatorReportHits": {"id": "sighting"}}
+    }
+    adapter.hits_error = RuntimeError("vendor unavailable")
+    assert reconciler.run_once().hits_reported == 1
+    assert router.calls_of("IndicatorReportHits(")[-1]["count"] == 1
+    assert reconciler._pending_hits == {}
+
+
+def test_undelivered_hit_reports_are_sent_when_no_deployment_is_live(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    router.handlers["IndicatorReportHits("] = ValueError("unavailable")
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+    reconciler.run_once()
+    assert list(reconciler._pending_hits) == ["a"]
+
+    router.handlers["IndicatorReportHits("] = {
+        "data": {"indicatorReportHits": {"id": "sighting"}}
+    }
+    list_nodes()
+    adapter.vendor = []
+    adapter.hits = []
+    assert reconciler.run_once().hits_reported == 1
+    assert router.calls_of("IndicatorReportHits(")[-1]["count"] == 1
+    assert reconciler._pending_hits == {}
+
+
 def test_a_hit_matched_by_value_credits_every_indicator_carrying_it(
     graphql_helper, make_reporter, router, list_nodes, node_factory
 ):

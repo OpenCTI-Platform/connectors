@@ -813,11 +813,11 @@ class DeploymentReconciler:
         if not deployments:
             self._hits_since = next_since
             self._release_held_hits([])
-            return 0
+            return self._send_hit_reports({}, now)
         since = self._hits_since if self._hits_since is not None else next_since
         collected = self._read_hits(deployments, since, next_since)
         if collected is None:
-            return 0
+            return self._send_hit_reports({}, now)
         hits, next_since = collected
         index = _Index.of_deployments(deployments)
         aggregated: dict[str, list[Any]] = {}
