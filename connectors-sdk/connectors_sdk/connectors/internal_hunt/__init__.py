@@ -7,6 +7,7 @@ This package provides the building blocks of the connectors of type ``INTERNAL_H
   ``HuntEvidence``, ``HuntRunReport``
 - pySigma helpers: ``build_pipeline``, ``parse_sigma_rule``, ``convert_sigma``, ``detection_fields``
 - Result helpers: ``flatten_fields``, ``value_strings``, ``build_evidence``, ``count_distinct_entities``
+- Time helpers: ``RunDeadline`` (bound API calls and job polling), ``parse_timestamp``
 - Errors: ``HuntError`` and its subclasses
 """
 
@@ -64,6 +65,7 @@ from connectors_sdk.connectors.internal_hunt.stix_mapping import (
     hunt_author,
     hunt_markings,
 )
+from connectors_sdk.connectors.internal_hunt.timing import RunDeadline, parse_timestamp
 from connectors_sdk.connectors.internal_hunt.translation import (
     NO_PIPELINE,
     build_pipeline,
@@ -110,6 +112,9 @@ __all__ = [
     "sha256_hex",
     "suppress_benign",
     "value_strings",
+    # Time helpers
+    "RunDeadline",
+    "parse_timestamp",
     # Observables and STIX mapping
     "ObservableValue",
     "extract_observables",
