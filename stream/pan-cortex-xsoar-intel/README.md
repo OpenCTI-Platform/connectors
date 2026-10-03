@@ -66,7 +66,6 @@ There are a number of configuration options, which are set either in `docker-com
 | Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| true                 | No        | Set to `true` unless synchronizing between OpenCTI platforms.                  |
 | Live Stream Start Timestamp    | live_stream_start_timestamp| `CONNECTOR_LIVE_STREAM_START_TIMESTAMP`|                      | No        | Start timestamp used on connector first start.                                 |
 | Consumer Count                 | consumer_count            | `CONNECTOR_CONSUMER_COUNT`              | 5                    | No        | Number of consumer/worker threads.                                             |
-| Confidence Level               | confidence_level          | `CONNECTOR_CONFIDENCE_LEVEL`            |                      | Yes       | Default confidence level (1-4).                                                |
 | Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | info                 | No        | Determines the verbosity of the logs.                                          |
 
 ### Connector extra parameters environment variables
@@ -103,7 +102,6 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=xsoar
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
-      - CONNECTOR_CONFIDENCE_LEVEL=80
       - XSOAR_URL=https://api-xsoar.example.com
       - XSOAR_KEY_ID=ChangeMe
       - XSOAR_KEY=ChangeMe
