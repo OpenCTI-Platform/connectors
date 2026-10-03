@@ -83,7 +83,7 @@
     },
     "SPLUNK_SAVED_SEARCHES_SEARCH_SCOPE": {
       "default": "alerts",
-      "description": "Saved searches to import: `correlation_searches` (Enterprise Security correlation searches only), `alerts` (correlation searches and scheduled searches that trigger alert actions) or `all`.",
+      "description": "Saved searches to import: `correlation_searches` (Enterprise Security correlation searches only), `alerts` (correlation searches, scheduled searches that trigger alert actions, and saved searches annotated with ATT&CK techniques in `action.correlationsearch.annotations`) or `all`.",
       "enum": [
         "correlation_searches",
         "alerts",
@@ -101,7 +101,7 @@
     },
     "SPLUNK_SAVED_SEARCHES_IMPORT_DISABLED_RULES": {
       "default": true,
-      "description": "Import disabled saved searches too, with the deployment status `deployed` (enabled ones get `active`). When false, disabled saved searches are left out and count as removed.",
+      "description": "Import saved searches that do not run (disabled or not scheduled) too, with the deployment status `deployed` (enabled and scheduled ones get `active`). When false, they are left out and count as removed.",
       "type": "boolean"
     },
     "SPLUNK_SAVED_SEARCHES_PAGE_SIZE": {

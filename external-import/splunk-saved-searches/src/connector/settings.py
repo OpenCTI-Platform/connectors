@@ -63,8 +63,9 @@ class SplunkSavedSearchesConfig(BaseConfigModel):
     )
     search_scope: Literal["correlation_searches", "alerts", "all"] = Field(
         description="Saved searches to import: `correlation_searches` (Enterprise "
-        "Security correlation searches only), `alerts` (correlation searches and "
-        "scheduled searches that trigger alert actions) or `all`.",
+        "Security correlation searches only), `alerts` (correlation searches, "
+        "scheduled searches that trigger alert actions, and saved searches annotated "
+        "with ATT&CK techniques in `action.correlationsearch.annotations`) or `all`.",
         default="alerts",
     )
     web_url: HttpUrl | None = Field(
@@ -73,9 +74,9 @@ class SplunkSavedSearchesConfig(BaseConfigModel):
         default=None,
     )
     import_disabled_rules: bool = Field(
-        description="Import disabled saved searches too, with the deployment status "
-        "`deployed` (enabled ones get `active`). When false, disabled saved searches "
-        "are left out and count as removed.",
+        description="Import saved searches that do not run (disabled or not "
+        "scheduled) too, with the deployment status `deployed` (enabled and scheduled "
+        "ones get `active`). When false, they are left out and count as removed.",
         default=True,
     )
     page_size: int = Field(

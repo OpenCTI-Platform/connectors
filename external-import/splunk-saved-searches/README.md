@@ -22,6 +22,7 @@ Table of Contents
     - [Deployment status and reconciliation](#deployment-status-and-reconciliation)
     - [ATT&CK techniques](#attck-techniques)
     - [The deployed-on relationship](#the-deployed-on-relationship)
+  - [Conventions for producers](#conventions-for-producers)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -29,7 +30,8 @@ Table of Contents
 
 This connector imports the detections deployed in [Splunk](https://www.splunk.com/) into OpenCTI:
 Splunk Enterprise Security correlation searches (including the Splunk Security Content / ESCU
-detections) and scheduled searches that trigger alert actions. Each saved search becomes an Indicator
+detections), scheduled searches that trigger alert actions, and saved searches annotated with MITRE
+ATT&CK techniques. Each saved search becomes an Indicator
 whose pattern is its SPL query, linked to the MITRE ATT&CK techniques it detects and recorded as deployed
 on the Splunk platform with its current status.
 
@@ -76,9 +78,9 @@ Connector-specific variables:
 | `SPLUNK_SAVED_SEARCHES_TOKEN` | `splunk_saved_searches.token` | Yes | | Splunk authentication token. |
 | `SPLUNK_SAVED_SEARCHES_APP` | `splunk_saved_searches.app` | No | `-` | App namespace to read (`-`: every app), e.g. `SplunkEnterpriseSecuritySuite`. |
 | `SPLUNK_SAVED_SEARCHES_OWNER` | `splunk_saved_searches.owner` | No | `-` | Owner namespace to read (`-`: every owner), e.g. `nobody`. |
-| `SPLUNK_SAVED_SEARCHES_SEARCH_SCOPE` | `splunk_saved_searches.search_scope` | No | `alerts` | `correlation_searches`, `alerts` (correlation searches and alerting scheduled searches) or `all`. |
+| `SPLUNK_SAVED_SEARCHES_SEARCH_SCOPE` | `splunk_saved_searches.search_scope` | No | `alerts` | `correlation_searches`, `alerts` (correlation searches, alerting scheduled searches and ATT&CK-annotated searches) or `all`. |
 | `SPLUNK_SAVED_SEARCHES_WEB_URL` | `splunk_saved_searches.web_url` | No | | Base URL of Splunk Web, e.g. `https://splunk.example.com:8000`. When set, each Indicator links to its search. |
-| `SPLUNK_SAVED_SEARCHES_IMPORT_DISABLED_RULES` | `splunk_saved_searches.import_disabled_rules` | No | `true` | Import disabled searches with the status `deployed`. When `false`, disabled searches are left out (and count as removed). |
+| `SPLUNK_SAVED_SEARCHES_IMPORT_DISABLED_RULES` | `splunk_saved_searches.import_disabled_rules` | No | `true` | Import searches that do not run (disabled or not scheduled) with the status `deployed`. When `false`, they are left out (and count as removed). |
 | `SPLUNK_SAVED_SEARCHES_PAGE_SIZE` | `splunk_saved_searches.page_size` | No | `100` | Saved searches per page (1-10000). |
 | `SPLUNK_SAVED_SEARCHES_REQUEST_TIMEOUT` | `splunk_saved_searches.request_timeout` | No | `60` | Timeout of each HTTP request, in seconds. |
 | `SPLUNK_SAVED_SEARCHES_MAX_RETRIES` | `splunk_saved_searches.max_retries` | No | `5` | Retries on 429, 5xx and network errors, with exponential backoff honoring `Retry-After`. |
@@ -148,8 +150,10 @@ graph LR
 | `SEARCH_SCOPE` | Imported saved searches |
 |---|---|
 | `correlation_searches` | Enterprise Security correlation searches (`action.correlationsearch.enabled = 1`). |
-| `alerts` (default) | Correlation searches, and scheduled searches (`is_scheduled = 1`) with at least one alert action (`actions`) or tracked alerts (`alert.track = 1`). Reports and dashboards' searches are left out. |
+| `alerts` (default) | Correlation searches; scheduled searches (`is_scheduled = 1`) with at least one alert action (`actions`) or tracked alerts (`alert.track = 1`); and saved searches whose `action.correlationsearch.annotations` carry at least one ATT&CK technique id in `mitre_attack`. Other reports and dashboards' searches are left out. |
 | `all` | Every saved search with a search string. |
+
+Saved searches without a search string are always left out (`no_query`).
 
 ### Entity mapping
 
@@ -161,8 +165,8 @@ graph LR
 | `action.notable.param.severity`, else `alert.severity` | Indicator `x_opencti_rule_level` (see below) |
 | Saved search name | External reference `external_id`, `deployed-on` `external_id` |
 | Splunk Web link (`<web_url>/app/<app>/search?s=<saved search>`) | External reference `url`, when `WEB_URL` is set |
-| `action.correlationsearch.annotations` `mitre_attack` | `indicates` relationships to Attack Patterns |
-| `disabled` | `deployed-on` `deployment_status`: `active` (enabled) or `deployed` (disabled) |
+| `action.correlationsearch.annotations` `mitre_attack` (else ids in the name, label, description) | `indicates` relationships to Attack Patterns |
+| `disabled`, `is_scheduled` | `deployed-on` `deployment_status`: `active` (enabled and scheduled) or `deployed` (disabled, or not scheduled) |
 
 Severity: the notable event severity of a correlation search (`informational`, `low`, `medium`, `high`,
 `critical`) is used as is. Otherwise `alert.severity` is mapped: 1 (debug) and 2 (info) to
@@ -173,6 +177,10 @@ carries the `Splunk` author and the configured TLP marking. The Security Platfor
 (`identity_class: securityplatform`) is named after `SPLUNK_SAVED_SEARCHES_PLATFORM_NAME`.
 
 ### Deployment status and reconciliation
+
+A saved search only runs when it is enabled (`disabled = 0`) and scheduled (`is_scheduled = 1`, set by
+`enableSched = 1` in `savedsearches.conf`): such a search gets the status `active`. A disabled search, or
+an enabled search that is not scheduled (it never runs on its own), gets `deployed`.
 
 Every run reads all the saved searches and sends, for each one, its Indicator and its deployment with
 `last_sync_at` set to the time of the run. The connector state keeps the Indicator of every search
@@ -188,11 +196,22 @@ asked whether the Indicator still exists, the removal is retried on the next run
 
 ### ATT&CK techniques
 
-The techniques and sub-techniques of the correlation search annotations (`mitre_attack`, as written by
-Splunk Security Content) give one `indicates` relationship each, from the Indicator to the Attack Pattern
-whose id is derived from the MITRE id. Searches without annotations are searched for technique ids
-written in their name, label or description: standalone uppercase ids (`T1059`, `T1059.001`) and
-`attack.mitre.org/techniques/...` links only, so words or hashes never match.
+Techniques are read from the `mitre_attack` key of `action.correlationsearch.annotations`, the JSON
+object Splunk Enterprise Security and Splunk Security Content write
+(`{"mitre_attack": ["T1059.001", "T1027"], "analytic_story": [...], ...}`):
+
+- `mitre_attack` is a list of strings, or a single string;
+- each string may hold one or several technique or sub-technique ids, in any case, separated by commas,
+  semicolons, pipes or spaces (`"T1059.001, T1027"`), or ATT&CK links
+  (`https://attack.mitre.org/techniques/T1021/002/`);
+- tactic ids (`TA0002`), tactic or technique names, and the other annotation keys (`analytic_story`,
+  `kill_chain_phases`, `cis20`, `nist`, ...) are ignored; an annotation that is not valid JSON is ignored.
+
+Only when the annotations give no technique, the technique ids written in the saved search name, the
+correlation search label (`action.correlationsearch.label`) or the description count: standalone
+uppercase ids (`T1059`, `T1059.001`) and `attack.mitre.org/techniques/...` links only, so words or hashes
+never match. Each technique gives one `indicates` relationship from the Indicator to the Attack Pattern
+whose id is derived from the MITRE id.
 
 Once per run, OpenCTI is asked which techniques it already holds: those are referenced as they are and
 never renamed or re-attributed. A technique OpenCTI does not hold yet is created under its MITRE id; the
@@ -208,6 +227,48 @@ run, the connector checks the relationship schema of the platform (`schemaRelati
 `deployed-on` is not defined between an Indicator and a Security Platform, it records each deployment as
 a `related-to` relationship described as `Deployed on <platform> (status: <status>, rule id: <name>)`
 instead, and logs one warning per run.
+
+## Conventions for producers
+
+Apps and add-ons that ship saved searches (for example the OpenCTI for Splunk Enterprise add-on) get them
+imported with their techniques by following these conventions:
+
+1. **Annotate every detection** with `action.correlationsearch.annotations`, a JSON object whose
+   `mitre_attack` key lists the technique and sub-technique ids the search detects. This works with or
+   without Enterprise Security, and makes the search part of the default `alerts` scope even when it has
+   no alert action:
+
+   ```ini
+   [OpenCTI - Encoded PowerShell command line]
+   search = | tstats count from datamodel=Endpoint.Processes where Processes.process="*-enc*" by Processes.dest
+   description = Detects encoded PowerShell command lines.
+   action.correlationsearch.annotations = {"mitre_attack": ["T1059.001", "T1027"]}
+   action.notable.param.severity = high
+   alert.severity = 5
+   enableSched = 1
+   cron_schedule = */15 * * * *
+   disabled = 1
+   ```
+
+   Use one id per list item (`T1059.001`), uppercase. Without Enterprise Security, declare the setting in
+   the app `README/savedsearches.conf.spec` (`action.correlationsearch.annotations = <string>`) so Splunk
+   validates it.
+2. **Schedule what should run**: only an enabled search with `enableSched = 1` is `active`. Shipping a
+   search disabled (`disabled = 1`) is fine: it is imported as `deployed` (available, not running) until
+   an administrator enables it.
+3. **Keep the saved search name stable**: the name is the rule id (`external_id` of the deployment) and,
+   with the app and owner, the key that reconciles runs. Renaming a search records the old name as
+   `removed` and the new one as `deployed` or `active`.
+4. **Edit the SPL only when the logic changes**: the Indicator id derives from the search string, so any
+   edit of `search` gives a new Indicator and marks the previous one `removed`.
+5. **Give the severity** with `action.notable.param.severity` (`informational`, `low`, `medium`, `high`,
+   `critical`) or `alert.severity` (1-6).
+6. **Use one Security Platform per Splunk deployment**: the importer creates the Security Platform
+   identity `<SPLUNK_SAVED_SEARCHES_PLATFORM_NAME>` (`identity_class: securityplatform`,
+   `security_platform_type: SIEM`, STIX id `pycti.Identity.generate_id(<name>, "securityplatform")`).
+   Set `SPLUNK_SAVED_SEARCHES_PLATFORM_NAME` to the name of the Security Platform other integrations of
+   the same deployment report to (for example the platform of the OpenCTI add-on), so rule deployments,
+   indicator deployments and sightings land on the same entity.
 
 ## Debugging
 

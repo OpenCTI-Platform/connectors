@@ -3,13 +3,18 @@ from datetime import datetime, timezone
 import pytest
 from connector.detection_rule import RuleSkippedError
 from connector.rule_mapper import (
+    ANNOTATIONS_KEY,
+    annotation_techniques,
     in_scope,
+    is_running,
     is_true,
     map_saved_search,
     name_from_key,
     rule_key,
 )
 from splunk_samples import CORRELATION_SEARCH, REPORT, SCHEDULED_ALERT, entry
+
+ANNOTATED = '{"mitre_attack": ["T1078"]}'
 
 
 def _url(raw):
@@ -45,10 +50,35 @@ def test_is_true(value, expected):
         (entry(REPORT, **{"alert.track": "1"}), "alerts", True),
         (entry(SCHEDULED_ALERT, is_scheduled="0"), "alerts", False),
         (REPORT, "all", True),
+        # Saved searches annotated with ATT&CK techniques are detections.
+        (entry(REPORT, **{ANNOTATIONS_KEY: ANNOTATED}), "alerts", True),
+        (entry(REPORT, **{ANNOTATIONS_KEY: ANNOTATED}), "correlation_searches", False),
+        (entry(REPORT, **{ANNOTATIONS_KEY: '{"mitre_attack": []}'}), "alerts", False),
+        (
+            entry(REPORT, **{ANNOTATIONS_KEY: '{"mitre_attack": ["TA0002"]}'}),
+            "alerts",
+            False,
+        ),
     ],
 )
 def test_scope(raw, scope, expected):
     assert in_scope(raw["content"], scope) is expected
+
+
+@pytest.mark.parametrize(
+    "disabled,is_scheduled,running",
+    [
+        (False, True, True),
+        ("0", "1", True),
+        ("1", "1", False),
+        (False, False, False),
+        (False, None, False),
+    ],
+)
+def test_only_enabled_scheduled_searches_run(disabled, is_scheduled, running):
+    raw = entry(CORRELATION_SEARCH, disabled=disabled, is_scheduled=is_scheduled)
+    assert is_running(raw["content"]) is running
+    assert map_saved_search(raw, "all", _url).enabled is running
 
 
 def test_correlation_search():
@@ -89,6 +119,36 @@ def test_annotations_variants(annotations):
     techniques = map_saved_search(raw, "all", _url).techniques
     expected = {"T1059": None} if "mitre_attack" in annotations else {}
     assert techniques == expected
+
+
+@pytest.mark.parametrize(
+    "annotations,expected",
+    [
+        ('{"mitre_attack": ["T1059.001", "T1027"]}', ["T1059.001", "T1027"]),
+        (
+            '{"mitre_attack": "T1059.001, t1027 | T1105"}',
+            ["T1059.001", "T1027", "T1105"],
+        ),
+        (
+            '{"mitre_attack": ["https://attack.mitre.org/techniques/T1021/002/"]}',
+            ["T1021.002"],
+        ),
+        ('{"mitre_attack": ["T1059.001", "T1059.001"]}', ["T1059.001"]),
+        ('{"mitre_attack": {"id": "T1059"}}', []),
+        ('{"mitre_attack": ["TA0002", "Execution"]}', []),
+        ({"mitre_attack": ["T1566"]}, ["T1566"]),
+        (None, []),
+    ],
+)
+def test_annotation_techniques(annotations, expected):
+    assert list(annotation_techniques(annotations)) == expected
+
+
+def test_annotated_report_is_imported_but_not_active():
+    raw = entry(REPORT, is_scheduled="0", **{ANNOTATIONS_KEY: ANNOTATED})
+    rule = map_saved_search(raw, "alerts", _url)
+    assert rule.techniques == {"T1078": None}
+    assert rule.enabled is False
 
 
 def test_annotations_as_an_object_and_label_fallback():

@@ -1,6 +1,7 @@
 """Splunk saved search -> ``DetectionRule``."""
 
 import json
+import re
 from collections.abc import Callable
 from typing import Any, Literal
 
@@ -24,6 +25,9 @@ ALERT_SEVERITY_LEVELS = {
     6: "critical",
 }
 _TRUE_VALUES = {"1", "true", "t", "yes", "y", "on"}
+_SEPARATORS_RE = re.compile(r"[\s,;|]+")
+# Saved search setting holding the ATT&CK annotations (JSON object).
+ANNOTATIONS_KEY = "action.correlationsearch.annotations"
 
 
 def is_true(value: Any) -> bool:
@@ -48,16 +52,19 @@ def is_alert(content: dict[str, Any]) -> bool:
     )
 
 
-def in_scope(content: dict[str, Any], scope: SearchScope) -> bool:
-    """Tell whether the saved search belongs to the configured scope."""
-    if scope == "all":
-        return True
-    if scope == "correlation_searches":
-        return is_correlation_search(content)
-    return is_correlation_search(content) or is_alert(content)
+def is_running(content: dict[str, Any]) -> bool:
+    """Tell whether the saved search runs: enabled and scheduled."""
+    return not is_true(content.get("disabled")) and is_true(content.get("is_scheduled"))
 
 
-def _annotation_techniques(annotations: Any) -> dict[str, str | None]:
+def annotation_techniques(annotations: Any) -> dict[str, str | None]:
+    """Return the techniques of the ``mitre_attack`` annotation.
+
+    ``annotations`` is the JSON object of ``action.correlationsearch.annotations``
+    (a string, or already decoded). ``mitre_attack`` holds a list of technique
+    ids or a single string; each value may hold several ids (separated by
+    commas, semicolons, pipes or spaces) or ATT&CK links.
+    """
     if isinstance(annotations, str):
         try:
             annotations = json.loads(annotations) if annotations.strip() else {}
@@ -65,15 +72,35 @@ def _annotation_techniques(annotations: Any) -> dict[str, str | None]:
             return {}
     if not isinstance(annotations, dict):
         return {}
-    techniques: dict[str, str | None] = {}
     mitre_attack = annotations.get("mitre_attack") or []
     if isinstance(mitre_attack, str):
         mitre_attack = [mitre_attack]
+    if not isinstance(mitre_attack, list):
+        return {}
+    found: list[str] = []
     for value in mitre_attack:
-        mitre_id = normalize_technique_id(value)
-        if mitre_id:
-            techniques[mitre_id] = None
-    return techniques
+        text = str(value)
+        found.extend(
+            mitre_id
+            for mitre_id in map(normalize_technique_id, _SEPARATORS_RE.split(text))
+            if mitre_id
+        )
+        found.extend(extract_technique_ids(text))
+    return {mitre_id: None for mitre_id in dict.fromkeys(found)}
+
+
+def is_annotated(content: dict[str, Any]) -> bool:
+    """Tell whether the saved search is annotated with ATT&CK techniques."""
+    return bool(annotation_techniques(content.get(ANNOTATIONS_KEY)))
+
+
+def in_scope(content: dict[str, Any], scope: SearchScope) -> bool:
+    """Tell whether the saved search belongs to the configured scope."""
+    if scope == "all":
+        return True
+    if scope == "correlation_searches":
+        return is_correlation_search(content)
+    return is_correlation_search(content) or is_alert(content) or is_annotated(content)
 
 
 def _level(content: dict[str, Any]) -> str | None:
@@ -103,9 +130,10 @@ def map_saved_search(
 ) -> DetectionRule:
     """Map an entry of ``/servicesNS/<owner>/<app>/saved/searches``.
 
-    ATT&CK techniques come from the correlation search annotations
-    (``mitre_attack``); saved searches without them are searched for
-    technique ids written in their name or description.
+    ATT&CK techniques come from the ``mitre_attack`` annotation; saved
+    searches without it are searched for technique ids written in their
+    name, label or description. The search is enabled when it runs (not
+    disabled and scheduled).
     """
     name = entry.get("name")
     if not name:
@@ -120,9 +148,7 @@ def map_saved_search(
     label = content.get("action.correlationsearch.label") or None
     description = content.get("description") or None
 
-    techniques = _annotation_techniques(
-        content.get("action.correlationsearch.annotations")
-    ) or {
+    techniques = annotation_techniques(content.get(ANNOTATIONS_KEY)) or {
         mitre_id: None
         for mitre_id in extract_technique_ids(str(name), label, description)
     }
@@ -133,7 +159,7 @@ def map_saved_search(
         description=description,
         pattern=str(search),
         pattern_type="spl",
-        enabled=not is_true(content.get("disabled")),
+        enabled=is_running(content),
         modified_at=parse_timestamp(entry.get("updated")),
         level=_level(content),
         techniques=techniques,
