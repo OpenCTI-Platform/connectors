@@ -5,6 +5,7 @@ from .client import (
     CrowdstrikeClient,
     IocOperationResult,
     IocOperationStatus,
+    alert_id,
 )
 from .metrics import Metrics
 
@@ -16,4 +17,5 @@ __all__ = [
     "IocOperationResult",
     "IocOperationStatus",
     "Metrics",
+    "alert_id",
 ]

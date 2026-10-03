@@ -23,6 +23,7 @@ from crowdstrike_services import (
     CrowdstrikeApiError,
     CrowdstrikeClient,
     IocOperationStatus,
+    alert_id,
 )
 
 if TYPE_CHECKING:
@@ -136,7 +137,11 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
         raise CrowdstrikeApiError(result.error or f"IOC push {result.status}")
 
     def collect_hits(
-        self, deployments: Sequence[IndicatorDeployment], since: datetime
+        self,
+        deployments: Sequence[IndicatorDeployment],
+        since: datetime,
+        *,
+        resume: frozenset[str] | None = None,
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the Falcon alerts raised by deployed indicators since a date.
 
@@ -146,38 +151,53 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
         Args:
             deployments: The live deployments.
             since: Only alerts created after this date are read.
+            resume: Ids of the alerts already read at ``since``, when the previous
+                read was capped there.
 
         Returns:
             The hits. When ``max_alerts`` alerts were read (oldest first), the
-            collection is complete until the newest alert read.
+            collection is complete until the newest alert read; when none of them
+            is after ``since``, the next read skips the alerts already read there.
         """
-        by_value: dict[str, IndicatorDeployment] = {}
+        by_value: dict[str, list[IndicatorDeployment]] = {}
         for deployment in deployments:
             for value in deployment.values:
-                by_value.setdefault(value, deployment)
+                by_value.setdefault(value, []).append(deployment)
         if not by_value:
             return []
+        already_read = resume or frozenset()
+        read_at_start: set[str] = set(already_read)
         hits: list[VendorHit] = []
         read = 0
         newest: datetime = since
-        for alert in self._client.iter_alerts(since, self._max_alerts):
+        for alert in self._client.iter_alerts(
+            since, self._max_alerts, exclude_ids=already_read
+        ):
             read += 1
             timestamp = parse_datetime(
                 alert.get("timestamp") or alert.get("created_timestamp")
             )
+            if timestamp is None or timestamp <= since:
+                identifier = alert_id(alert)
+                if identifier:
+                    read_at_start.add(identifier)
             if timestamp is None or timestamp < since:
                 continue
             newest = max(newest, timestamp)
             matched = {
-                by_value[value].indicator_id
+                deployment.indicator_id
                 for value in self._alert_values(alert)
-                if value in by_value
+                for deployment in by_value.get(value, ())
             }
             hits.extend(
                 VendorHit(timestamp=timestamp, indicator_id=indicator_id)
                 for indicator_id in sorted(matched)
             )
         if read >= self._max_alerts:
+            if newest <= since:
+                return HitCollection(
+                    hits=hits, complete_until=since, resume=frozenset(read_at_start)
+                )
             return HitCollection(hits=hits, complete_until=newest)
         return hits
 

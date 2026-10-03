@@ -1,4 +1,4 @@
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -31,6 +31,12 @@ MAX_IOC_PAGES = 2_000
 
 ALERT_PAGE_SIZE = 1_000
 """Page size of the alert retrieval (maximum accepted by the Alerts API)."""
+
+
+def alert_id(alert: dict[str, Any]) -> str | None:
+    """Return the id of an alert (``composite_id``, ``id`` for older payloads)."""
+    identifier = alert.get("composite_id") or alert.get("id")
+    return str(identifier) if identifier else None
 
 
 class CrowdstrikeApiError(Exception):
@@ -524,6 +530,27 @@ class CrowdstrikeClient:
         body = response.get("body")
         return body if isinstance(body, dict) else {}
 
+    @staticmethod
+    def _resources_of(body: dict[str, Any], kind: str) -> list[Any]:
+        """
+        Return the resources of a listing response
+        :param body: Response body
+        :param kind: What is listed, for the error message
+        :return: The resources, empty only for a listing reported empty
+        :raise CrowdstrikeApiError: When the response carries no resource list. It is
+            never read as an empty listing: every deployment would look absent and
+            the hit window would move past unread alerts
+        """
+        resources = body.get("resources")
+        pagination = (body.get("meta") or {}).get("pagination") or {}
+        if resources is None and pagination.get("total") == 0:
+            return []
+        if not isinstance(resources, list):
+            raise CrowdstrikeApiError(
+                f"Unexpected {kind} listing response (resources are missing)"
+            )
+        return resources
+
     def iter_connector_iocs(
         self, page_size: int = IOC_PAGE_SIZE, max_pages: int = MAX_IOC_PAGES
     ) -> Iterator[dict[str, Any]]:
@@ -547,7 +574,7 @@ class CrowdstrikeClient:
             body = self._raise_for_response(
                 self.cs.indicator_combined(parameters=parameters), 200
             )
-            resources = body.get("resources") or []
+            resources = self._resources_of(body, "IOC")
             for resource in resources:
                 if isinstance(resource, dict):
                     yield resource
@@ -596,15 +623,21 @@ class CrowdstrikeClient:
         self._raise_for_response(self.cs.indicator_update(body=body), 200)
 
     def iter_alerts(
-        self, since: datetime, max_alerts: int, page_size: int = ALERT_PAGE_SIZE
+        self,
+        since: datetime,
+        max_alerts: int,
+        page_size: int = ALERT_PAGE_SIZE,
+        exclude_ids: Collection[str] = (),
     ) -> Iterator[dict[str, Any]]:
         """
         Iterate over the alerts created since a date, oldest first
         :param since: Only return alerts created at or after this date
         :param max_alerts: Maximum number of alerts returned
         :param page_size: Number of alerts per page
+        :param exclude_ids: Ids (see `alert_id`) of alerts already read, skipped
+            without counting towards `max_alerts`
         :return: Alert entities
-        :raise CrowdstrikeApiError: On any API error
+        :raise CrowdstrikeApiError: On any API error or an unexpected response
         """
         since_utc = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         after: str | None = None
@@ -614,16 +647,22 @@ class CrowdstrikeClient:
                 self.alerts.get_alerts_combined(
                     filter=f"created_timestamp:>='{since_utc}'",
                     sort="created_timestamp|asc",
-                    limit=min(page_size, max_alerts - returned),
+                    limit=(
+                        page_size
+                        if exclude_ids
+                        else min(page_size, max_alerts - returned)
+                    ),
                     after=after,
                 ),
                 200,
             )
-            resources = body.get("resources") or []
+            resources = self._resources_of(body, "alert")
             for resource in resources:
                 if returned >= max_alerts:
                     return
                 if isinstance(resource, dict):
+                    if exclude_ids and alert_id(resource) in exclude_ids:
+                        continue
                     returned += 1
                     yield resource
             next_after = ((body.get("meta") or {}).get("pagination") or {}).get("after")

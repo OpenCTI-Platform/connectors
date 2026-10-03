@@ -473,6 +473,54 @@ def test_iter_alerts_is_bounded_and_paginated():
     assert second.kwargs["after"] == "next"
 
 
+def test_listings_without_a_resource_list_are_rejected():
+    """A malformed success is never read as an empty listing: reconciliation would
+    report every deployment removed and the hit window would skip unread alerts."""
+    connector = build_connector()
+    malformed = {"status_code": 200, "body": {"errors": []}}
+    connector.client.cs.indicator_combined.return_value = malformed
+    with pytest.raises(CrowdstrikeApiError, match="IOC listing response"):
+        list(connector.client.iter_connector_iocs())
+
+    connector.client._alerts.get_alerts_combined.return_value = {
+        "status_code": 200,
+        "body": {"resources": {"unexpected": True}},
+    }
+    since = datetime(2026, 10, 3, 10, 0, tzinfo=UTC)
+    with pytest.raises(CrowdstrikeApiError, match="alert listing response"):
+        list(connector.client.iter_alerts(since, max_alerts=3))
+
+    connector.client.cs.indicator_combined.return_value = {
+        "status_code": 200,
+        "body": {"resources": None, "meta": {"pagination": {"total": 0}}},
+    }
+    assert list(connector.client.iter_connector_iocs()) == []
+
+
+def test_iter_alerts_skips_excluded_alerts_without_counting_them():
+    connector = build_connector()
+    alerts = connector.client._alerts
+    alerts.get_alerts_combined.side_effect = [
+        api_response(
+            resources=[{"composite_id": "a1"}, {"id": "a2"}, {"composite_id": "a3"}],
+            after="next",
+        ),
+        api_response(resources=[{"composite_id": "a4"}]),
+    ]
+    since = datetime(2026, 10, 3, 10, 0, tzinfo=UTC)
+
+    result = list(
+        connector.client.iter_alerts(
+            since, max_alerts=2, page_size=3, exclude_ids=frozenset({"a1", "a2"})
+        )
+    )
+
+    assert [alert["composite_id"] for alert in result] == ["a3", "a4"]
+    first, second = alerts.get_alerts_combined.call_args_list
+    assert first.kwargs["limit"] == 3
+    assert second.kwargs["limit"] == 3
+
+
 # Vendor adapter
 
 
@@ -593,7 +641,9 @@ def test_adapter_collects_hits_from_alerts(adapter_client):
         (INDICATOR_ID, 20),
         (INDICATOR_ID, 30),
     ]
-    adapter_client.iter_alerts.assert_called_once_with(since, 10_000)
+    adapter_client.iter_alerts.assert_called_once_with(
+        since, 10_000, exclude_ids=frozenset()
+    )
 
 
 def test_adapter_capped_hit_read_is_complete_until_the_newest_alert(adapter_client):
@@ -615,6 +665,60 @@ def test_adapter_capped_hit_read_is_complete_until_the_newest_alert(adapter_clie
     assert isinstance(collection, HitCollection)
     assert collection.complete_until == datetime(2026, 10, 3, 11, 20, tzinfo=UTC)
     assert [hit.timestamp.minute for hit in collection.hits] == [10, 20]
+    assert collection.resume is None
+
+
+def test_adapter_capped_read_at_its_start_continues_after_the_alerts_read(
+    adapter_client,
+):
+    """More alerts than the cap in the starting second: the next read skips the
+    alerts already read there (those of that second before `since` included)."""
+    since = datetime(2026, 10, 3, 11, 0, 0, 500000, tzinfo=UTC)
+    adapter_client.iter_alerts.return_value = iter(
+        [
+            {
+                "composite_id": "early",
+                "timestamp": "2026-10-03T11:00:00.100Z",
+                "ioc_value": "198.51.100.7",
+            },
+            {
+                "composite_id": "tied",
+                "timestamp": "2026-10-03T11:00:00.500Z",
+                "ioc_value": "198.51.100.7",
+            },
+        ]
+    )
+    adapter = CrowdstrikeDeploymentAdapter(
+        adapter_client, SimpleNamespace(permanent_delete=False), max_alerts=2
+    )
+
+    collection = adapter.collect_hits(
+        [make_deployment()], since, resume=frozenset({"before"})
+    )
+
+    assert isinstance(collection, HitCollection)
+    assert collection.complete_until == since
+    assert collection.resume == frozenset({"before", "early", "tied"})
+    assert [hit.timestamp for hit in collection.hits] == [since]
+    adapter_client.iter_alerts.assert_called_once_with(
+        since, 2, exclude_ids=frozenset({"before"})
+    )
+
+
+def test_adapter_credits_every_indicator_sharing_an_alert_value(adapter_client):
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    adapter_client.iter_alerts.return_value = iter(
+        [{"timestamp": "2026-10-03T11:10:00Z", "ioc_value": "198.51.100.7"}]
+    )
+    other_id = "1f2e3d4c-5b6a-4789-8abc-def012345678"
+
+    hits = list(
+        make_adapter(adapter_client).collect_hits(
+            [make_deployment(), make_deployment(indicator_id=other_id)], since
+        )
+    )
+
+    assert sorted(hit.indicator_id for hit in hits) == sorted([INDICATOR_ID, other_id])
 
 
 def test_adapter_hits_without_values_read_no_alert(adapter_client):
