@@ -2,6 +2,7 @@ import traceback
 
 from microsoft_sentinel_intel import Connector, ConnectorSettings
 from microsoft_sentinel_intel.client import ConnectorClient
+from microsoft_sentinel_intel.deployment import build_deployment_assurance
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -20,6 +21,7 @@ if __name__ == "__main__":
         client = ConnectorClient(helper=helper, config=settings)
 
         connector = Connector(config=settings, helper=helper, client=client)
+        connector.assurance = build_deployment_assurance(connector)
         connector.run()
     except Exception:
         traceback.print_exc()

@@ -24,6 +24,7 @@ The Microsoft Sentinel Intel connector streams OpenCTI indicators to Microsoft S
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
+    - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -37,6 +38,7 @@ Key features:
 - Managed identity or app registration authentication
 - Configurable source system and extra labels
 - STIX bundle format for comprehensive threat intelligence
+- Dissemination assurance: deployment status, periodic reconciliation and incident hits reported back to OpenCTI
 
 ## Installation
 
@@ -204,6 +206,46 @@ For deletion to work properly, the following must be configured:
 - `source_system`
 - `workspace_name`
 - `subscription_id`
+
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each indicator is actually live in Microsoft Sentinel. The status is stored on
+the `deployed-on` relationship between the indicator and the `Microsoft Sentinel` Security Platform entity (created if
+it does not exist), and detection hits are counted with a sighting of the indicator on that entity.
+
+| When                                      | Reported to OpenCTI                                                                                       |
+|-------------------------------------------|-----------------------------------------------------------------------------------------------------------|
+| Upload accepted (create, update)          | `deployed` (`removed` for a revoked indicator, which is no longer valid in Sentinel)                      |
+| Upload rejected                           | `failed`, with the API error message                                                                      |
+| Delete event processed                    | `removed` (also when the indicator was already absent from Sentinel)                                      |
+| Reconciliation, indicator present         | `active`, with the name of the Sentinel threat intelligence object as external id                         |
+| Reconciliation, indicator absent          | `removed` (deleted or purged in Sentinel)                                                                 |
+| Reconciliation, `pending` (analyst retry) | The indicator is uploaded again and reported `deployed` or `failed`                                       |
+| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from Sentinel and reported `removed`   |
+| Reconciliation, unknown indicator         | Indicators of the connector `source_system` with no deployment yet are reported `active` (backfill)       |
+| Hits                                      | Sentinel incidents whose IP, URL, domain or file hash entities match a deployed indicator                  |
+
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the threat intelligence indicators of the
+  connector `source_system` are read back with the `threatIntelligence/main/query` API (`query_api_version`). Revoked
+  and expired Sentinel indicators are not considered live. A read-back error skips the run: indicators are never
+  reported `removed` from a partial listing.
+- **Hits**: during each reconciliation, the incidents modified since the previous run are listed with the incidents API
+  (`management_api_version`), most recent first, and the entities of at most 200 incidents are read. Each incident
+  counts one hit per matching indicator, at the incident last activity time; hits already reported are never counted
+  twice.
+- **Permissions**: the **Microsoft Sentinel Contributor** role already required by the connector covers the read-back,
+  the deletion and the incidents read (Microsoft Sentinel Reader is enough for the read-only parts).
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+| Environment variable                 | Default              | Description                                                                 |
+|--------------------------------------|----------------------|-----------------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `true`               | Report the deployment status of the pushed indicators.                      |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60`                 | Minutes between two reconciliations, `0` disables the reconciliation.       |
+| `HITS_REPORTING_ENABLED`             | `true`               | Report the incident hits of the deployed indicators.                        |
+| `SECURITY_PLATFORM_NAME`             | `Microsoft Sentinel` | Name of the Security Platform entity in OpenCTI.                            |
+| `SECURITY_PLATFORM_TYPE`             | `SIEM`               | Type of the Security Platform entity (`security_platform_type_ov`).          |
+| `SECURITY_PLATFORM_ID`               |                      | Id of an existing Security Platform entity, used instead of the name.       |
 
 ## Debugging
 
