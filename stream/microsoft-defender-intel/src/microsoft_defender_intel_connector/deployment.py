@@ -12,15 +12,16 @@ access to Microsoft Defender for Endpoint:
   the value of a deployed indicator.
 """
 
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
 
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentVendorAdapter,
+    HitCollection,
     IndicatorDeployment,
     VendorHit,
     VendorIndicator,
@@ -39,7 +40,13 @@ if TYPE_CHECKING:
     )
 
 MAX_HIT_ALERTS = MAX_PAGE_SIZE
-"""Maximum number of alerts read by one hit collection."""
+"""Maximum number of alerts read by one request of a hit collection."""
+
+MAX_HIT_WINDOW_READS = 8
+"""Maximum number of alert requests of one hit collection."""
+
+MIN_HIT_WINDOW = timedelta(minutes=1)
+"""Shortest time window of alerts (never halved again)."""
 
 MAX_ERROR_DETAIL_LENGTH = 500
 """Maximum length of the Defender response appended to a deployment error."""
@@ -112,12 +119,18 @@ def _evidence_values(alert: dict[str, Any]) -> set[str]:
 class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
     """Vendor operations of the deployment reconciliation for Microsoft Defender."""
 
-    def __init__(self, connector: "MicrosoftDefenderIntelConnector") -> None:
+    def __init__(
+        self,
+        connector: "MicrosoftDefenderIntelConnector",
+        clock: Callable[[], datetime] | None = None,
+    ) -> None:
         """Initialize the adapter.
 
         :param connector: The connector, whose API handler and create path are used.
+        :param clock: Current time provider (injectable for tests).
         """
         self._connector = connector
+        self._clock = clock or (lambda: datetime.now(UTC))
 
     @property
     def _api(self) -> DefenderApiHandler:
@@ -178,7 +191,7 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
 
     def collect_hits(
         self, deployments: Sequence[IndicatorDeployment], since: datetime
-    ) -> Iterable[VendorHit]:
+    ) -> Iterable[VendorHit] | HitCollection:
         """Read the Defender alerts whose evidence matches deployed indicators.
 
         Each alert counts one hit per matching indicator, at the alert creation time.
@@ -192,7 +205,7 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         if not by_value:
             return []
         with _readable_errors():
-            alerts = self._api.list_alerts(since, MAX_HIT_ALERTS)
+            alerts, complete_until = self._read_alerts(since)
         hits: list[VendorHit] = []
         for alert in alerts:
             timestamp = parse_datetime(
@@ -209,7 +222,38 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
                 VendorHit(timestamp=timestamp, indicator_id=indicator_id)
                 for indicator_id in sorted(matched)
             )
+        if complete_until is not None:
+            return HitCollection(hits=hits, complete_until=complete_until)
         return hits
+
+    def _read_alerts(
+        self, since: datetime
+    ) -> tuple[list[dict[str, Any]], datetime | None]:
+        """Read the alerts created since a date, by time windows.
+
+        The alerts API has no ordering: a window whose read reaches `MAX_HIT_ALERTS`
+        is halved and its halves are read, oldest first, so the alerts read are
+        complete up to a known date. A window of `MIN_HIT_WINDOW` still capped is
+        kept as read (its count is a lower bound).
+
+        :return: The alerts, and `None` when every window was read, otherwise the
+            start of the first window left unread after `MAX_HIT_WINDOW_READS` reads.
+        """
+        alerts: list[dict[str, Any]] = []
+        windows = [(since, self._clock())]
+        reads = 0
+        while windows:
+            start, end = windows.pop()
+            if reads >= MAX_HIT_WINDOW_READS:
+                return alerts, start
+            window_alerts = self._api.list_alerts(start, MAX_HIT_ALERTS, until=end)
+            reads += 1
+            if len(window_alerts) < MAX_HIT_ALERTS or end - start <= MIN_HIT_WINDOW:
+                alerts.extend(window_alerts)
+                continue
+            middle = start + (end - start) / 2
+            windows.extend([(middle, end), (start, middle)])
+        return alerts, None
 
 
 def build_deployment_assurance(

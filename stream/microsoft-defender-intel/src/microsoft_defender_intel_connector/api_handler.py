@@ -356,17 +356,25 @@ class DefenderApiHandler:
         )
 
     def list_alerts(
-        self, since: datetime, max_alerts: int = MAX_PAGE_SIZE
+        self,
+        since: datetime,
+        max_alerts: int = MAX_PAGE_SIZE,
+        until: datetime | None = None,
     ) -> list[dict[str, Any]]:
         """
         List the alerts created since a date, with their evidence.
         :param since: Only alerts created at or after this date
         :param max_alerts: Maximum number of alerts returned (10,000 at most per request)
+        :param until: Only alerts created strictly before this date, when given
         :return: Alert entities
         :raise DefenderApiHandlerError: On any error or an unexpected payload
         """
         since_utc = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-        query_filter = quote(f"alertCreationTime ge {since_utc}", safe="")
+        expression = f"alertCreationTime ge {since_utc}"
+        if until is not None:
+            until_utc = until.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            expression += f" and alertCreationTime lt {until_utc}"
+        query_filter = quote(expression, safe="")
         url = f"{self.base_url}/{ALERTS_RESOURCE_PATH}"
         alerts: list[dict[str, Any]] = []
         while len(alerts) < max_alerts:
