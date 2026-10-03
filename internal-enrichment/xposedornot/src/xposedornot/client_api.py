@@ -154,7 +154,15 @@ def _identifier(value: Any) -> str | None:
 
 
 def _split_data_classes(value) -> list[str]:
-    return [item.strip() for item in str(value or "").split(";") if item.strip()]
+    """The exposed data categories, from the `;`-joined string the API sends.
+
+    A list is read as one entry per element. `str()` of a list would have
+    produced a single category spelling out the list's own syntax.
+    """
+    items = value if isinstance(value, (list, tuple)) else str(value or "").split(";")
+    return [
+        str(item).strip() for item in items if item is not None and str(item).strip()
+    ]
 
 
 def _as_dict(value: Any) -> dict[str, Any]:

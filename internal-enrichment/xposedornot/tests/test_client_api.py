@@ -485,3 +485,18 @@ def test_a_record_without_an_identifier_is_not_a_breach():
     assert [b["name"] for b in kept["breaches"]] == ["Real"]
 
     assert free([{"breach": "  Padded  "}])["breaches"][0]["name"] == "Padded"
+
+
+def test_data_classes_accept_a_list_as_well_as_the_joined_string():
+    """A list is one entry per element, not one entry spelling out the list."""
+    from src.xposedornot.client_api import _split_data_classes
+
+    assert _split_data_classes("Email addresses;Passwords; ;") == [
+        "Email addresses",
+        "Passwords",
+    ]
+    assert _split_data_classes(["Email addresses", None, " Passwords "]) == [
+        "Email addresses",
+        "Passwords",
+    ]
+    assert _split_data_classes(None) == []

@@ -562,3 +562,22 @@ def test_a_naive_timestamp_does_not_break_the_note():
                 supersedes=supersedes,
             ).to_stix2_object()
             assert note["modified"] >= note["created"], (created, supersedes)
+
+
+def test_boolean_record_counts_are_neither_summed_nor_rendered():
+    """`True` is an int to Python and would otherwise count as one record."""
+    converter = ConverterToStix(author=ConverterToStix.make_author())
+    note = converter.build_note(
+        "email-addr--11111111-1111-4111-8111-111111111111",
+        {
+            "breaches": [
+                {"name": "A", "records": True},
+                {"name": "B", "records": 4},
+                {"name": "C", "records": "9"},
+            ]
+        },
+        markings=[],
+    )
+    assert "**Total records across breaches:** 4  " in note.content
+    rows = [line for line in note.content.splitlines() if line.startswith("| A ")]
+    assert rows and rows[0].split("|")[3].strip() == "—"

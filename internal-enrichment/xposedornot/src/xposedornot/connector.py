@@ -56,6 +56,17 @@ def listed(value: Any) -> list[Any]:
     return list(value) if isinstance(value, (list, tuple)) else []
 
 
+def mapping(value: Any) -> dict[str, Any]:
+    """A value read as a mapping, or an empty one when it is not.
+
+    The payload halves this connector reads are mappings by contract, but a
+    malformed message is still a message, and the handler has to be able to
+    answer it and hand the bundle back rather than fail inside the very code
+    that reports failures.
+    """
+    return value if hasattr(value, "get") else {}
+
+
 class MarkingResolutionError(Exception):
     """A marking on the enriched entity cannot be represented in the bundle."""
 
@@ -124,6 +135,20 @@ def is_marking_id(value: Any) -> bool:
     return isinstance(value, str) and bool(MARKING_ID_RE.match(value.strip()))
 
 
+def marking_identifier(marking: dict[str, Any]) -> str | None:
+    """The usable identifier a marking carries, under either spelling, or None.
+
+    A bundled definition names itself with `id`; an OpenCTI objectMarking entry
+    uses `standard_id`. Anything that judges a marking by its identifier has to
+    read both, or a check applied on one route is simply absent on the other.
+    """
+    for key in ("id", "standard_id"):
+        value = marking.get(key)
+        if is_marking_id(value):
+            return value.strip()
+    return None
+
+
 def declared_marking_id(marking: dict[str, Any]) -> str | None:
     """The id the marking's own definition implies, or None if it declares one.
 
@@ -159,9 +184,9 @@ def marking_id(marking: dict[str, Any]) -> str | None:
     from its type and value instead, and only one that survives none of these
     routes is unidentifiable.
     """
-    standard_id = marking.get("standard_id")
-    if is_marking_id(standard_id):
-        return standard_id.strip()
+    identifier = marking_identifier(marking)
+    if identifier is not None:
+        return identifier
     custom = custom_marking_fields(marking)
     if custom:
         return PyctiMarkingDefinition.generate_id(*custom)
@@ -322,7 +347,9 @@ def resolve_source_markings(
         identifiers.append(identifier)
     refs = list(dict.fromkeys(supplied + identifiers))
     present = {
-        obj.get("id") for obj in bundled if obj.get("type") == "marking-definition"
+        obj.get("id")
+        for obj in bundled
+        if hasattr(obj, "get") and obj.get("type") == "marking-definition"
     }
     candidates = {}
     for marking in entries:
@@ -390,10 +417,9 @@ def contradicting_tlp_id(marking: Any, level: str) -> str | None:
     otherwise. Only the six TLP identifiers are judged here: any other id may
     legitimately have been assigned elsewhere.
     """
-    identifier = marking.get("id")
-    if not is_marking_id(identifier):
+    identifier = marking_identifier(marking)
+    if identifier is None:
         return None
-    identifier = identifier.strip()
     expected = PyctiMarkingDefinition.generate_id("TLP", canonical_tlp(level))
     if identifier == expected:
         return None
@@ -419,16 +445,27 @@ def source_tlp_levels(
     A marking that declares itself TLP but carries no value this connector can
     read is reported as unreadable rather than ignored: treating it as "no
     marking" would let an entity past on the strength of a field nobody parsed.
+
+    So is a marking whose identifier is one of the six TLP ids but whose body
+    says something else. The entity points at it by id, and the platform
+    enforces access by that id, so a body that does not declare TLP at all
+    under a TLP identifier is a contradiction rather than a non-TLP marking.
+    Reading the body alone let such an entry pass an AMBER gate under the
+    TLP:RED identifier.
     """
     levels: list[str] = []
     unreadable: list[Any] = []
-    sources = list(observable.get("objectMarking") or []) + list(definitions or [])
+    sources = marking_sequence(observable.get("objectMarking"), "objectMarking")
+    sources += list(definitions or [])
     for marking in sources:
         if not hasattr(marking, "get"):
             unreadable.append(marking)
             continue
         is_tlp, raw = tlp_marking_value(marking)
         if not is_tlp:
+            identifier = marking_identifier(marking)
+            if identifier in TLP_MARKING_IDS:
+                unreadable.append(f"{identifier} carrying a definition that is not TLP")
             continue
         level = tlp_level_of(raw)
         if level is None:
@@ -627,6 +664,11 @@ class XposedOrNotConnector:
         back untouched. The bundle keeps everything it arrived with and gains
         only the definitions its own references need.
 
+        Nothing is sent when there is nothing to send. An input bundle with no
+        objects in it is not an error on this connector's part, but an empty
+        bundle is one the platform refuses, so handing it back would turn a
+        plain no-op into a failed work.
+
         The status message is redacted here as well. Several of these messages
         quote the payload so the operator can see what was refused, an
         unreadable marking or an unsupported entity type among them, and the
@@ -638,9 +680,9 @@ class XposedOrNotConnector:
         if is_playbook_run(data):
             try:
                 marking_refs, missing_markings = resolve_source_markings(
-                    data.get("stix_entity") or {},
-                    data.get("enrichment_entity") or {},
-                    data.get("stix_objects") or [],
+                    mapping(data.get("stix_entity")),
+                    mapping(data.get("enrichment_entity")),
+                    self._bundle_objects(data),
                 )
             except MarkingResolutionError as error:
                 return self._refuse_unresolved_marking(error, data)
@@ -648,20 +690,38 @@ class XposedOrNotConnector:
             referenced = {
                 ref
                 for obj in forwarded
-                if hasattr(obj, "get")
-                for ref in (obj.get("object_marking_refs") or [])
+                for ref in listed(obj.get("object_marking_refs"))
             }
-            self._send_bundle(
-                unique_by_id(
-                    forwarded
-                    + [
-                        definition
-                        for definition in missing_markings
-                        if definition["id"] in referenced
-                    ]
+            if forwarded:
+                self._send_bundle(
+                    unique_by_id(
+                        forwarded
+                        + [
+                            definition
+                            for definition in missing_markings
+                            if definition["id"] in referenced
+                        ]
+                    )
                 )
-            )
         return message
+
+    def _bundle_objects(self, data: dict[str, Any]) -> list[dict[str, Any]]:
+        """The incoming bundle's STIX objects, with anything that is not one left out.
+
+        An entry that is not a mapping has no id or type to read and cannot be
+        serialised into a bundle the platform accepts. One such entry used to
+        fail the enrichment and the hand-back alike, so a single malformed
+        element in someone else's bundle turned every outcome into an internal
+        error. It is counted and ignored instead.
+        """
+        supplied = listed(data.get("stix_objects"))
+        objects = [obj for obj in supplied if hasattr(obj, "get")]
+        if len(objects) != len(supplied):
+            self.helper.connector_logger.warning(
+                "Ignoring entries of the incoming bundle that are not STIX objects",
+                meta={"ignored": len(supplied) - len(objects)},
+            )
+        return objects
 
     def _forwarded_objects(
         self, data: dict[str, Any], marking_refs: list[str]
@@ -677,20 +737,17 @@ class XposedOrNotConnector:
         The entity is copied rather than edited, so the caller's own objects
         are left as they arrived.
         """
-        forwarded = list(data.get("stix_objects") or [])
-        entity = data.get("stix_entity") or {}
-        entity_id = entity.get("id") if hasattr(entity, "get") else None
+        forwarded = self._bundle_objects(data)
+        entity = mapping(data.get("stix_entity"))
+        entity_id = entity.get("id")
         if not marking_refs or not entity_id:
             return forwarded
         if sorted(listed(entity.get("object_marking_refs"))) == sorted(marking_refs):
             return forwarded
         marked = deepcopy(entity)
         marked["object_marking_refs"] = marking_refs
-        replaced = [
-            marked if getattr(obj, "get", dict().get)("id") == entity_id else obj
-            for obj in forwarded
-        ]
-        if all(getattr(obj, "get", dict().get)("id") != entity_id for obj in replaced):
+        replaced = [marked if obj.get("id") == entity_id else obj for obj in forwarded]
+        if all(obj.get("id") != entity_id for obj in replaced):
             replaced.append(marked)
         return replaced
 
@@ -722,20 +779,22 @@ class XposedOrNotConnector:
         return reason
 
     def _process_message(self, data: dict[str, Any]) -> str:
-        observable = data["enrichment_entity"]
+        observable = mapping(data.get("enrichment_entity"))
         entity_type = observable.get("entity_type")
         if entity_type not in self.scopes:
             return self._forward_unchanged(data, f"Unsupported type: {entity_type}")
 
+        stix_objects = self._bundle_objects(data)
+        stix_entity = data["stix_entity"]
         try:
             marking_refs, missing_markings = resolve_source_markings(
-                data["stix_entity"], observable, data["stix_objects"]
+                stix_entity, observable, stix_objects
             )
         except MarkingResolutionError as error:
             return self._refuse_unresolved_marking(error, data)
         source_definitions = [
             obj
-            for obj in list(data["stix_objects"]) + missing_markings
+            for obj in stix_objects + missing_markings
             if obj.get("type") == "marking-definition" and obj.get("id") in marking_refs
         ]
 
@@ -775,8 +834,6 @@ class XposedOrNotConnector:
 
         breaches = result.get("breaches") or []
 
-        stix_objects = data["stix_objects"]
-        stix_entity = data["stix_entity"]
         enriched_entity = deepcopy(stix_entity)
         if marking_refs:
             enriched_entity["object_marking_refs"] = marking_refs
@@ -839,10 +896,10 @@ class XposedOrNotConnector:
         enriched_entity["x_opencti_external_references"] = external_references
         enriched_entity.pop("external_references", None)
         enriched_objects = [
-            enriched_entity if obj["id"] == enriched_entity["id"] else obj
+            enriched_entity if obj.get("id") == enriched_entity["id"] else obj
             for obj in stix_objects
         ]
-        if all(obj["id"] != enriched_entity["id"] for obj in enriched_objects):
+        if all(obj.get("id") != enriched_entity["id"] for obj in enriched_objects):
             enriched_objects.append(enriched_entity)
 
         # Per-breach detail as a markdown Note attached to the observable.
@@ -867,7 +924,7 @@ class XposedOrNotConnector:
         )
         note_object = note.to_stix2_object()
         enriched_objects = [
-            obj for obj in enriched_objects if obj["id"] != note_object["id"]
+            obj for obj in enriched_objects if obj.get("id") != note_object["id"]
         ]
         enriched_objects += [
             self.converter.author.to_stix2_object(),
@@ -896,7 +953,7 @@ class XposedOrNotConnector:
         Both spellings are blanked: text may quote the address as the platform
         supplied it, or as the connector normalised it before use.
         """
-        observable = data.get("enrichment_entity") or {}
+        observable = mapping(data.get("enrichment_entity"))
         raw = str(observable.get("observable_value") or observable.get("value") or "")
         return redact(text, raw, normalise_email(observable), self.client.api_key)
 

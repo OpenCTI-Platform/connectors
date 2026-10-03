@@ -179,11 +179,19 @@ def _md_cell(value: Any) -> str:
     return _one_line(text.replace("|", "\\|")) or "—"
 
 
+def _record_count(value: Any) -> int | None:
+    """A record count the note can state, or None.
+
+    A bool is an int to Python, so `True` would be summed as one record and
+    rendered as one. The normalisers never emit one, but the converter is
+    public and must not report a count it was never given.
+    """
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
 def _fmt_records(value) -> str:
-    try:
-        return f"{int(value):,}"
-    except (TypeError, ValueError):
-        return "—"
+    count = _record_count(value)
+    return f"{count:,}" if count is not None else "—"
 
 
 class ConverterToStix:
@@ -240,9 +248,8 @@ class ConverterToStix:
             breach for breach in result.get("breaches") or [] if hasattr(breach, "get")
         ]
         first_year, latest_year = self.years(breaches)
-        total_records = sum(
-            b.get("records") for b in breaches if isinstance(b.get("records"), int)
-        )
+        counts = [_record_count(breach.get("records")) for breach in breaches]
+        total_records = sum(count for count in counts if count is not None)
 
         lines = [
             "## XposedOrNot — breach exposure summary",

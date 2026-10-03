@@ -442,6 +442,128 @@ def test_marking_refs_on_the_observable_are_collected():
     helper.send_stix2_bundle.assert_not_called()
 
 
+def test_a_tlp_identifier_with_a_non_tlp_body_fails_closed():
+    """The id is what the platform enforces; a body that disagrees is unreadable.
+
+    A bundled definition carrying the TLP:RED identifier but a statement body
+    declared no TLP at all, so it was skipped as a non-TLP marking and the
+    entity passed an AMBER gate under the RED identifier. The same reading is
+    applied to an objectMarking entry keyed by `standard_id`.
+    """
+    red = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
+    bodies = (
+        {"definition_type": "statement", "definition": {"statement": "x"}},
+        {
+            "definition_type": "statement",
+            "definition": {"statement": "custom"},
+            "x_opencti_definition_type": "PAP",
+            "x_opencti_definition": "PAP:RED",
+        },
+        {},
+    )
+    for body in bodies:
+        bundled = {"type": "marking-definition", "spec_version": "2.1", "id": red}
+        bundled.update(body)
+        levels, unreadable = source_tlp_levels({}, [bundled])
+        assert levels == [] and unreadable and red in str(unreadable[0]), body
+        entry = {"standard_id": red, **body}
+        levels, unreadable = source_tlp_levels({"objectMarking": [entry]})
+        assert levels == [] and unreadable, body
+
+    honest = {
+        "type": "marking-definition",
+        "spec_version": "2.1",
+        "id": "marking-definition--aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "definition_type": "statement",
+        "definition": {"statement": "Internal only"},
+    }
+    assert source_tlp_levels({}, [honest]) == ([], [])
+
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(side_effect=AssertionError("API was called"))
+    data = _enrichment_data(tlp=None)
+    data["stix_entity"]["object_marking_refs"] = [red]
+    liar = {"type": "marking-definition", "spec_version": "2.1", "id": red}
+    liar.update(bodies[0])
+    data["stix_objects"].append(liar)
+    message = connector._process_message(data)
+    connector.client.lookup.assert_not_called()
+    assert "cannot read" in message and red in message
+
+
+def test_an_object_marking_field_that_is_not_a_list_is_refused_by_the_reader():
+    """Reading a string field as a list yielded its characters as markings."""
+    for bad in ("TLP:RED", {"definition_type": "TLP"}, 0, ""):
+        with pytest.raises(MarkingResolutionError, match="not a list"):
+            source_tlp_levels({"objectMarking": bad})
+    assert source_tlp_levels({"objectMarking": ()}) == ([], [])
+
+
+def test_entries_that_are_not_stix_objects_are_ignored_on_every_path():
+    """One malformed element in someone else's bundle failed every outcome.
+
+    The forward path tolerated such entries while the enrichment path raised
+    on them, so the same bundle could be handed back untouched and still be
+    reported as an internal error when enriched. Both now leave them out, say
+    so once, and carry on.
+    """
+    junk = ["not an object", 7, None, ["nested"]]
+
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data()
+    data["stix_objects"] = junk[:2] + data["stix_objects"] + junk[2:]
+    message = connector._process_message(data)
+    assert message.startswith("Found 1 breach(es)"), message
+    sent = helper.stix2_create_bundle.call_args.args[0]
+    assert all(hasattr(obj, "get") for obj in sent)
+    assert any(obj.get("id") == OBSERVABLE_ID for obj in sent)
+    warned = [call.args[0] for call in helper.connector_logger.warning.call_args_list]
+    assert any("not STIX objects" in text for text in warned), warned
+    assert helper.connector_logger.warning.call_args_list[0].kwargs["meta"] == {
+        "ignored": 4
+    }
+
+    connector, helper = _make_connector()
+    data = _enrichment_data(playbook=True, tlp=None)
+    data["enrichment_entity"]["entity_type"] = "IPv4-Addr"
+    data["stix_objects"] = junk + data["stix_objects"]
+    message = connector._process_callback(data)
+    assert message == "Unsupported type: IPv4-Addr"
+    sent = helper.stix2_create_bundle.call_args.args[0]
+    assert [obj.get("id") for obj in sent] == [OBSERVABLE_ID]
+    helper.connector_logger.error.assert_not_called()
+
+
+def test_an_unreadable_enrichment_entity_is_answered_not_crashed():
+    """A payload whose entity is not a mapping must still get a status back.
+
+    The failure used to happen inside the redaction that every error path
+    runs, so the exception escaped the callback itself.
+    """
+    for broken in (["x"], "x", None, 7):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(side_effect=AssertionError("called"))
+        data = _enrichment_data(playbook=True)
+        data["enrichment_entity"] = broken
+        message = connector._process_callback(data)
+        assert message == "Unsupported type: None", repr(broken)
+        helper.send_stix2_bundle.assert_called_once()
+        helper.connector_logger.error.assert_not_called()
+
+
+def test_an_empty_playbook_input_is_not_handed_back_as_an_empty_bundle():
+    """The platform refuses an empty bundle, so sending one fails a plain no-op."""
+    connector, helper = _make_connector()
+    data = _enrichment_data(playbook=True, tlp=None)
+    data["enrichment_entity"]["entity_type"] = "IPv4-Addr"
+    data["stix_objects"] = []
+    message = connector._process_callback(data)
+    assert message == "Unsupported type: IPv4-Addr"
+    helper.send_stix2_bundle.assert_not_called()
+    helper.connector_logger.error.assert_not_called()
+
+
 def test_unresolved_marking_is_not_forwarded_at_all():
     """The refusal must not hand the bundle on, in a playbook or otherwise.
 

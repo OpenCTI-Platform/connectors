@@ -90,7 +90,20 @@ def test_connector_is_instantiated_from_settings(mock_opencti_connector_helper):
     assert connector.client.base_url == "https://api.xposedornot.com"
 
 
-def test_top_level_traceback_is_redacted():
+def _redacted_traceback(message: str) -> str:
+    import traceback as _traceback
+
+    from src.main import redact_secrets
+
+    try:
+        raise RuntimeError(message)
+    except RuntimeError:
+        captured = io.StringIO()
+        _traceback.print_exc(file=captured)
+        return redact_secrets(captured.getvalue())
+
+
+def test_top_level_traceback_is_redacted(monkeypatch):
     """A failure escaping main() must not put secrets on stderr.
 
     The connector promises that neither the API key nor the platform token
@@ -99,34 +112,48 @@ def test_top_level_traceback_is_redacted():
     which is redacted before it is printed, which also satisfies the
     repository linter rule that requires that call in the main guard.
     """
-    import os
-    import traceback as _traceback
+    monkeypatch.setenv("XPOSEDORNOT_API_KEY", "SUPERSECRETKEY")
+    monkeypatch.setenv("OPENCTI_TOKEN", "6f1d8d0e-2a4b-4c7e-9f11-3b7a5c9e2d40")
+    monkeypatch.setattr("src.main.ConnectorSettings", _unbuildable_settings)
 
-    from src.main import redact_secrets
+    printed = _redacted_traceback("auth failed key=SUPERSECRETKEY")
+    assert "SUPERSECRETKEY" not in printed
+    assert "<redacted>" in printed
+    assert "RuntimeError" in printed and "Traceback" in printed
 
-    os.environ["XPOSEDORNOT_API_KEY"] = "SUPERSECRETKEY"
-    os.environ["OPENCTI_TOKEN"] = "6f1d8d0e-2a4b-4c7e-9f11-3b7a5c9e2d40"
-    try:
-        try:
-            raise RuntimeError("auth failed key=SUPERSECRETKEY")
-        except RuntimeError:
-            captured = io.StringIO()
-            _traceback.print_exc(file=captured)
-            printed = redact_secrets(captured.getvalue())
-        assert "SUPERSECRETKEY" not in printed
-        assert "<redacted>" in printed
-        assert "RuntimeError" in printed and "Traceback" in printed
-    finally:
-        os.environ.pop("XPOSEDORNOT_API_KEY", None)
-        os.environ["OPENCTI_TOKEN"] = "t"
+
+def _unbuildable_settings():
+    raise RuntimeError("no configuration")
+
+
+def test_secrets_given_through_the_settings_are_redacted_too(monkeypatch):
+    """A token or key supplied in `config.yml` is never in the environment.
+
+    Reading the environment alone left exactly that secret legible in a
+    top-level traceback, contradicting the documented guarantee.
+    """
+    monkeypatch.delenv("XPOSEDORNOT_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCTI_TOKEN", raising=False)
+    monkeypatch.setattr("src.main.ConnectorSettings", StubConnectorSettings)
+
+    printed = _redacted_traceback("token=test-token key=test-api-key")
+    assert "test-token" not in printed and "test-api-key" not in printed
+    assert printed.count("<redacted>") >= 2
+    assert "RuntimeError" in printed
 
 
 def test_neither_entrypoint_prints_a_raw_traceback():
-    """Both guards must capture and redact rather than print straight out."""
+    """Both guards must capture and redact rather than print straight out.
+
+    The files are located from this test file, not from the working
+    directory: the repository runs the suite from its root, where a path
+    relative to the connector does not exist.
+    """
     import pathlib
 
-    for name in ("src/main.py", "src/__main__.py"):
-        source = pathlib.Path(name).read_text()
+    src = pathlib.Path(__file__).resolve().parents[1] / "src"
+    for name in ("main.py", "__main__.py"):
+        source = (src / name).read_text()
         assert "traceback.print_exc(file=captured)" in source, name
         assert "redact_secrets(captured.getvalue())" in source, name
         assert "traceback.print_exc()" not in source, name
