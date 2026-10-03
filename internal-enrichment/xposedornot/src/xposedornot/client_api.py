@@ -18,6 +18,7 @@ normal outcome, not an error. Errors return None (and are logged).
 
 from __future__ import annotations
 
+import html
 import math
 import re
 import time
@@ -41,7 +42,7 @@ def retry_after_seconds(value, default: int = DEFAULT_RETRY_AFTER) -> int:
     text = str(value or "").strip()
     if not text:
         return default
-    if text.isdigit():
+    if text.isascii() and text.isdigit():
         return int(text)
     try:
         when = parsedate_to_datetime(text)
@@ -57,15 +58,16 @@ MAX_DECODE_PASSES = 20
 
 
 def fully_decoded(text: str) -> str:
-    """Percent-encoding peeled off until the text stops changing.
+    """Percent and HTML entity encoding peeled off until the text stops changing.
 
     A single `unquote` only removes one layer, so a value encoded twice still
-    reads as encoded afterwards. Each pass either shortens the text or leaves
+    reads as encoded afterwards, and an HTML error page can spell the same
+    address with character references instead. Each pass either shortens the text or leaves
     it alone, so this settles on its own; the cap only bounds the work done on
     something a third party sent, and sits far above any real encoding depth.
     """
     for _ in range(MAX_DECODE_PASSES):
-        decoded = unquote(text)
+        decoded = html.unescape(unquote(text))
         if decoded == text:
             break
         text = decoded
@@ -165,6 +167,17 @@ def _split_data_classes(value) -> list[str]:
     ]
 
 
+def _scalar(value: Any) -> Any:
+    """A value fit to print as one field of the note, or None.
+
+    The API documents these fields as strings. A list or a mapping in their
+    place would be rendered as Python's spelling of the container and read by
+    an analyst as the breach's domain or industry; nothing the API did not
+    state as a single value is passed on.
+    """
+    return value if isinstance(value, (str, int, float, bool)) else None
+
+
 def _as_dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
@@ -185,12 +198,12 @@ def _normalise_free(data: dict[str, Any]) -> dict[str, Any]:
         breaches.append(
             {
                 "name": name,
-                "date": entry.get("xposed_date"),
+                "date": _scalar(entry.get("xposed_date")),
                 "records": _to_int(entry.get("xposed_records")),
-                "domain": entry.get("domain"),
-                "industry": entry.get("industry"),
-                "password_risk": entry.get("password_risk"),
-                "verified": entry.get("verified"),
+                "domain": _scalar(entry.get("domain")),
+                "industry": _scalar(entry.get("industry")),
+                "password_risk": _scalar(entry.get("password_risk")),
+                "verified": _scalar(entry.get("verified")),
                 "data_classes": _split_data_classes(entry.get("xposed_data")),
             }
         )
@@ -198,7 +211,7 @@ def _normalise_free(data: dict[str, Any]) -> dict[str, Any]:
         return {}
     risk = _as_list(_as_dict(data.get("BreachMetrics")).get("risk"))
     first = _as_dict(risk[0]) if risk else {}
-    risk_label = first.get("risk_label")
+    risk_label = _scalar(first.get("risk_label"))
     risk_score = first.get("risk_score")
     return {"breaches": breaches, "risk_label": risk_label, "risk_score": risk_score}
 
@@ -214,12 +227,12 @@ def _normalise_plus(data: dict[str, Any]) -> dict[str, Any]:
         breaches.append(
             {
                 "name": name,
-                "date": entry.get("breached_date"),
+                "date": _scalar(entry.get("breached_date")),
                 "records": _to_int(entry.get("xposed_records")),
-                "domain": entry.get("domain"),
-                "industry": entry.get("industry"),
-                "password_risk": entry.get("password_risk"),
-                "verified": entry.get("verified"),
+                "domain": _scalar(entry.get("domain")),
+                "industry": _scalar(entry.get("industry")),
+                "password_risk": _scalar(entry.get("password_risk")),
+                "verified": _scalar(entry.get("verified")),
                 "data_classes": _split_data_classes(entry.get("xposed_data")),
             }
         )

@@ -496,7 +496,9 @@ def test_a_malformed_breach_entry_does_not_break_the_note():
             {"breaches": breaches},
             markings=[],
         )
-        assert "XposedOrNot" in note.content
+        real = [b for b in breaches if hasattr(b, "get")]
+        assert f"**Breaches found:** {len(real)}" in note.content, breaches
+        assert note.abstract.endswith(f"exposed in {len(real)} data breach(es)")
 
 
 def test_an_implausible_breach_year_is_not_reported_as_fact():
@@ -565,7 +567,11 @@ def test_a_naive_timestamp_does_not_break_the_note():
 
 
 def test_boolean_record_counts_are_neither_summed_nor_rendered():
-    """`True` is an int to Python and would otherwise count as one record."""
+    """`True` is an int to Python and would otherwise count as one record.
+
+    A negative count is not a count of anything either; `-100` was summed
+    into the total and written into the table as fact.
+    """
     converter = ConverterToStix(author=ConverterToStix.make_author())
     note = converter.build_note(
         "email-addr--11111111-1111-4111-8111-111111111111",
@@ -574,13 +580,15 @@ def test_boolean_record_counts_are_neither_summed_nor_rendered():
                 {"name": "A", "records": True},
                 {"name": "B", "records": 4},
                 {"name": "C", "records": "9"},
+                {"name": "D", "records": -100},
             ]
         },
         markings=[],
     )
     assert "**Total records across breaches:** 4  " in note.content
-    rows = [line for line in note.content.splitlines() if line.startswith("| A ")]
-    assert rows and rows[0].split("|")[3].strip() == "—"
+    for name in ("A", "D"):
+        rows = [l for l in note.content.splitlines() if l.startswith(f"| {name} ")]
+        assert rows and rows[0].split("|")[3].strip() == "—", name
 
 
 def test_a_known_zero_total_is_reported_and_an_unknown_one_is_not():

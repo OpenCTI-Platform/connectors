@@ -500,3 +500,59 @@ def test_data_classes_accept_a_list_as_well_as_the_joined_string():
         "Passwords",
     ]
     assert _split_data_classes(None) == []
+
+
+def test_retry_after_with_non_ascii_digits_falls_back_instead_of_raising():
+    """`str.isdigit` accepts superscripts that `int()` rejects."""
+    from src.xposedornot.client_api import DEFAULT_RETRY_AFTER, retry_after_seconds
+
+    assert retry_after_seconds("15") == 15
+    for odd in ("²", "¹⁵", "１５"):
+        assert retry_after_seconds(odd) == DEFAULT_RETRY_AFTER, odd
+
+
+def test_html_entity_encoded_secrets_are_redacted_too():
+    """An HTML error page can spell the address with character references."""
+    from src.xposedornot.client_api import redact
+
+    for text in (
+        "sent to a&#64;b.test",
+        "a&#x40;b.test",
+        "a%26%2364%3Bb.test",
+        "A&#64;B.TEST",
+    ):
+        out = redact(text, "a@b.test")
+        assert "b.test" not in out or "<redacted>" in out, (text, out)
+        assert "a&#64;b" not in out and "a@b.test" not in out.lower(), (text, out)
+
+
+def test_non_scalar_api_fields_are_dropped_rather_than_printed():
+    """A list or mapping where a string belongs would be rendered as Python syntax."""
+    from src.xposedornot.client_api import _normalise_free, _normalise_plus
+
+    free = _normalise_free(
+        {
+            "ExposedBreaches": {
+                "breaches_details": [
+                    {
+                        "breach": "A",
+                        "xposed_date": ["2024"],
+                        "domain": {"d": 1},
+                        "industry": None,
+                        "password_risk": 7,
+                        "verified": True,
+                    }
+                ]
+            },
+            "BreachMetrics": {"risk": [{"risk_label": ["High"], "risk_score": 55}]},
+        }
+    )
+    breach = free["breaches"][0]
+    assert breach["date"] is None and breach["domain"] is None
+    assert breach["password_risk"] == 7 and breach["verified"] is True
+    assert free["risk_label"] is None and free["risk_score"] == 55
+    plus = _normalise_plus(
+        {"breaches": [{"breach_id": "A", "domain": ["x"], "industry": "Food"}]}
+    )
+    assert plus["breaches"][0]["domain"] is None
+    assert plus["breaches"][0]["industry"] == "Food"

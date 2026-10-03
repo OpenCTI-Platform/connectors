@@ -6,7 +6,6 @@ import sys
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from pycti import OpenCTIConnectorHelper
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 sys.path.insert(0, ROOT)
@@ -24,7 +23,6 @@ def make_helper() -> MagicMock:
     helper = MagicMock()
     helper.connector_logger = Mock(spec=PYCTI_LOGGER_METHODS)
     helper.stix2_create_bundle.return_value = "BUNDLE"
-    helper.check_max_tlp = OpenCTIConnectorHelper.check_max_tlp
     return helper
 
 

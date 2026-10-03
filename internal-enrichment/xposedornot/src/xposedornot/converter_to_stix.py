@@ -183,10 +183,13 @@ def _record_count(value: Any) -> int | None:
     """A record count the note can state, or None.
 
     A bool is an int to Python, so `True` would be summed as one record and
-    rendered as one. The normalisers never emit one, but the converter is
-    public and must not report a count it was never given.
+    rendered as one, and a negative count is not a count of anything. The
+    normalisers never emit either, but the converter is public and must not
+    report a number it cannot vouch for.
     """
-    return value if isinstance(value, int) and not isinstance(value, bool) else None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        return None
+    return value
 
 
 def _fmt_records(value) -> str:

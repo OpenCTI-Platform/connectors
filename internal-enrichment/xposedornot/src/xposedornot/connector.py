@@ -16,6 +16,7 @@ import json
 import re
 import traceback
 from copy import deepcopy
+from datetime import timezone
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
@@ -67,6 +68,47 @@ def mapping(value: Any) -> dict[str, Any]:
     return value if hasattr(value, "get") else {}
 
 
+def canonical_markings(obj: dict[str, Any]) -> dict[str, Any]:
+    """A bundle entry with its marking identifiers in the canonical spelling.
+
+    A definition's own `id` and every `object_marking_refs` entry are stripped
+    and lower-cased when they are identifiers at all; anything that is not one
+    is left for the validation that refuses it. Without this a definition
+    spelled in upper case was absent from the bundle as far as a canonical
+    reference was concerned, while the same spelling on an objectMarking entry
+    was accepted, so one marking was judged two ways.
+    """
+    if obj.get("type") == "marking-definition":
+        identifier = canonical_marking_id(obj.get("id"))
+        if identifier is not None:
+            obj["id"] = identifier
+    refs = obj.get("object_marking_refs")
+    if isinstance(refs, (list, tuple)):
+        obj["object_marking_refs"] = [canonical_marking_id(ref) or ref for ref in refs]
+    return obj
+
+
+def plain_json(obj: Any) -> dict[str, Any] | None:
+    """A bundle entry as the plain mapping the platform will receive, or None.
+
+    A live stix2 object serialises through its own method; a mapping holding
+    one is serialised the same way. Anything that still cannot be written as
+    JSON is not something a STIX bundle can carry.
+    """
+    if not hasattr(obj, "get"):
+        return None
+
+    def stix(value: Any) -> Any:
+        if hasattr(value, "serialize"):
+            return json.loads(value.serialize())
+        raise TypeError(f"{type(value).__name__} is not JSON serialisable")
+
+    try:
+        return json.loads(json.dumps(obj, default=stix))
+    except (TypeError, ValueError):
+        return None
+
+
 class MarkingResolutionError(Exception):
     """A marking on the enriched entity cannot be represented in the bundle."""
 
@@ -104,12 +146,14 @@ def custom_marking_fields(marking: dict[str, Any]) -> tuple[str, str] | None:
     connectors-sdk carries the real type and level of its statement-shaped
     markings here, and pycti's importer reads this pair in preference to the
     STIX fields. Anything that identifies or rebuilds a marking has to look at
-    it too, or the sdk shape is silently unrecognisable.
+    it too, or the sdk shape is silently unrecognisable. The type is stripped,
+    since it selects a branch; the text is returned as written, and whoever
+    derives an identifier from it strips it then.
     """
     definition_type = marking.get("x_opencti_definition_type")
     definition = marking.get("x_opencti_definition")
     if _filled(definition_type) and _filled(definition):
-        return definition_type, definition
+        return definition_type.strip(), definition
     return None
 
 
@@ -132,46 +176,88 @@ def is_marking_id(value: Any) -> bool:
     own `id`, produces a bundle the platform cannot resolve. A non-empty
     string is not enough: `"not-a-stix-id"` was travelling into both.
     """
-    return isinstance(value, str) and bool(MARKING_ID_RE.match(value.strip()))
+    return canonical_marking_id(value) is not None
+
+
+def canonical_marking_id(value: Any) -> str | None:
+    """The one spelling of a marking identifier every comparison uses.
+
+    UUID hex is case-insensitive on input, and the platform writes it in
+    lower case, so an identifier is stripped and lower-cased before it is
+    compared with anything or written anywhere. Accepting an upper-cased
+    identifier and then comparing it as written let the TLP:RED identifier
+    slip past a membership test that only knew the lower-case spelling, and
+    a padded reference was accepted and then failed to match the very
+    definition it pointed at.
+    """
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip().lower()
+    return candidate if MARKING_ID_RE.match(candidate) else None
 
 
 def marking_identifier(marking: dict[str, Any]) -> str | None:
-    """The usable identifier a marking carries, under either spelling, or None.
+    """The usable identifier a marking carries, under either key, canonicalised.
 
     A bundled definition names itself with `id`; an OpenCTI objectMarking entry
     uses `standard_id`. Anything that judges a marking by its identifier has to
     read both, or a check applied on one route is simply absent on the other.
+    An entry carrying both, pointing at different definitions, is refused: the
+    platform fills `standard_id` with the marking it actually applied, and a
+    gate that read the other one would be judging a restriction nobody set.
     """
-    for key in ("id", "standard_id"):
-        value = marking.get(key)
-        if is_marking_id(value):
-            return value.strip()
-    return None
+    found = {
+        key: canonical_marking_id(marking.get(key))
+        for key in ("id", "standard_id")
+        if canonical_marking_id(marking.get(key)) is not None
+    }
+    if len(set(found.values())) > 1:
+        raise MarkingResolutionError(
+            f"Marking {marking!r} of the enriched observable carries two different"
+            " identifiers; refusing to enrich rather than guess which restriction"
+            " applies."
+        )
+    return next(iter(found.values()), None)
+
+
+def marking_body(marking: dict[str, Any]) -> tuple[str, str] | None:
+    """The `definition_type` and the text it carries, in whichever shape arrived.
+
+    The platform sends the text as a string. An exported or live stix2
+    definition nests it in a mapping keyed by the type, with a TLP level also
+    repeated in `name`. The gate already read every one of these shapes; the
+    code that rebuilt a definition accepted only the string, so a marking the
+    gate understood perfectly was then refused as unresolvable.
+    """
+    definition_type = marking.get("definition_type")
+    if not _filled(definition_type):
+        return None
+    definition_type = definition_type.strip()
+    definition = marking.get("definition")
+    if hasattr(definition, "get"):
+        definition = definition.get(definition_type.lower()) or marking.get("name")
+    if not _filled(definition):
+        return None
+    return definition_type, str(definition)
 
 
 def declared_marking_id(marking: dict[str, Any]) -> str | None:
-    """The id the marking's own definition implies, or None if it declares one.
+    """The id the marking's own definition implies, or None if it declares none.
 
     A TLP value is canonicalised first, so `tlp:red` and `TLP:RED` imply the
     same id and a difference in spelling is not mistaken for a difference in
     meaning.
     """
-    custom = custom_marking_fields(marking)
-    if custom:
-        definition_type, definition = custom
-    else:
-        definition_type = marking.get("definition_type")
-        definition = marking.get("definition")
-        if not (_filled(definition_type) and _filled(definition)):
-            return None
-    if str(definition_type).strip().upper() == "TLP":
+    declared = custom_marking_fields(marking) or marking_body(marking)
+    if declared is None:
+        return None
+    definition_type, definition = declared
+    if definition_type.upper() == "TLP":
         level = tlp_level_of(definition)
         if level is None:
             return None
         return PyctiMarkingDefinition.generate_id("TLP", canonical_tlp(level))
-    return PyctiMarkingDefinition.generate_id(
-        str(definition_type).strip(), str(definition).strip()
-    )
+    return PyctiMarkingDefinition.generate_id(definition_type, definition.strip())
 
 
 def marking_id(marking: dict[str, Any]) -> str | None:
@@ -181,20 +267,37 @@ def marking_id(marking: dict[str, Any]) -> str | None:
     as both the reference and the rebuilt definition's own id, so the bundle
     carried an identifier nothing could resolve. The definition itself is
     authoritative, so an entry whose `standard_id` is unusable is identified
-    from its type and value instead, and only one that survives none of these
-    routes is unidentifiable.
+    from its type and value instead, canonicalised exactly as the declared id
+    is so the two cannot disagree over spelling. A TLP value that does not
+    parse still gets an identifier from its raw text, so that it reaches the
+    gate and is refused there as unreadable, which tells the operator what was
+    wrong with it. Only an entry that survives none of these routes is
+    unidentifiable.
     """
     identifier = marking_identifier(marking)
     if identifier is not None:
         return identifier
-    custom = custom_marking_fields(marking)
-    if custom:
-        return PyctiMarkingDefinition.generate_id(*custom)
-    definition_type = marking.get("definition_type")
-    definition = marking.get("definition")
-    if _filled(definition_type) and _filled(definition):
-        return PyctiMarkingDefinition.generate_id(definition_type, definition)
-    return None
+    declared = declared_marking_id(marking)
+    if declared is not None:
+        return declared
+    pair = custom_marking_fields(marking) or marking_body(marking)
+    if pair is None:
+        return None
+    return PyctiMarkingDefinition.generate_id(pair[0], pair[1].strip())
+
+
+def marking_created(marking: dict[str, Any]) -> str:
+    """The `created` timestamp a rebuilt definition may carry.
+
+    The platform's value is kept when it reads as a timestamp, written in the
+    STIX spelling. Anything else falls back to the fixed TLP epoch: a value
+    copied through verbatim was emitting definitions whose `created` was a
+    word, a number or a list, which is not a STIX object at all.
+    """
+    stamp = read_timestamp(marking.get("created"))
+    if stamp is None:
+        return TLP_MARKING_CREATED
+    return stamp.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 
 def materialize_marking(marking: dict[str, Any]) -> dict[str, Any] | None:
@@ -227,15 +330,26 @@ def materialize_marking(marking: dict[str, Any]) -> dict[str, Any] | None:
     prepare_export shape, except that the statement text keeps its case: the
     id was derived from the text as written, and pycti reads the text back
     verbatim, so lowercasing it would publish a different statement under the
-    source's identifier. Only a TLP value is normalised, since pycti upper-cases
-    it on import anyway.
+    source's identifier. A TLP value is written as the level name only when
+    it parses as one; anything else is kept as written rather than altered.
+
+    Text travels exactly as the platform wrote it when the platform also
+    supplied the identifier, padding included, since that identifier was
+    derived from the text as written. Only when the connector derives the
+    identifier itself is the text stripped, so that the two agree.
     """
     identifier = marking_id(marking)
     if identifier is None:
         return None
+    supplied = marking_identifier(marking) is not None
+
+    def text(value: str) -> str:
+        return value if supplied else value.strip()
+
     custom = custom_marking_fields(marking)
     if custom:
         custom_type, custom_definition = custom
+        custom_definition = text(custom_definition)
         return {
             "type": "marking-definition",
             "spec_version": "2.1",
@@ -243,17 +357,18 @@ def materialize_marking(marking: dict[str, Any]) -> dict[str, Any] | None:
             "created": (
                 TLP_MARKING_CREATED
                 if custom_type.upper() == "TLP"
-                else marking.get("created") or TLP_MARKING_CREATED
+                else marking_created(marking)
             ),
             "definition_type": "statement",
             "definition": {"statement": "custom"},
             "x_opencti_definition_type": custom_type,
             "x_opencti_definition": custom_definition,
         }
-    definition_type = marking.get("definition_type")
-    definition = marking.get("definition")
-    if not isinstance(definition_type, str) or not isinstance(definition, str):
+    body = marking_body(marking)
+    if body is None:
         return None
+    definition_type, definition = body
+    definition = text(definition)
     if definition_type.upper() == "TLP":
         level = tlp_level_of(definition)
         if level is not None:
@@ -265,7 +380,7 @@ def materialize_marking(marking: dict[str, Any]) -> dict[str, Any] | None:
             "type": "marking-definition",
             "spec_version": "2.1",
             "id": identifier,
-            "created": marking.get("created") or TLP_MARKING_CREATED,
+            "created": marking_created(marking),
             "definition_type": "statement",
             "definition": {"statement": "custom"},
             "x_opencti_definition_type": definition_type,
@@ -273,9 +388,9 @@ def materialize_marking(marking: dict[str, Any]) -> dict[str, Any] | None:
         }
     if definition_type.upper() == "TLP":
         created = TLP_MARKING_CREATED
-        value = definition.lower().replace("tlp:", "")
+        value = tlp_level_of(definition) or definition
     else:
-        created = marking.get("created") or TLP_MARKING_CREATED
+        created = marking_created(marking)
         value = definition
     return {
         "type": "marking-definition",
@@ -294,6 +409,10 @@ def resolve_source_markings(
     bundled: list[dict[str, Any]],
 ) -> tuple[list[str], list[dict[str, Any]]]:
     """Every marking the source carries, and the definitions the bundle lacks.
+
+    References and bundled identifiers are canonicalised before anything else
+    looks at them, so a reference and the definition it points at cannot miss
+    each other over the spelling of their hex digits.
 
     Both halves come from one pass so the references placed on derived objects
     and the definitions shipped alongside them cannot drift apart. A reference
@@ -318,16 +437,17 @@ def resolve_source_markings(
     """
     supplied = []
     for source in (stix_entity, observable):
-        supplied.extend(
-            marking_sequence(source.get("object_marking_refs"), "object_marking_refs")
-        )
-    for ref in supplied:
-        if not is_marking_id(ref):
-            raise MarkingResolutionError(
-                f"Marking reference {ref!r} of the enriched observable is not a"
-                " usable identifier; refusing to enrich rather than treat the"
-                " observable as carrying one marking fewer."
-            )
+        for ref in marking_sequence(
+            source.get("object_marking_refs"), "object_marking_refs"
+        ):
+            identifier = canonical_marking_id(ref)
+            if identifier is None:
+                raise MarkingResolutionError(
+                    f"Marking reference {ref!r} of the enriched observable is not"
+                    " a usable identifier; refusing to enrich rather than treat"
+                    " the observable as carrying one marking fewer."
+                )
+            supplied.append(identifier)
     entries = marking_sequence(observable.get("objectMarking"), "objectMarking")
     identifiers = []
     for marking in entries:
@@ -353,7 +473,7 @@ def resolve_source_markings(
         identifiers.append(identifier)
     refs = list(dict.fromkeys(supplied + identifiers))
     present = {
-        obj.get("id")
+        canonical_marking_id(obj.get("id"))
         for obj in bundled
         if hasattr(obj, "get") and obj.get("type") == "marking-definition"
     }
@@ -399,6 +519,12 @@ def tlp_marking_value(marking: Any) -> tuple[bool, Any]:
     the platform will actually store. Checking `definition_type` alone made
     every AMBER+STRICT marking that arrived in the sdk shape invisible, which
     let it past the gate unlooked at.
+
+    Within the STIX shape the importer stores `definition["tlp"]` and reads
+    `name` only when that is absent, so the nested value is read first here
+    too. A body whose `name` and nested level disagree is reported as
+    unreadable: judging it by `name` let a definition the platform stores as
+    TLP:RED pass an AMBER gate on the strength of a label that said AMBER.
     """
     custom_type = marking.get("x_opencti_definition_type")
     if isinstance(custom_type, str) and custom_type.strip().upper() == "TLP":
@@ -407,7 +533,12 @@ def tlp_marking_value(marking: Any) -> tuple[bool, Any]:
         return False, None
     definition = marking.get("definition")
     if hasattr(definition, "get"):
-        return True, marking.get("name") or definition.get("tlp")
+        nested, name = definition.get("tlp"), marking.get("name")
+        if nested is None:
+            return True, name
+        if name is not None and tlp_level_of(name) != tlp_level_of(nested):
+            return True, f"name {name!r} disagrees with definition {nested!r}"
+        return True, nested
     if definition is None:
         return True, marking.get("name")
     return True, definition
@@ -588,16 +719,30 @@ def is_own_reference(reference: Any) -> bool:
 
 
 def named_labels(value: Any) -> list[str]:
-    """The labels in a field, keeping only entries that name something.
+    """The labels in a field, stripped, keeping only entries that name something.
 
     Filtering has to happen before deduplication rather than after: a label
     that is a dict or a list is unhashable, and `dict.fromkeys` raised on it,
     which turned one malformed entry into a failed enrichment. Blank entries
-    are dropped too, since a label of spaces names nothing.
+    are dropped too, since a label of spaces names nothing, and padding is
+    removed because a tag does not change meaning with the spaces around it.
     """
     return [
-        label for label in listed(value) if isinstance(label, str) and label.strip()
+        label.strip()
+        for label in listed(value)
+        if isinstance(label, str) and label.strip()
     ]
+
+
+def is_owned_label(label: str) -> bool:
+    """Whether a label is one this connector sets and may therefore remove.
+
+    Matched without regard to case, as the connector's own external reference
+    is. A stale `Plaintext-Password-Exposure` spelled with capitals was not
+    recognised as ours, so it survived every re-enrichment beside the
+    lower-case one the connector kept adding.
+    """
+    return label.casefold() in XposedOrNotConnector.OWNED_LABEL_KEYS
 
 
 def unique_by_id(objects: list[Any]) -> list[Any]:
@@ -621,6 +766,7 @@ def unique_by_id(objects: list[Any]) -> list[Any]:
 
 class XposedOrNotConnector:
     OWNED_LABELS = ("data-breach", "plaintext-password-exposure")
+    OWNED_LABEL_KEYS = frozenset(label.casefold() for label in OWNED_LABELS)
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
@@ -719,9 +865,18 @@ class XposedOrNotConnector:
         fail the enrichment and the hand-back alike, so a single malformed
         element in someone else's bundle turned every outcome into an internal
         error. It is counted and ignored instead.
+
+        Every surviving entry is reduced to plain JSON here, before the gate
+        reads it. A live stix2 object nested inside a dict serialises only
+        when the bundle is built, which happens after the lookup, so a value
+        that could not be serialised was discovered only once the address had
+        already left the platform. Marking identifiers are written in their
+        canonical spelling at the same time, so everything downstream compares
+        like with like.
         """
         supplied = listed(data.get("stix_objects"))
-        objects = [obj for obj in supplied if hasattr(obj, "get")]
+        objects = [plain_json(obj) for obj in supplied]
+        objects = [canonical_markings(obj) for obj in objects if obj is not None]
         if len(objects) != len(supplied):
             self.helper.connector_logger.warning(
                 "Ignoring entries of the incoming bundle that are not STIX objects",
@@ -801,7 +956,8 @@ class XposedOrNotConnector:
         source_definitions = [
             obj
             for obj in stix_objects + missing_markings
-            if obj.get("type") == "marking-definition" and obj.get("id") in marking_refs
+            if obj.get("type") == "marking-definition"
+            and canonical_marking_id(obj.get("id")) in marking_refs
         ]
 
         too_high, unreadable = refused_tlps(
@@ -838,7 +994,9 @@ class XposedOrNotConnector:
                 data, "No known breach exposure for this email address (XposedOrNot)."
             )
 
-        breaches = result.get("breaches") or []
+        breaches = [
+            breach for breach in result.get("breaches") or [] if hasattr(breach, "get")
+        ]
 
         enriched_entity = deepcopy(stix_entity)
         if marking_refs:
@@ -871,7 +1029,7 @@ class XposedOrNotConnector:
         labels = [
             label
             for label in dict.fromkeys(existing_labels)
-            if label not in self.OWNED_LABELS
+            if not is_owned_label(label)
         ]
         labels.append("data-breach")
         if self.converter.has_plaintext_exposure(breaches):
@@ -886,6 +1044,7 @@ class XposedOrNotConnector:
             key = (
                 str(ref.get("source_name") or "").strip().casefold(),
                 normalised_url(ref.get("url")),
+                str(ref.get("external_id") or "").strip(),
             )
             if any(key):
                 if key in seen:
@@ -908,12 +1067,11 @@ class XposedOrNotConnector:
         if all(obj.get("id") != enriched_entity["id"] for obj in enriched_objects):
             enriched_objects.append(enriched_entity)
 
-        # Per-breach detail as a markdown Note attached to the observable.
         note_tlp = TLPMarking(
             level=effective_tlp_level(observable, self.tlp_level, source_definitions)
         )
         note_markings = [note_tlp] + [
-            Reference(id=ref) for ref in marking_refs if ref != note_tlp.id
+            Reference(id=ref) for ref in marking_refs if ref not in TLP_MARKING_IDS
         ]
         note_id = ObservableNote.stable_id(enriched_entity["id"])
         superseded = [
@@ -948,9 +1106,10 @@ class XposedOrNotConnector:
             if first_year and latest_year
             else ""
         )
-        return (
+        return self._redacted(
             f"Found {len(breaches)} breach(es){span}; observable updated and"
-            " summary note attached."
+            " summary note attached.",
+            data,
         )
 
     def _redacted(self, text: str, data: dict[str, Any]) -> str:
@@ -968,6 +1127,7 @@ class XposedOrNotConnector:
         return self._redacted(traceback.format_exc(), data)
 
     def _process_callback(self, data: dict[str, Any]) -> str:
+        data = mapping(data)
         try:
             return self._process_message(data)
         except MarkingResolutionError as error:

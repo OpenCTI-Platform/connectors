@@ -21,7 +21,9 @@ from src.xposedornot.connector import (
     TLP_RANK,
     MarkingResolutionError,
     XposedOrNotConnector,
+    canonical_marking_id,
     canonical_tlp,
+    declared_marking_id,
     effective_tlp_level,
     is_marking_id,
     is_own_reference,
@@ -34,6 +36,7 @@ from src.xposedornot.connector import (
     refused_tlps,
     resolve_source_markings,
     source_tlp_levels,
+    tlp_level_of,
     tlp_marking_value,
     unique_by_id,
     usable_score,
@@ -341,7 +344,15 @@ def test_tlp_marking_value_reads_every_shape():
     )
     assert tlp_marking_value(
         {"definition_type": "tlp", "name": "TLP:RED", "definition": {"tlp": "red"}}
-    ) == (True, "TLP:RED")
+    ) == (True, "red")
+    is_tlp, disagreement = tlp_marking_value(
+        {"definition_type": "tlp", "name": "TLP:AMBER", "definition": {"tlp": "red"}}
+    )
+    assert is_tlp and tlp_level_of(disagreement) is None, disagreement
+    assert tlp_marking_value({"definition_type": "tlp", "name": "TLP:RED"}) == (
+        True,
+        "TLP:RED",
+    )
     assert tlp_marking_value(
         {"definition_type": "tlp", "definition": {"tlp": "red"}}
     ) == (
@@ -562,6 +573,326 @@ def test_an_empty_playbook_input_is_not_handed_back_as_an_empty_bundle():
     assert message == "Unsupported type: IPv4-Addr"
     helper.send_stix2_bundle.assert_not_called()
     helper.connector_logger.error.assert_not_called()
+
+
+def test_marking_identifiers_are_compared_in_one_canonical_spelling():
+    """UUID hex is case-insensitive on input; the platform writes it lower-case.
+
+    An upper-cased TLP:RED identifier with a statement body was treated as an
+    ordinary custom marking and the address left the platform, while the same
+    identifier with an honest TLP:RED body was refused as contradictory. A
+    padded reference was accepted and then failed to match its own definition.
+    """
+    red = PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")
+    upper = "marking-definition--" + red.split("--")[1].upper()
+    padded = f"  {red}  "
+    for spelling in (upper, padded):
+        levels, unreadable = source_tlp_levels(
+            {},
+            [
+                {
+                    "id": spelling,
+                    "definition_type": "statement",
+                    "definition": {"statement": "x"},
+                }
+            ],
+        )
+        assert levels == [] and unreadable, spelling
+
+    for spelling in (upper, padded):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(
+            side_effect=AssertionError("API was called")
+        )
+        data = _enrichment_data(tlp=None)
+        data["stix_entity"]["object_marking_refs"] = [spelling]
+        data["stix_objects"].append(
+            {
+                "type": "marking-definition",
+                "spec_version": "2.1",
+                "id": spelling,
+                "definition_type": "statement",
+                "definition": {"statement": "x"},
+            }
+        )
+        message = connector._process_callback(data)
+        connector.client.lookup.assert_not_called()
+        assert "cannot" in message, message
+
+    StubConnectorSettings._max_tlp = "TLP:RED"
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data(tlp=None)
+    data["stix_entity"]["object_marking_refs"] = [padded]
+    data["stix_objects"].append(dict(RED_MARKING_DEF))
+    message = connector._process_message(data)
+    assert message.startswith("Found 1 breach"), message
+    sent = helper.stix2_create_bundle.call_args.args[0]
+    observable = next(o for o in sent if o["id"] == OBSERVABLE_ID)
+    assert observable["object_marking_refs"] == [red]
+
+    refs, missing = resolve_source_markings(
+        {"object_marking_refs": [upper]},
+        {
+            "objectMarking": [
+                {
+                    "standard_id": padded,
+                    "definition_type": "TLP",
+                    "definition": "TLP:RED",
+                }
+            ]
+        },
+        [],
+    )
+    assert refs == [red] and [m["id"] for m in missing] == [red]
+
+    with pytest.raises(MarkingResolutionError, match="two different identifiers"):
+        resolve_source_markings(
+            {},
+            {
+                "objectMarking": [
+                    {
+                        "id": PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER"),
+                        "standard_id": red,
+                        "definition_type": "TLP",
+                        "definition": "TLP:AMBER",
+                    }
+                ]
+            },
+            [],
+        )
+
+
+def test_a_tlp_body_whose_name_and_level_disagree_fails_closed():
+    """pycti stores `definition["tlp"]` and reads `name` only when it is absent.
+
+    Judging the body by `name` let a definition the platform stores as TLP:RED
+    pass an AMBER gate on the strength of a label that said AMBER.
+    """
+    amber = PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER")
+    liar = {
+        "type": "marking-definition",
+        "spec_version": "2.1",
+        "id": amber,
+        "created": "2017-01-20T00:00:00.000Z",
+        "definition_type": "tlp",
+        "name": "TLP:AMBER",
+        "definition": {"tlp": "red"},
+    }
+    levels, unreadable = source_tlp_levels({}, [liar])
+    assert levels == [] and unreadable
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(side_effect=AssertionError("API was called"))
+    data = _enrichment_data(tlp=None)
+    data["stix_entity"]["object_marking_refs"] = [amber]
+    data["stix_objects"].append(liar)
+    message = connector._process_message(data)
+    connector.client.lookup.assert_not_called()
+    assert "cannot read" in message
+    honest = dict(liar, definition={"tlp": "amber"})
+    assert source_tlp_levels({}, [honest]) == (["amber"], [])
+
+
+def test_the_materialiser_reads_every_shape_the_gate_reads():
+    """A marking the gate understood was refused as unresolvable.
+
+    `tlp_marking_value` accepted a mapping body and a live stix2 object; the
+    code rebuilding the definition demanded a string.
+    """
+    amber = PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER")
+    for entry in (
+        {
+            "standard_id": amber,
+            "definition_type": "tlp",
+            "name": "TLP:AMBER",
+            "definition": {"tlp": "amber"},
+        },
+        {
+            "standard_id": amber,
+            "definition_type": "tlp",
+            "definition": {"tlp": "amber"},
+        },
+        json.loads(TLPMarking(level="amber").to_stix2_object().serialize()),
+        {"definition_type": "PAP", "definition": {"pap": "red"}},
+        {"definition_type": "TLP", "definition": "tlp:red"},
+        {"definition_type": "Tlp ", "definition": " TLP:RED "},
+        {"x_opencti_definition_type": " TLP", "x_opencti_definition": "TLP:RED "},
+    ):
+        built = materialize_marking(entry)
+        assert built is not None, entry
+        assert built["id"] == marking_id(entry) == declared_marking_id(entry), entry
+        refs, missing = resolve_source_markings({}, {"objectMarking": [entry]}, [])
+        assert refs == [built["id"]] and len(missing) == 1, entry
+    derived = materialize_marking({"definition_type": "PAP", "definition": " PAP:RED "})
+    assert derived["id"] == PyctiMarkingDefinition.generate_id("PAP", "PAP:RED")
+    assert derived["x_opencti_definition"] == "PAP:RED"
+    padded_text = "Internal Only "
+    supplied = materialize_marking(
+        {
+            "standard_id": CUSTOM_ID,
+            "definition_type": "statement",
+            "definition": padded_text,
+        }
+    )
+    assert supplied["definition"] == {"statement": padded_text}
+    assert supplied["id"] == CUSTOM_ID
+    unknown = materialize_marking(
+        {
+            "standard_id": "marking-definition--aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+            "definition_type": "TLP",
+            "definition": "TLP:Purple-TLP:Mauve",
+        }
+    )
+    assert unknown["definition"] == {"tlp": "TLP:Purple-TLP:Mauve"}
+
+
+def test_a_rebuilt_definition_carries_a_real_timestamp():
+    """`created` was copied through verbatim, words and lists included."""
+    for created, expected in (
+        ("2024-01-01T00:00:00.000Z", "2024-01-01T00:00:00.000Z"),
+        ("2024-01-01T05:30:00+05:30", "2024-01-01T00:00:00.000Z"),
+        ("yesterday", "2017-01-20T00:00:00.000Z"),
+        (1712345678, "2017-01-20T00:00:00.000Z"),
+        (["2024-01-01"], "2017-01-20T00:00:00.000Z"),
+        (None, "2017-01-20T00:00:00.000Z"),
+    ):
+        built = materialize_marking(
+            {
+                "definition_type": "statement",
+                "definition": "Internal Only",
+                "created": created,
+            }
+        )
+        assert built["created"] == expected, created
+
+
+def test_a_live_stix2_object_nested_in_a_bundle_entry_is_handled_before_lookup():
+    """A value that cannot be serialised used to surface only after the address left."""
+    amber = PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER")
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data(tlp=None)
+    data["stix_entity"]["object_marking_refs"] = [amber]
+    data["stix_objects"].append(
+        {
+            "type": "marking-definition",
+            "spec_version": "2.1",
+            "id": amber,
+            "definition_type": "tlp",
+            "name": "TLP:AMBER",
+            "definition": TLPMarking(level="amber").to_stix2_object()["definition"],
+        }
+    )
+    message = connector._process_callback(data)
+    assert message.startswith("Found 1 breach"), message
+    helper.send_stix2_bundle.assert_called_once()
+
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(side_effect=AssertionError("API was called"))
+    data = _enrichment_data(tlp=None)
+    data["stix_entity"]["object_marking_refs"] = [amber]
+    data["stix_objects"].append(
+        {"type": "marking-definition", "id": amber, "definition": object()}
+    )
+    message = connector._process_callback(data)
+    connector.client.lookup.assert_not_called()
+    assert "cannot be resolved" in message
+
+
+def test_the_note_carries_one_tlp_marking_plus_the_non_tlp_ones():
+    """A configured level stricter than the source left two TLPs on the Note."""
+    StubConnectorSettings._max_tlp = "TLP:RED"
+    StubConnectorSettings._tlp_level = "red"
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data(tlp="TLP:GREEN")
+    data["enrichment_entity"]["objectMarking"].append(
+        {
+            "standard_id": CUSTOM_ID,
+            "definition_type": "statement",
+            "definition": "Internal only",
+        }
+    )
+    connector._process_message(data)
+    sent = helper.stix2_create_bundle.call_args.args[0]
+    note = next(o for o in sent if o.get("type") == "note")
+    tlp_refs = [ref for ref in note["object_marking_refs"] if ref in TLP_MARKING_IDS]
+    assert tlp_refs == [PyctiMarkingDefinition.generate_id("TLP", "TLP:RED")]
+    assert CUSTOM_ID in note["object_marking_refs"]
+    observable = next(o for o in sent if o["id"] == OBSERVABLE_ID)
+    assert (
+        PyctiMarkingDefinition.generate_id("TLP", "TLP:GREEN")
+        in observable["object_marking_refs"]
+    )
+
+
+def test_owned_labels_are_recognised_whatever_their_case_or_padding():
+    """A stale `Plaintext-Password-Exposure` survived every re-enrichment."""
+    connector, helper = _make_connector()
+    clean = dict(
+        BREACHED, breaches=[dict(BREACHED["breaches"][0], password_risk="hardtocrack")]
+    )
+    connector.client.lookup = MagicMock(return_value=clean)
+    data = _enrichment_data()
+    data["stix_entity"]["x_opencti_labels"] = [
+        " Data-Breach",
+        "DATA-BREACH",
+        "Plaintext-Password-Exposure",
+        " keep me ",
+        "Keep Me",
+    ]
+    connector._process_message(data)
+    sent = helper.stix2_create_bundle.call_args.args[0]
+    observable = next(o for o in sent if o["id"] == OBSERVABLE_ID)
+    assert observable["x_opencti_labels"] == [
+        "keep me",
+        "Keep Me",
+        "legacy-label",
+        "data-breach",
+    ]
+
+
+def test_references_sharing_a_source_but_not_an_external_id_are_all_kept():
+    """Three CVE references collapsed to one because the key ignored external_id."""
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data()
+    data["stix_entity"]["external_references"] = [
+        {"source_name": "cve", "external_id": "CVE-2024-0001"},
+        {"source_name": "cve", "external_id": "CVE-2024-0002"},
+        {"source_name": "cve", "external_id": "CVE-2024-0002"},
+        {
+            "source_name": "mitre-attack",
+            "external_id": "T1566",
+            "url": "https://attack.mitre.org/techniques/T1566",
+        },
+    ]
+    connector._process_message(data)
+    sent = helper.stix2_create_bundle.call_args.args[0]
+    observable = next(o for o in sent if o["id"] == OBSERVABLE_ID)
+    ids = [
+        ref.get("external_id") for ref in observable["x_opencti_external_references"]
+    ]
+    assert ids == ["CVE-2024-0001", "CVE-2024-0002", "T1566", None]
+
+
+def test_a_message_that_is_not_a_mapping_still_gets_an_answer():
+    for broken in (None, "x", 7, ["a"]):
+        connector, helper = _make_connector()
+        message = connector._process_callback(broken)
+        assert isinstance(message, str) and message, repr(broken)
+
+
+def test_junk_breach_entries_do_not_reach_the_label_or_year_helpers():
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(
+        return_value={
+            "breaches": [{"name": "A", "date": "2024"}, "junk", None],
+            "risk_score": 10,
+        }
+    )
+    message = connector._process_message(_enrichment_data())
+    assert message.startswith("Found 1 breach(es) (first 2024, latest 2024)"), message
 
 
 def test_unresolved_marking_is_not_forwarded_at_all():
@@ -900,6 +1231,13 @@ def test_only_real_marking_identifiers_are_trusted():
     """
     good = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
     assert is_marking_id(good)
+    assert canonical_marking_id(f"  {good}  ") == good
+    assert (
+        canonical_marking_id(
+            good.upper().replace("MARKING-DEFINITION", "marking-definition")
+        )
+        == good
+    )
     assert is_marking_id(
         good.upper().replace("MARKING-DEFINITION", "marking-definition")
     )

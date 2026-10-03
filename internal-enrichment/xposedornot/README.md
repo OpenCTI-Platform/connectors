@@ -96,25 +96,26 @@ On an `Email-Addr` observable, click the enrichment button and select the Xposed
 
 ## Behavior
 
-For a breached email address, the connector enriches in place — no extra entities are created, keeping the graph clean:
+For a breached email address, the connector enriches the observable in place and attaches one Note. Besides the Note, the only objects it publishes are the Note's author (an `XposedOrNot` Organization identity) and the marking definitions the Note and the observable reference; no relationships are built:
 
-- the observable's **score** is set from the XposedOrNot risk score (0–100). The community API returns this score; the Plus API does not, so with `XPOSEDORNOT_API_KEY` set the score and the risk line of the note are omitted;
-- **labels** `data-breach` — and `plaintext-password-exposure` when at least one breach stored passwords in plaintext — are added to the observable;
-- an **external reference** to xposedornot.com is attached;
+- the observable's **score** is set from the XposedOrNot risk score (0–100). The community API returns this score; the Plus API does not, so with `XPOSEDORNOT_API_KEY` set the note carries no risk line and the observable receives no score. A score this connector set on an earlier community-API run is retracted (set to null) rather than left stale; a score set by anyone else is left untouched;
+- **labels** `data-breach` — and `plaintext-password-exposure` when at least one breach stored passwords in plaintext — are added to the observable. Both labels belong to the connector, so a `plaintext-password-exposure` label from an earlier run is removed when the current result no longer warrants it; every other label is preserved;
+- an **external reference** to xposedornot.com is attached. The connector's own earlier reference is replaced rather than duplicated; the observable's other references are kept, with exact duplicates (same source name and URL, the scheme and host compared without regard to case) collapsed to one;
 - a markdown **Note** is attached with the breach table (the 50 most recent by default, with a footer naming how many more; see `XPOSEDORNOT_MAX_NOTE_BREACHES`): breach name, date, records exposed, affected domain, industry, exposed data classes, password-storage risk and verification status, plus first/latest exposure years and totals. Re-enriching the same observable updates that note in place instead of creating a second one.
 
-A clean email (not found in any breach) completes with an explicit "no known breach exposure" message and modifies nothing. Rate limiting (HTTP 429) is retried with backoff honoring `Retry-After`; persistent rate limiting fails that single enrichment with a log message recommending the optional key — the connector itself keeps running.
+A clean email (not found in any breach) completes with the status `No known breach exposure for this email address (XposedOrNot).` and modifies nothing. Rate limiting (HTTP 429) is retried with backoff honouring `Retry-After`; each retry warning names the optional key as the way to raise limits, and persistent rate limiting fails that single enrichment with `XposedOrNot: still rate limited after retries.` — the connector itself keeps running.
 
 ### Data Flow
 
 ```mermaid
 graph LR
-    A[Email-Addr observable] --> B{In scope and<br/>within max TLP?}
-    B -- no --> C[Original bundle returned unchanged]
+    A[Email-Addr observable] --> B{In scope, markings resolvable,<br/>within max TLP, valid address?}
+    B -- marking unresolvable --> X[Refused: nothing published]
+    B -- no --> C[No-op: in a playbook the original<br/>bundle is handed back unchanged]
     B -- yes --> D[XposedOrNot API]
-    D -- no breaches --> C
-    D -- breaches --> E[Score, labels and<br/>external reference<br/>on the observable]
-    E --> F[Markdown Note<br/>with the breach table]
+    D -- failure or no breaches --> C
+    D -- breaches --> E[Score, labels, external reference<br/>and markings on the observable]
+    E --> F[Markdown Note with the breach table,<br/>its author identity and markings]
     F --> G[STIX bundle sent to OpenCTI]
 ```
 
@@ -128,11 +129,11 @@ graph LR
 | per-breach detail        | rows of the markdown table in the attached Note       |
 | service identity         | `XposedOrNot` external reference on the Email-Addr    |
 
-No extra entities are created and no relationships are built; the observable is enriched in place to keep the graph clean.
+No relationships are built. Apart from the enriched observable, the bundle carries the Note, its author identity and the marking definitions they reference.
 
 ### Marking Propagation
 
-The Note carries the stricter of `XPOSEDORNOT_TLP_LEVEL` and the source observable's own TLP marking, plus every other marking the observable carries (PAP, statement, custom).
+The Note carries a TLP marking at the stricter of `XPOSEDORNOT_TLP_LEVEL` and the source observable's own TLP level, and in addition every marking the observable itself carries (its TLP, PAP, statement and custom markings), so it is never readable by anyone who cannot read the source. The enriched observable keeps all of its own markings, and every marking definition referenced in the bundle travels with it.
 
 The TLP gate fails closed in both directions. A marking above `XPOSEDORNOT_MAX_TLP` skips the enrichment, and so does a TLP marking whose value the connector cannot read: treating an unreadable marking as "unmarked" would let an observable through on a field nobody could parse. A marking reference that can be resolved from neither the bundle nor the observable fails the enrichment rather than publishing derived data with a weaker restriction.
 
@@ -152,6 +153,7 @@ The observable's email address is the only platform data that leaves OpenCTI, se
 Set `CONNECTOR_LOG_LEVEL=debug`. All API errors are logged through the connector logger with masked context; the API key never appears in logs. Typical messages:
 
 - `XposedOrNot rate limited (keyless: 2/s, 25/hour); backing off.` — expected under keyless bursts; configure a key for volume.
+- `XposedOrNot Plus API rate limited; backing off.` — the same condition with a key configured.
 - `XposedOrNot: still rate limited after retries.` — the three backoff attempts were exhausted; that single enrichment fails and the connector keeps running.
 - `XposedOrNot: API key rejected by the Plus API` — check `XPOSEDORNOT_API_KEY`.
 - `XposedOrNot: request rejected by the community API` — the keyless endpoint refused the request; retry later or configure a key.

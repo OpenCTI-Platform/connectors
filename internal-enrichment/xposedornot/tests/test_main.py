@@ -1,5 +1,3 @@
-import io
-
 # -*- coding: utf-8 -*-
 """Tests for the connector wiring.
 
@@ -8,6 +6,7 @@ and that `XposedOrNotConnector` reads its behaviour from those settings,
 mirroring the convention of the merged sibling connectors.
 """
 
+import io
 from typing import Any
 from unittest.mock import MagicMock
 
