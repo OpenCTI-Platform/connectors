@@ -5,7 +5,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    DeploymentConfig,
+    HitsConfig,
     ListFromString,
+    SecurityPlatformConfig,
 )
 from pydantic import Field, SecretStr, model_validator
 from pydantic.networks import HttpUrl
@@ -108,9 +111,26 @@ class MetricsConfig(BaseConfigModel):
         return self
 
 
+class CrowdstrikeSecurityPlatformConfig(SecurityPlatformConfig):
+    """
+    Define the Security Platform entity representing CrowdStrike Falcon in OpenCTI (deployment write-back).
+    """
+
+    name: str = Field(
+        default="CrowdStrike Falcon",
+        min_length=2,
+        description="Name of the Security Platform entity representing CrowdStrike Falcon in OpenCTI (created if it does not exist).",
+    )
+    type: str | None = Field(
+        default="EDR",
+        description="Type of the Security Platform entity (open vocabulary security_platform_type_ov).",
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `StreamConnectorConfig` and `CrowdstrikeEndpointSecurityConfig`.
+    Override `BaseConnectorSettings` to include `StreamConnectorConfig`, `CrowdstrikeEndpointSecurityConfig`
+    and the deployment write-back namespaces (`deployment`, `hits`, `security_platform`).
     """
 
     connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
@@ -118,3 +138,8 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=CrowdstrikeEndpointSecurityConfig
     )
     metrics: MetricsConfig = Field(default_factory=MetricsConfig)
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    hits: HitsConfig = Field(default_factory=HitsConfig)
+    security_platform: CrowdstrikeSecurityPlatformConfig = Field(
+        default_factory=CrowdstrikeSecurityPlatformConfig
+    )

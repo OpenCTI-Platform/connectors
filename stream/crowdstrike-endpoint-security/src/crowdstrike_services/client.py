@@ -449,9 +449,7 @@ class CrowdstrikeClient:
                         "[API] IOC successfully updated in Crowdstrike",
                         {"ioc_value": ioc_value},
                     )
-                    return IocOperationResult(
-                        IocOperationStatus.UPDATED, ioc_id=ioc_id
-                    )
+                    return IocOperationResult(IocOperationStatus.UPDATED, ioc_id=ioc_id)
                 return IocOperationResult(
                     IocOperationStatus.FAILED,
                     ioc_id=ioc_id,
@@ -623,12 +621,12 @@ class CrowdstrikeClient:
             )
             resources = body.get("resources") or []
             for resource in resources:
+                if returned >= max_alerts:
+                    return
                 if isinstance(resource, dict):
                     returned += 1
                     yield resource
-            next_after = ((body.get("meta") or {}).get("pagination") or {}).get(
-                "after"
-            )
+            next_after = ((body.get("meta") or {}).get("pagination") or {}).get("after")
             if not resources or not next_after or next_after == after:
                 return
             after = next_after

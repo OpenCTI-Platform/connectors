@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from connectors_sdk import (
+    DeploymentAssurance,
     DeploymentVendorAdapter,
     IndicatorDeployment,
     VendorHit,
@@ -24,6 +25,7 @@ from crowdstrike_services import (
 )
 
 if TYPE_CHECKING:
+    from crowdstrike_connector.connector import CrowdstrikeConnector
     from crowdstrike_connector.settings import CrowdstrikeEndpointSecurityConfig
 
 DEFAULT_MAX_ALERTS = 10_000
@@ -184,3 +186,24 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
             for raw_value in raw_values
             if isinstance(raw_value, str) and (normalized := normalize_value(raw_value))
         }
+
+
+def build_deployment_assurance(
+    connector: "CrowdstrikeConnector",
+) -> DeploymentAssurance:
+    """Build the deployment write-back of the connector, reconciliation and hits included.
+
+    Args:
+        connector: The connector (settings ``deployment``, ``hits`` and
+            ``security_platform``, CrowdStrike client).
+
+    Returns:
+        The deployment write-back, a no-op when ``DEPLOYMENT_REPORTING_ENABLED`` is false.
+    """
+    return DeploymentAssurance.from_settings(
+        connector.helper,
+        connector.config,
+        adapter=CrowdstrikeDeploymentAdapter(
+            connector.client, connector.config.crowdstrike
+        ),
+    )
