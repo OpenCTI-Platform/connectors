@@ -4,19 +4,43 @@ import hashlib
 import secrets
 import string
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from connectors_sdk import ApiClientError, BaseClientApi
 from cortex_xdr_client.types import IocFilter, IocPayload
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from pydantic import HttpUrl
+
+PAGE_SIZE = 100
+"""Records per call (`search_to - search_from`) of the IOCs and alerts read-back."""
+
+IOC_ALERT_SOURCE = "XDR IOC"
+"""`alert_source` of the alerts raised when an IOC matches."""
 
 
 class CortexXdrApiError(Exception):
     """Exception raised when the Cortex XDR API returns an error."""
 
     pass
+
+
+def _reply_list(response: Any, key: str, endpoint: str) -> list[dict[str, Any]]:
+    """Return the `key` list of a response, unwrapping the optional `reply` envelope.
+
+    Raises:
+        CortexXdrApiError: When the list is missing, so that a read-back is never
+            mistaken for an empty listing.
+    """
+    reply = response.get("reply", response) if isinstance(response, dict) else None
+    items = reply.get(key) if isinstance(reply, dict) else None
+    if not isinstance(items, list):
+        raise CortexXdrApiError(
+            f"Unexpected response format of {endpoint}: missing '{key}' list"
+        )
+    return [item for item in items if isinstance(item, dict)]
 
 
 class CortexXdrClient(BaseClientApi):
@@ -165,3 +189,98 @@ class CortexXdrClient(BaseClientApi):
             )
         except ApiClientError as err:
             raise CortexXdrApiError("Error while fetching Cortex XDR API") from err
+
+    def iter_iocs(
+        self, page_size: int = PAGE_SIZE, max_pages: int = 10_000
+    ) -> Iterator[dict[str, Any]]:
+        """Iterate over every IOC of the tenant, paginated with `search_from` / `search_to`.
+
+        Used by the deployment reconciliation to read the pushed IOCs back.
+
+        Raises:
+            CortexXdrApiError: On any API error, an unexpected payload, a page
+                repeating the previous one (pagination not honored) or when
+                `max_pages` is reached: a partial listing is never returned silently.
+
+        Reference:
+            https://cortex-docs.paloaltonetworks.com/xdr-5-api/cortex-platform/iocs#post-public_api-v1-indicators-get
+        """
+        previous_first: Any = None
+        for page in range(max_pages):
+            search_from = page * page_size
+            try:
+                response = self._post(
+                    "/public_api/v1/indicators/get",
+                    headers=self._build_auth_headers(),
+                    json={
+                        "request_data": {
+                            "filters": [],
+                            "search_from": search_from,
+                            "search_to": search_from + page_size,
+                        }
+                    },
+                )
+            except ApiClientError as err:
+                raise CortexXdrApiError("Error while fetching Cortex XDR API") from err
+            objects = _reply_list(response, "objects", "indicators/get")
+            if objects:
+                first = (objects[0].get("rule_id"), objects[0].get("indicator"))
+                if page > 0 and first == previous_first:
+                    raise CortexXdrApiError(
+                        "Cortex XDR returned the same IOC page twice, "
+                        "the read-back pagination is not honored"
+                    )
+                previous_first = first
+            yield from objects
+            if len(objects) < page_size:
+                return
+        raise CortexXdrApiError(
+            f"IOC read-back stopped after {max_pages} pages of {page_size} IOCs"
+        )
+
+    def get_ioc_alerts(
+        self, since: datetime, max_alerts: int = 10_000
+    ) -> list[dict[str, Any]]:
+        """List the IOC alerts (`alert_source` "XDR IOC") created since a date, with their events.
+
+        Raises:
+            CortexXdrApiError: On any API error or an unexpected payload.
+
+        Reference:
+            https://cortex-docs.paloaltonetworks.com/xdr-5-api/cortex-xdr-api/get-alerts-multi-events
+        """
+        since_ms = int(since.timestamp() * 1000)
+        alerts: list[dict[str, Any]] = []
+        while len(alerts) < max_alerts:
+            size = min(PAGE_SIZE, max_alerts - len(alerts))
+            try:
+                response = self._post(
+                    "/public_api/v1/alerts/get_alerts_multi_events",
+                    headers=self._build_auth_headers(),
+                    json={
+                        "request_data": {
+                            "filters": [
+                                {
+                                    "field": "creation_time",
+                                    "operator": "gte",
+                                    "value": since_ms,
+                                },
+                                {
+                                    "field": "alert_source",
+                                    "operator": "in",
+                                    "value": [IOC_ALERT_SOURCE],
+                                },
+                            ],
+                            "search_from": len(alerts),
+                            "search_to": len(alerts) + size,
+                            "sort": {"field": "creation_time", "keyword": "asc"},
+                        }
+                    },
+                )
+            except ApiClientError as err:
+                raise CortexXdrApiError("Error while fetching Cortex XDR API") from err
+            page = _reply_list(response, "alerts", "alerts/get_alerts_multi_events")
+            alerts.extend(page[:size])
+            if len(page) < size:
+                break
+        return alerts
