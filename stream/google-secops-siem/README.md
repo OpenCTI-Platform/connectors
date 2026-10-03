@@ -19,6 +19,7 @@ The Google SecOps SIEM connector streams OpenCTI STIX indicators to Google SecOp
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
+    - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -228,11 +229,11 @@ graph LR
 
 ### Event Processing
 
-| Event Type | Action                                                        |
-|------------|---------------------------------------------------------------|
-| create     | Creates UDM entity in Google SecOps SIEM                      |
-| update     | Updates UDM entity in Google SecOps SIEM                      |
-| delete     | Removes UDM entity from Google SecOps SIEM                    |
+| Event Type | Action                                                                                                           |
+|------------|------------------------------------------------------------------------------------------------------------------|
+| create     | Creates UDM entity in Google SecOps SIEM                                                                         |
+| update     | Updates UDM entity in Google SecOps SIEM                                                                         |
+| delete     | Nothing: Google SecOps cannot delete imported entities, they stop matching at the end of their validity interval |
 
 ### Entity Mapping
 
@@ -263,6 +264,50 @@ graph LR
 | metadata.threat.category_details    | Indicator associated labels                      |
 | metadata.threat.url_back_to_product | OpenCTI URL link to the indicator                |
 
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each indicator was accepted by Google SecOps. The status is stored on the
+`deployed-on` relationship between the indicator and the `Google SecOps SIEM` Security Platform entity (created if it
+does not exist), and detection hits are counted with a sighting of the indicator on that entity.
+
+| When                                       | Reported to OpenCTI                                                                                  |
+|--------------------------------------------|------------------------------------------------------------------------------------------------------|
+| Indicator ingested in Google SecOps        | `deployed`, with the STIX id of the indicator (`metadata.product_entity_id` of its entities) as external id |
+| Indicator rejected by Google SecOps        | `failed`, with the API error, the HTTP status and the Google SecOps response                         |
+| Indicator without any supported observable | Nothing: the indicator is never ingested                                                             |
+| Delete event                               | Nothing: imported entities cannot be deleted, they stay live until their `valid_until`               |
+| Periodic run, `pending` (analyst retry)    | The indicator is ingested again and reported `deployed` or `failed`                                  |
+| Hits                                       | IoC matches whose artifact (domain, destination IP address, file hash) is the value of a deployed indicator |
+
+- **No read-back**: the Google SecOps API cannot list nor delete the imported UDM entities, so the presence of the
+  indicators is not reconciled: they are never reported `active` or `removed` by the connector, and a withdrawal
+  requested in OpenCTI cannot be applied (the entity stops matching at the end of its validity interval, after which
+  OpenCTI flags the deployment `expired`).
+- **Periodic run**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the `pending` deployments (retry requested by an
+  analyst in OpenCTI) are ingested again and the hits are collected.
+- **Hits**: the IoC matches of the instance (`legacySearchEnterpriseWideIoCs`, at most 10,000 per request) matched since
+  the previous run are read. A truncated time window is halved and read oldest first (at most 8 requests per run); when
+  the budget runs out, the next run resumes at the first window left unread, so no match is lost. A match counts one hit for every deployed indicator whose value is its artifact (domain,
+  destination IP address, MD5, SHA-1 or SHA-256 hash), at the time Google SecOps last saw the artifact in the
+  environment; hits already reported are never counted twice. URL indicators have no IoC match artifact and get no hit.
+- **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
+  the requests only target indicators this connector reports `deployed`. The retry requested by an analyst
+  (`pending`) is handled by the periodic run.
+- **Permissions**: hit reporting needs the `chronicle.legacies.legacySearchEnterpriseWideIoCs` IAM permission on the
+  Google SecOps instance, in addition to the entity import permission. Check that the role granted to the service
+  account includes it (or add a custom role); without it, set `HITS_REPORTING_ENABLED=false`.
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+| Environment variable                 | Default              | Description                                                                       |
+|--------------------------------------|----------------------|-----------------------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `true`               | Report the deployment status of the ingested indicators.                          |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60`                 | Minutes between two periodic runs (re-push and hits), `0` disables them.          |
+| `HITS_REPORTING_ENABLED`             | `true`               | Report the IoC match hits of the deployed indicators.                             |
+| `SECURITY_PLATFORM_NAME`             | `Google SecOps SIEM` | Name of the Security Platform entity in OpenCTI.                                  |
+| `SECURITY_PLATFORM_TYPE`             | `SIEM`               | Type of the Security Platform entity (`security_platform_type_ov`).               |
+| `SECURITY_PLATFORM_ID`               |                      | Id of an existing Security Platform entity, used instead of the name.             |
+
 ## Debugging
 
 Enable verbose logging by setting:
@@ -284,6 +329,7 @@ Log output includes:
 | OAuth token expiry         | Tokens expire after 1 hour; refresh automatically          |
 | Update latency             | Changes reflect in 2-3 hours on dashboard, 5 min on search |
 | Authentication errors      | Verify service account credentials                         |
+| Logs show `[DEPLOYMENT] Cannot read the detections from the vendor` | The service account lacks `chronicle.legacies.legacySearchEnterpriseWideIoCs`: grant it, or set `HITS_REPORTING_ENABLED=false` |
 
 ## Additional information
 

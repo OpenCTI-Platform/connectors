@@ -17,3 +17,12 @@ zscaler:
   api_key: 'ChangeMe'
   # blacklist_name: 'BLACK_LIST_DYNDNS' # optional (default: 'BLACK_LIST_DYNDNS')
   # ssl_verify: false # optional (default: false)
+
+# Dissemination assurance (deployment write-back to OpenCTI)
+#deployment:
+#  reporting_enabled: true # optional (default: true)
+#  reconciliation_interval: 60 # optional (default: 60 minutes, 0 disables the reconciliation)
+#security_platform:
+#  name: 'Zscaler Internet Access' # optional (default: 'Zscaler Internet Access')
+#  type: 'ChangeMe' # optional (default: none)
+#  id: 'ChangeMe' # optional (existing Security Platform entity id)

@@ -6,6 +6,7 @@ https://developers.cloudflare.com/api/resources/rules/subresources/lists/
 
 import json
 import time
+from collections.abc import Iterator
 from typing import Any, Optional, Union
 
 import requests
@@ -121,6 +122,50 @@ class CloudflareRulesListClient:
                 break
 
         return all_items
+
+    def iter_list_items(self, list_id: str, max_pages: int = 10_000) -> Iterator[dict]:
+        """Iterate over every item of a list (deployment reconciliation read-back).
+
+        Raises:
+            CloudflareAPIError: On any API error, an unexpected payload, a cursor
+                repeating the previous one or when ``max_pages`` is reached: a
+                partial listing is never returned silently.
+        """
+        cursor: Optional[str] = None
+        for _ in range(max_pages):
+            response = self.get_list_items(list_id, cursor)
+            items = response.get("result") if isinstance(response, dict) else None
+            if not isinstance(items, list):
+                raise CloudflareAPIError(
+                    "Unexpected list items response: 'result' is not a list"
+                )
+            yield from (item for item in items if isinstance(item, dict))
+            result_info = response.get("result_info") or {}
+            next_cursor = (result_info.get("cursors") or {}).get("after")
+            if not next_cursor:
+                return
+            if next_cursor == cursor:
+                raise CloudflareAPIError(
+                    "Cloudflare returned the same list items cursor twice, "
+                    "the read-back pagination is not honored"
+                )
+            cursor = next_cursor
+        raise CloudflareAPIError(
+            f"List items read-back stopped after {max_pages} pages"
+        )
+
+    def delete_list_items(self, list_id: str, item_ids: list[str]) -> dict:
+        """Delete items of a list by item id.
+
+        Returns:
+            Operation result, including an ``operation_id`` for the async bulk job.
+        """
+        response = self._make_request(
+            "DELETE",
+            f"/rules/lists/{list_id}/items",
+            data={"items": [{"id": item_id} for item_id in item_ids]},
+        )
+        return response.get("result", {})
 
     def replace_list_items(self, list_id: str, items: list[dict]) -> dict:
         """Replace ALL items in a list with the provided items (snapshot).

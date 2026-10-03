@@ -13,6 +13,7 @@ Cloudflare security configurations.
 - [Configuration variables](#configuration-variables)
 - [Deployment](#deployment)
 - [Behavior](#behavior)
+  - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
 - [Capabilities and limitations](#capabilities-and-limitations)
 - [Development](#development)
 
@@ -119,7 +120,49 @@ IPv4 values are extracted from three shapes: STIX indicators with an
 OpenCTI observables with `entity_type: "IPv4-Addr"`.
 
 Each entry written to the Cloudflare list is tagged with a comment of the form
-`OpenCTI: <id>`, recording the source OpenCTI object ID.
+`OpenCTI: <id>`, recording the STIX id of the source OpenCTI object (the same id
+for the startup full sync and the live stream; the internal id for an API object
+without one).
+
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each IPv4 indicator is actually in the Cloudflare Rules List. The status is
+stored on the `deployed-on` relationship between the indicator and the `Cloudflare` Security Platform entity (created
+if it does not exist). `IPv4-Addr` observables are pushed as before and not reported.
+
+| When                                      | Reported to OpenCTI                                                                                   |
+|-------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| Snapshot uploaded                         | `deployed` for the indicators added or whose IP changed since the previous upload                     |
+| Snapshot rejected by Cloudflare           | `failed` for those indicators, with the API error (they are retried with the next upload)             |
+| Snapshot uploaded without an indicator    | `removed` for the indicators of the previous upload dropped by a delete event (when the last object is deleted, an empty snapshot clears the list) |
+| Reconciliation, indicator present         | `active`, with the Cloudflare list item id as external id                                             |
+| Reconciliation, indicator absent          | `removed` (deleted from the list outside of OpenCTI)                                                  |
+| Reconciliation, `pending` (analyst retry) | The indicator is added to the snapshot, uploaded and reported `deployed` or `failed`                  |
+| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still listed are deleted from the list and reported `removed` |
+| Reconciliation, unknown indicator         | Items whose comment carries the STIX id of an indicator with no deployment are reported `active` (backfill) |
+
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the items of the list are read back (cursor
+  pagination). Deployments are matched by the OpenCTI id of the item comment when it is a STIX indicator id, by item
+  id, then by IP address. A read-back error, or a cursor repeated by the API, skips the run: indicators are never
+  reported `removed` from a partial listing.
+- **Withdrawal safety**: a withdrawal deletes the list item (`DELETE /rules/lists/{id}/items`, never an empty snapshot)
+  only when its comment carries an id of the indicator, and drops the indicator from the snapshot.
+- **Hits**: not reported. Hits of a list are the firewall events of the rules referencing it, which the connector does
+  not manage.
+- **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
+  the requests only target indicators this connector reports `deployed` or `active`. The two analyst requests carried by
+  a deployment are handled by the reconciliation: a retry (`pending`) uploads the indicator again, a withdrawal deletes
+  its list item.
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+| Environment variable                 | Default      | Description                                                                   |
+|--------------------------------------|--------------|-------------------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `true`       | Report the deployment status of the uploaded indicators.                      |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60`         | Minutes between two reconciliations, `0` disables the reconciliation.         |
+| `SECURITY_PLATFORM_NAME`             | `Cloudflare` | Name of the Security Platform entity in OpenCTI.                              |
+| `SECURITY_PLATFORM_TYPE`             |              | Type of the Security Platform entity (`security_platform_type_ov`), optional. |
+| `SECURITY_PLATFORM_ID`               |              | Id of an existing Security Platform entity, used instead of the name.         |
 
 ## Capabilities and limitations
 
@@ -138,9 +181,9 @@ Each entry written to the Cloudflare list is tagged with a comment of the form
   disagree on what belongs in the list.
 - **State is in-memory.** The snapshot is rebuilt by a full sync on every
   restart; nothing is persisted locally.
-- **Removals happen on delete events only.** A revoked or expired indicator is
+- **Removals happen on delete events and withdrawals.** A revoked or expired indicator is
   dropped from the list when its delete event arrives, which requires
-  `CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true`.
+  `CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true`, or when the deployment reconciliation withdraws it.
 - **The Cloudflare list is owned by the connector.** Because each sync *replaces*
   the entire list, any items added to it outside the connector are overwritten on
   the next push. Use a dedicated list.

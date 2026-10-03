@@ -34,6 +34,7 @@ OpenCTI platforms (no-op).
 | `DeploymentAssuranceOptions` | Resolved options, built from SDK settings (`from_settings`) or, for connectors still loading their configuration by hand, from `config.yml` and the environment (`from_legacy_config`). |
 | `DeploymentReporter` | Feature detection, security platform resolution, single, batch and hit reports, listing of the deployments of the platform, coalescing queue for the stream path. |
 | `DeploymentReconciler` + `DeploymentVendorAdapter` | Reconciliation runner (periodic daemon thread) and the vendor operations a connector implements: list, remove, push, and optionally collect hits. |
+| `DeploymentPushAdapter` | Base of `DeploymentVendorAdapter` for vendors whose API cannot list the pushed indicators (push, optional hits): the reconciliation then only pushes `pending` deployments again and reports hits. |
 | `DeploymentAssurance` | Facade wiring the reporter and the reconciliation for a connector. |
 
 ### Key design decisions

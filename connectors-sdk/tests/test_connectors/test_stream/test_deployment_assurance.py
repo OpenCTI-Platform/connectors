@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 from connectors_sdk.connectors.stream.deployment import (
     DeploymentAssurance,
+    DeploymentPushAdapter,
     DeploymentReconciler,
     DeploymentReporter,
     DeploymentVendorAdapter,
@@ -51,6 +52,22 @@ def test_from_options_with_adapter(graphql_helper, options, no_atexit):
 
     assurance.stop(timeout=5)
     assert not assurance.reconciler._thread.is_alive()
+
+
+class _PushOnlyAdapter(DeploymentPushAdapter):
+    def push_indicator(self, stix_indicator):
+        return None
+
+
+def test_from_options_with_push_only_adapter(graphql_helper, options, no_atexit):
+    """A vendor without read-back still gets the periodic re-push and hits run."""
+    assurance = DeploymentAssurance.from_options(
+        graphql_helper, options, _PushOnlyAdapter(), initial_delay=3600.0
+    )
+    assert isinstance(assurance.reconciler, DeploymentReconciler)
+    assert list(assurance.reconciler._adapter.collect_hits([], None)) == []
+    assert assurance.start() is True
+    assurance.stop(timeout=5)
 
 
 def test_start_does_not_schedule_the_reconciliation_when_disabled(

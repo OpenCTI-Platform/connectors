@@ -26,4 +26,12 @@ services:
       # - SECOPS_SIEM_TOKEN_URI=https://oauth2.googleapis.com/token
       # - SECOPS_SIEM_AUTH_PROVIDER_CERT=https://www.googleapis.com/oauth2/v1/certs
       - SECOPS_SIEM_CLIENT_CERT_URL=ChangeMe
+
+      # Dissemination assurance (deployment write-back to OpenCTI)
+      # - DEPLOYMENT_REPORTING_ENABLED=true # Optional (default: true)
+      # - DEPLOYMENT_RECONCILIATION_INTERVAL=60 # Optional (default: 60 minutes, 0 disables the re-push of pending deployments and the hit reporting)
+      # - HITS_REPORTING_ENABLED=true # Optional (default: true, requires the chronicle.legacies.legacySearchEnterpriseWideIoCs permission)
+      # - SECURITY_PLATFORM_NAME=Google SecOps SIEM # Optional (default: 'Google SecOps SIEM')
+      # - SECURITY_PLATFORM_TYPE=SIEM # Optional (default: 'SIEM')
+      # - SECURITY_PLATFORM_ID=ChangeMe # Optional (existing Security Platform entity id)
     restart: always

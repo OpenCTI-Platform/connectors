@@ -38,6 +38,7 @@ def test_root_public_api_is_valid():
         "DeploymentAssurance",
         "DeploymentAssuranceOptions",
         "DeploymentConfig",
+        "DeploymentPushAdapter",
         "DeploymentReconciler",
         "DeploymentReporter",
         "DeploymentStatus",

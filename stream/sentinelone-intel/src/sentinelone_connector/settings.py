@@ -4,7 +4,9 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    DeploymentConfig,
     ListFromString,
+    SecurityPlatformConfig,
 )
 from pydantic import (
     AliasChoices,
@@ -122,9 +124,26 @@ class SentinelOneIntelSettings(BaseConfigModel):
         return self
 
 
+class SentinelOneSecurityPlatformConfig(SecurityPlatformConfig):
+    """
+    Define the Security Platform entity representing SentinelOne in OpenCTI (deployment write-back).
+    """
+
+    name: str = Field(
+        default="SentinelOne",
+        min_length=2,
+        description="Name of the Security Platform entity representing SentinelOne in OpenCTI (created if it does not exist).",
+    )
+    type: str | None = Field(
+        default="EDR",
+        description="Type of the Security Platform entity (open vocabulary security_platform_type_ov).",
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `StreamConnectorConfig` and `TemplateConfig`.
+    Override `BaseConnectorSettings` to include `StreamConnectorConfig`, `SentinelOneIntelSettings`
+    and the deployment write-back namespaces (`deployment`, `security_platform`).
     """
 
     connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
@@ -135,4 +154,8 @@ class ConnectorSettings(BaseConnectorSettings):
             "sentinelone-intel",  # accept old key
         ),
         serialization_alias="sentinelone_intel",  # always output new key
+    )
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    security_platform: SentinelOneSecurityPlatformConfig = Field(
+        default_factory=SentinelOneSecurityPlatformConfig
     )
