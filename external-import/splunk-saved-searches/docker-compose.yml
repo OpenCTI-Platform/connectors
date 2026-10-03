@@ -1,0 +1,27 @@
+version: '3'
+services:
+  connector-splunk-saved-searches:
+    image: opencti/connector-splunk-saved-searches:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Splunk Saved Searches
+      # - CONNECTOR_SCOPE=Indicator,Attack-Pattern,SecurityPlatform
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT6H
+      - SPLUNK_SAVED_SEARCHES_API_URL=ChangeMe
+      - SPLUNK_SAVED_SEARCHES_TOKEN=ChangeMe
+      # - SPLUNK_SAVED_SEARCHES_APP=-
+      # - SPLUNK_SAVED_SEARCHES_OWNER=-
+      # - SPLUNK_SAVED_SEARCHES_SEARCH_SCOPE=alerts
+      # - SPLUNK_SAVED_SEARCHES_WEB_URL=
+      # - SPLUNK_SAVED_SEARCHES_IMPORT_DISABLED_RULES=true
+      # - SPLUNK_SAVED_SEARCHES_PAGE_SIZE=100
+      # - SPLUNK_SAVED_SEARCHES_REQUEST_TIMEOUT=60
+      # - SPLUNK_SAVED_SEARCHES_MAX_RETRIES=5
+      # - SPLUNK_SAVED_SEARCHES_VERIFY_SSL=true
+      # - SPLUNK_SAVED_SEARCHES_PLATFORM_NAME=Splunk
+      # - SPLUNK_SAVED_SEARCHES_PLATFORM_TYPE=SIEM
+      # - SPLUNK_SAVED_SEARCHES_TLP_LEVEL=amber
+    restart: always
