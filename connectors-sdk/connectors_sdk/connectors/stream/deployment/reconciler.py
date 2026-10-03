@@ -71,12 +71,16 @@ MAX_PENDING_HITS_AGE = timedelta(hours=24)
 
 @dataclass(slots=True)
 class _PendingHits:
-    """Hits of one indicator read from the vendor but not delivered to OpenCTI yet."""
+    """A hit report of one indicator not delivered to OpenCTI yet.
+
+    ``failing_since`` is ``None`` until the report is sent: only a report never
+    sent can take newer hits, one that was sent may have been recorded.
+    """
 
     count: int
     first_hit: datetime
     last_hit: datetime
-    failing_since: datetime
+    failing_since: datetime | None
 
 
 _LOG_PREFIX = "[DEPLOYMENT]"
@@ -277,7 +281,7 @@ class DeploymentReconciler:
         self._hits_since: datetime | None = None
         self._hits_resume: Any = None
         self._held_hits: list[VendorHit] = []
-        self._pending_hits: dict[str, _PendingHits] = {}
+        self._pending_hits: dict[str, list[_PendingHits]] = {}
         self._run_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -918,55 +922,64 @@ class DeploymentReconciler:
             The newest counted hit time, or ``None`` when no hit was counted yet.
         """
         watermark = deployment.last_hit_at
-        pending = self._pending_hits.get(deployment.indicator_id)
-        if pending is not None and (watermark is None or pending.last_hit > watermark):
-            return pending.last_hit
+        for pending in self._pending_hits.get(deployment.indicator_id, ()):
+            if watermark is None or pending.last_hit > watermark:
+                watermark = pending.last_hit
         return watermark
 
     def _send_hit_reports(self, aggregated: dict[str, list[Any]], now: datetime) -> int:
-        """Send the hit reports of a run with the ones not delivered by earlier runs.
+        """Send the hit reports of a run after the ones not delivered by earlier runs.
 
-        A report OpenCTI rejects (deleted or unreadable indicator) is dropped; one that
-        was not delivered (outage, timeout, rate limit) is kept and merged into the
-        report of the next run, for at most ``MAX_PENDING_HITS_AGE``, so the hit window
-        moves on without losing the detections it already read.
+        A report that was not delivered (outage, timeout, rate limit) may still have
+        been recorded: OpenCTI only ignores a report whose last hit is not newer than
+        the one it recorded. Such a report is sent again unchanged, for at most
+        ``MAX_PENDING_HITS_AGE``, and the newer hits of an indicator wait behind it in
+        one report never sent, so the hit window moves on without losing or counting
+        twice a detection it already read. A report OpenCTI rejects (deleted or
+        unreadable indicator) is dropped.
 
         Args:
             aggregated: Per indicator: count, first hit and last hit of this run.
             now: The reference time.
 
         Returns:
-            The number of indicators whose report was accepted.
+            The number of indicators with a report accepted.
         """
-        previous = self._pending_hits
+        queues = self._pending_hits
         self._pending_hits = {}
-        for indicator_id, pending in previous.items():
-            entry = aggregated.setdefault(
-                indicator_id, [0, pending.first_hit, pending.last_hit]
-            )
-            entry[0] += pending.count
-            entry[1] = min(entry[1], pending.first_hit)
-            entry[2] = max(entry[2], pending.last_hit)
+        for indicator_id, (count, first_hit, last_hit) in aggregated.items():
+            queue = queues.setdefault(indicator_id, [])
+            if queue and queue[-1].failing_since is None:
+                tail = queue[-1]
+                tail.count += count
+                tail.first_hit = min(tail.first_hit, first_hit)
+                tail.last_hit = max(tail.last_hit, last_hit)
+            else:
+                queue.append(_PendingHits(count, first_hit, last_hit, None))
         reported = 0
         dropped = 0
-        for indicator_id, (count, first_hit, last_hit) in aggregated.items():
-            outcome = self._reporter.report_indicator_hits_outcome(
-                indicator_id, count, last_hit=last_hit, first_hit=first_hit
-            )
-            if outcome == REPORT_SENT:
-                reported += 1
-            elif outcome == REPORT_UNSENT:
-                failing_since = (
-                    previous[indicator_id].failing_since
-                    if indicator_id in previous
-                    else now
+        for indicator_id, queue in queues.items():
+            accepted = False
+            while queue:
+                report = queue[0]
+                outcome = self._reporter.report_indicator_hits_outcome(
+                    indicator_id,
+                    report.count,
+                    last_hit=report.last_hit,
+                    first_hit=report.first_hit,
                 )
-                if now - failing_since <= MAX_PENDING_HITS_AGE:
-                    self._pending_hits[indicator_id] = _PendingHits(
-                        count, first_hit, last_hit, failing_since
-                    )
-                else:
+                if outcome == REPORT_UNSENT:
+                    failing_since = report.failing_since or now
+                    if now - failing_since <= MAX_PENDING_HITS_AGE:
+                        report.failing_since = failing_since
+                        self._pending_hits[indicator_id] = queue
+                        break
                     dropped += 1
+                elif outcome == REPORT_SENT:
+                    accepted = True
+                queue.pop(0)
+            if accepted:
+                reported += 1
         if self._pending_hits or dropped:
             self._logger.warning(
                 f"{_LOG_PREFIX} Some hit reports were not delivered, they are sent "

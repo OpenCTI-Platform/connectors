@@ -1042,8 +1042,8 @@ def test_queued_reports_are_held_without_blocking(
 def test_undelivered_hit_reports_are_sent_with_the_next_run(
     graphql_helper, make_reporter, router, list_nodes, node_factory
 ):
-    """An OpenCTI outage loses no detection: the window moves on and the hits already
-    read are merged into the report of the next run."""
+    """An OpenCTI outage loses no detection: the window moves on, the undelivered
+    report is sent again unchanged and the newer hits in their own report."""
     router.handlers["IndicatorReportHits("] = ValueError("unavailable")
     list_nodes(node_factory(indicator_id="a", status="active"))
     adapter = FakeAdapter(
@@ -1061,18 +1061,104 @@ def test_undelivered_hit_reports_are_sent_with_the_next_run(
     }
     adapter.hits = [VendorHit(timestamp=NOW - timedelta(minutes=1), indicator_id="a")]
     assert reconciler.run_once().hits_reported == 1
-    delivered = router.calls_of("IndicatorReportHits(")[-1]
-    assert delivered["count"] == 2
-    assert delivered["firstHit"] == "2026-10-03T11:55:00.000Z"
-    assert delivered["lastHit"] == "2026-10-03T11:59:00.000Z"
+    replayed, newer = router.calls_of("IndicatorReportHits(")[-2:]
+    assert (replayed["count"], replayed["firstHit"], replayed["lastHit"]) == (
+        1,
+        "2026-10-03T11:55:00.000Z",
+        "2026-10-03T11:55:00.000Z",
+    )
+    assert (newer["count"], newer["firstHit"], newer["lastHit"]) == (
+        1,
+        "2026-10-03T11:59:00.000Z",
+        "2026-10-03T11:59:00.000Z",
+    )
     assert reconciler._pending_hits == {}
+
+
+def _hit_reports(router):
+    return [
+        (call["count"], call["lastHit"])
+        for call in router.calls_of("IndicatorReportHits(")
+    ]
+
+
+def test_newer_hits_wait_behind_an_undelivered_report_without_changing_it(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """OpenCTI may have recorded a report whose call timed out, and only ignores a
+    report that is not newer: the report is never merged with newer hits, and the
+    newer hits are only sent once it is delivered."""
+    router.handlers["IndicatorReportHits("] = ValueError("unavailable")
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[
+            VendorHit(timestamp=NOW - timedelta(minutes=9), indicator_id="a"),
+            VendorHit(timestamp=NOW - timedelta(minutes=8), indicator_id="a"),
+        ],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+    reconciler.run_once()
+
+    adapter.hits = [VendorHit(timestamp=NOW - timedelta(minutes=6), indicator_id="a")]
+    reconciler.run_once()
+    adapter.hits = [VendorHit(timestamp=NOW - timedelta(minutes=4), indicator_id="a")]
+    reconciler.run_once()
+
+    assert _hit_reports(router) == [(2, "2026-10-03T11:52:00.000Z")] * 3
+    assert [
+        (pending.count, pending.failing_since is None)
+        for pending in reconciler._pending_hits["a"]
+    ] == [(2, False), (2, True)]
+
+    router.handlers["IndicatorReportHits("] = {
+        "data": {"indicatorReportHits": {"id": "sighting"}}
+    }
+    adapter.hits = []
+    assert reconciler.run_once().hits_reported == 1
+    assert _hit_reports(router)[-2:] == [
+        (2, "2026-10-03T11:52:00.000Z"),
+        (2, "2026-10-03T11:56:00.000Z"),
+    ]
+    assert reconciler._pending_hits == {}
+
+
+def test_newer_hits_are_sent_alone_once_an_undelivered_report_expires(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    router.handlers["IndicatorReportHits("] = ValueError("unavailable")
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+    )
+    clock = {"now": NOW}
+    reconciler = make_reconciler(
+        make_reporter(graphql_helper), adapter, clock=lambda: clock["now"]
+    )
+    reconciler.run_once()
+
+    clock["now"] = NOW + reconciler_module.MAX_PENDING_HITS_AGE + timedelta(minutes=1)
+    adapter.hits = [
+        VendorHit(timestamp=clock["now"] - timedelta(minutes=1), indicator_id="a")
+    ]
+    reconciler.run_once()
+
+    assert [
+        (pending.count, pending.failing_since)
+        for pending in reconciler._pending_hits["a"]
+    ] == [(1, clock["now"])]
+    assert _hit_reports(router)[-2:] == [
+        (1, "2026-10-03T11:55:00.000Z"),
+        (1, "2026-10-04T12:00:00.000Z"),
+    ]
 
 
 def test_a_hit_held_in_an_undelivered_report_is_not_counted_again(
     graphql_helper, make_reporter, router, list_nodes, node_factory
 ):
     """The hit reads overlap: a hit already held in an undelivered report is not
-    added to it again when the next run reads it a second time."""
+    counted again when the next run reads it a second time."""
     router.handlers["IndicatorReportHits("] = ValueError("unavailable")
     list_nodes(node_factory(indicator_id="a", status="active"))
     first_hit = VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")
@@ -1088,10 +1174,10 @@ def test_a_hit_held_in_an_undelivered_report_is_not_counted_again(
         VendorHit(timestamp=NOW - timedelta(minutes=1), indicator_id="a"),
     ]
     assert reconciler.run_once().hits_reported == 1
-    delivered = router.calls_of("IndicatorReportHits(")[-1]
-    assert delivered["count"] == 2
-    assert delivered["firstHit"] == "2026-10-03T11:55:00.000Z"
-    assert delivered["lastHit"] == "2026-10-03T11:59:00.000Z"
+    assert _hit_reports(router)[-2:] == [
+        (1, "2026-10-03T11:55:00.000Z"),
+        (1, "2026-10-03T11:59:00.000Z"),
+    ]
 
 
 def test_a_newer_last_hit_recorded_by_opencti_stays_the_watermark(
@@ -1119,7 +1205,11 @@ def test_a_newer_last_hit_recorded_by_opencti_stays_the_watermark(
         VendorHit(timestamp=NOW - timedelta(minutes=2), indicator_id="a"),
     ]
     assert reconciler.run_once().hits_reported == 1
-    assert router.calls_of("IndicatorReportHits(")[-1]["count"] == 2
+    # The replay is not newer than the last hit OpenCTI recorded: OpenCTI ignores it.
+    assert _hit_reports(router)[-2:] == [
+        (1, "2026-10-03T11:50:00.000Z"),
+        (1, "2026-10-03T11:58:00.000Z"),
+    ]
 
 
 def test_hit_reports_rejected_by_opencti_are_not_sent_again(
