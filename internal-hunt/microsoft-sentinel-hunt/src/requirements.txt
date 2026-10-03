@@ -1,0 +1,6 @@
+azure-identity~=1.26.0
+pycti==7.261002.0
+pydantic~=2.13.5
+pysigma==1.5.1
+pysigma-backend-kusto==1.0.1
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
