@@ -15,6 +15,7 @@ CONNECTOR_TYPES_DIRECTORIES = [
     "external-import",
     "internal-enrichment",
     "internal-export-file",
+    "internal-hunt",
     "internal-import-file",
     "stream",
 ]
@@ -23,8 +24,21 @@ VALID_CONNECTOR_TYPES = {
     "EXTERNAL_IMPORT",
     "INTERNAL_ENRICHMENT",
     "INTERNAL_EXPORT_FILE",
+    "INTERNAL_HUNT",
     "INTERNAL_IMPORT_FILE",
     "STREAM",
+}
+
+HUNT_PLATFORMS = {
+    "splunk",
+    "microsoft-sentinel",
+    "elastic-security",
+    "crowdstrike-logscale",
+    "google-secops",
+    "opensearch",
+    "clickhouse",
+    "s3-ocsf",
+    "internet",
 }
 
 VALID_LOG_LEVELS = {
@@ -44,6 +58,8 @@ def get_config_schema_paths(connector_type: str | None = None) -> list[str]:
             continue
 
         directory_path = Path(".") / connector_type_directory
+        if not directory_path.is_dir():
+            continue
         for entry in directory_path.iterdir():
             if entry.is_dir() and not entry.name.startswith("."):
                 schema_path = entry / "__metadata__" / "connector_config_schema.json"
@@ -278,6 +294,33 @@ def test_internal_import_file_connector_config_schema(schema_path: str):
     assert properties["CONNECTOR_SCOPE"].get("items") == {"type": "string"}
     assert isinstance(properties["CONNECTOR_SCOPE"].get("default"), list)
     assert len(properties["CONNECTOR_SCOPE"]["default"]) > 0
+
+
+@pytest.mark.parametrize("schema_path", get_config_schema_paths("internal-hunt"))
+def test_internal_hunt_connector_config_schema(schema_path: str):
+    """Assert INTERNAL_HUNT-specific config schema rules.
+
+    CONNECTOR_SCOPE must default to exactly one hunt platform slug, and the
+    Security Platform settings must be exposed.
+    """
+    # Given a connector config schema for an internal-hunt connector
+    schema = load_schema(schema_path)
+    properties = schema.get("properties", {})
+
+    # Then CONNECTOR_TYPE is INTERNAL_HUNT
+    assert properties["CONNECTOR_TYPE"].get("const") == "INTERNAL_HUNT"
+
+    # And CONNECTOR_SCOPE defaults to exactly one hunt platform slug
+    assert properties["CONNECTOR_SCOPE"].get("type") == "array"
+    assert properties["CONNECTOR_SCOPE"].get("items") == {"type": "string"}
+    default_scope = properties["CONNECTOR_SCOPE"].get("default")
+    assert isinstance(default_scope, list) and len(default_scope) == 1
+    assert default_scope[0] in HUNT_PLATFORMS
+
+    # And the Security Platform settings are exposed
+    assert properties["CONNECTOR_SECURITY_PLATFORM_NAME"].get("type") == "string"
+    assert properties["CONNECTOR_SECURITY_PLATFORM_TYPE"].get("type") == "string"
+    assert properties["CONNECTOR_OBSERVABLE_TYPES"].get("type") == "array"
 
 
 @pytest.mark.parametrize("schema_path", get_config_schema_paths("stream"))

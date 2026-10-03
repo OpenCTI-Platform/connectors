@@ -17,6 +17,7 @@ REPOSITORY_SUBDIRECTORIES_TO_INCLUDE = [
     "external-import",
     "internal-enrichment",
     "internal-export-file",
+    "internal-hunt",
     "internal-import-file",
     "stream",
 ]
