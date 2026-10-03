@@ -30,3 +30,14 @@ microsoft_sentinel_intel:
 #  batch_size: 100
 #  batch_timeout: 30
 #  event_types: 'create,update,delete'
+
+# Dissemination assurance (deployment write-back to OpenCTI)
+#deployment:
+#  reporting_enabled: true
+#  reconciliation_interval: 60 # Minutes, 0 disables the reconciliation
+#hits:
+#  reporting_enabled: true
+#security_platform:
+#  name: 'Microsoft Sentinel'
+#  type: 'SIEM'
+#  id: 'ChangeMe' # Existing Security Platform entity id (optional)

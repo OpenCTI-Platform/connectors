@@ -15,4 +15,10 @@ services:
       - ELASTIC_SECURITY_VERIFY_SSL=true
       - ELASTIC_SECURITY_INDICATOR_EXPIRE_TIME=90
       - ELASTIC_SECURITY_BATCH_SIZE=100
+      # Dissemination assurance (deployment write-back to OpenCTI)
+      #- DEPLOYMENT_REPORTING_ENABLED=true # Optional (default: true)
+      #- DEPLOYMENT_RECONCILIATION_INTERVAL=60 # Optional (default: 60 minutes, 0 disables the reconciliation)
+      #- SECURITY_PLATFORM_NAME=Elastic Security # Optional (default: 'Elastic Security')
+      #- SECURITY_PLATFORM_TYPE=SIEM # Optional (default: 'SIEM')
+      #- SECURITY_PLATFORM_ID=ChangeMe # Optional (existing Security Platform entity id)
     restart: always

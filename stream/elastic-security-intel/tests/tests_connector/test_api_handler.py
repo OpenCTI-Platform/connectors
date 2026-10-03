@@ -141,6 +141,77 @@ def test_delete_indicator_uses_conflicts_proceed(handler, observable, requests_m
     assert _doc_requests(requests_mock) == []
 
 
+KIBANA_URL = "http://kibana.test:5601"
+RULES_URL = f"{KIBANA_URL}/api/detection_engine/rules"
+FIND_RULES_URL = f"{RULES_URL}/_find"
+
+
+class _KibanaConfig(_Config):
+    elastic_kibana_url = KIBANA_URL
+
+
+@pytest.fixture
+def kibana_handler():
+    return ElasticApiHandler(_Helper(), _KibanaConfig())
+
+
+@pytest.fixture
+def native_indicator(observable):
+    return {**observable, "pattern_type": "kql", "pattern": "dns.question.name : x"}
+
+
+def test_delete_removes_the_siem_rule_found_on_kibana(
+    kibana_handler, native_indicator, requests_mock
+):
+    requests_mock.get(FIND_RULES_URL, json={"data": [{"id": "rule-1"}]})
+    requests_mock.delete(RULES_URL, json={"id": "rule-1"})
+    requests_mock.post(DELETE_URL, json={"deleted": 1})
+
+    assert kibana_handler.process_indicator(native_indicator, "delete") is True
+
+    deletion = next(r for r in requests_mock.request_history if r.method == "DELETE")
+    assert deletion.qs.get("id") == ["rule-1"]
+
+
+def test_delete_without_siem_rule_succeeds(
+    kibana_handler, native_indicator, requests_mock
+):
+    requests_mock.get(FIND_RULES_URL, json={"data": []})
+    requests_mock.post(DELETE_URL, json={"deleted": 1})
+
+    assert kibana_handler.process_indicator(native_indicator, "delete") is True
+    assert not [r for r in requests_mock.request_history if r.method == "DELETE"]
+
+
+def test_delete_fails_when_the_siem_rule_remains(
+    kibana_handler, native_indicator, requests_mock
+):
+    """A rule that could not be deleted keeps detecting: the deletion failed,
+    even though the threat intel document is still removed."""
+    requests_mock.get(FIND_RULES_URL, json={"data": [{"id": "rule-1"}]})
+    requests_mock.delete(RULES_URL, status_code=500, text="boom")
+    requests_mock.post(DELETE_URL, json={"deleted": 1})
+
+    assert kibana_handler.process_indicator(native_indicator, "delete") is False
+    assert len(_delete_by_query_requests(requests_mock)) == 1
+
+
+def test_delete_fails_when_the_siem_rule_lookup_fails(
+    kibana_handler, native_indicator, requests_mock
+):
+    requests_mock.get(FIND_RULES_URL, status_code=503, text="unavailable")
+    requests_mock.post(DELETE_URL, json={"deleted": 1})
+
+    assert kibana_handler.process_indicator(native_indicator, "delete") is False
+    assert len(_delete_by_query_requests(requests_mock)) == 1
+
+
+def test_lenient_siem_rule_lookup_returns_none_on_errors(kibana_handler, requests_mock):
+    requests_mock.get(FIND_RULES_URL, status_code=503, text="unavailable")
+
+    assert kibana_handler._find_siem_rule_by_opencti_id("indicator--x") is None
+
+
 def test_delete_docs_by_opencti_id_query_targets_doc_id(handler, requests_mock):
     requests_mock.post(DELETE_URL, json={"deleted": 3})
 

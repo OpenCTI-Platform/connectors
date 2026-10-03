@@ -4,7 +4,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    DeploymentConfig,
+    HitsConfig,
     ListFromString,
+    SecurityPlatformConfig,
 )
 from pydantic import Field, HttpUrl, SecretStr
 
@@ -85,12 +88,34 @@ class MicrosoftDefenderIntelConfig(BaseConfigModel):
     )
 
 
+class MicrosoftDefenderSecurityPlatformConfig(SecurityPlatformConfig):
+    """
+    Define the Security Platform entity representing Microsoft Defender for Endpoint in OpenCTI (deployment write-back).
+    """
+
+    name: str = Field(
+        default="Microsoft Defender for Endpoint",
+        min_length=2,
+        description="Name of the Security Platform entity representing Microsoft Defender for Endpoint in OpenCTI (created if it does not exist).",
+    )
+    type: str | None = Field(
+        default="EDR",
+        description="Type of the Security Platform entity (open vocabulary security_platform_type_ov).",
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `StreamConnectorConfig` and `MicrosoftDefenderIntelConfig`.
+    Override `BaseConnectorSettings` to include `StreamConnectorConfig`, `MicrosoftDefenderIntelConfig`
+    and the deployment write-back namespaces (`deployment`, `hits`, `security_platform`).
     """
 
     connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
     microsoft_defender_intel: MicrosoftDefenderIntelConfig = Field(
         default_factory=MicrosoftDefenderIntelConfig
+    )
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    hits: HitsConfig = Field(default_factory=HitsConfig)
+    security_platform: MicrosoftDefenderSecurityPlatformConfig = Field(
+        default_factory=MicrosoftDefenderSecurityPlatformConfig
     )

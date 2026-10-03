@@ -1,10 +1,12 @@
 import json
 from json import JSONDecodeError
 
+from connectors_sdk import DeploymentAssurance
 from microsoft_defender_intel_connector.api_handler import (
     DefenderApiHandler,
     DefenderApiHandlerError,
 )
+from microsoft_defender_intel_connector.deployment import describe_error
 from microsoft_defender_intel_connector.settings import ConnectorSettings
 from microsoft_defender_intel_connector.utils import (
     FILE_HASH_TYPES_MAPPER,
@@ -41,12 +43,19 @@ class MicrosoftDefenderIntelConnector:
 
     """
 
-    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+    def __init__(
+        self,
+        config: ConnectorSettings,
+        helper: OpenCTIConnectorHelper,
+        assurance: DeploymentAssurance | None = None,
+    ):
         """
         Initialize the Connector with necessary configurations
+        :param assurance: Deployment write-back (dissemination assurance), if any
         """
         self.config = config
         self.helper = helper
+        self.assurance = assurance
         self.api = DefenderApiHandler(
             self.helper,
             base_url=self.config.microsoft_defender_intel.base_url,
@@ -124,22 +133,55 @@ class MicrosoftDefenderIntelConnector:
                 "[CREATE] Indicator created",
                 {"defender_id": result["id"], "opencti_id": observable_opencti_id},
             )
-            external_reference = self.helper.api.external_reference.create(
-                source_name="Microsoft Defender",
-                external_id=result["id"],
-                description="Intel within the Microsoft platform.",
-            )
-            if "pattern" in observable_data:
-                self.helper.api.stix_domain_object.add_external_reference(
-                    id=observable_opencti_id,
-                    external_reference_id=external_reference["id"],
+            # The indicator is live in Defender: an OpenCTI error while linking the
+            # external reference must not abort the dissemination.
+            try:
+                external_reference = self.helper.api.external_reference.create(
+                    source_name="Microsoft Defender",
+                    external_id=result["id"],
+                    description="Intel within the Microsoft platform.",
                 )
-            else:
-                self.helper.api.stix_cyber_observable.add_external_reference(
-                    id=observable_opencti_id,
-                    external_reference_id=external_reference["id"],
+                if "pattern" in observable_data:
+                    self.helper.api.stix_domain_object.add_external_reference(
+                        id=observable_opencti_id,
+                        external_reference_id=external_reference["id"],
+                    )
+                else:
+                    self.helper.api.stix_cyber_observable.add_external_reference(
+                        id=observable_opencti_id,
+                        external_reference_id=external_reference["id"],
+                    )
+            except Exception as err:
+                self.helper.connector_logger.warning(
+                    "[CREATE] Cannot add the Microsoft Defender external reference",
+                    {"defender_id": result["id"], "error": str(err)},
                 )
         return result
+
+    def push_indicator(self, data: dict) -> list[str]:
+        """
+        Create the Defender indicators of an OpenCTI indicator, one per observable.
+        Shared by the stream create path and the reconciliation re-push.
+        :param data: OpenCTI indicator (stream event shape)
+        :return: Ids of the Defender indicators created
+        :raise DefenderApiHandlerError: When Defender rejects an indicator
+        """
+        defender_ids = []
+        for observable in self._convert_indicator_to_observables(data) or []:
+            result = self._create_defender_indicator(observable)
+            if result and result.get("id"):
+                defender_ids.append(str(result["id"]))
+        return defender_ids
+
+    def _report_failed(self, data: dict, error: BaseException) -> None:
+        """Report an indicator rejected by Defender (no-op without write-back)."""
+        if self.assurance is not None:
+            self.assurance.report_push_failed(data, describe_error(error))
+
+    def _report_pushed(self, data: dict, defender_ids: list[str]) -> None:
+        """Report an indicator live in Defender, with its first Defender id."""
+        if self.assurance is not None and defender_ids:
+            self.assurance.report_pushed(data, external_id=defender_ids[0])
 
     def _update_defender_indicator(self, defender_id, observable_data) -> bool:
         """
@@ -157,9 +199,12 @@ class MicrosoftDefenderIntelConnector:
         :param data: Streamed data (representing either an observable or an indicator)
         """
         if is_stix_indicator(data):
-            observables = self._convert_indicator_to_observables(data)
-            for observable in observables:
-                self._create_defender_indicator(observable)
+            try:
+                defender_ids = self.push_indicator(data)
+            except Exception as err:
+                self._report_failed(data, err)
+                raise
+            self._report_pushed(data, defender_ids)
         elif is_observable(data):
             self._create_defender_indicator(data)
 
@@ -171,26 +216,33 @@ class MicrosoftDefenderIntelConnector:
         did_update = False
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         if is_stix_indicator(data):
-            observables = self._convert_indicator_to_observables(data)
-            for observable in observables:
-                observable_value = None
-                if observable["type"] == "file":
-                    if "sha256" in observable["hashes"]:
-                        observable_value = observable["hashes"]["sha256"]
-                    elif "sha1" in observable["hashes"]:
-                        observable_value = observable["hashes"]["sha1"]
-                    elif "md5" in observable["hashes"]:
-                        observable_value = observable["hashes"]["md5"]
-                else:
-                    observable_value = observable["value"]
-                result = self.api.find_indicators(observable_value)
-                if len(result) > 0:
-                    self._update_defender_indicator(result[0]["id"], observable)
-                    did_update = True
-                    self.helper.connector_logger.info(
-                        "[UPDATE] Indicator updated",
-                        {"defender_id": result[0]["id"], "opencti_id": opencti_id},
-                    )
+            observables = self._convert_indicator_to_observables(data) or []
+            updated_ids = []
+            try:
+                for observable in observables:
+                    observable_value = None
+                    if observable["type"] == "file":
+                        if "sha256" in observable["hashes"]:
+                            observable_value = observable["hashes"]["sha256"]
+                        elif "sha1" in observable["hashes"]:
+                            observable_value = observable["hashes"]["sha1"]
+                        elif "md5" in observable["hashes"]:
+                            observable_value = observable["hashes"]["md5"]
+                    else:
+                        observable_value = observable["value"]
+                    result = self.api.find_indicators(observable_value)
+                    if len(result) > 0:
+                        self._update_defender_indicator(result[0]["id"], observable)
+                        did_update = True
+                        updated_ids.append(str(result[0]["id"]))
+                        self.helper.connector_logger.info(
+                            "[UPDATE] Indicator updated",
+                            {"defender_id": result[0]["id"], "opencti_id": opencti_id},
+                        )
+            except Exception as err:
+                self._report_failed(data, err)
+                raise
+            self._report_pushed(data, updated_ids)
         elif is_observable(data):
             result = self.api.find_indicators(data["value"])
             if len(result) > 0:
@@ -206,6 +258,31 @@ class MicrosoftDefenderIntelConnector:
                 {"opencti_id": opencti_id},
             )
 
+    def _delete_external_reference(self, defender_id: str) -> None:
+        """
+        Delete the Microsoft Defender external reference of a deleted Defender indicator.
+        An OpenCTI error is logged: the indicator is already removed from Defender.
+        :param defender_id: Defender ID
+        """
+        try:
+            external_reference = self.helper.api.external_reference.read(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {"key": "source_name", "values": ["Microsoft Defender"]},
+                        {"key": "external_id", "values": [defender_id]},
+                    ],
+                    "filterGroups": [],
+                }
+            )
+            if external_reference is not None:
+                self.helper.api.external_reference.delete(external_reference["id"])
+        except Exception as err:
+            self.helper.connector_logger.warning(
+                "[DELETE] Cannot delete the Microsoft Defender external reference",
+                {"defender_id": defender_id, "error": str(err)},
+            )
+
     def _handle_delete_event(self, data):
         """
         Handle delete event by trying to delete the corresponding Threat Intelligence Indicators on Defender.
@@ -214,7 +291,8 @@ class MicrosoftDefenderIntelConnector:
         did_delete = False
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         if is_stix_indicator(data):
-            observables = self._convert_indicator_to_observables(data)
+            observables = self._convert_indicator_to_observables(data) or []
+            deleted_ids = []
             for observable in observables:
                 observable_value = None
                 if observable["type"] == "file":
@@ -230,6 +308,7 @@ class MicrosoftDefenderIntelConnector:
                 for indicator_result in result:
                     self.api.delete_indicator(indicator_result["id"])
                     did_delete = True
+                    deleted_ids.append(str(indicator_result["id"]))
                     self.helper.connector_logger.info(
                         "[DELETE] Indicator deleted",
                         {
@@ -237,26 +316,12 @@ class MicrosoftDefenderIntelConnector:
                             "opencti_id": opencti_id,
                         },
                     )
-                    external_reference = self.helper.api.external_reference.read(
-                        filters={
-                            "mode": "and",
-                            "filters": [
-                                {
-                                    "key": "source_name",
-                                    "values": ["Microsoft Defender"],
-                                },
-                                {
-                                    "key": "external_id",
-                                    "values": [indicator_result["id"]],
-                                },
-                            ],
-                            "filterGroups": [],
-                        }
-                    )
-                    if external_reference is not None:
-                        self.helper.api.external_reference.delete(
-                            external_reference["id"]
-                        )
+                    self._delete_external_reference(indicator_result["id"])
+            if self.assurance is not None:
+                # Also when no Defender indicator was found: it is absent from Defender
+                self.assurance.report_removed(
+                    data, external_id=deleted_ids[0] if deleted_ids else None
+                )
         elif is_observable(data):
             result = self.api.find_indicators(data["value"])
             for indicator_result in result:
@@ -266,18 +331,7 @@ class MicrosoftDefenderIntelConnector:
                     "[DELETE] Indicator deleted",
                     {"defender_id": indicator_result["id"], "opencti_id": opencti_id},
                 )
-                external_reference = self.helper.api.external_reference.read(
-                    filters={
-                        "mode": "and",
-                        "filters": [
-                            {"key": "source_name", "values": ["Microsoft Defender"]},
-                            {"key": "external_id", "values": [indicator_result["id"]]},
-                        ],
-                        "filterGroups": [],
-                    }
-                )
-                if external_reference is not None:
-                    self.helper.api.external_reference.delete(external_reference["id"])
+                self._delete_external_reference(indicator_result["id"])
         if not did_delete:
             self.helper.connector_logger.info(
                 "[DELETE] Indicator not found on Microsoft Defender",
@@ -334,4 +388,6 @@ class MicrosoftDefenderIntelConnector:
         The connector have the capability to listen a live stream from the platform.
         The helper provide an easy way to listen to the events.
         """
+        if self.assurance is not None:
+            self.assurance.start()
         self.helper.listen_stream(message_callback=self.process_message)

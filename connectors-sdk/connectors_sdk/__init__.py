@@ -20,6 +20,21 @@ from connectors_sdk.connectors.external_import.external_import_connector import 
     ExternalImportConnector,
 )
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.connectors.stream.deployment import (
+    DeploymentAssurance,
+    DeploymentAssuranceOptions,
+    DeploymentConfig,
+    DeploymentReconciler,
+    DeploymentReporter,
+    DeploymentStatus,
+    DeploymentVendorAdapter,
+    HitCollection,
+    HitsConfig,
+    IndicatorDeployment,
+    SecurityPlatformConfig,
+    VendorHit,
+    VendorIndicator,
+)
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -78,4 +93,18 @@ __all__ = [
     "ConnectorLogger",
     "BaseDataProcessor",
     "WorkManager",
+    # Stream connectors: dissemination assurance (deployment write-back)
+    "DeploymentAssurance",
+    "DeploymentAssuranceOptions",
+    "DeploymentConfig",
+    "DeploymentReconciler",
+    "DeploymentReporter",
+    "DeploymentStatus",
+    "DeploymentVendorAdapter",
+    "HitCollection",
+    "HitsConfig",
+    "IndicatorDeployment",
+    "SecurityPlatformConfig",
+    "VendorHit",
+    "VendorIndicator",
 ]

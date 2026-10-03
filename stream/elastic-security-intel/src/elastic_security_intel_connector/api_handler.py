@@ -5,10 +5,14 @@ Elastic Security API Handler for threat intelligence and SIEM rules management
 import hashlib
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 import requests
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+READ_BACK_PAGE_SIZE = 500
+READ_BACK_KEEP_ALIVE = "2m"
+READ_BACK_FIELDS = ["opencti_doc_id", "stix", "threat.indicator.valid_until"]
 
 
 class ElasticApiHandlerError(Exception):
@@ -88,6 +92,90 @@ class ElasticApiHandler:
         """Generate a unique document ID based on OpenCTI ID"""
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         return hashlib.sha256(opencti_id.encode()).hexdigest()
+
+    def document_id(self, data: dict) -> str:
+        """Return the opencti_doc_id under which an object is written in the index"""
+        return self._generate_doc_id(data)
+
+    def iter_connector_documents(self) -> Iterator[dict]:
+        """
+        Read back every document written by the connector in the threat intel index.
+
+        A point in time keeps the pages consistent while the stream keeps writing,
+        and any error raises: a partial listing would report pushed indicators as removed.
+
+        :return: The ``_source`` of the documents (opencti_doc_id, stix, valid_until)
+        :raises ElasticApiHandlerError: On any Elasticsearch error
+        """
+        verify = self._get_verify_config()
+        try:
+            opened = requests.post(
+                f"{self.elastic_url}/{self.index_name}/_pit",
+                headers=self.headers,
+                params={"keep_alive": READ_BACK_KEEP_ALIVE},
+                verify=verify,
+                cert=self.cert,
+                timeout=30,
+            )
+            if opened.status_code == 404:
+                # The data stream does not exist yet: nothing has been pushed
+                return
+            if opened.status_code != 200:
+                raise ElasticApiHandlerError(
+                    f"Failed to read the indicators back: {opened.status_code}",
+                    {"response": opened.text[:500]},
+                )
+            pit_id = opened.json()["id"]
+            try:
+                search_after = None
+                while True:
+                    body: Dict[str, Any] = {
+                        "size": READ_BACK_PAGE_SIZE,
+                        "query": {"exists": {"field": "opencti_doc_id"}},
+                        "_source": READ_BACK_FIELDS,
+                        "pit": {"id": pit_id, "keep_alive": READ_BACK_KEEP_ALIVE},
+                        "sort": [{"_shard_doc": "asc"}],
+                    }
+                    if search_after is not None:
+                        body["search_after"] = search_after
+                    response = requests.post(
+                        f"{self.elastic_url}/_search",
+                        headers=self.headers,
+                        json=body,
+                        verify=verify,
+                        cert=self.cert,
+                        timeout=60,
+                    )
+                    if response.status_code != 200:
+                        raise ElasticApiHandlerError(
+                            f"Failed to read the indicators back: {response.status_code}",
+                            {"response": response.text[:500]},
+                        )
+                    result = response.json()
+                    pit_id = result.get("pit_id", pit_id)
+                    hits = result.get("hits", {}).get("hits", [])
+                    for hit in hits:
+                        yield hit.get("_source") or {}
+                    if len(hits) < READ_BACK_PAGE_SIZE:
+                        return
+                    search_after = hits[-1].get("sort")
+            finally:
+                try:
+                    requests.delete(
+                        f"{self.elastic_url}/_pit",
+                        headers=self.headers,
+                        json={"id": pit_id},
+                        verify=verify,
+                        cert=self.cert,
+                        timeout=30,
+                    )
+                except requests.exceptions.RequestException:
+                    # The point in time expires on its own
+                    pass
+        except requests.exceptions.RequestException as e:
+            raise ElasticApiHandlerError(
+                "Request failed while reading the indicators back", {"error": str(e)}
+            )
 
     def _is_elastic_native_pattern(self, pattern_type: str) -> bool:
         """
@@ -327,10 +415,18 @@ class ElasticApiHandler:
             )
             return False
 
-    def _find_siem_rule_by_opencti_id(self, opencti_id: str) -> Optional[str]:
-        """Find SIEM rule by OpenCTI ID reference"""
+    def _find_siem_rule_by_opencti_id(
+        self, opencti_id: str, strict: bool = False
+    ) -> Optional[str]:
+        """Find SIEM rule by OpenCTI ID reference
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :param strict: Raise when the lookup fails instead of returning None
+        :return: ID of the SIEM rule, None when the indicator has no rule
+        """
         try:
-            url = f"{self.elastic_url}/api/detection_engine/rules/_find"
+            # The detection engine is a Kibana API, like the other SIEM rule calls
+            url = f"{self._get_kibana_url()}/api/detection_engine/rules/_find"
             params = {
                 "filter": f'alert.attributes.references:"opencti-id:{opencti_id}"'
             }
@@ -343,17 +439,33 @@ class ElasticApiHandler:
                 cert=self.cert,
                 timeout=30,
             )
-
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("data") and len(result["data"]) > 0:
-                    return result["data"][0]["id"]
-
-            return None
+            response.raise_for_status()
+            rules = response.json().get("data") or []
+            return rules[0]["id"] if rules else None
 
         except Exception as e:
+            if strict:
+                raise
             self.helper.connector_logger.debug(f"Error finding SIEM rule: {str(e)}")
             return None
+
+    def _delete_siem_rule_of_indicator(self, opencti_id: str) -> bool:
+        """Delete the SIEM rule of an indicator, if it has one.
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: False when the rule lookup or deletion failed (a rule may remain)
+        """
+        try:
+            rule_id = self._find_siem_rule_by_opencti_id(opencti_id, strict=True)
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "Cannot look up the SIEM rule of the indicator",
+                {"opencti_id": opencti_id, "error": str(e)},
+            )
+            return False
+        if rule_id is None:
+            return True
+        return self._delete_siem_rule(rule_id)
 
     def _calculate_risk_score(self, indicator_data: dict) -> int:
         """Calculate risk score based on indicator confidence and severity"""
@@ -863,13 +975,8 @@ class ElasticApiHandler:
                             )
 
                 elif operation == "delete":
-                    rule_id = self._find_siem_rule_by_opencti_id(opencti_id)
-                    if rule_id:
-                        if self._delete_siem_rule(rule_id):
-                            self.helper.connector_logger.info(
-                                f"Deleted SIEM rule for {pattern_type} pattern",
-                                {"opencti_id": opencti_id},
-                            )
+                    if not self._delete_siem_rule_of_indicator(opencti_id):
+                        success = False
 
             if operation == "create":
                 result = self.create_indicator(indicator_data)

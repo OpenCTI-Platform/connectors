@@ -29,3 +29,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | METRICS_ENABLE | `boolean` |  | boolean | `false` | Whether or not Prometheus metrics should be enabled. |
 | METRICS_PORT | `integer` |  | integer | `9113` | Port to use for metrics endpoint. |
 | METRICS_ADDR | `string` |  | string | `"0.0.0.0"` | Bind IP address to use for metrics endpoint. |
+| DEPLOYMENT_REPORTING_ENABLED | `boolean` |  | boolean | `true` | Report to OpenCTI the deployment status of every indicator pushed to the security platform (deployed, failed, removed), stored on the 'deployed-on' relationship between the indicator and the Security Platform entity. Ignored (no-op) on OpenCTI platforms that do not support the deployment write-back. |
+| DEPLOYMENT_RECONCILIATION_INTERVAL | `integer` |  | `0 <= x ` | `60` | Interval in minutes between two reconciliations of the deployment statuses with the indicators read back from the security platform. 0 disables the reconciliation. |
+| HITS_REPORTING_ENABLED | `boolean` |  | boolean | `true` | Report to OpenCTI the detections (hits) of deployed indicators observed on the security platform, as a sighting of the indicator on the Security Platform entity. Hits are collected during each reconciliation. |
+| SECURITY_PLATFORM_NAME | `string` |  | Length: `string >= 2` | `"CrowdStrike Falcon"` | Name of the Security Platform entity representing CrowdStrike Falcon in OpenCTI (created if it does not exist). |
+| SECURITY_PLATFORM_TYPE | `string` |  | string | `"EDR"` | Type of the Security Platform entity (open vocabulary security_platform_type_ov). |
+| SECURITY_PLATFORM_ID | `string` |  | string | `null` | Id of an existing Security Platform entity in OpenCTI. When set, it is used instead of resolving the entity by name. |

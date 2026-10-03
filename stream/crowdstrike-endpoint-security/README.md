@@ -22,6 +22,7 @@ The CrowdStrike Endpoint Security connector streams OpenCTI indicators to CrowdS
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
+    - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -37,6 +38,7 @@ Key features:
 - Platform-specific IOC targeting (Windows, Mac, Linux, mobile)
 - Configurable permanent or soft delete behavior
 - Prometheus metrics for monitoring
+- Dissemination assurance: deployment status, periodic IOC reconciliation and alert hits reported back to OpenCTI
 
 ## Installation
 
@@ -44,7 +46,8 @@ Key features:
 
 - OpenCTI Platform >= 5.0.0
 - CrowdStrike Falcon account with API access
-- API credentials (Client ID and Client Secret) with IOC Manager permissions
+- API credentials (Client ID and Client Secret) with IOC Manager permissions (**IOC Management: Read and Write**), plus
+  **Alerts: Read** to report hits (see [Dissemination assurance](#dissemination-assurance-deployment-write-back))
 
 ## Configuration variables
 
@@ -179,6 +182,47 @@ graph LR
 | linux            | linux                | Always available                |
 | android          | android              | Requires `falcon_for_mobile_active=true` |
 | ios              | ios                  | Requires `falcon_for_mobile_active=true` |
+
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each indicator is actually live in CrowdStrike Falcon. The status is stored on
+the `deployed-on` relationship between the indicator and the `CrowdStrike Falcon` Security Platform entity (created if
+it does not exist), and detection hits are counted with a sighting of the indicator on that entity.
+
+| When                                      | Reported to OpenCTI                                                                                  |
+|-------------------------------------------|------------------------------------------------------------------------------------------------------|
+| IOC created, updated or already present   | `deployed`, with the CrowdStrike IOC id as external id                                               |
+| IOC rejected by CrowdStrike               | `failed`, with the CrowdStrike error message                                                         |
+| Unsupported IOC type (URL, email...)      | Nothing: the indicator is not disseminated to CrowdStrike                                            |
+| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once the IOC is deleted (or already absent)                                        |
+| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting                             |
+| Reconciliation, IOC present               | `active`                                                                                             |
+| Reconciliation, IOC absent                | `removed` (deleted or expired in CrowdStrike)                                                        |
+| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`                                    |
+| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are withdrawn and reported `removed`          |
+| Hits                                      | Falcon alerts whose IOC value matches a deployed indicator                                            |
+
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs created by the connector API client
+  (`created_by`) with the `OpenCTI IOC` source are read back with the IOC API (500 per page). Expired and deleted IOCs,
+  and IOCs withdrawn by the connector (tagged `TO_DELETE` with the `no_action` action), are not live. Deployments are
+  matched by IOC id, then by IOC value. A withdrawal deletes the IOC when `CROWDSTRIKE_PERMANENT_DELETE=true`;
+  otherwise the IOC is kept, tagged `TO_DELETE` and its action set to `no_action` so that it stops detecting. A
+  read-back error skips the run: IOCs are never reported `removed` from a partial listing.
+- **Hits**: during each reconciliation, the Falcon alerts created since the previous run are read (at most 10,000 per
+  run, oldest first; when the limit is reached the next run resumes at the newest alert read). An alert counts one hit
+  for every deployed indicator whose value is the alert IOC value; hits already reported are never counted twice. The API client needs the **Alerts: Read** scope; without it, set
+  `HITS_REPORTING_ENABLED=false`.
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+| Environment variable                 | Default              | Description                                                           |
+|--------------------------------------|----------------------|-----------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `true`               | Report the deployment status of the pushed indicators.                |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60`                 | Minutes between two reconciliations, `0` disables the reconciliation. |
+| `HITS_REPORTING_ENABLED`             | `true`               | Report the alert hits of the deployed indicators.                     |
+| `SECURITY_PLATFORM_NAME`             | `CrowdStrike Falcon` | Name of the Security Platform entity in OpenCTI.                      |
+| `SECURITY_PLATFORM_TYPE`             | `EDR`                | Type of the Security Platform entity (`security_platform_type_ov`).    |
+| `SECURITY_PLATFORM_ID`               |                      | Id of an existing Security Platform entity, used instead of the name. |
 
 ## Debugging
 
