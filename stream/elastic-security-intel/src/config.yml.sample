@@ -21,3 +21,12 @@ elastic_security:
   index_name: 'logs-ti_custom_opencti.indicator' # Custom index with proper mappings
   indicator_expire_time: 90 # Days before indicators expire
   batch_size: 100 # Batch size for bulk operations
+
+# Dissemination assurance (deployment write-back to OpenCTI)
+#deployment:
+  #reporting_enabled: true # Optional (default: true)
+  #reconciliation_interval: 60 # Optional (default: 60 minutes, 0 disables the reconciliation)
+#security_platform:
+  #name: 'Elastic Security' # Optional (default: 'Elastic Security')
+  #type: 'SIEM' # Optional (default: 'SIEM')
+  #id: 'ChangeMe' # Optional (existing Security Platform entity id)

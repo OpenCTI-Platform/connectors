@@ -10,10 +10,12 @@ import json
 from json import JSONDecodeError
 from typing import Dict, List
 
+from connectors_sdk import DeploymentAssurance
 from pycti import OpenCTIConnectorHelper
 
 from .api_handler import ElasticApiHandler, ElasticApiHandlerError
 from .config_variables import ConfigConnector
+from .deployment import PUSH_FAILED_MESSAGE
 from .utils import FILE_HASH_TYPES_MAPPER, is_observable, is_stix_indicator
 
 
@@ -26,13 +28,17 @@ class ElasticSecurityIntelConnector:
     for pattern-based indicators.
     """
 
-    def __init__(self):
-        """Initialize the connector with necessary configurations"""
+    def __init__(self, assurance: DeploymentAssurance | None = None):
+        """Initialize the connector with necessary configurations
+
+        :param assurance: Deployment write-back (dissemination assurance), if any
+        """
 
         # Load configuration and create helper
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
         self.api = ElasticApiHandler(self.helper, self.config)
+        self.assurance = assurance
 
         # Test connection on startup (optional - log warning if fails but continue)
         if not self.api.test_connection():
@@ -208,6 +214,19 @@ class ElasticSecurityIntelConnector:
                     f"Batch operation failed: {e.msg}", e.metadata
                 )
 
+    def _report_push(self, data: dict, success: bool) -> None:
+        """
+        Report the outcome of a create or update of an indicator to OpenCTI
+        :param data: Streamed indicator
+        :param success: Whether Elastic Security accepted the indicator
+        """
+        if self.assurance is None:
+            return
+        if success:
+            self.assurance.report_pushed(data, external_id=self.api.document_id(data))
+        else:
+            self.assurance.report_push_failed(data, PUSH_FAILED_MESSAGE)
+
     def _handle_create_event(self, data: dict) -> None:
         """
         Handle create event by creating threat indicators and/or SIEM rules in Elastic
@@ -226,7 +245,7 @@ class ElasticSecurityIntelConnector:
                         "pattern_type": data.get("pattern_type", "stix"),
                     },
                 )
-                self.api.process_indicator(data, "create")
+                self._report_push(data, self.api.process_indicator(data, "create"))
             else:
                 # Convert to observables for threat intel only
                 observables = self._convert_indicator_to_observables(data)
@@ -261,7 +280,7 @@ class ElasticSecurityIntelConnector:
                         "pattern_type": data.get("pattern_type", "stix"),
                     },
                 )
-                self.api.process_indicator(data, "update")
+                self._report_push(data, self.api.process_indicator(data, "update"))
             else:
                 # Convert to observables for threat intel only
                 observables = self._convert_indicator_to_observables(data)
@@ -296,7 +315,13 @@ class ElasticSecurityIntelConnector:
                         "pattern_type": data.get("pattern_type", "stix"),
                     },
                 )
-                self.api.process_indicator(data, "delete")
+                if (
+                    self.api.process_indicator(data, "delete")
+                    and self.assurance is not None
+                ):
+                    self.assurance.report_removed(
+                        data, external_id=self.api.document_id(data)
+                    )
             else:
                 # Convert to observables for threat intel only
                 observables = self._convert_indicator_to_observables(data)
@@ -389,6 +414,10 @@ class ElasticSecurityIntelConnector:
                 "stream_id": self.helper.connect_live_stream_id,
             },
         )
+
+        # Start the deployment write-back (reconciliation included)
+        if self.assurance is not None:
+            self.assurance.start()
 
         # Start listening to the stream
         self.helper.listen_stream(message_callback=self.process_message)

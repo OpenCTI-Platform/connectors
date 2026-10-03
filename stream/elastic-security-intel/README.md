@@ -22,6 +22,7 @@ The Elastic Security Intel connector streams threat intelligence from OpenCTI to
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
+    - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -226,6 +227,42 @@ The connector automatically creates vocabulary entries in OpenCTI for Elastic-sp
 | File (SHA-1)            | threat.indicator.file.hash.sha1 |
 | File (SHA-256)          | threat.indicator.file.hash.sha256 |
 | Email-Addr              | threat.indicator.email.address |
+
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each indicator is actually live in Elastic Security. The status is stored on
+the `deployed-on` relationship between the indicator and the `Elastic Security` Security Platform entity (created if it
+does not exist). Observables streamed directly (not as indicators) are pushed as before and not reported.
+
+| When                                      | Reported to OpenCTI                                                                     |
+|-------------------------------------------|-----------------------------------------------------------------------------------------|
+| Indicator created or updated in Elastic   | `deployed`, with the `opencti_doc_id` of its threat intel document as external id       |
+| Indicator not accepted by Elastic         | `failed` (the Elasticsearch error is in the connector logs)                             |
+| Delete event processed                    | `removed`                                                                               |
+| Reconciliation, indicator present         | `active`                                                                                |
+| Reconciliation, indicator absent          | `removed` (deleted from the index, or past its `valid_until`)                           |
+| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`                       |
+| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from Elastic and reported `removed` |
+| Reconciliation, unknown indicator         | Indicator documents of the connector with no deployment yet are reported `active` (backfill) |
+
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the indicator documents of the connector
+  (documents carrying an `opencti_doc_id` in `ELASTIC_SECURITY_INDEX_NAME`) are read back through a point in time, 500
+  per page. Each one keeps the OpenCTI id of the indicator in its `stix` copy. A read-back error skips the run:
+  indicators are never reported `removed` from a partial listing.
+- **Hits**: not reported. Elastic records indicator matches as alerts of its detection rules, which this connector does
+  not read.
+- **Permissions**: the API key needs the `read` and `view_index_metadata` privileges on the index (point in time and
+  search), in addition to the write privileges already required.
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+| Environment variable                 | config.yml                                | Default            | Description                                                           |
+|--------------------------------------|-------------------------------------------|--------------------|-----------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `deployment.reporting_enabled`            | `true`             | Report the deployment status of the pushed indicators.                |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `deployment.reconciliation_interval`      | `60`               | Minutes between two reconciliations, `0` disables the reconciliation. |
+| `SECURITY_PLATFORM_NAME`             | `security_platform.name`                  | `Elastic Security` | Name of the Security Platform entity in OpenCTI.                      |
+| `SECURITY_PLATFORM_TYPE`             | `security_platform.type`                  | `SIEM`             | Type of the Security Platform entity (`security_platform_type_ov`).    |
+| `SECURITY_PLATFORM_ID`               | `security_platform.id`                    |                    | Id of an existing Security Platform entity, used instead of the name. |
 
 ## Debugging
 
