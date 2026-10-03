@@ -126,14 +126,14 @@ class _Index:
     """Lookup of objects by OpenCTI id, vendor id and observable value."""
 
     def __init__(self) -> None:
-        self.by_id: dict[str, Any] = {}
-        self.by_external_id: dict[str, Any] = {}
-        self.by_value: dict[str, Any] = {}
+        self.by_id: dict[str, list[Any]] = {}
+        self.by_external_id: dict[str, list[Any]] = {}
+        self.by_value: dict[str, list[Any]] = {}
 
     @staticmethod
-    def _add(mapping: dict[str, Any], key: str | None, item: Any) -> None:
+    def _add(mapping: dict[str, list[Any]], key: str | None, item: Any) -> None:
         if key is not None:
-            mapping.setdefault(key, item)
+            mapping.setdefault(key, []).append(item)
 
     @classmethod
     def of_vendor_indicators(
@@ -175,19 +175,35 @@ class _Index:
                 index._add(index.by_value, value, deployment)
         return index
 
+    def find_all(
+        self, identifiers: Iterable[str], external_id: Any, values: Iterable[str]
+    ) -> list[Any]:
+        """Return every object matching the first criterion that matches.
+
+        All the objects sharing an OpenCTI id or a vendor id are returned, since a
+        vendor can hold several items for one indicator (one per observable, or
+        duplicates). Value matching only returns the first object: a value can be
+        shared by unrelated indicators.
+        """
+        matches: dict[int, Any] = {}
+        for identifier in sorted(identifiers):
+            for item in self.by_id.get(identifier, ()):
+                matches.setdefault(id(item), item)
+        if matches:
+            return list(matches.values())
+        normalized_external_id = normalize_value(external_id)
+        if normalized_external_id and normalized_external_id in self.by_external_id:
+            return list(self.by_external_id[normalized_external_id])
+        for value in values:
+            if value in self.by_value:
+                return self.by_value[value][:1]
+        return []
+
     def find(
         self, identifiers: Iterable[str], external_id: Any, values: Iterable[str]
     ) -> Any:
-        for identifier in identifiers:
-            if identifier in self.by_id:
-                return self.by_id[identifier]
-        normalized_external_id = normalize_value(external_id)
-        if normalized_external_id and normalized_external_id in self.by_external_id:
-            return self.by_external_id[normalized_external_id]
-        for value in values:
-            if value in self.by_value:
-                return self.by_value[value]
-        return None
+        matches = self.find_all(identifiers, external_id, values)
+        return matches[0] if matches else None
 
 
 class DeploymentReconciler:
@@ -356,13 +372,12 @@ class DeploymentReconciler:
         matched: set[int] = set()
         reports: list[DeploymentReport] = []
         for deployment in deployments:
-            vendor_indicator = vendor_index.find(
+            vendor_matches = vendor_index.find_all(
                 deployment.identifiers, deployment.external_id, deployment.values
             )
-            if vendor_indicator is not None:
-                matched.add(id(vendor_indicator))
+            matched.update(id(vendor_indicator) for vendor_indicator in vendor_matches)
             report = self._reconcile_deployment(
-                deployment, vendor_indicator, now, summary
+                deployment, vendor_matches, now, summary
             )
             if report is not None:
                 reports.append(report)
@@ -410,7 +425,7 @@ class DeploymentReconciler:
     def _reconcile_deployment(
         self,
         deployment: IndicatorDeployment,
-        vendor_indicator: VendorIndicator | None,
+        vendor_matches: Sequence[VendorIndicator],
         now: datetime,
         summary: ReconciliationSummary,
     ) -> DeploymentReport | None:
@@ -418,22 +433,29 @@ class DeploymentReconciler:
 
         Args:
             deployment: The deployment.
-            vendor_indicator: The matching vendor indicator, if present.
-            now: The reference time.
+            vendor_matches: The vendor indicators of the deployment (several when
+                the vendor holds one item per observable, or duplicates).
+            now: The start of the run, taken before the vendor read-back.
             summary: The run counters, updated.
 
         Returns:
             The report to send, if any.
         """
+        vendor_indicator = vendor_matches[0] if vendor_matches else None
         must_remove = (
             deployment.requires_removal(now)
             or deployment.status == DeploymentStatus.EXPIRED
         )
-        if must_remove:
-            if vendor_indicator is not None:
-                return self._withdraw(deployment, vendor_indicator, now, summary)
+        if must_remove and vendor_matches:
+            return self._withdraw(deployment, vendor_matches, now, summary)
+        if vendor_indicator is None:
             if summary.vendor_listing_truncated:
                 return None
+            if deployment.last_sync_at is not None and deployment.last_sync_at >= now:
+                # Pushed by the stream while the vendor was being read back.
+                summary.deferred += 1
+                return None
+        if must_remove:
             summary.marked_removed += 1
             return DeploymentReport(
                 indicator_id=deployment.indicator_id,
@@ -450,8 +472,6 @@ class DeploymentReconciler:
                 external_id=vendor_indicator.external_id or deployment.external_id,
                 synced_at=now,
             )
-        if summary.vendor_listing_truncated:
-            return None
         if deployment.is_live:
             summary.marked_removed += 1
             return DeploymentReport(
@@ -468,40 +488,42 @@ class DeploymentReconciler:
     def _withdraw(
         self,
         deployment: IndicatorDeployment,
-        vendor_indicator: VendorIndicator,
+        vendor_matches: Sequence[VendorIndicator],
         now: datetime,
         summary: ReconciliationSummary,
     ) -> DeploymentReport | None:
-        """Remove an indicator from the vendor.
+        """Remove every vendor item of an indicator from the vendor.
 
         Args:
             deployment: The deployment to withdraw.
-            vendor_indicator: The vendor indicator.
+            vendor_matches: The vendor indicators of the deployment (at least one).
             now: The reference time.
             summary: The run counters, updated.
 
         Returns:
-            A ``removed`` report, or ``None`` when the removal failed (OpenCTI flags
-            the deployment ``expired`` if no removal is confirmed in time).
+            A ``removed`` report once every item is removed, or ``None`` when one
+            removal failed (the next run retries the items still listed; OpenCTI
+            flags the deployment ``expired`` if no removal is confirmed in time).
         """
-        try:
-            self._adapter.remove_vendor_indicator(vendor_indicator, deployment)
-        except Exception as err:
-            summary.withdrawal_failed += 1
-            self._logger.warning(
-                f"{_LOG_PREFIX} Cannot remove an indicator from the vendor.",
-                {
-                    "indicator_id": deployment.indicator_id,
-                    "external_id": vendor_indicator.external_id,
-                    "error": str(err),
-                },
-            )
-            return None
+        for vendor_indicator in vendor_matches:
+            try:
+                self._adapter.remove_vendor_indicator(vendor_indicator, deployment)
+            except Exception as err:
+                summary.withdrawal_failed += 1
+                self._logger.warning(
+                    f"{_LOG_PREFIX} Cannot remove an indicator from the vendor.",
+                    {
+                        "indicator_id": deployment.indicator_id,
+                        "external_id": vendor_indicator.external_id,
+                        "error": str(err),
+                    },
+                )
+                return None
         summary.withdrawn += 1
         return DeploymentReport(
             indicator_id=deployment.indicator_id,
             status=DeploymentStatus.REMOVED,
-            external_id=vendor_indicator.external_id or deployment.external_id,
+            external_id=vendor_matches[0].external_id or deployment.external_id,
             synced_at=now,
             removed_at=now,
         )

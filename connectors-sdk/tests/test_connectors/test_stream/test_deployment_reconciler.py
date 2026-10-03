@@ -354,6 +354,116 @@ def test_withdrawal_failures_are_not_reported(
     assert reported() == {}
 
 
+def test_withdrawal_removes_every_vendor_item_of_the_indicator(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """One indicator can be several vendor items (one per observable, duplicates):
+    ``removed`` is only reported once every item matched by id is removed."""
+    list_nodes(
+        node_factory(
+            indicator_id="a", status="active", revoked=True, standard_id="indicator--a"
+        )
+    )
+    adapter = FakeAdapter(
+        vendor=[
+            VendorIndicator(indicator_id="a", external_id="ext-1"),
+            VendorIndicator(indicator_id="indicator--a", external_id="ext-2"),
+            VendorIndicator(indicator_id="a", external_id="ext-3"),
+        ]
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert [vendor.external_id for vendor, _deployment in adapter.removed] == [
+        "ext-1",
+        "ext-3",
+        "ext-2",
+    ]
+    assert summary.withdrawn == 1
+    assert summary.discovered == 0
+    assert reported()["a"]["status"] == "removed"
+    assert reported()["a"]["externalId"] == "ext-1"
+
+
+def test_partial_withdrawal_is_not_reported(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """When one item of the indicator cannot be removed, the next run retries."""
+
+    class FailingOnSecondRemoval(FakeAdapter):
+        def remove_vendor_indicator(self, vendor_indicator, deployment):
+            if self.removed:
+                raise PermissionError("denied")
+            super().remove_vendor_indicator(vendor_indicator, deployment)
+
+    list_nodes(node_factory(indicator_id="a", status="active", revoked=True))
+    adapter = FailingOnSecondRemoval(
+        vendor=[
+            VendorIndicator(indicator_id="a", external_id="ext-1"),
+            VendorIndicator(indicator_id="a", external_id="ext-2"),
+        ]
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert len(adapter.removed) == 1
+    assert summary.withdrawal_failed == 1
+    assert summary.withdrawn == 0
+    assert reported() == {}
+
+
+def test_value_matching_withdraws_a_single_vendor_item(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """A value can be shared by unrelated indicators: only one item is removed."""
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            status="active",
+            revoked=True,
+            pattern="[domain-name:value = 'shared.example']",
+        )
+    )
+    adapter = FakeAdapter(
+        vendor=[
+            VendorIndicator(value="shared.example", external_id="ext-1"),
+            VendorIndicator(value="shared.example", external_id="ext-2"),
+        ]
+    )
+
+    make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert [vendor.external_id for vendor, _deployment in adapter.removed] == ["ext-1"]
+    assert reported()["a"]["status"] == "removed"
+
+
+def test_deployments_confirmed_during_the_read_back_are_deferred(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """A deployment pushed by the stream after the read-back started is absent from
+    the listing without being gone: no absence decision is taken this run."""
+    during_run = "2026-10-03T12:00:05.000Z"
+    list_nodes(
+        node_factory(indicator_id="live", status="deployed", last_sync_at=during_run),
+        node_factory(
+            indicator_id="withdrawn",
+            status="active",
+            revoked=True,
+            last_sync_at=during_run,
+        ),
+        node_factory(indicator_id="pending", status="pending", last_sync_at=during_run),
+        node_factory(indicator_id="stale", status="active"),
+    )
+    adapter = FakeAdapter()
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert summary.deferred == 3
+    assert summary.marked_removed == 1
+    assert set(reported()) == {"stale"}
+    assert adapter.pushed == []
+
+
 def test_repush_failures_are_reported_failed(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):
