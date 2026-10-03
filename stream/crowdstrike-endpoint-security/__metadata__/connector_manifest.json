@@ -1,7 +1,7 @@
 {
   "title": "CrowdStrike Endpoint Security",
   "slug": "crowdstrike-endpoint-security",
-  "description": "The CrowdStrike Endpoint Security connector is a standalone Python process that monitors events from OpenCTI and executes related actions to create, update or delete a data in CrowdStrike.\nSummary",
+  "description": "The CrowdStrike Endpoint Security connector is a standalone Python process that monitors events from OpenCTI and executes related actions to create, update or delete a data in CrowdStrike. It reports the deployment status of each indicator back to OpenCTI, reconciles it periodically with the IOCs read back from CrowdStrike Falcon and reports the alerts matching deployed indicators as hits.\nSummary",
   "short_description": "Streams OpenCTI threat intelligence to CrowdStrike Falcon, creating, updating, and deleting indicators in real time for endpoint detection and prevention.",
   "logo": "stream/crowdstrike-endpoint-security/__metadata__/logo.png",
   "use_cases": [

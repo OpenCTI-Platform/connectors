@@ -26,3 +26,14 @@ crowdstrike:
 #   enable: false # set to true to expose prometheus metrics
 #   port: 9113 # port on which metrics should be exposed
 #   addr: 0.0.0.0 # ip on which metrics should be exposed
+
+# Dissemination assurance (deployment write-back to OpenCTI)
+# deployment:
+#   reporting_enabled: true
+#   reconciliation_interval: 60 # minutes, 0 disables the reconciliation
+# hits:
+#   reporting_enabled: true # requires the Alerts: Read API scope
+# security_platform:
+#   name: 'CrowdStrike Falcon'
+#   type: 'EDR'
+#   id: 'ChangeMe' # existing Security Platform entity id (optional)
