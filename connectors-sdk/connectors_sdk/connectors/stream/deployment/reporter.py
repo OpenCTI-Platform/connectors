@@ -56,6 +56,9 @@ LISTING_PAGE_SIZE = 500
 MAX_ERROR_MESSAGE_LENGTH = 2000
 """Maximum length of a vendor error message stored on a deployment."""
 
+MAX_QUEUED_REPORTS = 10_000
+"""Maximum number of reports kept while the write-back is not available yet."""
+
 _LOG_PREFIX = "[DEPLOYMENT]"
 
 
@@ -138,6 +141,7 @@ class DeploymentReporter:
         self._buffer_lock = threading.Lock()
         self._send_lock = threading.Lock()
         self._flush_timer: threading.Timer | None = None
+        self._waiting_for_write_back = False
         self._closed = False
         self._exit_handler_registered = False
 
@@ -555,17 +559,23 @@ class DeploymentReporter:
             self._buffer.pop(report.indicator_id, None)
             self._buffer[report.indicator_id] = report
             queued = len(self._buffer)
-            if queued < MAX_BATCH_SIZE and self._flush_timer is None:
+            if self._flush_timer is None:
                 timer = threading.Timer(self._flush_interval, self._flush_on_timer)
                 timer.daemon = True
                 self._flush_timer = timer
                 timer.start()
-        if queued >= MAX_BATCH_SIZE:
+            flush_now = queued >= MAX_BATCH_SIZE and not self._waiting_for_write_back
+        if flush_now:
             self.flush()
         return True
 
     def flush(self) -> DeploymentBatchResult:
         """Send the queued reports now.
+
+        While the write-back is not available yet (feature detection or security
+        platform resolution failed and is retried later), the reports stay queued
+        (at most ``MAX_QUEUED_REPORTS``). They are dropped when the platform is known
+        not to support the write-back.
 
         Returns:
             The result of the batch.
@@ -579,7 +589,57 @@ class DeploymentReporter:
                     self._flush_timer = None
             if not reports:
                 return DeploymentBatchResult()
+            if self._awaiting_write_back():
+                self._requeue(reports)
+                return DeploymentBatchResult()
+            self._waiting_for_write_back = False
             return self.report_indicator_deployments(reports)
+
+    def _awaiting_write_back(self) -> bool:
+        """Tell whether the write-back is expected to become available later.
+
+        Returns:
+            ``True`` when the feature detection or the security platform resolution
+            failed and will be retried.
+        """
+        if not self.enabled or self._closed:
+            return False
+        mutations = self._available_mutations()
+        if mutations is None:
+            return True
+        if REPORT_DEPLOYMENT_MUTATION not in mutations:
+            return False
+        return self.security_platform_id is None
+
+    def _requeue(self, reports: list[DeploymentReport]) -> None:
+        """Put reports back in the queue, behind nothing newer for the same indicator.
+
+        Args:
+            reports: The reports that could not be sent yet, oldest first.
+        """
+        with self._buffer_lock:
+            merged = {
+                report.indicator_id: report
+                for report in reports
+                if report.indicator_id not in self._buffer
+            }
+            merged.update(self._buffer)
+            overflow = len(merged) - MAX_QUEUED_REPORTS
+            if overflow > 0:
+                for indicator_id in list(merged)[:overflow]:
+                    del merged[indicator_id]
+                self._logger.warning(
+                    f"{_LOG_PREFIX} Deployment write-back unavailable, dropping the "
+                    "oldest queued reports.",
+                    {"dropped": overflow, "queued": MAX_QUEUED_REPORTS},
+                )
+            self._buffer = merged
+            self._waiting_for_write_back = True
+            if self._flush_timer is None:
+                timer = threading.Timer(self._flush_interval, self._flush_on_timer)
+                timer.daemon = True
+                self._flush_timer = timer
+                timer.start()
 
     def close(self) -> None:
         """Flush the queued reports and stop accepting new ones."""

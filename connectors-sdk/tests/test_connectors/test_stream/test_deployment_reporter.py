@@ -836,6 +836,106 @@ def test_close_flushes_and_stops_queueing(graphql_helper, make_reporter, router)
     )
 
 
+def test_queued_reports_wait_for_the_feature_detection(
+    graphql_helper, make_reporter, router
+):
+    """Reports stay queued while the detection is retried, then are sent."""
+    clock = Clock()
+    detection = router.handlers["DeploymentWriteBackFeatures"]
+    router.handlers["DeploymentWriteBackFeatures"] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+    reporter.enqueue(DeploymentReport(indicator_id="b", status="deployed"))
+
+    assert reporter.flush() == DeploymentBatchResult()
+    assert router.calls_of("IndicatorReportDeployments(") == []
+    assert reporter._flush_timer is not None
+
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="removed"))
+    router.handlers["DeploymentWriteBackFeatures"] = detection
+    clock.now += 61
+
+    result = reporter.flush()
+
+    reports = router.calls_of("IndicatorReportDeployments(")[0]["reports"]
+    assert reports == [
+        {"indicatorId": "b", "status": "deployed"},
+        {"indicatorId": "a", "status": "removed"},
+    ]
+    assert result.processed == 2
+
+
+def test_queued_reports_wait_for_the_security_platform(
+    graphql_helper, make_reporter, router, ids
+):
+    """Reports stay queued while the security platform resolution is retried."""
+    clock = Clock()
+    router.handlers["DeploymentSecurityPlatformAdd"] = {"data": None}
+    reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+
+    reporter.flush()
+    assert router.calls_of("IndicatorReportDeployments(") == []
+
+    router.handlers["DeploymentSecurityPlatformAdd"] = {
+        "data": {"securityPlatformAdd": {"id": ids.platform}}
+    }
+    clock.now += 61
+    assert reporter.flush().processed == 1
+
+
+def test_queued_reports_are_dropped_on_unsupported_platforms(
+    graphql_helper, make_reporter, router, router_factory
+):
+    """Platforms without the write-back drop the queued reports."""
+    router.handlers.update(router_factory(mutations=()).handlers)
+    reporter = make_reporter(graphql_helper)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+
+    assert reporter.flush() == DeploymentBatchResult()
+    assert reporter._buffer == {}
+
+
+def test_queued_reports_are_bounded_while_waiting(
+    graphql_helper, make_reporter, router, monkeypatch
+):
+    """The oldest reports are dropped beyond the queue limit."""
+    monkeypatch.setattr(
+        "connectors_sdk.connectors.stream.deployment.reporter.MAX_QUEUED_REPORTS", 2
+    )
+    router.handlers["DeploymentWriteBackFeatures"] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper)
+    for indicator_id in ("a", "b", "c"):
+        reporter.enqueue(DeploymentReport(indicator_id=indicator_id, status="deployed"))
+
+    reporter.flush()
+
+    assert list(reporter._buffer) == ["b", "c"]
+    assert any(
+        "dropping" in call.args[0]
+        for call in graphql_helper.connector_logger.warning.call_args_list
+    )
+
+
+def test_full_queue_does_not_flush_while_waiting(
+    graphql_helper, make_reporter, router, monkeypatch
+):
+    """While waiting for the write-back, only the timer retries the flush."""
+    monkeypatch.setattr(
+        "connectors_sdk.connectors.stream.deployment.reporter.MAX_BATCH_SIZE", 2
+    )
+    router.handlers["DeploymentWriteBackFeatures"] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+    reporter.enqueue(DeploymentReport(indicator_id="b", status="deployed"))
+    detections = len(router.calls_of("DeploymentWriteBackFeatures"))
+
+    reporter.enqueue(DeploymentReport(indicator_id="c", status="deployed"))
+
+    assert len(router.calls_of("DeploymentWriteBackFeatures")) == detections
+    assert list(reporter._buffer) == ["a", "b", "c"]
+
+
 def test_invalid_report_fields_are_logged(graphql_helper, make_reporter):
     """Unexpected report fields are logged and ignored."""
     reporter = make_reporter(graphql_helper)
