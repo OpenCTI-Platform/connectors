@@ -432,12 +432,18 @@ class DeploymentReconciler:
                     skipped=True, reason="Queued stream reports not delivered"
                 )
             now = self._clock()
-            adapter = self._adapter
+            vendor_adapter = (
+                self._adapter
+                if isinstance(self._adapter, DeploymentVendorAdapter)
+                else None
+            )
 
-            vendor_indicators: list[VendorIndicator] | None = None
-            if isinstance(adapter, DeploymentVendorAdapter):
+            vendor_indicators: list[VendorIndicator] = []
+            if vendor_adapter is not None:
                 try:
-                    vendor_indicators = self._read_vendor_indicators(adapter, summary)
+                    vendor_indicators = self._read_vendor_indicators(
+                        vendor_adapter, summary
+                    )
                 except Exception as err:
                     self._logger.warning(
                         f"{_LOG_PREFIX} Cannot read the indicators back from the vendor, "
@@ -457,12 +463,9 @@ class DeploymentReconciler:
                 return ReconciliationSummary(skipped=True, reason=str(err))
             summary.deployments = len(deployments)
 
-            if (
-                isinstance(adapter, DeploymentVendorAdapter)
-                and vendor_indicators is not None
-            ):
+            if vendor_adapter is not None:
                 reports = self._compare(
-                    adapter, vendor_indicators, deployments, now, summary
+                    vendor_adapter, vendor_indicators, deployments, now, summary
                 )
             else:
                 reports = self._repush_pending(deployments, now, summary)

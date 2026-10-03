@@ -343,6 +343,20 @@ def test_throttled_request_is_retried_after_retry_after(connector, monkeypatch):
     assert sleeps == [3]
 
 
+def test_retry_after_date_falls_back_to_the_default_delay(connector, monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("stream_connector.connector.time.sleep", sleeps.append)
+    connector.session = MagicMock()
+    connector.session.get.side_effect = [
+        response(429, headers={"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}),
+        response(json_data={"id": 1}),
+    ]
+
+    connector.request_zscaler(connector.session.get, CATEGORY_URL)
+
+    assert sleeps == [connector.retry_delay]
+
+
 def test_persistent_throttling_raises(connector):
     connector.session = MagicMock()
     connector.session.get.return_value = response(429, text="slow down")

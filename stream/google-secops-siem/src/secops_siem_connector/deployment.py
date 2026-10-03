@@ -88,10 +88,10 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
 
         :raises SecOpsApiError: When the IoC matches cannot be listed.
         """
-        by_value: dict[str, IndicatorDeployment] = {}
+        by_value: dict[str, list[IndicatorDeployment]] = {}
         for deployment in deployments:
             for value in deployment.values:
-                by_value.setdefault(value, deployment)
+                by_value.setdefault(value, []).append(deployment)
         if not by_value:
             return []
         matches, more_available = self._connector.api_client.list_ioc_matches(
@@ -109,9 +109,9 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
             if timestamp is None or timestamp < since:
                 continue
             matched = {
-                by_value[value].indicator_id
+                deployment.indicator_id
                 for value in _match_values(match)
-                if value in by_value
+                for deployment in by_value.get(value, ())
             }
             hits.extend(
                 VendorHit(timestamp=timestamp, indicator_id=indicator_id)

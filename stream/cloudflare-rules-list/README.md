@@ -132,7 +132,7 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
 |-------------------------------------------|-------------------------------------------------------------------------------------------------------|
 | Snapshot uploaded                         | `deployed` for the indicators added or whose IP changed since the previous upload                     |
 | Snapshot rejected by Cloudflare           | `failed` for those indicators, with the API error (they are retried with the next upload)             |
-| Snapshot uploaded without an indicator    | `removed` for the indicators of the previous upload dropped by a delete event                         |
+| Snapshot uploaded without an indicator    | `removed` for the indicators of the previous upload dropped by a delete event (when the last object is deleted, an empty snapshot clears the list) |
 | Reconciliation, indicator present         | `active`, with the Cloudflare list item id as external id                                             |
 | Reconciliation, indicator absent          | `removed` (deleted from the list outside of OpenCTI)                                                  |
 | Reconciliation, `pending` (analyst retry) | The indicator is added to the snapshot, uploaded and reported `deployed` or `failed`                  |

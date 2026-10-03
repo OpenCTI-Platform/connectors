@@ -18,7 +18,6 @@ from cloudflare_rules_list.settings import ConnectorSettings
 from connectors_sdk.connectors.stream.deployment import (
     DeploymentReport,
     DeploymentStatus,
-    get_opencti_indicator_id,
     normalize_value,
 )
 from pycti import OpenCTIConnectorHelper
@@ -56,6 +55,8 @@ class Connector:
         self._indicator_keys: set[str] = set()
         # Indicators of the last snapshot uploaded, for the deployment write-back.
         self._synced: dict[str, str] = {}
+        # Whether the last snapshot uploaded had items (an emptied snapshot clears the list).
+        self._list_has_items = False
         # The stream and the deployment reconciliation both change the snapshot.
         self._lock = threading.RLock()
         self._last_sync_time = 0.0
@@ -172,10 +173,11 @@ class Connector:
     def _sync_to_cloudflare(self) -> None:
         """Push the full IPv4 snapshot to the Cloudflare Rules List."""
         with self._lock:
-            if not self._indicator_cache:
+            if not self._indicator_cache and not self._list_has_items:
                 # Nothing to push -- do not open the throttle window, otherwise the
                 # first real indicator to arrive could be delayed by up to
-                # sync_interval before it is synced.
+                # sync_interval before it is synced. An empty snapshot is only
+                # uploaded to clear a list the connector filled before.
                 self.logger.info("No indicators to sync")
                 return
             try:
@@ -241,6 +243,7 @@ class Connector:
                 DeploymentStatus.REMOVED,
             )
             self._synced = indicators
+            self._list_has_items = bool(items)
 
     def _changed(self, indicators: dict[str, str]) -> list[str]:
         """Return the indicators whose value differs from the last uploaded snapshot."""
@@ -273,7 +276,7 @@ class Connector:
             CloudflareAPIError: When Cloudflare refuses the snapshot.
         """
         value = self._extract_ipv4(indicator)
-        indicator_id = get_opencti_indicator_id(indicator)
+        indicator_id = self._object_id(indicator)
         if not value or not indicator_id:
             raise ValueError("The indicator has no IPv4 pattern for Cloudflare")
         with self._lock:

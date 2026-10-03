@@ -133,9 +133,14 @@ class ZscalerConnector:
 
             if response.status_code == 429:
                 retry_after = response.headers.get("Retry-After", retry_delay)
-                msg = f"Rate limit exceeded. Retrying in {retry_after} seconds..."
+                try:
+                    delay = int(retry_after)
+                except (TypeError, ValueError):
+                    # `Retry-After` may also be an HTTP date.
+                    delay = retry_delay
+                msg = f"Rate limit exceeded. Retrying in {delay} seconds..."
                 self.helper.connector_logger.warning(msg)
-                time.sleep(int(retry_after))
+                time.sleep(delay)
                 continue
 
             if response.status_code == 401:

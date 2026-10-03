@@ -202,8 +202,27 @@ class SentinelOneClient:
             repeating the previous one or when `max_pages` is reached: a partial listing
             is never returned silently.
         """
+        yield from self._iter_pages(self._scope_params(), max_pages)
+
+    def find_iocs_by_external_id(
+        self, external_id: str, max_pages: int = MAX_PAGES
+    ) -> list[dict[str, Any]]:
+        """
+        List every IOC of the scope of the connector carrying an external id.
+
+        :param external_id: The external id (the STIX id of the pushed indicator).
+        :raises SentinelOneApiError: On any API error, an unexpected payload, a cursor
+            repeating the previous one or when `max_pages` is reached.
+        """
         params = self._scope_params()
-        params["limit"] = str(PAGE_SIZE)
+        params["externalId"] = external_id
+        return list(self._iter_pages(params, max_pages))
+
+    def _iter_pages(
+        self, params: dict[str, str], max_pages: int
+    ) -> Iterator[dict[str, Any]]:
+        """Iterate over the IOCs matching the query parameters, to cursor exhaustion."""
+        params = {**params, "limit": str(PAGE_SIZE)}
         cursor: str | None = None
         for _ in range(max_pages):
             page_params = {**params, "cursor": cursor} if cursor else params
@@ -220,18 +239,6 @@ class SentinelOneClient:
         raise SentinelOneApiError(
             f"IOC read-back stopped after {max_pages} pages of {PAGE_SIZE} IOCs"
         )
-
-    def find_iocs_by_external_id(self, external_id: str) -> list[dict[str, Any]]:
-        """
-        List the IOCs of the scope of the connector carrying an external id.
-
-        :param external_id: The external id (the STIX id of the pushed indicator).
-        :raises SentinelOneApiError: On any API error or an unexpected payload.
-        """
-        params = self._scope_params()
-        params.update({"externalId": external_id, "limit": str(PAGE_SIZE)})
-        data, _next_cursor = self._list_page(params)
-        return data
 
     def delete_iocs(self, uuids: list[str]) -> None:
         """
