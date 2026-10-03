@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/sentinel-analytics-rules_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Microsoft Sentinel Analytics Rules",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Indicator",
+        "Attack-Pattern",
+        "SecurityPlatform"
+      ],
+      "description": "The scope of the connector, i.e. the entity types it imports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT6H",
+      "description": "Time to wait between two runs of the connector, as an ISO 8601 duration (e.g. `PT6H` for six hours). Every run reads the full rule set.",
+      "format": "duration",
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_TENANT_ID": {
+      "description": "Microsoft Entra ID tenant of the application.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_CLIENT_ID": {
+      "description": "Application (client) id of the Entra ID app registration.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_CLIENT_SECRET": {
+      "description": "Client secret of the app registration. The application needs the `Microsoft Sentinel Reader` role on the workspace (or its resource group).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SENTINEL_ANALYTICS_RULES_SUBSCRIPTION_ID": {
+      "description": "Azure subscription holding the Log Analytics workspace.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_RESOURCE_GROUP": {
+      "description": "Resource group of the Log Analytics workspace.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_WORKSPACE_NAME": {
+      "description": "Name of the Log Analytics workspace Microsoft Sentinel runs on.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_MANAGEMENT_URL": {
+      "default": "https://management.azure.com/",
+      "description": "Azure Resource Manager endpoint. Change it for sovereign clouds (e.g. `https://management.usgovcloudapi.net`).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_LOGIN_URL": {
+      "default": "https://login.microsoftonline.com/",
+      "description": "Microsoft Entra ID authority. Change it for sovereign clouds (e.g. `https://login.microsoftonline.us`).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_API_VERSION": {
+      "default": "2025-07-01-preview",
+      "description": "Microsoft.SecurityInsights API version. The default one returns NRT rules and sub-techniques.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_IMPORT_DISABLED_RULES": {
+      "default": true,
+      "description": "Import disabled rules too, with the deployment status `deployed` (enabled rules get `active`). When false, disabled rules are left out and count as removed.",
+      "type": "boolean"
+    },
+    "SENTINEL_ANALYTICS_RULES_REQUEST_TIMEOUT": {
+      "default": 60,
+      "description": "Timeout of each HTTP request, in seconds.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "SENTINEL_ANALYTICS_RULES_MAX_RETRIES": {
+      "default": 5,
+      "description": "Retries of a request failing with a rate limit (429), a server error (5xx) or a network error, with exponential backoff.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "SENTINEL_ANALYTICS_RULES_PLATFORM_NAME": {
+      "default": "Microsoft Sentinel",
+      "description": "Name of the Security Platform the rules are deployed on in OpenCTI.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_PLATFORM_TYPE": {
+      "default": "SIEM",
+      "description": "Type of that Security Platform (`security_platform_type`).",
+      "enum": [
+        "SIEM",
+        "EDR",
+        "XDR",
+        "SOAR",
+        "NDR",
+        "ISPM"
+      ],
+      "type": "string"
+    },
+    "SENTINEL_ANALYTICS_RULES_TLP_LEVEL": {
+      "description": "TLP marking applied to every object this connector creates.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "SENTINEL_ANALYTICS_RULES_TENANT_ID",
+    "SENTINEL_ANALYTICS_RULES_CLIENT_ID",
+    "SENTINEL_ANALYTICS_RULES_CLIENT_SECRET",
+    "SENTINEL_ANALYTICS_RULES_SUBSCRIPTION_ID",
+    "SENTINEL_ANALYTICS_RULES_RESOURCE_GROUP",
+    "SENTINEL_ANALYTICS_RULES_WORKSPACE_NAME"
+  ],
+  "additionalProperties": true
+}
