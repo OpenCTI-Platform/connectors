@@ -347,48 +347,50 @@ class DeploymentReconciler:
                 skipped=True, reason="Security platform not resolved"
             )
         summary = ReconciliationSummary()
-        now = self._clock()
+        # From the vendor snapshot to its reports, the stream outcomes are held and sent
+        # right after: a removal pushed meanwhile always lands after a stale `active`.
+        with reporter.holding_queued_reports():
+            now = self._clock()
+            try:
+                vendor_indicators = self._read_vendor_indicators(summary)
+            except Exception as err:
+                self._logger.warning(
+                    f"{_LOG_PREFIX} Cannot read the indicators back from the vendor, "
+                    "reconciliation skipped.",
+                    {"error": str(err)},
+                )
+                return ReconciliationSummary(
+                    skipped=True, reason=f"Vendor read-back failed: {err}"
+                )
+            try:
+                deployments = list(reporter.list_indicator_deployments(LISTED_STATUSES))
+            except DeploymentListingError as err:
+                self._logger.warning(
+                    f"{_LOG_PREFIX} Cannot list the deployments, reconciliation skipped.",
+                    {"error": str(err)},
+                )
+                return ReconciliationSummary(skipped=True, reason=str(err))
+            summary.deployments = len(deployments)
 
-        try:
-            vendor_indicators = self._read_vendor_indicators(summary)
-        except Exception as err:
-            self._logger.warning(
-                f"{_LOG_PREFIX} Cannot read the indicators back from the vendor, "
-                "reconciliation skipped.",
-                {"error": str(err)},
+            vendor_index = _Index.of_vendor_indicators(vendor_indicators)
+            matched: set[int] = set()
+            reports: list[DeploymentReport] = []
+            for deployment in deployments:
+                vendor_matches = vendor_index.find_all(
+                    deployment.identifiers, deployment.external_id, deployment.values
+                )
+                matched.update(id(vendor) for vendor in vendor_matches)
+                report = self._reconcile_deployment(
+                    deployment, vendor_matches, now, summary
+                )
+                if report is not None:
+                    reports.append(report)
+            reports.extend(
+                self._discover(vendor_indicators, deployments, matched, now, summary)
             )
-            return ReconciliationSummary(
-                skipped=True, reason=f"Vendor read-back failed: {err}"
-            )
-        try:
-            deployments = list(reporter.list_indicator_deployments(LISTED_STATUSES))
-        except DeploymentListingError as err:
-            self._logger.warning(
-                f"{_LOG_PREFIX} Cannot list the deployments, reconciliation skipped.",
-                {"error": str(err)},
-            )
-            return ReconciliationSummary(skipped=True, reason=str(err))
-        summary.deployments = len(deployments)
 
-        vendor_index = _Index.of_vendor_indicators(vendor_indicators)
-        matched: set[int] = set()
-        reports: list[DeploymentReport] = []
-        for deployment in deployments:
-            vendor_matches = vendor_index.find_all(
-                deployment.identifiers, deployment.external_id, deployment.values
-            )
-            matched.update(id(vendor_indicator) for vendor_indicator in vendor_matches)
-            report = self._reconcile_deployment(
-                deployment, vendor_matches, now, summary
-            )
-            if report is not None:
-                reports.append(report)
-        reports.extend(
-            self._discover(vendor_indicators, deployments, matched, now, summary)
-        )
-
-        result = reporter.report_indicator_deployments(reports)
-        summary.report_errors = len(result.errors)
+            result = reporter.report_indicator_deployments(reports)
+            summary.report_errors = len(result.errors)
 
         if reporter.hits_enabled:
             live = [
@@ -752,5 +754,15 @@ class DeploymentReconciler:
                 indicator_id, count, last_hit=last_hit, first_hit=first_hit
             ):
                 reported += 1
+        if aggregated and reported == 0:
+            # Nothing accepted (OpenCTI unavailable): read the same detections again on
+            # the next run. A single rejected indicator (deleted, no longer readable)
+            # does not hold the window back, or it would block every other detection.
+            self._logger.warning(
+                f"{_LOG_PREFIX} No hit report was accepted, the detections are read "
+                "again on the next run.",
+                {"since": since.isoformat(), "indicators": len(aggregated)},
+            )
+            return 0
         self._hits_since = next_since
         return reported
