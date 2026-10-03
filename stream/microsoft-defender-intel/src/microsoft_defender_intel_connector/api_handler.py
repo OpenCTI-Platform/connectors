@@ -360,14 +360,12 @@ class DefenderApiHandler:
         since: datetime,
         max_alerts: int = MAX_PAGE_SIZE,
         until: datetime | None = None,
-        skip: int = 0,
     ) -> list[dict[str, Any]]:
         """
         List the alerts created since a date, with their evidence.
         :param since: Only alerts created at or after this date
         :param max_alerts: Maximum number of alerts returned (10,000 at most per request)
         :param until: Only alerts created strictly before this date, when given
-        :param skip: Number of leading alerts of the listing already read
         :return: Alert entities
         :raise DefenderApiHandlerError: On any error or an unexpected payload
         """
@@ -384,7 +382,7 @@ class DefenderApiHandler:
             items = self._get_page(
                 url,
                 f"$filter={query_filter}&$expand=evidence&$top={top}"
-                f"&$skip={skip + len(alerts)}",
+                f"&$skip={len(alerts)}",
             )
             alerts.extend(items[:top])
             if len(items) < top:

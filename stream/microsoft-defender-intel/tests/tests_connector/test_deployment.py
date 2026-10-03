@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 import requests
@@ -687,7 +687,7 @@ def serve_alerts(minutes):
     capped like the API (in no particular order)."""
     times = [datetime(2026, 10, 3, 11, minute, tzinfo=UTC) for minute in minutes]
 
-    def _list_alerts(since, max_alerts, until, skip=0):
+    def _list_alerts(since, max_alerts, until):
         return [
             {
                 "alertCreationTime": time.isoformat(),
@@ -695,7 +695,7 @@ def serve_alerts(minutes):
             }
             for time in reversed(times)
             if since <= time < until
-        ][skip : skip + max_alerts]
+        ][:max_alerts]
 
     return MagicMock(side_effect=_list_alerts)
 
@@ -744,11 +744,39 @@ def test_adapter_hit_windows_resume_after_the_read_budget(monkeypatch):
     assert [hit.timestamp.minute for hit in collection.hits] == [5]
 
 
-def test_adapter_continues_a_capped_minimal_window_instead_of_reading_it_as_complete(
+def test_adapter_resumes_halving_where_the_read_budget_ran_out(monkeypatch):
+    """The alerts API is unordered, so a read is never continued by offset: when the
+    requests run out before the first window is read, the next read halves that
+    window further instead of starting again from the whole period."""
+    monkeypatch.setattr(
+        "microsoft_defender_intel_connector.deployment.MAX_HIT_ALERTS", 2
+    )
+    monkeypatch.setattr(
+        "microsoft_defender_intel_connector.deployment.MAX_HIT_WINDOW_READS", 2
+    )
+    connector = build_connector()
+    connector.api.list_alerts = serve_alerts([5, 20, 25, 40])
+    adapter = MicrosoftDefenderDeploymentAdapter(connector, clock=lambda: HIT_UNTIL)
+    quarter = HIT_SINCE + timedelta(minutes=15)
+
+    first = adapter.collect_hits([make_deployment()], HIT_SINCE)
+    assert isinstance(first, HitCollection)
+    assert (first.complete_until, first.resume, first.hits) == (HIT_SINCE, quarter, [])
+
+    connector.api.list_alerts.reset_mock()
+    second = adapter.collect_hits([make_deployment()], HIT_SINCE, resume=quarter)
+    assert connector.api.list_alerts.call_args_list[0] == call(
+        HIT_SINCE, 2, until=quarter
+    )
+    assert (second.complete_until, second.resume) == (quarter, None)
+    assert [hit.timestamp.minute for hit in second.hits] == [5]
+
+
+def test_adapter_reports_a_capped_minimal_window_at_the_start_as_a_lower_bound(
     monkeypatch,
 ):
-    """A smallest window still capped at the start of the read is continued by the
-    next read (alerts already read skipped), never reported as complete."""
+    """A smallest window still capped cannot be split: its alerts are a lower bound
+    and the reconciler moves past it, never re-reading it by offset."""
     monkeypatch.setattr(
         "microsoft_defender_intel_connector.deployment.MAX_HIT_ALERTS", 2
     )
@@ -757,19 +785,29 @@ def test_adapter_continues_a_capped_minimal_window_instead_of_reading_it_as_comp
         timedelta(hours=1),
     )
     connector = build_connector()
-    connector.api.list_alerts = serve_alerts([5, 10, 20, 40, 50])
+    connector.api.list_alerts = serve_alerts([5, 10, 20])
     adapter = MicrosoftDefenderDeploymentAdapter(connector, clock=lambda: HIT_UNTIL)
 
-    first = adapter.collect_hits([make_deployment()], HIT_SINCE)
-    assert isinstance(first, HitCollection)
-    assert (first.complete_until, first.resume, len(first.hits)) == (HIT_SINCE, 2, 2)
+    collection = adapter.collect_hits([make_deployment()], HIT_SINCE)
 
-    second = adapter.collect_hits([make_deployment()], HIT_SINCE, resume=2)
-    assert (second.complete_until, second.resume, len(second.hits)) == (HIT_SINCE, 4, 2)
-    connector.api.list_alerts.assert_called_with(HIT_SINCE, 2, until=HIT_UNTIL, skip=2)
+    assert isinstance(collection, HitCollection)
+    assert (collection.complete_until, collection.resume) == (HIT_SINCE, None)
+    assert len(collection.hits) == 2
+    connector.api.list_alerts.assert_called_once_with(HIT_SINCE, 2, until=HIT_UNTIL)
 
-    last = adapter.collect_hits([make_deployment()], HIT_SINCE, resume=4)
-    assert (last.complete_until, last.resume, len(last.hits)) == (HIT_UNTIL, None, 1)
+
+def test_adapter_ignores_a_resume_outside_the_read_period(monkeypatch):
+    monkeypatch.setattr(
+        "microsoft_defender_intel_connector.deployment.MAX_HIT_ALERTS", 2
+    )
+    connector = build_connector()
+    connector.api.list_alerts = serve_alerts([5])
+    adapter = MicrosoftDefenderDeploymentAdapter(connector, clock=lambda: HIT_UNTIL)
+
+    hits = adapter.collect_hits([make_deployment()], HIT_SINCE, resume=HIT_UNTIL)
+
+    assert [hit.timestamp.minute for hit in hits] == [5]
+    connector.api.list_alerts.assert_called_once_with(HIT_SINCE, 2, until=HIT_UNTIL)
 
 
 def test_adapter_stops_at_a_capped_minimal_window_after_the_start(monkeypatch):
@@ -803,16 +841,6 @@ def test_list_alerts_bounds_the_window():
         "$filter=alertCreationTime%20ge%202026-10-03T11%3A00%3A00Z"
         "%20and%20alertCreationTime%20lt%202026-10-03T12%3A00%3A00Z"
     )
-
-
-def test_list_alerts_skips_the_alerts_already_read():
-    connector = build_connector()
-    connector.api._send_request.return_value = {"value": []}
-
-    connector.api.list_alerts(HIT_SINCE, max_alerts=5, until=HIT_UNTIL, skip=10_000)
-
-    params = connector.api._send_request.call_args.kwargs["params"]
-    assert params.endswith("&$top=5&$skip=10000")
 
 
 def test_adapter_hits_without_values_read_no_alert():
