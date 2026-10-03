@@ -117,7 +117,8 @@ mkdir -p "$NEW_CONNECTOR_DIR"
 
 # Copy template files to the new directory
 echo "Copying template files..."
-cp -r "$TEMPLATE_DIR/"* "$NEW_CONNECTOR_DIR"
+# "/." also copies the dotfiles (.dockerignore), which a "/*" glob skips
+cp -r "$TEMPLATE_DIR/." "$NEW_CONNECTOR_DIR"
 
 # Update placeholders in the copied files
 echo "Customizing connector files..."
