@@ -90,7 +90,7 @@ def test_certificate_verification(requests_mock, verify_ssl, ca_cert, expected):
 
 
 def test_ppl_restricts_caps_and_counts(requests_mock):
-    # Given a PPL answer and its count
+    # Given a PPL answer filling the cap, and its count
     requests_mock.post(
         PPL_URL,
         [
@@ -104,7 +104,7 @@ def test_ppl_restricts_caps_and_counts(requests_mock):
         "source=ocsf-* | where class_uid=1007 | fields time;",
         START,
         END,
-        50,
+        1,
         RunDeadline(30),
     )
 
@@ -113,11 +113,23 @@ def test_ppl_restricts_caps_and_counts(requests_mock):
     window = f"`time` >= {START_MS} and `time` <= {END_MS}"
     base = f"source=ocsf-* | where {window} | where class_uid=1007 | fields time"
     assert queries == [
-        f"{base} | head 50",
+        f"{base} | head 1",
         f"{base} | stats count() as opencti_hit_count",
     ]
     assert result.rows == [{"time": START_MS, "device.hostname": "ws1"}]
     assert (result.total, result.partial) == (42, False)
+
+
+def test_ppl_does_not_count_a_page_below_the_cap(requests_mock):
+    # Given fewer rows than the cap: they are all the matches
+    requests_mock.post(PPL_URL, json=ppl_answer(["a"], [[1], [2]]))
+
+    # When the query runs
+    result = _client().ppl("source=x", START, END, 50, RunDeadline(30))
+
+    # Then no count query is sent and the total is the number of rows
+    assert requests_mock.call_count == 1
+    assert result.total == 2
 
 
 def test_ppl_date_window_and_platform_cap(requests_mock):
@@ -153,7 +165,7 @@ def test_ppl_keeps_the_row_count_without_a_usable_count(requests_mock, count):
     )
 
     # When/Then the total is the number of rows
-    assert _client().ppl("source=x", START, END, 10, RunDeadline(30)).total == 2
+    assert _client().ppl("source=x", START, END, 2, RunDeadline(30)).total == 2
 
 
 def test_ppl_reports_the_error_details(requests_mock):

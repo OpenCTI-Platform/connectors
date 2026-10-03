@@ -141,7 +141,8 @@ class OpenSearchClient(HuntApiClient):
         cap = min(max_results, MAX_RESULTS)
         rows = ppl_rows(self._ppl(f"{filtered} | head {cap}", deadline))
         total = len(rows)
-        if rows:
+        # Fewer rows than the cap is already the exact count: only a full page needs the count query
+        if len(rows) >= cap:
             counted = ppl_rows(
                 self._ppl(f"{filtered} | stats count() as {COUNT_COLUMN}", deadline)
             )
