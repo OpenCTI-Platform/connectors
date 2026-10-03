@@ -89,6 +89,7 @@ Connector-specific variables:
 | `GOOGLE_SECOPS_RULES_REQUEST_TIMEOUT` | `google_secops_rules.request_timeout` | No | `60` | Timeout of each HTTP request, in seconds. |
 | `GOOGLE_SECOPS_RULES_MAX_RETRIES` | `google_secops_rules.max_retries` | No | `5` | Retries on 429, 5xx and network errors, with exponential backoff honoring `Retry-After`. |
 | `GOOGLE_SECOPS_RULES_PLATFORM_NAME` | `google_secops_rules.platform_name` | No | `Google SecOps` | Name of the Security Platform in OpenCTI. Use one name per instance. |
+| `GOOGLE_SECOPS_RULES_PLATFORM_ID` | `google_secops_rules.platform_id` | No | | Id (internal or STIX) of an existing Security Platform in OpenCTI, for example the one the Google SecOps stream connector of the same instance reports to. Takes precedence over the platform name and type: the rules are deployed on that platform, which the connector references and never rewrites. A run fails when the id is not a Security Platform. |
 | `GOOGLE_SECOPS_RULES_PLATFORM_TYPE` | `google_secops_rules.platform_type` | No | `SIEM` | `security_platform_type` of that platform: `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
 | `GOOGLE_SECOPS_RULES_TLP_LEVEL` | `google_secops_rules.tlp_level` | No | `amber` | TLP marking of every imported object. |
 
@@ -167,7 +168,7 @@ Each run lists the rules of the instance (`GET .../rules?view=FULL`, which retur
 
 Every object carries the `Google` author and the configured TLP marking. The Security Platform identity
 (`identity_class: securityplatform`, `security_platform_type: SIEM` by default) is named after
-`GOOGLE_SECOPS_RULES_PLATFORM_NAME`.
+`GOOGLE_SECOPS_RULES_PLATFORM_NAME`. When `GOOGLE_SECOPS_RULES_PLATFORM_ID` designates an existing Security Platform, the deployments target that platform instead, which the bundles reference without carrying its identity.
 
 ### Deployment status and reconciliation
 
@@ -243,4 +244,6 @@ returned by Google.
   and [`rules.deployments.list`](https://cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.rules.deployments/list).
 - Curated detections managed by Google are not rules of the instance and are not imported.
 - One connector instance reads one Google SecOps instance; deploy one connector per instance (with
-  distinct `CONNECTOR_ID` and `GOOGLE_SECOPS_RULES_PLATFORM_NAME`).
+  distinct `CONNECTOR_ID` and `GOOGLE_SECOPS_RULES_PLATFORM_NAME` or `GOOGLE_SECOPS_RULES_PLATFORM_ID`).
+- Switching from the platform name to a platform id (or between ids) moves the deployments: the
+  previous platform gets every deployment marked `removed` and the new one gets the current ones.

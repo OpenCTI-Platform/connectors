@@ -113,6 +113,15 @@ class GoogleSecOpsRulesConfig(BaseConfigModel):
         default="Google SecOps",
         min_length=1,
     )
+    platform_id: str | None = Field(
+        description="Id (internal or STIX) of an existing Security Platform in "
+        "OpenCTI the rules are deployed on, for example the one "
+        "the Google SecOps stream connector of the same instance reports to. "
+        "Takes precedence over `platform_name` and `platform_type`: the connector "
+        "references that platform and never rewrites it.",
+        default=None,
+        min_length=1,
+    )
     platform_type: Literal["SIEM", "EDR", "XDR", "SOAR", "NDR", "ISPM"] = Field(
         description="Type of that Security Platform (`security_platform_type`).",
         default="SIEM",

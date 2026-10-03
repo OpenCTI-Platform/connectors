@@ -37,6 +37,7 @@ def test_defaults():
     assert config.request_timeout == 60
     assert config.max_retries == 5
     assert config.platform_name == "Google SecOps"
+    assert config.platform_id is None
     assert config.platform_type == "SIEM"
     assert config.tlp_level.value == "amber"
     assert settings.connector.name == "Google SecOps Detection Rules"
@@ -95,6 +96,7 @@ def test_required_fields(missing):
         ("page_size", 1001),
         ("max_retries", -1),
         ("platform_type", "Antivirus"),
+        ("platform_id", ""),
         ("tlp_level", "purple"),
     ],
 )

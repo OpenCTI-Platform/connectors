@@ -33,6 +33,7 @@ def test_defaults():
     assert config.page_size == 100
     assert config.verify_ssl is True
     assert config.platform_name == "Splunk"
+    assert config.platform_id is None
     assert config.platform_type == "SIEM"
     assert config.tlp_level.value == "amber"
     assert settings.connector.name == "Splunk Saved Searches"
@@ -49,6 +50,7 @@ def test_overrides():
                 "search_scope": "correlation_searches",
                 "web_url": "https://splunk.example.com:8000",
                 "verify_ssl": "false",
+                "platform_id": "identity--3f1c0b56-7c2e-5b1a-9a77-2f8a4c1d9e01",
             }
         }
     ).splunk_saved_searches
@@ -56,6 +58,7 @@ def test_overrides():
     assert config.search_scope == "correlation_searches"
     assert str(config.web_url) == "https://splunk.example.com:8000/"
     assert config.verify_ssl is False
+    assert config.platform_id == "identity--3f1c0b56-7c2e-5b1a-9a77-2f8a4c1d9e01"
 
 
 @pytest.mark.parametrize("missing", ["api_url", "token"])
@@ -74,6 +77,7 @@ def test_required_fields(missing):
         ("page_size", 10001),
         ("max_retries", -1),
         ("platform_type", "Firewall"),
+        ("platform_id", ""),
         ("tlp_level", "purple"),
     ],
 )

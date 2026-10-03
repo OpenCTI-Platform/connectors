@@ -48,6 +48,9 @@ class DeployedRulesProcessor(BaseDataProcessor):
     builder: RuleStixBuilder
     #: Human-readable platform name, used in log messages.
     platform_label: str
+    #: Id (internal or STIX) of an existing Security Platform to deploy on.
+    #: When set, it takes precedence over the platform derived from its name.
+    configured_platform_id: str | None = None
 
     def inject_dependencies(
         self,
@@ -76,10 +79,29 @@ class DeployedRulesProcessor(BaseDataProcessor):
         """Return the vendor rule id of a rule key kept in the state."""
         return key
 
+    def resolve_platform(self) -> None:
+        """Target the configured existing Security Platform, if any.
+
+        The platform is read at every run, so a platform created after the
+        connector started is found and a rename in OpenCTI is followed. An
+        id that does not designate a Security Platform fails the run rather
+        than sending the deployments to another platform.
+        """
+        if not self.configured_platform_id:
+            return
+        platform = self.helper.api.identity.read(id=self.configured_platform_id)
+        if not platform or platform.get("entity_type") != "SecurityPlatform":
+            raise ValueError(
+                f"The configured platform id {self.configured_platform_id} is not "
+                "a Security Platform of the OpenCTI platform"
+            )
+        self.builder.target_existing_platform(platform["standard_id"], platform["name"])
+
     # -- transform --------------------------------------------------------
     def transform(self, raw_rules: Iterable[Any]) -> Generator[list[Any], None, None]:
         """Turn the rule set of the platform into STIX bundles."""
         run_time = datetime.now(timezone.utc)
+        self.resolve_platform()
         rules, skipped = self._map_rules(raw_rules)
 
         deployed_on_supported = is_deployed_on_supported(self.helper)
@@ -142,7 +164,7 @@ class DeployedRulesProcessor(BaseDataProcessor):
             yield objects
 
         former_platform = self.state.platform_id
-        if former_platform in (None, self.builder.platform.id):
+        if former_platform in (None, self.builder.platform_id):
             former_platform = None
             removed, still_pending = self._removed_rules(previous, current, pending)
         else:
@@ -171,7 +193,7 @@ class DeployedRulesProcessor(BaseDataProcessor):
             self.state.deployed_rules = current
             # Removals that could not be checked are retried on the next run.
             self.state.pending_removals = still_pending or None
-            self.state.platform_id = self.builder.platform.id
+            self.state.platform_id = self.builder.platform_id
         self.logger.info(
             "Detection rules reconciled",
             {

@@ -25,5 +25,6 @@ google_secops_rules:
   # request_timeout: 60
   # max_retries: 5
   # platform_name: 'Google SecOps'
+  # platform_id: 'ChangeMe'
   # platform_type: 'SIEM'
   # tlp_level: 'amber'

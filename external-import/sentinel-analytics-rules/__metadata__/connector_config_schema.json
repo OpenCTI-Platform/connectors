@@ -132,6 +132,12 @@
       "minLength": 1,
       "type": "string"
     },
+    "SENTINEL_ANALYTICS_RULES_PLATFORM_ID": {
+      "default": null,
+      "description": "Id (internal or STIX) of an existing Security Platform in OpenCTI the rules are deployed on, for example the one the Microsoft Sentinel stream connector of the same workspace reports to. Takes precedence over `platform_name` and `platform_type`: the connector references that platform and never rewrites it.",
+      "minLength": 1,
+      "type": "string"
+    },
     "SENTINEL_ANALYTICS_RULES_PLATFORM_TYPE": {
       "default": "SIEM",
       "description": "Type of that Security Platform (`security_platform_type`).",

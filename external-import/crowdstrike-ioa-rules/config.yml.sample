@@ -22,5 +22,6 @@ crowdstrike_ioa_rules:
   # request_timeout: 60
   # max_retries: 5
   # platform_name: 'CrowdStrike Falcon'
+  # platform_id: 'ChangeMe'
   # platform_type: 'EDR'
   # tlp_level: 'amber'

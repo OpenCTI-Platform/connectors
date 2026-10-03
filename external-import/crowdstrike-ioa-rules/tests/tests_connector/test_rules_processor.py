@@ -9,7 +9,7 @@ from connector.attack_patterns import attack_pattern_id
 from connector.rule_mapper import rule_pattern
 from connectors_sdk import ApiForbiddenError, ApiServerError
 from crowdstrike_samples import DNS_RULE, MAC_GROUP, PROCESS_RULE, WINDOWS_GROUP
-from pycti import Indicator
+from pycti import Identity, Indicator
 
 GONE_INDICATOR = Indicator.generate_id('{"ruletype_name": "deleted rule"}')
 GONE_KEY = f"{WINDOWS_GROUP['id']}/99"
@@ -229,3 +229,39 @@ def test_dns_rule_without_logic_change_keeps_its_indicator(helper):
     assert len(bundles) == 2
     (removed,) = _of_type(bundles[1], "relationship", "deployed-on")
     assert removed.external_id == "1"
+
+
+EXISTING_PLATFORM = Identity.generate_id("SOC Falcon", "securityplatform")
+EXISTING = {
+    "entity_type": "SecurityPlatform",
+    "standard_id": EXISTING_PLATFORM,
+    "name": "SOC Falcon",
+}
+
+
+def test_configured_platform_id_targets_the_existing_platform(helper):
+    helper.api.identity.read.return_value = EXISTING
+    processor = _processor(helper, [WINDOWS_GROUP], platform_id="internal-platform-id")
+    (objects,) = _run(processor)
+    helper.api.identity.read.assert_called_once_with(id="internal-platform-id")
+    deployments = _of_type(objects, "relationship", "deployed-on")
+    assert deployments
+    assert {deployment.target_ref for deployment in deployments} == {EXISTING_PLATFORM}
+    # The platform another integration created is referenced, never rewritten.
+    assert not [
+        obj
+        for obj in _of_type(objects, "identity")
+        if obj.identity_class == "securityplatform"
+    ]
+    assert processor.state.platform_id == EXISTING_PLATFORM
+
+
+@pytest.mark.parametrize(
+    "found",
+    [None, {"entity_type": "System", "standard_id": "identity--x", "name": "SOC"}],
+)
+def test_configured_platform_id_must_be_a_security_platform(helper, found):
+    helper.api.identity.read.return_value = found
+    processor = _processor(helper, [WINDOWS_GROUP], platform_id="unknown")
+    with pytest.raises(ValueError, match="is not a Security Platform"):
+        _run(processor)

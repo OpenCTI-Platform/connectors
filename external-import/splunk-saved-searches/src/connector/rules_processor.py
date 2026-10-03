@@ -50,6 +50,7 @@ class SplunkRulesProcessor(DeployedRulesProcessor):
             "imported by the Splunk Saved Searches connector.",
             source_name="Splunk",
         )
+        self.configured_platform_id = config.platform_id
 
     def collect(self) -> list[dict[str, Any]]:
         """Read every saved search of the namespace."""

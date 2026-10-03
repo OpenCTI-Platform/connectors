@@ -54,11 +54,27 @@ class RuleStixBuilder:
             object_marking_refs=[self.marking.id],
             custom_properties={"security_platform_type": platform_type},
         )
+        self.platform_id: str = self.platform.id
+        self.platform_name: str = platform_name
+        self._owns_platform = True
+
+    def target_existing_platform(self, platform_id: str, name: str) -> None:
+        """Deploy on an existing Security Platform, referenced by its STIX id.
+
+        The platform identity is left out of the bundles so that the entity
+        another integration created is never rewritten by this connector.
+        """
+        self.platform_id = platform_id
+        self.platform_name = name
+        self._owns_platform = False
 
     @property
     def common_objects(self) -> list[Any]:
-        """Objects every bundle carries: author, marking, Security Platform."""
-        return [self.author, self.marking, self.platform]
+        """Objects every bundle carries: author, marking, own Security Platform."""
+        objects: list[Any] = [self.author, self.marking]
+        if self._owns_platform:
+            objects.append(self.platform)
+        return objects
 
     def indicator(self, rule: DetectionRule, run_time: datetime) -> stix2.Indicator:
         """Build the rule Indicator."""
@@ -120,11 +136,11 @@ class RuleStixBuilder:
         defines it, otherwise ``related-to`` describing the deployment.
         ``platform_id`` targets another platform identity (a former name).
         """
-        target_id = platform_id or self.platform.id
+        target_id = platform_id or self.platform_id
         if not deployed_on_supported:
             platform_name = (
-                self.platform.name
-                if target_id == self.platform.id
+                self.platform_name
+                if target_id == self.platform_id
                 else "the former Security Platform"
             )
             return stix2.Relationship(

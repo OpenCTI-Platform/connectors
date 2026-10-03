@@ -7,9 +7,10 @@ from conftest import SCHEMA_WITHOUT_DEPLOYED_ON, make_settings
 from connector import ConnectorState, SplunkRulesProcessor
 from connector.attack_patterns import attack_pattern_id
 from connector.deployed_rules_processor import RULES_PER_BUNDLE
-from pycti import Indicator
+from pycti import Identity, Indicator
 from splunk_samples import CORRELATION_SEARCH, REPORT, SCHEDULED_ALERT, entry
 
+EXISTING_PLATFORM = Identity.generate_id("Splunk splunk-prod-01", "securityplatform")
 GONE_INDICATOR = Indicator.generate_id("index=old | stats count")
 GONE_KEY = "search/admin/Old detection"
 CORRELATION_KEY = (
@@ -118,6 +119,89 @@ def test_platform_without_deployed_on_gets_related_to(helper):
         "Deployed on Splunk (status: active, rule id: "
         "ESCU - Windows PowerShell Encoded Command - Rule)"
     )
+
+
+def _security_platforms(objects):
+    return [
+        obj
+        for obj in _of_type(objects, "identity")
+        if obj.identity_class == "securityplatform"
+    ]
+
+
+def test_configured_platform_id_targets_the_existing_platform(helper):
+    helper.api.identity.read.return_value = {
+        "entity_type": "SecurityPlatform",
+        "standard_id": EXISTING_PLATFORM,
+        "name": "Splunk splunk-prod-01",
+    }
+    processor = _processor(
+        helper, [CORRELATION_SEARCH], platform_id="2b8f1d4e-internal-id"
+    )
+    (objects,) = _run(processor)
+    helper.api.identity.read.assert_called_once_with(id="2b8f1d4e-internal-id")
+    (deployment,) = _of_type(objects, "relationship", "deployed-on")
+    assert deployment.target_ref == EXISTING_PLATFORM
+    # The platform another integration created is referenced, never rewritten.
+    assert _security_platforms(objects) == []
+    assert processor.state.platform_id == EXISTING_PLATFORM
+
+
+def test_configured_platform_id_names_the_platform_in_related_to(helper):
+    helper.api.query.return_value = SCHEMA_WITHOUT_DEPLOYED_ON
+    helper.api.identity.read.return_value = {
+        "entity_type": "SecurityPlatform",
+        "standard_id": EXISTING_PLATFORM,
+        "name": "Splunk splunk-prod-01",
+    }
+    (objects,) = _run(
+        _processor(helper, [CORRELATION_SEARCH], platform_id=EXISTING_PLATFORM)
+    )
+    (related,) = _of_type(objects, "relationship", "related-to")
+    assert related.target_ref == EXISTING_PLATFORM
+    assert related.description.startswith("Deployed on Splunk splunk-prod-01 ")
+
+
+@pytest.mark.parametrize(
+    "found",
+    [None, {"entity_type": "System", "standard_id": "identity--x", "name": "SOC"}],
+)
+def test_configured_platform_id_must_be_a_security_platform(helper, found):
+    helper.api.identity.read.return_value = found
+    processor = _processor(helper, [CORRELATION_SEARCH], platform_id="unknown")
+    with pytest.raises(ValueError, match="is not a Security Platform"):
+        _run(processor)
+
+
+def test_switching_to_a_configured_platform_moves_the_deployments(helper):
+    helper.api.identity.read.return_value = {
+        "entity_type": "SecurityPlatform",
+        "standard_id": EXISTING_PLATFORM,
+        "name": "Splunk splunk-prod-01",
+    }
+    helper.api.indicator.list.return_value = [
+        {"standard_id": _indicator_id(CORRELATION_SEARCH), "x_opencti_stix_ids": []}
+    ]
+    named_platform = Identity.generate_id("Splunk", "securityplatform")
+    state = ConnectorState(
+        deployed_rules={CORRELATION_KEY: _indicator_id(CORRELATION_SEARCH)},
+        platform_id=named_platform,
+    )
+    processor = _processor(
+        helper, [CORRELATION_SEARCH], state=state, platform_id=EXISTING_PLATFORM
+    )
+    deployed, removed = _run(processor)
+    (current,) = _of_type(deployed, "relationship", "deployed-on")
+    assert (current.target_ref, current.deployment_status) == (
+        EXISTING_PLATFORM,
+        "active",
+    )
+    (former,) = _of_type(removed, "relationship", "deployed-on")
+    assert (former.target_ref, former.deployment_status) == (
+        named_platform,
+        "removed",
+    )
+    assert processor.state.platform_id == EXISTING_PLATFORM
 
 
 def test_removed_saved_search_carries_its_name(helper):

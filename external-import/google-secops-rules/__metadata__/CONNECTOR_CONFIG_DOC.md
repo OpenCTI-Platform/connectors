@@ -27,5 +27,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | GOOGLE_SECOPS_RULES_REQUEST_TIMEOUT | `integer` |  | `1 <= x ` | `60` | Timeout of each HTTP request, in seconds. |
 | GOOGLE_SECOPS_RULES_MAX_RETRIES | `integer` |  | `0 <= x ` | `5` | Retries of a request failing with a rate limit (429), a server error (5xx) or a network error, with exponential backoff. |
 | GOOGLE_SECOPS_RULES_PLATFORM_NAME | `string` |  | Length: `string >= 1` | `"Google SecOps"` | Name of the Security Platform the rules are deployed on in OpenCTI. |
+| GOOGLE_SECOPS_RULES_PLATFORM_ID | `string` |  | Length: `string >= 1` | `null` | Id (internal or STIX) of an existing Security Platform in OpenCTI the rules are deployed on, for example the one the Google SecOps stream connector of the same instance reports to. Takes precedence over `platform_name` and `platform_type`: the connector references that platform and never rewrites it. |
 | GOOGLE_SECOPS_RULES_PLATFORM_TYPE | `string` |  | `SIEM` `EDR` `XDR` `SOAR` `NDR` `ISPM` | `"SIEM"` | Type of that Security Platform (`security_platform_type`). |
 | GOOGLE_SECOPS_RULES_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber"` | TLP marking applied to every object this connector creates. |

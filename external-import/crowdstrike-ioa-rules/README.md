@@ -85,6 +85,7 @@ Connector-specific variables:
 | `CROWDSTRIKE_IOA_RULES_REQUEST_TIMEOUT` | `crowdstrike_ioa_rules.request_timeout` | No | `60` | Timeout of each HTTP request, in seconds. |
 | `CROWDSTRIKE_IOA_RULES_MAX_RETRIES` | `crowdstrike_ioa_rules.max_retries` | No | `5` | Retries on 429, 5xx and network errors, with exponential backoff honoring `Retry-After` and `X-RateLimit-RetryAfter`. |
 | `CROWDSTRIKE_IOA_RULES_PLATFORM_NAME` | `crowdstrike_ioa_rules.platform_name` | No | `CrowdStrike Falcon` | Name of the Security Platform in OpenCTI. Use one name per CID. |
+| `CROWDSTRIKE_IOA_RULES_PLATFORM_ID` | `crowdstrike_ioa_rules.platform_id` | No | | Id (internal or STIX) of an existing Security Platform in OpenCTI, for example the one the CrowdStrike stream connector of the same tenant reports to. Takes precedence over the platform name and type: the rules are deployed on that platform, which the connector references and never rewrites. A run fails when the id is not a Security Platform. |
 | `CROWDSTRIKE_IOA_RULES_PLATFORM_TYPE` | `crowdstrike_ioa_rules.platform_type` | No | `EDR` | `security_platform_type` of that platform: `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
 | `CROWDSTRIKE_IOA_RULES_TLP_LEVEL` | `crowdstrike_ioa_rules.tlp_level` | No | `amber` | TLP marking of every imported object. |
 
@@ -163,7 +164,7 @@ graph LR
 
 Every object carries the `CrowdStrike` author and the configured TLP marking. The Security Platform
 identity (`identity_class: securityplatform`, `security_platform_type: EDR` by default) is named after
-`CROWDSTRIKE_IOA_RULES_PLATFORM_NAME`. Deleted rules and rules of deleted groups are left out.
+`CROWDSTRIKE_IOA_RULES_PLATFORM_NAME`. When `CROWDSTRIKE_IOA_RULES_PLATFORM_ID` designates an existing Security Platform, the deployments target that platform instead, which the bundles reference without carrying its identity. Deleted rules and rules of deleted groups are left out.
 
 ### Indicator pattern
 
@@ -248,4 +249,6 @@ with the delay before the next attempt. An expired or revoked access token is re
   `/ioarules/entities/rule-groups/v1`) and prevention policies (`/policy/combined/prevention/v1`). See
   the Falcon console API documentation or [FalconPy](https://www.falconpy.io/Service-Collections/Custom-IOA.html).
 - One connector instance reads one CID; deploy one instance per CID (with distinct `CONNECTOR_ID` and
-  `CROWDSTRIKE_IOA_RULES_PLATFORM_NAME`).
+  `CROWDSTRIKE_IOA_RULES_PLATFORM_NAME` or `CROWDSTRIKE_IOA_RULES_PLATFORM_ID`).
+- Switching from the platform name to a platform id (or between ids) moves the deployments: the
+  previous platform gets every deployment marked `removed` and the new one gets the current ones.

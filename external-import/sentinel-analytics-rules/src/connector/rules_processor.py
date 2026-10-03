@@ -52,6 +52,7 @@ class SentinelRulesProcessor(DeployedRulesProcessor):
             "Microsoft Sentinel Analytics Rules connector.",
             source_name="Microsoft Sentinel",
         )
+        self.configured_platform_id = config.platform_id
 
     def collect(self) -> list[dict[str, Any]]:
         """Read every alert rule of the workspace."""

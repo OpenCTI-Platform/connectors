@@ -24,5 +24,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CROWDSTRIKE_IOA_RULES_REQUEST_TIMEOUT | `integer` |  | `1 <= x ` | `60` | Timeout of each HTTP request, in seconds. |
 | CROWDSTRIKE_IOA_RULES_MAX_RETRIES | `integer` |  | `0 <= x ` | `5` | Retries of a request failing with a rate limit (429), a server error (5xx) or a network error, with exponential backoff. |
 | CROWDSTRIKE_IOA_RULES_PLATFORM_NAME | `string` |  | Length: `string >= 1` | `"CrowdStrike Falcon"` | Name of the Security Platform the rules are deployed on in OpenCTI. |
+| CROWDSTRIKE_IOA_RULES_PLATFORM_ID | `string` |  | Length: `string >= 1` | `null` | Id (internal or STIX) of an existing Security Platform in OpenCTI the rules are deployed on, for example the one the CrowdStrike stream connector of the same tenant reports to. Takes precedence over `platform_name` and `platform_type`: the connector references that platform and never rewrites it. |
 | CROWDSTRIKE_IOA_RULES_PLATFORM_TYPE | `string` |  | `SIEM` `EDR` `XDR` `SOAR` `NDR` `ISPM` | `"EDR"` | Type of that Security Platform (`security_platform_type`). |
 | CROWDSTRIKE_IOA_RULES_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber"` | TLP marking applied to every object this connector creates. |

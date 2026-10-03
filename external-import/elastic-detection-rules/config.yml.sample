@@ -21,5 +21,6 @@ elastic_detection_rules:
   # max_retries: 5
   # verify_ssl: true
   # platform_name: 'Elastic Security'
+  # platform_id: 'ChangeMe'
   # platform_type: 'SIEM'
   # tlp_level: 'amber'

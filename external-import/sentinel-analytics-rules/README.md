@@ -83,6 +83,7 @@ Connector-specific variables:
 | `SENTINEL_ANALYTICS_RULES_REQUEST_TIMEOUT` | `sentinel_analytics_rules.request_timeout` | No | `60` | Timeout of each HTTP request, in seconds. |
 | `SENTINEL_ANALYTICS_RULES_MAX_RETRIES` | `sentinel_analytics_rules.max_retries` | No | `5` | Retries on 429, 5xx and network errors, with exponential backoff honoring `Retry-After`. |
 | `SENTINEL_ANALYTICS_RULES_PLATFORM_NAME` | `sentinel_analytics_rules.platform_name` | No | `Microsoft Sentinel` | Name of the Security Platform in OpenCTI. Use one name per workspace. |
+| `SENTINEL_ANALYTICS_RULES_PLATFORM_ID` | `sentinel_analytics_rules.platform_id` | No | | Id (internal or STIX) of an existing Security Platform in OpenCTI, for example the one the Microsoft Sentinel stream connector of the same workspace reports to. Takes precedence over the platform name and type: the rules are deployed on that platform, which the connector references and never rewrites. A run fails when the id is not a Security Platform. |
 | `SENTINEL_ANALYTICS_RULES_PLATFORM_TYPE` | `sentinel_analytics_rules.platform_type` | No | `SIEM` | `security_platform_type` of that platform: `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
 | `SENTINEL_ANALYTICS_RULES_TLP_LEVEL` | `sentinel_analytics_rules.tlp_level` | No | `amber` | TLP marking of every imported object. |
 
@@ -154,7 +155,7 @@ graph LR
 | `properties.enabled` | `deployed-on` `deployment_status`: `active` (enabled) or `deployed` (disabled) |
 
 Every object carries the `Microsoft` author and the configured TLP marking. The Security Platform
-identity (`identity_class: securityplatform`) is named after `SENTINEL_ANALYTICS_RULES_PLATFORM_NAME`.
+identity (`identity_class: securityplatform`) is named after `SENTINEL_ANALYTICS_RULES_PLATFORM_NAME`. When `SENTINEL_ANALYTICS_RULES_PLATFORM_ID` designates an existing Security Platform, the deployments target that platform instead, which the bundles reference without carrying its identity.
 
 ### Rule kinds
 
@@ -207,4 +208,6 @@ are logged with the delay before the next attempt. An expired or revoked access 
 
 - Azure REST API: [Alert Rules - List](https://learn.microsoft.com/rest/api/securityinsights/alert-rules/list).
 - One connector instance reads one workspace; deploy one instance per workspace (with distinct
-  `CONNECTOR_ID` and `SENTINEL_ANALYTICS_RULES_PLATFORM_NAME`).
+  `CONNECTOR_ID` and `SENTINEL_ANALYTICS_RULES_PLATFORM_NAME` or `SENTINEL_ANALYTICS_RULES_PLATFORM_ID`).
+- Switching from the platform name to a platform id (or between ids) moves the deployments: the
+  previous platform gets every deployment marked `removed` and the new one gets the current ones.

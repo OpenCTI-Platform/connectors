@@ -24,5 +24,6 @@ sentinel_analytics_rules:
   # request_timeout: 60
   # max_retries: 5
   # platform_name: 'Microsoft Sentinel'
+  # platform_id: 'ChangeMe'
   # platform_type: 'SIEM'
   # tlp_level: 'amber'

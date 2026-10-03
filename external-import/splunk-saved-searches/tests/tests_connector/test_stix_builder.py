@@ -54,6 +54,17 @@ def test_security_platform_identity(builder):
     assert builder.common_objects == [builder.author, builder.marking, platform]
 
 
+def test_existing_platform_is_referenced_not_rewritten(builder):
+    existing = Identity.generate_id("SOC SIEM", "securityplatform")
+    builder.target_existing_platform(existing, "SOC SIEM")
+    assert builder.common_objects == [builder.author, builder.marking]
+    deployed = builder.deployment(INDICATOR_ID, "rule-1", "active", RUN_TIME, True)
+    assert deployed.target_ref == existing
+    related = builder.deployment(INDICATOR_ID, "rule-1", "active", RUN_TIME, False)
+    assert related.target_ref == existing
+    assert related.description.startswith("Deployed on SOC SIEM ")
+
+
 def test_indicator_carries_rule_metadata(builder):
     rule = _rule(
         level="high",

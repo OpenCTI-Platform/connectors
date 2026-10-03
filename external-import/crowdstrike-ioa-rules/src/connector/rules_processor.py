@@ -51,6 +51,7 @@ class CrowdStrikeRulesProcessor(DeployedRulesProcessor):
             "are imported by the CrowdStrike Falcon Custom IOA Rules connector.",
             source_name="CrowdStrike Falcon",
         )
+        self.configured_platform_id = config.platform_id
 
     def collect(self) -> list[RawRule]:
         """Read every custom IOA rule group and flatten its rules."""

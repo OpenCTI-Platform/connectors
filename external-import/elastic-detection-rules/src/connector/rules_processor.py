@@ -47,6 +47,7 @@ class ElasticRulesProcessor(DeployedRulesProcessor):
             "are imported by the Elastic Security Detection Rules connector.",
             source_name="Elastic Security",
         )
+        self.configured_platform_id = config.platform_id
 
     def collect(self) -> list[dict[str, Any]]:
         """Read every detection rule of the space."""

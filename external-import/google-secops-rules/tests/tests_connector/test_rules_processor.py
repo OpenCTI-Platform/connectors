@@ -9,7 +9,7 @@ from connector import rules_processor as rules_processor_module
 from connector.attack_patterns import attack_pattern_id
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from pycti import Indicator
+from pycti import Identity, Indicator
 from secops_client import GoogleSecOpsRulesClient
 from secops_samples import (
     ARCHIVED_RULE,
@@ -272,3 +272,41 @@ def test_real_private_key_builds_service_account_credentials(helper, monkeypatch
     assert credentials.signer_email == credentials.service_account_email
     assert credentials.signer.key_id == "0123abcd"
     assert credentials.scopes == ["https://www.googleapis.com/auth/cloud-platform"]
+
+
+EXISTING_PLATFORM = Identity.generate_id("SOC SecOps", "securityplatform")
+EXISTING = {
+    "entity_type": "SecurityPlatform",
+    "standard_id": EXISTING_PLATFORM,
+    "name": "SOC SecOps",
+}
+
+
+def test_configured_platform_id_targets_the_existing_platform(helper):
+    helper.api.identity.read.return_value = EXISTING
+    processor = _processor(
+        helper, [POWERSHELL_RULE], platform_id="internal-platform-id"
+    )
+    (objects,) = _run(processor)
+    helper.api.identity.read.assert_called_once_with(id="internal-platform-id")
+    deployments = _of_type(objects, "relationship", "deployed-on")
+    assert deployments
+    assert {deployment.target_ref for deployment in deployments} == {EXISTING_PLATFORM}
+    # The platform another integration created is referenced, never rewritten.
+    assert not [
+        obj
+        for obj in _of_type(objects, "identity")
+        if obj.identity_class == "securityplatform"
+    ]
+    assert processor.state.platform_id == EXISTING_PLATFORM
+
+
+@pytest.mark.parametrize(
+    "found",
+    [None, {"entity_type": "System", "standard_id": "identity--x", "name": "SOC"}],
+)
+def test_configured_platform_id_must_be_a_security_platform(helper, found):
+    helper.api.identity.read.return_value = found
+    processor = _processor(helper, [POWERSHELL_RULE], platform_id="unknown")
+    with pytest.raises(ValueError, match="is not a Security Platform"):
+        _run(processor)

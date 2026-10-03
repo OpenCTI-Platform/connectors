@@ -77,6 +77,7 @@ Connector-specific variables:
 | `ELASTIC_DETECTION_RULES_MAX_RETRIES` | `elastic_detection_rules.max_retries` | No | `5` | Retries on 429, 5xx and network errors, with exponential backoff honoring `Retry-After`. |
 | `ELASTIC_DETECTION_RULES_VERIFY_SSL` | `elastic_detection_rules.verify_ssl` | No | `true` | Verify the TLS certificate of Kibana. |
 | `ELASTIC_DETECTION_RULES_PLATFORM_NAME` | `elastic_detection_rules.platform_name` | No | `Elastic Security` | Name of the Security Platform in OpenCTI. Use one name per Elastic deployment. |
+| `ELASTIC_DETECTION_RULES_PLATFORM_ID` | `elastic_detection_rules.platform_id` | No | | Id (internal or STIX) of an existing Security Platform in OpenCTI, for example the one an Elastic integration of the same deployment reports to. Takes precedence over the platform name and type: the rules are deployed on that platform, which the connector references and never rewrites. A run fails when the id is not a Security Platform. |
 | `ELASTIC_DETECTION_RULES_PLATFORM_TYPE` | `elastic_detection_rules.platform_type` | No | `SIEM` | `security_platform_type` of that platform: `SIEM`, `EDR`, `XDR`, `SOAR`, `NDR` or `ISPM`. |
 | `ELASTIC_DETECTION_RULES_TLP_LEVEL` | `elastic_detection_rules.tlp_level` | No | `amber` | TLP marking of every imported object. |
 
@@ -152,7 +153,7 @@ graph LR
 
 Machine learning rules have no query and are not imported. Every object carries the `Elastic` author and
 the configured TLP marking. The Security Platform identity (`identity_class: securityplatform`) is named
-after `ELASTIC_DETECTION_RULES_PLATFORM_NAME`.
+after `ELASTIC_DETECTION_RULES_PLATFORM_NAME`. When `ELASTIC_DETECTION_RULES_PLATFORM_ID` designates an existing Security Platform, the deployments target that platform instead, which the bundles reference without carrying its identity.
 
 ### Deployment status and reconciliation
 
@@ -199,4 +200,6 @@ rate limit, a server error or a network error are logged with the delay before t
 
 - Kibana detection engine API: [Find detection rules](https://www.elastic.co/docs/api/doc/kibana/operation/operation-findrules).
 - One connector instance reads one Kibana space; deploy one instance per space (with distinct
-  `CONNECTOR_ID` and, when the spaces are distinct deployments, distinct `ELASTIC_DETECTION_RULES_PLATFORM_NAME`).
+  `CONNECTOR_ID` and, when the spaces are distinct deployments, distinct `ELASTIC_DETECTION_RULES_PLATFORM_NAME` or `ELASTIC_DETECTION_RULES_PLATFORM_ID`).
+- Switching from the platform name to a platform id (or between ids) moves the deployments: the
+  previous platform gets every deployment marked `removed` and the new one gets the current ones.

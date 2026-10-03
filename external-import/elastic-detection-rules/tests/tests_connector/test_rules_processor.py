@@ -8,7 +8,7 @@ from connector import ConnectorState, ElasticRulesProcessor
 from connector.attack_patterns import attack_pattern_id
 from connector.deployed_rules_processor import RULES_PER_BUNDLE
 from elastic_samples import EQL_RULE, KUERY_RULE, ML_RULE, rule
-from pycti import Indicator, StixCoreRelationship
+from pycti import Identity, Indicator, StixCoreRelationship
 
 OLD_INDICATOR = Indicator.generate_id("an older version of the rule")
 GONE_INDICATOR = Indicator.generate_id("a rule deleted from Kibana")
@@ -385,3 +385,39 @@ def test_collect_errors_fail_the_run_without_touching_the_state(helper):
         processor.process()
     assert processor.state.deployed_rules == {"gone-rule": GONE_INDICATOR}
     helper.send_stix2_bundle.assert_not_called()
+
+
+EXISTING_PLATFORM = Identity.generate_id("SOC Elastic", "securityplatform")
+EXISTING = {
+    "entity_type": "SecurityPlatform",
+    "standard_id": EXISTING_PLATFORM,
+    "name": "SOC Elastic",
+}
+
+
+def test_configured_platform_id_targets_the_existing_platform(helper):
+    helper.api.identity.read.return_value = EXISTING
+    processor = _processor(helper, [EQL_RULE], platform_id="internal-platform-id")
+    (objects,) = _run(processor)
+    helper.api.identity.read.assert_called_once_with(id="internal-platform-id")
+    deployments = _of_type(objects, "relationship", "deployed-on")
+    assert deployments
+    assert {deployment.target_ref for deployment in deployments} == {EXISTING_PLATFORM}
+    # The platform another integration created is referenced, never rewritten.
+    assert not [
+        obj
+        for obj in _of_type(objects, "identity")
+        if obj.identity_class == "securityplatform"
+    ]
+    assert processor.state.platform_id == EXISTING_PLATFORM
+
+
+@pytest.mark.parametrize(
+    "found",
+    [None, {"entity_type": "System", "standard_id": "identity--x", "name": "SOC"}],
+)
+def test_configured_platform_id_must_be_a_security_platform(helper, found):
+    helper.api.identity.read.return_value = found
+    processor = _processor(helper, [EQL_RULE], platform_id="unknown")
+    with pytest.raises(ValueError, match="is not a Security Platform"):
+        _run(processor)

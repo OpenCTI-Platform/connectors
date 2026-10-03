@@ -31,6 +31,7 @@ def test_defaults():
     assert config.import_disabled_rules is True
     assert config.max_retries == 5
     assert config.platform_name == "Microsoft Sentinel"
+    assert config.platform_id is None
     assert config.platform_type == "SIEM"
     assert config.tlp_level.value == "amber"
     assert settings.connector.name == "Microsoft Sentinel Analytics Rules"
@@ -78,6 +79,7 @@ def test_required_fields(missing):
         ("request_timeout", 0),
         ("max_retries", -1),
         ("platform_type", "Firewall"),
+        ("platform_id", ""),
         ("tlp_level", "purple"),
     ],
 )

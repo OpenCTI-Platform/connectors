@@ -23,5 +23,6 @@ splunk_saved_searches:
   # max_retries: 5
   # verify_ssl: true
   # platform_name: 'Splunk'
+  # platform_id: 'ChangeMe'
   # platform_type: 'SIEM'
   # tlp_level: 'amber'

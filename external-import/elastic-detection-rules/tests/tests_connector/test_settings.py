@@ -33,6 +33,7 @@ def test_defaults():
     assert config.max_retries == 5
     assert config.verify_ssl is True
     assert config.platform_name == "Elastic Security"
+    assert config.platform_id is None
     assert config.platform_type == "SIEM"
     assert config.tlp_level.value == "amber"
     assert settings.connector.name == "Elastic Security Detection Rules"
@@ -75,6 +76,7 @@ def test_required_fields(missing):
         ("request_timeout", 0),
         ("max_retries", -1),
         ("platform_type", "Firewall"),
+        ("platform_id", ""),
         ("platform_name", ""),
         ("tlp_level", "purple"),
     ],

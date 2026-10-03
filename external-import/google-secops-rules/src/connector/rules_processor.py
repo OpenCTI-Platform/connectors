@@ -69,6 +69,7 @@ class GoogleSecOpsRulesProcessor(DeployedRulesProcessor):
             "connector.",
             source_name="Google SecOps",
         )
+        self.configured_platform_id = config.platform_id
 
     def collect(self) -> list[RawRule]:
         """Read every rule of the instance with its deployment."""
