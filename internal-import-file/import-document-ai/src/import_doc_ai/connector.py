@@ -102,7 +102,15 @@ class Connector:
 
     def _bind_existing_entities(self, bundle: stix2.Bundle) -> stix2.Bundle:
         """Bind the extracted entities to the entities OpenCTI already knows."""
-        bound_bundle, summary = self.existing_entity_binder.bind(bundle)
+        try:
+            bound_bundle, summary = self.existing_entity_binder.bind(bundle)
+        except Exception as error:  # the binding never fails an import
+            self.helper.connector_logger.error(
+                "Could not bind the extracted entities to the existing ones, "
+                "importing them as extracted",
+                {"error": f"{type(error).__name__}: {error}"},
+            )
+            return bundle
         for binding in summary.bindings:
             self.helper.connector_logger.debug(
                 "Bound an extracted entity to an existing OpenCTI entity",

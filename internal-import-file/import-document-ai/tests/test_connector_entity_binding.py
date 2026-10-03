@@ -115,6 +115,7 @@ def build_connector(
     helper.api.query.return_value = {"data": {"settings": {"id": "instance-id"}}}
     helper.api_impersonate.query.side_effect = platform.query
     helper.applicant_id = "88ec0c6a-13ce-5e39-b486-354fe4a7084f"
+    helper.draft_id = ""
     helper.get_only_contextual.return_value = False
     config = Mock()
     config.import_document_ai.include_relationships = False
@@ -332,3 +333,28 @@ def test_import_against_a_platform_without_curation_resolve_is_unchanged(
     ]
     assert len(fallback_logs) == 1
     helper.connector_logger.warning.assert_not_called()
+
+
+def test_an_unexpected_binding_error_does_not_fail_the_import(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    # Given a binder failing in an unexpected way
+    extracted = extraction(with_report=True)
+    connector, helper = build_connector(
+        monkeypatch, extracted, Platform(), resolve_existing_entities=False
+    )
+    connector.process_message(data={})
+    expected = sent(helper.send_stix2_bundle.call_args)
+    connector, helper = build_connector(monkeypatch, extracted, Platform())
+    connector.existing_entity_binder.bind = Mock(side_effect=RuntimeError("boom"))
+
+    # When importing a document
+    connector.process_message(data={})
+
+    # Then the document is imported as extracted, and the error logged
+    assert sent(helper.send_stix2_bundle.call_args) == expected
+    helper.connector_logger.error.assert_called_once_with(
+        "Could not bind the extracted entities to the existing ones, "
+        "importing them as extracted",
+        {"error": "RuntimeError: boom"},
+    )

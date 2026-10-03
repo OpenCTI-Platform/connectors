@@ -9,8 +9,9 @@ A match binds the extracted object to the existing entity: it takes the
 entity's standard id and canonical name, keeps the spelling of the document as
 an alias, and every reference to its former id follows.
 
-The lookups run with the permissions of the user who triggered the import, are
-cached and bounded per document, and never block the import: a platform that
+The lookups run with the permissions of the user who triggered the import, in
+the draft the import targets, are cached and bounded per document, and never
+block the import: a platform that
 does not expose ``curationResolve`` is detected on the first lookup and the
 binding is skipped for the lifetime of the process, and any other failure
 leaves the entity as extracted.
@@ -18,8 +19,10 @@ leaves the entity as extracted.
 
 import enum
 import json
+import re
 import threading
 import time
+import uuid
 from collections import OrderedDict
 from collections.abc import Callable, Hashable, Iterable
 from dataclasses import dataclass, field
@@ -112,6 +115,34 @@ _LOOKUP_PRIORITY = {
 
 _SCHEMA_ERROR_CODE = "GRAPHQL_VALIDATION_FAILED"
 _UNKNOWN_QUERY_MESSAGE = 'Cannot query field "curationResolve"'
+_STIX_TYPE_RE = re.compile(r"[a-z][a-z0-9-]*[a-z0-9]")
+
+
+def is_stix_id(value: object) -> bool:
+    """Whether a value is a STIX identifier: ``<type>--<UUID>``, in canonical form.
+
+    Args:
+        value (object): The value to check.
+
+    Returns:
+        (bool): True for an identifier such as
+            ``malware--e5fd2b5f-3ae4-5b44-8a46-0a24c7f2e2f1``.
+
+    Examples:
+        >>> is_stix_id("malware--e5fd2b5f-3ae4-5b44-8a46-0a24c7f2e2f1")
+        True
+        >>> is_stix_id("malware--invalid")
+        False
+    """
+    if not isinstance(value, str):
+        return False
+    stix_type, separator, identifier = value.partition("--")
+    if not separator or not _STIX_TYPE_RE.fullmatch(stix_type):
+        return False
+    try:
+        return str(uuid.UUID(identifier)) == identifier
+    except ValueError:
+        return False
 
 
 def resolve_entity_type(stix_object: stix2.v21._STIXBase21 | dict) -> str | None:
@@ -234,15 +265,15 @@ class EntityResolution:
         standard_id = payload.get("standard_id")
         entity_type = payload.get("entity_type")
         name = payload.get("name")
+        if not is_stix_id(standard_id):
+            raise ValueError(f"invalid standard_id {standard_id!r}")
         if not (
-            isinstance(standard_id, str)
-            and "--" in standard_id
-            and isinstance(entity_type, str)
+            isinstance(entity_type, str)
             and entity_type
             and isinstance(name, str)
             and name.strip()
         ):
-            raise ValueError("missing standard_id, entity_type or name")
+            raise ValueError("missing entity_type or name")
         score = payload.get("score")
         matched_value = payload.get("matched_value")
         return cls(
@@ -472,7 +503,7 @@ class ExistingEntityBinder:
 
     One binder serves every document the connector imports: it remembers
     whether the platform exposes ``curationResolve`` and caches the
-    resolutions across documents, per user, for a few minutes.
+    resolutions across documents, per user and draft, for a few minutes.
     """
 
     def __init__(
@@ -595,13 +626,19 @@ class ExistingEntityBinder:
             candidates, key=lambda candidate: _LOOKUP_PRIORITY[candidate.stix_type]
         ):
             pending.setdefault(candidate.key, candidate)
-        applicant_id = getattr(self._helper, "applicant_id", None)
+        # The impersonating client sends the lookups as the user who triggered
+        # the import and in the draft the import targets (pycti sets both per
+        # message): a resolution only holds for that user in that draft.
+        scope = (
+            getattr(self._helper, "applicant_id", None),
+            getattr(self._helper, "draft_id", None) or None,
+        )
         resolutions = {}
         consecutive_failures = 0
         over_budget = 0
         after_failures = 0
         for key, candidate in pending.items():
-            cache_key = (applicant_id, *key)
+            cache_key = (*scope, *key)
             cached, resolution = self._cache.get(cache_key)
             if cached:
                 summary.cache_hits += 1
@@ -694,7 +731,7 @@ class ExistingEntityBinder:
         except ValueError as error:
             return _LookupResult(
                 _LookupStatus.FAILED,
-                error=f"unexpected curationResolve result: {error}",
+                error=f"unexpected curationResolve result: {error}"[:_MAX_ERROR_LENGTH],
             )
         return _LookupResult(_LookupStatus.ANSWERED, resolution)
 
