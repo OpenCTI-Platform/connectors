@@ -21,6 +21,7 @@ from connectors_sdk import (
     ApiClientError,
     ApiServerError,
     DeploymentAssurance,
+    HitCollection,
     IndicatorDeployment,
     VendorIndicator,
 )
@@ -403,7 +404,7 @@ def test_get_ioc_alerts_filters_ioc_alerts_since_a_date(xdr_client, monkeypatch)
         {"field": "alert_source", "operator": "in", "value": ["XDR IOC"]},
     ]
     assert (request_data["search_from"], request_data["search_to"]) == (0, 2)
-    assert request_data["sort"] == {"field": "creation_time", "keyword": "desc"}
+    assert request_data["sort"] == {"field": "creation_time", "keyword": "asc"}
     assert second.kwargs["json"]["request_data"]["search_to"] == 3
 
 
@@ -566,17 +567,27 @@ def test_adapter_credits_every_indicator_sharing_a_value():
     assert sorted(hit.indicator_id for hit in hits) == sorted([INDICATOR_ID, OTHER_ID])
 
 
-def test_adapter_warns_when_the_alert_cap_is_reached(monkeypatch):
+def test_adapter_capped_read_is_complete_until_the_newest_alert(monkeypatch):
     monkeypatch.setattr("connector.deployment.MAX_HIT_ALERTS", 2)
     connector = build_connector()
-    connector.client.get_ioc_alerts.return_value = [{}, {}]
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
 
-    adapter = CortexXdrDeploymentAdapter(connector)
+    def at(minute):
+        return int(datetime(2026, 10, 3, 11, minute, tzinfo=UTC).timestamp() * 1000)
 
-    assert adapter.collect_hits([make_deployment()], datetime.now(UTC)) == []
-    connector.client.get_ioc_alerts.assert_called_once()
-    assert connector.client.get_ioc_alerts.call_args.args[1] == 2
-    connector.helper.connector_logger.warning.assert_called_once()
+    connector.client.get_ioc_alerts.return_value = [
+        {"detection_timestamp": at(5), "action_remote_ip": "198.51.100.7"},
+        {"detection_timestamp": at(9), "action_remote_ip": "203.0.113.9"},
+    ]
+
+    collected = CortexXdrDeploymentAdapter(connector).collect_hits(
+        [make_deployment()], since
+    )
+
+    assert isinstance(collected, HitCollection)
+    assert collected.complete_until == datetime(2026, 10, 3, 11, 9, tzinfo=UTC)
+    assert [hit.indicator_id for hit in collected.hits] == [INDICATOR_ID]
+    assert connector.client.get_ioc_alerts.call_args.args == (since, 2)
 
 
 def test_adapter_hits_without_values_read_no_alert():

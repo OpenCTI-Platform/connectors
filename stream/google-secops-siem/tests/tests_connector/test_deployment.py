@@ -11,6 +11,7 @@ import requests
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentReconciler,
+    HitCollection,
     IndicatorDeployment,
 )
 from pycti import OpenCTIConnectorHelper
@@ -480,15 +481,74 @@ def test_adapter_credits_every_indicator_sharing_a_value(connector):
     assert sorted(hit.indicator_id for hit in hits) == sorted([INDICATOR_ID, OTHER_ID])
 
 
-def test_adapter_warns_when_more_matches_are_available(connector):
-    connector.api_client.list_ioc_matches.return_value = ([], True)
+def test_adapter_halves_truncated_windows_oldest_first(connector):
+    since = NOW - timedelta(hours=1)
+    middle = NOW - timedelta(minutes=30)
+    shared = ioc_match(NOW - timedelta(minutes=1), destinationIpAddress="198.51.100.7")
+    replies = {
+        (since, NOW): ([], True),
+        (since, middle): ([shared], False),
+        (middle, NOW): ([shared, ioc_match(NOW, domain="evil.example")], False),
+    }
+    connector.api_client.list_ioc_matches.side_effect = (
+        lambda start, end, limit: replies[(start, end)]
+    )
+    deployments = [
+        make_deployment(),
+        make_deployment(
+            indicator_id=OTHER_ID, pattern="[domain-name:value = 'evil.example']"
+        ),
+    ]
 
-    hits = SecOpsDeploymentAdapter(connector).collect_hits(
-        [make_deployment()], datetime.now(UTC) - timedelta(hours=1)
+    hits = SecOpsDeploymentAdapter(connector, clock=lambda: NOW).collect_hits(
+        deployments, since
     )
 
-    assert list(hits) == []
-    connector.helper.connector_logger.warning.assert_called_once()
+    assert [hit.indicator_id for hit in hits] == [INDICATOR_ID, OTHER_ID]
+    windows = [
+        call.args[:2] for call in connector.api_client.list_ioc_matches.call_args_list
+    ]
+    assert windows == [(since, NOW), (since, middle), (middle, NOW)]
+
+
+def test_adapter_resumes_after_the_read_budget(connector, monkeypatch):
+    monkeypatch.setattr("secops_siem_connector.deployment.MAX_HIT_WINDOW_READS", 2)
+    since = NOW - timedelta(hours=1)
+    middle = NOW - timedelta(minutes=30)
+    connector.api_client.list_ioc_matches.side_effect = [
+        ([], True),
+        (
+            [
+                ioc_match(
+                    middle - timedelta(minutes=1), destinationIpAddress="198.51.100.7"
+                )
+            ],
+            False,
+        ),
+    ]
+
+    collected = SecOpsDeploymentAdapter(connector, clock=lambda: NOW).collect_hits(
+        [make_deployment()], since
+    )
+
+    assert isinstance(collected, HitCollection)
+    assert collected.complete_until == middle
+    assert [hit.indicator_id for hit in collected.hits] == [INDICATOR_ID]
+
+
+def test_adapter_keeps_the_shortest_window_as_read(connector):
+    since = NOW - timedelta(seconds=30)
+    connector.api_client.list_ioc_matches.return_value = (
+        [ioc_match(NOW, destinationIpAddress="198.51.100.7")],
+        True,
+    )
+
+    hits = SecOpsDeploymentAdapter(connector, clock=lambda: NOW).collect_hits(
+        [make_deployment()], since
+    )
+
+    assert [hit.indicator_id for hit in hits] == [INDICATOR_ID]
+    connector.api_client.list_ioc_matches.assert_called_once()
 
 
 def test_adapter_hits_without_values_read_no_match(connector):

@@ -24,6 +24,7 @@ from connectors_sdk import (
     ApiClientError,
     DeploymentAssurance,
     DeploymentVendorAdapter,
+    HitCollection,
     IndicatorDeployment,
     VendorHit,
     VendorIndicator,
@@ -228,10 +229,13 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
 
     def collect_hits(
         self, deployments: Sequence[IndicatorDeployment], since: datetime
-    ) -> Iterable[VendorHit]:
+    ) -> Iterable[VendorHit] | HitCollection:
         """Read the IOC alerts whose events match deployed indicators.
 
         Each alert counts one hit per matching indicator, at its detection time.
+        Alerts are read oldest first: when `MAX_HIT_ALERTS` alerts were read, the
+        collection is complete until the newest alert read and the next run
+        resumes there.
 
         :raises CortexXdrDeploymentError: When the alerts cannot be listed.
         """
@@ -243,19 +247,15 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
             return []
         with _readable_errors():
             alerts = self._client.get_ioc_alerts(since, MAX_HIT_ALERTS)
-        if len(alerts) >= MAX_HIT_ALERTS:
-            self._connector.helper.connector_logger.warning(
-                "[DEPLOYMENT] More IOC alerts than read by one hit collection, "
-                "the oldest ones are not counted.",
-                {"limit": MAX_HIT_ALERTS},
-            )
         hits: list[VendorHit] = []
+        newest = since
         for alert in alerts:
             timestamp = _timestamp(alert.get("detection_timestamp")) or _timestamp(
                 alert.get("local_insert_ts")
             )
             if timestamp is None or timestamp < since:
                 continue
+            newest = max(newest, timestamp)
             matched = {
                 deployment.indicator_id
                 for value in _alert_values(alert)
@@ -265,6 +265,8 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
                 VendorHit(timestamp=timestamp, indicator_id=indicator_id)
                 for indicator_id in sorted(matched)
             )
+        if len(alerts) >= MAX_HIT_ALERTS:
+            return HitCollection(hits=hits, complete_until=newest)
         return hits
 
 

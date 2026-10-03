@@ -13,13 +13,14 @@ Presence, absence and withdrawal are not reconciled: an imported entity stays li
 Google SecOps until the end of its validity interval (the indicator `valid_until`).
 """
 
-from collections.abc import Iterable, Mapping, Sequence
-from datetime import UTC, datetime
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentPushAdapter,
+    HitCollection,
     IndicatorDeployment,
     VendorHit,
 )
@@ -29,7 +30,13 @@ if TYPE_CHECKING:
     from secops_siem_connector.connector import SecOpsSIEMConnector
 
 MAX_HIT_MATCHES = 10_000
-"""Maximum number of IoC matches read by one hit collection."""
+"""Maximum number of IoC matches read by one request of a hit collection."""
+
+MAX_HIT_WINDOW_READS = 8
+"""Maximum number of IoC match requests of one hit collection."""
+
+MIN_HIT_WINDOW = timedelta(minutes=1)
+"""Shortest time window of IoC matches (never halved again)."""
 
 ARTIFACT_VALUE_FIELDS = (
     "domain",
@@ -62,12 +69,18 @@ def _match_values(match: Mapping[str, Any]) -> set[str]:
 class SecOpsDeploymentAdapter(DeploymentPushAdapter):
     """Vendor operations of the deployment reconciliation for Google SecOps."""
 
-    def __init__(self, connector: "SecOpsSIEMConnector") -> None:
+    def __init__(
+        self,
+        connector: "SecOpsSIEMConnector",
+        clock: Callable[[], datetime] | None = None,
+    ) -> None:
         """Initialize the adapter.
 
         :param connector: The connector, whose API client and ingest path are used.
+        :param clock: Current time provider (injectable for tests).
         """
         self._connector = connector
+        self._clock = clock or (lambda: datetime.now(UTC))
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
         """Ingest an indicator again, with the stream ingest path.
@@ -80,7 +93,7 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
 
     def collect_hits(
         self, deployments: Sequence[IndicatorDeployment], since: datetime
-    ) -> Iterable[VendorHit]:
+    ) -> Iterable[VendorHit] | HitCollection:
         """Read the IoC matches whose artifact is the value of a deployed indicator.
 
         A match counts one hit per matching indicator, at the time Google SecOps last saw
@@ -94,15 +107,7 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
                 by_value.setdefault(value, []).append(deployment)
         if not by_value:
             return []
-        matches, more_available = self._connector.api_client.list_ioc_matches(
-            since, datetime.now(UTC), MAX_HIT_MATCHES
-        )
-        if more_available:
-            self._connector.helper.connector_logger.warning(
-                "[DEPLOYMENT] More IoC matches than read by one hit collection, "
-                "the oldest ones are not counted.",
-                {"limit": MAX_HIT_MATCHES},
-            )
+        matches, complete_until = self._read_matches(since)
         hits: list[VendorHit] = []
         for match in matches:
             timestamp = parse_datetime(match.get("lastSeenTimestamp"))
@@ -117,7 +122,48 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
                 VendorHit(timestamp=timestamp, indicator_id=indicator_id)
                 for indicator_id in sorted(matched)
             )
+        if complete_until is not None:
+            return HitCollection(hits=hits, complete_until=complete_until)
         return hits
+
+    def _read_matches(
+        self, since: datetime
+    ) -> tuple[list[dict[str, Any]], datetime | None]:
+        """Read the IoC matches since a date, by time windows.
+
+        The IoC matches API returns the most recent matches first and only tells that
+        more were available: a truncated window is halved and its halves are read,
+        oldest first, so the matches read are complete up to a known date. A window of
+        `MIN_HIT_WINDOW` still truncated is kept as read (its count is a lower bound).
+        A match returned by several windows is kept once.
+
+        :return: The matches, and `None` when every window was read, otherwise the
+            start of the first window left unread after `MAX_HIT_WINDOW_READS` reads.
+        """
+        matches: dict[tuple[Any, ...], dict[str, Any]] = {}
+        windows = [(since, self._clock())]
+        reads = 0
+        while windows:
+            start, end = windows.pop()
+            if reads >= MAX_HIT_WINDOW_READS:
+                return list(matches.values()), start
+            window_matches, more_available = (
+                self._connector.api_client.list_ioc_matches(start, end, MAX_HIT_MATCHES)
+            )
+            reads += 1
+            if not more_available or end - start <= MIN_HIT_WINDOW:
+                for match in window_matches:
+                    key = (
+                        match.get("id"),
+                        repr(match.get("artifactIndicator")),
+                        repr(match.get("fieldAndValue")),
+                        match.get("lastSeenTimestamp"),
+                    )
+                    matches.setdefault(key, match)
+                continue
+            middle = start + (end - start) / 2
+            windows.extend([(middle, end), (start, middle)])
+        return list(matches.values()), None
 
 
 def build_deployment_assurance(connector: "SecOpsSIEMConnector") -> DeploymentAssurance:
