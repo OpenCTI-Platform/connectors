@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'CrowdStrike LogScale Hunt' # optional (default: 'CrowdStrike LogScale Hunt')
+  # scope: 'crowdstrike-logscale' # optional, hunt platform slug (default: 'crowdstrike-logscale')
+  # log_level: 'error' # optional (default: 'error')
+  # security_platform_name: 'CrowdStrike Falcon' # optional (default: 'CrowdStrike Falcon')
+  # security_platform_type: 'SIEM' # optional (default: 'SIEM')
+  # max_concurrent_runs: 2 # optional (default: none)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+crowdstrike_logscale_hunt:
+  client_id: 'ChangeMe' # CrowdStrike API client ID (deployment 'falcon')
+  client_secret: 'ChangeMe' # CrowdStrike API client secret (deployment 'falcon')
+  # deployment: 'falcon' # optional, 'falcon' (Falcon Next-Gen SIEM) or 'logscale' (LogScale cluster)
+  # base_url: 'https://api.crowdstrike.com' # optional, CrowdStrike API URL of your Falcon cloud
+  # logscale_url: '' # LogScale cluster URL (deployment 'logscale')
+  # logscale_token: '' # LogScale API token (deployment 'logscale')
+  # repository: 'search-all' # optional, repository or view searched
+  # verify_ssl: true # optional (default: true)
+  # sigma_pipeline: 'crowdstrike_falcon' # optional, 'crowdstrike_falcon', 'crowdstrike_fdr' or 'none'
+  # poll_interval: 1 # optional, seconds between two query job status checks
