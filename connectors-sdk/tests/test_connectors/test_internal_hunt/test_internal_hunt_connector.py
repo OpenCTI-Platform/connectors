@@ -468,12 +468,12 @@ def test_timeout_cancels_and_fails_the_run(connector_factory, hunt_event, hunt_h
     connector.block = True
     event = hunt_event(limits={"timeout_seconds": 1})
 
-    # When/Then the run times out, the platform job is cancelled and the run fails
+    # When/Then the run times out, the platform job is cancelled and the run is reported as a timeout
     with pytest.raises(HuntTimeoutError, match="1 seconds"):
         connector.process_message(event)
     assert len(connector.timeouts) == 1
     args, kwargs = _report_kwargs(hunt_helper)
-    assert args == ("run-1", "failed")
+    assert args == ("run-1", "timeout")
     assert kwargs["error"].startswith("HuntTimeoutError")
 
 

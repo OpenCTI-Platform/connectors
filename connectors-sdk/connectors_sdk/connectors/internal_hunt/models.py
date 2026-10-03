@@ -36,7 +36,7 @@ class HuntRunMode(StrEnum):
 
 
 class HuntRunStatus(StrEnum):
-    """Status of a hunt run (connectors only report running, completed and failed)."""
+    """Status of a hunt run (connectors report running, completed, failed and timeout)."""
 
     QUEUED = "queued"
     RUNNING = "running"
@@ -303,8 +303,10 @@ class HuntRunReport(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    status: Literal[HuntRunStatus.COMPLETED, HuntRunStatus.FAILED] = Field(
-        description="Final status of the run."
+    status: Literal[
+        HuntRunStatus.COMPLETED, HuntRunStatus.FAILED, HuntRunStatus.TIMEOUT
+    ] = Field(
+        description="Final status of the run, timeout when it exceeded its deadline."
     )
     translated_query: str | None = Field(
         default=None, description="Query executed on the platform."
