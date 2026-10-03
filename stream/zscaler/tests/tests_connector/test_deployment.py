@@ -530,6 +530,69 @@ def test_activation_failure_is_reported_failed(connector, activation, message):
     connector.assurance.report_pushed.assert_not_called()
 
 
+def activate(connector, statuses, activations, max_retries=5):
+    """Run the activation (without the tenacity retry) against scripted responses."""
+    connector.session = MagicMock()
+    connector.session.get.side_effect = [
+        response(json_data={"status": status}) for status in statuses
+    ]
+    connector.session.post.side_effect = activations
+    return ZscalerConnector.activate_zscaler_changes.__wrapped__(
+        connector, max_retries=max_retries, delay=0
+    )
+
+
+def test_pending_changes_are_activated(connector):
+    assert activate(connector, ["PENDING"], [response(json_data={"status": "ACTIVE"})])
+    connector.session.post.assert_called_once()
+
+
+def test_activation_in_progress_is_waited_for(connector):
+    assert activate(
+        connector,
+        ["PENDING", "INPROGRESS", "ACTIVE"],
+        [response(json_data={"status": "INPROGRESS"})],
+    )
+    assert connector.session.get.call_count == 3
+    connector.session.post.assert_called_once()
+
+
+def test_configuration_already_active_is_not_activated(connector):
+    assert activate(connector, ["ACTIVE"], [])
+    connector.session.post.assert_not_called()
+
+
+def test_activation_never_completing_is_a_failure(connector):
+    assert not activate(connector, ["INPROGRESS", "INPROGRESS"], [], max_retries=2)
+    connector.helper.connector_logger.error.assert_called_with(
+        "Zscaler configuration still not active after all checks."
+    )
+
+
+def test_unreadable_status_and_busy_activation_are_retried(connector):
+    connector.session = MagicMock()
+    connector.session.get.side_effect = [
+        response(500, text="unavailable"),
+        response(json_data=ValueError("not JSON"), text="<html>"),
+    ]
+    connector.session.post.side_effect = [
+        response(503, json_data={"message": "busy"}),
+        response(503, json_data=ValueError("not JSON"), text="busy"),
+    ]
+
+    assert not ZscalerConnector.activate_zscaler_changes.__wrapped__(
+        connector, max_retries=2, delay=0
+    )
+    assert connector.session.post.call_count == 2
+
+
+def test_refused_activation_raises(connector):
+    with pytest.raises(Exception, match="Activation failed: 403 forbidden"):
+        activate(connector, ["PENDING"], [response(403, text="forbidden")])
+    with pytest.raises(Exception, match="Activation failed: No response"):
+        activate(connector, ["PENDING"], [None])
+
+
 def test_rejected_request_message_is_truncated(connector):
     connector.session = MagicMock()
     connector.session.put.return_value = response(500, text="x" * 2000)

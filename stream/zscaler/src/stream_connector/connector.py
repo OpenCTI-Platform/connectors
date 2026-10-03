@@ -33,6 +33,19 @@ class SharedDomainLookupError(Exception):
     """Error raised when OpenCTI cannot tell whether another indicator blocks a domain."""
 
 
+ACTIVATION_POLL_SECONDS = 5
+"""Seconds between two checks of a Zscaler configuration activation in progress."""
+
+
+def _activation_status(response) -> str | None:
+    """Return the activation status (`ACTIVE`, `PENDING`, `INPROGRESS`) of a ZIA response."""
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+    return payload.get("status") if isinstance(payload, dict) else None
+
+
 class ZscalerConnector:
     def __init__(
         self,
@@ -471,28 +484,51 @@ class ZscalerConnector:
         reraise=True,
     )
     def activate_zscaler_changes(self, max_retries=5, delay=30):
-        """Activate configuration changes in Zscaler with retry/backoff handled by tenacity."""
+        """Activate the pending configuration changes in Zscaler and wait until they are active.
+
+        `ACTIVE` means every change is active; `PENDING` changes are activated with
+        `POST /status/activate`; an `INPROGRESS` activation is checked again until it
+        completes. Refused activations are retried with backoff by tenacity.
+
+        :return: True once the configuration is `ACTIVE`, False when it is still not
+            after `max_retries` checks.
+        """
 
         status_url = f"{self.zscaler_base_url}/status"
         activate_url = f"{self.zscaler_base_url}/status/activate"
 
         for attempt in range(1, max_retries + 1):
-            # Check if already ACTIVE/PENDING/INPROGRESS
             status_resp = self.session.get(status_url)
-            if status_resp and status_resp.status_code == 200:
-                status = status_resp.json().get("status")
-                if status in ("ACTIVE", "PENDING", "INPROGRESS"):
+            status = (
+                _activation_status(status_resp)
+                if status_resp is not None and status_resp.status_code == 200
+                else None
+            )
+            if status == "ACTIVE":
+                self.helper.connector_logger.info("Zscaler configuration is active.")
+                return True
+            if status == "INPROGRESS":
+                self.helper.connector_logger.info(
+                    f"Zscaler activation in progress ({attempt}/{max_retries}), "
+                    f"checking again in {ACTIVATION_POLL_SECONDS}s..."
+                )
+                time.sleep(ACTIVATION_POLL_SECONDS)
+                continue
+
+            # PENDING changes (or an unreadable status): activate them.
+            resp = self.session.post(activate_url)
+            if resp is not None and resp.status_code == 200:
+                if _activation_status(resp) == "ACTIVE":
                     self.helper.connector_logger.info(
-                        f"Zscaler config status = {status}, no activation needed."
+                        "Zscaler configuration activated."
                     )
                     return True
-
-            # Try activation
-            resp = self.session.post(activate_url)
-            if resp and resp.status_code == 200:
-                self.helper.connector_logger.info("Zscaler configuration activated.")
-                return True
-            elif resp and resp.status_code == 503:
+                self.helper.connector_logger.info(
+                    "Zscaler activation started, checking its status..."
+                )
+                time.sleep(ACTIVATION_POLL_SECONDS)
+                continue
+            elif resp is not None and resp.status_code == 503:
                 try:
                     msg = resp.json().get("message", resp.text)
                 except Exception:
@@ -504,14 +540,17 @@ class ZscalerConnector:
                 delay *= 2
                 continue
             else:
-                self.helper.connector_logger.error(
-                    f"Activation failed: {resp.text if resp else 'No response'}"
+                detail = (
+                    f"{resp.status_code} {resp.text}"
+                    if resp is not None
+                    else "No response"
                 )
-                raise Exception(
-                    f"Activation failed: {resp.text if resp else 'No response'}"
-                )
+                self.helper.connector_logger.error(f"Activation failed: {detail}")
+                raise Exception(f"Activation failed: {detail}")
 
-        self.helper.connector_logger.error("Activation failed after all retries.")
+        self.helper.connector_logger.error(
+            "Zscaler configuration still not active after all checks."
+        )
         return False
 
     def _process_message(self, msg):

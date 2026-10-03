@@ -227,7 +227,8 @@ graph LR
 4. **Membership Check**: Skip the addition of a domain already in the blacklist, and the removal of a domain absent from it
 5. **Add/Remove**: Add or remove domain from URL category
 6. **Activation**: Activate the Zscaler configuration after each addition or removal (no activation when the blacklist
-   did not change); a failed activation after an addition reports the deployment `failed`
+   did not change): `PENDING` changes are activated and an activation `INPROGRESS` is checked every 5 seconds until the
+   configuration is `ACTIVE`; a failed or unfinished activation after an addition reports the deployment `failed`
 
 ### Dissemination assurance (deployment write-back)
 
