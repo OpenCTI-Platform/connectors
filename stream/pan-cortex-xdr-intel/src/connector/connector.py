@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, Protocol
 
+from connector.deployment import describe_error, rule_ids_of
 from connector.models import CortexXdrIoc, OctiIndicator
 from connectors_sdk import (
     ApiForbiddenError,
@@ -16,6 +17,7 @@ from pydantic import ValidationError
 
 if TYPE_CHECKING:
     from connector.settings import ConnectorSettings
+    from connectors_sdk import DeploymentAssurance
     from cortex_xdr_client import CortexXdrClient
     from pycti import OpenCTIConnectorHelper
 
@@ -56,6 +58,8 @@ class Connector:
             Store the connector's configuration.
         client (CortexXdrClient):
             Provide methods to request the Cortex XDR API.
+        assurance (DeploymentAssurance | None):
+            Deployment write-back (dissemination assurance), if any.
 
     ---
 
@@ -68,10 +72,12 @@ class Connector:
         helper: OpenCTIConnectorHelper,
         settings: ConnectorSettings,
         client: CortexXdrClient,
+        assurance: DeploymentAssurance | None = None,
     ) -> None:
         self.helper = helper
         self.settings = settings
         self.client = client
+        self.assurance = assurance
 
         # Reusable exit message for fatal errors logging
         self._exit_message = (
@@ -223,8 +229,14 @@ class Connector:
 
         return extracted_xdr_iocs  # type: ignore[return-value]  # `rule_id` (int) is added to each dict
 
-    def _handle_upsert(self, octi_indicator: OctiIndicator) -> None:
-        """Upsert `octi_indicator`'s supported observables into Cortex XDR as IOCs."""
+    def _handle_upsert(self, octi_indicator: OctiIndicator) -> list[str] | None:
+        """Upsert `octi_indicator`'s supported observables into Cortex XDR as IOCs.
+
+        Returns:
+            The `rule_id`s of the upserted IOCs known from the response or the
+            look-up (possibly empty), or `None` when no Cortex XDR IOC could be
+            extracted (nothing was sent).
+        """
         # Extract Cortex XDR IOCs from the indicator's observables
         # (`xdr_iocs` is re-assigned after each transformation to ease debugging)
         xdr_iocs = self._extract_xdr_iocs(octi_indicator)
@@ -239,7 +251,7 @@ class Connector:
                     "observables_count": len(octi_indicator.observables),
                 },
             )
-            return
+            return None
 
         self.helper.connector_logger.debug(
             "Upserting IOC(s) into Cortex XDR",
@@ -247,7 +259,7 @@ class Connector:
         )
 
         # Send the payloads to Cortex XDR as dicts, omitting any unset fields to let client default them.
-        self.client.insert_iocs(
+        response = self.client.insert_iocs(
             [ioc.model_dump(exclude_none=True) for ioc in xdr_iocs]  # type: ignore[arg-type]
         )
 
@@ -255,9 +267,55 @@ class Connector:
             "Successfully upserted IOC(s) into Cortex XDR",
             {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
         )
+        return rule_ids_of(response, xdr_iocs)
 
-    def _handle_delete(self, octi_indicator: OctiIndicator) -> None:
-        """Delete `octi_indicator`'s supported observables from Cortex XDR."""
+    def push_indicator(self, data: dict[str, Any]) -> str | None:
+        """Upsert an OpenCTI indicator into Cortex XDR (reconciliation re-push).
+
+        Args:
+            data: The indicator, in the stream event shape.
+
+        Returns:
+            The `rule_id` of the first Cortex XDR IOC, if known.
+
+        Raises:
+            ValueError: When no observable of the indicator can be pushed.
+            CortexXdrApiError: When Cortex XDR rejects the request.
+        """
+        octi_indicator = self._build_octi_indicator(data)
+        rule_ids = (
+            self._handle_upsert(octi_indicator) if octi_indicator.observables else None
+        )
+        if rule_ids is None:
+            raise ValueError(
+                "No observable of the indicator can be pushed to Cortex XDR"
+            )
+        return rule_ids[0] if rule_ids else None
+
+    def _report_pushed(self, data: dict[str, Any], rule_ids: list[str]) -> None:
+        """Report an indicator live in Cortex XDR, with its first `rule_id`."""
+        if self.assurance is not None:
+            self.assurance.report_pushed(
+                data, external_id=rule_ids[0] if rule_ids else None
+            )
+
+    def _report_failed(self, data: dict[str, Any], error: BaseException) -> None:
+        """Report an indicator rejected by Cortex XDR (no-op without write-back)."""
+        if self.assurance is not None:
+            self.assurance.report_push_failed(data, describe_error(error))
+
+    def _report_removed(self, data: dict[str, Any]) -> None:
+        """Report an indicator deleted from Cortex XDR (no-op without write-back)."""
+        if self.assurance is not None:
+            self.assurance.report_removed(data)
+
+    def _handle_delete(self, octi_indicator: OctiIndicator) -> bool:
+        """Delete `octi_indicator`'s supported observables from Cortex XDR.
+
+        Returns:
+            `True` when the deletion was sent, `False` when no Cortex XDR IOC could
+            be extracted (nothing was sent).
+        """
         # Extract Cortex XDR IOCs from the indicator's observables
         xdr_iocs = self._extract_xdr_iocs(octi_indicator)
         if not xdr_iocs:
@@ -269,7 +327,7 @@ class Connector:
                     "observables_count": len(octi_indicator.observables),
                 },
             )
-            return
+            return False
 
         self.helper.connector_logger.debug(
             "Deleting IOC(s) from Cortex XDR",
@@ -291,6 +349,7 @@ class Connector:
             "Successfully deleted IOC(s) from Cortex XDR",
             {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
         )
+        return True
 
     def _process_message(self, msg: StreamMessage) -> None:
         """Process a single stream event message.
@@ -373,11 +432,16 @@ class Connector:
 
         try:
             if event in {"create", "update"}:
-                self._handle_upsert(octi_indicator)
+                rule_ids = self._handle_upsert(octi_indicator)
+                if rule_ids is not None:
+                    self._report_pushed(entity_data, rule_ids)
             elif event == "delete":
-                self._handle_delete(octi_indicator)
+                if self._handle_delete(octi_indicator):
+                    self._report_removed(entity_data)
 
         except CortexXdrApiError as err:
+            if event != "delete":
+                self._report_failed(entity_data, err)
             fatal_causes = (
                 ApiUnauthorizedError,  # 401
                 ApiForbiddenError,  # 403
@@ -411,6 +475,8 @@ class Connector:
                 )
                 return  # skip the event and continue
         except Exception as err:
+            if event != "delete":
+                self._report_failed(entity_data, err)
             # Repetitive unexpected errors could consume the stream in vain (no action performed).
             # To avoid data loss, the connector must stop and the issue must be investigated and fixed before resuming.
             self.helper.connector_logger.error(
@@ -425,4 +491,6 @@ class Connector:
 
     def start(self) -> None:
         """Start the connector's main loop: listen to the OpenCTI stream and process each message."""
+        if self.assurance is not None:
+            self.assurance.start()
         self.helper.listen_stream(self._process_message)
