@@ -22,6 +22,7 @@ import atexit
 import threading
 import time
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Any
 
@@ -540,10 +541,29 @@ class DeploymentReporter:
                 timer.start()
             flush_now = queued >= MAX_BATCH_SIZE and not self._waiting_for_write_back
         if flush_now:
-            self.flush()
+            # Never blocks the stream: a held queue is sent when the holder releases it.
+            self.flush(wait=False)
         return True
 
-    def flush(self) -> DeploymentBatchResult:
+    @contextmanager
+    def holding_queued_reports(self) -> Iterator[None]:
+        """Hold the queued (stream) reports while a snapshot based batch is built and sent.
+
+        The reports queued before are sent first and the ones queued while held are
+        sent right after, so an outcome newer than the snapshot is always applied last.
+
+        Yields:
+            Nothing; the queued reports are held until the block ends.
+        """
+        self.flush()
+        self._send_lock.acquire()
+        try:
+            yield
+        finally:
+            self._send_lock.release()
+        self.flush()
+
+    def flush(self, *, wait: bool = True) -> DeploymentBatchResult:
         """Send the queued reports now.
 
         While the write-back is not available yet (feature detection or security
@@ -551,23 +571,39 @@ class DeploymentReporter:
         (at most ``MAX_QUEUED_REPORTS``). They are dropped when the platform is known
         not to support the write-back.
 
+        Args:
+            wait: Wait for the sends held by another batch. When ``False`` and the
+                sends are held, the reports stay queued for the next flush.
+
         Returns:
             The result of the batch.
         """
-        with self._send_lock:
-            with self._buffer_lock:
-                reports = list(self._buffer.values())
-                self._buffer.clear()
-                if self._flush_timer is not None:
-                    self._flush_timer.cancel()
-                    self._flush_timer = None
-            if not reports:
-                return DeploymentBatchResult()
-            if self._awaiting_write_back():
-                self._requeue(reports)
-                return DeploymentBatchResult()
-            self._waiting_for_write_back = False
-            return self.report_indicator_deployments(reports)
+        if not self._send_lock.acquire(blocking=wait):
+            return DeploymentBatchResult()
+        try:
+            return self._flush_queued()
+        finally:
+            self._send_lock.release()
+
+    def _flush_queued(self) -> DeploymentBatchResult:
+        """Send the queued reports, the send lock being held.
+
+        Returns:
+            The result of the batch.
+        """
+        with self._buffer_lock:
+            reports = list(self._buffer.values())
+            self._buffer.clear()
+            if self._flush_timer is not None:
+                self._flush_timer.cancel()
+                self._flush_timer = None
+        if not reports:
+            return DeploymentBatchResult()
+        if self._awaiting_write_back():
+            self._requeue(reports)
+            return DeploymentBatchResult()
+        self._waiting_for_write_back = False
+        return self.report_indicator_deployments(reports)
 
     def _awaiting_write_back(self) -> bool:
         """Tell whether the write-back is expected to become available later.

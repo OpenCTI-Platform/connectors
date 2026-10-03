@@ -9,6 +9,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from connectors_sdk.connectors.stream.deployment.models import (
+    DeploymentReport,
+    DeploymentStatus,
     HitCollection,
     IndicatorDeployment,
     VendorHit,
@@ -721,6 +723,100 @@ def test_complete_hit_collection_advances_the_window(
     reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
 
     assert reconciler.run_once().hits_reported == 1
+    assert reconciler._hits_since == NOW - reconciler._hits_lookback
+
+
+def test_stream_reports_queued_during_the_snapshot_are_sent_after_it(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """A stream removal that happens while the vendor is read back is applied after
+    the (stale) `active` report of the snapshot, never before."""
+    list_nodes(node_factory(indicator_id="a", status="deployed"))
+    reporter = make_reporter(graphql_helper)
+
+    class StreamDuringSnapshot(FakeAdapter):
+        def list_vendor_indicators(self):
+            reporter.enqueue(
+                DeploymentReport(indicator_id="a", status=DeploymentStatus.REMOVED)
+            )
+            yield from super().list_vendor_indicators()
+
+    adapter = StreamDuringSnapshot(vendor=[VendorIndicator(indicator_id="a")])
+
+    make_reconciler(reporter, adapter).run_once()
+
+    batches = [
+        [(report["indicatorId"], report["status"]) for report in call["reports"]]
+        for call in router.calls_of("IndicatorReportDeployments(")
+    ]
+    assert batches == [[("a", "active")], [("a", "removed")]]
+
+
+def test_queued_reports_are_held_without_blocking(
+    graphql_helper, make_reporter, router
+):
+    reporter = make_reporter(graphql_helper)
+
+    with reporter.holding_queued_reports():
+        reporter.enqueue(
+            DeploymentReport(indicator_id="a", status=DeploymentStatus.REMOVED)
+        )
+        assert reporter.flush(wait=False).processed == 0
+        assert router.calls_of("IndicatorReportDeployments(") == []
+
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert batch["reports"][0]["indicatorId"] == "a"
+
+
+def test_hit_window_is_kept_when_no_report_is_accepted(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """An OpenCTI outage longer than the lookback window loses no detection."""
+    router.handlers["IndicatorReportHits("] = ValueError("unavailable")
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    reconciler.run_once()
+    assert reconciler._hits_since is None
+
+    reconciler.run_once()
+    assert adapter.hits_calls[1][1] == adapter.hits_calls[0][1]
+
+
+def test_hit_window_advances_past_a_single_rejected_indicator(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    calls = []
+
+    def report_hits(variables):
+        calls.append(variables["indicatorId"])
+        if variables["indicatorId"] == "gone":
+            raise ValueError("Indicator not found or not accessible")
+        return {"data": {"indicatorReportHits": {"id": "sighting"}}}
+
+    router.handlers["IndicatorReportHits("] = report_hits
+    list_nodes(
+        node_factory(indicator_id="a", status="active", standard_id="indicator--a"),
+        node_factory(indicator_id="gone", status="active", standard_id="indicator--g"),
+    )
+    adapter = FakeAdapter(
+        vendor=[
+            VendorIndicator(indicator_id="a"),
+            VendorIndicator(indicator_id="gone"),
+        ],
+        hits=[
+            VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a"),
+            VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="gone"),
+        ],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 1
+    assert sorted(calls) == ["a", "gone"]
     assert reconciler._hits_since == NOW - reconciler._hits_lookback
 
 
