@@ -154,6 +154,59 @@ def _is_batch_result(data: Any) -> bool:
     return isinstance(data, Mapping) and data.get("processed") is not None
 
 
+def _deployments_page(response: Any) -> tuple[list[Mapping[str, Any]], str | None]:
+    """Return the relationship nodes and the next cursor of a deployments page.
+
+    The reconciler acts on the absence of a deployment, so a page that is not a
+    complete connection is never read as empty or as the last page.
+
+    Args:
+        response: The ``IndicatorDeploymentsOfPlatform`` response.
+
+    Returns:
+        The nodes of the page and the cursor of the next page (``None`` on the
+        last page).
+
+    Raises:
+        DeploymentListingError: When the response carries no connection, edges
+            or page information, an edge without its relationship, or a next page
+            without its cursor.
+    """
+    data = response.get("data") if isinstance(response, Mapping) else None
+    connection = (
+        data.get("stixCoreRelationships") if isinstance(data, Mapping) else None
+    )
+    if not isinstance(connection, Mapping):
+        raise DeploymentListingError("OpenCTI returned no deployments connection")
+    edges = connection.get("edges")
+    page_info = connection.get("pageInfo")
+    if not isinstance(edges, list) or not isinstance(page_info, Mapping):
+        raise DeploymentListingError(
+            "OpenCTI returned a deployments page without its edges or page information"
+        )
+    nodes: list[Mapping[str, Any]] = []
+    for edge in edges:
+        node = edge.get("node") if isinstance(edge, Mapping) else None
+        if not isinstance(node, Mapping):
+            raise DeploymentListingError(
+                "OpenCTI returned a deployments edge without its relationship"
+            )
+        nodes.append(node)
+    has_next_page = page_info.get("hasNextPage")
+    if not isinstance(has_next_page, bool):
+        raise DeploymentListingError(
+            "OpenCTI returned a deployments page without hasNextPage"
+        )
+    if not has_next_page:
+        return nodes, None
+    end_cursor = page_info.get("endCursor")
+    if not end_cursor:
+        raise DeploymentListingError(
+            "OpenCTI announced a next deployments page without its cursor"
+        )
+    return nodes, str(end_cursor)
+
+
 def _is_folded_call_failure(
     chunk: Sequence[DeploymentReport], result: DeploymentBatchResult
 ) -> bool:
@@ -585,8 +638,9 @@ class DeploymentReporter:
             The deployments, page by page (500 per page).
 
         Raises:
-            DeploymentListingError: If a page cannot be read. Callers that decide on
-                the absence of an indicator must not rely on a partial listing.
+            DeploymentListingError: If a page cannot be read or is malformed.
+                Callers that decide on the absence of an indicator must not rely
+                on a partial listing.
         """
         platform_id = self._ready(REPORT_DEPLOYMENT_MUTATION)
         if platform_id is None:
@@ -616,7 +670,8 @@ class DeploymentReporter:
             The relationship nodes, page by page.
 
         Raises:
-            DeploymentListingError: If a page cannot be read.
+            DeploymentListingError: If a page cannot be read, is malformed, or
+                points back to a page already read.
         """
         filters = (
             {
@@ -628,6 +683,7 @@ class DeploymentReporter:
             else None
         )
         after: str | None = None
+        followed: set[str] = set()
         while True:
             try:
                 response = self._execute(
@@ -644,16 +700,16 @@ class DeploymentReporter:
                 raise DeploymentListingError(
                     f"Cannot list the deployments of the security platform: {err}"
                 ) from err
-            connection = (response.get("data") or {}).get("stixCoreRelationships") or {}
-            for edge in connection.get("edges") or []:
-                node = edge.get("node") if isinstance(edge, Mapping) else None
-                if isinstance(node, Mapping):
-                    yield node
-            page_info = connection.get("pageInfo") or {}
-            end_cursor = page_info.get("endCursor")
-            if not page_info.get("hasNextPage") or not end_cursor:
+            nodes, next_cursor = _deployments_page(response)
+            yield from nodes
+            if next_cursor is None:
                 return
-            after = str(end_cursor)
+            if next_cursor in followed:
+                raise DeploymentListingError(
+                    "OpenCTI returned a deployments cursor that was already followed"
+                )
+            followed.add(next_cursor)
+            after = next_cursor
 
     def enqueue(self, report: DeploymentReport) -> bool:
         """Queue a report, flushed with the next batch.

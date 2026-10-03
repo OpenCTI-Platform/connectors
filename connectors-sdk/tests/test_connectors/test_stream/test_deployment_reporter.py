@@ -973,7 +973,6 @@ def test_list_indicator_deployments_paginates(
                         "edges": [
                             {"node": node_factory(indicator_id="a")},
                             {"node": {"id": "unreadable", "from": None}},
-                            "not an edge",
                         ],
                         "pageInfo": {"endCursor": "cursor-1", "hasNextPage": True},
                     }
@@ -1015,28 +1014,84 @@ def test_list_indicator_deployments_paginates(
 def test_list_indicator_deployments_without_status_filter(
     graphql_helper, make_reporter, router
 ):
-    """All statuses are listed without a filter; empty pages stop the listing."""
-    router.handlers["IndicatorDeploymentsOfPlatform"] = {"data": None}
+    """All statuses are listed without a filter; an empty last page ends the listing."""
     reporter = make_reporter(graphql_helper)
     assert list(reporter.list_indicator_deployments()) == []
     assert router.calls_of("IndicatorDeploymentsOfPlatform")[0]["filters"] is None
 
 
-def test_list_indicator_deployments_stops_without_cursor(
+def _page(edges, page_info):
+    return {"data": {"stixCoreRelationships": {"edges": edges, "pageInfo": page_info}}}
+
+
+_LAST_PAGE = {"endCursor": None, "hasNextPage": False}
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        None,
+        {"data": None},
+        {"data": {"stixCoreRelationships": None}},
+        {"data": {"stixCoreRelationships": {"pageInfo": _LAST_PAGE}}},
+        _page(None, _LAST_PAGE),
+        _page([], None),
+        _page(["not an edge"], _LAST_PAGE),
+        _page([{"node": None}], _LAST_PAGE),
+        _page([], {"endCursor": None}),
+        _page([], {"endCursor": None, "hasNextPage": True}),
+        _page([], {"endCursor": "", "hasNextPage": True}),
+    ],
+    ids=[
+        "no response",
+        "null data",
+        "null connection",
+        "no edges",
+        "null edges",
+        "null page information",
+        "malformed edge",
+        "edge without its relationship",
+        "no hasNextPage",
+        "next page without cursor",
+        "next page with an empty cursor",
+    ],
+)
+def test_list_indicator_deployments_rejects_a_malformed_page(
+    graphql_helper, make_reporter, router, response
+):
+    """A page that is not a complete connection is never read as empty or as the last page."""
+    router.handlers["IndicatorDeploymentsOfPlatform"] = response
+    reporter = make_reporter(graphql_helper)
+    with pytest.raises(DeploymentListingError, match="OpenCTI"):
+        list(reporter.list_indicator_deployments())
+
+
+def test_list_indicator_deployments_rejects_a_cursor_already_followed(
     graphql_helper, make_reporter, router, node_factory
 ):
-    """A next page without cursor ends the listing."""
-    router.handlers["IndicatorDeploymentsOfPlatform"] = {
-        "data": {
-            "stixCoreRelationships": {
-                "edges": [{"node": node_factory()}],
-                "pageInfo": {"endCursor": None, "hasNextPage": True},
-            }
-        }
-    }
+    """A cursor pointing back to a page already read never loops nor ends the listing."""
+    pages = iter(
+        [
+            _page(
+                [{"node": node_factory(indicator_id="a")}],
+                {"endCursor": "cursor-1", "hasNextPage": True},
+            ),
+            _page(
+                [{"node": node_factory(indicator_id="b")}],
+                {"endCursor": "cursor-2", "hasNextPage": True},
+            ),
+            _page(
+                [{"node": node_factory(indicator_id="a")}],
+                {"endCursor": "cursor-1", "hasNextPage": True},
+            ),
+        ]
+    )
+    router.handlers["IndicatorDeploymentsOfPlatform"] = lambda _variables: next(pages)
     reporter = make_reporter(graphql_helper)
-    assert len(list(reporter.list_indicator_deployments())) == 1
-    assert len(router.calls_of("IndicatorDeploymentsOfPlatform")) == 1
+
+    with pytest.raises(DeploymentListingError, match="already followed"):
+        list(reporter.list_indicator_deployments())
+    assert len(router.calls_of("IndicatorDeploymentsOfPlatform")) == 3
 
 
 def test_list_indicator_deployments_raises_on_error(
