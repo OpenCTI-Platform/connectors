@@ -986,6 +986,60 @@ def test_undelivered_hit_reports_are_sent_with_the_next_run(
     assert reconciler._pending_hits == {}
 
 
+def test_a_hit_held_in_an_undelivered_report_is_not_counted_again(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """The hit reads overlap: a hit already held in an undelivered report is not
+    added to it again when the next run reads it a second time."""
+    router.handlers["IndicatorReportHits("] = ValueError("unavailable")
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    first_hit = VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")
+    adapter = FakeAdapter(vendor=[VendorIndicator(indicator_id="a")], hits=[first_hit])
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+    reconciler.run_once()
+
+    router.handlers["IndicatorReportHits("] = {
+        "data": {"indicatorReportHits": {"id": "sighting"}}
+    }
+    adapter.hits = [
+        first_hit,
+        VendorHit(timestamp=NOW - timedelta(minutes=1), indicator_id="a"),
+    ]
+    assert reconciler.run_once().hits_reported == 1
+    delivered = router.calls_of("IndicatorReportHits(")[-1]
+    assert delivered["count"] == 2
+    assert delivered["firstHit"] == "2026-10-03T11:55:00.000Z"
+    assert delivered["lastHit"] == "2026-10-03T11:59:00.000Z"
+
+
+def test_a_newer_last_hit_recorded_by_opencti_stays_the_watermark(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    router.handlers["IndicatorReportHits("] = ValueError("unavailable")
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=10), indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+    reconciler.run_once()
+
+    router.handlers["IndicatorReportHits("] = {
+        "data": {"indicatorReportHits": {"id": "sighting"}}
+    }
+    list_nodes(
+        node_factory(
+            indicator_id="a", status="active", last_hit_at="2026-10-03T11:55:00Z"
+        )
+    )
+    adapter.hits = [
+        VendorHit(timestamp=NOW - timedelta(minutes=7), indicator_id="a"),
+        VendorHit(timestamp=NOW - timedelta(minutes=2), indicator_id="a"),
+    ]
+    assert reconciler.run_once().hits_reported == 1
+    assert router.calls_of("IndicatorReportHits(")[-1]["count"] == 2
+
+
 def test_hit_reports_rejected_by_opencti_are_not_sent_again(
     graphql_helper, make_reporter, router, list_nodes, node_factory
 ):

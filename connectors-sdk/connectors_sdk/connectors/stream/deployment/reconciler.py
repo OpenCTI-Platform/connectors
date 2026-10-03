@@ -834,10 +834,8 @@ class DeploymentReconciler:
                 # A matched value is a hit of every indicator carrying it.
                 matched = index.by_value.get(value, [])
             for deployment in matched:
-                if (
-                    deployment.last_hit_at is not None
-                    and timestamp <= deployment.last_hit_at
-                ):
+                watermark = self._hit_watermark(deployment)
+                if watermark is not None and timestamp <= watermark:
                     continue
                 entry = aggregated.setdefault(
                     deployment.indicator_id, [0, timestamp, timestamp]
@@ -847,6 +845,25 @@ class DeploymentReconciler:
                 entry[2] = max(entry[2], timestamp)
         self._hits_since = next_since
         return self._send_hit_reports(aggregated, now)
+
+    def _hit_watermark(self, deployment: IndicatorDeployment) -> datetime | None:
+        """Return the time up to which the hits of a deployment are already counted.
+
+        The hit reads overlap; a hit up to the last one OpenCTI recorded, or up to
+        the last one of a report still waiting for delivery (OpenCTI has not moved
+        its ``last_hit_at`` yet), is not counted again.
+
+        Args:
+            deployment: The deployment.
+
+        Returns:
+            The newest counted hit time, or ``None`` when no hit was counted yet.
+        """
+        watermark = deployment.last_hit_at
+        pending = self._pending_hits.get(deployment.indicator_id)
+        if pending is not None and (watermark is None or pending.last_hit > watermark):
+            return pending.last_hit
+        return watermark
 
     def _send_hit_reports(self, aggregated: dict[str, list[Any]], now: datetime) -> int:
         """Send the hit reports of a run with the ones not delivered by earlier runs.
