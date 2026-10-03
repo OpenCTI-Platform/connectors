@@ -14,6 +14,8 @@ Pipfile*
 venv*
 venv_*
 .temp_venv
+.temp_venv_run
+.temp_venv_review
 black
 *.key
 *.crt
@@ -27,6 +29,7 @@ external-import/loaderinsightagency
 
 .mise/config.local.toml
 .mise/tasks/local/**
+*.pyc
 *.egg-info
 
 # Connector version stamp, generated at build time by the CI (see
