@@ -18,6 +18,7 @@ from microsoft_sentinel_intel import Connector
 from microsoft_sentinel_intel.client import ConnectorClient, IncidentListing
 from microsoft_sentinel_intel.deployment import (
     MAX_HIT_INCIDENTS,
+    IncidentCursor,
     MicrosoftSentinelIntelDeploymentAdapter,
     SentinelDeploymentError,
     build_deployment_assurance,
@@ -894,7 +895,10 @@ def test_adapter_hits_resume_at_an_incident_whose_entities_cannot_be_read(
     collection = adapter.collect_hits([make_deployment()], since)
 
     assert isinstance(collection, HitCollection)
-    assert collection.complete_until == failing
+    assert collection.complete_until == since
+    assert collection.resume == IncidentCursor(
+        modified_since=first, handled=frozenset({"incident-1"})
+    )
     assert [hit.timestamp for hit in collection.hits] == [first]
     assert adapter_connector.client.list_incident_entities.call_count == 2
 
@@ -919,7 +923,13 @@ def test_adapter_hits_resume_after_the_last_listed_page(
 
     collection = adapter.collect_hits([make_deployment()], since)
 
-    assert collection == HitCollection(hits=[], complete_until=last)
+    assert collection == HitCollection(
+        hits=[],
+        complete_until=since,
+        resume=IncidentCursor(
+            modified_since=last, handled=frozenset({"incident-1", "incident-2"})
+        ),
+    )
 
 
 def test_adapter_hits_of_a_complete_listing_are_complete(
@@ -1005,7 +1015,14 @@ def test_adapter_hits_inspect_a_bounded_number_of_incidents(
     collection = adapter.collect_hits([make_deployment()], since)
 
     assert collection == HitCollection(
-        hits=[], complete_until=recent + timedelta(seconds=MAX_HIT_INCIDENTS)
+        hits=[],
+        complete_until=since,
+        resume=IncidentCursor(
+            modified_since=recent + timedelta(seconds=MAX_HIT_INCIDENTS - 1),
+            handled=frozenset(
+                f"incident-{index}" for index in range(MAX_HIT_INCIDENTS)
+            ),
+        ),
     )
     assert (
         adapter_connector.client.list_incident_entities.call_count == MAX_HIT_INCIDENTS
@@ -1034,17 +1051,83 @@ def test_adapter_hits_capped_at_their_start_continue_after_the_incidents_inspect
     ]
 
     collection = adapter.collect_hits(
-        [make_deployment()], since, resume=frozenset({"incident-0"})
+        [make_deployment()],
+        since,
+        resume=IncidentCursor(modified_since=since, handled=frozenset({"incident-0"})),
     )
 
     assert isinstance(collection, HitCollection)
     assert collection.complete_until == since
-    assert collection.resume == frozenset({"incident-0", "incident-1", "incident-2"})
+    assert collection.resume == IncidentCursor(
+        modified_since=since,
+        handled=frozenset({"incident-0", "incident-1", "incident-2"}),
+    )
     assert len(collection.hits) == 2
     assert [
         call.args[0]
         for call in adapter_connector.client.list_incident_entities.call_args_list
     ] == ["incident-1", "incident-2"]
+
+
+def test_adapter_hits_continued_later_keep_the_activity_lower_bound(
+    adapter, adapter_connector
+) -> None:
+    """The listing continues at a modification time, the activity filter stays at
+    `since`: an unread incident modified later but active earlier is counted."""
+    since = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=1)
+    cursor = since + timedelta(minutes=20)
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
+        [
+            {
+                "id": "incident-1",
+                "properties": {"lastModifiedTimeUtc": cursor.isoformat()},
+            },
+            {
+                "id": "incident-2",
+                "properties": {
+                    "lastActivityTimeUtc": (since + timedelta(minutes=5)).isoformat(),
+                    "lastModifiedTimeUtc": (since + timedelta(minutes=25)).isoformat(),
+                },
+            },
+        ]
+    )
+    adapter_connector.client.list_incident_entities.return_value = [
+        {"kind": "Ip", "properties": {"address": "198.51.100.7"}}
+    ]
+
+    hits = adapter.collect_hits(
+        [make_deployment()],
+        since,
+        resume=IncidentCursor(modified_since=cursor, handled=frozenset({"incident-1"})),
+    )
+
+    assert [hit.timestamp for hit in hits] == [since + timedelta(minutes=5)]
+    adapter_connector.client.iter_incidents.assert_called_once_with(
+        modified_since=cursor, page_size=100, max_pages=20
+    )
+    adapter_connector.client.list_incident_entities.assert_called_once_with(
+        "incident-2"
+    )
+
+
+def test_adapter_hits_not_continued_beyond_the_handled_incident_limit(
+    adapter, adapter_connector, monkeypatch
+) -> None:
+    monkeypatch.setattr("microsoft_sentinel_intel.deployment.MAX_HIT_INCIDENTS", 2)
+    monkeypatch.setattr("microsoft_sentinel_intel.deployment.MAX_HANDLED_INCIDENTS", 1)
+    since = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=1)
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
+        {
+            "id": f"incident-{index}",
+            "properties": {"lastActivityTimeUtc": since.isoformat()},
+        }
+        for index in range(3)
+    )
+    adapter_connector.client.list_incident_entities.return_value = []
+
+    collection = adapter.collect_hits([make_deployment()], since)
+
+    assert collection == HitCollection(hits=[], complete_until=since)
 
 
 # End to end: stream processing and reconciliation through GraphQL

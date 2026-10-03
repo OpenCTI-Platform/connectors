@@ -13,6 +13,7 @@ access to Microsoft Sentinel:
 
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -55,6 +56,9 @@ INCIDENTS_MAX_PAGES = 20
 MAX_HIT_INCIDENTS = 200
 """Maximum number of incidents whose entities are read by one hit collection."""
 
+MAX_HANDLED_INCIDENTS = 20_000
+"""Maximum number of incidents remembered by a hit read continued over several runs."""
+
 ENTITY_VALUE_PROPERTIES = {
     "Ip": ("address",),
     "Url": ("url",),
@@ -78,6 +82,19 @@ def _is_not_found(error: ConnectorClientError) -> bool:
     return isinstance(cause, ResourceNotFoundError) or (
         getattr(cause, "status_code", None) == 404
     )
+
+
+@dataclass(frozen=True, slots=True)
+class IncidentCursor:
+    """Where a hit read stopped early continues.
+
+    The incident listing restarts at `modified_since` (a modification time) and
+    skips the incidents already handled by the read, whose hit-time lower bound
+    stays the `since` of the reconciler.
+    """
+
+    modified_since: datetime
+    handled: frozenset[str]
 
 
 class SentinelDeploymentError(Exception):
@@ -205,7 +222,7 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         deployments: Sequence[IndicatorDeployment],
         since: datetime,
         *,
-        resume: frozenset[str] | None = None,
+        resume: IncidentCursor | None = None,
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the Sentinel incidents whose entities match deployed indicators.
 
@@ -217,13 +234,16 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
 
         The read stops at the first incident beyond `MAX_HIT_INCIDENTS` inspected
         incidents or whose entities cannot be read, and when the listing stops at
-        `INCIDENTS_MAX_PAGES` with pages left: the collection is then complete until
-        that incident's modification time, where the next run resumes. When that
-        time is `since` itself, the next run skips the incidents already inspected
-        there (`resume`).
+        `INCIDENTS_MAX_PAGES` with pages left. The listing is ordered by
+        modification time while hits carry the activity time: an incident left
+        unread can have any activity time after `since`, so the collection is then
+        complete only until `since`. The reconciler holds its hits, and the next
+        run continues the listing where this one stopped (`resume`), skipping the
+        incidents already handled, with the same `since` for the activity time.
+        Beyond `MAX_HANDLED_INCIDENTS` handled incidents, the read is not
+        continued and its hits are a lower bound.
 
-        :param resume: Ids of the incidents already inspected at `since`, when the
-            previous read stopped there.
+        :param resume: Where the previous read, stopped early, continues.
         :raises SentinelDeploymentError: When the incidents cannot be listed.
         """
         indicators_by_value: dict[str, set[str]] = {}
@@ -234,16 +254,16 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                 )
         if not indicators_by_value:
             return []
-        already_inspected = resume or frozenset()
-        inspected_at_start: set[str] = set(already_inspected)
+        listed_since = resume.modified_since if resume else since
+        handled: set[str] = set(resume.handled) if resume else set()
+        cursor = listed_since
         hits: list[VendorHit] = []
         inspected = 0
-        modified_time: datetime | None = None
-        stopped_at: datetime | None = None
+        stopped = False
         with _readable_errors():
             # Lazy iteration: the next incident pages are read only while needed.
             listing = self._client.iter_incidents(
-                modified_since=since,
+                modified_since=listed_since,
                 page_size=INCIDENTS_PAGE_SIZE,
                 max_pages=INCIDENTS_MAX_PAGES,
             )
@@ -256,54 +276,54 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                     or modified_time
                 )
                 incident_id = incident.get("id") or incident.get("name")
-                if incident_id and str(incident_id) in already_inspected:
+                if not incident_id or str(incident_id) in handled:
                     continue
-                at_start = modified_time is None or modified_time <= since
-                if activity_time is None or activity_time < since or not incident_id:
-                    if incident_id and at_start:
-                        inspected_at_start.add(str(incident_id))
-                    continue
-                if inspected >= MAX_HIT_INCIDENTS:
-                    self._logger.warning(
-                        f"{_LOG_PREFIX} Incident limit reached, the next run resumes "
-                        "at the first incident not inspected.",
-                        {"limit": MAX_HIT_INCIDENTS},
+                if activity_time is not None and activity_time >= since:
+                    if inspected >= MAX_HIT_INCIDENTS:
+                        self._logger.warning(
+                            f"{_LOG_PREFIX} Incident limit reached, the next run "
+                            "continues at the first incident not inspected.",
+                            {"limit": MAX_HIT_INCIDENTS},
+                        )
+                        stopped = True
+                        break
+                    try:
+                        entities = self._client.list_incident_entities(str(incident_id))
+                    except ConnectorClientError as err:
+                        self._logger.warning(
+                            f"{_LOG_PREFIX} Cannot read the entities of an incident, "
+                            "the next run continues at it.",
+                            {"incident_id": incident_id, "error": describe_error(err)},
+                        )
+                        stopped = True
+                        break
+                    inspected += 1
+                    matched = {
+                        indicator_id
+                        for value in self._entity_values(entities)
+                        for indicator_id in indicators_by_value.get(value, ())
+                    }
+                    hits.extend(
+                        VendorHit(timestamp=activity_time, indicator_id=indicator_id)
+                        for indicator_id in sorted(matched)
                     )
-                    stopped_at = modified_time or since
-                    break
-                try:
-                    entities = self._client.list_incident_entities(str(incident_id))
-                except ConnectorClientError as err:
-                    self._logger.warning(
-                        f"{_LOG_PREFIX} Cannot read the entities of an incident, the "
-                        "next run resumes at it.",
-                        {"incident_id": incident_id, "error": describe_error(err)},
-                    )
-                    stopped_at = modified_time or since
-                    break
-                inspected += 1
-                if at_start:
-                    inspected_at_start.add(str(incident_id))
-                matched = {
-                    indicator_id
-                    for value in self._entity_values(entities)
-                    for indicator_id in indicators_by_value.get(value, ())
-                }
-                hits.extend(
-                    VendorHit(timestamp=activity_time, indicator_id=indicator_id)
-                    for indicator_id in sorted(matched)
-                )
-        if stopped_at is None and listing.truncated:
-            stopped_at = modified_time or since
-        if stopped_at is not None:
-            if stopped_at <= since:
-                return HitCollection(
-                    hits=hits,
-                    complete_until=since,
-                    resume=frozenset(inspected_at_start),
-                )
-            return HitCollection(hits=hits, complete_until=stopped_at)
-        return hits
+                handled.add(str(incident_id))
+                if modified_time is not None and modified_time > cursor:
+                    cursor = modified_time
+        if not stopped and not listing.truncated:
+            return hits
+        if len(handled) > MAX_HANDLED_INCIDENTS:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Too many incidents to continue the capped read, its "
+                "hits are a lower bound.",
+                {"handled": len(handled), "limit": MAX_HANDLED_INCIDENTS},
+            )
+            return HitCollection(hits=hits, complete_until=since)
+        return HitCollection(
+            hits=hits,
+            complete_until=since,
+            resume=IncidentCursor(modified_since=cursor, handled=frozenset(handled)),
+        )
 
     @staticmethod
     def _entity_values(entities: Iterable[dict[str, Any]]) -> set[str]:
