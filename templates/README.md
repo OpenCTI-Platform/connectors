@@ -124,7 +124,7 @@ You can create a new connector by simply running the following command:
 sh create_connector_dir.sh -t <TYPE> -n <NAME>
 ```
 
-Where `<TYPE>` is the type of connector you want to create (`external-import`,`internal-enrichment`,`stream`, `internal-import-file`, `internal-export-file`) and `<NAME>` is the name of the connector.
+Where `<TYPE>` is the type of connector you want to create (`external-import`,`internal-enrichment`,`stream`, `internal-import-file`, `internal-export-file`, `internal-hunt`) and `<NAME>` is the name of the connector.
 
 ### Manual creation
 
@@ -436,6 +436,25 @@ The helper provide an easy way to listen to the events.
 self.helper.listen_stream(message_callback=self.process_message)
 ```
 
+#### Internal hunt connectors specifications
+
+Execute the hunts dispatched by OpenCTI (one message per hunt run) on a telemetry platform or on internet scanning
+APIs. Build the connector on `InternalHuntConnector` from the connectors-sdk: it registers the hunt platform, listens
+to the hunt runs, enforces the run limits, maps the results to STIX and reports every run. Implement the query
+languages, the pySigma backend and the query execution (see the `internal-hunt` folder of this directory and
+[the internal hunt specifications](../docs/06-internal-hunt-specifications.md)).
+
+```python
+class MyHuntConnector(InternalHuntConnector):
+    languages = ("spl",)
+
+    def sigma_backend(self, pipeline):
+        ...
+
+    def execute(self, native_query, time_window, limits):
+        ...
+```
+
 ### Tests
 
 Testing is crucial for several reasons:
@@ -523,6 +542,7 @@ _For fields not listed below with specific allowed values, any value is accepted
   - EXTERNAL_IMPORT
   - INTERNAL_ENRICHMENT
   - INTERNAL_EXPORT_FILE
+  - INTERNAL_HUNT
   - INTERNAL_IMPORT_FILE
   - STREAM
 

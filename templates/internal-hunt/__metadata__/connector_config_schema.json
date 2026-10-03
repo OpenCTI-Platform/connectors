@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/internal-hunt_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Template Hunt",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "opensearch"
+      ],
+      "description": "The hunt platform the connector executes against.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_HUNT",
+      "default": "INTERNAL_HUNT",
+      "type": "string"
+    },
+    "CONNECTOR_SECURITY_PLATFORM_NAME": {
+      "default": "Template SIEM",
+      "description": "Name of the OpenCTI Security Platform the hunts are executed against.",
+      "type": "string"
+    },
+    "CONNECTOR_SECURITY_PLATFORM_TYPE": {
+      "default": "SIEM",
+      "description": "Type of the OpenCTI Security Platform the hunts are executed against.",
+      "enum": [
+        "SIEM",
+        "EDR",
+        "XDR",
+        "SOAR",
+        "NDR",
+        "ISPM"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_MAX_CONCURRENT_RUNS": {
+      "default": null,
+      "description": "Maximum number of hunt runs OpenCTI may dispatch to this connector at the same time. The platform budget is the minimum of its own setting and this value.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "CONNECTOR_OBSERVABLE_TYPES": {
+      "default": [
+        "IPv4-Addr",
+        "IPv6-Addr",
+        "Domain-Name",
+        "Url",
+        "StixFile",
+        "Email-Addr"
+      ],
+      "description": "Observable types the connector may create from hunt results, intersected with the types expected by each hunt. Defaults to IOC types only; supported values: IPv4-Addr, IPv6-Addr, Domain-Name, Url, StixFile, Email-Addr, Hostname, User-Account, Mac-Addr.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_MAX_OBSERVABLES": {
+      "default": 100,
+      "description": "Maximum number of observables created per hunt run (the most frequent first).",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "TEMPLATE_API_BASE_URL": {
+      "description": "Base URL of the platform search API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "TEMPLATE_API_KEY": {
+      "description": "API key used to authenticate against the platform search API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TEMPLATE_VERIFY_SSL": {
+      "default": true,
+      "description": "Whether to verify the TLS certificate of the platform API.",
+      "type": "boolean"
+    },
+    "TEMPLATE_SIGMA_PIPELINE": {
+      "default": "none",
+      "description": "pySigma processing pipeline(s) used to translate Sigma rules, chained with '+' (or 'none').",
+      "type": "string"
+    },
+    "TEMPLATE_INDICES": {
+      "default": [
+        "*"
+      ],
+      "description": "Indices (or tables) the hunts search in.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "TEMPLATE_API_BASE_URL",
+    "TEMPLATE_API_KEY"
+  ],
+  "additionalProperties": true
+}
