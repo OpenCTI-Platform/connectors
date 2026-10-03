@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'c6b0f5f2-c47e-4d49-92a9-10371b40f5d8'  # optional (a unique UUIDv4 per instance)
+  name: 'XposedOrNot'                 # optional (default: 'XposedOrNot')
+  scope: 'Email-Addr'                 # optional (default: 'Email-Addr')
+  log_level: 'info'                   # optional (default: 'error')
+  auto: false                         # optional, auto-enrich observables. Keyless API is rate limited; keep false or set an api_key (default: false)
+
+xposedornot:
+  api_key: ''                         # optional; leave empty to use the free keyless community API
+  api_base_url: 'https://api.xposedornot.com'  # optional (default: community API)
+  max_tlp: 'TLP:AMBER'                # optional, max TLP of observables the connector may enrich (default: 'TLP:AMBER')
+  tlp_level: 'amber'                  # optional, minimum TLP applied to produced objects: clear, white, green, amber, amber+strict, red (default: 'amber')
+  max_note_breaches: 50               # optional, breaches tabulated in the summary note, newest first; 0 renders every breach (default: 50)

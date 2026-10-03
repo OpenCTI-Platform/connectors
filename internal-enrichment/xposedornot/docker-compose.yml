@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-xposedornot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opencti/connector-xposedornot:latest
+    environment:
+      # OpenCTI configuration
+      - OPENCTI_URL=${OPENCTI_URL:-http://localhost:8080}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      # Common connector configuration
+      - CONNECTOR_ID=${CONNECTOR_ID:-c6b0f5f2-c47e-4d49-92a9-10371b40f5d8}
+      - CONNECTOR_NAME=${CONNECTOR_NAME:-XposedOrNot}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-Email-Addr}
+      - CONNECTOR_AUTO=${CONNECTOR_AUTO:-false}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-error}
+      # XposedOrNot configuration
+      - XPOSEDORNOT_API_KEY=${XPOSEDORNOT_API_KEY:-}
+      - XPOSEDORNOT_API_BASE_URL=${XPOSEDORNOT_API_BASE_URL:-https://api.xposedornot.com}
+      - XPOSEDORNOT_MAX_TLP=${XPOSEDORNOT_MAX_TLP:-TLP:AMBER}
+      - XPOSEDORNOT_TLP_LEVEL=${XPOSEDORNOT_TLP_LEVEL:-amber}
+      - XPOSEDORNOT_MAX_NOTE_BREACHES=${XPOSEDORNOT_MAX_NOTE_BREACHES:-50}
+    restart: always
