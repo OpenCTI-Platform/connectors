@@ -15,7 +15,7 @@ from connectors_sdk import (
 )
 from filigran_sseclient.sseclient import Event
 from microsoft_sentinel_intel import Connector
-from microsoft_sentinel_intel.client import ConnectorClient
+from microsoft_sentinel_intel.client import ConnectorClient, IncidentListing
 from microsoft_sentinel_intel.deployment import (
     MAX_HIT_INCIDENTS,
     MicrosoftSentinelIntelDeploymentAdapter,
@@ -580,14 +580,52 @@ def test_iter_incidents_stops_at_the_page_limit(
         ],
     )
 
-    incidents = list(
-        connector.client.iter_incidents(
-            modified_since=datetime.now(UTC), page_size=1, max_pages=2
-        )
+    listing = connector.client.iter_incidents(
+        modified_since=datetime.now(UTC), page_size=1, max_pages=2
     )
 
-    assert incidents == [{"id": "incident-1"}, {"id": "incident-2"}]
+    assert list(listing) == [{"id": "incident-1"}, {"id": "incident-2"}]
+    assert listing.truncated is True
     connector.helper.connector_logger.warning.assert_called_once()
+
+
+def test_iter_incidents_marks_short_pages_left_at_the_page_limit_as_truncated(
+    mocker: MockerFixture, connector: Connector
+) -> None:
+    """Pages can be shorter than `$top`: the `nextLink` left decides, not the count."""
+    mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        side_effect=[
+            response({"value": [{"id": "incident-1"}], "nextLink": "https://next/1"}),
+            response({"value": [{"id": "incident-2"}], "nextLink": "https://next/2"}),
+        ],
+    )
+
+    listing = connector.client.iter_incidents(
+        modified_since=datetime.now(UTC), page_size=100, max_pages=2
+    )
+
+    assert len(list(listing)) == 2
+    assert listing.truncated is True
+
+
+def test_iter_incidents_read_to_the_end_is_not_truncated(
+    mocker: MockerFixture, connector: Connector
+) -> None:
+    mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        side_effect=[
+            response({"value": [{"id": "incident-1"}], "nextLink": "https://next/1"}),
+            response({"value": [{"id": "incident-2"}]}),
+        ],
+    )
+
+    listing = connector.client.iter_incidents(
+        modified_since=datetime.now(UTC), page_size=1, max_pages=2
+    )
+
+    assert len(list(listing)) == 2
+    assert listing.truncated is False
 
 
 def test_iter_incidents_filters_on_the_modification_time(
@@ -796,7 +834,7 @@ def test_adapter_collects_hits_from_incident_entities(
     since = datetime.now(UTC) - timedelta(hours=1)
     recent = (since + timedelta(minutes=30)).isoformat()
     old = (since - timedelta(minutes=30)).isoformat()
-    adapter_connector.client.iter_incidents.return_value = iter(
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
         [
             {"id": "incident-old", "properties": {"lastActivityTimeUtc": old}},
             {"properties": {"lastActivityTimeUtc": recent}},
@@ -815,9 +853,9 @@ def test_adapter_collects_hits_from_incident_entities(
 
     hits = list(adapter.collect_hits([make_deployment()], since))
 
-    assert [(hit.value, hit.count) for hit in hits] == [
-        ("198.51.100.7", 1),
-        ("198.51.100.7", 1),
+    assert [(hit.indicator_id, hit.count) for hit in hits] == [
+        (INDICATOR_ID, 1),
+        (INDICATOR_ID, 1),
     ]
     assert hits[0].timestamp.isoformat() == recent
     adapter_connector.client.iter_incidents.assert_called_once_with(
@@ -832,7 +870,7 @@ def test_adapter_hits_resume_at_an_incident_whose_entities_cannot_be_read(
     since = datetime.now(UTC) - timedelta(hours=1)
     first = since + timedelta(minutes=10)
     failing = since + timedelta(minutes=20)
-    adapter_connector.client.iter_incidents.return_value = iter(
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
         [
             {
                 "id": "incident-1",
@@ -862,13 +900,11 @@ def test_adapter_hits_resume_at_an_incident_whose_entities_cannot_be_read(
 
 
 def test_adapter_hits_resume_after_the_last_listed_page(
-    adapter, adapter_connector, monkeypatch
+    adapter, adapter_connector
 ) -> None:
-    monkeypatch.setattr("microsoft_sentinel_intel.deployment.INCIDENTS_PAGE_SIZE", 1)
-    monkeypatch.setattr("microsoft_sentinel_intel.deployment.INCIDENTS_MAX_PAGES", 2)
     since = datetime.now(UTC) - timedelta(hours=1)
     last = since + timedelta(minutes=5)
-    adapter_connector.client.iter_incidents.return_value = iter(
+    listing = IncidentListing(
         [
             {"id": "incident-1", "properties": {"lastModifiedTimeUtc": "invalid"}},
             {
@@ -877,11 +913,67 @@ def test_adapter_hits_resume_after_the_last_listed_page(
             },
         ]
     )
+    listing.mark_truncated()
+    adapter_connector.client.iter_incidents.return_value = listing
     adapter_connector.client.list_incident_entities.return_value = []
 
     collection = adapter.collect_hits([make_deployment()], since)
 
     assert collection == HitCollection(hits=[], complete_until=last)
+
+
+def test_adapter_hits_of_a_complete_listing_are_complete(
+    adapter, adapter_connector
+) -> None:
+    since = datetime.now(UTC) - timedelta(hours=1)
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
+        {
+            "id": f"incident-{index}",
+            "properties": {
+                "lastModifiedTimeUtc": (since + timedelta(minutes=index)).isoformat()
+            },
+        }
+        for index in range(3)
+    )
+    adapter_connector.client.list_incident_entities.return_value = []
+
+    assert adapter.collect_hits([make_deployment()], since) == []
+
+
+def test_adapter_hits_count_once_per_indicator_and_credit_shared_values(
+    adapter, adapter_connector
+) -> None:
+    """Two values of one indicator in an incident make one hit; a value shared by
+    two indicators makes one hit for each of them."""
+    since = datetime.now(UTC) - timedelta(hours=1)
+    recent = since + timedelta(minutes=5)
+    multi_value = make_deployment(
+        pattern="[ipv4-addr:value = '198.51.100.7'] OR [domain-name:value = 'bad.example']"
+    )
+    sharing = make_deployment(
+        indicator_id="other-indicator",
+        stix_id="indicator--0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+        pattern="[domain-name:value = 'bad.example']",
+    )
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
+        [
+            {
+                "id": "incident-1",
+                "properties": {"lastActivityTimeUtc": recent.isoformat()},
+            }
+        ]
+    )
+    adapter_connector.client.list_incident_entities.return_value = [
+        {"kind": "Ip", "properties": {"address": "198.51.100.7"}},
+        {"kind": "DnsResolution", "properties": {"domainName": "bad.example"}},
+    ]
+
+    hits = list(adapter.collect_hits([multi_value, sharing], since))
+
+    assert sorted((hit.indicator_id, hit.count) for hit in hits) == [
+        (INDICATOR_ID, 1),
+        ("other-indicator", 1),
+    ]
 
 
 def test_adapter_hits_without_values_read_no_incident(
@@ -898,7 +990,7 @@ def test_adapter_hits_inspect_a_bounded_number_of_incidents(
 ) -> None:
     since = datetime.now(UTC) - timedelta(hours=1)
     recent = since + timedelta(minutes=1)
-    adapter_connector.client.iter_incidents.return_value = iter(
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
         {
             "id": f"incident-{index}",
             "properties": {
@@ -927,7 +1019,7 @@ def test_adapter_hits_capped_at_their_start_continue_after_the_incidents_inspect
     incidents already inspected there instead of moving past that time."""
     monkeypatch.setattr("microsoft_sentinel_intel.deployment.MAX_HIT_INCIDENTS", 2)
     since = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=1)
-    adapter_connector.client.iter_incidents.return_value = iter(
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
         {
             "id": f"incident-{index}",
             "properties": {

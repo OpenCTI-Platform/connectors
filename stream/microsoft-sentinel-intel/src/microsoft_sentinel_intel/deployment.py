@@ -211,38 +211,43 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
 
         Incidents modified since `since` are listed (oldest first); those whose last
         activity is older than `since` are skipped. Each incident counts one hit per
-        matching indicator value, at the incident last activity time.
+        matching indicator (whatever the number of its values in the incident, and
+        for every indicator carrying a shared value), at the incident last activity
+        time.
 
         The read stops at the first incident beyond `MAX_HIT_INCIDENTS` inspected
-        incidents or whose entities cannot be read, and after `INCIDENTS_MAX_PAGES`
-        pages: the collection is then complete until that incident's modification
-        time, where the next run resumes. When that time is `since` itself, the
-        next run skips the incidents already inspected there (`resume`).
+        incidents or whose entities cannot be read, and when the listing stops at
+        `INCIDENTS_MAX_PAGES` with pages left: the collection is then complete until
+        that incident's modification time, where the next run resumes. When that
+        time is `since` itself, the next run skips the incidents already inspected
+        there (`resume`).
 
         :param resume: Ids of the incidents already inspected at `since`, when the
             previous read stopped there.
         :raises SentinelDeploymentError: When the incidents cannot be listed.
         """
-        deployed_values = set().union(
-            *(deployment.values for deployment in deployments)
-        )
-        if not deployed_values:
+        indicators_by_value: dict[str, set[str]] = {}
+        for deployment in deployments:
+            for value in deployment.values:
+                indicators_by_value.setdefault(value, set()).add(
+                    deployment.indicator_id
+                )
+        if not indicators_by_value:
             return []
         already_inspected = resume or frozenset()
         inspected_at_start: set[str] = set(already_inspected)
         hits: list[VendorHit] = []
         inspected = 0
-        listed = 0
         modified_time: datetime | None = None
         stopped_at: datetime | None = None
         with _readable_errors():
             # Lazy iteration: the next incident pages are read only while needed.
-            for incident in self._client.iter_incidents(
+            listing = self._client.iter_incidents(
                 modified_since=since,
                 page_size=INCIDENTS_PAGE_SIZE,
                 max_pages=INCIDENTS_MAX_PAGES,
-            ):
-                listed += 1
+            )
+            for incident in listing:
                 properties = incident.get("properties") or {}
                 modified_time = parse_datetime(properties.get("lastModifiedTimeUtc"))
                 activity_time = (
@@ -279,12 +284,16 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                 inspected += 1
                 if at_start:
                     inspected_at_start.add(str(incident_id))
-                matched = self._entity_values(entities) & deployed_values
+                matched = {
+                    indicator_id
+                    for value in self._entity_values(entities)
+                    for indicator_id in indicators_by_value.get(value, ())
+                }
                 hits.extend(
-                    VendorHit(timestamp=activity_time, value=value)
-                    for value in sorted(matched)
+                    VendorHit(timestamp=activity_time, indicator_id=indicator_id)
+                    for indicator_id in sorted(matched)
                 )
-        if stopped_at is None and listed >= INCIDENTS_PAGE_SIZE * INCIDENTS_MAX_PAGES:
+        if stopped_at is None and listing.truncated:
             stopped_at = modified_time or since
         if stopped_at is not None:
             if stopped_at <= since:

@@ -1,5 +1,5 @@
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterable, Iterator
 from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import quote
@@ -12,6 +12,24 @@ from azure.identity import ClientSecretCredential, DefaultAzureCredential
 from microsoft_sentinel_intel.errors import ConnectorClientError
 from microsoft_sentinel_intel.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
+
+
+class IncidentListing:
+    """Incidents of a listing bounded by a page limit, read lazily, oldest first.
+
+    `truncated` is set once the iteration stopped at the page limit with a `nextLink`
+    left: incidents were left unread, whatever the number of incidents listed.
+    """
+
+    def __init__(self, incidents: Iterable[dict[str, Any]] = ()) -> None:
+        self.incidents: Iterable[dict[str, Any]] = incidents
+        self.truncated = False
+
+    def mark_truncated(self) -> None:
+        self.truncated = True
+
+    def __iter__(self) -> Iterator[dict[str, Any]]:
+        return iter(self.incidents)
 
 
 class ConnectorClient:
@@ -87,6 +105,7 @@ class ConnectorClient:
         api_version: str,
         max_pages: int,
         complete: bool = True,
+        on_truncated: Callable[[], None] | None = None,
     ) -> Iterator[dict[str, Any]]:
         """Yield the items of a paginated management API response.
 
@@ -98,6 +117,8 @@ class ConnectorClient:
         :param max_pages: Maximum number of pages read.
         :param complete: When `True`, exceeding `max_pages` raises (the listing must be
             complete); otherwise the iteration stops after `max_pages` pages.
+        :param on_truncated: Called when a listing that need not be complete stops at
+            `max_pages` with a `nextLink` left, so the caller knows items were left.
         :raises ConnectorClientError: On any error, a missing `value` key, a repeated
             `nextLink` or, for complete listings, when the listing exceeds `max_pages`
             (a partial listing is never returned silently).
@@ -122,6 +143,8 @@ class ConnectorClient:
                     message="[API] Listing stopped after the maximum number of pages",
                     meta={"max_pages": max_pages},
                 )
+                if on_truncated is not None:
+                    on_truncated()
                 return
             if pages >= max_pages or next_link in seen_links:
                 raise ConnectorClientError(
@@ -184,8 +207,8 @@ class ConnectorClient:
 
     def iter_incidents(
         self, modified_since: datetime, page_size: int, max_pages: int
-    ) -> Iterator[dict[str, Any]]:
-        """Yield the Microsoft Sentinel incidents modified since a date, oldest first.
+    ) -> "IncidentListing":
+        """List the Microsoft Sentinel incidents modified since a date, oldest first.
 
         Uses the `Microsoft.SecurityInsights/incidents` list API
         (`management_api_version`) with `$filter`, `$orderby` and `$top`, paginated
@@ -194,6 +217,8 @@ class ConnectorClient:
         :param modified_since: Only incidents with `lastModifiedTimeUtc` on or after it.
         :param page_size: The `$top` of each page.
         :param max_pages: Maximum number of pages read (the oldest incidents first).
+        :return: The incidents, read lazily; `truncated` tells, once iterated, whether
+            the page limit left incidents unread (pages can be shorter than `$top`).
         """
         api_version = self.config.microsoft_sentinel_intel.management_api_version
         since = (
@@ -210,7 +235,15 @@ class ConnectorClient:
                 "$top": str(page_size),
             },
         )
-        return self._iter_pages(request, api_version, max_pages, complete=False)
+        listing = IncidentListing()
+        listing.incidents = self._iter_pages(
+            request,
+            api_version,
+            max_pages,
+            complete=False,
+            on_truncated=listing.mark_truncated,
+        )
+        return listing
 
     def list_incident_entities(self, incident_id: str) -> list[dict[str, Any]]:
         """Return the entities of an incident.
