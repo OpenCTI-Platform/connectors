@@ -4,7 +4,9 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    DeploymentConfig,
     ListFromString,
+    SecurityPlatformConfig,
 )
 from pydantic import Field, SecretStr
 
@@ -55,8 +57,26 @@ class ZscalerConfig(BaseConfigModel):
     )
 
 
+class ZscalerSecurityPlatformConfig(SecurityPlatformConfig):
+    """Security Platform entity representing Zscaler Internet Access in OpenCTI (deployment write-back)."""
+
+    name: str = Field(
+        default="Zscaler Internet Access",
+        min_length=2,
+        description="Name of the Security Platform entity representing Zscaler Internet Access in OpenCTI (created if it does not exist).",
+    )
+    type: str | None = Field(
+        default=None,
+        description="Type of the Security Platform entity (open vocabulary security_platform_type_ov). None by default: the vocabulary has no secure web gateway type.",
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
-    """Global settings for the Zscaler STREAM connector."""
+    """Global settings for the Zscaler STREAM connector, deployment write-back included."""
 
     connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
     zscaler: ZscalerConfig = Field(default_factory=ZscalerConfig)
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    security_platform: ZscalerSecurityPlatformConfig = Field(
+        default_factory=ZscalerSecurityPlatformConfig
+    )
