@@ -805,6 +805,32 @@ def test_withdrawal_removes_every_expected_value_but_the_shared_ones(
     assert reported()["b"]["status"] == "active"
 
 
+def test_truncated_read_back_does_not_push_a_partly_listed_indicator_again(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """The vendor items beyond the read-back limit are unknown, not missing."""
+    list_nodes(
+        node_factory(
+            indicator_id="a", status="active", pattern=FILE_PATTERN, external_id="1"
+        )
+    )
+    adapter = EveryValueAdapter(
+        vendor=[
+            VendorIndicator(value="aa", external_id="1"),
+            VendorIndicator(value="bb", external_id="2"),
+        ]
+    )
+
+    summary = make_reconciler(
+        make_reporter(graphql_helper), adapter, max_vendor_indicators=1
+    ).run_once()
+
+    assert summary.vendor_listing_truncated
+    assert (summary.incomplete, summary.repushed) == (0, 0)
+    assert adapter.pushed == []
+    assert reported()["a"]["status"] == "active"
+
+
 def test_truncated_read_back_skips_absence_decisions(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):
