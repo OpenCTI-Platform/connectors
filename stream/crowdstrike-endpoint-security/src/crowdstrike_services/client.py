@@ -637,10 +637,12 @@ class CrowdstrikeClient:
         :param exclude_ids: Ids (see `alert_id`) of alerts already read, skipped
             without counting towards `max_alerts`
         :return: Alert entities
-        :raise CrowdstrikeApiError: On any API error or an unexpected response
+        :raise CrowdstrikeApiError: On any API error, an unexpected response or a
+            pagination token returned twice (the listing is never cut short silently)
         """
         since_utc = since.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         after: str | None = None
+        seen_tokens: set[str] = set()
         returned = 0
         while returned < max_alerts:
             body = self._raise_for_response(
@@ -666,6 +668,11 @@ class CrowdstrikeClient:
                     returned += 1
                     yield resource
             next_after = ((body.get("meta") or {}).get("pagination") or {}).get("after")
-            if not resources or not next_after or next_after == after:
+            if not resources or not next_after:
                 return
+            if next_after in seen_tokens:
+                raise CrowdstrikeApiError(
+                    "The alerts API returned the same pagination token twice"
+                )
+            seen_tokens.add(next_after)
             after = next_after

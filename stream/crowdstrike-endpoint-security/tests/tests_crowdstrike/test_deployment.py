@@ -473,6 +473,23 @@ def test_iter_alerts_is_bounded_and_paginated():
     assert second.kwargs["after"] == "next"
 
 
+@pytest.mark.parametrize(
+    "tokens", [["same", "same"], ["token-1", "token-2", "token-1"]]
+)
+def test_iter_alerts_never_returns_a_listing_cut_by_a_repeated_token(tokens):
+    """A pagination token returned twice while alerts are still listed is an error,
+    never the end of the listing: the hit read would skip the alerts behind it."""
+    connector = build_connector()
+    connector.client._alerts.get_alerts_combined.side_effect = [
+        api_response(resources=[{"id": f"a{index}"}], after=token)
+        for index, token in enumerate(tokens)
+    ]
+    since = datetime(2026, 10, 3, 10, 0, tzinfo=UTC)
+
+    with pytest.raises(CrowdstrikeApiError, match="same pagination token"):
+        list(connector.client.iter_alerts(since, max_alerts=10, page_size=1))
+
+
 def test_listings_without_a_resource_list_are_rejected():
     """A malformed success is never read as an empty listing: reconciliation would
     report every deployment removed and the hit window would skip unread alerts."""
