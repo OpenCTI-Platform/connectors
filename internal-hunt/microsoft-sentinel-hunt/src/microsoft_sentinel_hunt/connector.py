@@ -18,7 +18,7 @@ from connectors_sdk.connectors.internal_hunt import (
     flatten_fields,
     parse_timestamp,
 )
-from microsoft_sentinel_hunt.client import LogAnalyticsClient
+from microsoft_sentinel_hunt.client import LogAnalyticsClient, TokenRequestTransport
 from microsoft_sentinel_hunt.settings import ConnectorSettings
 from sigma.backends.kusto import KustoBackend
 from sigma.pipelines.azuremonitor import azure_monitor_pipeline
@@ -105,11 +105,17 @@ class MicrosoftSentinelHuntConnector(InternalHuntConnector):
         self.sentinel_config = settings.microsoft_sentinel_hunt
         self.client: LogAnalyticsClient | None = None
 
-    def build_credential(self) -> TokenCredential:
-        """Create the Azure credential of the configured authentication method."""
+    def build_credential(self, transport: TokenRequestTransport) -> TokenCredential:
+        """Create the Azure credential of the configured authentication method.
+
+        Args:
+            transport: Transport of the token requests, bounded by the run deadline.
+        """
         config = self.sentinel_config
         if config.auth_type == "azure_credential":
-            return DefaultAzureCredential(authority=config.authority_host)
+            return DefaultAzureCredential(
+                authority=config.authority_host, transport=transport
+            )
         return ClientSecretCredential(
             tenant_id=str(config.tenant_id),
             client_id=str(config.client_id),
@@ -117,17 +123,20 @@ class MicrosoftSentinelHuntConnector(InternalHuntConnector):
                 config.client_secret.get_secret_value() if config.client_secret else ""
             ),
             authority=config.authority_host,
+            transport=transport,
         )
 
     def post_init(self) -> None:
         """Create the Log Analytics query API client."""
         config = self.sentinel_config
+        transport = TokenRequestTransport()
         self.client = LogAnalyticsClient(
             api_url=str(config.api_url),
             workspace_id=config.workspace_id,
-            credential=self.build_credential(),
+            credential=self.build_credential(transport),
             additional_workspaces=list(config.additional_workspaces),
             raw_columns=RAW_COLUMNS,
+            token_transport=transport,
         )
 
     def sigma_backend(self, pipeline: str | None) -> KustoBackend:

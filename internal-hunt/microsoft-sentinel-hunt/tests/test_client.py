@@ -1,28 +1,38 @@
 from datetime import datetime, timezone
+from unittest.mock import patch
 
 import pytest
 import requests
 from azure.core.exceptions import ClientAuthenticationError
+from azure.core.pipeline.transport import RequestsTransport
 from conftest import API_URL, QUERY_URL, FakeCredential, table
 from connectors_sdk.connectors.internal_hunt import (
     HuntExecutionError,
     HuntTimeoutError,
     RunDeadline,
 )
-from microsoft_sentinel_hunt.client import LogAnalyticsClient, iso_time
+from microsoft_sentinel_hunt.client import (
+    TOKEN_TIMEOUT_SECONDS,
+    LogAnalyticsClient,
+    TokenRequestTransport,
+    iso_time,
+)
 from microsoft_sentinel_hunt.connector import RAW_COLUMNS
 
 START = datetime(2026, 10, 3, tzinfo=timezone.utc)
 END = datetime(2026, 10, 4, tzinfo=timezone.utc)
 
 
-def _client(credential=None, workspaces=None, api_url=API_URL) -> LogAnalyticsClient:
+def _client(
+    credential=None, workspaces=None, api_url=API_URL, token_transport=None
+) -> LogAnalyticsClient:
     return LogAnalyticsClient(
         api_url=api_url,
         workspace_id="ws-1",
         credential=credential or FakeCredential(),
         additional_workspaces=workspaces or [],
         raw_columns=RAW_COLUMNS,
+        token_transport=token_transport,
     )
 
 
@@ -182,3 +192,75 @@ def test_query_maps_timeouts(requests_mock):
     # When/Then the run times out
     with pytest.raises(HuntTimeoutError):
         _client().query("T", START, END, RunDeadline(30))
+
+
+def test_token_acquisition_is_bounded_by_the_run_deadline(requests_mock):
+    # Given a credential sending its token requests through the client transport
+    requests_mock.post(QUERY_URL, json=table([], []))
+    transport = TokenRequestTransport()
+    bounds = []
+
+    class BoundCredential(FakeCredential):
+        def get_token(self, *scopes, **kwargs):
+            bounds.append(transport.deadline)
+            return super().get_token(*scopes, **kwargs)
+
+    deadline = RunDeadline(30)
+
+    # When a query runs
+    _client(BoundCredential(), token_transport=transport).query(
+        "T", START, END, deadline
+    )
+
+    # Then the token was requested under the run deadline, released afterwards
+    assert bounds == [deadline]
+    assert transport.deadline is None
+
+
+def test_token_transport_bounds_every_request_by_the_deadline():
+    # Given a token transport and a run deadline of 12 seconds
+    now = [0.0]
+    deadline = RunDeadline(12, clock=lambda: now[0])
+    transport = TokenRequestTransport()
+
+    with patch.object(RequestsTransport, "send", return_value="answer") as send:
+        # When/Then outside a run, a token request waits at most the token timeout
+        assert transport.send("token-request") == "answer"
+        assert send.call_args.kwargs == {
+            "connection_timeout": TOKEN_TIMEOUT_SECONDS,
+            "read_timeout": TOKEN_TIMEOUT_SECONDS,
+        }
+        with transport.bounded_by(deadline):
+            # During the run, at most the time left before its deadline
+            transport.send("token-request")
+            assert send.call_args.kwargs == {
+                "connection_timeout": 12.0,
+                "read_timeout": 12.0,
+            }
+            # Once the deadline is reached, no request is sent (retries included)
+            now[0] = 13.0
+            with pytest.raises(HuntTimeoutError, match="Microsoft Entra"):
+                transport.send("token-request")
+        assert send.call_count == 2
+    assert transport.deadline is None
+
+
+def test_stalled_authentication_is_reported_as_a_timeout():
+    # Given a credential chain stalling until the deadline, then reporting an authentication error
+    now = [0.0]
+    deadline = RunDeadline(30, clock=lambda: now[0])
+
+    def _stall(*_, **__):
+        now[0] = 31.0
+        raise ClientAuthenticationError(
+            "DefaultAzureCredential failed to retrieve a token"
+        )
+
+    credential = FakeCredential()
+    credential.get_token = _stall
+
+    # When/Then the run times out instead of failing on authentication
+    with pytest.raises(HuntTimeoutError, match="Microsoft Entra authentication"):
+        _client(credential, token_transport=TokenRequestTransport()).query(
+            "T", START, END, deadline
+        )

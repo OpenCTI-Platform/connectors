@@ -14,6 +14,7 @@ from connectors_sdk.connectors.internal_hunt import (
     NativeQuery,
 )
 from microsoft_sentinel_hunt import MicrosoftSentinelHuntConnector
+from microsoft_sentinel_hunt.client import TokenRequestTransport
 from microsoft_sentinel_hunt.connector import strip_statement_end
 
 WINDOW = HuntTimeWindow(start="2026-10-03T00:00:00Z", end="2026-10-04T00:00:00Z")
@@ -193,17 +194,21 @@ def test_build_credential_for_the_app_registration():
     # Given app registration settings
     connector = MicrosoftSentinelHuntConnector(make_settings())
 
+    transport = TokenRequestTransport()
+
     # When the credential is built
     with patch(f"{MODULE}.ClientSecretCredential") as credential_cls:
-        credential = connector.build_credential()
+        credential = connector.build_credential(transport)
 
-    # Then it authenticates the app registration on the configured authority
+    # Then it authenticates the app registration on the configured authority,
+    # its token requests going through the deadline-bound transport
     assert credential is credential_cls.return_value
     credential_cls.assert_called_once_with(
         tenant_id="tenant-1",
         client_id="client-1",
         client_secret="secret-1",
         authority="login.microsoftonline.com",
+        transport=transport,
     )
 
 
@@ -220,10 +225,14 @@ def test_build_credential_for_azure_credentials():
         )
     )
 
-    # When/Then DefaultAzureCredential is used on that authority
+    transport = TokenRequestTransport()
+
+    # When/Then DefaultAzureCredential is used on that authority with the deadline-bound transport
     with patch(f"{MODULE}.DefaultAzureCredential") as credential_cls:
-        assert connector.build_credential() is credential_cls.return_value
-    credential_cls.assert_called_once_with(authority="login.microsoftonline.us")
+        assert connector.build_credential(transport) is credential_cls.return_value
+    credential_cls.assert_called_once_with(
+        authority="login.microsoftonline.us", transport=transport
+    )
 
 
 def test_process_message_reports_hits_and_sends_knowledge(
