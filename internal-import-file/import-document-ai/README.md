@@ -18,6 +18,7 @@
   - [Behavior](#behavior)
     - [Processing workflow](#processing-workflow)
     - [Refanging of defanged observables](#refanging-of-defanged-observables)
+    - [Binding to existing entities](#binding-to-existing-entities)
     - [Mapping to OpenCTI entities](#mapping-to-opencti-entities)
     - [Contextual import relationships](#contextual-import-relationships)
     - [Extractable entities](#extractable-entities)
@@ -47,6 +48,8 @@ This connector allows **Enterprise Edition** organizations to extract threat int
 - OpenCTI Platform >= 6.6.0
 - Filigran Enterprise Edition license certificate (PEM format)
 - Network access to the Ariane web service (`https://importdoc.ariane.filigran.io`)
+- To bind the extracted entities to the existing ones: an OpenCTI version exposing the `curationResolve` query. On older versions the connector imports the entities as extracted, as before (see [Binding to existing entities](#binding-to-existing-entities)).
+
 ## Configuration variables
 
 Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
@@ -64,7 +67,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==6.6.0`. If you don't, it will take the latest version, but sometimes the OpenCTI SDK fails to initialize.
+Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==7.261002.0`. If you don't, it will take the latest version, but sometimes the OpenCTI SDK fails to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
 
@@ -115,6 +118,7 @@ The connector will:
 - Send the document to the Ariane AI service for extraction
 - Receive extracted entities, observables, and predicted relationships
 - Validate relationships against OpenCTI's schema
+- Bind the extracted entities OpenCTI already knows (under another name or alias) to the existing ones
 - Create a STIX bundle and import it into OpenCTI
 
 ## Behavior
@@ -129,7 +133,8 @@ flowchart TD
     D --> E[Deduplicate Entities]
     E --> F[Create STIX Objects]
     F --> R[Refang Defanged Observables]
-    R --> G{Context Entity?}
+    R --> X[Bind to Existing Entities]
+    X --> G{Context Entity?}
     G -->|Yes| H[Add to Context Entity]
     G -->|No| I[Add file to first extracted Report OR Create New Report]
     H --> J[Validate Relationships]
@@ -159,6 +164,38 @@ Reports often defang their indicators so that nobody follows them by mistake (`a
 - A refanged value is only kept when it is a valid value of its type: it must pass the checks OpenCTI applies to domain names, hostnames, email addresses and IP addresses, and a URL must be well-formed (a valid host, or valid addresses for a `mailto:` URL). Otherwise the observable is sent unchanged, as it was before, and logged as a warning.
 - Only the notations are refanged, with the whitespace inside and around them (`filigran [ . ] io`): any other whitespace is kept, so a value with stray leading or trailing whitespace does not refang.
 - A refanged observable gets the deterministic STIX id derived from its new value and loses its `defanged` flag. Every reference to its former id (report `object_refs`, relationship `source_ref` / `target_ref`, any `*_ref` / `*_refs`) is rewritten, and two spellings of one value, as well as the relationships they end up sharing, are merged.
+
+### Binding to existing entities
+
+A document names an entity its own way ("Clop", "Graceful Spider", "USA"), and the STIX id of an extracted entity derives from that spelling: sent as is, an entity OpenCTI already knows under another name or alias would be created again. Before the bundle is sent, and before the report or the contextual container references the extracted objects, the connector therefore looks every named entity up by name and type with the `curationResolve` query of OpenCTI:
+
+| Extracted entity | Looked up as | Alias property |
+|------------------|--------------|----------------|
+| Intrusion Set, Malware, Tool, Campaign, Channel, Infrastructure, Narrative, Event | the same type | `aliases` |
+| Threat Actor | Threat-Actor-Group or Threat-Actor-Individual (`x_opencti_type`, else `resource_level`) | `aliases` |
+| Attack Pattern without MITRE ATT&CK id | Attack-Pattern | `aliases` |
+| Vulnerability, Course of Action | the same type | `x_opencti_aliases` |
+| Identity | Organization, Individual, Sector or System (`identity_class`) | `x_opencti_aliases` |
+| Location | Country, Region, City or Administrative-Area (`x_opencti_location_type`) | `x_opencti_aliases` |
+
+When OpenCTI returns an existing entity of the same type, the extracted object is bound to it:
+
+- It takes the standard id and the canonical name of the existing entity; every other extracted property is kept.
+- The spelling of the document is kept as an alias (in the alias property of the type), unless the entity already holds it: its name, the alias that matched, or a spelling another object of the document brings.
+- Every reference to its former id follows: relationship `source_ref` / `target_ref`, report and container `object_refs`, any `*_ref` / `*_refs`. The objects and the relationships that end up identical are merged, and a relationship the binding turns into a self-reference ("Cozy Bear related-to APT29") is dropped.
+
+Nothing is bound when OpenCTI matches nothing, or matches an entity of another type: the entity is imported as extracted. Attack patterns holding a MITRE ATT&CK id keep being reunified by that id.
+
+The lookups:
+
+- Run with the permissions of the user who triggered the import, and in the draft the import targets, so that a document is never bound to an entity this user cannot see there.
+- Are sent once per distinct name and type of a document. The answers, matches and misses alike, are cached across documents for 10 minutes, per user and draft, 1,024 entries at most.
+- Are bounded to 500 per document. Beyond, the threat entities (intrusion sets, threat actors, campaigns, malware, tools) are looked up first and the others imported as extracted, with a warning.
+- Stop for the rest of a document after 3 consecutive failures, the remaining entities being imported as extracted, with a warning.
+
+The `curationResolve` query comes with the autonomous curation of OpenCTI ([OpenCTI-Platform/opencti#18675](https://github.com/OpenCTI-Platform/opencti/issues/18675)). On a platform that does not expose it, the first lookup fails with a GraphQL validation error: the connector logs it once at info level, then imports every document as extracted, as before, until it restarts. Any other failure of a lookup (network, HTTP status, permission) is logged as a warning and leaves that one entity as extracted.
+
+Set `IMPORT_DOCUMENT_AI_RESOLVE_EXISTING_ENTITIES=false` (`import_document_ai.resolve_existing_entities: false` in `config.yml`) to turn the binding off.
 
 ### Mapping to OpenCTI entities
 
@@ -349,5 +386,6 @@ A dedicated development environment is available in the [dev directory](./dev/RE
 - **Global imports**: When importing via `import/global`, the original file is attached to the first Report extracted by the AI, or a new Report is created to host it as `x_opencti_files`.
 - **Deterministic IDs**: STIX objects use deterministic ID generation (e.g., `Malware.generate_id(name)`) to ensure idempotent imports.
 - **Refanging**: Defanged observable values (`admin[at]filigran[dot]io`, `hxxps://evil[.]com`) are refanged before import, see [Refanging of defanged observables](#refanging-of-defanged-observables).
+- **Binding to existing entities**: An extracted entity OpenCTI already knows under another name or alias is imported as that entity, with the document's spelling as an alias, see [Binding to existing entities](#binding-to-existing-entities).
 
 *Reference: [STIX 2.1 Specification](https://docs.oasis-open.org/cti/stix/v2.1/cs01/stix-v2.1-cs01.html)*

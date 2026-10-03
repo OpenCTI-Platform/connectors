@@ -6,6 +6,7 @@ import json
 
 import stix2
 from import_doc_ai.client_api import ImportDocumentAIClient
+from import_doc_ai.entity_binding import ExistingEntityBinder
 from import_doc_ai.refang import refang_bundle_observables
 from import_doc_ai.settings import ConnectorSettings
 from import_doc_ai.util import (
@@ -53,6 +54,10 @@ class Connector:
         self.helper = helper
 
         self.import_doc_ia_client = ImportDocumentAIClient(helper, config)
+        self.existing_entity_binder = ExistingEntityBinder(
+            helper=self.helper,
+            enabled=bool(self.config.import_document_ai.resolve_existing_entities),
+        )
 
         if not self.config.import_document_ai.include_relationships:
             # for backward behavior due to previous connector capabilities
@@ -94,6 +99,49 @@ class Connector:
                 },
             )
         return refanged_bundle
+
+    def _bind_existing_entities(self, bundle: stix2.Bundle) -> stix2.Bundle:
+        """Bind the extracted entities to the entities OpenCTI already knows."""
+        try:
+            bound_bundle, summary = self.existing_entity_binder.bind(bundle)
+        except Exception as error:  # the binding never fails an import
+            self.helper.connector_logger.error(
+                "Could not bind the extracted entities to the existing ones, "
+                "importing them as extracted",
+                {"error": f"{type(error).__name__}: {error}"},
+            )
+            return bundle
+        for binding in summary.bindings:
+            self.helper.connector_logger.debug(
+                "Bound an extracted entity to an existing OpenCTI entity",
+                {
+                    "type": binding.entity_type,
+                    "extracted_name": binding.extracted_name,
+                    "bound_name": binding.bound_name,
+                    "bound_id": binding.bound_id,
+                    "match_type": binding.match_type,
+                    "score": binding.score,
+                    "alias_added": binding.alias_added,
+                },
+            )
+        if summary.lookups or summary.cache_hits:
+            self.helper.connector_logger.info(
+                "Resolved the extracted entities against OpenCTI",
+                {
+                    "bound": len(summary.bindings),
+                    "aliases_added": sum(
+                        binding.alias_added for binding in summary.bindings
+                    ),
+                    "lookups": summary.lookups,
+                    "cache_hits": summary.cache_hits,
+                    "failed_lookups": summary.failed_lookups,
+                    "rejected_resolutions": summary.rejected_resolutions,
+                    "unresolved_names": summary.unresolved_names,
+                    "merged_duplicates": summary.merged_objects,
+                    "dropped_relationships": summary.dropped_relationships,
+                },
+            )
+        return bound_bundle
 
     def _resolve_agent_slug(self, data: dict) -> str | None:
         """Extract agent_slug from the message configuration field if present."""
@@ -177,6 +225,11 @@ class Connector:
                 for ai_location in ai_locations_bundle.get("objects", [])
             },
         )
+
+        # Bind the extracted names to the entities the platform already knows
+        # (other spelling, vendor alias) instead of creating duplicates, before
+        # any container or relationship below captures the extracted ids.
+        ai_bundle = self._bind_existing_entities(ai_bundle)
 
         # Handle observables: indicator creation delegation to the platform if relevant
         if self.config.import_document_ai.create_indicator:
