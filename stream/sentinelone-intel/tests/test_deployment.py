@@ -733,6 +733,48 @@ def test_reconciliation_confirms_removes_and_withdraws(e2e_connector, router):
     assert reports["withdrawn-id"]["status"] == "removed"
 
 
+def test_withdrawal_deletes_every_ioc_of_the_indicator(e2e_connector, router):
+    withdrawn_stix_id = "indicator--7f6b4c5d-0e1f-4a3b-c4d5-e6f7a8b9c0d1"
+    router.deployments = [
+        deployment_node(
+            "withdrawn-id", "active", "192.0.2.1", withdrawn_stix_id, revoked=True
+        )
+    ]
+
+    def request(method, url, params=None, json=None, timeout=None):
+        if method == "GET":
+            return mock_response(
+                {
+                    "data": [
+                        {
+                            "uuid": "u-1",
+                            "value": "192.0.2.1",
+                            "externalId": withdrawn_stix_id,
+                        },
+                        {
+                            "uuid": "u-2",
+                            "value": "192.0.2.1",
+                            "externalId": withdrawn_stix_id,
+                        },
+                    ]
+                }
+            )
+        return mock_response({"data": {"affected": 1}})
+
+    e2e_connector.client.session.request.side_effect = request
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.withdrawn == 1
+    deleted = [
+        call.kwargs["json"]["filter"]["uuids"]
+        for call in calls_of(e2e_connector.client.session, "DELETE")
+    ]
+    assert deleted == [["u-1"], ["u-2"]]
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert batch["reports"][0]["status"] == "removed"
+
+
 def test_read_back_failure_skips_the_reconciliation(e2e_connector, router):
     router.deployments = [
         deployment_node(INDICATOR_ID, "active", "198.51.100.7", STIX_ID)

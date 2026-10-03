@@ -6,6 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentReconciler,
@@ -374,6 +375,43 @@ def test_failed_re_authentication_raises(connector, monkeypatch):
 
     with pytest.raises(ZscalerApiError, match="Re-authentication"):
         connector.request_zscaler(connector.session.get, CATEGORY_URL)
+
+
+def test_rejected_credentials_do_not_recurse(connector, monkeypatch):
+    monkeypatch.setattr(
+        "stream_connector.connector.obfuscate_api_key", lambda key, ts: "obfuscated"
+    )
+    connector.session = MagicMock()
+    connector.session.cookies = {}
+    connector.session.post.return_value = response(401, text="INVALID_CREDENTIALS")
+
+    connector.authenticate_with_zscaler()
+
+    assert connector.session.post.call_count == 1
+    connector.helper.connector_logger.error.assert_any_call(
+        "Failed to authenticate with Zscaler: No response - No text"
+    )
+
+
+def test_transport_errors_are_readable_zscaler_errors(connector):
+    connector.session = MagicMock()
+    connector.session.get.side_effect = requests.ConnectionError("connection reset")
+
+    with pytest.raises(ZscalerApiError, match="connection reset"):
+        connector.request_zscaler(connector.session.get, CATEGORY_URL)
+    assert connector.handle_rate_limit(connector.session.get, CATEGORY_URL) is None
+
+
+def test_transport_error_on_create_is_reported_failed(connector):
+    FakeZscaler().install(connector)
+    connector.session.put.side_effect = requests.Timeout("timed out")
+    indicator = make_indicator()
+
+    connector._process_message(make_message("create", indicator))
+
+    (reported, error), _ = connector.assurance.report_push_failed.call_args
+    assert reported == indicator
+    assert "timed out" in str(error)
 
 
 def test_rejected_request_message_is_truncated(connector):

@@ -383,12 +383,14 @@ class Connector:
             )
             raise
 
-        if self.assurance is not None:
-            self.assurance.start()
-
         try:
             self._full_sync()
         except Exception as exc:  # noqa: BLE001
             self.logger.error("Initial full sync failed", meta={"error": str(exc)})
+
+        # The reconciliation changes the snapshot: it starts once the full sync built
+        # it (the full sync reports are queued until then).
+        if self.assurance is not None:
+            self.assurance.start()
 
         self.helper.listen_stream(message_callback=self.process_message)

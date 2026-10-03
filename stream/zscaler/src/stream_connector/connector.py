@@ -73,9 +73,16 @@ class ZscalerConnector:
         }
         headers = {"Content-Type": "application/json"}
 
-        response = self.handle_rate_limit(
-            self.session.post, url, json=payload, headers=headers
-        )
+        try:
+            response = self.request_zscaler(
+                self.session.post,
+                url,
+                json=payload,
+                headers=headers,
+                reauthenticate=False,
+            )
+        except ZscalerApiError:
+            response = None
 
         safe_payload = sanitize_payload(payload)
         self.helper.connector_logger.debug(
@@ -112,18 +119,27 @@ class ZscalerConnector:
         except ZscalerApiError:
             return None
 
-    def request_zscaler(self, request_func, *args, **kwargs) -> requests.Response:
+    def request_zscaler(
+        self, request_func, *args, reauthenticate: bool = True, **kwargs
+    ) -> requests.Response:
         """Send a request to Zscaler: throttled requests (429) are retried after `Retry-After`,
         an expired session (401) is re-authenticated once per attempt.
 
+        :param reauthenticate: False for the authentication request itself, whose 401 means
+            rejected credentials.
         :return: The successful (HTTP 200) response.
-        :raises ZscalerApiError: When the request failed, with the HTTP status and the Zscaler response.
+        :raises ZscalerApiError: When the request failed, with the HTTP status and the Zscaler
+            response, or the transport error.
         """
         max_retries = 3
         retry_delay = self.retry_delay
 
         for _attempt in range(max_retries):
-            response = request_func(*args, **kwargs)
+            try:
+                response = request_func(*args, **kwargs)
+            except requests.RequestException as err:
+                self.helper.connector_logger.error(f"Request failed: {err}")
+                raise ZscalerApiError(f"Zscaler request failed: {err}") from err
             if response is None:
                 self.helper.connector_logger.error("Request failed: no response.")
                 raise ZscalerApiError("No response from Zscaler")
@@ -142,6 +158,12 @@ class ZscalerConnector:
                 self.helper.connector_logger.warning(msg)
                 time.sleep(delay)
                 continue
+
+            if response.status_code == 401 and not reauthenticate:
+                self.helper.connector_logger.error(
+                    "Authentication rejected by Zscaler (401)."
+                )
+                raise ZscalerApiError("Authentication rejected by Zscaler (HTTP 401)")
 
             if response.status_code == 401:
                 msg = "Request failed with status 401 : SESSION_NOT_VALID. Re-authentication has started..."

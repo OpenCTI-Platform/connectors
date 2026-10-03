@@ -298,7 +298,7 @@ def test_connector_works_without_write_back():
     ]
 
 
-def test_run_starts_the_write_back_before_the_full_sync(connector, assurance):
+def test_run_starts_the_write_back_after_the_full_sync(connector, assurance):
     order = []
     assurance.start.side_effect = lambda: order.append("assurance")
     connector.helper.api.indicator.list.side_effect = lambda **_: (
@@ -308,7 +308,7 @@ def test_run_starts_the_write_back_before_the_full_sync(connector, assurance):
 
     connector.run()
 
-    assert order == ["assurance", "full sync", "stream"]
+    assert order == ["full sync", "assurance", "stream"]
 
 
 def test_push_indicator_uploads_the_snapshot(connector, assurance):
