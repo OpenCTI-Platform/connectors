@@ -22,15 +22,58 @@ from connector_linter.models import (
 from connector_linter.registry import CheckRegistry
 
 _HUNT_BASE_CLASS = "InternalHuntConnector"
+_SDK_PACKAGE = "connectors_sdk"
 
 
-def _base_name(base: ast.expr) -> str:
-    """Return the unqualified name of a base class expression."""
+def _is_sdk_module(name: str) -> bool:
+    """Return whether a module name is the connectors-sdk package or one of its modules."""
+    return name == _SDK_PACKAGE or name.startswith(f"{_SDK_PACKAGE}.")
+
+
+def _sdk_bindings(tree: ast.Module) -> tuple[set[str], set[str]]:
+    """Return the names a module binds to the SDK hunt base class and to SDK modules.
+
+    A class of the module named like the base class shadows it, so it binds nothing.
+    """
+    base_names: set[str] = set()
+    module_names: set[str] = set()
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.ImportFrom)
+            and node.module
+            and _is_sdk_module(node.module)
+        ):
+            base_names.update(
+                alias.asname or alias.name
+                for alias in node.names
+                if alias.name == _HUNT_BASE_CLASS
+            )
+        elif isinstance(node, ast.Import):
+            module_names.update(
+                alias.asname or alias.name.split(".")[0]
+                for alias in node.names
+                if _is_sdk_module(alias.name)
+            )
+    if any(
+        isinstance(node, ast.ClassDef) and node.name == _HUNT_BASE_CLASS
+        for node in ast.walk(tree)
+    ):
+        base_names.discard(_HUNT_BASE_CLASS)
+    return base_names, module_names
+
+
+def _is_sdk_hunt_base(
+    base: ast.expr, base_names: set[str], module_names: set[str]
+) -> bool:
+    """Return whether a base class expression is the SDK ``InternalHuntConnector``."""
     if isinstance(base, ast.Name):
-        return base.id
-    if isinstance(base, ast.Attribute):
-        return base.attr
-    return ""
+        return base.id in base_names
+    if isinstance(base, ast.Attribute) and base.attr == _HUNT_BASE_CLASS:
+        root = base.value
+        while isinstance(root, ast.Attribute):
+            root = root.value
+        return isinstance(root, ast.Name) and root.id in module_names
+    return False
 
 
 def _is_helper_listen_hunt(node: ast.Call) -> bool:
@@ -47,12 +90,13 @@ def _is_helper_listen_hunt(node: ast.Call) -> bool:
 def _find_hunt_entrypoints(
     trees: dict[Path, ast.Module],
 ) -> list[tuple[Path, int, str]]:
-    """Find hunt connector classes and ``helper.listen_hunt()`` calls."""
+    """Find subclasses of the SDK hunt base class and ``helper.listen_hunt()`` calls."""
     hits: list[tuple[Path, int, str]] = []
     for file_path, tree in trees.items():
+        base_names, module_names = _sdk_bindings(tree)
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and any(
-                _base_name(base) == _HUNT_BASE_CLASS for base in node.bases
+                _is_sdk_hunt_base(base, base_names, module_names) for base in node.bases
             ):
                 hits.append((file_path, node.lineno, "base class"))
             elif isinstance(node, ast.Call) and _is_helper_listen_hunt(node):

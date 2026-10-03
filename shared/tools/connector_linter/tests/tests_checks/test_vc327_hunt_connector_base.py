@@ -30,6 +30,44 @@ def run(helper):
     helper.listen_hunt(message_callback=process)
 """
 
+_ALIASED_SUBMODULE_BASE = """\
+import connectors_sdk.connectors.internal_hunt as hunt
+from connectors_sdk.connectors.internal_hunt import InternalHuntConnector as HuntBase
+
+
+class SplunkHuntConnector(HuntBase):
+    pass
+
+
+class SentinelHuntConnector(hunt.InternalHuntConnector):
+    pass
+"""
+
+_SHADOWED_BASE = """\
+from connectors_sdk import InternalHuntConnector
+
+
+class InternalHuntConnector:
+    pass
+
+
+class Connector(InternalHuntConnector):
+    pass
+"""
+
+_FOREIGN_BASE = """\
+import other_sdk
+from other_sdk import InternalHuntConnector
+
+
+class Connector(InternalHuntConnector):
+    pass
+
+
+class OtherConnector(other_sdk.InternalHuntConnector):
+    pass
+"""
+
 _NO_HUNT_LISTENER = """\
 class Connector:
     def run(self):
@@ -56,6 +94,27 @@ class TestVC327HuntConnectorBase:
         )
         results = run_checks(path, select=["VC327"])
         assert all(r.severity == Severity.INFO for r in results)
+
+    def test_passes_with_aliased_sdk_imports(self, connector_src):
+        path = connector_src(
+            ("src/main.py", _ALIASED_SUBMODULE_BASE), connector_type="INTERNAL_HUNT"
+        )
+        results = run_checks(path, select=["VC327"])
+        assert [r.severity for r in results] == [Severity.INFO]
+
+    def test_flags_a_local_class_shadowing_the_sdk_base(self, connector_src):
+        path = connector_src(
+            ("src/main.py", _SHADOWED_BASE), connector_type="INTERNAL_HUNT"
+        )
+        results = run_checks(path, select=["VC327"])
+        assert [r.severity for r in results] == [Severity.ERROR]
+
+    def test_flags_a_base_class_not_imported_from_the_sdk(self, connector_src):
+        path = connector_src(
+            ("src/main.py", _FOREIGN_BASE), connector_type="INTERNAL_HUNT"
+        )
+        results = run_checks(path, select=["VC327"])
+        assert [r.severity for r in results] == [Severity.ERROR]
 
     def test_passes_with_helper_listen_hunt(self, connector_src):
         path = connector_src(
