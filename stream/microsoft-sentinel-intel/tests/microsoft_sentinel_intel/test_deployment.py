@@ -9,6 +9,7 @@ import pytest
 from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 from connectors_sdk import (
     DeploymentAssurance,
+    HitCollection,
     IndicatorDeployment,
     VendorIndicator,
 )
@@ -614,7 +615,7 @@ def test_iter_incidents_filters_on_the_modification_time(
         "$filter=properties/lastModifiedTimeUtc%20ge%202026-10-03T10:00:00Z"
         in request.url
     )
-    assert "$orderby=properties/lastModifiedTimeUtc%20desc" in request.url
+    assert "$orderby=properties/lastModifiedTimeUtc%20asc" in request.url
     assert "$top=50" in request.url
 
 
@@ -781,10 +782,10 @@ def test_adapter_collects_hits_from_incident_entities(
     old = (since - timedelta(minutes=30)).isoformat()
     adapter_connector.client.iter_incidents.return_value = iter(
         [
-            {"id": "incident-1", "properties": {"lastActivityTimeUtc": recent}},
-            {"id": "incident-2", "properties": {"createdTimeUtc": recent}},
             {"id": "incident-old", "properties": {"lastActivityTimeUtc": old}},
             {"properties": {"lastActivityTimeUtc": recent}},
+            {"id": "incident-1", "properties": {"lastActivityTimeUtc": recent}},
+            {"id": "incident-2", "properties": {"createdTimeUtc": recent}},
         ]
     )
     adapter_connector.client.list_incident_entities.side_effect = [
@@ -793,17 +794,78 @@ def test_adapter_collects_hits_from_incident_entities(
             {"kind": "Url", "properties": {"url": "https://unrelated.example"}},
             {"kind": "Account", "properties": {"address": "198.51.100.7"}},
         ],
-        ConnectorClientError("[API] Failed", {"error": "404"}),
+        [{"kind": "Ip", "properties": {"address": "198.51.100.7"}}],
     ]
 
     hits = list(adapter.collect_hits([make_deployment()], since))
 
-    assert [(hit.value, hit.count) for hit in hits] == [("198.51.100.7", 1)]
+    assert [(hit.value, hit.count) for hit in hits] == [
+        ("198.51.100.7", 1),
+        ("198.51.100.7", 1),
+    ]
     assert hits[0].timestamp.isoformat() == recent
     adapter_connector.client.iter_incidents.assert_called_once_with(
         modified_since=since, page_size=100, max_pages=20
     )
     assert adapter_connector.client.list_incident_entities.call_count == 2
+
+
+def test_adapter_hits_resume_at_an_incident_whose_entities_cannot_be_read(
+    adapter, adapter_connector
+) -> None:
+    since = datetime.now(UTC) - timedelta(hours=1)
+    first = since + timedelta(minutes=10)
+    failing = since + timedelta(minutes=20)
+    adapter_connector.client.iter_incidents.return_value = iter(
+        [
+            {
+                "id": "incident-1",
+                "properties": {"lastModifiedTimeUtc": first.isoformat()},
+            },
+            {
+                "id": "incident-2",
+                "properties": {"lastModifiedTimeUtc": failing.isoformat()},
+            },
+            {
+                "id": "incident-3",
+                "properties": {"lastModifiedTimeUtc": failing.isoformat()},
+            },
+        ]
+    )
+    adapter_connector.client.list_incident_entities.side_effect = [
+        [{"kind": "Ip", "properties": {"address": "198.51.100.7"}}],
+        ConnectorClientError("[API] Failed", {"error": "503"}),
+    ]
+
+    collection = adapter.collect_hits([make_deployment()], since)
+
+    assert isinstance(collection, HitCollection)
+    assert collection.complete_until == failing
+    assert [hit.timestamp for hit in collection.hits] == [first]
+    assert adapter_connector.client.list_incident_entities.call_count == 2
+
+
+def test_adapter_hits_resume_after_the_last_listed_page(
+    adapter, adapter_connector, monkeypatch
+) -> None:
+    monkeypatch.setattr("microsoft_sentinel_intel.deployment.INCIDENTS_PAGE_SIZE", 1)
+    monkeypatch.setattr("microsoft_sentinel_intel.deployment.INCIDENTS_MAX_PAGES", 2)
+    since = datetime.now(UTC) - timedelta(hours=1)
+    last = since + timedelta(minutes=5)
+    adapter_connector.client.iter_incidents.return_value = iter(
+        [
+            {"id": "incident-1", "properties": {"lastModifiedTimeUtc": "invalid"}},
+            {
+                "id": "incident-2",
+                "properties": {"lastModifiedTimeUtc": last.isoformat()},
+            },
+        ]
+    )
+    adapter_connector.client.list_incident_entities.return_value = []
+
+    collection = adapter.collect_hits([make_deployment()], since)
+
+    assert collection == HitCollection(hits=[], complete_until=last)
 
 
 def test_adapter_hits_without_values_read_no_incident(
@@ -819,14 +881,24 @@ def test_adapter_hits_inspect_a_bounded_number_of_incidents(
     adapter, adapter_connector
 ) -> None:
     since = datetime.now(UTC) - timedelta(hours=1)
-    recent = (since + timedelta(minutes=1)).isoformat()
+    recent = since + timedelta(minutes=1)
     adapter_connector.client.iter_incidents.return_value = iter(
-        {"id": f"incident-{index}", "properties": {"lastActivityTimeUtc": recent}}
+        {
+            "id": f"incident-{index}",
+            "properties": {
+                "lastActivityTimeUtc": recent.isoformat(),
+                "lastModifiedTimeUtc": (recent + timedelta(seconds=index)).isoformat(),
+            },
+        }
         for index in range(MAX_HIT_INCIDENTS + 5)
     )
     adapter_connector.client.list_incident_entities.return_value = []
 
-    assert list(adapter.collect_hits([make_deployment()], since)) == []
+    collection = adapter.collect_hits([make_deployment()], since)
+
+    assert collection == HitCollection(
+        hits=[], complete_until=recent + timedelta(seconds=MAX_HIT_INCIDENTS)
+    )
     assert (
         adapter_connector.client.list_incident_entities.call_count == MAX_HIT_INCIDENTS
     )
