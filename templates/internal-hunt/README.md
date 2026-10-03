@@ -96,9 +96,10 @@ For every hunt run:
 2. The query runs over the time window of the run, bounded by the run timeout and `max_results`.
 3. Events matching a benign pattern of the hunt are suppressed. When the platform returned only part of the results and some returned events were benign, the run reports the non-benign returned events as its hits: the platform total cannot be corrected from a sample.
 4. When there are hits, the connector sends a sighting of every technique and indicator of the hunt on the Security
-   Platform identity, and an observed-data referencing the IOC observables found in the results (only for the
-   observable types the hunt expects). Objects inherit the markings and the author of the hunt and have deterministic
-   identifiers, so re-runs over the same window upsert them.
+   Platform identity, and one observed-data per number of observations referencing the IOC observables that many
+   result events hold (only for the observable types the hunt expects). Objects inherit the markings and the author
+   of the hunt and have deterministic identifiers; those of the sightings and observed-data derive from the hunt run
+   too, so a retry of a run updates its own objects and two runs never share one.
 5. The run is reported with the hit count, the distinct hosts/users/peers, the translated query and an evidence sample.
 
 Evidence and privacy guarantees: raw events never leave the connector. Evidence values are SHA-256 hashed and their

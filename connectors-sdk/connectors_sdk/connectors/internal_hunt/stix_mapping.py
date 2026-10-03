@@ -5,12 +5,14 @@ For a run with hits, the bundle holds:
 - one ``sighting`` per technique and per indicator of the hunt, sighted on the
   Security Platform identity, counting the hits between the first and the last
   matching event;
-- one ``observed-data`` referencing the IOC observables extracted from the
-  results, restricted to the observable types the hunt expects.
+- the IOC observables extracted from the results, restricted to the observable
+  types the hunt expects, and one ``observed-data`` per number of observations,
+  referencing the observables that many result events hold.
 
 Every object inherits the markings and the author of the hunt. Identifiers are
-deterministic, so running the same hunt over the same window again upserts the
-same objects instead of duplicating them.
+deterministic: observables keep their standard identifiers, while sightings and
+observed-data carry the hunt run and have identifiers scoped to it, so a retry
+of a run upserts its own objects and two runs never share one.
 """
 
 from __future__ import annotations
@@ -52,6 +54,47 @@ def sighting_description(request: HuntRequest, hits_count: int) -> str:
     )
 
 
+def build_observed_data(
+    request: HuntRequest,
+    observations: Sequence[tuple[BaseIdentifiedEntity, int]],
+    first_seen: datetime,
+    last_seen: datetime,
+) -> list[ObservedData]:
+    """Build the observed-data of the observables found by a hunt run.
+
+    ``number_observed`` is the number of observations of each referenced
+    object, so the observables are grouped by their number of observations:
+    one observed-data per count, the most observed first.
+
+    Args:
+        request: The hunt run request.
+        observations: The observables found, each with its number of
+            observations (at least one).
+        first_seen: Time of the first observation of the run.
+        last_seen: Time of the last observation of the run.
+
+    Returns:
+        The observed-data, stamped with the hunt run (empty without observable).
+    """
+    groups: dict[int, list[BaseIdentifiedEntity]] = {}
+    for entity, count in observations:
+        groups.setdefault(count, []).append(entity)
+    author = hunt_author(request)
+    markings = hunt_markings(request) or None
+    return [
+        ObservedData(
+            first_observed=first_seen,
+            last_observed=last_seen,
+            number_observed=count,
+            entities=entities,
+            hunt_run_id=request.hunt_run.id,
+            author=author,
+            markings=markings,
+        )
+        for count, entities in sorted(groups.items(), key=lambda item: -item[0])
+    ]
+
+
 def build_telemetry_objects(
     request: HuntRequest,
     hits_count: int,
@@ -80,19 +123,20 @@ def build_telemetry_objects(
     observable_models: list[BaseIdentifiedEntity] = [
         to_observable_model(observable, author, markings) for observable in observables
     ]
-    if observable_models:
-        objects.extend(observable_models)
-        objects.append(
-            ObservedData(
-                first_observed=first_seen,
-                last_observed=last_seen,
-                number_observed=hits_count,
-                entities=observable_models,
-                hunt_run_id=request.hunt_run.id,
-                author=author,
-                markings=markings or None,
-            )
+    objects.extend(observable_models)
+    objects.extend(
+        build_observed_data(
+            request,
+            [
+                (model, observable.count)
+                for model, observable in zip(
+                    observable_models, observables, strict=True
+                )
+            ],
+            first_seen,
+            last_seen,
         )
+    )
 
     if request.security_platform is not None:
         platform_id = request.security_platform.standard_id

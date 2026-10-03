@@ -11,6 +11,7 @@ from connectors_sdk.models import (
 )
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.sighting import Sighting
+from pycti import StixSightingRelationship as PyctiStixSightingRelationship
 from pydantic import ValidationError
 from stix2.v21 import Sighting as Stix2Sighting
 
@@ -140,6 +141,35 @@ def test_sighting_to_stix2_object_has_deterministic_id(
     # Then: They should have the same deterministic ID
     assert stix_a.id == stix_b.id
     assert stix_a.id.startswith("sighting--")
+
+
+def test_sighting_identity_is_scoped_to_the_hunt_run(
+    fake_valid_organization_author: OrganizationAuthor,
+) -> None:
+    """Test that two hunt runs never share a Sighting, while a retried run does."""
+    # Given: The same sighting found by two hunt runs, the first one retried
+    kwargs = dict(
+        sighting_of=fake_valid_organization_author,
+        where_sighted=[fake_valid_organization_author],
+        first_seen=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        last_seen=datetime(2026, 3, 1, tzinfo=timezone.utc),
+    )
+    # When: converting each of them to STIX
+    standard = Sighting(**kwargs).to_stix2_object()
+    run_1 = Sighting(**kwargs, hunt_run_id="run-1").to_stix2_object()
+    run_1_retry = Sighting(**kwargs, hunt_run_id="run-1").to_stix2_object()
+    run_2 = Sighting(**kwargs, hunt_run_id="run-2").to_stix2_object()
+    # Then: The ID is the standard one outside of a hunt and scoped to each run
+    assert standard.id == PyctiStixSightingRelationship.generate_id(
+        sighting_of_ref=fake_valid_organization_author.id,
+        where_sighted_refs=[fake_valid_organization_author.id],
+        first_seen=kwargs["first_seen"],
+        last_seen=kwargs["last_seen"],
+    )
+    assert run_1.id == run_1_retry.id
+    assert len({standard.id, run_1.id, run_2.id}) == 3
+    assert run_2.id.startswith("sighting--")
+    assert run_2["x_opencti_hunt_run_id"] == "run-2"
 
 
 def test_sighting_to_stix2_object_with_reference_objects() -> None:

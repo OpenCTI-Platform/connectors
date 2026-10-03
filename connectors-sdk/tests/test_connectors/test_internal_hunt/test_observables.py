@@ -101,8 +101,10 @@ def test_extract_observables_from_telemetry_fields():
     observables = extract_observables(events, ALL_TYPES)
     found = {(o.observable_type, o.value): o for o in observables}
 
-    # Then public IOCs are extracted and normalized, internal values are dropped
-    assert found[("IPv4-Addr", "8.8.8.8")].count == 3
+    # Then public IOCs are extracted and normalized, internal values are dropped,
+    # and a value found in several fields of one event counts once for that event
+    assert found[("IPv4-Addr", "8.8.8.8")].count == 2
+    assert found[("IPv4-Addr", "1.1.1.1")].count == 1
     assert ("IPv4-Addr", "10.0.0.5") not in found
     assert ("IPv4-Addr", "1.1.1.1") in found
     assert ("IPv4-Addr", "9.9.9.9") not in found

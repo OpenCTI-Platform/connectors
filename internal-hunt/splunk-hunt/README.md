@@ -31,7 +31,7 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
    [Splunk backend](https://github.com/SigmaHQ/pySigma-backend-splunk);
 2. runs it as a Splunk search job over the run time window, within the run timeout and result limit;
 3. sends the resulting knowledge to OpenCTI: a sighting of every technique and indicator of the hunt on the Splunk
-   Security Platform identity, and an observed-data referencing the IOC observables found in the results;
+   Security Platform identity, and observed-data referencing the IOC observables found in the results;
 4. reports the run (hit count, distinct hosts/users/peers, translated query, redacted evidence sample).
 
 Raw events never leave Splunk: OpenCTI only receives counts and evidence values that are SHA-256 hashed and truncated.
@@ -157,9 +157,10 @@ The connector executes `spl`.
 3. Events matching a benign pattern of the hunt are suppressed.
 4. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
    Splunk Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event) and one observed-data
-   referencing the public IP addresses, domains, URLs, file hashes and email addresses found in the results, restricted
-   to the observable types the hunt expects. Objects inherit the markings and author of the hunt and have deterministic
-   identifiers, so re-runs over the same window update them.
+   per number of observations, referencing the public IP addresses, domains, URLs, file hashes and email addresses that
+   many result events hold, restricted to the observable types the hunt expects. Objects inherit the markings and author
+   of the hunt and have deterministic identifiers; those of the sightings and observed-data derive from the hunt run
+   too, so a retry of a run updates its own objects and two runs never share one.
 5. The run is reported with the hit count (the Splunk `resultCount`), the distinct hosts, users and network peers, the
    SPL executed and an evidence sample. `_raw` and Splunk bookkeeping fields (`_time`, `_cd`, `punct`, `date_*`...)
    are never sampled; host names, user names and command lines only appear hashed and truncated in the evidence.

@@ -32,16 +32,19 @@ def test_build_telemetry_objects_maps_sightings_and_observed_data(hunt_event):
     for item in stix:
         by_type.setdefault(item["type"], []).append(item)
 
-    # Then observables, one observed-data and one sighting per technique and indicator are produced
+    # Then observables, one observed-data per observation count and one sighting
+    # per technique and indicator are produced
     assert len(by_type["ipv4-addr"]) == 1
     assert len(by_type["domain-name"]) == 1
-    observed = by_type["observed-data"][0]
-    assert observed["number_observed"] == 7
-    assert observed["x_opencti_hunt_run_id"] == request.hunt_run.id
-    assert set(observed["object_refs"]) == {
-        by_type["ipv4-addr"][0]["id"],
-        by_type["domain-name"][0]["id"],
-    }
+    most_observed, least_observed = by_type["observed-data"]
+    assert most_observed["number_observed"] == 3
+    assert most_observed["object_refs"] == [by_type["ipv4-addr"][0]["id"]]
+    assert least_observed["number_observed"] == 1
+    assert least_observed["object_refs"] == [by_type["domain-name"][0]["id"]]
+    for observed in by_type["observed-data"]:
+        assert observed["x_opencti_hunt_run_id"] == request.hunt_run.id
+        assert observed["first_observed"] == FIRST
+        assert observed["last_observed"] == LAST
     sightings = by_type["sighting"]
     assert {s["sighting_of_ref"] for s in sightings} == {
         request.hunt.techniques[0].standard_id,
@@ -60,19 +63,27 @@ def test_build_telemetry_objects_maps_sightings_and_observed_data(hunt_event):
     assert any(isinstance(obj, ObservedData) for obj in objects)
 
 
-def test_build_telemetry_objects_is_deterministic(hunt_event):
-    # Given the same run mapped twice
+def test_build_telemetry_objects_is_deterministic_per_run(hunt_event):
+    # Given a run mapped twice (a retry) and another run with the same results
     request = HuntRequest.model_validate(hunt_event())
+    retry = HuntRequest.model_validate(
+        hunt_event(hunt_run={"id": "run-1", "attempt": 2, "trigger": "retry"})
+    )
+    other_run = HuntRequest.model_validate(
+        hunt_event(hunt_run={"id": "run-2", "attempt": 1, "trigger": "schedule"})
+    )
     observables = [ObservableValue("IPv4-Addr", "8.8.8.8")]
 
-    # When/Then the STIX ids are identical (re-runs upsert)
-    first = [
-        o.id for o in build_telemetry_objects(request, 1, FIRST, LAST, observables)
-    ]
-    second = [
-        o.id for o in build_telemetry_objects(request, 1, FIRST, LAST, observables)
-    ]
-    assert first == second
+    # When the knowledge of each run is built
+    def ids(run: HuntRequest) -> list[str]:
+        return [o.id for o in build_telemetry_objects(run, 1, FIRST, LAST, observables)]
+
+    first, again, other = ids(request), ids(retry), ids(other_run)
+
+    # Then a retry upserts the same objects, and another run only shares the observable
+    assert first == again
+    assert first[0] == other[0] and first[0].startswith("ipv4-addr--")
+    assert set(first[1:]).isdisjoint(other[1:])
 
 
 def test_build_telemetry_objects_without_hits_or_platform(hunt_event):

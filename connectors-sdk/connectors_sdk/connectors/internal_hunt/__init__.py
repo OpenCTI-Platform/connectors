@@ -66,6 +66,7 @@ from connectors_sdk.connectors.internal_hunt.observables import (
     to_observable_model,
 )
 from connectors_sdk.connectors.internal_hunt.stix_mapping import (
+    build_observed_data,
     build_telemetry_objects,
     hunt_author,
     hunt_markings,
@@ -129,6 +130,7 @@ __all__ = [
     "is_public_domain",
     "is_public_ip",
     "to_observable_model",
+    "build_observed_data",
     "build_telemetry_objects",
     "hunt_author",
     "hunt_markings",

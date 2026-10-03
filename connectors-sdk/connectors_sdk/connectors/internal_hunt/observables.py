@@ -131,7 +131,7 @@ class ObservableValue:
         observable_type: OpenCTI observable type (e.g. ``IPv4-Addr``).
         value: Normalized value (hash value for ``StixFile``).
         hash_algorithm: Hash algorithm of a ``StixFile`` value.
-        count: Number of occurrences in the results.
+        count: Number of result events holding the value.
     """
 
     observable_type: str
@@ -394,7 +394,7 @@ def extract_observables(
         max_items: Maximum number of observables returned.
 
     Returns:
-        The observables, the most frequent first.
+        The observables, the most frequent first, each counted once per event.
     """
     allowed = set(allowed_types)
     if not allowed or max_items <= 0:
@@ -403,6 +403,7 @@ def extract_observables(
     counts: Counter[tuple[str, str, HashAlgorithm | None]] = Counter()
     field_cache: dict[str, tuple[set[str], list[str]]] = {}
     for event in events:
+        in_event: set[tuple[str, str, HashAlgorithm | None]] = set()
         for field, raw in event.fields.items():
             if field not in field_cache:
                 tokens = field_tokens(field)
@@ -410,11 +411,12 @@ def extract_observables(
                 field_cache[field] = (tokens, [kind] if kind else _field_types(tokens))
             tokens, candidates = field_cache[field]
             for text in value_strings(raw) if candidates else []:
-                counts.update(
+                in_event.update(
                     (found.observable_type, found.value, found.hash_algorithm)
                     for found in _first_match(text, candidates, tokens)
                     if found.observable_type in allowed
                 )
+        counts.update(in_event)
     ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0][0], item[0][1]))
     return [
         ObservableValue(kind, value, algorithm, count)

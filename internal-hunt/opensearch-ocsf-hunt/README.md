@@ -34,7 +34,7 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
    attributes) and the [OpenSearch backend](https://github.com/SigmaHQ/pySigma-backend-opensearch);
 2. runs it over the run time window, within the run timeout and result limit;
 3. sends the resulting knowledge to OpenCTI: a sighting of every technique and indicator of the hunt on the OpenSearch
-   Security Platform identity, and an observed-data referencing the IOC observables found in the results;
+   Security Platform identity, and observed-data referencing the IOC observables found in the results;
 4. reports the run (hit count, distinct hosts/users/peers, translated query, redacted evidence sample).
 
 Raw events never leave OpenSearch: OpenCTI only receives counts and evidence values that are SHA-256 hashed and
@@ -156,9 +156,10 @@ The connector executes `ppl` and `opensearch-lucene`.
 3. Events matching a benign pattern of the hunt are suppressed.
 4. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
    OpenSearch Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event) and one
-   observed-data referencing the public IP addresses, domains, URLs, file hashes and email addresses found in the
-   results, restricted to the observable types the hunt expects. Objects inherit the markings and author of the hunt
-   and have deterministic identifiers, so re-runs over the same window update them.
+   observed-data per number of observations, referencing the public IP addresses, domains, URLs, file hashes and email
+   addresses that many result events hold, restricted to the observable types the hunt expects. Objects inherit the
+   markings and author of the hunt and have deterministic identifiers; those of the sightings and observed-data derive
+   from the hunt run too, so a retry of a run updates its own objects and two runs never share one.
 5. The run is reported with the hit count, the distinct hosts, users and network peers (OCSF `device.hostname`,
    `actor.user.name`, `src_endpoint.ip`, `dst_endpoint.ip`...), the query executed and an evidence sample. The raw event
    (`raw_data`) and bookkeeping fields (`metadata.uid`, `metadata.version`, `_id`, `_index`...) are never sampled; host

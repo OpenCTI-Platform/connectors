@@ -24,7 +24,8 @@ Every hunt connector repeats the same pipeline:
 4. execute the query within the run limits (`timeout_seconds`, `max_results`);
 5. suppress the benign events of the hunt;
 6. map the results to STIX (sightings of the techniques and indicators on the Security Platform identity,
-   observed-data with IOC observables only), with deterministic ids, markings and author inherited from the hunt;
+   one observed-data per observation count with IOC observables only), with deterministic ids scoped to the hunt
+   run for sightings and observed-data, markings and author inherited from the hunt;
 7. send the bundle within the run work;
 8. report the run: hits, distinct entities, redacted evidence (SHA-256 hashes and truncated previews), translated
    query, cost and result ids, or the error of a failed run.
@@ -106,7 +107,8 @@ CI and the image builds rewrite the `connectors-sdk @ git+...` requirement line 
   are written and tested once (100% coverage), so connectors only implement translation and execution.
 - **Privacy by default**: raw telemetry never leaves the connector; only hashed and truncated evidence, counts and IOC
   observables reach OpenCTI.
-- **Deterministic knowledge**: re-running a hunt over the same window upserts the same objects.
+- **Deterministic knowledge**: observables keep their standard ids; the ids of sightings and observed-data derive
+  from the hunt run too, so a retry of a run upserts its own objects and two runs never share one.
 - **Light SDK**: connectors that do not hunt do not install pySigma.
 
 <br>

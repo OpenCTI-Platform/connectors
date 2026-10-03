@@ -32,7 +32,7 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
 2. runs it with the [Log Analytics query API](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/api/overview)
    over the run time window, within the run timeout and result limit;
 3. sends the resulting knowledge to OpenCTI: a sighting of every technique and indicator of the hunt on the Microsoft
-   Sentinel Security Platform identity, and an observed-data referencing the IOC observables found in the results;
+   Sentinel Security Platform identity, and observed-data referencing the IOC observables found in the results;
 4. reports the run (hit count, distinct hosts/users/peers, translated query, redacted evidence sample).
 
 Raw events never leave the workspace: OpenCTI only receives counts and evidence values that are SHA-256 hashed and
@@ -148,10 +148,11 @@ The connector executes `kql`.
 3. Events matching a benign pattern of the hunt are suppressed.
 4. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
    Microsoft Sentinel Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event, read from
-   `TimeGenerated`, `Timestamp`, `EventStartTime` or `TimeCreated`) and one observed-data referencing the public IP
-   addresses, domains, URLs, file hashes and email addresses found in the results, restricted to the observable types
-   the hunt expects. Objects inherit the markings and author of the hunt and have deterministic identifiers, so re-runs
-   over the same window update them.
+   `TimeGenerated`, `Timestamp`, `EventStartTime` or `TimeCreated`) and one observed-data per number of observations,
+   referencing the public IP addresses, domains, URLs, file hashes and email addresses that many result events hold,
+   restricted to the observable types the hunt expects. Objects inherit the markings and author of the hunt and have
+   deterministic identifiers; those of the sightings and observed-data derive from the hunt run too, so a retry of a run
+   updates its own objects and two runs never share one.
 5. The run is reported with the hit count, the distinct hosts, users and network peers, the KQL executed and an
    evidence sample. Raw payload columns (`EventData`, `RawEventData`, `AdditionalFields`, `Message`...) and Log
    Analytics bookkeeping columns (`TenantId`, `_ResourceId`, `Type`...) are never sampled; host names, user names and
