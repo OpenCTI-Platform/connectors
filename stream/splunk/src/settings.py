@@ -2,7 +2,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
+    DeploymentConfig,
+    HitsConfig,
     ListFromString,
+    SecurityPlatformConfig,
 )
 from pydantic import Field, HttpUrl, SecretStr
 
@@ -57,6 +60,16 @@ class SplunkConfig(BaseConfigModel):
         description="Comma-separated list of entity types to ignore.",
         default=[],
     )
+    hits_saved_search: str | None = Field(
+        description=(
+            "Name of a Splunk saved search, visible in the owner/app namespace, returning "
+            "the matches of the KV Store indicators in your events. It is run over the "
+            "time range of each hit collection; every result carries 'opencti_id' (the "
+            "KV Store '_key') or 'value' (the matched observable value), '_time' and "
+            "optionally 'count'. Leave empty to not report hits."
+        ),
+        default=None,
+    )
 
 
 class MetricsConfig(BaseConfigModel):
@@ -78,12 +91,39 @@ class MetricsConfig(BaseConfigModel):
     )
 
 
+class SplunkSecurityPlatformConfig(SecurityPlatformConfig):
+    """
+    Security Platform entity representing Splunk in OpenCTI (deployment write-back).
+    """
+
+    name: str = Field(
+        default="Splunk",
+        min_length=2,
+        description=(
+            "Name of the Security Platform entity representing Splunk in OpenCTI "
+            "(created if it does not exist)."
+        ),
+    )
+    type: str | None = Field(
+        default="SIEM",
+        description=(
+            "Type of the Security Platform entity (open vocabulary "
+            "security_platform_type_ov)."
+        ),
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """
     Override `BaseConnectorSettings` to include `StreamConnectorConfig`,
-    `SplunkConfig` and `MetricsConfig`.
+    `SplunkConfig`, `MetricsConfig` and the deployment write-back namespaces.
     """
 
     connector: StreamConnectorConfig = Field(default_factory=StreamConnectorConfig)
     splunk: SplunkConfig = Field(default_factory=SplunkConfig)
     metrics: MetricsConfig = Field(default_factory=MetricsConfig)
+    deployment: DeploymentConfig = Field(default_factory=DeploymentConfig)
+    hits: HitsConfig = Field(default_factory=HitsConfig)
+    security_platform: SplunkSecurityPlatformConfig = Field(
+        default_factory=SplunkSecurityPlatformConfig
+    )
