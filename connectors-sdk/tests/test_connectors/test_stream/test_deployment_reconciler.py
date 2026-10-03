@@ -442,6 +442,88 @@ def test_value_matching_withdraws_a_single_vendor_item(
     assert reported()["a"]["status"] == "removed"
 
 
+@pytest.mark.parametrize(
+    ("withdrawn", "matched_by"),
+    [
+        ({"revoked": True}, "external_id"),
+        ({"status": "expired"}, "external_id"),
+        ({"revoked": True}, "value"),
+    ],
+)
+def test_a_vendor_item_shared_with_a_deployment_that_stays_is_not_removed(
+    graphql_helper,
+    make_reporter,
+    list_nodes,
+    node_factory,
+    reported,
+    withdrawn,
+    matched_by,
+):
+    """Vendors de-duplicating by value hold one item for two indicators: withdrawing
+    one of them leaves the item to the other one."""
+    external_id = "ext-shared" if matched_by == "external_id" else None
+    pattern = "[domain-name:value = 'shared.example']"
+    list_nodes(
+        node_factory(
+            **{
+                "indicator_id": "a",
+                "status": "active",
+                "pattern": pattern,
+                "external_id": external_id,
+                "standard_id": "indicator--a",
+                **withdrawn,
+            }
+        ),
+        node_factory(
+            indicator_id="b",
+            status="active",
+            pattern=pattern,
+            external_id=external_id,
+            standard_id="indicator--b",
+        ),
+    )
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(value="shared.example", external_id="ext-shared")]
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert adapter.removed == []
+    assert summary.withdrawn == 1
+    assert reported()["a"]["status"] == "removed"
+    assert reported()["b"]["status"] == "active"
+
+
+def test_a_vendor_item_of_withdrawn_deployments_only_is_removed(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            status="active",
+            revoked=True,
+            external_id="ext-shared",
+            standard_id="indicator--a",
+        ),
+        node_factory(
+            indicator_id="b",
+            status="expired",
+            external_id="ext-shared",
+            standard_id="indicator--b",
+        ),
+    )
+    adapter = FakeAdapter(vendor=[VendorIndicator(external_id="ext-shared")])
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert [vendor.external_id for vendor, _deployment in adapter.removed] == [
+        "ext-shared"
+    ]
+    assert summary.withdrawn == 2
+    assert reported()["a"]["status"] == "removed"
+    assert reported()["b"]["status"] == "removed"
+
+
 def test_deployments_confirmed_during_the_read_back_are_deferred(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):

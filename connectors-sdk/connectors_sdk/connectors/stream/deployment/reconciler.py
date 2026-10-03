@@ -403,15 +403,32 @@ class DeploymentReconciler:
             summary.deployments = len(deployments)
 
             vendor_index = _Index.of_vendor_indicators(vendor_indicators)
+            deployment_matches = [
+                (
+                    deployment,
+                    vendor_index.find_all(
+                        deployment.identifiers,
+                        deployment.external_id,
+                        deployment.values,
+                    ),
+                )
+                for deployment in deployments
+            ]
+            # Vendors de-duplicating by value hold one item for several indicators:
+            # an item still used by a deployment that stays is never removed.
+            kept = {
+                id(vendor)
+                for deployment, vendor_matches in deployment_matches
+                if not self._must_remove(deployment, now)
+                for vendor in vendor_matches
+            }
+            removed: set[int] = set()
             matched: set[int] = set()
             reports: list[DeploymentReport] = []
-            for deployment in deployments:
-                vendor_matches = vendor_index.find_all(
-                    deployment.identifiers, deployment.external_id, deployment.values
-                )
+            for deployment, vendor_matches in deployment_matches:
                 matched.update(id(vendor) for vendor in vendor_matches)
                 report = self._reconcile_deployment(
-                    deployment, vendor_matches, now, summary
+                    deployment, vendor_matches, now, summary, kept, removed
                 )
                 if report is not None:
                     reports.append(report)
@@ -465,12 +482,30 @@ class DeploymentReconciler:
         summary.vendor_indicators = len(vendor_indicators)
         return vendor_indicators
 
+    @staticmethod
+    def _must_remove(deployment: IndicatorDeployment, now: datetime) -> bool:
+        """Tell whether a deployment must be withdrawn from the vendor.
+
+        Args:
+            deployment: The deployment.
+            now: The start of the run.
+
+        Returns:
+            ``True`` when the indicator must be withdrawn or the deployment expired.
+        """
+        return (
+            deployment.requires_removal(now)
+            or deployment.status == DeploymentStatus.EXPIRED
+        )
+
     def _reconcile_deployment(
         self,
         deployment: IndicatorDeployment,
         vendor_matches: Sequence[VendorIndicator],
         now: datetime,
         summary: ReconciliationSummary,
+        kept: set[int],
+        removed: set[int],
     ) -> DeploymentReport | None:
         """Decide the report of one deployment.
 
@@ -480,17 +515,18 @@ class DeploymentReconciler:
                 the vendor holds one item per observable, or duplicates).
             now: The start of the run, taken before the vendor read-back.
             summary: The run counters, updated.
+            kept: Python ids of the vendor indicators used by a deployment that stays.
+            removed: Python ids of the vendor indicators removed by the run, updated.
 
         Returns:
             The report to send, if any.
         """
         vendor_indicator = vendor_matches[0] if vendor_matches else None
-        must_remove = (
-            deployment.requires_removal(now)
-            or deployment.status == DeploymentStatus.EXPIRED
-        )
+        must_remove = self._must_remove(deployment, now)
         if must_remove and vendor_matches:
-            return self._withdraw(deployment, vendor_matches, now, summary)
+            return self._withdraw(
+                deployment, vendor_matches, now, summary, kept, removed
+            )
         if vendor_indicator is None:
             if summary.vendor_listing_truncated:
                 return None
@@ -534,14 +570,23 @@ class DeploymentReconciler:
         vendor_matches: Sequence[VendorIndicator],
         now: datetime,
         summary: ReconciliationSummary,
+        kept: set[int],
+        removed: set[int],
     ) -> DeploymentReport | None:
         """Remove every vendor item of an indicator from the vendor.
+
+        An item another deployment still uses (one vendor item for several
+        indicators of the same value) stays on the vendor: the indicator is
+        withdrawn without it. An item already removed by the run is not removed
+        again.
 
         Args:
             deployment: The deployment to withdraw.
             vendor_matches: The vendor indicators of the deployment (at least one).
             now: The reference time.
             summary: The run counters, updated.
+            kept: Python ids of the vendor indicators used by a deployment that stays.
+            removed: Python ids of the vendor indicators removed by the run, updated.
 
         Returns:
             A ``removed`` report once every item is removed, or ``None`` when one
@@ -549,6 +594,18 @@ class DeploymentReconciler:
             flags the deployment ``expired`` if no removal is confirmed in time).
         """
         for vendor_indicator in vendor_matches:
+            if id(vendor_indicator) in removed:
+                continue
+            if id(vendor_indicator) in kept:
+                self._logger.info(
+                    f"{_LOG_PREFIX} Vendor indicator kept, another deployment still "
+                    "uses it.",
+                    {
+                        "indicator_id": deployment.indicator_id,
+                        "external_id": vendor_indicator.external_id,
+                    },
+                )
+                continue
             try:
                 self._adapter.remove_vendor_indicator(vendor_indicator, deployment)
             except Exception as err:
@@ -562,6 +619,7 @@ class DeploymentReconciler:
                     },
                 )
                 return None
+            removed.add(id(vendor_indicator))
         summary.withdrawn += 1
         return DeploymentReport(
             indicator_id=deployment.indicator_id,
