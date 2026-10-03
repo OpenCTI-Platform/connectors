@@ -106,7 +106,9 @@ fetched from its repository.
 1. **Verify** the configured Cloudflare Rules List exists (and log its kind).
 2. **Full sync** on startup: load all IPv4 indicators and `IPv4-Addr`
    observables from OpenCTI into an in-memory snapshot, then immediately push
-   that snapshot to Cloudflare.
+   that snapshot to Cloudflare. When a listing fails, nothing is pushed and the
+   next live-stream events retry the full sync (at most once per
+   `CLOUDFLARE_SYNC_INTERVAL`) until it succeeds.
 3. **Listen** to the OpenCTI live stream — cache IPv4 values on create/update,
    drop them on delete.
 4. **Replace** the entire Cloudflare list with the current snapshot, then poll
@@ -147,9 +149,11 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
   reported `removed` from a partial listing.
 - **Withdrawal safety**: a withdrawal deletes the list item (`DELETE /rules/lists/{id}/items`, never an empty snapshot)
   only when its comment carries an id of the indicator, and drops the indicator from the snapshot.
-- **Startup**: the initial full sync always uploads its snapshot, even an empty one, so the items a previous run left
-  in the list are cleared. The reconciliation starts after it; when the full sync fails, it is not started (a re-push
-  would upload a partial snapshot) and only the stream outcomes are reported until the next restart.
+- **Startup**: the initial full sync reads every IPv4 indicator and observable from OpenCTI and always uploads its
+  snapshot, even an empty one, so the items a previous run left in the list are cleared. When either listing fails,
+  nothing is uploaded: the list keeps its items, the stream events retry the full sync (at most once per
+  `CLOUDFLARE_SYNC_INTERVAL`) instead of uploading a snapshot of their objects alone, and the reconciliation starts
+  once a full sync succeeds.
 - **Hits**: not reported. Hits of a list are the firewall events of the rules referencing it, which the connector does
   not manage.
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;

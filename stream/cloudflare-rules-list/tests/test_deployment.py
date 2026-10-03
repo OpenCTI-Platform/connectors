@@ -72,6 +72,8 @@ def build_connector(helper=None, client=None, assurance=None, settings=None):
         client=client or MagicMock(spec=CloudflareRulesListClient),
     )
     connector.sync_interval = 0
+    # The stream events of the tests arrive after a successful initial full sync.
+    connector._full_sync_done = True
     connector.client.replace_list_items.return_value = {}
     connector.client.delete_list_items.return_value = {}
     connector.assurance = assurance
@@ -272,6 +274,87 @@ def test_empty_full_sync_clears_the_items_of_a_previous_run(connector, assurance
     connector.client.replace_list_items.assert_called_once()
 
 
+def test_failed_observable_listing_fails_the_full_sync(connector, assurance):
+    connector._full_sync_done = False
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": INDICATOR_ID,
+            "standard_id": STIX_ID,
+            "entity_type": "Indicator",
+            "pattern": "[ipv4-addr:value = '198.51.100.7']",
+        }
+    ]
+    connector.helper.api.stix_cyber_observable.list.side_effect = RuntimeError(
+        "OpenCTI timeout"
+    )
+
+    with pytest.raises(RuntimeError, match="OpenCTI timeout"):
+        connector._full_sync()
+
+    connector.client.replace_list_items.assert_not_called()
+    assert enqueued(assurance) == {}
+    assert connector._full_sync_done is False
+    assert connector._indicator_cache == {}
+
+
+def test_stream_events_retry_a_failed_full_sync_instead_of_uploading(
+    connector, assurance
+):
+    connector._full_sync_done = False
+    connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
+    connector.helper.api.stix_cyber_observable.list.return_value = []
+
+    connector.process_message(make_message("create", make_indicator()))
+
+    connector.client.replace_list_items.assert_not_called()
+    assurance.start.assert_not_called()
+    connector.logger.error.assert_called_once_with(
+        "Full sync retry failed", meta={"error": "OpenCTI down"}
+    )
+
+    connector.helper.api.indicator.list.side_effect = None
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": INDICATOR_ID,
+            "standard_id": STIX_ID,
+            "entity_type": "Indicator",
+            "pattern": "[ipv4-addr:value = '198.51.100.7']",
+        },
+        {
+            "id": OTHER_ID,
+            "standard_id": OTHER_STIX_ID,
+            "entity_type": "Indicator",
+            "pattern": "[ipv4-addr:value = '203.0.113.9']",
+        },
+    ]
+    connector.process_message(
+        make_message("create", make_indicator(stix_id=OTHER_STIX_ID, ip="203.0.113.9"))
+    )
+
+    connector.client.replace_list_items.assert_called_once_with(
+        "list-123",
+        [
+            {"ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"},
+            {"ip": "203.0.113.9", "comment": f"OpenCTI: {OTHER_STIX_ID}"},
+        ],
+    )
+    assert set(enqueued(assurance)) == {STIX_ID, OTHER_STIX_ID}
+    assurance.start.assert_called_once()
+    assert connector._full_sync_done is True
+
+
+def test_full_sync_retry_waits_for_the_sync_interval(connector, assurance):
+    connector._full_sync_done = False
+    connector.sync_interval = 3600
+    connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
+
+    connector.process_message(make_message("create", make_indicator()))
+    connector.process_message(make_message("delete", make_indicator()))
+
+    connector.helper.api.indicator.list.assert_called_once()
+    connector.client.replace_list_items.assert_not_called()
+
+
 def test_stream_events_after_a_full_sync_share_its_keys(connector, assurance):
     connector.helper.api.indicator.list.return_value = [
         {
@@ -326,6 +409,7 @@ def test_run_starts_the_write_back_after_the_full_sync(connector, assurance):
 
 
 def test_failed_full_sync_does_not_start_the_reconciliation(connector, assurance):
+    connector._full_sync_done = False
     connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
 
     connector.run()

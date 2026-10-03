@@ -37,6 +37,8 @@ def connector(helper, config, client):
     conn = Connector(helper=helper, config=config, client=client)
     # Force sync to trigger on demand in tests.
     conn.sync_interval = 0
+    # The stream events of the tests arrive after a successful initial full sync.
+    conn._full_sync_done = True
     return conn
 
 
@@ -258,14 +260,15 @@ def test_full_sync_loads_indicators_and_observables(connector):
     connector.client.replace_list_items.assert_called_once()
 
 
-def test_full_sync_handles_observable_error(connector):
+def test_full_sync_fails_on_observable_error(connector):
     connector.helper.api.indicator.list.return_value = []
     connector.helper.api.stix_cyber_observable.list.side_effect = RuntimeError("boom")
     connector.client.replace_list_items.return_value = {}
 
-    connector._full_sync()
+    with pytest.raises(RuntimeError, match="boom"):
+        connector._full_sync()
 
-    connector.logger.warning.assert_called_once()
+    connector.client.replace_list_items.assert_not_called()
 
 
 # --------------------------------------------------------------------------- #

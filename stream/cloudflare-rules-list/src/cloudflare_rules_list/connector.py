@@ -57,6 +57,9 @@ class Connector:
         self._synced: dict[str, str] = {}
         # Whether the last snapshot uploaded had items (an emptied snapshot clears the list).
         self._list_has_items = False
+        # Whether a full sync built the snapshot: before, it only holds the objects of
+        # the stream events, and uploading it would remove every other item of the list.
+        self._full_sync_done = False
         # The stream and the deployment reconciliation both change the snapshot.
         self._lock = threading.RLock()
         self._last_sync_time = 0.0
@@ -172,9 +175,28 @@ class Connector:
     # Sync to Cloudflare
     # ------------------------------------------------------------------ #
     def _check_sync(self) -> None:
-        """Sync to Cloudflare if the configured interval has elapsed."""
-        if time.monotonic() - self._last_sync_time >= self.sync_interval:
+        """Sync to Cloudflare if the configured interval has elapsed.
+
+        Until a full sync succeeds, the full sync is retried instead (at most once per
+        interval) and nothing else is uploaded.
+        """
+        if time.monotonic() - self._last_sync_time < self.sync_interval:
+            return
+        if self._full_sync_done:
             self._sync_to_cloudflare()
+        else:
+            self._retry_full_sync()
+
+    def _retry_full_sync(self) -> None:
+        """Retry a failed initial full sync, then start the deployment reconciliation."""
+        self._last_sync_time = time.monotonic()
+        try:
+            self._full_sync()
+        except Exception as exc:  # noqa: BLE001 - retried after the next interval
+            self.logger.error("Full sync retry failed", meta={"error": str(exc)})
+            return
+        if self.assurance is not None:
+            self.assurance.start()
 
     def _sync_to_cloudflare(self, force: bool = False) -> None:
         """Push the full IPv4 snapshot to the Cloudflare Rules List.
@@ -325,7 +347,11 @@ class Connector:
     # Full sync (startup)
     # ------------------------------------------------------------------ #
     def _full_sync(self) -> None:
-        """Load all IPv4 indicators and observables from OpenCTI, then sync."""
+        """Load all IPv4 indicators and observables from OpenCTI, then sync.
+
+        The uploaded snapshot replaces the list: when either listing fails, the full
+        sync fails and nothing is uploaded.
+        """
         self.logger.info("Starting full sync from OpenCTI")
         cache: dict[str, str] = {}
         indicator_keys: set[str] = set()
@@ -341,23 +367,19 @@ class Connector:
                 cache[indicator_id] = value
                 indicator_keys.add(indicator_id)
 
-        try:
-            observables = self.helper.api.stix_cyber_observable.list(
-                types=["IPv4-Addr"], getAll=True
-            )
-            for observable in observables:
-                value = self._extract_ipv4(observable)
-                obs_id = self._api_object_id(observable)
-                if value and obs_id:
-                    cache[obs_id] = value
-        except Exception as exc:  # noqa: BLE001
-            self.logger.warning(
-                "Could not fetch IPv4 observables", meta={"error": str(exc)}
-            )
+        observables = self.helper.api.stix_cyber_observable.list(
+            types=["IPv4-Addr"], getAll=True
+        )
+        for observable in observables:
+            value = self._extract_ipv4(observable)
+            obs_id = self._api_object_id(observable)
+            if value and obs_id:
+                cache[obs_id] = value
 
         with self._lock:
             self._indicator_cache = cache
             self._indicator_keys = indicator_keys
+            self._full_sync_done = True
         self.logger.info(
             "Loaded IPv4 indicators for sync",
             meta={"count": len(cache)},
@@ -391,16 +413,14 @@ class Connector:
 
         try:
             self._full_sync()
-            full_sync_done = True
         except Exception as exc:  # noqa: BLE001
             self.logger.error("Initial full sync failed", meta={"error": str(exc)})
-            full_sync_done = False
 
         # The reconciliation uploads the snapshot: it only starts on a snapshot built by
-        # the full sync (the full sync reports are queued until then). After a failed
-        # full sync, the stream outcomes are still reported.
+        # a full sync (the full sync reports are queued until then). After a failed full
+        # sync, the stream events retry it and the reconciliation starts once it succeeds.
         if self.assurance is not None:
-            if full_sync_done:
+            if self._full_sync_done:
                 self.assurance.start()
             else:
                 self.logger.warning(
