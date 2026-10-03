@@ -89,6 +89,29 @@ def scout_window(window: HuntTimeWindow, today: date) -> tuple[date, date] | Non
     return (start, end) if start <= end else None
 
 
+def within_window(result: SourceResult, window: HuntTimeWindow) -> SourceResult:
+    """Keep the hosts of a current-view source last scanned within the run window.
+
+    Censys and Silent Push search their current view of the internet, without
+    time bounds: a host whose last scan falls outside the window is dropped,
+    and a host without scan time is kept. The records read still count against
+    the run budget.
+
+    Args:
+        result: Hosts found by one source query.
+        window: Time window of the run.
+
+    Returns:
+        The hosts observed within the window.
+    """
+    hosts = [
+        host
+        for host in result.hosts
+        if host.last_seen is None or window.start <= host.last_seen <= window.end
+    ]
+    return SourceResult(hosts, result.total, result.read)
+
+
 def describe_rule(rule: FingerprintRule, max_items: int = 5) -> str:
     """Describe the fingerprints of a rule in a few words."""
     parts = [f"{fp.kind} {fp.value}" for fp in rule.fingerprints[:max_items]]
@@ -193,6 +216,7 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
         native_query: NativeQuery,
         time_window: HuntTimeWindow,
         limits: HuntLimits,
+        deadline: RunDeadline | None = None,
     ) -> HuntResult:
         """Run the source queries of a plan and merge the hosts they find.
 
@@ -206,12 +230,14 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
             native_query: Query plan.
             time_window: Time window of the run.
             limits: Run limits.
+            deadline: Run deadline shared with the SDK (started from the
+                limits on direct calls).
 
         Returns:
             One event per host (IP address, else host name).
         """
         plan = load_plan(native_query.query)
-        deadline = RunDeadline(limits.timeout_seconds)
+        deadline = deadline or RunDeadline(limits.timeout_seconds)
         hosts: dict[str, Host] = {}
         errors: list[HuntExecutionError] = []
         answered = 0
@@ -294,7 +320,7 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
                 )
                 return SourceResult([])
             return client.search(query, dates[0], dates[1], limit, deadline)
-        return client.search(query, limit, deadline)
+        return within_window(client.search(query, limit, deadline), window)
 
     def _enrich(self, hosts: list[Host], deadline: RunDeadline) -> None:
         """Add the Shodan InternetDB data of the IP addresses found (best effort)."""

@@ -26,7 +26,12 @@ from connectors_sdk.connectors.internal_hunt import (
     NativeQuery,
 )
 from infrastructure_tracker import InfrastructureTrackerConnector
-from infrastructure_tracker.connector import _today, describe_rule, scout_window
+from infrastructure_tracker.connector import (
+    _today,
+    describe_rule,
+    scout_window,
+    within_window,
+)
 from infrastructure_tracker.rule import parse_rule, render_plan
 from infrastructure_tracker.sources import (
     CensysClient,
@@ -36,6 +41,7 @@ from infrastructure_tracker.sources import (
     SourceResult,
     UrlscanClient,
 )
+from infrastructure_tracker.stix import infrastructure_name
 
 SDK_CONNECTOR = "connectors_sdk.connectors.internal_hunt.internal_hunt_connector"
 TRACKER = "infrastructure_tracker.connector"
@@ -102,6 +108,26 @@ def test_scout_window_keeps_the_most_recent_searchable_days():
     )
     assert scout_window(wide, today) == (date(2026, 9, 5), date(2026, 10, 4))
     assert scout_window(WINDOW, date(2027, 1, 30)) is None
+
+
+def test_within_window_keeps_the_hosts_scanned_during_the_run_window():
+    inside = Host(
+        key="8.8.8.8", last_seen=datetime(2026, 10, 3, 8, tzinfo=timezone.utc)
+    )
+    before = Host(key="8.8.4.4", last_seen=datetime(2026, 9, 1, tzinfo=timezone.utc))
+    after = Host(key="1.1.1.1", last_seen=datetime(2026, 10, 5, tzinfo=timezone.utc))
+    unknown = Host(key="9.9.9.9")
+    result = within_window(SourceResult([inside, before, after, unknown], 12), WINDOW)
+    assert [host.key for host in result.hosts] == ["8.8.8.8", "9.9.9.9"]
+    assert result.total == 12
+    assert result.read == 4
+
+
+def test_infrastructure_name_carries_the_hunt_id():
+    first = infrastructure_name("C2 servers", "3f2a9c1d-0000-4000-8000-000000000001")
+    second = infrastructure_name("C2 servers", "7b10e4aa-0000-4000-8000-000000000002")
+    assert first == "C2 servers (hunt 3f2a9c1d)"
+    assert first != second
 
 
 def test_today_is_the_utc_date():
@@ -173,7 +199,7 @@ def test_process_message_maps_the_infrastructure(
         if obj["type"] in ("ipv4-addr", "domain-name", "x509-certificate")
     }
     (infrastructure,) = [obj for obj in sent if obj["type"] == "infrastructure"]
-    assert infrastructure["name"] == "Cobalt Strike team servers"
+    assert infrastructure["name"] == "Cobalt Strike team servers (hunt hunt-1)"
     assert "run-1" in infrastructure["description"]
     assert infrastructure["first_seen"] == "2026-10-03T08:00:00Z"
     assert [o["value"] for o in sent if o["type"] == "ipv4-addr"] == ["8.8.8.8"]

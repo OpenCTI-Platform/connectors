@@ -2,8 +2,8 @@
 
 For a run with hits, the bundle holds:
 
-- one ``infrastructure`` named after the hunt, active between the first and the
-  last observation of its hosts;
+- one ``infrastructure`` named after the hunt and its OpenCTI id, active between
+  the first and the last observation of its hosts;
 - the IPv4 addresses, domain names and X.509 certificates of the hosts, each
   ``consists-of`` the infrastructure;
 - one detection ``indicator`` per observable, ``based-on`` it;
@@ -154,6 +154,23 @@ def _indicator_name(observable: TrackedObservable) -> str:
     return observable.value
 
 
+def infrastructure_name(hunt_name: str, hunt_id: str) -> str:
+    """Name of the infrastructure tracked by a hunt.
+
+    OpenCTI derives the identifier of an infrastructure from its name, so the
+    name carries the immutable OpenCTI id of the hunt next to its display name:
+    two hunts sharing a name never grow the same infrastructure.
+
+    Args:
+        hunt_name: Name of the hunt.
+        hunt_id: OpenCTI internal id of the hunt.
+
+    Returns:
+        The hunt name followed by the first eight characters of its id.
+    """
+    return f"{hunt_name} (hunt {hunt_id[:8]})"
+
+
 def build_infrastructure_objects(
     request: HuntRequest,
     hits_count: int,
@@ -181,7 +198,7 @@ def build_infrastructure_objects(
     markings = hunt_markings(request) or None
     hunt = request.hunt
     infrastructure = Infrastructure(
-        name=hunt.name,
+        name=infrastructure_name(hunt.name, hunt.id),
         description=(
             f"Internet infrastructure matching the fingerprints of the hunt '{hunt.name}' "
             f"({fingerprints}): {hits_count} host(s) found by hunt run {request.hunt_run.id}."

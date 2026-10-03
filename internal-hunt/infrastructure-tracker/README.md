@@ -166,8 +166,9 @@ configured source supports its fingerprints.
 ## Behavior
 
 1. The sources are queried one after the other, within the run timeout. Censys and Silent Push search their current
-   view of the internet; urlscan.io searches the scans of the run window; Team Cymru Scout searches the most recent 30
-   days of the run window within its 90 days of history (a window older than that is skipped).
+   view of the internet, and only the hosts they last scanned within the run window are kept (a host without a scan
+   time is kept); urlscan.io searches the scans of the run window; Team Cymru Scout searches the most recent 30 days of
+   the run window within its 90 days of history (a window older than that is skipped).
 2. A failing source is logged and skipped; the run fails only when every query fails. A source timeout fails the run.
 3. The queries share the run `max_results`: each query reads at most an equal share of what is left of it, so the run
    never reads more than `max_results` records in total, whatever the number of queries. Hosts are merged by IP
@@ -177,7 +178,9 @@ configured source supports its fingerprints.
    enrichment is best effort: an error is logged, and it stops when the run timeout is close.
 5. Hosts matching a benign pattern of the hunt are suppressed.
 6. With hits, the connector sends:
-   - one `infrastructure` named after the hunt, active between the first and last observation of its hosts;
+   - one `infrastructure` named after the hunt and the first eight characters of its OpenCTI id ("Cobalt Strike team
+     servers (hunt 3f2a9c1d)"), so two hunts sharing a name never grow the same infrastructure, active between the
+     first and last observation of its hosts;
    - the public IPv4 addresses, public domain names and X.509 certificates (SHA-256, subject, issuer) found, the most
      frequent first, each `consists-of` the infrastructure, restricted to `CONNECTOR_OBSERVABLE_TYPES`, to the
      observable types the hunt expects and to `INFRASTRUCTURE_TRACKER_CREATE_CERTIFICATES`;
