@@ -459,6 +459,21 @@ def test_adapter_collects_hits_from_ioc_matches(connector):
     connector.helper.connector_logger.warning.assert_not_called()
 
 
+def test_adapter_credits_every_indicator_sharing_a_value(connector):
+    recent = datetime.now(UTC) - timedelta(minutes=5)
+    connector.api_client.list_ioc_matches.return_value = (
+        [ioc_match(recent, destinationIpAddress="198.51.100.7")],
+        False,
+    )
+
+    hits = SecOpsDeploymentAdapter(connector).collect_hits(
+        [make_deployment(), make_deployment(indicator_id=OTHER_ID)],
+        datetime.now(UTC) - timedelta(hours=1),
+    )
+
+    assert sorted(hit.indicator_id for hit in hits) == sorted([INDICATOR_ID, OTHER_ID])
+
+
 def test_adapter_warns_when_more_matches_are_available(connector):
     connector.api_client.list_ioc_matches.return_value = ([], True)
 

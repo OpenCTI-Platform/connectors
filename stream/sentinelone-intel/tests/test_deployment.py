@@ -243,6 +243,44 @@ def test_delete_removes_the_iocs_created_from_the_indicator(connector):
     connector.assurance.report_removed.assert_called_once_with(indicator)
 
 
+def test_delete_removes_the_iocs_of_every_page(connector):
+    connector.client.session.request.side_effect = [
+        mock_response(
+            {
+                "data": [{"uuid": "uuid-1", "externalId": STIX_ID}],
+                "pagination": {"nextCursor": "c1"},
+            }
+        ),
+        mock_response({"data": [{"uuid": "uuid-2", "externalId": STIX_ID}]}),
+        mock_response({"data": {"affected": 2}}),
+    ]
+
+    connector.process_message(make_message("delete", make_indicator()))
+
+    second_page = calls_of(connector.client.session, "GET")[1]
+    assert second_page.kwargs["params"]["cursor"] == "c1"
+    assert second_page.kwargs["params"]["externalId"] == STIX_ID
+    (deletion,) = calls_of(connector.client.session, "DELETE")
+    assert deletion.kwargs["json"]["filter"]["uuids"] == ["uuid-1", "uuid-2"]
+    connector.assurance.report_removed.assert_called_once()
+
+
+def test_delete_with_an_ignored_pagination_is_not_reported(connector):
+    page = {
+        "data": [{"uuid": "uuid-1", "externalId": STIX_ID}],
+        "pagination": {"nextCursor": "same"},
+    }
+    connector.client.session.request.side_effect = [
+        mock_response(page),
+        mock_response(page),
+    ]
+
+    connector.process_message(make_message("delete", make_indicator()))
+
+    assert calls_of(connector.client.session, "DELETE") == []
+    connector.assurance.report_removed.assert_not_called()
+
+
 def test_delete_without_ioc_of_the_indicator_is_not_reported(connector):
     connector.client.session.request.return_value = mock_response(
         {"data": [{"uuid": "uuid-2", "externalId": "other-source"}]}

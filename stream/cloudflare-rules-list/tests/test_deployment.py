@@ -168,6 +168,34 @@ def test_dropped_indicators_are_reported_removed(connector, assurance):
     assert reports[STIX_ID].status == "removed"
 
 
+def test_deleting_the_last_object_clears_the_list(connector, assurance):
+    connector.process_message(make_message("create", make_indicator()))
+    assurance.reporter.enqueue.reset_mock()
+
+    connector.process_message(make_message("delete", make_indicator()))
+
+    connector.client.replace_list_items.assert_called_with("list-123", [])
+    reports = enqueued(assurance)
+    assert set(reports) == {STIX_ID}
+    assert reports[STIX_ID].status == "removed"
+
+    connector.process_message(make_message("delete", make_indicator()))
+    connector._sync_to_cloudflare()
+    assert connector.client.replace_list_items.call_count == 2
+
+
+def test_failed_clear_keeps_the_last_indicator_deployed(connector, assurance):
+    connector.process_message(make_message("create", make_indicator()))
+    assurance.reporter.enqueue.reset_mock()
+    connector.client.replace_list_items.side_effect = CloudflareAPIError("refused")
+
+    connector.process_message(make_message("delete", make_indicator()))
+
+    assurance.reporter.enqueue.assert_not_called()
+    assert connector._synced == {STIX_ID: "198.51.100.7"}
+    assert connector._list_has_items is True
+
+
 def test_failed_upload_reports_the_new_indicators_failed(connector, assurance):
     connector.process_message(make_message("create", make_indicator()))
     assurance.reporter.enqueue.reset_mock()
@@ -224,7 +252,12 @@ def test_connector_works_without_write_back():
     connector.process_message(make_message("create", make_indicator()))
     connector.process_message(make_message("delete", make_indicator()))
 
-    connector.client.replace_list_items.assert_called_once()
+    assert [
+        call.args[1] for call in connector.client.replace_list_items.call_args_list
+    ] == [
+        [{"ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"}],
+        [],
+    ]
 
 
 def test_run_starts_the_write_back_before_the_full_sync(connector, assurance):
@@ -241,12 +274,22 @@ def test_run_starts_the_write_back_before_the_full_sync(connector, assurance):
 
 
 def test_push_indicator_uploads_the_snapshot(connector, assurance):
+    connector.process_message(
+        make_message("create", make_indicator(stix_id=OTHER_STIX_ID, ip="203.0.113.9"))
+    )
+    assurance.reporter.enqueue.reset_mock()
+
     connector.push_indicator(make_indicator())
 
-    connector.client.replace_list_items.assert_called_once_with(
-        "list-123", [{"ip": "198.51.100.7", "comment": f"OpenCTI: {INDICATOR_ID}"}]
+    connector.client.replace_list_items.assert_called_with(
+        "list-123",
+        [
+            {"ip": "203.0.113.9", "comment": f"OpenCTI: {OTHER_STIX_ID}"},
+            {"ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"},
+        ],
     )
-    assert enqueued(assurance)[INDICATOR_ID].status == "deployed"
+    assert set(enqueued(assurance)) == {STIX_ID}
+    assert enqueued(assurance)[STIX_ID].status == "deployed"
 
 
 def test_push_indicator_errors(connector):
