@@ -37,6 +37,7 @@ def test_build_telemetry_objects_maps_sightings_and_observed_data(hunt_event):
     assert len(by_type["domain-name"]) == 1
     observed = by_type["observed-data"][0]
     assert observed["number_observed"] == 7
+    assert observed["x_opencti_hunt_run_id"] == request.hunt_run.id
     assert set(observed["object_refs"]) == {
         by_type["ipv4-addr"][0]["id"],
         by_type["domain-name"][0]["id"],
@@ -52,6 +53,7 @@ def test_build_telemetry_objects_maps_sightings_and_observed_data(hunt_event):
         assert sighting["first_seen"] == FIRST
         assert sighting["last_seen"] == LAST
         assert "run-1" in sighting["description"]
+        assert sighting["x_opencti_hunt_run_id"] == request.hunt_run.id
         assert sighting["created_by_ref"] == request.hunt.created_by_ref
         assert sighting["object_marking_refs"] == request.hunt.object_marking_refs
     assert isinstance(objects[-1], Sighting)
