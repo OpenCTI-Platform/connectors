@@ -1,0 +1,22 @@
+services:
+  connector-stairwell:
+    image: opencti/connector-stairwell:rolling
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_STAIRWELL_ID}
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=Stairwell
+      - CONNECTOR_SCOPE=StixFile,Domain-Name,IPv4-Addr,IPv6-Addr,Autonomous-System
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=error
+      - STAIRWELL_API_TOKEN=${STAIRWELL_API_TOKEN}
+      - STAIRWELL_API_BASE_URL=https://app.stairwell.com
+      - STAIRWELL_ORGANIZATION_ID=${STAIRWELL_ORGANIZATION_ID:-}
+      - STAIRWELL_USER_ID=${STAIRWELL_USER_ID:-}
+      - STAIRWELL_DEFAULT_TLP=amber
+      - STAIRWELL_MAX_TLP_LEVEL=red
+      - STAIRWELL_VARIANT_LIMIT=25
+      - STAIRWELL_RESOLUTIONS_LIMIT=50
+      - STAIRWELL_SIGHTINGS_LIMIT=100
+    restart: always
