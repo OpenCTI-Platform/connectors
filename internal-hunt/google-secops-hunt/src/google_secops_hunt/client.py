@@ -111,9 +111,10 @@ class SecOpsClient(HuntApiClient):
         with self._token_lock:
             if self._credentials.valid:
                 return
-            deadline.check("The Google authentication")
             request = _BoundedAuthRequest(
-                deadline.request_timeout(TOKEN_TIMEOUT_SECONDS)
+                deadline.request_timeout(
+                    TOKEN_TIMEOUT_SECONDS, "The Google authentication"
+                )
             )
             try:
                 self._credentials.refresh(request)

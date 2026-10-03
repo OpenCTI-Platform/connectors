@@ -61,8 +61,9 @@ class TokenRequestTransport(RequestsTransport):
         deadline = self._deadline
         timeout = TOKEN_TIMEOUT_SECONDS
         if deadline is not None:
-            deadline.check(AUTHENTICATION_OPERATION)
-            timeout = deadline.request_timeout(TOKEN_TIMEOUT_SECONDS)
+            timeout = deadline.request_timeout(
+                TOKEN_TIMEOUT_SECONDS, AUTHENTICATION_OPERATION
+            )
         kwargs["connection_timeout"] = timeout
         kwargs["read_timeout"] = timeout
         return super().send(request, **kwargs)

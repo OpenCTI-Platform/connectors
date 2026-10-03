@@ -161,6 +161,21 @@ def test_authentication_respects_the_deadline():
     assert credentials.requests == []
 
 
+def test_authentication_never_waits_longer_than_the_time_left(requests_mock):
+    # Given a deadline with half a second left
+    requests_mock.get(UDM_SEARCH_URL, json={})
+    now = [0.0]
+    deadline = RunDeadline(10, clock=lambda: now[0])
+    now[0] = 9.5
+    credentials = FakeCredentials()
+
+    # When a search runs
+    make_client(credentials).udm_search("x", START, END, 10, deadline)
+
+    # Then the token request is bounded by the time left
+    assert credentials.requests[0]._timeout == pytest.approx(0.5)
+
+
 def test_bounded_auth_request_forces_the_timeout():
     # Given a bounded transport
     with patch("google_secops_hunt.client.GoogleAuthRequest") as request_cls:

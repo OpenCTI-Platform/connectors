@@ -135,6 +135,21 @@ def test_hunt_request_caps_the_request_timeout(client):
     assert request.call_args.kwargs["timeout"] == 5
 
 
+def test_hunt_request_never_outlives_the_run_deadline(client):
+    # Given a deadline with a quarter of a second left
+    now = [100.0]
+    deadline = RunDeadline(10, clock=lambda: now[0])
+    now[0] += 9.75
+    with patch.object(client._session, "request") as request:
+        request.return_value = _response(204)
+
+        # When the call is sent
+        client.hunt_request("GET", "/x", deadline, "The call")
+
+    # Then its timeout is the time left, not a longer floor
+    assert request.call_args.kwargs["timeout"] == pytest.approx(0.25)
+
+
 def test_hunt_request_refuses_expired_deadlines(client):
     # Given an expired deadline
     with patch.object(client._session, "request") as request:

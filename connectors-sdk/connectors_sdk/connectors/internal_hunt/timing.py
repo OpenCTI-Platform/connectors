@@ -45,17 +45,28 @@ class RunDeadline:
         """Return whether the deadline is reached."""
         return self.remaining() <= 0
 
-    def request_timeout(self, maximum: float = 60.0, minimum: float = 1.0) -> float:
+    def request_timeout(
+        self, maximum: float = 60.0, operation: str = "The request"
+    ) -> float:
         """Return the timeout of the next HTTP request.
 
         Args:
             maximum: Upper bound of a single request.
-            minimum: Lower bound, so that a request is never sent without timeout.
+            operation: Description of the request, for the error message.
 
         Returns:
-            The remaining time, bounded by ``minimum`` and ``maximum``.
+            The time left before the deadline, at most ``maximum``: a request
+            never outlives the run.
+
+        Raises:
+            HuntTimeoutError: If no time is left, so that no request is sent.
         """
-        return max(minimum, min(maximum, self.remaining()))
+        remaining = self.remaining()
+        if remaining <= 0:
+            raise HuntTimeoutError(
+                f"{operation} did not complete within the run timeout."
+            )
+        return min(maximum, remaining)
 
     def check(self, operation: str) -> None:
         """Raise when the deadline is reached.

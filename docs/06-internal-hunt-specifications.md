@@ -124,7 +124,8 @@ class SplunkHuntConnector(InternalHuntConnector):
 Rules:
 
 - Build the platform client on `HuntApiClient` from the connectors-sdk: `hunt_request()` bounds every call with the run
-  deadline (`RunDeadline(limits.timeout_seconds)`), retries on 429/5xx and raises `HuntExecutionError` /
+  deadline (`RunDeadline(limits.timeout_seconds)`; `RunDeadline.request_timeout()` never gives a request more than the
+  time left and refuses to send one once it is spent), retries on 429/5xx and raises `HuntExecutionError` /
   `HuntTimeoutError` carrying the platform error message; `cleanup_request()` cancels or deletes platform jobs without
   masking the run outcome. Poll asynchronous jobs with `RunDeadline.check()` / `RunDeadline.sleep()` and cancel them in
   `on_timeout()`.

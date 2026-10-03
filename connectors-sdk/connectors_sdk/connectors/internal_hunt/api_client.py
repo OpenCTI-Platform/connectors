@@ -159,8 +159,7 @@ class HuntApiClient(BaseClientApi):
         """
         attempt = 0
         while True:
-            deadline.check(operation)
-            kwargs["timeout"] = deadline.request_timeout(max_timeout)
+            kwargs["timeout"] = deadline.request_timeout(max_timeout, operation)
             try:
                 return self._request(method, path, **kwargs)
             except requests.Timeout as err:

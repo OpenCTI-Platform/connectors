@@ -237,11 +237,18 @@ def test_token_transport_bounds_every_request_by_the_deadline():
                 "connection_timeout": 12.0,
                 "read_timeout": 12.0,
             }
+            # With a fraction of a second left, never more than that fraction
+            now[0] = 11.5
+            transport.send("token-request")
+            assert send.call_args.kwargs == {
+                "connection_timeout": 0.5,
+                "read_timeout": 0.5,
+            }
             # Once the deadline is reached, no request is sent (retries included)
             now[0] = 13.0
             with pytest.raises(HuntTimeoutError, match="Microsoft Entra"):
                 transport.send("token-request")
-        assert send.call_count == 2
+        assert send.call_count == 3
     assert transport.deadline is None
 
 

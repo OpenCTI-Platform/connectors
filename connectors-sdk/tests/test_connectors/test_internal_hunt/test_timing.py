@@ -39,9 +39,23 @@ def test_run_deadline_bounds_requests_and_sleeps():
     deadline.sleep(30)
     assert clock.slept == [3, 7]
     assert deadline.expired() is True
-    assert deadline.request_timeout() == 1.0
     with pytest.raises(HuntTimeoutError, match="Splunk job did not complete"):
         deadline.check("Splunk job")
+
+
+def test_run_deadline_never_gives_a_request_more_time_than_is_left():
+    # Given a deadline with a fraction of a second left
+    clock = _Clock()
+    deadline = RunDeadline(10, clock=clock, sleeper=clock.sleep)
+    clock.now += 9.99
+
+    # When/Then the request timeout is the time left, not a floor of one second
+    assert deadline.request_timeout() == pytest.approx(0.01)
+
+    # And no request is sent once the deadline is reached
+    clock.now += 1
+    with pytest.raises(HuntTimeoutError, match="The token request did not complete"):
+        deadline.request_timeout(operation="The token request")
 
 
 def test_run_deadline_uses_the_monotonic_clock_by_default():
