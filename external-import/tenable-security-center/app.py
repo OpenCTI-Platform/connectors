@@ -179,7 +179,9 @@ class Connector:
             if len(stix_objects) == 0:
                 return True
 
-            self._send_bundle(self.helper.stix2_create_bundle(stix_objects))
+            self._send_bundle(
+                self.helper.stix2_create_bundle(list(stix_objects.values()))
+            )
 
             return True
 

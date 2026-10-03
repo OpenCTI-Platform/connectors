@@ -53,7 +53,7 @@ Below are the parameters you'll need to set for the connector:
 | API backoff                            | `TSC_API_BACKOFF`                 | 5       | No        | Backoff time in seconds for API retries                                                         |
 | API retries                            | `TSC_API_RETRIES`                 | 3       | No        | Number of retries for API requests                                                              |
 | Export since                           | `TSC_EXPORT_SINCE`                |         | Yes       | Export data since this date, in ISO8601 format. This will be overwritten after the first successful run. |
-| Minimum severity level                 | `TSC_SEVERITY_MIN_LEVEL`          |         | Yes       | Minimum severity level to export. Should be one of "info", "low", "medium", "high", "critical"  |
+| Minimum severity level                 | `TSC_SEVERITY_MIN_LEVEL`          | high    | No        | Minimum severity level to export. Should be one of "info", "low", "medium", "high", "critical"  |
 | Process Systems Without Vulnerabilities | `TSC_PROCESS_SYSTEMS_WITHOUT_VULNERABILITIES` |         | Yes       | Process systems without vulnerabilities (True/False). Activating this option might significantly increase the amount of ingested data.|
 | Marking definition                     | `TSC_MARKING_DEFINITION`          |         | No        | Marking definition for exported data (Should be TLP:WHITE, TLP:AMBER, etc)                                                           |
 
@@ -148,7 +148,7 @@ graph LR
     TenableHostAsset==>|looping over installed OS| OpenCTIOperatingSystem
 
     %% Plugin generates Software and Vulnerability
-    TenableVulnerability ==>|looping over targeted CPE URIs| OpenCTISoftware
+    TenableVulnerability ==>|looping over the plugin CPE URIs| OpenCTISoftware
     TenableVulnerability ==>|looping over detected CVEs| OpenCTIVulnerability
 
     %% Relationships between System and Observables
@@ -161,6 +161,33 @@ graph LR
     OpenCTISystem -.-> |"Has"| OpenCTIVulnerability
 
 ```
+
+### Vulnerabilities
+
+Each CVE referenced by a finding is imported as a Vulnerability. Its description, publication and modification
+dates and CVSS v3 metrics are fetched from the Tenable Security Center CVE endpoint. If Tenable Security Center
+returns no details for a CVE, the Vulnerability is still created with the CVE identifier only (and the Tenable
+severity of the finding), so that the relationship with the System is kept.
+
+A finding that does not reference any CVE is imported as a Vulnerability named after the Tenable plugin.
+
+### Softwares and CPE URIs
+
+Software observables are built from the CPE URIs of the Tenable plugin that triggered the finding (the `cpe` field
+of the Tenable Security Center vulnerability analysis). This is the case whether or not the finding references CVEs,
+and is aligned with the Tenable Vulnerability Management connector.
+
+Please note that:
+
+- These CPE URIs are plugin metadata, not a software inventory of the scanned host: they are the same on every host
+  where the plugin triggers and usually identify a product without its version. Only the vendor and the product are
+  kept, the Software is created without version.
+- The Software is linked to the Vulnerabilities with a `has` relationship. It is not linked to the System, which is
+  directly linked to the Vulnerabilities.
+- Package CPE URIs (`p-cpe`) are ignored.
+- The CPE URIs listed in the CVE details (the generic NVD list of all the products affected by the CVE) are **not**
+  imported: they are not tied to the scanned asset and can represent a very large volume of data. If you need this
+  information, use the [CVE connector](../cve/README.md) with its `CVE_IMPORT_SOFTWARE` option enabled.
 
 ## Development
 To develop on the connector source code, you can install the provided tenable-security-center package in `editable` mode with the dev dependencies using :
