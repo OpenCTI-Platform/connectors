@@ -252,8 +252,8 @@ class Connector:
             )
 
             items = [
-                {"ip": value, "comment": f"{COMMENT_PREFIX}{indicator_id}"}
-                for indicator_id, value in snapshot.items()
+                {"ip": value, "comment": f"{COMMENT_PREFIX}{owner}"}
+                for value, owner in self._item_owners(snapshot).items()
             ]
 
             try:
@@ -287,6 +287,27 @@ class Connector:
             )
             self._synced = indicators
             self._list_has_items = bool(items)
+
+    def _item_owners(self, snapshot: dict[str, str]) -> dict[str, str]:
+        """Return the object named in the comment of each IP address of a snapshot.
+
+        A Cloudflare list holds an IP address once: an address shared by several
+        objects is uploaded as one item, whose comment names the first indicator
+        holding it (else the first observable).
+        """
+        owners: dict[str, str] = {}
+        for key, value in snapshot.items():
+            owner = owners.get(value)
+            if owner is None or (
+                owner not in self._indicator_keys and key in self._indicator_keys
+            ):
+                owners[value] = key
+        return owners
+
+    def indicators_of(self, ip: str) -> list[str]:
+        """Return the indicators of the last uploaded snapshot holding an IP address."""
+        with self._lock:
+            return [key for key, value in self._synced.items() if value == ip]
 
     def _changed(self, indicators: dict[str, str]) -> list[str]:
         """Return the indicators whose value differs from the last uploaded snapshot."""
@@ -327,30 +348,44 @@ class Connector:
             self._indicator_keys.add(indicator_id)
             self._upload_snapshot()
 
-    def withdraw_item(self, item_id: str, identifiers: Iterable[str]) -> None:
-        """Delete a list item and drop its indicator from the snapshot.
+    def withdraw_item(self, item_id: str, ip: str, identifiers: Iterable[str]) -> None:
+        """Withdraw an indicator from the list and drop it from the snapshot.
+
+        The list item is deleted, unless another object of the snapshot holds its IP
+        address: the snapshot without the indicator is then uploaded again, so the
+        item stays for that object and its comment names it.
 
         Args:
             item_id: The Cloudflare list item id.
+            ip: The IP address of the item.
             identifiers: The normalized identifiers of the indicator (OpenCTI ids).
 
         Raises:
-            CloudflareAPIError: When Cloudflare refuses the deletion.
+            CloudflareAPIError: When Cloudflare refuses the deletion or the snapshot.
         """
         identifiers = set(identifiers)
         with self._lock:
-            result = self.client.delete_list_items(self.list_id, [item_id])
-            operation_id = result.get("operation_id")
-            if operation_id:
-                self.client.wait_for_operation(operation_id)
-            for key in [
+            keys = [
                 key
                 for key in self._indicator_cache
                 if normalize_value(key) in identifiers
-            ]:
+            ]
+            shared = any(
+                value == ip
+                for key, value in self._indicator_cache.items()
+                if key not in keys
+            )
+            if not shared:
+                result = self.client.delete_list_items(self.list_id, [item_id])
+                operation_id = result.get("operation_id")
+                if operation_id:
+                    self.client.wait_for_operation(operation_id)
+            for key in keys:
                 del self._indicator_cache[key]
                 self._indicator_keys.discard(key)
                 self._synced.pop(key, None)
+            if shared:
+                self._upload_snapshot()
 
     # ------------------------------------------------------------------ #
     # Full sync (startup)

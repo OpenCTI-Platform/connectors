@@ -4,11 +4,13 @@ The `CloudflareDeploymentAdapter` gives the connectors SDK reconciliation access
 the Cloudflare Rules List:
 
 - read-back: the items of the list (`rules/lists/{id}/items`, cursor pagination),
-  matched with the deployments by the OpenCTI id of their comment
-  (`OpenCTI: <id>`), by item id, then by IP address;
-- removal: deletion of the list item, when its comment carries an id of the
-  indicator (items of other objects are left in place), and of the indicator from
-  the snapshot;
+  one per IP address, matched with the deployments by the OpenCTI id of their
+  comment (`OpenCTI: <id>`) and the indicators of the snapshot holding the address,
+  by item id, then by IP address;
+- removal: deletion of the list item when it belongs to the indicator (items of
+  other objects are left in place) and no other object of the snapshot holds the
+  address (the snapshot without the indicator is uploaded instead), and of the
+  indicator from the snapshot;
 - re-push: the indicator is added to the snapshot, which is uploaded.
 
 Hits are not reported: they are the firewall events of the rules referencing the
@@ -58,9 +60,10 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
         """Read back the IP address items of the list.
 
-        Only comments carrying a STIX indicator id identify an indicator; other
-        items (observables, or comments carrying an internal id) are matched by IP
-        address.
+        An item identifies the STIX indicator of its comment and, since the list
+        holds an IP address once, every indicator of the last uploaded snapshot
+        holding that address: one vendor indicator is returned for each. Other items
+        (observables, or comments carrying an internal id) are matched by IP address.
 
         :raises CloudflareAPIError: On any API error (never a partial listing).
         """
@@ -71,25 +74,41 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
             if not isinstance(ip, str) or not ip or item_id is None:
                 continue
             opencti_id = comment_id(item)
-            yield VendorIndicator(
-                indicator_id=(
-                    opencti_id
-                    if opencti_id and opencti_id.startswith(STIX_INDICATOR_PREFIX)
-                    else None
-                ),
-                external_id=str(item_id),
-                value=ip,
-                raw={"item_id": str(item_id), "opencti_id": opencti_id},
+            indicator_ids = list(
+                dict.fromkeys(
+                    (
+                        [opencti_id]
+                        if opencti_id and opencti_id.startswith(STIX_INDICATOR_PREFIX)
+                        else []
+                    )
+                    + connector.indicators_of(ip)
+                )
             )
+            if not indicator_ids:
+                yield VendorIndicator(
+                    external_id=str(item_id),
+                    value=ip,
+                    raw={"item_id": str(item_id), "opencti_id": opencti_id},
+                )
+            for indicator_id in indicator_ids:
+                yield VendorIndicator(
+                    indicator_id=indicator_id,
+                    external_id=str(item_id),
+                    value=ip,
+                    raw={"item_id": str(item_id), "opencti_id": indicator_id},
+                )
 
     def remove_vendor_indicator(
         self, vendor_indicator: VendorIndicator, deployment: IndicatorDeployment
     ) -> None:
-        """Delete the list item of an indicator (withdrawal, revocation or expiry).
+        """Withdraw the list item of an indicator (withdrawal, revocation or expiry).
 
-        :raises CloudflareDeploymentError: When the item comment does not carry an id
-            of the indicator (item of another object, left in place).
-        :raises CloudflareAPIError: When Cloudflare refuses the deletion.
+        The item is deleted, or kept for another object of the snapshot holding the
+        same IP address.
+
+        :raises CloudflareDeploymentError: When the item does not belong to the
+            indicator (item of another object, left in place).
+        :raises CloudflareAPIError: When Cloudflare refuses the deletion or the snapshot.
         """
         item_id = vendor_indicator.raw.get("item_id") or vendor_indicator.external_id
         opencti_id = normalize_value(vendor_indicator.raw.get("opencti_id"))
@@ -98,7 +117,9 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
                 f"The Cloudflare list item {item_id} does not belong to this indicator "
                 "(its comment carries another OpenCTI id), it is left in place"
             )
-        self._connector.withdraw_item(str(item_id), deployment.identifiers)
+        self._connector.withdraw_item(
+            str(item_id), vendor_indicator.value or "", deployment.identifiers
+        )
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
         """Add an indicator to the snapshot and upload it.

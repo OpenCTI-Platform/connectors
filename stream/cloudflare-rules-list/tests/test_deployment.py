@@ -511,13 +511,68 @@ def test_withdraw_item_deletes_the_item_and_drops_the_indicator(connector):
     )
     connector.client.delete_list_items.return_value = {"operation_id": "op-1"}
 
-    connector.withdraw_item("item-1", {STIX_ID, INDICATOR_ID})
+    connector.withdraw_item("item-1", "198.51.100.7", {STIX_ID, INDICATOR_ID})
 
     connector.client.delete_list_items.assert_called_once_with("list-123", ["item-1"])
     connector.client.wait_for_operation.assert_called_once_with("op-1")
     assert connector._indicator_cache == {OTHER_STIX_ID: "203.0.113.9"}
     assert connector._indicator_keys == {OTHER_STIX_ID}
     assert set(connector._synced) == {OTHER_STIX_ID}
+
+
+def make_observable(stix_id="ipv4-addr--1", ip="198.51.100.7"):
+    return {
+        "id": stix_id,
+        "type": "ipv4-addr",
+        "spec_version": "2.1",
+        "value": ip,
+        "extensions": {OPENCTI_EXTENSION_ID: {"id": stix_id, "type": "IPv4-Addr"}},
+    }
+
+
+def test_objects_sharing_an_ip_are_uploaded_as_one_item(connector, assurance):
+    connector.process_message(make_message("create", make_observable()))
+    connector.process_message(make_message("create", make_indicator()))
+    connector.process_message(
+        make_message("create", make_indicator(stix_id=OTHER_STIX_ID))
+    )
+
+    assert connector.client.replace_list_items.call_args.args == (
+        "list-123",
+        [{"ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"}],
+    )
+    assert set(enqueued(assurance)) == {STIX_ID, OTHER_STIX_ID}
+    assert connector.indicators_of("198.51.100.7") == [STIX_ID, OTHER_STIX_ID]
+
+
+def test_withdrawal_keeps_an_item_another_object_holds(connector, assurance):
+    connector.process_message(make_message("create", make_indicator()))
+    connector.process_message(
+        make_message("create", make_indicator(stix_id=OTHER_STIX_ID))
+    )
+    connector.client.replace_list_items.reset_mock()
+
+    connector.withdraw_item("item-1", "198.51.100.7", {STIX_ID, INDICATOR_ID})
+
+    connector.client.delete_list_items.assert_not_called()
+    connector.client.replace_list_items.assert_called_once_with(
+        "list-123", [{"ip": "198.51.100.7", "comment": f"OpenCTI: {OTHER_STIX_ID}"}]
+    )
+    assert connector._indicator_cache == {OTHER_STIX_ID: "198.51.100.7"}
+
+
+def test_failed_shared_withdrawal_never_deletes_the_item(connector, assurance):
+    connector.process_message(make_message("create", make_indicator()))
+    connector.process_message(
+        make_message("create", make_indicator(stix_id=OTHER_STIX_ID))
+    )
+    connector.client.replace_list_items.side_effect = CloudflareAPIError("refused")
+
+    for _ in range(2):
+        with pytest.raises(CloudflareAPIError, match="refused"):
+            connector.withdraw_item("item-1", "198.51.100.7", {STIX_ID})
+
+    connector.client.delete_list_items.assert_not_called()
 
 
 # Client
@@ -612,6 +667,26 @@ def test_adapter_lists_the_items(connector):
     ]
     assert indicators[1].raw == {"item_id": "2", "opencti_id": INDICATOR_ID}
     connector.client.iter_list_items.assert_called_once_with("list-123")
+
+
+def test_adapter_lists_every_indicator_holding_an_item(connector):
+    connector._synced = {STIX_ID: "198.51.100.7", OTHER_STIX_ID: "198.51.100.7"}
+    connector.client.iter_list_items.return_value = iter(
+        [{"id": "1", "ip": "198.51.100.7", "comment": f"OpenCTI: {OTHER_STIX_ID}"}]
+    )
+
+    indicators = list(CloudflareDeploymentAdapter(connector).list_vendor_indicators())
+
+    assert indicators == [
+        VendorIndicator(
+            indicator_id=OTHER_STIX_ID, external_id="1", value="198.51.100.7"
+        ),
+        VendorIndicator(indicator_id=STIX_ID, external_id="1", value="198.51.100.7"),
+    ]
+    assert [indicator.raw["opencti_id"] for indicator in indicators] == [
+        OTHER_STIX_ID,
+        STIX_ID,
+    ]
 
 
 def test_adapter_removes_only_the_items_of_the_indicator(connector):
@@ -815,6 +890,43 @@ def test_reconciliation_confirms_removes_and_withdraws(e2e_connector, router):
     assert reports[INDICATOR_ID]["externalId"] == "i-1"
     assert reports[OTHER_ID]["status"] == "removed"
     assert reports["withdrawn-id"]["status"] == "removed"
+
+
+def test_reconciliation_of_indicators_sharing_an_ip(e2e_connector, router):
+    third_stix_id = "indicator--7f6b4c5d-0e1f-4a3b-c4d5-e6f7a8b9c0d1"
+    for stix_id in (STIX_ID, OTHER_STIX_ID, third_stix_id):
+        e2e_connector.process_message(
+            make_message("create", make_indicator(stix_id=stix_id))
+        )
+    e2e_connector.assurance.flush()
+    router.calls.clear()
+    e2e_connector.client.replace_list_items.reset_mock()
+    router.deployments = [
+        deployment_node(INDICATOR_ID, "deployed", "198.51.100.7", STIX_ID),
+        deployment_node(OTHER_ID, "deployed", "198.51.100.7", OTHER_STIX_ID),
+        deployment_node(
+            "revoked-id", "active", "198.51.100.7", third_stix_id, revoked=True
+        ),
+    ]
+    e2e_connector.client.iter_list_items.return_value = iter(
+        [{"id": "i-1", "ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"}]
+    )
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.confirmed_active == 2
+    assert summary.withdrawn == 1
+    e2e_connector.client.delete_list_items.assert_not_called()
+    e2e_connector.client.replace_list_items.assert_called_once_with(
+        "list-123", [{"ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"}]
+    )
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    reports = {report["indicatorId"]: report["status"] for report in batch["reports"]}
+    assert reports == {
+        INDICATOR_ID: "active",
+        OTHER_ID: "active",
+        "revoked-id": "removed",
+    }
 
 
 def test_read_back_failure_skips_the_reconciliation(e2e_connector, router):
