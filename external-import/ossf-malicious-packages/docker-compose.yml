@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-ossf-malicious-packages:
+    image: opencti/connector-ossf-malicious-packages:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=3fda8b20-75f7-424d-ba15-f836b1a5bdfa  # Optional (default: 3fda8b20-75f7-424d-ba15-f836b1a5bdfa)
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=OSSF Malicious Packages
+      - CONNECTOR_SCOPE=file,indicator
+      - CONNECTOR_CONFIDENCE_LEVEL=80
+      - CONNECTOR_LOG_LEVEL=info
+      - OSSF_GITHUB_REPO_URL=https://github.com/ossf/malicious-packages.git  # Required
+      - OSSF_GITHUB_BRANCH=main  # Optional (default: main)
+      - OSSF_LOCAL_REPO_PATH=/opt/ossf-malicous-packages-repo  # Optional (default: /opt/ossf-malicous-packages-repo)
+      - OSSF_RUN_INTERVAL_SECONDS=3600  # Optional (default: 86400) - How often to check for updates, in seconds
+      - OSSF_DEFAULT_SCORE=80  # Optional (default: 80) - Default x_opencti_score for indicators
+      - OSSF_SOURCE_NAME=ossf/malicious-packages  # Optional (default: ossf/malicious-packages)
+    restart: always
