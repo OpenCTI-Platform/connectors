@@ -29,6 +29,7 @@ from connectors_sdk.connectors.stream.deployment.models import (
     RECONCILED_STATUSES,
     DeploymentReport,
     DeploymentStatus,
+    HitCollection,
     IndicatorDeployment,
     ReconciliationSummary,
     VendorHit,
@@ -106,7 +107,7 @@ class DeploymentVendorAdapter(ABC):
 
     def collect_hits(
         self, deployments: Sequence[IndicatorDeployment], since: datetime
-    ) -> Iterable[VendorHit]:
+    ) -> Iterable[VendorHit] | HitCollection:
         """Read the detections of deployed indicators observed since a date.
 
         Adapters able to read detections (alerts, incidents, matches) override it;
@@ -117,7 +118,8 @@ class DeploymentVendorAdapter(ABC):
             since: Only return detections that happened after this date.
 
         Returns:
-            The hits, matched to deployments by indicator id, vendor id or value.
+            The hits, matched to deployments by indicator id, vendor id or value. A
+            capped read returns a ``HitCollection`` telling how far it is complete.
         """
         return ()
 
@@ -245,7 +247,7 @@ class DeploymentReconciler:
         self._hits_lookback = hits_lookback or max(interval, timedelta(hours=1))
         self._initial_delay = initial_delay
         self._clock = clock or (lambda: datetime.now(UTC))
-        self._last_hits_run: datetime | None = None
+        self._hits_since: datetime | None = None
         self._run_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
@@ -647,6 +649,56 @@ class DeploymentReconciler:
             )
         return reports
 
+    def _read_hits(
+        self,
+        deployments: list[IndicatorDeployment],
+        since: datetime,
+        next_since: datetime,
+    ) -> tuple[list[VendorHit], datetime] | None:
+        """Read the detections from the vendor and decide where the next run starts.
+
+        Args:
+            deployments: The live deployments.
+            since: Start of the read.
+            next_since: Start of the next read when this one is complete.
+
+        Returns:
+            The hits to report and the start of the next read, or ``None`` when the
+            vendor could not be read.
+        """
+        try:
+            collected = self._adapter.collect_hits(deployments, since)
+            if not isinstance(collected, HitCollection):
+                return list(collected), next_since
+            hits = list(collected.hits)
+        except Exception as err:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Cannot read the detections from the vendor.",
+                {"error": str(err)},
+            )
+            return None
+        complete_until = collected.complete_until
+        if complete_until is None:
+            return hits, next_since
+        if complete_until <= since:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Detection read capped at the start of its window, "
+                "the hits of this run are a lower bound.",
+                {"since": since.isoformat()},
+            )
+            return hits, next_since
+        self._logger.warning(
+            f"{_LOG_PREFIX} Detection read capped by the vendor, the next run "
+            "resumes where this one stopped.",
+            {"since": since.isoformat(), "complete_until": complete_until.isoformat()},
+        )
+        return [
+            hit
+            for hit in hits
+            if (timestamp := parse_datetime(hit.timestamp)) is not None
+            and timestamp < complete_until
+        ], complete_until
+
     def _report_hits(
         self, deployments: list[IndicatorDeployment], now: datetime
     ) -> int:
@@ -659,18 +711,15 @@ class DeploymentReconciler:
         Returns:
             The number of indicators with new hits reported.
         """
+        next_since = now - self._hits_lookback
         if not deployments:
-            self._last_hits_run = now
+            self._hits_since = next_since
             return 0
-        since = (self._last_hits_run or now) - self._hits_lookback
-        try:
-            hits = list(self._adapter.collect_hits(deployments, since))
-        except Exception as err:
-            self._logger.warning(
-                f"{_LOG_PREFIX} Cannot read the detections from the vendor.",
-                {"error": str(err)},
-            )
+        since = self._hits_since if self._hits_since is not None else next_since
+        collected = self._read_hits(deployments, since, next_since)
+        if collected is None:
             return 0
+        hits, next_since = collected
         index = _Index.of_deployments(deployments)
         aggregated: dict[str, list[Any]] = {}
         for hit in hits:
@@ -703,5 +752,5 @@ class DeploymentReconciler:
                 indicator_id, count, last_hit=last_hit, first_hit=first_hit
             ):
                 reported += 1
-        self._last_hits_run = now
+        self._hits_since = next_since
         return reported

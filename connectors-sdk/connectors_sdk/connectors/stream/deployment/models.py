@@ -1,6 +1,6 @@
 """Data models of the deployment write-back."""
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -406,6 +406,26 @@ class VendorHit:
     external_id: str | None = None
     value: str | None = None
     count: int = 1
+
+
+@dataclass(frozen=True, slots=True)
+class HitCollection:
+    """Detections read from the security platform, with how far the read is complete.
+
+    Adapters whose read is capped (result limit, page budget) return it instead of a
+    plain iterable, reading the oldest detections first.
+
+    Attributes:
+        hits: The detections read.
+        complete_until: ``None`` when every detection since the requested date was
+            read. Otherwise every detection strictly before this date was read and
+            later ones may be missing: only the hits before it are reported and the
+            next run resumes at it, so capped detections are read later instead of
+            being lost.
+    """
+
+    hits: Sequence[VendorHit] = ()
+    complete_until: datetime | None = None
 
 
 @dataclass(slots=True)
