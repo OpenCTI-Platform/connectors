@@ -169,19 +169,52 @@ class ProvenanceSummary(BaseModel):
                 f"invalid {', '.join(invalid_fields)}."
             ) from err
 
-    def __hash__(self) -> int:
-        """Hash the summary from its JSON representation.
+    def model_copy(
+        self, *, update: Mapping[str, Any] | None = None, deep: bool = False
+    ) -> Self:
+        """Return a copy of the summary, validating the updated values.
 
-        The default hash of frozen pydantic models fails on mapping fields.
+        Pydantic does not validate `update` values: a copy could otherwise hold a
+        negative count or a mutable collection.
+
+        Args:
+            update: Values to change in the copy.
+            deep: Whether to make a deep copy (fields are immutable either way).
+
+        Returns:
+            A new summary.
+
+        Raises:
+            ValueError: If `update` names a field the model does not define.
+            ValidationError: If an updated value is invalid.
+
         """
-        return hash(self.model_dump_json())
+        if not update:
+            return super().model_copy(deep=deep)
+        unknown_fields = set(update) - set(type(self).model_fields)
+        if unknown_fields:
+            raise ValueError(
+                f"Unknown {type(self).__name__} fields: {', '.join(sorted(unknown_fields))}."
+            )
+        return type(self).model_validate(
+            {**self.model_dump(exclude_unset=True), **update}
+        )
+
+    def __hash__(self) -> int:
+        """Hash the summary consistently with its equality.
+
+        The default hash of frozen pydantic models fails on mapping fields. Mappings
+        are hashed as the frozenset of their items, so that equal summaries hash
+        equally whatever the key order.
+        """
+        values = tuple(
+            frozenset(value.items()) if isinstance(value, Mapping) else value
+            for value in (getattr(self, name) for name in type(self).model_fields)
+        )
+        return hash((type(self), values))
 
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Self:
-        """Return a shallow copy: every field is immutable, so it can be shared.
-
-        A new instance is required: `model_copy(deep=True, update=...)` updates
-        the copy in place.
-        """
+        """Return a shallow copy: every field is immutable, so it can be shared."""
         return self.__copy__()
 
     def __reduce__(self) -> tuple[Any, ...]:

@@ -515,6 +515,89 @@ def test_provenance_summary_copies(
     assert copied.model_fields_set == summary.model_fields_set
 
 
+def test_equal_summaries_hash_equally_whatever_the_key_order_or_timezone(
+    provenance_payload: dict[str, Any],
+) -> None:
+    """Test that the hash is consistent with equality for equivalent payloads."""
+    # Given the same summary with sources listed in another order and dates
+    # expressed in another timezone
+    reordered_payload = {
+        **provenance_payload,
+        "sources_by_kind": {"user": 1, "connector": 2},
+        "first_asserted": "2026-01-05T09:00:00+01:00",
+    }
+    summary = ProvenanceSummary.model_validate(provenance_payload)
+    reordered_summary = ProvenanceSummary.model_validate(reordered_payload)
+    # Then both summaries are equal and hash equally
+    assert list(summary.sources_by_kind) != list(reordered_summary.sources_by_kind)
+    assert summary == reordered_summary
+    assert hash(summary) == hash(reordered_summary)
+    assert len({summary, reordered_summary}) == 1
+
+
+def test_model_copy_validates_updates(provenance_payload: dict[str, Any]) -> None:
+    """Test that model_copy validates and freezes the updated values."""
+    # Given a provenance summary
+    summary = ProvenanceSummary.model_validate(provenance_payload)
+    # When copying it with updated values
+    updated = summary.model_copy(
+        update={
+            "sources_by_kind": {"feed": 4},
+            "first_asserted": "2026-02-01T00:00:00Z",
+        }
+    )
+    # Then the updated values are validated and immutable
+    assert updated.sources_by_kind[ProvenanceSourceKind.FEED] == 4
+    assert updated.first_asserted == datetime(2026, 2, 1, tzinfo=timezone.utc)
+    assert updated.corroboration_count == summary.corroboration_count
+    assert updated.model_fields_set == summary.model_fields_set
+    with pytest.raises(TypeError):
+        updated.sources_by_kind[ProvenanceSourceKind.USER] = 1
+    # And the original summary is unchanged
+    assert dict(summary.sources_by_kind) == {
+        ProvenanceSourceKind.CONNECTOR: 2,
+        ProvenanceSourceKind.USER: 1,
+    }
+
+
+def test_model_copy_keeps_the_fields_set(minimal_payload: dict[str, Any]) -> None:
+    """Test that model_copy marks updated fields as set, like pydantic does."""
+    summary = ProvenanceSummary.model_validate(minimal_payload)
+    updated = summary.model_copy(update={"conflicting_fields": ["name"]})
+    assert "conflicting_fields" not in summary.model_fields_set
+    assert updated.model_fields_set == summary.model_fields_set | {"conflicting_fields"}
+    assert updated.conflicting_fields == ("name",)
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        pytest.param({"corroboration_count": -1}, id="negative count"),
+        pytest.param({"assertions_count": "7"}, id="count as string"),
+        pytest.param(
+            {"sources_by_kind": {"connector": -2}}, id="negative source count"
+        ),
+        pytest.param({"last_asserted": "2026-09-30T17:45:12"}, id="naive date"),
+    ],
+)
+def test_model_copy_rejects_invalid_updates(
+    provenance_payload: dict[str, Any], update: dict[str, Any]
+) -> None:
+    """Test that model_copy cannot bypass the model validation."""
+    summary = ProvenanceSummary.model_validate(provenance_payload)
+    with pytest.raises(ValidationError):
+        summary.model_copy(update=update)
+
+
+def test_model_copy_rejects_unknown_fields(provenance_payload: dict[str, Any]) -> None:
+    """Test that model_copy refuses fields the model does not define."""
+    summary = ProvenanceSummary.model_validate(provenance_payload)
+    with pytest.raises(
+        ValueError, match="Unknown ProvenanceSummary fields: source_names"
+    ):
+        summary.model_copy(update={"source_names": ["Example feed"]})
+
+
 def test_deep_model_copy_with_update_leaves_the_original_untouched(
     provenance_payload: dict[str, Any],
 ) -> None:

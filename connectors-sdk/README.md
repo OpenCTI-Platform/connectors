@@ -43,10 +43,12 @@ for obj in [author, ip, org, rel]:
 
 ### Reading provenance summaries
 
-OpenCTI records which sources asserted each Stix Core Object (SDO and SCO), Stix Core Relationship and sighting, and when.
-It exports a summary of these assertions in the `opencti-provenance` STIX property extension
-(`extension-definition--283daa2f-7739-5345-a110-19d73676f670`, available as `STIX_EXT_OCTI_PROVENANCE`).
+OpenCTI versions that ship provenance, corroboration and freshness ([OpenCTI-Platform/opencti#18676](https://github.com/OpenCTI-Platform/opencti/issues/18676))
+record which sources asserted each Stix Core Object (SDO and SCO), Stix Core Relationship and sighting, and when.
+They export a summary of these assertions in the `opencti-provenance` STIX property extension
+(`extension-definition--283daa2f-7739-5345-a110-19d73676f670`, available as `STIX_EXT_OCTI_PROVENANCE`) when the provenance of an object is known.
 The summary holds counts, dates and flags only: it never contains source names nor user emails.
+Objects exported by OpenCTI versions without provenance support carry no such extension, and `from_stix` returns `None` for them.
 
 `ProvenanceSummary.from_stix` reads it from a STIX object received from OpenCTI, either a plain dict (stream events, bundles) or a `stix2` library object:
 
