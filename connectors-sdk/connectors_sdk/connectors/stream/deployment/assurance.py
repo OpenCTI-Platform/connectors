@@ -7,8 +7,8 @@ from typing import Any
 
 from connectors_sdk.connectors.stream.deployment.models import DeploymentBatchResult
 from connectors_sdk.connectors.stream.deployment.reconciler import (
+    DeploymentPushAdapter,
     DeploymentReconciler,
-    DeploymentVendorAdapter,
 )
 from connectors_sdk.connectors.stream.deployment.reporter import DeploymentReporter
 from connectors_sdk.connectors.stream.deployment.settings import (
@@ -35,15 +35,17 @@ class DeploymentAssurance:
     def __init__(
         self,
         reporter: DeploymentReporter,
-        adapter: DeploymentVendorAdapter | None = None,
+        adapter: DeploymentPushAdapter | None = None,
         **reconciler_kwargs: Any,
     ) -> None:
         """Initialize the facade.
 
         Args:
             reporter: The deployment reporter.
-            adapter: The vendor adapter, ``None`` when the vendor API cannot read
-                indicators back (push outcomes are reported, no reconciliation).
+            adapter: The vendor adapter: a ``DeploymentVendorAdapter`` for the full
+                reconciliation, a ``DeploymentPushAdapter`` when the vendor API cannot
+                read indicators back (re-push of ``pending`` deployments and hits), or
+                ``None`` (push outcomes are reported, no reconciliation).
             **reconciler_kwargs: Extra arguments of ``DeploymentReconciler``.
         """
         self.reporter = reporter
@@ -58,7 +60,7 @@ class DeploymentAssurance:
         cls,
         helper: OpenCTIConnectorHelper,
         options: DeploymentAssuranceOptions,
-        adapter: DeploymentVendorAdapter | None = None,
+        adapter: DeploymentPushAdapter | None = None,
         *,
         reporter_kwargs: Mapping[str, Any] | None = None,
         **reconciler_kwargs: Any,
@@ -68,7 +70,7 @@ class DeploymentAssurance:
         Args:
             helper: The connector helper.
             options: The deployment write-back options.
-            adapter: The vendor adapter, if the vendor API can read indicators back.
+            adapter: The vendor adapter (see ``DeploymentAssurance``), if any.
             reporter_kwargs: Extra arguments of ``DeploymentReporter``.
             **reconciler_kwargs: Extra arguments of ``DeploymentReconciler``.
 
@@ -83,7 +85,7 @@ class DeploymentAssurance:
         cls,
         helper: OpenCTIConnectorHelper,
         settings: BaseConnectorSettings,
-        adapter: DeploymentVendorAdapter | None = None,
+        adapter: DeploymentPushAdapter | None = None,
         *,
         reporter_kwargs: Mapping[str, Any] | None = None,
         **reconciler_kwargs: Any,
@@ -94,7 +96,7 @@ class DeploymentAssurance:
             helper: The connector helper.
             settings: Connector settings declaring the ``security_platform``
                 namespace (and optionally ``deployment`` and ``hits``).
-            adapter: The vendor adapter, if the vendor API can read indicators back.
+            adapter: The vendor adapter (see ``DeploymentAssurance``), if any.
             reporter_kwargs: Extra arguments of ``DeploymentReporter``.
             **reconciler_kwargs: Extra arguments of ``DeploymentReconciler``.
 

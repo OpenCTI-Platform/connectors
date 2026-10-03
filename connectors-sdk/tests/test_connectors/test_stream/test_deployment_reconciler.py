@@ -20,6 +20,7 @@ from connectors_sdk.connectors.stream.deployment.models import (
 from connectors_sdk.connectors.stream.deployment.reconciler import (
     CAPPED_INSTANT_STEP,
     LISTED_STATUSES,
+    DeploymentPushAdapter,
     DeploymentReconciler,
     DeploymentVendorAdapter,
 )
@@ -733,6 +734,121 @@ def test_truncated_read_back_skips_absence_decisions(
     assert summary.vendor_indicators == 1
     assert set(reported()) == {"present"}
     assert adapter.pushed == []
+
+
+class PushOnlyAdapter(DeploymentPushAdapter):
+    """Vendor without read-back: re-push and hits only."""
+
+    def __init__(self, hits=(), push_error=None):
+        self.hits = list(hits)
+        self.push_error = push_error
+        self.pushed = []
+        self.hits_calls = []
+
+    def push_indicator(self, stix_indicator):
+        if self.push_error:
+            raise self.push_error
+        self.pushed.append(stix_indicator)
+        return "vendor-retry"
+
+    def collect_hits(self, deployments, since):
+        self.hits_calls.append((list(deployments), since))
+        return self.hits
+
+
+def test_push_only_reconciliation_repushes_pending_deployments_and_reports_hits(
+    graphql_helper, make_reporter, router, list_nodes, node_factory, reported
+):
+    """Without read-back, only pending deployments are pushed and hits are reported."""
+    list_nodes(
+        node_factory(
+            indicator_id="pending",
+            status="pending",
+            standard_id="indicator--p",
+            pattern="[domain-name:value = 'retry.example']",
+        ),
+        node_factory(
+            indicator_id="pending-withdrawn",
+            status="pending",
+            revoked=True,
+            standard_id="indicator--w",
+        ),
+        node_factory(
+            indicator_id="live",
+            status="deployed",
+            standard_id="indicator--l",
+            pattern="[ipv4-addr:value = '198.51.100.7']",
+        ),
+        node_factory(
+            indicator_id="failed", status="failed", standard_id="indicator--f"
+        ),
+        node_factory(
+            indicator_id="expired", status="expired", standard_id="indicator--e"
+        ),
+    )
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--p",
+        "pattern": "[domain-name:value = 'retry.example']",
+    }
+    adapter = PushOnlyAdapter(
+        hits=[
+            VendorHit(
+                timestamp=datetime(2026, 10, 3, 11, tzinfo=UTC), value="198.51.100.7"
+            )
+        ]
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert not summary.skipped
+    assert summary.vendor_indicators == 0
+    assert summary.deployments == 5
+    assert summary.repushed == 1
+    assert summary.confirmed_active == summary.marked_removed == summary.withdrawn == 0
+    assert summary.discovered == 0
+    assert summary.hits_reported == 1
+    assert len(adapter.pushed) == 1
+    reports = reported()
+    assert set(reports) == {"pending"}
+    assert reports["pending"]["status"] == "deployed"
+    assert reports["pending"]["externalId"] == "vendor-retry"
+    assert {d.indicator_id for d in adapter.hits_calls[0][0]} == {"live"}
+    hits = router.calls_of("IndicatorReportHits(")
+    assert [hit["indicatorId"] for hit in hits] == ["live"]
+
+
+def test_push_only_reconciliation_reports_failed_repushes(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """A refused re-push of a vendor without read-back is reported ``failed``."""
+    list_nodes(node_factory(indicator_id="pending", status="pending"))
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--p",
+        "pattern": "[url:value = 'http://retry.example']",
+    }
+    adapter = PushOnlyAdapter(push_error=ValueError("quota exceeded"))
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert summary.repush_failed == 1
+    report = reported()["pending"]
+    assert report["status"] == "failed"
+    assert report["metadata"]["error_message"] == "quota exceeded"
+
+
+def test_push_only_reconciliation_is_skipped_when_the_deployments_cannot_be_listed(
+    graphql_helper, make_reporter, router
+):
+    """An OpenCTI listing error skips the run of a vendor without read-back."""
+    router.handlers["IndicatorDeploymentsOfPlatform"] = ConnectionError("opencti down")
+    adapter = PushOnlyAdapter()
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+    assert summary.skipped
+    assert "opencti down" in summary.reason
+    assert adapter.pushed == []
+    assert adapter.hits_calls == []
 
 
 def test_reconciliation_without_any_report(
