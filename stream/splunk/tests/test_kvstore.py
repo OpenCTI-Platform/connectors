@@ -89,7 +89,10 @@ def test_run_saved_search_runs_a_bounded_oneshot_job(kvstore, requests_mock):
     assert results == [{"opencti_id": "a"}]
     request = requests_mock.request_history[0]
     assert form_fields(request) == {
-        "search": '| savedsearch "OpenCTI \\"matches\\"" | sort 0 _time | head 50',
+        "search": (
+            '| savedsearch "OpenCTI \\"matches\\"" | sort 0 _time opencti_id value '
+            "| head 50"
+        ),
         "exec_mode": "oneshot",
         "output_mode": "json",
         "earliest_time": f"{earliest.timestamp():.3f}",
@@ -98,6 +101,19 @@ def test_run_saved_search_runs_a_bounded_oneshot_job(kvstore, requests_mock):
     }
     assert request.headers["Authorization"] == "Bearer splunk-token"
     assert "application/json" not in request.headers.get("Content-Type", "")
+
+
+def test_run_saved_search_skips_the_results_already_read(kvstore, requests_mock):
+    requests_mock.post(SEARCH_URL, json={"results": []})
+    earliest = datetime(2026, 10, 3, 8, 0, tzinfo=UTC)
+
+    kvstore.run_saved_search("matches", earliest, 50, offset=100)
+
+    assert form_fields(requests_mock.request_history[0])["search"] == (
+        '| savedsearch "matches" | sort 0 _time opencti_id value '
+        "| streamstats count AS opencti_row | where opencti_row > 100 "
+        "| fields - opencti_row | head 50"
+    )
 
 
 def test_run_saved_search_raises_on_http_error(kvstore, requests_mock):

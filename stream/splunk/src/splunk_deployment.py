@@ -178,26 +178,34 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
         return self._push_indicator(stix_indicator)
 
     def collect_hits(
-        self, deployments: Sequence[IndicatorDeployment], since: datetime
+        self,
+        deployments: Sequence[IndicatorDeployment],
+        since: datetime,
+        *,
+        resume: int | None = None,
     ) -> list[VendorHit] | HitCollection:
         """Read the matches of the KV store indicators from the saved search.
 
         Args:
             deployments: The live deployments.
             since: Start of the time range of the search.
+            resume: Number of results already read at `since`, when the previous
+                read was capped there.
 
         Returns:
             The hits, identified by OpenCTI id (KV store key) or matched value. When
             the result limit is reached, the results being sorted oldest first, the
-            collection is complete until the newest result read.
+            collection is complete until the newest result read; when every result
+            read is at `since`, the next read continues after them (offset).
 
         Raises:
             requests.HTTPError: When the saved search cannot be run.
         """
         if self._hits_saved_search is None or not deployments:
             return []
+        offset = resume or 0
         rows = self._kvstore.run_saved_search(
-            self._hits_saved_search, since, self._hits_max_results
+            self._hits_saved_search, since, self._hits_max_results, offset=offset
         )
         hits: list[VendorHit] = []
         newest = since
@@ -222,6 +230,10 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
                 )
             )
         if len(rows) >= self._hits_max_results:
+            if newest <= since:
+                return HitCollection(
+                    hits=hits, complete_until=since, resume=offset + len(rows)
+                )
             return HitCollection(hits=hits, complete_until=newest)
         return hits
 

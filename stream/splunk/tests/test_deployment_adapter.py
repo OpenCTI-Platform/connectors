@@ -133,7 +133,9 @@ def test_collect_hits_maps_the_saved_search_results(kvstore):
 
     hits = adapter.collect_hits([DEPLOYMENT], SINCE)
 
-    kvstore.run_saved_search.assert_called_once_with("OpenCTI matches", SINCE, 500)
+    kvstore.run_saved_search.assert_called_once_with(
+        "OpenCTI matches", SINCE, 500, offset=0
+    )
     assert hits == [
         VendorHit(
             timestamp=recent,
@@ -160,6 +162,25 @@ def test_collect_hits_is_complete_until_the_newest_result_when_capped(kvstore):
 
     assert isinstance(collection, HitCollection)
     assert collection.complete_until == newest
+    assert len(collection.hits) == 2
+    assert collection.resume is None
+
+
+def test_collect_hits_capped_at_its_start_continues_after_the_results_read(kvstore):
+    """More results share the start time than the limit: the next read skips the
+    results already read (offset), instead of moving past that time."""
+    kvstore.run_saved_search.return_value = [
+        {"opencti_id": INDICATOR_ID, "_time": SINCE.isoformat()},
+        {"value": "198.51.100.7", "_time": SINCE.isoformat()},
+    ]
+    adapter = make_adapter(kvstore, hits_saved_search="matches", hits_max_results=2)
+
+    collection = adapter.collect_hits([DEPLOYMENT], SINCE, resume=4)
+
+    kvstore.run_saved_search.assert_called_once_with("matches", SINCE, 2, offset=4)
+    assert isinstance(collection, HitCollection)
+    assert collection.complete_until == SINCE
+    assert collection.resume == 6
     assert len(collection.hits) == 2
 
 
