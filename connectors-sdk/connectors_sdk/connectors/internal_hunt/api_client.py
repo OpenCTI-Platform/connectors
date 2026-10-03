@@ -24,6 +24,12 @@ from connectors_sdk.connectors.internal_hunt.timing import RunDeadline
 API_ERROR_MAX_LENGTH = 500
 """Maximum length of the platform error message kept in a hunt error."""
 
+RETRY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
+"""HTTP statuses of the transient failures retried by ``hunt_request``."""
+
+RETRY_METHODS = frozenset({"DELETE", "GET", "HEAD", "OPTIONS", "PUT", "TRACE"})
+"""Idempotent methods retried by ``hunt_request`` (a search job is never sent twice)."""
+
 _MESSAGE_KEYS = ("message", "reason", "error_description", "detail", "text", "msg")
 _NESTED_KEYS = ("error", "errors", "messages", "root_cause", "innererror")
 _MAX_DEPTH = 4
@@ -76,8 +82,10 @@ class HuntApiClient(BaseClientApi):
     """Base client of the platform APIs queried by hunt connectors.
 
     ``hunt_request`` bounds every call with the run deadline and turns HTTP and
-    network failures into hunt errors. Retries with backoff on 429 and 5xx
-    answers are inherited from ``BaseClientApi``.
+    network failures into hunt errors. It retries transient failures of
+    idempotent calls with exponential (or ``Retry-After``) backoff, re-checking
+    the deadline before every attempt; the session adapter does not retry, as
+    its retries would each reuse the full request timeout past the deadline.
 
     Examples:
         >>> class MySiemClient(HuntApiClient):
@@ -86,6 +94,41 @@ class HuntApiClient(BaseClientApi):
         ...             "POST", "/search", deadline, "The search", json={"q": query}
         ...         )
     """
+
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        max_retries: int = 3,
+        backoff_factor: float = 1.0,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize the client.
+
+        Args:
+            base_url: Base URL of the platform API.
+            max_retries: Maximum number of retries of a transient failure.
+            backoff_factor: Multiplier of the exponential backoff between retries.
+            **kwargs: Other ``BaseClientApi`` arguments (``ssl_verify``...).
+        """
+        super().__init__(
+            base_url, max_retries=0, backoff_factor=backoff_factor, **kwargs
+        )
+        self._hunt_max_retries = max_retries
+
+    def _retry_delay(self, method: str, attempt: int, error: Exception) -> float | None:
+        """Return the backoff before retrying a failed call, or ``None``."""
+        if method.upper() not in RETRY_METHODS or attempt >= self._hunt_max_retries:
+            return None
+        if isinstance(error, ApiClientError):
+            if error.status_code not in RETRY_STATUSES:
+                return None
+            retry_after = getattr(error, "retry_after", None)
+            if retry_after is not None:
+                return float(retry_after)
+        elif not isinstance(error, requests.ConnectionError):
+            return None
+        return float(self._backoff_factor * 2**attempt)
 
     def hunt_request(
         self,
@@ -114,22 +157,33 @@ class HuntApiClient(BaseClientApi):
             HuntTimeoutError: If the deadline is reached or the call times out.
             HuntExecutionError: If the platform rejects the call or cannot be reached.
         """
-        deadline.check(operation)
-        kwargs["timeout"] = deadline.request_timeout(max_timeout)
-        try:
-            return self._request(method, path, **kwargs)
-        except ApiClientError as err:
-            details = api_error_message(err.response_body)
+        attempt = 0
+        while True:
+            deadline.check(operation)
+            kwargs["timeout"] = deadline.request_timeout(max_timeout)
+            try:
+                return self._request(method, path, **kwargs)
+            except requests.Timeout as err:
+                raise HuntTimeoutError(
+                    f"{operation} did not answer within the run timeout."
+                ) from err
+            except (ApiClientError, requests.RequestException) as err:
+                delay = self._retry_delay(method, attempt, err)
+                if delay is None or delay >= deadline.remaining():
+                    raise self._hunt_error(operation, err) from err
+            deadline.sleep(delay)
+            attempt += 1
+
+    @staticmethod
+    def _hunt_error(operation: str, error: Exception) -> HuntExecutionError:
+        """Build the hunt error of a failed platform call."""
+        if isinstance(error, ApiClientError):
+            details = api_error_message(error.response_body)
             suffix = f": {details}" if details else ""
-            raise HuntExecutionError(f"{operation} failed ({err}){suffix}") from err
-        except requests.Timeout as err:
-            raise HuntTimeoutError(
-                f"{operation} did not answer within the run timeout."
-            ) from err
-        except requests.RequestException as err:
-            raise HuntExecutionError(
-                f"{operation} failed: {type(err).__name__}: {err}"
-            ) from err
+            return HuntExecutionError(f"{operation} failed ({error}){suffix}")
+        return HuntExecutionError(
+            f"{operation} failed: {type(error).__name__}: {error}"
+        )
 
     def cleanup_request(
         self,

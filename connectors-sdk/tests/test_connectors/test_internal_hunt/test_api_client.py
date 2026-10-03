@@ -15,11 +15,12 @@ from connectors_sdk.connectors.internal_hunt import (
 )
 
 
-def _response(status_code, json_data=None, text=""):
+def _response(status_code, json_data=None, text="", headers=None):
     response = MagicMock(spec=requests.Response)
     response.status_code = status_code
     response.ok = status_code < 400
     response.headers = {"Content-Type": "application/json"} if json_data else {}
+    response.headers.update(headers or {})
     response.json.return_value = json_data
     if json_data is None:
         response.json.side_effect = ValueError("no json")
@@ -30,6 +31,29 @@ def _response(status_code, json_data=None, text=""):
 @pytest.fixture
 def client():
     return HuntApiClient("https://siem.example.com", max_retries=0)
+
+
+@pytest.fixture
+def retrying_client():
+    return HuntApiClient("https://siem.example.com", max_retries=2, backoff_factor=1)
+
+
+class _FakeTime:
+    """Clock and sleeper of a deadline, advanced by the sleeps only."""
+
+    def __init__(self):
+        self.now = 0.0
+        self.sleeps = []
+
+    def clock(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.now += seconds
+
+    def deadline(self, timeout_seconds):
+        return RunDeadline(timeout_seconds, clock=self.clock, sleeper=self.sleep)
 
 
 @pytest.mark.parametrize(
@@ -155,6 +179,118 @@ def test_hunt_request_maps_network_errors(client):
             client.hunt_request("GET", "/x", RunDeadline(30), "The search")
         with pytest.raises(HuntExecutionError, match="ConnectionError: down"):
             client.hunt_request("GET", "/x", RunDeadline(30), "The search")
+
+
+def test_hunt_client_session_does_not_retry(retrying_client):
+    # Given/When/Then the session adapter leaves the retries to hunt_request
+    adapter = retrying_client._session.get_adapter("https://siem.example.com")
+    assert adapter.max_retries.total == 0
+
+
+def test_hunt_request_retries_transient_failures_within_the_deadline(
+    retrying_client,
+):
+    # Given a platform failing twice with transient errors, then answering
+    time = _FakeTime()
+    with patch.object(
+        retrying_client._session,
+        "request",
+        side_effect=[
+            _response(503),
+            requests.ConnectionError("reset"),
+            _response(200, {"hits": 1}),
+        ],
+    ) as request:
+        # When an idempotent call is made
+        body = retrying_client.hunt_request(
+            "GET", "/x", time.deadline(30), "The search"
+        )
+
+    # Then the call is retried with exponential backoff, each attempt
+    # bounded by the time left
+    assert body == {"hits": 1}
+    assert time.sleeps == [1, 2]
+    assert [call.kwargs["timeout"] for call in request.call_args_list] == [
+        30,
+        29,
+        27,
+    ]
+
+
+def test_hunt_request_honors_retry_after(retrying_client):
+    # Given a platform rate limiting the call with a Retry-After header
+    time = _FakeTime()
+    with patch.object(
+        retrying_client._session,
+        "request",
+        side_effect=[
+            _response(429, headers={"Retry-After": "5"}),
+            _response(204),
+        ],
+    ):
+        # When/Then the retry waits for the delay asked by the platform
+        assert (
+            retrying_client.hunt_request("GET", "/x", time.deadline(30), "The call")
+            is None
+        )
+    assert time.sleeps == [5]
+
+
+@pytest.mark.parametrize(
+    "method, failure",
+    [
+        pytest.param("POST", _response(503), id="non_idempotent_method"),
+        pytest.param("GET", _response(400), id="non_transient_status"),
+        pytest.param(
+            "GET", requests.TooManyRedirects("loop"), id="non_transient_error"
+        ),
+    ],
+)
+def test_hunt_request_does_not_retry_permanent_failures(
+    retrying_client, method, failure
+):
+    # Given a failure that a retry would not fix
+    time = _FakeTime()
+    with patch.object(
+        retrying_client._session, "request", side_effect=[failure]
+    ) as request:
+        # When/Then the call fails at once
+        with pytest.raises(HuntExecutionError, match="The search failed"):
+            retrying_client.hunt_request(method, "/x", time.deadline(30), "The search")
+    assert request.call_count == 1
+    assert time.sleeps == []
+
+
+def test_hunt_request_stops_retrying_when_the_backoff_passes_the_deadline(
+    retrying_client,
+):
+    # Given a platform asking to wait longer than the time left
+    time = _FakeTime()
+    with patch.object(
+        retrying_client._session,
+        "request",
+        side_effect=[_response(429, headers={"Retry-After": "60"})],
+    ) as request:
+        # When/Then the run fails with the platform error instead of sleeping
+        with pytest.raises(HuntExecutionError, match=r"Rate limited \(429\)"):
+            retrying_client.hunt_request("GET", "/x", time.deadline(30), "The search")
+    assert request.call_count == 1
+    assert time.sleeps == []
+
+
+def test_hunt_request_gives_up_after_the_last_retry(retrying_client):
+    # Given a platform that keeps failing
+    time = _FakeTime()
+    with patch.object(
+        retrying_client._session,
+        "request",
+        side_effect=[_response(502), _response(502), _response(502)],
+    ) as request:
+        # When/Then the last failure is reported after the retries
+        with pytest.raises(HuntExecutionError, match=r"Server error \(502\)"):
+            retrying_client.hunt_request("GET", "/x", time.deadline(30), "The search")
+    assert request.call_count == 3
+    assert time.sleeps == [1, 2]
 
 
 def test_cleanup_request_never_raises(client):
