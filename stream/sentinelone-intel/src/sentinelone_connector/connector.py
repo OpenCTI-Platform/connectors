@@ -1,9 +1,15 @@
 import json
 import logging
+from typing import TYPE_CHECKING, Any
 
 from pycti import OpenCTIConnectorHelper
 from sentinelone_connector.settings import ConnectorSettings
-from sentinelone_services import SentinelOneClient
+from sentinelone_services import SentinelOneApiError, SentinelOneClient
+
+if TYPE_CHECKING:
+    from connectors_sdk import DeploymentAssurance
+
+STIX_INDICATOR_PREFIX = "indicator--"
 
 
 class SentinelOneIntelConnector:
@@ -11,16 +17,20 @@ class SentinelOneIntelConnector:
         """
         Initialize the SentinelOne Intel Connector
         with necessary configurations
+
+        `assurance` is the deployment write-back (dissemination assurance), set by `main.py`.
         """
         self.config = config
         self.helper = helper
         self.client = SentinelOneClient(config, helper)
+        self.assurance: "DeploymentAssurance | None" = None
 
     def process_message(self, msg) -> None:
         """
         Main process if connector successfully works.
         Processes incoming steam messages and filters for the creation
-        of Stix Indicators and creates them in SentinelOne
+        of Stix Indicators and creates them in SentinelOne, and for their
+        deletion to delete the IOCs created from them
 
         :param msg: Message event from stream containing event data
         :return: None
@@ -41,15 +51,102 @@ class SentinelOneIntelConnector:
                         "[CREATE] Processing indicator",
                         {"Indicator ID": indicator_id},
                     )
+                self._create_and_report(data)
+            elif msg.event == "delete":
+                self._delete_and_report(data)
 
-                if self.client.create_indicator(data):
-                    self.helper.connector_logger.info(
-                        "[CREATE] Successfully created Indicator in SentinelOne"
-                    )
+    def push_indicator(self, indicator: dict[str, Any]) -> str | None:
+        """
+        Create an OpenCTI indicator in SentinelOne (reconciliation re-push).
+
+        :param indicator: The indicator, in the stream event shape.
+        :return: The `uuid` of the first IOC created, if returned by SentinelOne.
+        :raises ValueError: When the pattern of the indicator is not supported.
+        :raises SentinelOneApiError: When SentinelOne rejects the indicator.
+        """
+        uuids = self.client.create_indicator(indicator)
+        if uuids is None:
+            raise ValueError(
+                "The pattern of the indicator is not supported by SentinelOne"
+            )
+        return uuids[0] if uuids else None
+
+    def delete_indicator(self, indicator: dict[str, Any]) -> bool:
+        """
+        Delete the IOCs created from an indicator: the IOCs of the scope of the connector
+        whose external id is the STIX id of the indicator. IOCs created by other sources
+        are never deleted.
+
+        :param indicator: The indicator, in the stream event shape.
+        :return: True when IOCs were deleted, False when none carries the indicator id.
+        :raises SentinelOneApiError: When SentinelOne cannot list or delete the IOCs.
+        """
+        stix_id = indicator.get("id")
+        if not isinstance(stix_id, str) or not stix_id.startswith(
+            STIX_INDICATOR_PREFIX
+        ):
+            return False
+        uuids = [
+            str(ioc["uuid"])
+            for ioc in self.client.find_iocs_by_external_id(stix_id)
+            if ioc.get("uuid") is not None and ioc.get("externalId") == stix_id
+        ]
+        if not uuids:
+            return False
+        self.client.delete_iocs(uuids)
+        return True
+
+    def _create_and_report(self, data: dict[str, Any]) -> None:
+        """
+        Create the indicator of a create event and report the outcome to OpenCTI:
+        `deployed` (with the `uuid` of the first IOC, if known) or `failed`; nothing
+        is reported for an unsupported pattern.
+        """
+        try:
+            uuids = self.client.create_indicator(data)
+        except SentinelOneApiError as err:
+            self.helper.connector_logger.warning(
+                "[CREATE] Failed to create Indicator in SentinelOne",
+                {"error": str(err)},
+            )
+            if self.assurance is not None:
+                self.assurance.report_push_failed(data, err)
+            return
+        if uuids is None:
+            return
+        self.helper.connector_logger.info(
+            "[CREATE] Successfully created Indicator in SentinelOne"
+        )
+        if self.assurance is not None:
+            self.assurance.report_pushed(data, external_id=uuids[0] if uuids else None)
+
+    def _delete_and_report(self, data: dict[str, Any]) -> None:
+        """
+        Delete the IOCs of the indicator of a delete event and report it `removed`
+        when IOCs were deleted.
+        """
+        try:
+            deleted = self.delete_indicator(data)
+        except SentinelOneApiError as err:
+            self.helper.connector_logger.warning(
+                "[DELETE] Failed to delete Indicator from SentinelOne",
+                {"error": str(err)},
+            )
+            return
+        if not deleted:
+            return
+        self.helper.connector_logger.info(
+            "[DELETE] Successfully deleted Indicator from SentinelOne"
+        )
+        if self.assurance is not None:
+            self.assurance.report_removed(data)
 
     def run(self) -> None:
         """
         Start the execution of the connector
         Anchored on the process_message method
+        The deployment write-back (and its reconciliation) starts first.
         """
+        if self.assurance is not None:
+            self.assurance.start()
         self.helper.listen_stream(message_callback=self.process_message)
