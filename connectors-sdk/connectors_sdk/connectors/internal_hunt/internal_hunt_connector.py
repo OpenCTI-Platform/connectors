@@ -151,8 +151,9 @@ class InternalHuntConnector(ABC):
         ...     languages = ("spl",)
         ...     def sigma_backend(self, pipeline):
         ...         return SplunkBackend(build_pipeline(pipeline or "splunk_windows", PIPELINES))
-        ...     def execute(self, native_query, time_window, limits):
-        ...         return self.client.search(native_query.query, time_window, limits)
+        ...     def execute(self, native_query, time_window, limits, deadline=None):
+        ...         deadline = deadline or RunDeadline(limits.timeout_seconds)
+        ...         return self.client.search(native_query.query, time_window, deadline)
         >>> SplunkHuntConnector(settings=ConnectorSettings()).start()
     """
 
@@ -284,17 +285,21 @@ class InternalHuntConnector(ABC):
         native_query: NativeQuery,
         time_window: HuntTimeWindow,
         limits: HuntLimits,
+        deadline: RunDeadline | None = None,
     ) -> HuntResult:
         """Execute a query on the platform.
 
-        Implementations must bound their API calls with ``limits.timeout_seconds``
-        and fetch at most ``limits.max_results`` events. The base class also
-        enforces both limits.
+        Implementations must bound their API calls, polling and retries with
+        ``deadline`` and fetch at most ``limits.max_results`` events. The base
+        class also enforces both limits.
 
         Args:
             native_query: Query to execute.
             time_window: Time window to restrict the query to.
             limits: Run limits.
+            deadline: Deadline of the run, the one the base class waits for, so
+                that no call outlives the run. ``None`` only for direct calls,
+                which start one from ``limits.timeout_seconds``.
 
         Returns:
             The query results.
@@ -570,7 +575,7 @@ class InternalHuntConnector(ABC):
         def _run() -> None:
             try:
                 outcome["result"] = self.execute(
-                    native_query, request.time_window, request.limits
+                    native_query, request.time_window, request.limits, deadline
                 )
             except BaseException as err:
                 outcome["error"] = err

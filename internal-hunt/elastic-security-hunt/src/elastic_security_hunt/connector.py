@@ -135,6 +135,7 @@ class ElasticSecurityHuntConnector(InternalHuntConnector):
         native_query: NativeQuery,
         time_window: HuntTimeWindow,
         limits: HuntLimits,
+        deadline: RunDeadline | None = None,
     ) -> HuntResult:
         """Run the hunt on Elasticsearch, restricted to the run window.
 
@@ -142,13 +143,15 @@ class ElasticSecurityHuntConnector(InternalHuntConnector):
             native_query: ES|QL, EQL or Lucene query.
             time_window: Time window of the run.
             limits: Run limits.
+            deadline: Run deadline shared with the SDK (started from the
+                limits on direct calls).
 
         Returns:
             The hunt results.
         """
         if self.client is None:
             raise RuntimeError("The Elasticsearch client is created by start().")
-        deadline = RunDeadline(limits.timeout_seconds)
+        deadline = deadline or RunDeadline(limits.timeout_seconds)
         query = strip_statement_end(native_query.query)
         indices = list(self.elastic_config.indices)
         start, end = time_window.start, time_window.end

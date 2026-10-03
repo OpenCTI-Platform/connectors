@@ -86,8 +86,10 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
    query only selects the pipeline used for the translation.
 3. **Preview**: in `preview` mode the run is reported `completed` with the translated query; nothing is executed and
    no knowledge is sent.
-4. **Execution**: `execute()` runs in a worker thread bounded by `timeout_seconds`; on timeout `on_timeout()` cancels
-   the platform job and the run fails. Results beyond `max_results` are dropped, the total hit count is kept.
+4. **Execution**: `execute()` runs in a worker thread bounded by `timeout_seconds`; it receives the `RunDeadline` the
+   base class waits for, so its requests, polling, retries and authentication share one absolute deadline. On timeout
+   `on_timeout()` cancels the platform job and the run fails. Results beyond `max_results` are dropped, the total hit
+   count is kept.
 5. **Suppression**: events matching a benign pattern (case-insensitive substring, or `/regex/`) are removed. Regular
    expressions run on the `regex` engine within what is left of `timeout_seconds`: a pattern that backtracks past it
    ends the run as a `timeout` instead of blocking its report.
@@ -99,7 +101,13 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
 
 ```python
 from connectors_sdk import InternalHuntConnector
-from connectors_sdk.connectors.internal_hunt import HuntEvent, HuntResult, build_pipeline, flatten_fields
+from connectors_sdk.connectors.internal_hunt import (
+    HuntEvent,
+    HuntResult,
+    RunDeadline,
+    build_pipeline,
+    flatten_fields,
+)
 from sigma.backends.splunk import SplunkBackend
 from sigma.pipelines.splunk import splunk_windows_pipeline
 
@@ -112,8 +120,9 @@ class SplunkHuntConnector(InternalHuntConnector):
     def sigma_backend(self, pipeline):
         return SplunkBackend(build_pipeline(pipeline or "splunk_windows", PIPELINES))
 
-    def execute(self, native_query, time_window, limits):
-        response = self.client.search(native_query.query, time_window, limits)
+    def execute(self, native_query, time_window, limits, deadline=None):
+        deadline = deadline or RunDeadline(limits.timeout_seconds)
+        response = self.client.search(native_query.query, time_window, limits.max_results, deadline)
         return HuntResult(
             events=[HuntEvent(timestamp=row.time, fields=flatten_fields(row.fields)) for row in response.rows],
             total_hits=response.total,
@@ -124,7 +133,7 @@ class SplunkHuntConnector(InternalHuntConnector):
 Rules:
 
 - Build the platform client on `HuntApiClient` from the connectors-sdk: `hunt_request()` bounds every call with the run
-  deadline (`RunDeadline(limits.timeout_seconds)`; `RunDeadline.request_timeout()` never gives a request more than the
+  deadline (the `deadline` given to `execute()`; `RunDeadline.request_timeout()` never gives a request more than the
   time left and refuses to send one once it is spent), retries on 429/5xx and raises `HuntExecutionError` /
   `HuntTimeoutError` carrying the platform error message; `cleanup_request()` cancels or deletes platform jobs without
   masking the run outcome. Poll asynchronous jobs with `RunDeadline.check()` / `RunDeadline.sleep()` and cancel them in

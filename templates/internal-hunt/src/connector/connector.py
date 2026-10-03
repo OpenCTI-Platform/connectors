@@ -89,6 +89,7 @@ class TemplateConnector(InternalHuntConnector):
         native_query: NativeQuery,
         time_window: HuntTimeWindow,
         limits: HuntLimits,
+        deadline: RunDeadline | None = None,
     ) -> HuntResult:
         """Execute a query on the platform search API.
 
@@ -96,6 +97,8 @@ class TemplateConnector(InternalHuntConnector):
             native_query: Query to execute.
             time_window: Time window to search over.
             limits: Run limits.
+            deadline: Run deadline shared with the SDK (started from the
+                limits on direct calls).
 
         Returns:
             The hunt results.
@@ -108,7 +111,7 @@ class TemplateConnector(InternalHuntConnector):
             start=time_window.start,
             end=time_window.end,
             max_results=limits.max_results,
-            deadline=RunDeadline(limits.timeout_seconds),
+            deadline=deadline or RunDeadline(limits.timeout_seconds),
         )
         events = [
             HuntEvent(

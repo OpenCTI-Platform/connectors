@@ -115,8 +115,8 @@ class MyHuntConnector(InternalHuntConnector):
     def sigma_backend(self, pipeline):
         return SplunkBackend(build_pipeline(pipeline or "splunk_windows", {"splunk_windows": splunk_windows_pipeline}))
 
-    def execute(self, native_query, time_window, limits) -> HuntResult:
-        ...  # run native_query.query over time_window, at most limits.max_results events
+    def execute(self, native_query, time_window, limits, deadline=None) -> HuntResult:
+        ...  # run native_query.query over time_window, at most limits.max_results events, every call bounded by deadline
 ```
 
 pySigma is an optional dependency: install the `hunt` extra (`connectors-sdk[hunt]`), or add `pysigma` and the backend

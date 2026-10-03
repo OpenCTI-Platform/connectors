@@ -147,6 +147,7 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
         native_query: NativeQuery,
         time_window: HuntTimeWindow,
         limits: HuntLimits,
+        deadline: RunDeadline | None = None,
     ) -> HuntResult:
         """Run the hunt as a UDM search or a YARA-L rule test over the run window.
 
@@ -154,13 +155,15 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
             native_query: UDM search query or YARA-L rule.
             time_window: Time window of the run.
             limits: Run limits.
+            deadline: Run deadline shared with the SDK (started from the
+                limits on direct calls).
 
         Returns:
             The hunt results.
         """
         if self.client is None:
             raise RuntimeError("The Chronicle API client is created by start().")
-        deadline = RunDeadline(limits.timeout_seconds)
+        deadline = deadline or RunDeadline(limits.timeout_seconds)
         query = native_query.query.strip()
         result: SearchResult
         if native_query.language == "yara-l":

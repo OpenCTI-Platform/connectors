@@ -262,6 +262,7 @@ class SplunkHuntConnector(InternalHuntConnector):
         native_query: NativeQuery,
         time_window: HuntTimeWindow,
         limits: HuntLimits,
+        deadline: RunDeadline | None = None,
     ) -> HuntResult:
         """Run the hunt as a Splunk search job.
 
@@ -269,13 +270,15 @@ class SplunkHuntConnector(InternalHuntConnector):
             native_query: SPL query.
             time_window: Time window of the run.
             limits: Run limits.
+            deadline: Run deadline shared with the SDK (started from the
+                limits on direct calls).
 
         Returns:
             The hunt results.
         """
         if self.client is None:
             raise RuntimeError("The Splunk client is created by start().")
-        deadline = RunDeadline(limits.timeout_seconds)
+        deadline = deadline or RunDeadline(limits.timeout_seconds)
         total, rows = self.client.search(
             build_search(native_query.query, self.splunk_config.search_prefix),
             time_window.start,

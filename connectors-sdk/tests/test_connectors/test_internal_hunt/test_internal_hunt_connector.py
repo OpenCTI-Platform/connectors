@@ -19,6 +19,7 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntUnsupportedPyctiError,
     InternalHuntConnector,
     NativeQuery,
+    RunDeadline,
     ensure_pycti_hunt_support,
 )
 from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
@@ -475,6 +476,25 @@ def test_timeout_cancels_and_fails_the_run(connector_factory, hunt_event, hunt_h
     args, kwargs = _report_kwargs(hunt_helper)
     assert args == ("run-1", "timeout")
     assert kwargs["error"].startswith("HuntTimeoutError")
+
+
+def test_execute_shares_the_run_deadline(connector_factory, hunt_event):
+    # Given a run with a 30 seconds timeout
+    connector = connector_factory(_results({"DestinationIp": "8.8.8.8"}))
+    created = []
+
+    def _deadline(timeout_seconds):
+        created.append(RunDeadline(timeout_seconds))
+        return created[-1]
+
+    # When the run is processed
+    with patch(f"{MODULE}.RunDeadline", side_effect=_deadline):
+        connector.process_message(hunt_event(limits={"timeout_seconds": 30}))
+
+    # Then execute() receives the single deadline the run is waited for with
+    assert len(created) == 1
+    assert connector.deadlines == created
+    assert 0 < created[0].remaining() <= 30
 
 
 def test_benign_suppression_counts_within_the_run_timeout(

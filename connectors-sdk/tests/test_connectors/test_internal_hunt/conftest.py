@@ -151,6 +151,7 @@ class DummyHuntConnector(InternalHuntConnector):
         super().__init__(settings)
         self.result = result if result is not None else HuntResult()
         self.executed = []
+        self.deadlines = []
         self.release = threading.Event()
         self.block = False
         self.timeouts = []
@@ -158,8 +159,9 @@ class DummyHuntConnector(InternalHuntConnector):
     def sigma_backend(self, pipeline):
         return TextQueryTestBackend(build_pipeline(pipeline, TEST_PIPELINES))
 
-    def execute(self, native_query, time_window, limits):
+    def execute(self, native_query, time_window, limits, deadline=None):
         self.executed.append((native_query, time_window, limits))
+        self.deadlines.append(deadline)
         if self.block:
             self.release.wait(10)
         if isinstance(self.result, BaseException):

@@ -59,14 +59,14 @@ class SplunkHuntConnector(InternalHuntConnector):
     def sigma_backend(self, pipeline: str | None) -> Backend:
         return SplunkBackend(build_pipeline(pipeline or "splunk_windows", PIPELINES))
 
-    def execute(self, native_query, time_window, limits) -> HuntResult:
-        return self.client.search(native_query.query, time_window, limits)
+    def execute(self, native_query, time_window, limits, deadline=None) -> HuntResult:
+        return self.client.search(native_query.query, time_window, limits, deadline)
 ```
 
 | Hook | Default |
 | --- | --- |
 | `sigma_backend(pipeline)` | Abstract: the pySigma backend and processing pipeline of the platform. |
-| `execute(native_query, time_window, limits)` | Abstract: the query execution. |
+| `execute(native_query, time_window, limits, deadline)` | Abstract: the query execution, every call bounded by the run `deadline` the base class waits for. |
 | `translate(sigma_rule, pipeline)` | pySigma conversion with `sigma_backend`, detection field names kept for evidence ranking. |
 | `combine_queries(queries)` | Single query, or joined with `query_join` when a Sigma document yields several. |
 | `to_stix(request, result)` | Telemetry mapping (sightings + observed-data); outside-in connectors override it. |
