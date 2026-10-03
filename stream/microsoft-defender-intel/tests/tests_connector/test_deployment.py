@@ -374,34 +374,99 @@ def test_disabled_write_back_is_a_no_op():
 # API handler
 
 
-def test_iter_application_indicators_pages_with_top_and_skip():
+def serve_pages(rows, before_page=None):
+    """Serve `rows` with the `$top` / `$skip` of each request (an OData collection).
+
+    :param before_page: Called with the page number before serving it, to change rows
+    """
+    pages = []
+
+    def _send_request(method, url, params):
+        query = dict(part.split("=", 1) for part in params.split("&"))
+        if before_page is not None:
+            before_page(len(pages))
+        skip, top = int(query["$skip"]), int(query["$top"])
+        pages.append(skip)
+        return {"value": [{"id": row} for row in rows[skip : skip + top]]}
+
+    return _send_request, pages
+
+
+def test_iter_application_indicators_pages_with_top_and_overlapping_skip():
     connector = build_connector()
     connector.api._send_request.side_effect = [
         {"value": [{"id": "1"}, {"id": "2"}]},
+        {"value": [{"id": "2"}, {"id": "3"}]},
         {"value": [{"id": "3"}, "ignored"]},
     ]
 
     indicators = list(connector.api.iter_application_indicators(page_size=2))
 
     assert [indicator["id"] for indicator in indicators] == ["1", "2", "3"]
-    first, second = connector.api._send_request.call_args_list
+    first, second, third = connector.api._send_request.call_args_list
     assert first.args == ("get", INDICATORS_URL)
     assert first.kwargs["params"] == (
         "$filter=application%20eq%20%27OpenCTI%20Microsoft%20Defender%20Intel%27"
         "&$top=2&$skip=0"
     )
-    assert second.kwargs["params"].endswith("&$top=2&$skip=2")
+    assert second.kwargs["params"].endswith("&$top=2&$skip=1")
+    assert third.kwargs["params"].endswith("&$top=2&$skip=2")
+
+
+def test_iter_application_indicators_reads_every_row_once():
+    connector = build_connector()
+    rows = [str(row) for row in range(10)]
+    connector.api._send_request.side_effect, pages = serve_pages(rows)
+
+    indicators = list(connector.api.iter_application_indicators(page_size=4))
+
+    assert [indicator["id"] for indicator in indicators] == rows
+    assert pages == [0, 3, 6, 9]
+
+
+@pytest.mark.parametrize("change", ["deleted", "created"])
+def test_iter_application_indicators_fails_when_rows_move_between_pages(change):
+    """A row deleted (or created) before the page boundary shifts the offsets: the
+    next page would skip (or repeat) a row, so the listing is discarded."""
+    connector = build_connector()
+    rows = [str(row) for row in range(10)]
+
+    def before_page(page):
+        if page == 1:
+            if change == "deleted":
+                rows.remove("0")
+            else:
+                rows.insert(0, "new")
+
+    connector.api._send_request.side_effect, _pages = serve_pages(rows, before_page)
+
+    with pytest.raises(DefenderApiHandlerError) as error:
+        list(connector.api.iter_application_indicators(page_size=4))
+
+    assert error.value.msg.startswith("[API] Indicators changed during the read-back")
+    assert error.value.metadata == {"page": 1, "skip": 3}
+
+
+def test_iter_application_indicators_needs_two_rows_per_page():
+    connector = build_connector()
+
+    with pytest.raises(ValueError, match="at least 2"):
+        list(connector.api.iter_application_indicators(page_size=1))
+
+    connector.api._send_request.assert_not_called()
 
 
 def test_iter_application_indicators_never_returns_a_partial_listing():
     connector = build_connector()
-    connector.api._send_request.return_value = {"value": [{"id": "1"}]}
+    rows = [str(row) for row in range(10)]
+    connector.api._send_request.side_effect, _pages = serve_pages(rows)
 
     with pytest.raises(DefenderApiHandlerError) as error:
-        list(connector.api.iter_application_indicators(page_size=1, max_pages=3))
+        list(connector.api.iter_application_indicators(page_size=2, max_pages=3))
 
-    assert error.value.metadata == {"max_pages": 3, "page_size": 1}
+    assert error.value.metadata == {"max_pages": 3, "page_size": 2}
 
+    connector.api._send_request.side_effect = None
     connector.api._send_request.return_value = None
     with pytest.raises(DefenderApiHandlerError) as error:
         list(connector.api.iter_application_indicators())
@@ -644,12 +709,12 @@ class GraphQLRouter:
         return [variables for query, variables in self.calls if marker in query]
 
 
-def deployment_node(indicator_id, status, value):
+def deployment_node(indicator_id, status, value, revoked=False):
     return {
         "id": f"relationship-{indicator_id}",
         "deployment_status": status,
         "external_id": None,
-        "revoked": False,
+        "revoked": revoked,
         "last_sync_at": "2026-10-01T00:00:00.000Z",
         "last_hit_at": None,
         "hit_count": 0,
@@ -769,6 +834,38 @@ def test_reconciliation_and_hits_are_reported(e2e_connector, router):
     (hits,) = router.calls_of("IndicatorReportHits(")
     assert hits["indicatorId"] == INDICATOR_ID
     assert hits["count"] == 1
+
+
+def test_withdrawal_deletes_every_ioc_of_the_indicator(e2e_connector, router):
+    """An indicator pushed as several Defender IOCs (one per hash) is only reported
+    removed once all of them are deleted."""
+    router.deployments = [
+        deployment_node(INDICATOR_ID, "active", "198.51.100.7", revoked=True)
+    ]
+    e2e_connector.api._send_request.side_effect = [
+        {
+            "value": [
+                {"id": 6371, "indicatorValue": "a" * 64, "externalId": INDICATOR_ID},
+                {"id": 6372, "indicatorValue": "b" * 32, "externalId": INDICATOR_ID},
+            ]
+        },
+        None,
+        None,
+    ]
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.withdrawn == 1
+    assert summary.discovered == 0
+    deletions = [
+        call.args[1]
+        for call in e2e_connector.api._send_request.call_args_list
+        if call.args[0] == "delete"
+    ]
+    assert [url.rsplit("/", 1)[1] for url in deletions] == ["6371", "6372"]
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert batch["reports"][0]["indicatorId"] == INDICATOR_ID
+    assert batch["reports"][0]["status"] == "removed"
 
 
 def test_read_back_failure_skips_the_reconciliation(e2e_connector, router):

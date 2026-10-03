@@ -312,23 +312,44 @@ class DefenderApiHandler:
     ) -> Iterator[dict[str, Any]]:
         """
         Iterate over the active indicators of an application, paginated with `$top` and `$skip`.
+
+        Offsets shift when indicators are created or deleted during the listing, which
+        would silently skip a row. Each page after the first therefore starts one row
+        early and must start with the last row of the previous page; otherwise the
+        listing fails, so the reconciliation never acts on a listing with a hole.
         :param application: The `application` of the indicators (the connector's by default)
-        :param page_size: `$top` of each page (10,000 at most)
+        :param page_size: `$top` of each page (2 to 10,000)
         :param max_pages: Safety bound of the number of pages
         :return: Indicator entities
-        :raise DefenderApiHandlerError: On any error, never yield a partial listing silently
+        :raise DefenderApiHandlerError: On any error or when rows moved between pages,
+            never yield a partial listing silently
         """
+        if page_size < 2:
+            raise ValueError("page_size must be at least 2 to verify page overlaps")
         url = f"{self.base_url}/{self.resource_path.strip('/')}"
         odata_application = application.replace("'", "''")
         query_filter = quote(f"application eq '{odata_application}'", safe="")
+        read = 0
+        previous_last_id = None
         for page in range(max_pages):
+            skip = read if previous_last_id is None else read - 1
             items = self._get_page(
                 url,
-                f"$filter={query_filter}&$top={page_size}&$skip={page * page_size}",
+                f"$filter={query_filter}&$top={page_size}&$skip={skip}",
             )
+            full_page = len(items) == page_size
+            if previous_last_id is not None:
+                if not items or items[0].get("id") != previous_last_id:
+                    raise DefenderApiHandlerError(
+                        "[API] Indicators changed during the read-back, listing discarded",
+                        {"page": page, "skip": skip},
+                    )
+                items = items[1:]
             yield from items
-            if len(items) < page_size:
+            if not full_page:
                 return
+            read += len(items)
+            previous_last_id = items[-1].get("id")
         raise DefenderApiHandlerError(
             "[API] Indicator read-back stopped before reaching the end",
             {"max_pages": max_pages, "page_size": page_size},
