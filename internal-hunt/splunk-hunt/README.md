@@ -146,7 +146,10 @@ The connector executes `spl`.
 
 1. The query becomes a search: plain expressions get the `search` command and the configured search prefix, both
    parenthesized so that their `OR` operators keep their meaning (`search (<prefix>) (<query>) | <pipeline>`).
-   Generating commands (`| tstats`, `| inputlookup`...) are executed as written. With the
+   Generating commands (`| tstats`, `| inputlookup`...) are executed as written when no search prefix is configured.
+   With a search prefix, a `| tstats` search gets the prefix in its `where` clause
+   (`| tstats ... where (<prefix>) AND (<condition>) by ...`) and any other generating command is refused (the run
+   fails with an explicit error), so no hunt ever searches outside the configured scope. With the
    [OpenCTI for Splunk Enterprise add-on](https://github.com/OpenCTI-Platform/splunk-enterprise-add-on), set
    `SPLUNK_HUNT_SEARCH_PREFIX` to `` `opencti_hunt_scope` `` to reuse the indexes the add-on scopes hunts to.
 2. The search job runs over the run window (`earliest_time` / `latest_time` in UTC), is polled every

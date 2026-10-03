@@ -63,8 +63,28 @@ def test_split_first_pipe_ignores_quoted_pipes(query, expected):
         ("search a=1 | stats count", "index=x", "search (index=x) (a=1) | stats count"),
         (
             "| tstats count from datamodel=Endpoint",
-            "index=x",
+            "",
             "| tstats count from datamodel=Endpoint",
+        ),
+        (
+            "| tstats count from datamodel=Endpoint",
+            "index=x OR index=y",
+            "| tstats count from datamodel=Endpoint where (index=x OR index=y)",
+        ),
+        (
+            "| tstats count from datamodel=Endpoint.Processes where Processes.process_name=a OR Processes.user=b by Processes.dest | head 5",
+            "index=x",
+            "| tstats count from datamodel=Endpoint.Processes where (index=x) AND (Processes.process_name=a OR Processes.user=b) by Processes.dest | head 5",
+        ),
+        (
+            "|tstats summariesonly=t count FROM datamodel=Endpoint BY host",
+            "`opencti_hunt_scope`",
+            "| tstats summariesonly=t count FROM datamodel=Endpoint where (`opencti_hunt_scope`) BY host",
+        ),
+        (
+            '| tstats count from datamodel=Endpoint where Processes.process="a where b by c"',
+            "index=x",
+            '| tstats count from datamodel=Endpoint where (index=x) AND (Processes.process="a where b by c")',
         ),
         ("| inputlookup x", "", "| inputlookup x"),
         ("search | head 1", "index=x", "search (index=x) | head 1"),
@@ -73,6 +93,16 @@ def test_split_first_pipe_ignores_quoted_pipes(query, expected):
 def test_build_search(query, prefix, expected):
     # Given/When/Then searches get the search command and the parenthesized prefix
     assert build_search(query, prefix) == expected
+
+
+@pytest.mark.parametrize(
+    "query", ["| inputlookup threats.csv", "| rest /services/apps/local", "|"]
+)
+def test_build_search_refuses_generating_commands_a_prefix_cannot_constrain(query):
+    # Given a configured prefix, When the query is a generating command other than tstats
+    # Then it is refused instead of running outside the configured scope
+    with pytest.raises(HuntExecutionError, match="search prefix cannot constrain"):
+        build_search(query, "index=x")
 
 
 def test_translate_with_the_configured_pipeline(connector_factory):

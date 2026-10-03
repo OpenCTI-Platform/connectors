@@ -1,10 +1,12 @@
 """Splunk hunt connector: executes OpenCTI hunts as Splunk search jobs."""
 
+import re
 from collections.abc import Sequence
 
 from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
     HuntEvent,
+    HuntExecutionError,
     HuntLimits,
     HuntResult,
     HuntTimeWindow,
@@ -49,6 +51,8 @@ SPLUNK_INTERNAL_FIELDS = frozenset(
 )
 """Raw event and Splunk bookkeeping fields, never sampled as evidence."""
 
+TSTATS_RE = re.compile(r"^\|\s*tstats\b", re.IGNORECASE)
+
 
 def split_first_pipe(query: str) -> tuple[str, str]:
     """Split an SPL query at its first pipe outside quotes.
@@ -76,13 +80,80 @@ def split_first_pipe(query: str) -> tuple[str, str]:
     return query.strip(), ""
 
 
+def find_keyword(segment: str, keyword: str, start: int = 0) -> tuple[int, int] | None:
+    """Find a whole-word SPL keyword outside quotes.
+
+    Args:
+        segment: One SPL command.
+        keyword: Lowercase keyword (e.g. ``where``).
+        start: Index the search starts from.
+
+    Returns:
+        The start and end index of the first match, or ``None``.
+    """
+    lowered = segment.lower()
+    quote: str | None = None
+    escaped = False
+    for index in range(start, len(segment)):
+        char = segment[index]
+        if escaped:
+            escaped = False
+        elif char == "\\":
+            escaped = True
+        elif quote:
+            if char == quote:
+                quote = None
+        elif char in ("'", '"'):
+            quote = char
+        elif lowered.startswith(keyword, index):
+            end = index + len(keyword)
+            if (index == 0 or segment[index - 1].isspace()) and (
+                end == len(segment) or segment[end].isspace()
+            ):
+                return index, end
+    return None
+
+
+def constrain_tstats(search: str, search_prefix: str) -> str:
+    """Add the search prefix to the ``where`` clause of a ``| tstats`` search.
+
+    The prefix is ANDed with the existing condition, both parenthesized, and
+    stays before the ``by`` clause; a search without condition gets one.
+
+    Args:
+        search: A search starting with ``| tstats``.
+        search_prefix: Connector-wide constraint (e.g. ``index=wineventlog``).
+
+    Returns:
+        The constrained search.
+    """
+    command, rest = split_first_pipe(search.strip()[1:])
+    prefix = f"({search_prefix.strip()})"
+    where = find_keyword(command, "where")
+    by = find_keyword(command, "by", where[1] if where else 0)
+    clause_end = by[0] if by else len(command)
+    if where:
+        condition = command[where[1] : clause_end].strip()
+        head = command[: where[1]]
+        constrained = (
+            f"{head} {prefix} AND ({condition})" if condition else f"{head} {prefix}"
+        )
+    else:
+        constrained = f"{command[:clause_end].rstrip()} where {prefix}"
+    tail = command[clause_end:].strip()
+    constrained = f"| {constrained} {tail}" if tail else f"| {constrained}"
+    return f"{constrained} {rest}" if rest else constrained
+
+
 def build_search(query: str, search_prefix: str) -> str:
     """Build the SPL search of a hunt query.
 
-    Generating commands (queries starting with ``|``, e.g. ``| tstats``) are
-    executed as is. Other queries get the ``search`` command and the configured
-    prefix constraint, both parenthesized so that their ``OR`` operators keep
-    their meaning.
+    Plain queries get the ``search`` command and the configured prefix
+    constraint, both parenthesized so that their ``OR`` operators keep their
+    meaning. Generating commands (queries starting with ``|``) run as written
+    when no prefix is configured; with a prefix, a ``| tstats`` search gets it
+    in its ``where`` clause and any other generating command is refused, so no
+    query ever runs outside the configured scope.
 
     Args:
         query: Hunt query (translated or native).
@@ -90,10 +161,23 @@ def build_search(query: str, search_prefix: str) -> str:
 
     Returns:
         The SPL search to run.
+
+    Raises:
+        HuntExecutionError: A prefix is configured and the query is a
+            generating command it cannot constrain.
     """
     text = query.strip()
     if text.startswith("|"):
-        return text
+        if not search_prefix.strip():
+            return text
+        if TSTATS_RE.match(text):
+            return constrain_tstats(text, search_prefix)
+        command = text[1:].split(maxsplit=1)[0] if text[1:].strip() else ""
+        raise HuntExecutionError(
+            f"The search prefix cannot constrain the generating command '| {command}': "
+            "the query is refused instead of running outside the configured scope "
+            "(with a search prefix, only plain searches and '| tstats' searches run)."
+        )
     if text.lower().startswith("search "):
         text = text[len("search ") :].strip()
     base, rest = split_first_pipe(text)
