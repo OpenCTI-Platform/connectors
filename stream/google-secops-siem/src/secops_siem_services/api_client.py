@@ -1,10 +1,10 @@
 import time
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from google.auth.transport import requests as ChronicleRequests
 from google.oauth2 import service_account
 from requests import Response
-from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
@@ -13,6 +13,26 @@ if TYPE_CHECKING:
 
 SECOPS_SIEM_API_BASE_URL = "https://chronicle.googleapis.com"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
+MAX_ERROR_DETAIL_LENGTH = 500
+"""Maximum length of the Google SecOps response body kept in an error message."""
+
+
+class SecOpsApiError(Exception):
+    """Error raised when Google SecOps rejects a request or cannot be reached."""
+
+
+def describe_response(response: Response) -> str:
+    """Describe a failed Google SecOps response: HTTP status and response body excerpt."""
+    detail = (response.text or "").strip()
+    message = f"HTTP {response.status_code}"
+    if detail:
+        message = f"{message} - {detail[:MAX_ERROR_DETAIL_LENGTH]}"
+    return message
+
+
+def format_timestamp(value: datetime) -> str:
+    """Format a datetime as the RFC 3339 UTC timestamp expected by Google SecOps."""
+    return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 class SecOpsEntitiesClient:
@@ -37,6 +57,10 @@ class SecOpsEntitiesClient:
             f"instances/{self.config.project_instance}"
         )
         self.url = f"{self.base_url_with_region}/v1alpha/{parent}/entities:import"
+        self.ioc_matches_url = (
+            f"{self.base_url_with_region}/v1alpha/{parent}"
+            "/legacy:legacySearchEnterpriseWideIoCs"
+        )
 
     def init_session(self) -> ChronicleRequests.AuthorizedSession:
         """
@@ -196,75 +220,85 @@ class SecOpsEntitiesClient:
         # Return the last response after all retries fail
         return last_response
 
-    def ingest(self, entities: list):
+    def ingest(self, entities: list) -> bool:
         """
         Ingests a list of entities by making an HTTP POST request to the configured Chronicle URL.
 
         This method constructs a request payload with the provided entities and sends it to the Chronicle SIEM platform.
-        It includes robust error handling to log and manage common issues like HTTP errors, timeouts, and connection errors.
+        Requests throttled by Google SecOps (HTTP 429) are retried with an exponential backoff.
 
         :param entities:
             A list of entities to be ingested. Each entity is expected to be a dictionary containing the relevant
             data required by the Chronicle API.
 
         :return:
-            A boolean indicating the success of the operation (True if the ingestion was successful and the API
-            returned a 200 status code, None otherwise).
+            True when Google SecOps accepted the entities (HTTP 200).
 
-        :raises:
-            No explicit exceptions are raised directly from this method. Errors are caught, logged, and result
-            in a return value of None. These include:
-
-            - RetryError: If maximum retries are exceeded during the request.
-            - HTTPError: For HTTP errors (e.g., 4xx, 5xx responses).
-            - Timeout: If the request times out.
-            - ConnectionError: For network-related connection issues.
-            - Exception: For any other unexpected errors.
-
-        Error logging:
-            Errors are logged using `self.helper.connector_logger` with appropriate log levels and error details.
+        :raises SecOpsApiError:
+            When Google SecOps rejects the entities (HTTP status and response body in the message), cannot be
+            reached (timeout, connection or authentication error) or keeps throttling the request.
         """
         try:
             response = self._send_request(
                 entities=entities, retry_status_forcelist=[429]
             )
-
-            if response is not None and response.status_code == 200:
-                # Google returns True for response.ok when the request is successful
-                return response.ok
-            else:
-                if response is not None:
-                    response.raise_for_status()
-                else:
-                    self.helper.connector_logger.error(
-                        "[API] Request failed after retries with no response received."
-                    )
-                    return None
-
-        except HTTPError as err:
-            self.helper.connector_logger.error(
-                "An HTTP error occurred during data handling",
-                {"http_error": str(err)},
-            )
-            return None
-
-        except Timeout as err:
-            self.helper.connector_logger.error(
-                "A timeout error has occurred during data handling",
-                {"timeout_error": str(err)},
-            )
-            return None
-
-        except ConnectionError as err:
-            self.helper.connector_logger.error(
-                "A connection error occurred during data handling",
-                {"connection_error": str(err)},
-            )
-            return None
-
         except Exception as err:
-            self.helper.connector_logger.error(
-                "An unexpected error occurred during data handling",
-                {"error": str(err)},
+            raise SecOpsApiError(f"Cannot import the entities: {err}") from err
+
+        if response is None:
+            raise SecOpsApiError(
+                "Cannot import the entities: no response received after retries"
             )
-            return None
+        if response.status_code != 200 or not response.ok:
+            raise SecOpsApiError(
+                f"Entities import rejected: {describe_response(response)}"
+            )
+        return True
+
+    def list_ioc_matches(
+        self, start: datetime, end: datetime, max_matches: int
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """
+        List the IoC matches of the instance: indicators matched against ingested events in a time range.
+
+        Reference:
+            https://cloud.google.com/chronicle/docs/reference/rest/v1alpha/projects.locations.instances.legacy/legacySearchEnterpriseWideIoCs
+
+        :param start: Start of the time range (when the IoC was matched against an event), inclusive.
+        :param end: End of the time range, exclusive.
+        :param max_matches: Maximum number of matches returned (most recent first).
+        :return: The matches, and whether more matches were available than returned.
+        :raises SecOpsApiError: When Google SecOps cannot be reached, rejects the request or returns an
+            unexpected payload.
+        """
+        params = {
+            "timestampRange.startTime": format_timestamp(start),
+            "timestampRange.endTime": format_timestamp(end),
+            "maxMatchesToReturn": max_matches,
+            "addMandiantAttributes": "false",
+        }
+        try:
+            response = self.chronicle_http_session.request(
+                method="GET", url=self.ioc_matches_url, params=params
+            )
+        except Exception as err:
+            raise SecOpsApiError(f"Cannot list the IoC matches: {err}") from err
+        if response.status_code != 200:
+            raise SecOpsApiError(
+                f"IoC matches listing rejected: {describe_response(response)}"
+            )
+        try:
+            payload = response.json()
+        except ValueError as err:
+            raise SecOpsApiError(
+                "Unexpected IoC matches response: the body is not JSON"
+            ) from err
+        matches = payload.get("matches", []) if isinstance(payload, dict) else None
+        if not isinstance(matches, list):
+            raise SecOpsApiError(
+                "Unexpected IoC matches response: 'matches' is not a list"
+            )
+        return (
+            [match for match in matches if isinstance(match, dict)],
+            bool(payload.get("moreDataAvailable")),
+        )
