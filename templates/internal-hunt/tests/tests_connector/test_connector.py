@@ -1,10 +1,12 @@
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 from connector import TemplateConnector
 from connectors_sdk.connectors.internal_hunt import (
     HuntExecutionError,
     HuntLimits,
+    HuntTimeoutError,
     HuntTimeWindow,
     NativeQuery,
 )
@@ -99,12 +101,28 @@ def test_execute_maps_platform_events(connector, requests_mock):
 
 
 def test_execute_reports_platform_errors(connector, requests_mock):
-    # Given a platform rejecting the search
-    requests_mock.post("https://siem.example.com/api/search", status_code=400)
+    # Given a platform rejecting the search with an explanation
+    requests_mock.post(
+        "https://siem.example.com/api/search",
+        status_code=400,
+        json={"error": {"reason": "unknown field"}},
+    )
     window = HuntTimeWindow(start="2026-10-03T00:00:00Z", end="2026-10-04T00:00:00Z")
 
-    # When/Then the error is raised as an execution error
-    with pytest.raises(HuntExecutionError, match="search failed"):
+    # When/Then the error is raised as an execution error with the platform message
+    with pytest.raises(HuntExecutionError, match="search failed.*unknown field"):
+        connector.execute(NativeQuery(language="x", query="q"), window, HuntLimits())
+
+
+def test_execute_reports_platform_timeouts(connector, requests_mock):
+    # Given a platform that does not answer in time
+    requests_mock.post(
+        "https://siem.example.com/api/search", exc=requests.exceptions.ReadTimeout
+    )
+    window = HuntTimeWindow(start="2026-10-03T00:00:00Z", end="2026-10-04T00:00:00Z")
+
+    # When/Then the run times out
+    with pytest.raises(HuntTimeoutError):
         connector.execute(NativeQuery(language="x", query="q"), window, HuntLimits())
 
 
@@ -148,3 +166,16 @@ def test_process_message_preview_never_executes(connector, helper, requests_mock
     assert requests_mock.call_count == 0
     _, kwargs = helper.report_hunt_run.call_args
     assert "CommandLine" in kwargs["translated_query"]
+
+
+def test_process_message_reports_failed_runs(connector, helper, requests_mock):
+    # Given a platform rejecting the credentials
+    requests_mock.post("https://siem.example.com/api/search", status_code=401)
+
+    # When/Then the run fails, is reported as failed and no knowledge is sent
+    with pytest.raises(HuntExecutionError):
+        connector.process_message(EVENT)
+    args, kwargs = helper.report_hunt_run.call_args
+    assert args == ("run-1", "failed")
+    assert "Unauthorized" in kwargs["error"]
+    helper.send_stix2_bundle.assert_not_called()
