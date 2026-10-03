@@ -103,6 +103,33 @@
       "default": false,
       "description": "Whether to verify SSL certificates when connecting to OpenCTI.",
       "type": "boolean"
+    },
+    "DEPLOYMENT_REPORTING_ENABLED": {
+      "default": true,
+      "description": "Report to OpenCTI the deployment status of every indicator pushed to the security platform (deployed, failed, removed), stored on the 'deployed-on' relationship between the indicator and the Security Platform entity. Ignored (no-op) on OpenCTI platforms that do not support the deployment write-back.",
+      "type": "boolean"
+    },
+    "DEPLOYMENT_RECONCILIATION_INTERVAL": {
+      "default": 60,
+      "description": "Interval in minutes between two reconciliations of the deployment statuses with the indicators read back from the security platform. 0 disables the reconciliation.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "SECURITY_PLATFORM_NAME": {
+      "default": "Zscaler Internet Access",
+      "description": "Name of the Security Platform entity representing Zscaler Internet Access in OpenCTI (created if it does not exist).",
+      "minLength": 2,
+      "type": "string"
+    },
+    "SECURITY_PLATFORM_TYPE": {
+      "default": null,
+      "description": "Type of the Security Platform entity (open vocabulary security_platform_type_ov). None by default: the vocabulary has no secure web gateway type.",
+      "type": "string"
+    },
+    "SECURITY_PLATFORM_ID": {
+      "default": null,
+      "description": "Id of an existing Security Platform entity in OpenCTI. When set, it is used instead of resolving the entity by name.",
+      "type": "string"
     }
   },
   "required": [

@@ -1,6 +1,7 @@
 import json
 import re
 import time
+from typing import TYPE_CHECKING, Any
 
 import requests
 import urllib3
@@ -14,7 +15,17 @@ from tenacity import (
     wait_exponential,
 )
 
+if TYPE_CHECKING:
+    from connectors_sdk import DeploymentAssurance
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+MAX_ERROR_DETAIL_LENGTH = 500
+"""Maximum length of the Zscaler response body kept in an error message."""
+
+
+class ZscalerApiError(Exception):
+    """Error raised when Zscaler rejects a request or cannot be reached."""
 
 
 class ZscalerConnector:
@@ -43,6 +54,8 @@ class ZscalerConnector:
 
         self.rate_limit = 400  # Limit to 400 requests per hour
         self.retry_delay = 65  # Retry delay in seconds
+        # Deployment write-back (dissemination assurance), set by `main.py`
+        self.assurance: "DeploymentAssurance | None" = None
 
     def authenticate_with_zscaler(self):
         """Authenticate with Zscaler and obtain a session token."""
@@ -90,24 +103,42 @@ class ZscalerConnector:
             )
 
     def handle_rate_limit(self, request_func, *args, **kwargs):
-        """Handle rate limits for the Zscaler API by applying a delay if the limit is reached."""
+        """Handle rate limits for the Zscaler API by applying a delay if the limit is reached.
 
+        :return: The response, or None when the request failed (the error is logged).
+        """
+        try:
+            return self.request_zscaler(request_func, *args, **kwargs)
+        except ZscalerApiError:
+            return None
+
+    def request_zscaler(self, request_func, *args, **kwargs) -> requests.Response:
+        """Send a request to Zscaler: throttled requests (429) are retried after `Retry-After`,
+        an expired session (401) is re-authenticated once per attempt.
+
+        :return: The successful (HTTP 200) response.
+        :raises ZscalerApiError: When the request failed, with the HTTP status and the Zscaler response.
+        """
         max_retries = 3
         retry_delay = self.retry_delay
 
-        for attempt in range(max_retries):
+        for _attempt in range(max_retries):
             response = request_func(*args, **kwargs)
-            if response and response.status_code == 200:
+            if response is None:
+                self.helper.connector_logger.error("Request failed: no response.")
+                raise ZscalerApiError("No response from Zscaler")
+
+            if response.status_code == 200:
                 return response
 
-            if response and response.status_code == 429:
+            if response.status_code == 429:
                 retry_after = response.headers.get("Retry-After", retry_delay)
                 msg = f"Rate limit exceeded. Retrying in {retry_after} seconds..."
                 self.helper.connector_logger.warning(msg)
                 time.sleep(int(retry_after))
                 continue
 
-            if response and response.status_code == 401:
+            if response.status_code == 401:
                 msg = "Request failed with status 401 : SESSION_NOT_VALID. Re-authentication has started..."
                 self.helper.connector_logger.warning(msg)
                 self.authenticate_with_zscaler()
@@ -115,15 +146,18 @@ class ZscalerConnector:
                     self.helper.connector_logger.error(
                         "Re-authentication failed, aborting retry."
                     )
-                    return None
+                    raise ZscalerApiError("Re-authentication with Zscaler failed")
                 continue
-            else:
-                msg = f"Request failed with status {response.status_code}: {response.text}"
-                self.helper.connector_logger.error(msg)
-                return None
+
+            msg = f"Request failed with status {response.status_code}: {response.text}"
+            self.helper.connector_logger.error(msg)
+            detail = (response.text or "").strip()[:MAX_ERROR_DETAIL_LENGTH]
+            raise ZscalerApiError(
+                f"Request failed with status {response.status_code}: {detail}"
+            )
 
         self.helper.connector_logger.error("Max retries reached. Request failed.")
-        return None
+        raise ZscalerApiError("Max retries reached, the Zscaler request failed")
 
     def extract_domain(self, pattern):
         """Extract domain from the STIX pattern if it follows the format [domain-name:value = 'example.com']"""
@@ -173,6 +207,33 @@ class ZscalerConnector:
         self.helper.connector_logger.error(msg)
         return []
 
+    def list_blocked_domains(self) -> list[str]:
+        """Read the domains of the blacklist URL category back (deployment reconciliation).
+
+        :raises ZscalerApiError: When the category cannot be read or its payload is unexpected:
+            a partial listing is never returned.
+        """
+        url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
+        response = self.request_zscaler(self.session.get, url)
+        try:
+            category = response.json()
+        except ValueError as err:
+            raise ZscalerApiError(
+                "Unexpected URL category response: the body is not JSON"
+            ) from err
+        if not isinstance(category, dict) or not (
+            "id" in category or "configuredName" in category
+        ):
+            raise ZscalerApiError(
+                "Unexpected URL category response: not a URL category"
+            )
+        urls = category.get("urls", [])
+        if not isinstance(urls, list):
+            raise ZscalerApiError(
+                "Unexpected URL category response: 'urls' is not a list"
+            )
+        return [url for url in urls if isinstance(url, str)]
+
     def get_current_configured_name(self):
         url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
         response = self.handle_rate_limit(self.session.get, url)
@@ -181,29 +242,62 @@ class ZscalerConnector:
         return None
 
     def check_and_send_to_zscaler(self, data, event_type):
-        """Verify if a domain is already blocked and its classification before sending to Zscaler."""
+        """Verify the classification of a domain, then add it to (create) or remove it from
+        (delete) the blacklist.
+
+        :return: The domain when the blacklist holds it (create) or no longer holds it
+            (delete), None for an invalid domain pattern or an unsupported event type.
+        :raises ZscalerApiError: When Zscaler refuses the change or the blacklist cannot be read.
+        """
         domain = self.is_valid_domain(data["pattern"])
-        if domain:
-            classification = self.get_domain_classification_in_zscaler(domain)
-            if classification:
-                msg = f"Classification found for {domain}: {classification}"
-                self.helper.connector_logger.info(msg)
-
-            blocked_domains = self.get_zscaler_blocked_domains()
-
-            if domain in blocked_domains:
-                msg = f"The domain {domain} is already in the Blacklist."
-                self.helper.connector_logger.info(msg)
-            else:
-                msg = f"Sending domain {domain} to Zscaler..."
-                self.helper.connector_logger.info(msg)
-                self.send_to_zscaler(domain, event_type)
-        else:
+        if not domain:
             msg = f"Invalid domain pattern: {data['pattern']}"
             self.helper.connector_logger.error(msg)
+            return None
+
+        classification = self.get_domain_classification_in_zscaler(domain)
+        if classification:
+            msg = f"Classification found for {domain}: {classification}"
+            self.helper.connector_logger.info(msg)
+
+        if event_type == "create":
+            self.deploy_domain(domain)
+        elif event_type == "delete":
+            self.withdraw_domain(domain)
+        else:
+            self.helper.connector_logger.error("Unsupported event type.")
+            return None
+        return domain
+
+    def deploy_domain(self, domain: str) -> None:
+        """Add a domain to the blacklist, unless it is already listed.
+
+        :raises ZscalerApiError: When Zscaler refuses the change.
+        """
+        if domain in self.get_zscaler_blocked_domains():
+            msg = f"The domain {domain} is already in the Blacklist."
+            self.helper.connector_logger.info(msg)
+            return
+        msg = f"Sending domain {domain} to Zscaler..."
+        self.helper.connector_logger.info(msg)
+        self.send_to_zscaler(domain, "create")
+
+    def withdraw_domain(self, domain: str) -> None:
+        """Remove a domain from the blacklist, when it is listed.
+
+        :raises ZscalerApiError: When the blacklist cannot be read or Zscaler refuses the change.
+        """
+        if domain not in self.list_blocked_domains():
+            msg = f"The domain {domain} is not in the Blacklist."
+            self.helper.connector_logger.info(msg)
+            return
+        self.send_to_zscaler(domain, "delete")
 
     def send_to_zscaler(self, domain, event_type):
-        """Send creation or deletion events to Zscaler."""
+        """Send creation or deletion events to Zscaler, then activate the configuration.
+
+        :raises ZscalerApiError: When Zscaler refuses the change.
+        """
         real_configured_name = self.get_current_configured_name()
 
         if event_type == "create":
@@ -220,15 +314,47 @@ class ZscalerConnector:
             "urls": [domain],
         }
 
-        response = self.handle_rate_limit(self.session.put, base_url, json=payload)
+        self.request_zscaler(self.session.put, base_url, json=payload)
+        msg = f"Successfully sent {event_type} for {domain}."
+        self.helper.connector_logger.info(msg)
+        self.activate_zscaler_changes()
 
-        if response and response.status_code == 200:
-            msg = f"Successfully sent {event_type} for {domain}."
-            self.helper.connector_logger.info(msg)
-            self.activate_zscaler_changes()
+    def push_indicator(self, indicator: dict[str, Any]) -> None:
+        """Add the domain of an OpenCTI indicator to the blacklist (reconciliation re-push).
+
+        :param indicator: The indicator, in the stream event shape.
+        :raises ValueError: When the pattern is not a valid domain-name pattern.
+        :raises ZscalerApiError: When Zscaler refuses the change.
+        """
+        domain = self.is_valid_domain(indicator.get("pattern") or "")
+        if not domain:
+            raise ValueError("The pattern of the indicator is not a valid domain name")
+        self.deploy_domain(domain)
+
+    def _apply_and_report(self, data: dict[str, Any], event_type: str) -> None:
+        """Apply a create or delete event and report the outcome to OpenCTI.
+
+        A create is reported `deployed` (or `failed` with the Zscaler error), a delete
+        `removed` once the domain is out of the blacklist; nothing is reported for an
+        invalid domain pattern.
+        """
+        try:
+            domain = self.check_and_send_to_zscaler(
+                {"pattern": data.get("pattern")}, event_type
+            )
+        except ZscalerApiError as err:
+            self.helper.connector_logger.error(
+                f"Failed to send {event_type} event: {err}"
+            )
+            if event_type == "create" and self.assurance is not None:
+                self.assurance.report_push_failed(data, err)
+            return
+        if domain is None or self.assurance is None:
+            return
+        if event_type == "create":
+            self.assurance.report_pushed(data)
         else:
-            msg = f"Failed to send {event_type} event: {response.text if response else 'No response'}"
-            self.helper.connector_logger.error(msg)
+            self.assurance.report_removed(data)
 
     @retry(
         stop=stop_after_attempt(5),
@@ -286,11 +412,8 @@ class ZscalerConnector:
 
         # Only process indicators with pattern_type 'stix'
         if data.get("type") == "indicator" and data.get("pattern_type") == "stix":
-            structured_data = {"pattern": data.get("pattern")}
-            if msg.event == "create":
-                self.check_and_send_to_zscaler(structured_data, "create")
-            elif msg.event == "delete":
-                self.check_and_send_to_zscaler(structured_data, "delete")
+            if msg.event in ("create", "delete"):
+                self._apply_and_report(data, msg.event)
 
             # Always trigger activation after processing an event
             self.activate_zscaler_changes()
@@ -304,4 +427,6 @@ class ZscalerConnector:
 
         msg = "Starting connector and listening for OpenCTI event..."
         self.helper.connector_logger.info(msg)
+        if self.assurance is not None:
+            self.assurance.start()
         self.helper.listen_stream(self._process_message)

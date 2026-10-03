@@ -22,6 +22,7 @@ The Zscaler connector streams OpenCTI domain indicators to Zscaler for URL filte
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
+    - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
 
@@ -223,9 +224,46 @@ graph LR
 1. **Pattern Extraction**: Extract domain from STIX pattern `[domain-name:value = 'example.com']`
 2. **Validation**: Verify domain format is valid
 3. **Classification Lookup**: Check current Zscaler classification
-4. **Duplicate Check**: Verify domain not already in blacklist
+4. **Membership Check**: Skip the addition of a domain already in the blacklist, and the removal of a domain absent from it
 5. **Add/Remove**: Add or remove domain from URL category
 6. **Activation**: Automatically activate Zscaler configuration changes
+
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each domain indicator is actually in the Zscaler blacklist URL category. The
+status is stored on the `deployed-on` relationship between the indicator and the `Zscaler Internet Access` Security
+Platform entity (created if it does not exist).
+
+| When                                      | Reported to OpenCTI                                                                                    |
+|-------------------------------------------|--------------------------------------------------------------------------------------------------------|
+| Domain added (or already listed)          | `deployed`                                                                                             |
+| Domain rejected by Zscaler                | `failed`, with the HTTP status and the Zscaler response                                                |
+| Invalid domain pattern                    | Nothing: the indicator is never pushed                                                                 |
+| Delete event processed                    | `removed` (also when the domain was already absent); nothing when the blacklist cannot be read         |
+| Reconciliation, domain present            | `active`                                                                                               |
+| Reconciliation, domain absent             | `removed` (removed from the category outside of OpenCTI)                                               |
+| Reconciliation, `pending` (analyst retry) | The domain is added again and reported `deployed` or `failed`                                          |
+| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still listed are removed from the category and reported `removed` |
+
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the domains of the blacklist URL category are
+  read back (`GET /urlCategories/{id}`, one request). The category does not store the OpenCTI id, so deployments are
+  matched by value. A read-back error skips the run: indicators are never reported `removed` from a partial listing.
+  Each change made by the reconciliation is activated like the stream changes (mind the 400 requests per hour limit).
+- **Hits**: not reported. The ZIA API exposes no hit of a URL category (web logs are exported through Nanolog Streaming
+  Service feeds).
+- **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
+  the requests only target indicators this connector reports `deployed` or `active`. The two analyst requests carried by
+  a deployment are handled by the reconciliation: a retry (`pending`) adds the domain again, a withdrawal removes it.
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+| Environment variable                 | Default                   | Description                                                                   |
+|--------------------------------------|---------------------------|-------------------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `true`                    | Report the deployment status of the pushed domains.                           |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60`                      | Minutes between two reconciliations, `0` disables the reconciliation.         |
+| `SECURITY_PLATFORM_NAME`             | `Zscaler Internet Access` | Name of the Security Platform entity in OpenCTI.                              |
+| `SECURITY_PLATFORM_TYPE`             |                           | Type of the Security Platform entity (`security_platform_type_ov`), optional. |
+| `SECURITY_PLATFORM_ID`               |                           | Id of an existing Security Platform entity, used instead of the name.         |
 
 ### Rate Limiting
 
