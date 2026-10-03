@@ -121,8 +121,11 @@ class SplunkHuntConnector(InternalHuntConnector):
 
 Rules:
 
-- Use `BaseClientApi` from the connectors-sdk for HTTP calls (retries, typed errors) and bound every call with the run
-  timeout. Poll asynchronous jobs until the run deadline and cancel them in `on_timeout()`.
+- Build the platform client on `HuntApiClient` from the connectors-sdk: `hunt_request()` bounds every call with the run
+  deadline (`RunDeadline(limits.timeout_seconds)`), retries on 429/5xx and raises `HuntExecutionError` /
+  `HuntTimeoutError` carrying the platform error message; `cleanup_request()` cancels or deletes platform jobs without
+  masking the run outcome. Poll asynchronous jobs with `RunDeadline.check()` / `RunDeadline.sleep()` and cancel them in
+  `on_timeout()`.
 - Fetch at most `limits.max_results` events and report the platform total when it is available.
 - Declare `evidence_excluded_fields` for raw payload fields (e.g. Splunk `_raw`), `entity_fields` for the host, user
   and peer fields of the platform, and `observable_fields` for platform fields the name heuristics do not recognize.

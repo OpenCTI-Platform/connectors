@@ -67,7 +67,9 @@ class RunDeadline:
             HuntTimeoutError: If the deadline is reached.
         """
         if self.expired():
-            raise HuntTimeoutError(f"{operation} did not complete within the run timeout.")
+            raise HuntTimeoutError(
+                f"{operation} did not complete within the run timeout."
+            )
 
     def sleep(self, seconds: float) -> None:
         """Sleep without going past the deadline.

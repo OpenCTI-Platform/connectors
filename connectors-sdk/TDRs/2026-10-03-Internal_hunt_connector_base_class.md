@@ -78,6 +78,14 @@ connector; results beyond `limits.max_results` are dropped and the total hit cou
 The run is reported as `completed` or `failed` by the SDK, then the error of a failed run is raised again so that
 OpenCTI marks the work in error.
 
+### Platform clients
+
+`HuntApiClient` extends `BaseClientApi` for platform APIs: `hunt_request()` checks a `RunDeadline` built from
+`limits.timeout_seconds`, bounds the request timeout with the time left, and turns HTTP and network failures into
+`HuntExecutionError` / `HuntTimeoutError` whose message carries the (size-capped) platform error, so that the run
+report says why the platform refused the query. `cleanup_request()` cancels or deletes platform jobs (search jobs,
+async queries) without ever masking the run outcome.
+
 ### pycti compatibility
 
 `INTERNAL_HUNT`, `listen_hunt`, `register_hunt_platform` and `report_hunt_run` ship in the pycti release that comes
@@ -106,7 +114,8 @@ CI and the image builds rewrite the `connectors-sdk @ git+...` requirement line 
 ## Disadvantages
 
 - **Thread-based timeout**: a Python thread cannot be killed. A timed out `execute` keeps running until its own HTTP
-  timeouts expire; connectors must bound their calls and cancel platform jobs in `on_timeout`.
+  timeouts expire; connectors bound their calls with `HuntApiClient.hunt_request()` and cancel platform jobs in
+  `on_timeout`.
 - **Benign suppression on returned events**: when results are truncated, suppressed events are subtracted from the
   platform total, which is an approximation of the benign-free hit count.
 
