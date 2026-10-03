@@ -1,0 +1,57 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_IMPORT_FILE'
+  name: 'ImportDocumentLLM'
+  validate_before_import: true
+  scope: 'application/pdf,text/plain,text/html,text/markdown,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,application/octet-stream'
+  auto: false
+  log_level: 'info'
+
+import_document:
+  # LLM backend selection: openai | azureopenai | ollama
+  ai_provider: ollama
+  ai_model: gemma4
+
+  # Optional: soft rate-limit for LLM calls (requests per minute).
+  # 0 or unset disables it.
+  llm_rpm: 0
+
+  create_indicator: false
+  # Optional override used when provider cannot report context window.
+  manual_context_window: 0
+  max_model_tokens: 4096
+  model_input_ratio: 0.3
+  # OCR is lazy and only retried for likely image-based PDFs.
+  pdf_ocr: false
+  pdf_ocr_langs: ["en"]
+  pdf_ocr_min_img_area: 60000
+  pdf_ocr_page_dpi: 300
+  run_binary_cache_size: 100000
+  run_text_cache_size: 100000
+  # Optional: override system prompt file (also overridable via REPORTIMPORTER_SYSTEM_PROMPT env)
+  prompt_path: "reportimporter/prompts/system_prompt_relations.md"
+  trace_payloads: false  # Enable detailed tracing logs (also via REPORTIMPORTER_TRACE_PAYLOADS)
+
+# OpenAI public API (required when ai_provider=openai)
+openai:
+  key: "YOUR_OPENAI_API_KEY"
+
+# Azure OpenAI (required when ai_provider=azureopenai)
+azure_openai:
+  endpoint: "https://YOUR-RESOURCE-NAME.openai.azure.com/"
+  key: "YOUR_AZURE_OPENAI_KEY"
+  deployment: "YOUR_DEPLOYMENT_NAME"
+  api_version: "2024-02-15-preview"
+
+# Ollama (required when ai_provider=ollama)
+# The model is taken from import_document.ai_model (IMPORT_DOCUMENT_AI_MODEL),
+# not from this section.
+ollama:
+  host: "http://localhost:11434"
+  pull_on_start: false
+  pull_timeout_s: 600
