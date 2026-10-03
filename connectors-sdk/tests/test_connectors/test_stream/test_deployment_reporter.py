@@ -117,6 +117,17 @@ def test_start_on_a_platform_without_the_write_back(
     assert len(router.calls_of("DeploymentWriteBackFeatures")) == 1
 
 
+def test_start_registers_the_exit_flush_when_opencti_is_unreachable(
+    graphql_helper, make_reporter, router, no_atexit
+):
+    """A failed startup detection still flushes the reports queued later at exit."""
+    router.handlers["DeploymentWriteBackFeatures"] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper)
+
+    assert reporter.start() is False
+    assert no_atexit == [reporter.close]
+
+
 def test_feature_detection_failure_is_retried_later(
     graphql_helper, make_reporter, router
 ):
@@ -688,31 +699,33 @@ def test_list_indicator_deployments_when_unavailable(
     assert list(reporter.list_indicator_deployments()) == []
 
 
-def test_list_indicator_deployments_with_the_pycti_helper(
-    pycti_helper, make_reporter, node_factory, ids
+def test_list_indicator_deployments_never_uses_the_pycti_helper(
+    pycti_helper, make_reporter, router, node_factory
 ):
-    """The pycti helper lists deployments when available."""
-    pycti_helper.list_indicator_deployments.return_value = iter(
-        [node_factory(indicator_id="a"), "not a node", {"id": "no indicator"}]
+    """The pycti listing ends quietly on a failed page: the paginated query is used."""
+    pages = iter(
+        [
+            {
+                "data": {
+                    "stixCoreRelationships": {
+                        "edges": [{"node": node_factory(indicator_id="a")}],
+                        "pageInfo": {"endCursor": "cursor-1", "hasNextPage": True},
+                    }
+                }
+            },
+            ConnectionError("unreachable"),
+        ]
     )
+    router.handlers["IndicatorDeploymentsOfPlatform"] = lambda _variables: next(pages)
     reporter = make_reporter(pycti_helper)
 
-    deployments = list(reporter.list_indicator_deployments(["pending"]))
+    listed = []
+    with pytest.raises(DeploymentListingError, match="unreachable"):
+        for deployment in reporter.list_indicator_deployments(["pending"]):
+            listed.append(deployment.indicator_id)
 
-    assert [deployment.indicator_id for deployment in deployments] == ["a"]
-    pycti_helper.list_indicator_deployments.assert_called_once_with(
-        ids.platform, statuses=["pending"]
-    )
-
-
-def test_list_indicator_deployments_with_a_failing_pycti_helper(
-    pycti_helper, make_reporter
-):
-    """Errors of the pycti helper raise ``DeploymentListingError``."""
-    pycti_helper.list_indicator_deployments.side_effect = ConnectionError("unreachable")
-    reporter = make_reporter(pycti_helper)
-    with pytest.raises(DeploymentListingError):
-        list(reporter.list_indicator_deployments())
+    assert listed == ["a"]
+    pycti_helper.list_indicator_deployments.assert_not_called()
 
 
 # --- queued reports ------------------------------------------------------------------------

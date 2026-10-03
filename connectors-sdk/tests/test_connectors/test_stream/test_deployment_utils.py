@@ -134,11 +134,21 @@ def test_pattern_observable_values_without_file_hashes():
         ("   ", None),
         (" Evil.Example ", "evil.example"),
         (42, "42"),
+        ("HTTPS://Evil.Example/Admin?Id=A#Top", "https://evil.example/Admin?Id=A#Top"),
+        ("http://Evil.Example", "http://evil.example"),
+        ("http://Evil.Example?Q=1", "http://evil.example?Q=1"),
     ],
 )
 def test_normalize_value(value, expected):
-    """Values are stripped and lower-cased, empty ones give ``None``."""
+    """Values are stripped and lower-cased except URL paths, empty ones give ``None``."""
     assert normalize_value(value) == expected
+
+
+def test_normalize_value_keeps_url_paths_apart():
+    """URLs differing only by the case of their path are two observables."""
+    assert normalize_value("http://evil.example/Admin") != normalize_value(
+        "http://evil.example/admin"
+    )
 
 
 def test_parse_datetime_accepts_datetimes_and_iso_strings():

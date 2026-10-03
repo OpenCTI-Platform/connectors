@@ -12,6 +12,7 @@ _PATTERN_COMPARISON = re.compile(
     r"(?P<object_type>[a-z0-9][a-z0-9-]*):(?P<object_path>[\w.'\-]+?)"
     r"\s*=\s*'(?P<value>(?:[^'\\]|\\.)*)'"
 )
+_URL_PREFIX = re.compile(r"(?P<prefix>[A-Za-z][A-Za-z0-9+.\-]*://[^/?#]*)")
 
 _STIX_TO_OPENCTI_OBSERVABLE_TYPES = {
     "autonomous-system": "Autonomous-System",
@@ -161,16 +162,25 @@ def pattern_observable_values(pattern: str | None) -> list[dict[str, Any]]:
 def normalize_value(value: Any) -> str | None:
     """Normalize an observable value or an identifier for matching.
 
+    Only the scheme and the host of a URL are case-insensitive: its path, query and
+    fragment keep their case, so ``/Admin`` and ``/admin`` stay two values.
+
     Args:
         value: Any value.
 
     Returns:
-        The stripped lower-case string, or ``None`` when empty.
+        The stripped string, lower-cased except the case-sensitive URL parts, or
+        ``None`` when empty.
     """
     if value is None:
         return None
-    normalized = str(value).strip().lower()
-    return normalized or None
+    text = str(value).strip()
+    if not text:
+        return None
+    url = _URL_PREFIX.match(text)
+    if url:
+        return url.group("prefix").lower() + text[url.end() :]
+    return text.lower()
 
 
 def parse_datetime(value: datetime | str | None) -> datetime | None:

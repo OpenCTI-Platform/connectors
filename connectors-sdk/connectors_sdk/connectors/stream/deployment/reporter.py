@@ -199,13 +199,15 @@ class DeploymentReporter:
                 "(DEPLOYMENT_REPORTING_ENABLED=false)."
             )
             return False
-        platform_id = self._ready(REPORT_DEPLOYMENT_MUTATION)
-        if platform_id is None:
-            return False
+        # Before the detection: reports queued once OpenCTI is reachable again must
+        # still be flushed at exit when the platform was unreachable at startup.
         with self._lock:
             if not self._exit_handler_registered:
                 atexit.register(self.close)
                 self._exit_handler_registered = True
+        platform_id = self._ready(REPORT_DEPLOYMENT_MUTATION)
+        if platform_id is None:
+            return False
         self._logger.info(
             f"{_LOG_PREFIX} Deployment write-back enabled.",
             {
@@ -447,40 +449,12 @@ class DeploymentReporter:
             if statuses is not None
             else None
         )
-        if hasattr(self._helper, "list_indicator_deployments"):
-            nodes = self._list_nodes_with_helper(platform_id, status_values)
-        else:
-            nodes = self._list_nodes_with_graphql(platform_id, status_values)
-        for node in nodes:
+        # Never the pycti helper listing: it ends quietly on a failed page, and a
+        # partial listing would make the reconciler report deployments as removed.
+        for node in self._list_nodes_with_graphql(platform_id, status_values):
             deployment = IndicatorDeployment.from_node(node)
             if deployment is not None:
                 yield deployment
-
-    def _list_nodes_with_helper(
-        self, platform_id: str, status_values: list[str] | None
-    ) -> Iterator[Mapping[str, Any]]:
-        """List deployment nodes with the pycti helper.
-
-        Args:
-            platform_id: The security platform id.
-            status_values: The statuses to list, all when ``None``.
-
-        Yields:
-            The relationship nodes.
-
-        Raises:
-            DeploymentListingError: If the listing fails.
-        """
-        try:
-            for node in self._helper.list_indicator_deployments(
-                platform_id, statuses=status_values
-            ):
-                if isinstance(node, Mapping):
-                    yield node
-        except Exception as err:
-            raise DeploymentListingError(
-                f"Cannot list the deployments of the security platform: {err}"
-            ) from err
 
     def _list_nodes_with_graphql(
         self, platform_id: str, status_values: list[str] | None
