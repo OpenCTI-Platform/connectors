@@ -158,12 +158,12 @@ class GraphQLRouter:
         return [variables for query, variables in self.calls if marker in query]
 
 
-def deployment_node(indicator_id, stix_id, status, last_hit_at=None):
+def deployment_node(indicator_id, stix_id, status, last_hit_at=None, revoked=False):
     return {
         "id": f"relationship-{indicator_id}",
         "deployment_status": status,
         "external_id": None,
-        "revoked": False,
+        "revoked": revoked,
         "last_sync_at": "2026-10-01T00:00:00.000Z",
         "last_hit_at": last_hit_at,
         "hit_count": 0,
@@ -945,6 +945,38 @@ def test_reconciliation_and_hits_are_reported(
     (hits,) = router.calls_of("IndicatorReportHits(")
     assert hits["indicatorId"] == INDICATOR_ID
     assert hits["count"] == 1
+
+
+def test_withdrawal_deletes_every_resource_of_the_stix_id(
+    mocker: MockerFixture, e2e_connector: Connector, router: GraphQLRouter
+) -> None:
+    """Duplicate TI objects of one STIX id are all deleted before `removed`."""
+    router.deployments = [
+        deployment_node(INDICATOR_ID, INDICATOR_STIX_ID, "active", revoked=True)
+    ]
+    duplicate_id = f"{RESOURCE_ID}-duplicate"
+    send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        side_effect=[
+            response({"value": [ti_object(), ti_object(resource_id=duplicate_id)]}),
+            response({}),
+            response({}),
+        ],
+    )
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.withdrawn == 1
+    assert summary.discovered == 0
+    deleted = [
+        call.kwargs["request"].url
+        for call in send_request.call_args_list
+        if call.kwargs["request"].method == "DELETE"
+    ]
+    assert len(deleted) == 2
+    assert RESOURCE_ID in deleted[0] and duplicate_id in deleted[1]
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert batch["reports"][0]["status"] == "removed"
 
 
 def test_read_back_failure_skips_the_reconciliation(
