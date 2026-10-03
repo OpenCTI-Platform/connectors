@@ -235,3 +235,19 @@ def test_observed_data_to_stix2_object_with_entities(
     assert len(stix2_obj.object_refs) == 2
     assert ipv4.id in stix2_obj.object_refs
     assert url.id in stix2_obj.object_refs
+
+
+def test_observed_data_to_stix2_object_carries_the_hunt_run_only_when_set():
+    """Test that ObservedData exports its hunt run as x_opencti_hunt_run_id."""
+    input_data = {
+        "first_observed": datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+        "last_observed": datetime(2025, 1, 1, 13, 0, 0, tzinfo=timezone.utc),
+        "number_observed": 5,
+        "entities": [IPV4Address(value="1.1.1.1")],
+    }
+
+    with_run = ObservedData(**input_data, hunt_run_id="run-1").to_stix2_object()
+    without_run = ObservedData(**input_data).to_stix2_object()
+
+    assert with_run["x_opencti_hunt_run_id"] == "run-1"
+    assert "x_opencti_hunt_run_id" not in without_run

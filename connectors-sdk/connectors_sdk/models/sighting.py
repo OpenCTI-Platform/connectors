@@ -66,6 +66,10 @@ class Sighting(BaseIdentifiedEntity):
         default=None,
         description="Qualification of the sighting (false positive).",
     )
+    hunt_run_id: str | None = Field(
+        default=None,
+        description="OpenCTI id of the hunt run that found the sighting.",
+    )
 
     def to_stix2_object(self) -> Stix2Sighting:
         """Make stix object."""
@@ -91,6 +95,7 @@ class Sighting(BaseIdentifiedEntity):
             count=self.count,
             description=self.description,
             x_opencti_negative=self.qualification,
+            x_opencti_hunt_run_id=self.hunt_run_id,
             **self._common_stix2_properties(),
             allow_custom=True,
         )

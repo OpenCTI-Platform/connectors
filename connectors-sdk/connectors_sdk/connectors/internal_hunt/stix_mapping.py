@@ -88,6 +88,7 @@ def build_telemetry_objects(
                 last_observed=last_seen,
                 number_observed=hits_count,
                 entities=observable_models,
+                hunt_run_id=request.hunt_run.id,
                 author=author,
                 markings=markings or None,
             )
@@ -107,6 +108,7 @@ def build_telemetry_objects(
                     last_seen=last_seen,
                     count=hits_count,
                     description=description,
+                    hunt_run_id=request.hunt_run.id,
                     author=author,
                     markings=markings or None,
                 )

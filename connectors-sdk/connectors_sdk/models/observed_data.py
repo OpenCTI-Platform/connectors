@@ -28,6 +28,10 @@ class ObservedData(BaseIdentifiedEntity):
         default=None,
         description="Files to upload with the observed data, e.g. observed data as a PDF.",
     )
+    hunt_run_id: str | None = Field(
+        default=None,
+        description="OpenCTI id of the hunt run that observed the data.",
+    )
 
     def to_stix2_object(self) -> Stix2ObservedData:
         """Make stix object."""
@@ -41,6 +45,7 @@ class ObservedData(BaseIdentifiedEntity):
             x_opencti_files=[
                 file.to_stix2_object() for file in self.associated_files or []
             ],
+            x_opencti_hunt_run_id=self.hunt_run_id,
             allow_custom=True,
             **self._common_stix2_properties()
         )
