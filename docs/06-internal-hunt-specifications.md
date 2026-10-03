@@ -126,7 +126,8 @@ Rules:
   `HuntTimeoutError` carrying the platform error message; `cleanup_request()` cancels or deletes platform jobs without
   masking the run outcome. Poll asynchronous jobs with `RunDeadline.check()` / `RunDeadline.sleep()` and cancel them in
   `on_timeout()`.
-- Fetch at most `limits.max_results` events and report the platform total when it is available.
+- Fetch at most `limits.max_results` events in total for the run (shared by every query when a run issues several)
+  and report the platform total when it is available.
 - Declare `evidence_excluded_fields` for raw payload fields (e.g. Splunk `_raw`), `entity_fields` for the host, user
   and peer fields of the platform, and `observable_fields` for platform fields the name heuristics do not recognize.
 - Add `pysigma` and the backend package of the platform to `src/requirements.txt` (the SDK `hunt` extra cannot be
@@ -146,12 +147,18 @@ For a telemetry run with hits:
 - one **sighting** per technique and per indicator of the hunt: `sighting_of_ref` is the technique or indicator,
   `where_sighted_refs` the Security Platform identity, `count` the hits, `first_seen`/`last_seen` the first and last
   matching events, and the description names the hunt and the run;
-- one **observed-data** (`number_observed` = hits) referencing the IOC observables extracted from the results, only for
-  the observable types the hunt expects and the connector allows.
+- one **observed-data** per number of observations, referencing the IOC observables extracted from the results that
+  many result events hold: `number_observed` is the count of each referenced observable (an observable is counted once
+  per event), only for the observable types the hunt expects and the connector allows.
 
-Objects inherit the markings and the author of the hunt. Identifiers are deterministic (pycti `generate_id`), so a
-re-run over the same window upserts the same objects. Connectors never create incidents: OpenCTI creates incident
-drafts above the escalation threshold of the hunt.
+Objects inherit the markings and the author of the hunt, and every sighting and observed-data carries its run in
+`x_opencti_hunt_run_id`. Identifiers are deterministic: observables keep their standard pycti ids, while the ids of the
+sightings and observed-data derive from their standard pycti id and the hunt run (`hunt_run.id`, which does not change
+between the attempts of a run). A retry of a run therefore upserts its own objects, and a separate run, even over the
+same window, creates its own run-linked sightings and observed-data: never rely on cross-run upserts. On the platform,
+the OpenCTI deduplication may still merge sightings sharing their ends and close time bounds, or observed-data sharing
+their objects; the `result_ids` reported with every run keep the link between a run and its objects in all cases.
+Connectors never create incidents: OpenCTI creates incident drafts above the escalation threshold of the hunt.
 
 ## Evidence and privacy
 
@@ -168,8 +175,10 @@ drafts above the escalation threshold of the hunt.
 Connectors with the `internet` platform hunt adversary infrastructure on internet scanning APIs from fingerprint
 rules stored as hunt native queries (`platform: internet`, `language: internet`). They have no Security Platform and
 override `to_stix()` to produce `infrastructure`, observables (`ipv4-addr`, `domain-name`, `x509-certificate`) and
-detection indicators, linked with `consists-of`, `based-on`, `related-to` and `indicates` relationships (see
-`internal-hunt/infrastructure-tracker`).
+detection indicators, linked with `consists-of`, `based-on`, `related-to` and `indicates` relationships, plus the
+run-scoped observed-data of the observables found (`build_observed_data`, one per number of hosts) as the link to the
+run (see `internal-hunt/infrastructure-tracker`). The infrastructure, observables, indicators and relationships keep
+their standard ids, so every run of a hunt grows the same infrastructure.
 
 ## Testing
 
