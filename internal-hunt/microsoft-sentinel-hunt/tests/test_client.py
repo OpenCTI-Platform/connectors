@@ -135,12 +135,32 @@ def test_query_reports_the_log_analytics_error(requests_mock):
         },
     )
 
-    # When/Then the Log Analytics message is reported
-    with pytest.raises(
-        HuntExecutionError, match="query failed.*invalid properties"
-    ) as err:
+    # When/Then the Log Analytics messages, inner errors included, are reported
+    with pytest.raises(HuntExecutionError) as err:
         _client().query("T | whre x", START, END, RunDeadline(30))
-    assert "HTTP 400" in str(err.value)
+    assert str(err.value) == (
+        "The Log Analytics query failed (HTTP 400 on POST /v1/workspaces/ws-1/query): "
+        "The request had some invalid properties - Query could not be parsed at 'whre'"
+    )
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        pytest.param({"exc": requests.exceptions.ConnectionError}, id="network"),
+        pytest.param({"status_code": 401}, id="no_body"),
+        pytest.param(
+            {"status_code": 500, "json": {"error": {"code": "x"}}}, id="no_message"
+        ),
+    ],
+)
+def test_query_keeps_generic_errors(requests_mock, response):
+    # Given a failure without Log Analytics error messages
+    requests_mock.post(QUERY_URL, **response)
+
+    # When/Then the generic hunt error is raised
+    with pytest.raises(HuntExecutionError, match="The Log Analytics query failed"):
+        _client().query("T", START, END, RunDeadline(30))
 
 
 def test_query_maps_authentication_failures():
