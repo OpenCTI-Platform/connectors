@@ -51,14 +51,13 @@ def rule_pattern(rule: dict[str, Any]) -> str:
     )
 
 
-def rule_key(rule_group_id: str, instance_id: str) -> str:
-    """Return the unique key of a rule: ``<rule group id>/<instance id>``."""
+def ioa_rule_id(rule_group_id: str, instance_id: str) -> str:
+    """Return the id of a custom IOA rule: ``<rule group id>/<instance id>``.
+
+    Instance ids are numbered within each rule group (``1``, ``2``...), so
+    the instance id alone designates one rule per group.
+    """
     return f"{rule_group_id}/{instance_id}"
-
-
-def instance_id_from_key(key: str) -> str:
-    """Return the rule instance id of a rule key."""
-    return key.split("/", 1)[-1]
 
 
 def _techniques(group: dict[str, Any], rule: dict[str, Any]) -> dict[str, str | None]:
@@ -99,8 +98,7 @@ def map_rule(
         raise RuleSkippedError("no_rule_id")
     platform = PLATFORMS.get(str(group.get("platform") or "").lower())
     return DetectionRule(
-        key=rule_key(str(group_id), str(instance_id)),
-        external_id=str(instance_id),
+        external_id=ioa_rule_id(str(group_id), str(instance_id)),
         name=rule.get("name") or f"Custom IOA rule {instance_id}",
         description=rule.get("description") or None,
         pattern=rule_pattern(rule),

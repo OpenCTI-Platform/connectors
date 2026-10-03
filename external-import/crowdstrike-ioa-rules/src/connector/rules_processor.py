@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from connector.deployed_rules_processor import DeployedRulesProcessor
 from connector.detection_rule import DetectionRule, RuleSkippedError
-from connector.rule_mapper import instance_id_from_key, iter_rules, map_rule
+from connector.rule_mapper import iter_rules, map_rule
 from connector.stix_builder import RuleStixBuilder
 from connectors_sdk import ApiForbiddenError
 from connectors_sdk.models import OrganizationAuthor, TLPMarking
@@ -98,7 +98,3 @@ class CrowdStrikeRulesProcessor(DeployedRulesProcessor):
         ):
             raise RuleSkippedError("disabled")
         return detection_rule
-
-    def external_id_for_key(self, key: str) -> str:
-        """Rules are keyed by ``<rule group id>/<instance id>``."""
-        return instance_id_from_key(key)

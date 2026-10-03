@@ -119,7 +119,6 @@ def map_rule(rule: dict[str, Any], deployment: dict[str, Any] | None) -> Detecti
     if isinstance(severity, dict):
         severity = severity.get("displayName")
     return DetectionRule(
-        key=rule_id,
         external_id=rule_id,
         name=rule.get("displayName") or metadata.get("rule_name") or rule_id,
         description=metadata.get("description") or None,

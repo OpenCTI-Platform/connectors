@@ -9,8 +9,7 @@ from connector.rule_mapper import (
     is_running,
     is_true,
     map_saved_search,
-    name_from_key,
-    rule_key,
+    saved_search_id,
 )
 from splunk_samples import CORRELATION_SEARCH, REPORT, SCHEDULED_ALERT, entry
 
@@ -83,10 +82,9 @@ def test_only_enabled_scheduled_searches_run(disabled, is_scheduled, running):
 
 def test_correlation_search():
     rule = map_saved_search(CORRELATION_SEARCH, "alerts", _url)
-    assert rule.key == (
+    assert rule.external_id == (
         "DA-ESS-ContentUpdate/nobody/ESCU - Windows PowerShell Encoded Command - Rule"
     )
-    assert rule.external_id == CORRELATION_SEARCH["name"]
     assert rule.name == "ESCU - Windows PowerShell Encoded Command - Rule"
     assert rule.pattern == CORRELATION_SEARCH["content"]["search"]
     assert rule.pattern_type == "spl"
@@ -189,7 +187,26 @@ def test_saved_searches_left_out(raw, scope, reason):
     assert error.value.reason == reason
 
 
-def test_rule_keys():
-    key = rule_key("search", "admin", "a/b search")
-    assert key == "search/admin/a/b search"
-    assert name_from_key(key) == "a/b search"
+def test_saved_search_id():
+    assert saved_search_id("search", "admin", "a/b search") == "search/admin/a/b search"
+
+
+def test_same_name_in_two_namespaces_gets_two_ids():
+    other_app = {
+        **CORRELATION_SEARCH,
+        "acl": {"app": "SA-Custom", "owner": "admin", "sharing": "app"},
+    }
+    ids = {
+        map_saved_search(raw, "alerts", _url).external_id
+        for raw in (CORRELATION_SEARCH, other_app)
+    }
+    assert ids == {
+        f"DA-ESS-ContentUpdate/nobody/{CORRELATION_SEARCH['name']}",
+        f"SA-Custom/admin/{CORRELATION_SEARCH['name']}",
+    }
+
+
+def test_missing_acl_uses_wildcard_namespaces():
+    raw = {key: value for key, value in CORRELATION_SEARCH.items() if key != "acl"}
+    rule = map_saved_search(raw, "alerts", _url)
+    assert rule.external_id == f"-/-/{CORRELATION_SEARCH['name']}"

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from connector.deployed_rules_processor import DeployedRulesProcessor
 from connector.detection_rule import DetectionRule, RuleSkippedError
-from connector.rule_mapper import map_saved_search, name_from_key
+from connector.rule_mapper import map_saved_search
 from connector.stix_builder import RuleStixBuilder
 from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from splunk_client import SplunkSavedSearchesClient
@@ -71,7 +71,3 @@ class SplunkRulesProcessor(DeployedRulesProcessor):
         if not rule.enabled and not config.import_disabled_rules:
             raise RuleSkippedError("disabled")
         return rule
-
-    def external_id_for_key(self, key: str) -> str:
-        """Saved searches are keyed by ``<app>/<owner>/<name>``."""
-        return name_from_key(key)

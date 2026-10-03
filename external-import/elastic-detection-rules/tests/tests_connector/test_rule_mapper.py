@@ -19,7 +19,6 @@ def _url(saved_object_id: str) -> str:
 
 def test_kuery_rule():
     detection_rule = map_rule(KUERY_RULE, _url)
-    assert detection_rule.key == KUERY_RULE["rule_id"]
     assert detection_rule.external_id == KUERY_RULE["rule_id"]
     assert detection_rule.name == "Encoded PowerShell Command"
     assert detection_rule.pattern == KUERY_RULE["query"]

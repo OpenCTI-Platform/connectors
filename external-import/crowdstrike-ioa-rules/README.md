@@ -19,6 +19,7 @@ Table of Contents
   - [Behavior](#behavior)
     - [Entity mapping](#entity-mapping)
     - [Indicator pattern](#indicator-pattern)
+    - [Rule id](#rule-id)
     - [Deployment status and reconciliation](#deployment-status-and-reconciliation)
     - [ATT&CK techniques](#attck-techniques)
     - [The deployed-on relationship](#the-deployed-on-relationship)
@@ -158,7 +159,7 @@ graph LR
 | `pattern_severity` (`informational`, `low`, `medium`, `high`, `critical`) | Indicator `x_opencti_rule_level` |
 | Group `platform` (`windows`, `mac`, `linux`) | Indicator `x_mitre_platforms` (`windows`, `macos`, `linux`) and `x_opencti_rule_logsource.product` |
 | `ruletype_name` (`Process Creation`, `File Creation`, `Network Connection`, `Domain Name`) | `x_opencti_rule_logsource.category` (`process_creation`, `file_event`, `network_connection`, `dns_query`) |
-| `instance_id` | External reference `external_id`, `deployed-on` `external_id` |
+| Rule id `<rule group id>/<instance_id>` | External reference `external_id`, `deployed-on` `external_id` (see [Rule id](#rule-id)) |
 | Technique ids in `name`, `description`, `comment` (or in the group `name` and `description`) | `indicates` relationships to Attack Patterns |
 | Rule `enabled`, group `enabled`, group assigned to an enabled prevention policy | `deployed-on` `deployment_status`: `active` or `deployed` |
 
@@ -189,6 +190,14 @@ name; shown condensed here):
 Renaming a rule or editing its comment keeps the same Indicator; changing its logic (field values, rule
 type or action) gives a new Indicator.
 
+### Rule id
+
+CrowdStrike numbers the rules of each rule group from `1` (`instance_id`), so every rule group has its
+rule `1`. The connector therefore identifies each rule by `<rule group id>/<instance_id>`, for example
+`0a1b2c3d4e5f60718293a4b5c6d7e8f9/1`. This id is the `external_id` of the external reference and of the
+deployment, whether the deployment is current or `removed`, and it keys the connector state, so rules of
+two groups never share a deployment id and a removal always names the rule that is gone.
+
 ### Deployment status and reconciliation
 
 A custom IOA rule only runs on hosts when the rule is enabled, its rule group is enabled, and the group
@@ -199,7 +208,7 @@ counts.
 
 Every run reads all the rule groups and sends, for each rule, its Indicator and its deployment with
 `last_sync_at` set to the time of the run. The connector state keeps the Indicator of every rule imported
-by the previous run, so that:
+by the previous run (keyed by its rule id), so that:
 
 - a rule deleted since the previous run gets the status `removed` and a `removed_at` time;
 - a rule whose logic changed gets a new Indicator; the Indicator of the previous logic gets the status
@@ -232,7 +241,8 @@ dissemination assurance feature
 ([OpenCTI-Platform/opencti#18680](https://github.com/OpenCTI-Platform/opencti/issues/18680)). Once per
 run, the connector checks the relationship schema of the platform (`schemaRelationsTypesMapping`). When
 `deployed-on` is not defined between an Indicator and a Security Platform, it records each deployment as
-a `related-to` relationship described as `Deployed on <platform> (status: <status>, rule id: <rule_id>)`
+a `related-to` relationship described as
+`Deployed on <platform> (status: <status>, rule id: <rule group id>/<instance_id>)`
 instead, and logs one warning per run.
 
 ## Debugging

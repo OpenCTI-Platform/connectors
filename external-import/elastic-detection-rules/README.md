@@ -146,7 +146,7 @@ graph LR
 | `created_at` (or `updated_at`) | Indicator `valid_from` |
 | `severity` (`low`, `medium`, `high`, `critical`) | Indicator `x_opencti_rule_level` |
 | `OS: Windows` / `OS: Linux` / `OS: macOS` tags | Indicator `x_mitre_platforms`; with a single OS, `x_opencti_rule_logsource.product` |
-| `rule_id` | External reference `external_id`, `deployed-on` `external_id` |
+| `rule_id` (unique in the Kibana space) | External reference `external_id`, `deployed-on` `external_id` (current and `removed` deployments) |
 | Rule page in Kibana | External reference `url` |
 | `threat[]` (MITRE ATT&CK framework) techniques and sub-techniques | `indicates` relationships to Attack Patterns |
 | `enabled` | `deployed-on` `deployment_status`: `active` (enabled) or `deployed` (disabled) |
@@ -159,7 +159,7 @@ after `ELASTIC_DETECTION_RULES_PLATFORM_NAME`. When `ELASTIC_DETECTION_RULES_PLA
 
 Every run reads all the rules and sends, for each one, its Indicator and its deployment with
 `last_sync_at` set to the time of the run and `deployed_at` to the rule creation time. The connector
-state keeps the Indicator of every rule imported by the previous run, so that:
+state keeps the Indicator of every rule imported by the previous run (keyed by `rule_id`), so that:
 
 - a rule deleted since the previous run (or no longer selected by the filter) gets the status `removed`
   and a `removed_at` time;

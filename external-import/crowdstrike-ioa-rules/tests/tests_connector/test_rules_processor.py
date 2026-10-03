@@ -8,11 +8,20 @@ from connector import ConnectorState, CrowdStrikeRulesProcessor
 from connector.attack_patterns import attack_pattern_id
 from connector.rule_mapper import rule_pattern
 from connectors_sdk import ApiForbiddenError, ApiServerError
-from crowdstrike_samples import DNS_RULE, MAC_GROUP, PROCESS_RULE, WINDOWS_GROUP
+from crowdstrike_samples import (
+    DNS_RULE,
+    MAC_GROUP,
+    PROCESS_RULE,
+    WINDOWS_GROUP,
+    group,
+)
 from pycti import Identity, Indicator
 
 GONE_INDICATOR = Indicator.generate_id('{"ruletype_name": "deleted rule"}')
-GONE_KEY = f"{WINDOWS_GROUP['id']}/99"
+GONE_ID = f"{WINDOWS_GROUP['id']}/99"
+PROCESS_ID = f"{WINDOWS_GROUP['id']}/1"
+DNS_ID = f"{WINDOWS_GROUP['id']}/2"
+MAC_ID = f"{MAC_GROUP['id']}/7"
 
 
 def _processor(
@@ -64,7 +73,7 @@ def test_rules_become_ioa_indicators_deployed_on_falcon(helper):
         "product": "windows",
     }
     assert process.x_opencti_rule_level == "high"
-    assert process.external_references[0].external_id == "1"
+    assert process.external_references[0].external_id == PROCESS_ID
 
     indicates = _of_type(objects, "relationship", "indicates")
     assert sorted((r.source_ref, r.target_ref) for r in indicates) == sorted(
@@ -76,16 +85,12 @@ def test_rules_become_ioa_indicators_deployed_on_falcon(helper):
     deployments = {
         r.external_id: r for r in _of_type(objects, "relationship", "deployed-on")
     }
-    assert deployments["1"].deployment_status == "active"
-    assert deployments["1"].deployed_at == "2026-01-02T03:04:05.892Z"
-    assert deployments["2"].deployment_status == "deployed"
+    assert deployments[PROCESS_ID].deployment_status == "active"
+    assert deployments[PROCESS_ID].deployed_at == "2026-01-02T03:04:05.892Z"
+    assert deployments[DNS_ID].deployment_status == "deployed"
     # Enabled rule of a disabled group.
-    assert deployments["7"].deployment_status == "deployed"
-    assert set(processor.state.deployed_rules) == {
-        f"{WINDOWS_GROUP['id']}/1",
-        f"{WINDOWS_GROUP['id']}/2",
-        f"{MAC_GROUP['id']}/7",
-    }
+    assert deployments[MAC_ID].deployment_status == "deployed"
+    assert set(processor.state.deployed_rules) == {PROCESS_ID, DNS_ID, MAC_ID}
 
 
 def test_platform_without_deployed_on_gets_related_to(helper):
@@ -95,23 +100,63 @@ def test_platform_without_deployed_on_gets_related_to(helper):
         r.description for r in _of_type(objects, "relationship", "related-to")
     )
     assert descriptions == [
-        "Deployed on CrowdStrike Falcon (status: active, rule id: 1)",
-        "Deployed on CrowdStrike Falcon (status: deployed, rule id: 2)",
+        f"Deployed on CrowdStrike Falcon (status: active, rule id: {PROCESS_ID})",
+        f"Deployed on CrowdStrike Falcon (status: deployed, rule id: {DNS_ID})",
     ]
 
 
-def test_removed_rule_carries_its_instance_id(helper):
+def test_removed_rule_carries_its_namespaced_id(helper):
     helper.api.indicator.list.return_value = [
         {"standard_id": GONE_INDICATOR, "x_opencti_stix_ids": []}
     ]
-    state = ConnectorState(deployed_rules={GONE_KEY: GONE_INDICATOR})
+    state = ConnectorState(deployed_rules={GONE_ID: GONE_INDICATOR})
     bundles = _run(_processor(helper, [WINDOWS_GROUP], state=state))
     (removed,) = _of_type(bundles[1], "relationship", "deployed-on")
     assert (removed.source_ref, removed.external_id, removed.deployment_status) == (
         GONE_INDICATOR,
-        "99",
+        GONE_ID,
         "removed",
     )
+
+
+def test_same_instance_id_in_two_groups_never_shares_an_id(helper):
+    other_rule = dict(PROCESS_RULE, action_label="Monitor")
+    other_group = group(
+        WINDOWS_GROUP, id="1f2e3d4c5b6a79880011223344556677", rules=[other_rule]
+    )
+    windows_group = group(WINDOWS_GROUP, rules=[PROCESS_RULE])
+    other_id = f"{other_group['id']}/1"
+    first = _processor(helper, [windows_group, other_group])
+    (objects,) = _run(first)
+    deployments = {
+        r.source_ref: r.external_id
+        for r in _of_type(objects, "relationship", "deployed-on")
+    }
+    assert deployments == {
+        _indicator_id(PROCESS_RULE): PROCESS_ID,
+        _indicator_id(other_rule): other_id,
+    }
+    references = {
+        i.id: i.external_references[0].external_id
+        for i in _of_type(objects, "indicator")
+    }
+    assert references == deployments
+
+    # The rule deleted from one group is removed under its own id only.
+    helper.api.indicator.list.return_value = [
+        {"standard_id": _indicator_id(other_rule), "x_opencti_stix_ids": []}
+    ]
+    second = _processor(helper, [windows_group], state=first.state)
+    current, removals = _run(second)
+    (kept,) = _of_type(current, "relationship", "deployed-on")
+    assert kept.external_id == PROCESS_ID
+    (removed,) = _of_type(removals, "relationship", "deployed-on")
+    assert (removed.source_ref, removed.external_id, removed.deployment_status) == (
+        _indicator_id(other_rule),
+        other_id,
+        "removed",
+    )
+    assert second.state.deployed_rules == {PROCESS_ID: _indicator_id(PROCESS_RULE)}
 
 
 def test_changed_rule_logic_removes_the_previous_indicator(helper):
@@ -121,10 +166,10 @@ def test_changed_rule_logic_removes_the_previous_indicator(helper):
     helper.api.indicator.list.return_value = [
         {"standard_id": old, "x_opencti_stix_ids": []}
     ]
-    state = ConnectorState(deployed_rules={f"{WINDOWS_GROUP['id']}/1": old})
+    state = ConnectorState(deployed_rules={PROCESS_ID: old})
     bundles = _run(_processor(helper, [WINDOWS_GROUP], state=state))
     (removed,) = _of_type(bundles[1], "relationship", "deployed-on")
-    assert (removed.source_ref, removed.external_id) == (old, "1")
+    assert (removed.source_ref, removed.external_id) == (old, PROCESS_ID)
 
 
 def test_disabled_rules_can_be_left_out(helper):
@@ -134,7 +179,7 @@ def test_disabled_rules_can_be_left_out(helper):
     (objects,) = _run(processor)
     assert [
         r.external_id for r in _of_type(objects, "relationship", "deployed-on")
-    ] == ["1"]
+    ] == [PROCESS_ID]
     summary = helper.connector_logger.info.call_args_list[-1].args[1]
     assert summary["skipped"] == {"disabled": 2}
 
@@ -157,7 +202,7 @@ def _deployment_statuses(objects):
 
 def test_group_outside_prevention_policies_is_not_active(helper):
     (objects,) = _run(_processor(helper, [WINDOWS_GROUP], enforced=set()))
-    assert _deployment_statuses(objects) == {"1": "deployed", "2": "deployed"}
+    assert _deployment_statuses(objects) == {PROCESS_ID: "deployed", DNS_ID: "deployed"}
     summary = helper.connector_logger.info.call_args_list[0].args[1]
     assert summary["rule_groups_in_prevention_policies"] == 0
 
@@ -177,7 +222,7 @@ def test_missing_policy_scope_falls_back_to_the_enabled_flags(helper):
         "Forbidden (403) on GET /policy/combined/prevention/v1"
     )
     (objects,) = _run(processor)
-    assert _deployment_statuses(objects) == {"1": "active", "2": "deployed"}
+    assert _deployment_statuses(objects) == {PROCESS_ID: "active", DNS_ID: "deployed"}
     (warning,) = [
         call
         for call in helper.connector_logger.warning.call_args_list
@@ -191,7 +236,7 @@ def test_policy_check_can_be_turned_off(helper):
         helper, [WINDOWS_GROUP], enforced=set(), check_prevention_policies=False
     )
     (objects,) = _run(processor)
-    assert _deployment_statuses(objects) == {"1": "active", "2": "deployed"}
+    assert _deployment_statuses(objects) == {PROCESS_ID: "active", DNS_ID: "deployed"}
     processor.client.enforced_rule_group_ids.assert_not_called()
 
 
@@ -205,12 +250,12 @@ def test_policy_errors_other_than_forbidden_fail_the_run(helper):
 
 
 def test_collect_errors_fail_the_run_without_touching_the_state(helper):
-    state = ConnectorState(deployed_rules={GONE_KEY: GONE_INDICATOR})
+    state = ConnectorState(deployed_rules={GONE_ID: GONE_INDICATOR})
     processor = _processor(helper, [], state=state)
     processor.client.iter_rule_groups.side_effect = RuntimeError("Falcon down")
     with pytest.raises(RuntimeError):
         processor.process()
-    assert processor.state.deployed_rules == {GONE_KEY: GONE_INDICATOR}
+    assert processor.state.deployed_rules == {GONE_ID: GONE_INDICATOR}
 
 
 def test_dns_rule_without_logic_change_keeps_its_indicator(helper):
@@ -228,7 +273,7 @@ def test_dns_rule_without_logic_change_keeps_its_indicator(helper):
     # Only the deleted process rule is removed; the renamed DNS rule is the same.
     assert len(bundles) == 2
     (removed,) = _of_type(bundles[1], "relationship", "deployed-on")
-    assert removed.external_id == "1"
+    assert removed.external_id == PROCESS_ID
 
 
 EXISTING_PLATFORM = Identity.generate_id("SOC Falcon", "securityplatform")
@@ -267,7 +312,7 @@ def test_configured_platform_id_must_be_a_security_platform(helper, found):
         _run(processor)
 
 
-UNMAPPED_GONE_KEY = "gone-rule"
+UNMAPPED_GONE_ID = "gone-rule"
 UNMAPPED_GONE_INDICATOR = Indicator.generate_id("gone rule pattern")
 
 
@@ -275,7 +320,7 @@ def test_unmapped_rule_keeps_the_deployments_missing_from_the_run(helper):
     helper.api.indicator.list.return_value = [
         {"standard_id": UNMAPPED_GONE_INDICATOR, "x_opencti_stix_ids": []}
     ]
-    state = ConnectorState(deployed_rules={UNMAPPED_GONE_KEY: UNMAPPED_GONE_INDICATOR})
+    state = ConnectorState(deployed_rules={UNMAPPED_GONE_ID: UNMAPPED_GONE_INDICATOR})
     processor = _processor(helper, [WINDOWS_GROUP, MAC_GROUP], state=state)
     map_rule = processor.to_detection_rule
     calls = []
@@ -296,7 +341,7 @@ def test_unmapped_rule_keeps_the_deployments_missing_from_the_run(helper):
     # The unmapped rule cannot be told apart from the gone one: nothing is removed
     assert statuses
     assert "removed" not in statuses
-    assert processor.state.deployed_rules[UNMAPPED_GONE_KEY] == UNMAPPED_GONE_INDICATOR
+    assert processor.state.deployed_rules[UNMAPPED_GONE_ID] == UNMAPPED_GONE_INDICATOR
     assert len(processor.state.deployed_rules) > 1
     summary = helper.connector_logger.info.call_args_list[-1].args[1]
     assert summary["complete"] is False

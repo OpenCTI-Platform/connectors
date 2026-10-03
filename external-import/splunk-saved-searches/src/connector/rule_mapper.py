@@ -113,14 +113,13 @@ def _level(content: dict[str, Any]) -> str | None:
         return None
 
 
-def rule_key(app: str, owner: str, name: str) -> str:
-    """Return the unique key of a saved search: ``<app>/<owner>/<name>``."""
+def saved_search_id(app: str, owner: str, name: str) -> str:
+    """Return the id of a saved search: ``<app>/<owner>/<name>``.
+
+    Splunk only requires a name to be unique within its app and owner
+    namespace, so the name alone can designate several saved searches.
+    """
     return f"{app}/{owner}/{name}"
-
-
-def name_from_key(key: str) -> str:
-    """Return the saved search name of a rule key."""
-    return key.split("/", 2)[-1]
 
 
 def map_saved_search(
@@ -153,8 +152,9 @@ def map_saved_search(
         for mitre_id in extract_technique_ids(str(name), label, description)
     }
     return DetectionRule(
-        key=rule_key(acl.get("app") or "-", acl.get("owner") or "-", str(name)),
-        external_id=str(name),
+        external_id=saved_search_id(
+            acl.get("app") or "-", acl.get("owner") or "-", str(name)
+        ),
         name=label or str(name),
         description=description,
         pattern=str(search),

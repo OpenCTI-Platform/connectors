@@ -4,10 +4,9 @@ from datetime import datetime, timezone
 import pytest
 from connector.detection_rule import RuleSkippedError
 from connector.rule_mapper import (
-    instance_id_from_key,
+    ioa_rule_id,
     iter_rules,
     map_rule,
-    rule_key,
     rule_pattern,
 )
 from crowdstrike_samples import DNS_RULE, MAC_GROUP, PROCESS_RULE, WINDOWS_GROUP, group
@@ -15,8 +14,7 @@ from crowdstrike_samples import DNS_RULE, MAC_GROUP, PROCESS_RULE, WINDOWS_GROUP
 
 def test_process_creation_rule():
     rule = map_rule(WINDOWS_GROUP, PROCESS_RULE)
-    assert rule.key == "0a1b2c3d4e5f60718293a4b5c6d7e8f9/1"
-    assert rule.external_id == "1"
+    assert rule.external_id == "0a1b2c3d4e5f60718293a4b5c6d7e8f9/1"
     assert rule.name == "Encoded PowerShell (T1059.001)"
     assert rule.pattern_type == "crowdstrike-ioa"
     assert rule.enabled is True
@@ -144,5 +142,13 @@ def test_iter_rules_flags_groups_outside_prevention_policies():
     ]
 
 
-def test_rule_keys():
-    assert instance_id_from_key(rule_key("group", "12")) == "12"
+def test_ioa_rule_id():
+    assert ioa_rule_id("group", "12") == "group/12"
+
+
+def test_same_instance_id_in_two_groups_gets_two_ids():
+    ids = {
+        map_rule(rule_group, PROCESS_RULE).external_id
+        for rule_group in (WINDOWS_GROUP, group(WINDOWS_GROUP, id="0f1e2d3c"))
+    }
+    assert ids == {f"{WINDOWS_GROUP['id']}/1", "0f1e2d3c/1"}

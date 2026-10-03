@@ -57,7 +57,6 @@ def test_parse_timestamp_rejects_garbage():
 def test_detection_rule_requires_a_pattern():
     with pytest.raises(ValidationError):
         DetectionRule(
-            key="k",
             external_id="k",
             name="n",
             pattern="",

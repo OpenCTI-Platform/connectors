@@ -9,6 +9,8 @@ connector state keeps the Indicator of every rule of the previous run.
 When a rule fails to map, the rules missing from the run are not removed:
 they cannot be told apart from it, and the next complete run reconciles them.
 Rules sharing the same logic share one Indicator and one deployment.
+The external id of a rule (unique in the platform) keys the connector state,
+so a removed deployment carries the same external id as when it was current.
 """
 
 from __future__ import annotations
@@ -78,10 +80,6 @@ class DeployedRulesProcessor(BaseDataProcessor):
     @abstractmethod
     def to_detection_rule(self, raw_rule: Any) -> DetectionRule:
         """Map a vendor rule; raise ``RuleSkippedError`` to leave it out."""
-
-    def external_id_for_key(self, key: str) -> str:
-        """Return the vendor rule id of a rule key kept in the state."""
-        return key
 
     def resolve_platform(self) -> None:
         """Target the configured existing Security Platform, if any.
@@ -164,7 +162,7 @@ class DeployedRulesProcessor(BaseDataProcessor):
                 )
                 for member in group:
                     statuses[STATUS_ACTIVE if member.enabled else STATUS_DEPLOYED] += 1
-                    current[member.key] = indicator.id
+                    current[member.external_id] = indicator.id
             yield objects
 
         # A rule that could not be mapped is still on the platform, and the rules
@@ -238,7 +236,7 @@ class DeployedRulesProcessor(BaseDataProcessor):
         self, raw_rules: Iterable[Any]
     ) -> tuple[list[DetectionRule], Counter[str]]:
         rules: list[DetectionRule] = []
-        keys: set[str] = set()
+        external_ids: set[str] = set()
         skipped: Counter[str] = Counter()
         for raw_rule in raw_rules:
             try:
@@ -253,10 +251,10 @@ class DeployedRulesProcessor(BaseDataProcessor):
                 )
                 skipped[SKIP_INVALID] += 1
                 continue
-            if rule.key in keys:
+            if rule.external_id in external_ids:
                 skipped["duplicate"] += 1
                 continue
-            keys.add(rule.key)
+            external_ids.add(rule.external_id)
             rules.append(rule)
         return rules, skipped
 
@@ -292,18 +290,18 @@ class DeployedRulesProcessor(BaseDataProcessor):
     ) -> tuple[dict[str, str], dict[str, str]]:
         """Find the rule Indicators no longer deployed.
 
-        ``previous`` / ``current`` map rule keys to Indicator ids; ``pending``
-        maps Indicator ids to rule ids of removals not checked yet. Returns,
-        as Indicator id -> rule id, the removals to send (the Indicator still
-        exists on the platform) and the ones to retry on the next run (the
-        platform could not be asked). An Indicator deleted from the platform,
-        or still deployed through another rule, needs nothing.
+        ``previous`` / ``current`` map rule external ids to Indicator ids;
+        ``pending`` maps Indicator ids to external ids of removals not checked
+        yet. Returns, as Indicator id -> external id, the removals to send (the
+        Indicator still exists on the platform) and the ones to retry on the
+        next run (the platform could not be asked). An Indicator deleted from
+        the platform, or still deployed through another rule, needs nothing.
         """
         live_indicators = set(current.values())
         candidates = dict(pending)
-        for key, indicator_id in previous.items():
-            if current.get(key) != indicator_id:
-                candidates.setdefault(indicator_id, self.external_id_for_key(key))
+        for external_id, indicator_id in previous.items():
+            if current.get(external_id) != indicator_id:
+                candidates.setdefault(indicator_id, external_id)
         candidates = {
             indicator_id: external_id
             for indicator_id, external_id in candidates.items()

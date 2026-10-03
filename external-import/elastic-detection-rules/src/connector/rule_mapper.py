@@ -70,7 +70,6 @@ def map_rule(raw: dict[str, Any], rule_url: Callable[[str], str]) -> DetectionRu
 
     platforms = _platforms(raw.get("tags"))
     return DetectionRule(
-        key=str(rule_id),
         external_id=str(rule_id),
         name=raw.get("name") or str(rule_id),
         description=raw.get("description") or None,

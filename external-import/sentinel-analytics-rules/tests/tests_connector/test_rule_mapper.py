@@ -8,8 +8,7 @@ from sentinel_samples import FUSION_RULE, NRT_RULE, SCHEDULED_RULE, rule
 
 def test_scheduled_rule():
     detection_rule = map_rule(SCHEDULED_RULE)
-    assert detection_rule.key == "73e01a99-5cd7-4139-a149-9f2736ff2ab5"
-    assert detection_rule.external_id == detection_rule.key
+    assert detection_rule.external_id == "73e01a99-5cd7-4139-a149-9f2736ff2ab5"
     assert detection_rule.name == "Encoded PowerShell"
     assert detection_rule.description == "Detects encoded PowerShell command lines."
     assert detection_rule.pattern == SCHEDULED_RULE["properties"]["query"]

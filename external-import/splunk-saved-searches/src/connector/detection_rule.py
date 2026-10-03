@@ -53,12 +53,11 @@ class RuleSkippedError(Exception):
 class DetectionRule(BaseModel):
     """A detection rule as deployed in the security platform."""
 
-    key: str = Field(
-        description="Unique key of the rule in the platform, used to reconcile runs.",
-        min_length=1,
-    )
     external_id: str = Field(
-        description="Vendor rule id, carried by the deployment relationship.",
+        description="Id of the rule, unique in the security platform: namespaced "
+        "(app, rule group...) when the vendor id is only unique in a namespace. "
+        "Carried by the rule external reference and by every deployment, "
+        "current or removed, and keys the connector state.",
         min_length=1,
     )
     name: str = Field(min_length=1)

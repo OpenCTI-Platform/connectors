@@ -26,7 +26,6 @@ def builder() -> RuleStixBuilder:
 
 def _rule(**overrides) -> DetectionRule:
     values = {
-        "key": "rule-1",
         "external_id": "rule-1",
         "name": "Encoded PowerShell",
         "description": "Detects encoded PowerShell.",

@@ -15,7 +15,6 @@ from secops_samples import (
 
 def test_live_rule():
     mapped = map_rule(POWERSHELL_RULE, deployment_of(POWERSHELL_RULE))
-    assert mapped.key == "ru_e6abfcb5-1b85-41b0-b64c-695b3250436f"
     assert mapped.external_id == "ru_e6abfcb5-1b85-41b0-b64c-695b3250436f"
     assert mapped.name == "mitre_attack_T1059_001_encoded_powershell"
     assert mapped.description == "Encoded PowerShell command line"

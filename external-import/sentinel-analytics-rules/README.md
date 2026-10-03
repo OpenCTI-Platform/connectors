@@ -150,7 +150,7 @@ graph LR
 | `properties.displayName`, `properties.description` | Indicator `name`, `description` |
 | `systemData.createdAt` (or `properties.lastModifiedUtc`) | Indicator `valid_from`, `deployed-on` `deployed_at` |
 | `properties.severity` (`Informational`, `Low`, `Medium`, `High`) | Indicator `x_opencti_rule_level` |
-| `name` (rule GUID) | External reference `external_id`, `deployed-on` `external_id` |
+| `name` (rule GUID, unique in the workspace) | External reference `external_id`, `deployed-on` `external_id` (current and `removed` deployments) |
 | `properties.techniques`, `properties.subTechniques` | `indicates` relationships to Attack Patterns |
 | `properties.enabled` | `deployed-on` `deployment_status`: `active` (enabled) or `deployed` (disabled) |
 
@@ -168,7 +168,7 @@ out and counted per kind in the run summary.
 
 Every run reads all the rules and sends, for each one, its Indicator and its deployment with
 `last_sync_at` set to the time of the run. The connector state keeps the Indicator of every rule imported
-by the previous run, so that:
+by the previous run (keyed by its rule GUID), so that:
 
 - a rule deleted since the previous run gets the status `removed` and a `removed_at` time;
 - a rule whose query changed gets a new Indicator; the Indicator of the previous query gets the status

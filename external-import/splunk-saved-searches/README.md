@@ -19,6 +19,7 @@ Table of Contents
   - [Behavior](#behavior)
     - [Which saved searches are imported](#which-saved-searches-are-imported)
     - [Entity mapping](#entity-mapping)
+    - [Saved search id](#saved-search-id)
     - [Deployment status and reconciliation](#deployment-status-and-reconciliation)
     - [ATT&CK techniques](#attck-techniques)
     - [The deployed-on relationship](#the-deployed-on-relationship)
@@ -164,8 +165,8 @@ Saved searches without a search string are always left out (`no_query`).
 | `action.correlationsearch.label` (or the saved search name), `description` | Indicator `name`, `description` |
 | `updated` | Indicator `valid_from` |
 | `action.notable.param.severity`, else `alert.severity` | Indicator `x_opencti_rule_level` (see below) |
-| Saved search name | External reference `external_id`, `deployed-on` `external_id` |
-| Splunk Web link (`<web_url>/app/<app>/search?s=<saved search>`) | External reference `url`, when `WEB_URL` is set |
+| Saved search id `<app>/<owner>/<name>` (app and owner of the saved search ACL) | External reference `external_id`, `deployed-on` `external_id` (see [Saved search id](#saved-search-id)) |
+| Splunk Web link (`<web_url>/app/<app>/search?s=<REST path of the saved search>`) | External reference `url`, when `WEB_URL` is set |
 | `action.correlationsearch.annotations` `mitre_attack` (else ids in the name, label, description) | `indicates` relationships to Attack Patterns |
 | `disabled`, `is_scheduled` | `deployed-on` `deployment_status`: `active` (enabled and scheduled) or `deployed` (disabled, or not scheduled) |
 
@@ -179,6 +180,16 @@ carries the `Splunk` author and the configured TLP marking. The Security Platfor
 `SPLUNK_SAVED_SEARCHES_PLATFORM_ID` designates an existing platform: the deployments then target that
 platform, which the bundles reference without carrying its identity.
 
+### Saved search id
+
+Splunk only requires a saved search name to be unique within its app and owner namespace: with the `-`
+wildcards, two apps (or two users) can each hold a search named `Encoded PowerShell`. The connector
+therefore identifies each saved search by `<app>/<owner>/<name>`, for example
+`DA-ESS-ContentUpdate/nobody/ESCU - Windows PowerShell Encoded Command - Rule`. This id is the
+`external_id` of the external reference and of the deployment, whether the deployment is current or
+`removed`, and it keys the connector state, so two searches with the same name never share a deployment
+id and a removal always names the search that is gone.
+
 ### Deployment status and reconciliation
 
 A saved search only runs when it is enabled (`disabled = 0`) and scheduled (`is_scheduled = 1`, set by
@@ -187,7 +198,7 @@ an enabled search that is not scheduled (it never runs on its own), gets `deploy
 
 Every run reads all the saved searches and sends, for each one, its Indicator and its deployment with
 `last_sync_at` set to the time of the run. The connector state keeps the Indicator of every search
-imported by the previous run (keyed by app, owner and name), so that:
+imported by the previous run (keyed by its saved search id), so that:
 
 - a search deleted since the previous run (or no longer in scope) gets the status `removed` and a
   `removed_at` time;
@@ -228,7 +239,8 @@ dissemination assurance feature
 ([OpenCTI-Platform/opencti#18680](https://github.com/OpenCTI-Platform/opencti/issues/18680)). Once per
 run, the connector checks the relationship schema of the platform (`schemaRelationsTypesMapping`). When
 `deployed-on` is not defined between an Indicator and a Security Platform, it records each deployment as
-a `related-to` relationship described as `Deployed on <platform> (status: <status>, rule id: <name>)`
+a `related-to` relationship described as
+`Deployed on <platform> (status: <status>, rule id: <app>/<owner>/<name>)`
 instead, and logs one warning per run.
 
 ## Conventions for producers
@@ -259,9 +271,10 @@ imported with their techniques by following these conventions:
 2. **Schedule what should run**: only an enabled search with `enableSched = 1` is `active`. Shipping a
    search disabled (`disabled = 1`) is fine: it is imported as `deployed` (available, not running) until
    an administrator enables it.
-3. **Keep the saved search name stable**: the name is the rule id (`external_id` of the deployment) and,
-   with the app and owner, the key that reconciles runs. Renaming a search records the old name as
-   `removed` and the new one as `deployed` or `active`.
+3. **Keep the saved search name, app and owner stable**: together they form the saved search id
+   `<app>/<owner>/<name>` (`external_id` of the deployment) that reconciles runs. Renaming a search, or
+   moving it to another app or owner, records the old id as `removed` and the new one as `deployed` or
+   `active`.
 4. **Edit the SPL only when the logic changes**: the Indicator id derives from the search string, so any
    edit of `search` gives a new Indicator and marks the previous one `removed`.
 5. **Give the severity** with `action.notable.param.severity` (`informational`, `low`, `medium`, `high`,

@@ -46,7 +46,6 @@ def map_rule(raw: dict[str, Any]) -> DetectionRule:
     system_data = raw.get("systemData") or {}
 
     return DetectionRule(
-        key=str(rule_name),
         external_id=str(rule_name),
         name=properties.get("displayName") or str(rule_name),
         description=properties.get("description") or None,

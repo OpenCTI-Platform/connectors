@@ -162,7 +162,7 @@ Each run lists the rules of the instance (`GET .../rules?view=FULL`, which retur
 | `createTime` (or `revisionCreateTime`) | Indicator `valid_from`, `deployed-on` `deployed_at` |
 | `severity.displayName` (or `meta` `severity`) | Indicator `x_opencti_rule_level` (`informational`, `low`, `medium`, `high`, `critical`) |
 | UDM `metadata.event_type` of the `events` section, `meta` `platform` | Indicator `x_opencti_rule_logsource` and `x_mitre_platforms` (see [Log source](#log-source)) |
-| Rule id (`ru_<uuid>`, last segment of `name`) | External reference `external_id`, `deployed-on` `external_id` |
+| Rule id (`ru_<uuid>`, last segment of `name`, unique in the instance) | External reference `external_id`, `deployed-on` `external_id` (current and `removed` deployments) |
 | ATT&CK ids of the `meta` section and of the rule name | `indicates` relationships to Attack Patterns |
 | Deployment `enabled` | `deployed-on` `deployment_status`: `active` (live) or `deployed` (not live) |
 
@@ -178,7 +178,8 @@ live, or has no deployment, gets `deployed`. Archived rules cannot run: they are
 `archived` in the run summary.
 
 Every run sends, for each rule, its Indicator and its deployment with `last_sync_at` set to the time of
-the run. The connector state keeps the Indicator of every rule imported by the previous run, so that:
+the run. The connector state keeps the Indicator of every rule imported by the previous run (keyed by
+its rule id), so that:
 
 - a rule deleted or archived since the previous run gets the status `removed` and a `removed_at` time;
 - a rule whose text changed (a new revision) gets a new Indicator; the Indicator of the previous text gets

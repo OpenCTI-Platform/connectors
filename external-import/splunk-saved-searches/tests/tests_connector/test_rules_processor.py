@@ -12,8 +12,8 @@ from splunk_samples import CORRELATION_SEARCH, REPORT, SCHEDULED_ALERT, entry
 
 EXISTING_PLATFORM = Identity.generate_id("Splunk splunk-prod-01", "securityplatform")
 GONE_INDICATOR = Indicator.generate_id("index=old | stats count")
-GONE_KEY = "search/admin/Old detection"
-CORRELATION_KEY = (
+GONE_ID = "search/admin/Old detection"
+CORRELATION_ID = (
     "DA-ESS-ContentUpdate/nobody/ESCU - Windows PowerShell Encoded Command - Rule"
 )
 
@@ -85,13 +85,14 @@ def test_saved_searches_become_spl_indicators(helper):
     }
     assert deployments[_indicator_id(CORRELATION_SEARCH)].deployment_status == "active"
     assert deployments[_indicator_id(CORRELATION_SEARCH)].external_id == (
-        CORRELATION_SEARCH["name"]
+        CORRELATION_ID
     )
+    assert correlation.external_references[0].external_id == CORRELATION_ID
     # Splunk exposes no creation time.
     assert "deployed_at" not in deployments[_indicator_id(CORRELATION_SEARCH)]
     assert deployments[_indicator_id(SCHEDULED_ALERT)].deployment_status == "deployed"
     assert processor.state.deployed_rules == {
-        CORRELATION_KEY: _indicator_id(CORRELATION_SEARCH),
+        CORRELATION_ID: _indicator_id(CORRELATION_SEARCH),
         "search/admin/Brute force on VPN (T1110)": _indicator_id(SCHEDULED_ALERT),
     }
     summary = helper.connector_logger.info.call_args_list[-1].args[1]
@@ -116,8 +117,7 @@ def test_platform_without_deployed_on_gets_related_to(helper):
     (objects,) = _run(_processor(helper, [CORRELATION_SEARCH]))
     (related,) = _of_type(objects, "relationship", "related-to")
     assert related.description == (
-        "Deployed on Splunk (status: active, rule id: "
-        "ESCU - Windows PowerShell Encoded Command - Rule)"
+        f"Deployed on Splunk (status: active, rule id: {CORRELATION_ID})"
     )
 
 
@@ -184,7 +184,7 @@ def test_switching_to_a_configured_platform_moves_the_deployments(helper):
     ]
     named_platform = Identity.generate_id("Splunk", "securityplatform")
     state = ConnectorState(
-        deployed_rules={CORRELATION_KEY: _indicator_id(CORRELATION_SEARCH)},
+        deployed_rules={CORRELATION_ID: _indicator_id(CORRELATION_SEARCH)},
         platform_id=named_platform,
     )
     processor = _processor(
@@ -208,7 +208,7 @@ def test_unmapped_search_keeps_the_deployments_missing_from_the_run(helper):
     helper.api.indicator.list.return_value = [
         {"standard_id": GONE_INDICATOR, "x_opencti_stix_ids": []}
     ]
-    state = ConnectorState(deployed_rules={GONE_KEY: GONE_INDICATOR})
+    state = ConnectorState(deployed_rules={GONE_ID: GONE_INDICATOR})
     processor = _processor(helper, [CORRELATION_SEARCH, SCHEDULED_ALERT], state=state)
     map_rule = processor.to_detection_rule
 
@@ -227,25 +227,92 @@ def test_unmapped_search_keeps_the_deployments_missing_from_the_run(helper):
     # The unmapped search cannot be told apart from the gone one: nothing is removed
     assert [d.deployment_status for d in deployments] == ["active"]
     assert processor.state.deployed_rules == {
-        GONE_KEY: GONE_INDICATOR,
-        CORRELATION_KEY: _indicator_id(CORRELATION_SEARCH),
+        GONE_ID: GONE_INDICATOR,
+        CORRELATION_ID: _indicator_id(CORRELATION_SEARCH),
     }
     summary = helper.connector_logger.info.call_args_list[-1].args[1]
     assert summary["complete"] is False
     assert summary["skipped"] == {"invalid": 1}
 
 
-def test_removed_saved_search_carries_its_name(helper):
+def test_removed_saved_search_carries_its_namespaced_id(helper):
     helper.api.indicator.list.return_value = [
         {"standard_id": GONE_INDICATOR, "x_opencti_stix_ids": []}
     ]
-    state = ConnectorState(deployed_rules={GONE_KEY: GONE_INDICATOR})
+    state = ConnectorState(deployed_rules={GONE_ID: GONE_INDICATOR})
     processor = _processor(helper, [CORRELATION_SEARCH], state=state)
     bundles = _run(processor)
     (removed,) = _of_type(bundles[1], "relationship", "deployed-on")
     assert removed.source_ref == GONE_INDICATOR
-    assert removed.external_id == "Old detection"
+    assert removed.external_id == GONE_ID
     assert removed.deployment_status == "removed"
+
+
+def _in_app(raw, app, owner, search):
+    value = entry(raw, search=search)
+    value["acl"] = {"app": app, "owner": owner, "sharing": "app"}
+    return value
+
+
+def test_same_name_in_two_namespaces_never_shares_an_id(helper):
+    name = CORRELATION_SEARCH["name"]
+    escu = _in_app(CORRELATION_SEARCH, "DA-ESS-ContentUpdate", "nobody", "index=a")
+    custom = _in_app(CORRELATION_SEARCH, "SA-Custom", "admin", "index=b")
+    escu_id = f"DA-ESS-ContentUpdate/nobody/{name}"
+    custom_id = f"SA-Custom/admin/{name}"
+    first = _processor(helper, [escu, custom])
+    (objects,) = _run(first)
+    deployments = {
+        r.source_ref: r.external_id
+        for r in _of_type(objects, "relationship", "deployed-on")
+    }
+    assert deployments == {
+        _indicator_id(escu): escu_id,
+        _indicator_id(custom): custom_id,
+    }
+    references = {
+        i.id: i.external_references[0].external_id
+        for i in _of_type(objects, "indicator")
+    }
+    assert references == deployments
+    assert first.state.deployed_rules == {
+        escu_id: _indicator_id(escu),
+        custom_id: _indicator_id(custom),
+    }
+
+    # The search deleted from one app is removed under its own id only.
+    helper.api.indicator.list.return_value = [
+        {"standard_id": _indicator_id(custom), "x_opencti_stix_ids": []}
+    ]
+    second = _processor(helper, [escu], state=first.state)
+    current, removals = _run(second)
+    (kept,) = _of_type(current, "relationship", "deployed-on")
+    assert (kept.external_id, kept.deployment_status) == (escu_id, "active")
+    (removed,) = _of_type(removals, "relationship", "deployed-on")
+    assert (removed.source_ref, removed.external_id, removed.deployment_status) == (
+        _indicator_id(custom),
+        custom_id,
+        "removed",
+    )
+    assert second.state.deployed_rules == {escu_id: _indicator_id(escu)}
+
+
+def test_unchecked_removal_is_retried_with_its_namespaced_id(helper):
+    helper.api.indicator.list.side_effect = RuntimeError("OpenCTI unavailable")
+    state = ConnectorState(deployed_rules={GONE_ID: GONE_INDICATOR})
+    first = _processor(helper, [CORRELATION_SEARCH], state=state)
+    assert len(_run(first)) == 1
+    assert first.state.pending_removals == {GONE_INDICATOR: GONE_ID}
+
+    helper.api.indicator.list.side_effect = None
+    helper.api.indicator.list.return_value = [
+        {"standard_id": GONE_INDICATOR, "x_opencti_stix_ids": []}
+    ]
+    second = _processor(helper, [CORRELATION_SEARCH], state=first.state)
+    _, removals = _run(second)
+    (removed,) = _of_type(removals, "relationship", "deployed-on")
+    assert (removed.source_ref, removed.external_id) == (GONE_INDICATOR, GONE_ID)
+    assert second.state.pending_removals is None
 
 
 def test_disabled_saved_searches_can_be_left_out(helper):
@@ -266,9 +333,9 @@ def test_large_sets_are_split_into_bundles(helper):
 
 
 def test_collect_errors_fail_the_run_without_touching_the_state(helper):
-    state = ConnectorState(deployed_rules={GONE_KEY: GONE_INDICATOR})
+    state = ConnectorState(deployed_rules={GONE_ID: GONE_INDICATOR})
     processor = _processor(helper, [], state=state)
     processor.client.iter_saved_searches.side_effect = RuntimeError("Splunk down")
     with pytest.raises(RuntimeError):
         processor.process()
-    assert processor.state.deployed_rules == {GONE_KEY: GONE_INDICATOR}
+    assert processor.state.deployed_rules == {GONE_ID: GONE_INDICATOR}
