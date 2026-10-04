@@ -80,6 +80,74 @@ MAX_HITS_RECOVERY = timedelta(days=7)
 """How far back the first hit read after a start goes, however long the connector was stopped."""
 
 
+class _ConnectorStateGuard:
+    """Keep the keys the SDK writes in the connector state against the other writers.
+
+    pycti keeps the connector state as one serialized document. Its stream listener
+    rewrites it after each event from its own thread (read, change ``start_from``,
+    write), without a lock. The guard wraps the ``set_state`` of the helper so that
+    every write takes one lock: a key is written from the state read under that lock
+    (``start_from`` is never rolled back), and a write made from a state read before
+    the key changed gets the key back (the key is never lost). A state reset, written
+    by the ping of the platform with the original ``set_state``, is never undone: a
+    kept key the current state no longer holds is forgotten.
+    """
+
+    def __init__(self, helper: Any) -> None:
+        self._helper = helper
+        self._lock = threading.RLock()
+        self._write = helper.set_state
+        self._kept: dict[str, Any] = {}
+        helper.set_state = self._guarded_write
+
+    @classmethod
+    def of(cls, helper: Any) -> "_ConnectorStateGuard":
+        """Return the guard of a helper, installed on its first use."""
+        guard = getattr(helper, "_deployment_state_guard", None)
+        if not isinstance(guard, cls):
+            guard = cls(helper)
+            helper._deployment_state_guard = guard
+        return guard
+
+    def _current(self) -> dict[str, Any] | None:
+        state = self._helper.get_state()
+        return state if isinstance(state, dict) else None
+
+    def _guarded_write(self, state: Any) -> None:
+        with self._lock:
+            if isinstance(state, dict) and self._kept:
+                try:
+                    current = self._current()
+                except Exception:  # noqa: BLE001 - the write of the caller goes on
+                    current = None
+                restored: dict[str, Any] = {}
+                for key, value in list(self._kept.items()):
+                    if current is None or current.get(key) != value:
+                        del self._kept[key]
+                    elif state.get(key) != value:
+                        restored[key] = value
+                if restored:
+                    state = {**state, **restored}
+            self._write(state)
+
+    def update(self, key: str, value: Any) -> None:
+        """Write one key into the latest state, unless the state was reset.
+
+        Args:
+            key: The state key.
+            value: Its new value.
+        """
+        with self._lock:
+            state = self._current()
+            if state is None:
+                # pycti reads a state set to None as a reset and starts the stream over.
+                return
+            self._kept[key] = value
+            if state.get(key) != value:
+                state[key] = value
+                self._write(state)
+
+
 @dataclass(slots=True)
 class _PendingHits:
     """A hit report of one indicator not delivered to OpenCTI yet.
@@ -1131,19 +1199,22 @@ class DeploymentReconciler:
     def _save_hits_checkpoint(self) -> None:
         """Keep the hit checkpoint in the state of the connector, for the next start.
 
-        The stream listener of pycti writes its position in the same state: the
-        state is read right before it is written and only the checkpoint changes.
+        The stream listener of pycti writes its position in the same state from its
+        own thread: both writers go through ``_ConnectorStateGuard``, so neither the
+        checkpoint nor the stream position is ever rolled back by the other one.
         """
         checkpoint = format_datetime(self._hits_checkpoint())
-        set_state = getattr(self._reporter.helper, "set_state", None)
-        if checkpoint is None or not callable(set_state):
+        helper = self._reporter.helper
+        if (
+            checkpoint is None
+            or not callable(getattr(helper, "set_state", None))
+            or not callable(getattr(helper, "get_state", None))
+        ):
             return
         try:
-            state = self._connector_state()
-            if state is None or state.get(HITS_CHECKPOINT_STATE_KEY) == checkpoint:
-                return
-            state[HITS_CHECKPOINT_STATE_KEY] = checkpoint
-            set_state(state)
+            _ConnectorStateGuard.of(helper).update(
+                HITS_CHECKPOINT_STATE_KEY, checkpoint
+            )
         except Exception as err:  # noqa: BLE001 - the hits are reported anyway
             self._logger.warning(
                 f"{_LOG_PREFIX} The hit checkpoint could not be saved, a restart reads "

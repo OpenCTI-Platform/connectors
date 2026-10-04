@@ -1205,7 +1205,100 @@ def test_a_reset_connector_state_is_never_replaced(
     reconciler.run_once()
 
     assert adapter.hits_calls[0][1] == NOW - reconciler._hits_lookback
-    helper.set_state.assert_not_called()
+    assert helper.holder["state"] is None
+
+
+def run_with_a_hit(make_reporter, list_nodes, node_factory, helper):
+    """Run once with a hit, so that the hit checkpoint is written in the state."""
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+    )
+    make_reconciler(make_reporter(helper), adapter).run_once()
+
+
+def test_a_stream_position_written_from_an_older_state_keeps_the_hit_checkpoint(
+    router, make_reporter, list_nodes, node_factory
+):
+    """The stream listener of pycti reads the state, handles an event and writes
+    its position back: a checkpoint written meanwhile is never lost."""
+    helper = stateful_helper(router, {"start_from": "1-0"})
+    read_by_the_listener = helper.get_state()
+    run_with_a_hit(make_reporter, list_nodes, node_factory, helper)
+    read_by_the_listener["start_from"] = "2-0"
+
+    helper.set_state(read_by_the_listener)
+
+    assert helper.holder["state"]["start_from"] == "2-0"
+    assert checkpoint_of(helper) == "2026-10-03T11:00:00.000Z"
+    # A position written from a state read after the checkpoint is written as it is
+    fresh = helper.get_state()
+    fresh["start_from"] = "3-0"
+    helper.set_state(fresh)
+    assert helper.holder["state"]["start_from"] == "3-0"
+    assert checkpoint_of(helper) == "2026-10-03T11:00:00.000Z"
+
+
+def test_a_reset_of_the_connector_state_is_never_undone_by_the_checkpoint(
+    router, make_reporter, list_nodes, node_factory
+):
+    """The ping of the platform writes a reset with the original writer: the
+    checkpoint is not put back by the next writes of the stream listener."""
+    helper = stateful_helper(router, {"start_from": "1-0"})
+    original_write = helper.set_state
+    run_with_a_hit(make_reporter, list_nodes, node_factory, helper)
+
+    original_write({"start_from": "0-0"})
+    helper.set_state({"start_from": "1-0"})
+    assert helper.holder["state"] == {"start_from": "1-0"}
+    helper.set_state(None)
+
+    assert helper.holder["state"] is None
+    helper.set_state({"start_from": "0-0"})
+    assert helper.holder["state"] == {"start_from": "0-0"}
+
+
+def test_a_listener_write_goes_on_when_the_state_cannot_be_read(
+    router, make_reporter, list_nodes, node_factory
+):
+    helper = stateful_helper(router, {"start_from": "1-0"})
+    run_with_a_hit(make_reporter, list_nodes, node_factory, helper)
+    helper.get_state.side_effect = RuntimeError("state unavailable")
+
+    helper.set_state({"start_from": "2-0"})
+
+    assert helper.holder["state"] == {"start_from": "2-0"}
+
+
+def test_concurrent_writers_never_roll_back_the_stream_position_or_the_checkpoint(
+    router,
+):
+    """Both writers run at once: the last stream position and the last checkpoint
+    are the ones kept."""
+    helper = stateful_helper(router, {"start_from": "0-0"})
+    guard = reconciler_module._ConnectorStateGuard.of(helper)
+    rounds = 500
+
+    def listener():
+        for index in range(1, rounds + 1):
+            state = helper.get_state()
+            state["start_from"] = f"{index}-0"
+            helper.set_state(state)
+
+    def reconciler():
+        for index in range(1, rounds + 1):
+            guard.update(reconciler_module.HITS_CHECKPOINT_STATE_KEY, index)
+
+    threads = [threading.Thread(target=listener), threading.Thread(target=reconciler)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert reconciler_module._ConnectorStateGuard.of(helper) is guard
+    assert helper.holder["state"]["start_from"] == f"{rounds}-0"
+    assert checkpoint_of(helper) == rounds
 
 
 def test_connector_state_errors_never_stop_the_hits(
@@ -1222,7 +1315,7 @@ def test_connector_state_errors_never_stop_the_hits(
 
     assert reconciler.run_once().hits_reported == 1
     assert adapter.hits_calls[0][1] == NOW - reconciler._hits_lookback
-    helper.set_state.assert_not_called()
+    assert helper.holder["state"] == {}
 
 
 def test_stream_reports_queued_during_the_snapshot_are_sent_after_it(
