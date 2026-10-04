@@ -62,7 +62,12 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
         for ioc in self._connector.client.iter_iocs():
             uuid = ioc.get("uuid")
             value = ioc.get("value")
-            if uuid is None or not isinstance(value, str) or not value:
+            if (
+                not isinstance(uuid, str)
+                or not uuid
+                or not isinstance(value, str)
+                or not value
+            ):
                 raise SentinelOneDeploymentError(
                     "SentinelOne listed an IOC without uuid or value, "
                     "the read-back is incomplete"

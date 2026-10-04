@@ -109,7 +109,7 @@ class SentinelOneIntelConnector:
             for ioc in self.client.find_iocs_by_external_id(stix_id)
             if ioc.get("externalId") == stix_id
         ]
-        if any(ioc.get("uuid") is None for ioc in iocs):
+        if any(not isinstance(ioc.get("uuid"), str) or not ioc["uuid"] for ioc in iocs):
             raise SentinelOneApiError(
                 "SentinelOne listed an IOC of the indicator without uuid, "
                 "it cannot be deleted",

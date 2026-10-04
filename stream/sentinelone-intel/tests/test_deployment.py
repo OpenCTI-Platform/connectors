@@ -587,7 +587,13 @@ def test_adapter_lists_the_iocs_and_the_expired_ones_inactive(connector):
 
 @pytest.mark.parametrize(
     "ioc",
-    [{"uuid": "4", "value": ""}, {"value": "no-uuid.example"}, {"uuid": "5"}],
+    [
+        {"uuid": "4", "value": ""},
+        {"value": "no-uuid.example"},
+        {"uuid": "5"},
+        {"uuid": "", "value": "empty-uuid.example"},
+        {"uuid": 6, "value": "int-uuid.example"},
+    ],
 )
 def test_adapter_rejects_an_ioc_without_uuid_or_value(connector, ioc):
     connector.client.session.request.return_value = mock_response({"data": [ioc]})

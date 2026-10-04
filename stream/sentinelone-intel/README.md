@@ -216,7 +216,7 @@ exist).
   whose `validUntil` is in the past are not live: they never confirm a deployment, and the ones of a withdrawn or
   expired indicator are deleted. Deployments are matched by the IOC external id when it is the STIX id of the
   indicator, by IOC `uuid`, then by value. A read-back error, a cursor repeated by the API, malformed pagination
-  metadata or a malformed IOC (without `uuid` or value) skips the run: indicators are never reported `removed` from a
+  metadata or a malformed IOC (without a non-empty `uuid` or value) skips the run: indicators are never reported `removed` from a
   partial listing.
 - **Withdrawal safety**: only the IOCs whose external id is the STIX id of the indicator are deleted; an IOC of the same
   value created by another source is left in place (the removal is not reported and OpenCTI flags the deployment
