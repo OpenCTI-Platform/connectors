@@ -81,6 +81,9 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
         """
         now = self._clock()
         for ioc in self._client.iter_connector_iocs():
+            if not ioc.get("id"):
+                # Never skipped: its deployment would look absent.
+                raise CrowdstrikeApiError("An IOC of the read-back carries no id")
             if not self._is_retained(ioc):
                 continue
             yield VendorIndicator(

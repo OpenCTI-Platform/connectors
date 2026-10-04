@@ -531,15 +531,16 @@ class CrowdstrikeClient:
         return body if isinstance(body, dict) else {}
 
     @staticmethod
-    def _resources_of(body: dict[str, Any], kind: str) -> list[Any]:
+    def _resources_of(body: dict[str, Any], kind: str) -> list[dict[str, Any]]:
         """
         Return the resources of a listing response
         :param body: Response body
         :param kind: What is listed, for the error message
         :return: The resources, empty only for a listing reported empty
-        :raise CrowdstrikeApiError: When the response carries no resource list. It is
-            never read as an empty listing: every deployment would look absent and
-            the hit window would move past unread alerts
+        :raise CrowdstrikeApiError: When the response carries no resource list, or a
+            resource that is not an object. It is never read as an empty or shorter
+            listing: deployments would look absent and the hit window would move
+            past unread alerts
         """
         resources = body.get("resources")
         pagination = (body.get("meta") or {}).get("pagination") or {}
@@ -548,6 +549,10 @@ class CrowdstrikeClient:
         if not isinstance(resources, list):
             raise CrowdstrikeApiError(
                 f"Unexpected {kind} listing response (resources are missing)"
+            )
+        if not all(isinstance(resource, dict) for resource in resources):
+            raise CrowdstrikeApiError(
+                f"Unexpected {kind} listing response (a resource is not an object)"
             )
         return resources
 
@@ -575,9 +580,7 @@ class CrowdstrikeClient:
                 self.cs.indicator_combined(parameters=parameters), 200
             )
             resources = self._resources_of(body, "IOC")
-            for resource in resources:
-                if isinstance(resource, dict):
-                    yield resource
+            yield from resources
             pagination = (body.get("meta") or {}).get("pagination") or {}
             after = pagination.get("after")
             if not resources or not after:
@@ -662,11 +665,10 @@ class CrowdstrikeClient:
             for resource in resources:
                 if returned >= max_alerts:
                     return
-                if isinstance(resource, dict):
-                    if exclude_ids and alert_id(resource) in exclude_ids:
-                        continue
-                    returned += 1
-                    yield resource
+                if exclude_ids and alert_id(resource) in exclude_ids:
+                    continue
+                returned += 1
+                yield resource
             next_after = ((body.get("meta") or {}).get("pagination") or {}).get("after")
             if not resources or not next_after:
                 return

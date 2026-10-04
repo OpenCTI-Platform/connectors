@@ -362,7 +362,7 @@ def test_disabled_write_back_is_a_no_op():
 def test_iter_connector_iocs_follows_pagination():
     connector = build_connector()
     connector.client.cs.indicator_combined.side_effect = [
-        api_response(resources=[make_ioc(), "ignored"], after="token-1"),
+        api_response(resources=[make_ioc()], after="token-1"),
         api_response(resources=[make_ioc(ioc_id="other")], after="token-2"),
         api_response(resources=[]),
     ]
@@ -387,6 +387,23 @@ def test_iter_connector_iocs_follows_pagination():
             }
         ),
     ]
+
+
+def test_listings_reject_a_resource_that_is_not_an_object():
+    """A dropped resource would make an IOC look absent, or move the hit window past
+    an unread alert: the listing fails instead."""
+    connector = build_connector()
+    connector.client.cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(), "not an IOC"], after="token-1"
+    )
+    with pytest.raises(CrowdstrikeApiError, match="a resource is not an object"):
+        list(connector.client.iter_connector_iocs(page_size=2))
+
+    connector.client._alerts.get_alerts_combined.return_value = api_response(
+        resources=[None]
+    )
+    with pytest.raises(CrowdstrikeApiError, match="a resource is not an object"):
+        list(connector.client.iter_alerts(datetime(2026, 10, 3, 11, 0, tzinfo=UTC), 10))
 
 
 def test_iter_connector_iocs_raises_on_api_errors():
@@ -565,7 +582,6 @@ def test_adapter_lists_the_iocs_of_the_connector(adapter_client):
             make_ioc(ioc_id="expired", expired=True),
             make_ioc(ioc_id="past", expiration="2026-10-01T00:00:00Z"),
             make_ioc(ioc_id="future", expiration="2026-12-01T00:00:00Z"),
-            make_ioc(ioc_id=None),
         ]
     )
 
@@ -583,6 +599,16 @@ def test_adapter_lists_the_iocs_of_the_connector(adapter_client):
         external_id=IOC_ID, value="198.51.100.7"
     )
     assert vendor_indicators[0].raw["source"] == IOC_SOURCE
+
+
+def test_adapter_read_back_rejects_an_ioc_without_id(adapter_client):
+    """A skipped IOC would make its deployment look absent."""
+    adapter_client.iter_connector_iocs.return_value = iter(
+        [make_ioc(), make_ioc(ioc_id=None)]
+    )
+
+    with pytest.raises(CrowdstrikeApiError, match="carries no id"):
+        list(make_adapter(adapter_client).list_vendor_indicators())
 
 
 def test_adapter_withdrawal_follows_the_permanent_delete_option(adapter_client):
