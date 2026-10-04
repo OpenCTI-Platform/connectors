@@ -67,7 +67,13 @@ class ElasticDetectionRulesClient(RetryingApiClient):
     def iter_rules(
         self, rule_filter: str | None = None
     ) -> Generator[dict[str, Any], None, None]:
-        """Yield every detection rule of the space, oldest first."""
+        """Yield every detection rule of the space, oldest first.
+
+        Raises:
+            ApiClientError: When a page is empty before the reported total is
+                reached, so an incomplete listing is never taken for the full
+                rule set.
+        """
         page = 1
         seen = 0
         has_more = True
@@ -91,7 +97,14 @@ class ElasticDetectionRulesClient(RetryingApiClient):
                     response_body=response,
                 )
             data = response["data"]
+            total = int(response.get("total") or 0)
+            if not data and seen < total:
+                raise ApiClientError(
+                    f"The detection engine _find API returned an empty page {page} "
+                    f"after {seen} of {total} rules: the listing is incomplete",
+                    response_body=response,
+                )
             yield from data
             seen += len(data)
-            has_more = bool(data) and seen < int(response.get("total") or 0)
+            has_more = bool(data) and seen < total
             page += 1

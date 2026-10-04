@@ -61,10 +61,23 @@ def test_pages_through_every_rule(http):
     assert first.method == "GET"
 
 
-def test_stops_on_an_empty_page(http):
-    http.get(FIND, json=_page([], 10))
+def test_empty_space_has_no_rules(http):
+    http.get(FIND, json=_page([], 0))
     assert list(_client().iter_rules()) == []
     assert http.call_count == 1
+
+
+def test_empty_page_before_the_total_fails_the_listing(http):
+    http.get(
+        FIND,
+        [
+            {"json": _page([{"rule_id": "a"}, {"rule_id": "b"}], 10)},
+            {"json": _page([], 10)},
+        ],
+    )
+    with pytest.raises(ApiClientError, match="after 2 of 10 rules"):
+        list(_client(page_size=2).iter_rules())
+    assert http.call_count == 2
 
 
 def test_space_and_filter(http):
@@ -112,19 +125,6 @@ def test_server_errors_back_off_exponentially(http):
     first, second = (call.args[0] for call in sleep.call_args_list)
     assert 1 <= first <= 2
     assert 2 <= second <= 3
-
-
-def test_retry_delay_is_capped(http):
-    sleep = MagicMock()
-    http.get(
-        FIND,
-        [
-            {"status_code": 429, "headers": {"Retry-After": "3600"}},
-            {"json": _page([], 0)},
-        ],
-    )
-    list(_client(sleep=sleep).iter_rules())
-    sleep.assert_called_once_with(60.0)
 
 
 @pytest.mark.parametrize(

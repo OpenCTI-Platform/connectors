@@ -52,7 +52,13 @@ class SplunkSavedSearchesClient(RetryingApiClient):
         return {"Authorization": f"Bearer {self._token}"}
 
     def iter_saved_searches(self) -> Generator[dict[str, Any], None, None]:
-        """Yield every saved search entry of the namespace."""
+        """Yield every saved search entry of the namespace.
+
+        Raises:
+            ApiClientError: When a page is empty before the reported total is
+                reached, so an incomplete listing is never taken for the full
+                set of saved searches.
+        """
         path = (
             f"/servicesNS/{quote(self._owner, safe='-')}"
             f"/{quote(self._app, safe='-')}/saved/searches"
@@ -76,9 +82,15 @@ class SplunkSavedSearchesClient(RetryingApiClient):
                     response_body=response,
                 )
             entries = response["entry"]
+            total = int((response.get("paging") or {}).get("total") or 0)
+            if not entries and offset < total:
+                raise ApiClientError(
+                    f"The Splunk saved/searches endpoint returned an empty page at "
+                    f"offset {offset} of {total} entries: the listing is incomplete",
+                    response_body=response,
+                )
             yield from entries
             offset += len(entries)
-            total = int((response.get("paging") or {}).get("total") or 0)
             has_more = bool(entries) and offset < total
 
     def saved_search_url(self, entry: dict[str, Any]) -> str | None:

@@ -82,6 +82,16 @@ def test_member_cid_is_sent_for_child_tenants(http):
     assert "member_cid=child-cid" in http.request_history[0].text
 
 
+def test_empty_rule_group_page_before_the_total_fails_the_listing(http):
+    http.get(
+        QUERY,
+        [{"json": _ids_page(["g1", "g2"], 5)}, {"json": _ids_page([], 5)}],
+    )
+    with pytest.raises(ApiClientError, match="rule groups at offset 2 of 5"):
+        list(_client(page_size=2).iter_rule_groups())
+    assert http.call_count == 3
+
+
 def test_rate_limit_waits_until_the_announced_time(http, monkeypatch):
     monkeypatch.setattr(time, "time", lambda: 1_000.0)
     sleep = MagicMock()
@@ -182,6 +192,35 @@ def test_enforced_rule_groups_come_from_enabled_prevention_policies(http):
     first_page, second_page = http.request_history[1:]
     assert first_page.qs == {"offset": ["0"], "limit": ["500"]}
     assert second_page.qs["offset"] == ["2"]
+
+
+def test_empty_policy_page_before_the_total_fails_the_listing(http):
+    http.get(
+        POLICIES,
+        [
+            {"json": _policies_page([{"id": "p1", "enabled": True}], 4)},
+            {"json": _policies_page([], 4)},
+        ],
+    )
+    with pytest.raises(ApiClientError, match="prevention policies at offset 1 of 4"):
+        _client().enforced_rule_group_ids()
+
+
+def test_policy_pages_count_every_returned_entry(http):
+    http.get(
+        POLICIES,
+        [
+            {"json": _policies_page(["not-a-policy"], 2)},
+            {
+                "json": _policies_page(
+                    [{"id": "p1", "enabled": True, "ioa_rule_groups": [{"id": "g1"}]}],
+                    2,
+                )
+            },
+        ],
+    )
+    assert _client().enforced_rule_group_ids() == {"g1"}
+    assert http.request_history[-1].qs["offset"] == ["1"]
 
 
 def test_prevention_policies_need_their_scope(http):

@@ -18,6 +18,23 @@ _ENTITIES_BATCH_SIZE = 100
 _POLICIES_PAGE_SIZE = 500
 
 
+def _pagination_total(response: dict[str, Any]) -> int:
+    """Return the total the API reports in ``meta.pagination``."""
+    pagination = (response.get("meta") or {}).get("pagination") or {}
+    return int(pagination.get("total") or 0)
+
+
+def _incomplete_listing(
+    what: str, offset: int, total: int, response: dict[str, Any]
+) -> ApiClientError:
+    """Build the error raised when a listing ends before its reported total."""
+    return ApiClientError(
+        f"The CrowdStrike API returned an empty page of {what} at offset "
+        f"{offset} of {total}: the listing is incomplete",
+        response_body=response,
+    )
+
+
 class CrowdStrikeIoaClient(RetryingApiClient):
     """List the custom IOA rule groups of a CrowdStrike Falcon CID.
 
@@ -114,7 +131,13 @@ class CrowdStrikeIoaClient(RetryingApiClient):
     def iter_rule_group_ids(
         self, rule_group_filter: str | None = None
     ) -> Generator[str, None, None]:
-        """Yield the id of every rule group matching the filter."""
+        """Yield the id of every rule group matching the filter.
+
+        Raises:
+            ApiClientError: When a page is empty before the reported total is
+                reached, so an incomplete listing is never taken for the full
+                set of rule groups.
+        """
         offset = 0
         has_more = True
         while has_more:
@@ -125,10 +148,12 @@ class CrowdStrikeIoaClient(RetryingApiClient):
             ids = [
                 str(rule_group_id) for rule_group_id in response.get("resources") or []
             ]
+            total = _pagination_total(response)
+            if not ids and offset < total:
+                raise _incomplete_listing("rule groups", offset, total, response)
             yield from ids
             offset += len(ids)
-            pagination = (response.get("meta") or {}).get("pagination") or {}
-            has_more = bool(ids) and offset < int(pagination.get("total") or 0)
+            has_more = bool(ids) and offset < total
 
     def iter_rule_groups(
         self, rule_group_filter: str | None = None
@@ -144,7 +169,13 @@ class CrowdStrikeIoaClient(RetryingApiClient):
 
     # -- prevention policies ----------------------------------------------
     def iter_prevention_policies(self) -> Generator[dict[str, Any], None, None]:
-        """Yield every prevention policy, with its assigned custom IOA rule groups."""
+        """Yield every prevention policy, with its assigned custom IOA rule groups.
+
+        Raises:
+            ApiClientError: When a page is empty before the reported total is
+                reached, so an incomplete listing never hides an enforcing
+                policy.
+        """
         offset = 0
         has_more = True
         while has_more:
@@ -152,15 +183,15 @@ class CrowdStrikeIoaClient(RetryingApiClient):
                 "/policy/combined/prevention/v1",
                 {"offset": offset, "limit": _POLICIES_PAGE_SIZE},
             )
-            policies = [
-                policy
-                for policy in response.get("resources") or []
-                if isinstance(policy, dict)
-            ]
-            yield from policies
-            offset += len(response.get("resources") or [])
-            pagination = (response.get("meta") or {}).get("pagination") or {}
-            has_more = bool(policies) and offset < int(pagination.get("total") or 0)
+            resources = response.get("resources") or []
+            total = _pagination_total(response)
+            if not resources and offset < total:
+                raise _incomplete_listing(
+                    "prevention policies", offset, total, response
+                )
+            yield from (policy for policy in resources if isinstance(policy, dict))
+            offset += len(resources)
+            has_more = bool(resources) and offset < total
 
     def enforced_rule_group_ids(self) -> set[str]:
         """Return the rule groups assigned to at least one enabled prevention policy.

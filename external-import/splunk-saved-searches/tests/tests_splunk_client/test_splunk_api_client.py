@@ -56,9 +56,20 @@ def test_namespace(http):
     assert [e["name"] for e in client.iter_saved_searches()] == ["a"]
 
 
-def test_empty_page_stops(http):
-    http.get(ALL, json=_page([], 5))
+def test_empty_namespace_has_no_saved_searches(http):
+    http.get(ALL, json=_page([], 0))
     assert list(_client().iter_saved_searches()) == []
+    assert http.call_count == 1
+
+
+def test_empty_page_before_the_total_fails_the_listing(http):
+    http.get(
+        ALL,
+        [{"json": _page(["a", "b"], 5)}, {"json": _page([], 5, offset=2)}],
+    )
+    with pytest.raises(ApiClientError, match="offset 2 of 5 entries"):
+        list(_client(page_size=2).iter_saved_searches())
+    assert http.call_count == 2
 
 
 def test_busy_server_is_retried(http):
