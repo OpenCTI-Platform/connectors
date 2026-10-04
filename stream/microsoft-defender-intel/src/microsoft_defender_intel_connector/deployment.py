@@ -101,6 +101,12 @@ def _is_not_found(error: DefenderApiHandlerError) -> bool:
     return getattr(response, "status_code", None) == 404
 
 
+def _is_live(indicator: dict[str, Any], now: datetime) -> bool:
+    """Tell whether a Defender indicator has not expired yet (Defender keeps expired ones)."""
+    expiration = parse_datetime(indicator.get("expirationTime"))
+    return expiration is None or expiration > now
+
+
 def _floor_second(value: datetime) -> datetime:
     """Return a date without its fraction of a second."""
     return value.replace(microsecond=0)
@@ -188,30 +194,34 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
                     raise DefenderDeploymentError(
                         "A Microsoft Defender indicator of the read-back carries no id"
                     )
-                expiration = parse_datetime(indicator.get("expirationTime"))
                 opencti_id = indicator.get("externalId") or indicator.get("externalID")
                 yield VendorIndicator(
                     indicator_id=str(opencti_id) if opencti_id else None,
                     external_id=str(defender_id),
                     value=indicator.get("indicatorValue"),
                     raw={"id": defender_id},
-                    active=expiration is None or expiration > now,
+                    active=_is_live(indicator, now),
                 )
 
     def confirm_absent(self, deployment: IndicatorDeployment) -> bool:
         """Look the observable values of a deployment up on Defender, one by one.
 
         An indicator the paged read-back missed (rows moving between two offset
-        pages) is found by its exact value, so it is never reported removed.
+        pages) is found by its exact value, so it is never reported removed. An
+        expired indicator does not count, as in the read-back: Defender computes
+        its expiry from the indicator update, not from its OpenCTI validity.
 
         :param deployment: The deployment missing from the read-back.
-        :return: False when a Defender indicator of the connector holds one of the values.
+        :return: False when a live Defender indicator of the connector holds one of the values.
         :raises DefenderDeploymentError: On any API error.
         """
+        now = self._clock()
         with _readable_errors():
             for value in sorted(deployment.values):
                 for indicator in self._api.find_indicators(value) or []:
-                    if indicator.get("application") == APPLICATION_NAME:
+                    if indicator.get("application") == APPLICATION_NAME and _is_live(
+                        indicator, now
+                    ):
                         return False
         return True
 
