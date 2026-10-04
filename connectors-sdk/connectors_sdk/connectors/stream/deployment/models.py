@@ -469,6 +469,9 @@ class ReconciliationSummary:
         report_errors: Reports rejected by OpenCTI.
         incomplete: Deployments whose vendor items cover only part of the indicator
             (pushed again, or left ``failed`` until a new push is requested).
+        absence_unconfirmed: Deployments absent from the listing that the adapter
+            found on the vendor by a direct lookup, or could not look up (lookup
+            budget of the run spent, vendor error): left to the next run.
     """
 
     skipped: bool = False
@@ -487,6 +490,7 @@ class ReconciliationSummary:
     hits_reported: int = 0
     report_errors: int = 0
     incomplete: int = 0
+    absence_unconfirmed: int = 0
 
     def as_log_meta(self) -> dict[str, Any]:
         """Return the summary as logging metadata."""
@@ -507,4 +511,5 @@ class ReconciliationSummary:
             "hits_reported": self.hits_reported,
             "report_errors": self.report_errors,
             "incomplete": self.incomplete,
+            "absence_unconfirmed": self.absence_unconfirmed,
         }

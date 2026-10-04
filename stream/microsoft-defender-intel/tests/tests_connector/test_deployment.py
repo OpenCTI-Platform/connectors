@@ -520,6 +520,53 @@ def test_adapter_completeness_of_a_non_stix_pattern():
     )
 
 
+IP_AND_DOMAIN = (
+    "[ipv4-addr:value = '198.51.100.7' OR domain-name:value = 'evil.example']"
+)
+
+
+def test_adapter_confirms_an_absence_by_looking_each_value_up():
+    """The paged read-back has no documented order: an indicator it missed is found
+    by its exact value and never reported removed."""
+    connector = build_connector()
+    adapter = MicrosoftDefenderDeploymentAdapter(connector)
+    assert adapter.confirms_absence is True
+    connector.api._send_request.side_effect = [
+        {"value": []},
+        {"value": [{"id": "9", "application": APPLICATION_NAME}]},
+    ]
+
+    assert adapter.confirm_absent(make_pattern_deployment(IP_AND_DOMAIN)) is False
+    looked_up = [
+        entry.kwargs["params"] for entry in connector.api._send_request.call_args_list
+    ]
+    assert looked_up == [
+        "$filter=indicatorValue%20eq%20%27198.51.100.7%27",
+        "$filter=indicatorValue%20eq%20%27evil.example%27",
+    ]
+
+
+def test_adapter_confirms_an_absence_when_no_value_is_held_by_the_connector():
+    """Indicators of another application holding the same value do not count."""
+    connector = build_connector()
+    adapter = MicrosoftDefenderDeploymentAdapter(connector)
+    connector.api._send_request.side_effect = [
+        {"value": [{"id": "1", "application": "Another integration"}]},
+        {"value": []},
+    ]
+
+    assert adapter.confirm_absent(make_pattern_deployment(IP_AND_DOMAIN)) is True
+
+
+def test_adapter_absence_lookup_errors_are_readable():
+    connector = build_connector()
+    adapter = MicrosoftDefenderDeploymentAdapter(connector)
+    connector.api._send_request.side_effect = http_error(503, "Unavailable")
+
+    with pytest.raises(DefenderDeploymentError, match="503"):
+        adapter.confirm_absent(make_pattern_deployment(IP_AND_DOMAIN))
+
+
 def test_delete_is_reported_removed(connector):
     connector.api._send_request.side_effect = [
         {"value": [{"id": DEFENDER_ID}]},
@@ -1413,6 +1460,8 @@ def test_reconciliation_and_hits_are_reported(e2e_connector, router):
                 }
             ]
         },
+        # The absent indicator is looked up by its value before it is reported removed
+        {"value": []},
         {
             "value": [
                 {

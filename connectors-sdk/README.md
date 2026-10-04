@@ -94,7 +94,10 @@ class ConnectorSettings(BaseConnectorSettings):
 2. Implement a `DeploymentVendorAdapter` when the vendor API can read the pushed indicators back (`list_vendor_indicators`,
    `remove_vendor_indicator`, `push_indicator`, `collect_hits` when detections are available, and `is_complete` when the
    vendor holds one item per observable, so that an indicator only partly on the vendor is pushed again instead of being
-   confirmed `active`).
+   confirmed `active`). When the listing cannot guarantee completeness (offset pages of a collection without a documented
+   order), set `confirms_absence = True` and implement `confirm_absent`: an indicator missing from the listing is then
+   only reported `removed` once a direct vendor lookup confirms it (at most `max_absence_checks` lookups per run, 100 by
+   default; the next ones wait for the next run).
 
 3. Wire the facade and report after each vendor call (reports are queued and sent in batches, never raise):
 

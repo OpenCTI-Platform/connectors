@@ -150,6 +150,10 @@ def _evidence_values(alert: dict[str, Any]) -> set[str]:
 class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
     """Vendor operations of the deployment reconciliation for Microsoft Defender."""
 
+    # The read-back pages `$skip` offsets of a collection whose order Defender does
+    # not document (no `$orderby`): an absence is confirmed by an exact lookup.
+    confirms_absence = True
+
     def __init__(
         self,
         connector: "MicrosoftDefenderIntelConnector",
@@ -193,6 +197,23 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
                     raw={"id": defender_id},
                     active=expiration is None or expiration > now,
                 )
+
+    def confirm_absent(self, deployment: IndicatorDeployment) -> bool:
+        """Look the observable values of a deployment up on Defender, one by one.
+
+        An indicator the paged read-back missed (rows moving between two offset
+        pages) is found by its exact value, so it is never reported removed.
+
+        :param deployment: The deployment missing from the read-back.
+        :return: False when a Defender indicator of the connector holds one of the values.
+        :raises DefenderDeploymentError: On any API error.
+        """
+        with _readable_errors():
+            for value in sorted(deployment.values):
+                for indicator in self._api.find_indicators(value) or []:
+                    if indicator.get("application") == APPLICATION_NAME:
+                        return False
+        return True
 
     def remove_vendor_indicator(
         self, vendor_indicator: VendorIndicator, deployment: IndicatorDeployment

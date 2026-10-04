@@ -1601,3 +1601,91 @@ def test_stop_during_the_initial_delay(graphql_helper, make_reporter):
 def test_stop_without_start(graphql_helper, make_reporter):
     """Stopping a reconciler that never started is harmless."""
     make_reconciler(make_reporter(graphql_helper), FakeAdapter()).stop()
+
+
+# --- absence confirmed by a direct lookup ---------------------------------------------
+
+
+class ConfirmingAdapter(FakeAdapter):
+    """Vendor whose listing may miss items: absences are looked up one by one."""
+
+    confirms_absence = True
+
+    def __init__(self, present=(), lookup_error=None, **kwargs):
+        super().__init__(**kwargs)
+        self.present = set(present)
+        self.lookup_error = lookup_error
+        self.looked_up = []
+
+    def confirm_absent(self, deployment):
+        self.looked_up.append(deployment.indicator_id)
+        if self.lookup_error:
+            raise self.lookup_error
+        return deployment.indicator_id not in self.present
+
+
+def test_an_absence_is_only_reported_once_the_adapter_confirms_it(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """A live or withdrawn deployment missing from the listing but found by the lookup
+    is left as it is; a confirmed absence is reported removed."""
+    list_nodes(
+        node_factory(indicator_id="gone", status="active"),
+        node_factory(indicator_id="missed", status="active"),
+        node_factory(indicator_id="withdrawn", status="active", revoked=True),
+        node_factory(indicator_id="pending", status="pending", external_id="ext-p"),
+    )
+    adapter = ConfirmingAdapter(present={"missed", "withdrawn"})
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert sorted(adapter.looked_up) == ["gone", "missed", "withdrawn"]
+    assert set(reported()) == {"gone", "pending"}
+    assert reported()["gone"]["status"] == "removed"
+    assert summary.marked_removed == 1
+    assert summary.absence_unconfirmed == 2
+    assert summary.as_log_meta()["absence_unconfirmed"] == 2
+
+
+def test_absence_lookups_are_bounded_per_run(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """Beyond the lookup budget of a run, absent deployments wait for the next run."""
+    list_nodes(
+        node_factory(indicator_id="first", status="active"),
+        node_factory(indicator_id="second", status="deployed"),
+    )
+    adapter = ConfirmingAdapter()
+    reconciler = make_reconciler(
+        make_reporter(graphql_helper), adapter, max_absence_checks=1
+    )
+
+    summary = reconciler.run_once()
+
+    assert len(adapter.looked_up) == 1
+    assert len(reported()) == 1
+    assert summary.marked_removed == 1
+    assert summary.absence_unconfirmed == 1
+    # The budget is per run: the next run looks a deployment up again
+    reconciler.run_once()
+    assert len(adapter.looked_up) == 2
+
+
+def test_a_failed_absence_lookup_leaves_the_deployment_to_the_next_run(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(node_factory(indicator_id="unknown", status="active"))
+    adapter = ConfirmingAdapter(lookup_error=ConnectionError("vendor down"))
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert reported() == {}
+    assert summary.absence_unconfirmed == 1
+    graphql_helper.connector_logger.warning.assert_called_once()
+
+
+def test_adapters_trust_their_listing_by_default():
+    """The default adapter confirms every absence without any lookup."""
+    adapter = ReadOnlyAdapter()
+    assert adapter.confirms_absence is False
+    assert adapter.confirm_absent(MagicMock()) is True
