@@ -166,12 +166,18 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         :param now: The reference time of the expiry check.
         :return: The vendor indicator (inactive when revoked or expired), or `None`
             when it is not an indicator.
+        :raises SentinelDeploymentError: For an indicator without its STIX id (never
+            skipped: its deployment would look absent).
         """
         properties = ti_object.get("properties") or {}
         data = properties.get("data") or {}
-        stix_id = data.get("id")
-        if data.get("type", "indicator") != "indicator" or not stix_id:
+        if data.get("type", "indicator") != "indicator":
             return None
+        stix_id = data.get("id")
+        if not stix_id:
+            raise SentinelDeploymentError(
+                "A Microsoft Sentinel indicator of the read-back carries no STIX id"
+            )
         valid_until = parse_datetime(data.get("valid_until"))
         expired = valid_until is not None and valid_until < now
         resource_id = ti_object.get("id")

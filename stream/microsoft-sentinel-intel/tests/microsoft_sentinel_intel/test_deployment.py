@@ -726,7 +726,6 @@ def test_adapter_lists_live_indicators_of_the_source_system(
             ti_object(stix_id=OTHER_STIX_ID, revoked=True),
             ti_object(stix_id="indicator--expired", valid_until=past),
             {"id": "x", "properties": {"data": {"type": "attack-pattern", "id": "a"}}},
-            {"id": "y", "properties": {"data": {"type": "indicator"}}},
         ]
     )
 
@@ -759,6 +758,25 @@ def test_adapter_lists_live_indicators_of_the_source_system(
     adapter_connector.client.iter_indicators.assert_called_once_with(
         source_system="Opencti Stream Connector", page_size=100, max_pages=5_000
     )
+
+
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        {"id": "y", "properties": {"data": {"type": "indicator"}}},
+        {"id": "z", "properties": {}},
+    ],
+)
+def test_adapter_read_back_rejects_an_indicator_without_stix_id(
+    adapter, adapter_connector, malformed
+) -> None:
+    """A skipped indicator would make its deployment look absent."""
+    adapter_connector.client.iter_indicators.return_value = iter(
+        [ti_object(), malformed]
+    )
+
+    with pytest.raises(SentinelDeploymentError, match="carries no STIX id"):
+        list(adapter.list_vendor_indicators())
 
 
 def test_adapter_removes_by_resource_id(adapter, adapter_connector) -> None:
