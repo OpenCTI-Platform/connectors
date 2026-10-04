@@ -4,9 +4,49 @@ The CrowdStrike LogScale hunt connector executes the hunts of OpenCTI on CrowdSt
 Falcon LogScale cluster. It is a connector of type `INTERNAL_HUNT` registered for the `crowdstrike-logscale` hunt
 platform.
 
+## Before you start
+
+| | |
+|---|---|
+| Credential | Falcon Next-Gen SIEM (`falcon`): an API client ID and secret. LogScale (`logscale`): a personal API token, or an organization token scoped to the repository. |
+| Console | Falcon console: **Support and resources > API clients and keys**. LogScale: the API tokens of your account or organization. |
+| Network | The Falcon API of your cloud (`https://api.crowdstrike.com`, `https://api.us-2.crowdstrike.com`, `https://api.eu-1.crowdstrike.com`...) or the LogScale URL. |
+
+Step by step:
+
+1. Falcon: in **Support and resources > API clients and keys > Create API client**, create `opencti-hunt` with the scope **NGSIEM**: Read and Write.
+2. Copy the client ID and the secret (shown once) into `CROWDSTRIKE_LOGSCALE_HUNT_CLIENT_ID` and `CROWDSTRIKE_LOGSCALE_HUNT_CLIENT_SECRET`, and set `CROWDSTRIKE_LOGSCALE_HUNT_BASE_URL` to the API of your cloud.
+3. LogScale instead: set `CROWDSTRIKE_LOGSCALE_HUNT_DEPLOYMENT=logscale`, create a token with search access to the repository (or view) of `CROWDSTRIKE_LOGSCALE_HUNT_REPOSITORY`, and set it with the URL in `CROWDSTRIKE_LOGSCALE_HUNT_LOGSCALE_TOKEN` and `CROWDSTRIKE_LOGSCALE_HUNT_LOGSCALE_URL`.
+
+Least-privilege permissions:
+
+| Permission | Why |
+|---|---|
+| API client scope `NGSIEM` Read (`falcon`) | Read the status and results of the query jobs. |
+| API client scope `NGSIEM` Write (`falcon`) | Start the query jobs and stop them. |
+| Search (`ReadAccess` / `QueryDashboard`) on `CROWDSTRIKE_LOGSCALE_HUNT_REPOSITORY` (`logscale`) | Run query jobs on the repository or view. |
+
+The connector never ingests nor modifies data: it only creates and deletes its own query jobs. With `falcon`, the API client credentials are exchanged for an OAuth2 token, renewed one minute before it expires.
+
+Copy-ready configuration (`.env` of the `docker-compose.yml`):
+
+```env
+OPENCTI_URL=https://opencti.example.com
+OPENCTI_TOKEN=ChangeMe
+CONNECTOR_ID=ChangeMe-UUIDv4
+CROWDSTRIKE_LOGSCALE_HUNT_DEPLOYMENT=falcon
+CROWDSTRIKE_LOGSCALE_HUNT_BASE_URL=https://api.crowdstrike.com
+CROWDSTRIKE_LOGSCALE_HUNT_CLIENT_ID=ChangeMe
+CROWDSTRIKE_LOGSCALE_HUNT_CLIENT_SECRET=ChangeMe
+CROWDSTRIKE_LOGSCALE_HUNT_REPOSITORY=search-all
+```
+
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It runs one query job on the repository. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+
 Table of Contents
 
 - [OpenCTI CrowdStrike LogScale Hunt Connector](#opencti-crowdstrike-logscale-hunt-connector)
+  - [Before you start](#before-you-start)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -52,13 +92,7 @@ truncated.
 
 ### CrowdStrike permissions
 
-| Deployment | Credential | Permission | Why |
-|---|---|---|---|
-| `falcon` | API client (Support and resources > API clients and keys) | `NGSIEM` Read and Write | Start query jobs (write), read their status and results (read), stop them (write). |
-| `logscale` | Personal API token, or an organization token scoped to the repository | Search (`ReadAccess` / `QueryDashboard`) on `CROWDSTRIKE_LOGSCALE_HUNT_REPOSITORY` | Run query jobs on the repository or view. |
-
-The connector never ingests nor modifies data: it only creates and deletes its own query jobs. With `falcon`, the API
-client credentials are exchanged for an OAuth2 token, renewed one minute before it expires.
+The account, the least-privilege permissions, the console steps and a configuration example are in [Before you start](#before-you-start).
 
 ## Configuration variables
 

@@ -48,10 +48,39 @@ def strip_statement_end(query: str) -> str:
     return query.strip().rstrip("|").rstrip()
 
 
+DOCUMENTATION_URL = (
+    "https://docs.opencti.io/latest/usage/hunt-connectors/#crowdstrike-logscale"
+)
+
+REQUIRED_PERMISSIONS = (
+    (
+        "NGSIEM Read",
+        "Falcon API client scope: read the status and results of the query jobs.",
+    ),
+    (
+        "NGSIEM Write",
+        "Falcon API client scope: start and stop the query jobs.",
+    ),
+    (
+        "Search on CROWDSTRIKE_LOGSCALE_HUNT_REPOSITORY",
+        "LogScale token permission (ReadAccess or QueryDashboard): run query jobs on the repository or view.",
+    ),
+)
+"""Least-privilege permissions of the account of the connector, as (name, purpose)."""
+
+ACCESS_DENIED_HINTS = {
+    401: "CrowdStrike refused the credentials: check the API client ID and secret (Falcon) or the LogScale API token, and that they are not revoked",
+    403: "the API client needs the NGSIEM Read and Write scopes (Support and resources > API clients and keys), or the LogScale token needs search access to CROWDSTRIKE_LOGSCALE_HUNT_REPOSITORY",
+}
+"""What a refused account lacks, by HTTP status."""
+
+
 class CrowdstrikeLogscaleHuntConnector(InternalHuntConnector):
     """Hunt connector running Sigma and LogScale hunts on CrowdStrike Falcon and LogScale."""
 
     languages = ("logscale",)
+    required_permissions = REQUIRED_PERMISSIONS
+    documentation_url = DOCUMENTATION_URL
     query_join = " or "
     evidence_excluded_fields = RAW_FIELDS
     entity_fields = (
@@ -106,6 +135,11 @@ class CrowdstrikeLogscaleHuntConnector(InternalHuntConnector):
                 ),
                 **common,
             )
+        self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
+
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search: one event of the repository."""
+        return NativeQuery(language="logscale", query="*")
 
     def sigma_backend(self, pipeline: str | None) -> LogScaleBackend:
         """Create the pySigma LogScale backend.
