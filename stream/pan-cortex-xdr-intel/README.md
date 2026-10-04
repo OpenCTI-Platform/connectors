@@ -115,7 +115,7 @@ does not exist), and detection hits are counted with a sighting of the indicator
 | Indicator upserted in Cortex XDR            | `deployed`, with the Cortex XDR `rule_id` of its first IOC as external id                                 |
 | Indicator rejected by Cortex XDR            | `failed`, with a short reason such as "Cortex XDR refused the IOC upsert: permission denied" (the Cortex XDR response is written to the connector log) |
 | Indicator without any supported observable  | Nothing: the indicator is never pushed                                                                    |
-| Delete event processed                      | `removed` (also when the IOC was already absent from Cortex XDR); the IOCs of values another valid OpenCTI indicator (neither revoked nor expired) holds are kept; a failed deletion, or a deletion skipped because the other indicators cannot be read, is not reported |
+| Delete event processed                      | `removed` (also when the IOC was already absent from Cortex XDR); the IOCs of values another valid OpenCTI indicator (neither revoked nor expired) pushes too are kept; a failed deletion, or a deletion skipped because the other indicators cannot be read, is not reported |
 | Reconciliation, indicator present           | `active` when Cortex XDR holds an IOC for every value of the indicator                                    |
 | Reconciliation, indicator partly present    | The indicator is upserted again, which restores its missing IOCs, and reported `deployed` (`failed` if Cortex XDR rejects it); a `failed` indicator waits for an analyst retry |
 | Reconciliation, indicator absent            | `removed` (deleted or expired in Cortex XDR)                                                              |
@@ -134,7 +134,7 @@ does not exist), and detection hits are counted with a sighting of the indicator
   (`alerts/get_alerts_multi_events`, oldest creation time first, at most 10,000 per run: a capped read is complete until
   the creation time of the newest alert read and the next run resumes there; when more alerts share one creation time
   than the limit, the next runs read that instant further from the alerts already read, so no alert is lost). An alert counts one
-  hit, dated at its creation time, for every deployed indicator whose value is one of its IP addresses, host names, DNS
+  hit, dated at its creation time, for every deployed indicator one of whose pushed values is one of its IP addresses, host names, DNS
   queries, email addresses or file hashes (domain indicators match the host of a URL value); an alert detected before
   the previous run but created after it is counted; hits already reported are never counted twice. A malformed alert
   (a row that is not an object, or an alert without creation or detection time) or an alert page repeated by the API

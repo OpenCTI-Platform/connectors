@@ -5,7 +5,12 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
-from connector.deployment import describe_error, failure_reason, rule_ids_of
+from connector.deployment import (
+    describe_error,
+    failure_reason,
+    pushed_values,
+    rule_ids_of,
+)
 from connector.models import CortexXdrIoc, OctiIndicator
 from connectors_sdk import (
     ApiForbiddenError,
@@ -15,7 +20,6 @@ from connectors_sdk import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.connectors.stream.deployment import (
-    extract_pattern_values,
     normalize_value,
     parse_datetime,
 )
@@ -372,10 +376,9 @@ class Connector:
             valid_until = parse_datetime(indicator.get("valid_until"))
             if valid_until is not None and valid_until <= now:
                 continue
-            for pattern_value in extract_pattern_values(indicator.get("pattern")):
-                normalized = normalize_value(pattern_value.value)
-                if normalized in wanted:
-                    kept.add(wanted[normalized])
+            for value in pushed_values(indicator.get("pattern")):
+                if value in wanted:
+                    kept.add(wanted[value])
         return kept
 
     def _handle_delete(self, octi_indicator: OctiIndicator) -> bool:

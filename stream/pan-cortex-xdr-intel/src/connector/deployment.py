@@ -103,6 +103,26 @@ def describe_error(error: BaseException) -> str:
     return message
 
 
+def pushed_values(pattern: str | None) -> frozenset[str]:
+    """Return the normalized values of a pattern the connector pushes, one Cortex XDR IOC each.
+
+    :param pattern: A STIX pattern.
+    :return: Its hashes, domain names, IPv4 addresses, email addresses and URLs.
+    """
+    return frozenset(
+        normalized
+        for pattern_value in extract_pattern_values(pattern)
+        if (
+            pattern_value.hash_algorithm is not None
+            or (
+                pattern_value.object_type in PUSHED_OBSERVABLE_TYPES
+                and pattern_value.object_path == "value"
+            )
+        )
+        and (normalized := normalize_value(pattern_value.value))
+    )
+
+
 def failure_reason(error: BaseException) -> str:
     """Return the reason OpenCTI shows for an indicator Cortex XDR did not take.
 
@@ -245,19 +265,7 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         :return: The hashes, domain names, IPv4 addresses, email addresses and URLs of
             the pattern, or None when it has none.
         """
-        values = frozenset(
-            normalized
-            for pattern_value in extract_pattern_values(deployment.pattern)
-            if (
-                pattern_value.hash_algorithm is not None
-                or (
-                    pattern_value.object_type in PUSHED_OBSERVABLE_TYPES
-                    and pattern_value.object_path == "value"
-                )
-            )
-            and (normalized := normalize_value(pattern_value.value))
-        )
-        return values or None
+        return pushed_values(deployment.pattern) or None
 
     def remove_vendor_indicator(
         self, vendor_indicator: VendorIndicator, deployment: IndicatorDeployment
@@ -321,7 +329,7 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         """
         by_value: dict[str, list[IndicatorDeployment]] = {}
         for deployment in deployments:
-            for value in deployment.values:
+            for value in pushed_values(deployment.pattern):
                 by_value.setdefault(value, []).append(deployment)
         if not by_value:
             return []

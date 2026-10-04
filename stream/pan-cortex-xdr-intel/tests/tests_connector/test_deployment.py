@@ -312,6 +312,22 @@ def test_delete_keeps_the_iocs_another_valid_indicator_holds(connector):
     ]
 
 
+def test_delete_ignores_indicators_holding_the_value_in_an_unpushed_observable(
+    connector,
+):
+    connector.helper.api.indicator.list.return_value = [
+        {"id": OTHER_ID, "pattern": "[process:name = '198.51.100.7']"}
+    ]
+    indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    connector.client.delete_iocs.assert_called_once_with(
+        [{"field": "indicator", "operator": "IN", "value": ["198.51.100.7"]}]
+    )
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
 def test_delete_of_values_all_kept_sends_nothing_and_is_reported(connector):
     connector.helper.api.indicator.list.return_value = [
         {
@@ -823,6 +839,24 @@ def test_adapter_capped_read_without_creation_time_uses_the_detection(monkeypatc
 
     assert collected.complete_until == datetime(2026, 10, 3, 11, 7, tzinfo=UTC)
     assert [hit.indicator_id for hit in collected.hits] == [INDICATOR_ID]
+
+
+def test_adapter_credits_hits_on_the_pushed_values_only():
+    connector = build_connector()
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    created = int(datetime(2026, 10, 3, 11, 5, tzinfo=UTC).timestamp() * 1000)
+    connector.client.get_ioc_alerts.return_value = [
+        {"local_insert_ts": created, "action_external_hostname": "evil.example"},
+        {"local_insert_ts": created, "action_remote_ip": "198.51.100.7"},
+    ]
+    deployment = make_deployment(
+        pattern="[ipv4-addr:value = '198.51.100.7' OR process:name = 'evil.example']"
+    )
+
+    hits = list(CortexXdrDeploymentAdapter(connector).collect_hits([deployment], since))
+
+    assert len(hits) == 1
+    assert hits[0].indicator_id == deployment.indicator_id
 
 
 def test_adapter_hits_without_values_read_no_alert():
