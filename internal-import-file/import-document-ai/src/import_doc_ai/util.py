@@ -940,14 +940,37 @@ def merge_rewritten_relationships(
     )
 
 
+def _remaining_refs(
+    refs: list[str], removed: set[str], replacements: Mapping[str, str]
+) -> list[str]:
+    remaining = []
+    for ref in refs:
+        if ref in removed:
+            ref = replacements.get(ref)
+            if ref is None or ref in removed:
+                continue
+        if ref not in remaining:
+            remaining.append(ref)
+    return remaining
+
+
 def remove_objects_from_bundle(
-    bundle: stix2.Bundle, object_ids: set[str]
+    bundle: stix2.Bundle,
+    object_ids: set[str],
+    replacements: Mapping[str, str] | None = None,
 ) -> stix2.Bundle:
     """Remove objects from a STIX bundle, and from every container referencing them.
+
+    A container referencing a removed object references its replacement
+    instead, when ``replacements`` names one. A container left without any
+    reference is removed as well (STIX requires at least one), and so are the
+    references other containers hold to it.
 
     Args:
         bundle (stix2.Bundle): The STIX bundle to process.
         object_ids (set[str]): The ids of the objects to remove.
+        replacements (Mapping[str, str] | None): For removed objects, the id
+            the containers reference instead.
 
     Returns:
         (stix2.Bundle): The STIX bundle without those objects (``bundle``
@@ -955,14 +978,35 @@ def remove_objects_from_bundle(
     """
     if not object_ids:
         return bundle
-    bundle = remove_from_object_refs(bundle, references=list(object_ids))
-    return stix2.Bundle(
-        type=bundle["type"],
-        objects=[
-            obj for obj in bundle.get("objects", []) if obj["id"] not in object_ids
-        ],
-        allow_custom=True,
-    )
+    replacements = replacements or {}
+    objects = list(bundle.get("objects", []))
+    container_refs = {
+        obj["id"]: list(obj["object_refs"]) for obj in objects if "object_refs" in obj
+    }
+    removed = set(object_ids)
+    while True:
+        remaining_refs = {
+            container_id: _remaining_refs(refs, removed, replacements)
+            for container_id, refs in container_refs.items()
+            if container_id not in removed
+        }
+        emptied = {
+            container_id for container_id, refs in remaining_refs.items() if not refs
+        }
+        if not emptied:
+            break
+        removed |= emptied
+    updated_objects = []
+    for obj in objects:
+        if obj["id"] in removed:
+            continue
+        refs = remaining_refs.get(obj["id"])
+        if refs is not None and refs != container_refs[obj["id"]]:
+            object_dict = stix_object_to_dict(obj)
+            object_dict["object_refs"] = refs
+            obj = stix2.parse(object_dict, allow_custom=True)
+        updated_objects.append(obj)
+    return stix2.Bundle(type=bundle["type"], objects=updated_objects, allow_custom=True)
 
 
 def convert_location_to_octi_location(

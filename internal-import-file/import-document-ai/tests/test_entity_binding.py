@@ -30,6 +30,7 @@ from import_doc_ai.entity_binding import (
 from import_doc_ai.util import (
     convert_location_to_octi_location,
     deduplicate_bundle_objects,
+    remove_objects_from_bundle,
     replace_objects_in_bundle,
 )
 
@@ -405,6 +406,75 @@ def test_bind_records_the_alias_where_the_type_holds_its_aliases(
     }
     assert platform.calls == [(entity_type, extracted["name"])]
     assert len(summary.bindings) == 1
+
+
+def test_bind_keeps_a_container_whose_only_reference_becomes_a_self_reference():
+    # Given a report referencing only "Cozy Bear related-to APT29", where both
+    # names are APT29
+    apt29_id = pycti.IntrusionSet.generate_id("APT29")
+    apt29 = intrusion_set("APT29")
+    cozy_bear = intrusion_set("Cozy Bear")
+    same_actor = relationship("related-to", cozy_bear, apt29)
+    container = report([same_actor])
+    platform = FakePlatform(
+        {
+            ("Intrusion-Set", "APT29"): resolution(
+                "Intrusion-Set", "APT29", apt29_id, match_type="exact"
+            ),
+            ("Intrusion-Set", "Cozy Bear"): resolution(
+                "Intrusion-Set", "APT29", apt29_id, match_type="taxonomy"
+            ),
+        }
+    )
+    binder, _ = build_binder(platform)
+
+    bound_bundle, summary = binder.bind(
+        bundle_of(apt29, cozy_bear, same_actor, container)
+    )
+
+    # Then the relationship is dropped and the report references the
+    # intrusion set it collapsed into, instead of being emptied
+    objects = as_json(bound_bundle)
+    assert same_actor["id"] not in objects
+    assert objects[container["id"]]["object_refs"] == [apt29_id]
+    assert summary.dropped_relationships == 1
+
+
+def test_remove_objects_from_bundle_removes_the_containers_it_empties():
+    # Given a note about a relationship only, and a grouping holding the note
+    # and a malware
+    clop = malware("Clop")
+    lockbit = malware("LockBit")
+    removed = relationship("related-to", clop, lockbit)
+    note = stix2.Note(
+        id=pycti.Note.generate_id("2026-01-01T00:00:00Z", "About the relationship"),
+        content="About the relationship",
+        object_refs=[removed["id"]],
+    )
+    grouping = stix2.Grouping(
+        id=pycti.Grouping.generate_id("Grouping", "suspicious-activity"),
+        name="Grouping",
+        context="suspicious-activity",
+        object_refs=[note["id"], clop["id"]],
+    )
+    bundle = bundle_of(clop, lockbit, removed, note, grouping)
+
+    pruned = remove_objects_from_bundle(bundle, {removed["id"]})
+
+    # Then the note, left without any reference, is removed, and so is the
+    # grouping's reference to it
+    objects = as_json(pruned)
+    assert list(objects) == [clop["id"], lockbit["id"], grouping["id"]]
+    assert objects[grouping["id"]]["object_refs"] == [clop["id"]]
+    # And a replacement keeps the note, pointing to the replacing object
+    replaced = as_json(
+        remove_objects_from_bundle(
+            bundle, {removed["id"]}, replacements={removed["id"]: clop["id"]}
+        )
+    )
+    assert replaced[note["id"]]["object_refs"] == [clop["id"]]
+    assert replaced[grouping["id"]]["object_refs"] == [note["id"], clop["id"]]
+    assert remove_objects_from_bundle(bundle, set()) is bundle
 
 
 def test_bind_merges_the_extracted_objects_naming_the_same_entity():

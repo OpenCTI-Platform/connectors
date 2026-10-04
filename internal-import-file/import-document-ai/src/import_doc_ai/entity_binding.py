@@ -841,14 +841,18 @@ class ExistingEntityBinder:
             stix2.Bundle(type=bundle["type"], objects=objects, allow_custom=True),
             id_mapping,
         )
-        # "Cozy Bear related-to APT29" once both name the same intrusion set.
-        self_loop_ids = {
-            obj["id"]
+        # "Cozy Bear related-to APT29" once both name the same intrusion set:
+        # the containers referencing it reference that intrusion set instead.
+        self_loops = {
+            obj["id"]: obj["source_ref"]
             for obj in bound_bundle.get("objects", [])
             if obj["id"] in rewritten_relationship_ids
             and obj.get("source_ref") == obj.get("target_ref")
         }
-        bound_bundle = remove_objects_from_bundle(bound_bundle, self_loop_ids)
+        self_loop_ids = set(self_loops)
+        bound_bundle = remove_objects_from_bundle(
+            bound_bundle, self_loop_ids, replacements=self_loops
+        )
         bound_bundle = merge_rewritten_relationships(
             bound_bundle, rewritten_relationship_ids - self_loop_ids
         )
