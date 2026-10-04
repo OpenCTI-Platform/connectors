@@ -253,19 +253,20 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
                     active=expiration is None or expiration > now,
                 )
 
-    def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str] | None:
+    def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str]:
         """Return the normalized values pushed for an indicator, one Cortex XDR IOC each.
 
         Cortex XDR does not store the OpenCTI id: the reconciliation matches every IOC
-        holding one of these values, removes each of them on withdrawal and only
-        confirms the indicator `active` when Cortex XDR holds all of them (it is
-        upserted again otherwise).
+        holding one of these values, and only them, removes each of them on withdrawal
+        and only confirms the indicator `active` when Cortex XDR holds all of them (it
+        is upserted again otherwise). An IOC holding a pattern value the connector does
+        not push (a file name, a process name) is never matched, so never deleted.
 
         :param deployment: A deployment of the platform.
         :return: The hashes, domain names, IPv4 addresses, email addresses and URLs of
-            the pattern, or None when it has none.
+            the pattern (empty when it has none).
         """
-        return pushed_values(deployment.pattern) or None
+        return pushed_values(deployment.pattern)
 
     def remove_vendor_indicator(
         self, vendor_indicator: VendorIndicator, deployment: IndicatorDeployment

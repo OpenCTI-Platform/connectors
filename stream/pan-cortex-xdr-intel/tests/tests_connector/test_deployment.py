@@ -1076,7 +1076,7 @@ def test_adapter_expects_one_ioc_per_pushed_value():
     ) == {SHA256, "evil.example", "a@evil.example", "http://evil.example/a", "1.2.3.4"}
     assert (
         adapter.expected_values(make_deployment(pattern="[file:name = 'x.exe']"))
-        is None
+        == frozenset()
     )
 
 
