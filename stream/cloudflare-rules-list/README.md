@@ -154,7 +154,8 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
 - **Shared IP addresses**: a Cloudflare list holds an IP address once, so the objects sharing an address are uploaded
   as one item whose comment names the first indicator holding it (else the first observable). The reconciliation
   confirms every indicator of the snapshot holding the address of an item, and a withdrawal keeps an item another
-  object still holds: the snapshot without the withdrawn indicator is uploaded instead.
+  object still holds: the snapshot without the withdrawn indicator is uploaded instead. Since an upload gives the items
+  new ids, the next withdrawals of the same run upload the snapshot too instead of deleting an item by its old id.
 - **Startup**: the initial full sync reads every IPv4 indicator and observable from OpenCTI and always uploads its
   snapshot, even an empty one, so the items a previous run left in the list are cleared. It succeeds once Cloudflare
   accepts the snapshot. When a listing fails, nothing is uploaded and the list keeps its items; when Cloudflare

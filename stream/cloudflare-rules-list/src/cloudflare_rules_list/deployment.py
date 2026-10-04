@@ -77,6 +77,7 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
         """
         connector = self._connector
         listed: set[str] = set()
+        uploads = connector.uploads
         for item in connector.client.iter_list_items(connector.list_id):
             ip = item.get("ip")
             item_id = item.get("id")
@@ -101,14 +102,22 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
                 yield VendorIndicator(
                     external_id=str(item_id),
                     value=ip,
-                    raw={"item_id": str(item_id), "opencti_id": opencti_id},
+                    raw={
+                        "item_id": str(item_id),
+                        "opencti_id": opencti_id,
+                        "uploads": uploads,
+                    },
                 )
             for indicator_id in indicator_ids:
                 yield VendorIndicator(
                     indicator_id=indicator_id,
                     external_id=str(item_id),
                     value=ip,
-                    raw={"item_id": str(item_id), "opencti_id": indicator_id},
+                    raw={
+                        "item_id": str(item_id),
+                        "opencti_id": indicator_id,
+                        "uploads": uploads,
+                    },
                 )
         connector.forget_absent(listed)
 
@@ -132,7 +141,10 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
                 "(its comment carries another OpenCTI id), it is left in place"
             )
         self._connector.withdraw_item(
-            str(item_id), vendor_indicator.value or "", deployment.identifiers
+            str(item_id),
+            vendor_indicator.value or "",
+            deployment.identifiers,
+            vendor_indicator.raw.get("uploads"),
         )
 
     def forget_indicator(self, deployment: IndicatorDeployment) -> None:

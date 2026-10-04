@@ -838,7 +838,11 @@ def test_adapter_lists_the_items(connector):
         VendorIndicator(indicator_id=None, external_id="2", value="203.0.113.9"),
         VendorIndicator(indicator_id=None, external_id="3", value="192.0.2.1"),
     ]
-    assert indicators[1].raw == {"item_id": "2", "opencti_id": INDICATOR_ID}
+    assert indicators[1].raw == {
+        "item_id": "2",
+        "opencti_id": INDICATOR_ID,
+        "uploads": 0,
+    }
     connector.client.iter_list_items.assert_called_once_with("list-123")
 
 
@@ -1143,6 +1147,53 @@ def test_reconciliation_of_indicators_sharing_an_ip(e2e_connector, router):
         INDICATOR_ID: "active",
         OTHER_ID: "active",
         "revoked-id": "removed",
+    }
+
+
+def test_withdrawals_of_every_indicator_sharing_an_item_never_use_a_stale_id(
+    e2e_connector, router
+):
+    """The first withdrawal re-uploads the item, the next ones upload again."""
+    for stix_id in (STIX_ID, OTHER_STIX_ID):
+        e2e_connector.process_message(
+            make_message("create", make_indicator(stix_id=stix_id))
+        )
+    e2e_connector.process_message(
+        make_message(
+            "create", make_indicator(stix_id="indicator--live", ip="203.0.113.9")
+        )
+    )
+    e2e_connector.assurance.flush()
+    router.calls.clear()
+    e2e_connector.client.replace_list_items.reset_mock()
+    router.deployments = [
+        deployment_node(INDICATOR_ID, "active", "198.51.100.7", STIX_ID, revoked=True),
+        deployment_node(
+            OTHER_ID, "active", "198.51.100.7", OTHER_STIX_ID, revoked=True
+        ),
+    ]
+    e2e_connector.client.iter_list_items.return_value = iter(
+        [
+            {"id": "i-1", "ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"},
+            {"id": "i-2", "ip": "203.0.113.9", "comment": "OpenCTI: indicator--live"},
+        ]
+    )
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.withdrawn == 2
+    assert summary.withdrawal_failed == 0
+    e2e_connector.client.delete_list_items.assert_not_called()
+    assert e2e_connector.client.replace_list_items.call_args.args == (
+        "list-123",
+        [{"ip": "203.0.113.9", "comment": "OpenCTI: indicator--live"}],
+    )
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    reports = {report["indicatorId"]: report["status"] for report in batch["reports"]}
+    assert reports == {
+        INDICATOR_ID: "removed",
+        OTHER_ID: "removed",
+        "indicator--live": "active",
     }
 
 
