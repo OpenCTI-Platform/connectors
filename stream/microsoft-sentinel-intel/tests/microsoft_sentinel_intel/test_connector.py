@@ -9,6 +9,7 @@ from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
 from src.microsoft_sentinel_intel import Connector
 
+UPLOADED = json.dumps({"errors": []})
 BASE_API_URL = "https://management.azure.com/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe/providers/Microsoft.SecurityInsights/threatIntelligence/main"
 
 
@@ -65,7 +66,7 @@ def test_handle_event_create(
 ) -> None:
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     connector._handle_event(
         Event(event="create", data=json.dumps({"data": event_data_indicator}))
@@ -109,7 +110,7 @@ def test_handle_event_delete(
                 }
             ),
         ),
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     ]
     connector._handle_event(
         Event(event="delete", data=json.dumps({"data": event_data_indicator}))
@@ -187,7 +188,7 @@ def test_handle_event_delete_uses_stixindicators_resource_id(
                 }
             ),
         ),
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     ]
 
     connector._handle_event(
@@ -256,7 +257,7 @@ def test_handle_event_delete_multi_indicator_partial_failure(
         # First delete fails
         HttpResponseError(message="API error"),
         # Second delete succeeds
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     ]
     with pytest.raises(ConnectorClientError) as exc_info:
         connector._handle_event(
@@ -319,7 +320,7 @@ def test_process_batch_uploads_all(
 ) -> None:
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     batch_data = _make_batch_data(
@@ -343,7 +344,7 @@ def test_process_batch_deduplicates(
 ) -> None:
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     batch_data = _make_batch_data(
@@ -387,7 +388,7 @@ def test_process_batch_handles_delete_inline(
                 }
             ),
         ),
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     ]
 
     batch_data = _make_batch_data(
@@ -430,7 +431,7 @@ def test_process_batch_prepare_applied(
 ) -> None:
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     batch_data = _make_batch_data(
@@ -455,7 +456,7 @@ def test_process_batch_empty_events(
 ) -> None:
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     batch_connector.process_batch({"events": []})
@@ -469,7 +470,7 @@ def test_process_batch_skips_no_data_events(
 ) -> None:
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     batch_data = _make_batch_data(
@@ -519,7 +520,7 @@ def test_realtime_mode_unchanged(
 ) -> None:
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     connector._handle_event(
         Event(event="create", data=json.dumps({"data": event_data_indicator}))
@@ -540,7 +541,7 @@ def test_event_types_filters_delete(
     """Connector with event_types=create,update should ignore delete events."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     create_update_only_connector._handle_event(
         Event(event="delete", data=json.dumps({"data": event_data_indicator}))
@@ -555,7 +556,7 @@ def test_event_types_filters_create_update(
     """Connector with event_types=delete should ignore create/update events."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     delete_only_connector._handle_event(
         Event(event="create", data=json.dumps({"data": event_data_indicator}))
@@ -573,7 +574,7 @@ def test_process_batch_event_types_filter(
     """Batch connector with event_types=create should skip update events."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     batch_data = _make_batch_data(
@@ -598,7 +599,7 @@ def test_process_batch_malformed_json(
     """Batch should skip malformed JSON events and process remaining valid ones."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     batch_data = _make_batch_data(
@@ -622,7 +623,7 @@ def test_process_batch_non_indicator_stix_types(
     """Batch should skip non-indicator STIX objects."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     non_indicator = {
@@ -666,7 +667,7 @@ def test_process_batch_delete_wins_over_create(
                 }
             ),
         ),
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     ]
 
     batch_data = _make_batch_data(
@@ -690,7 +691,7 @@ def test_process_batch_create_wins_over_delete(
     """When same indicator has delete then create, only the upload runs."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     batch_data = _make_batch_data(
@@ -719,7 +720,7 @@ def test_process_batch_mixed_creates_and_deletes(
     )
     mocked_send_request.side_effect = [
         # Upload call for creates
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
         # Query call for delete
         Mock(
             status_code=200,
@@ -735,7 +736,7 @@ def test_process_batch_mixed_creates_and_deletes(
             ),
         ),
         # Delete call
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     ]
 
     batch_data = _make_batch_data(
@@ -781,7 +782,7 @@ def test_process_batch_only_deletes(
                 }
             ),
         ),
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
         # Delete 2: query + delete
         Mock(
             status_code=200,
@@ -796,7 +797,7 @@ def test_process_batch_only_deletes(
                 }
             ),
         ),
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     ]
 
     batch_data = _make_batch_data(
@@ -843,7 +844,7 @@ def test_process_batch_delete_filtered_by_event_types(
     """Delete events are filtered out when event_types does not include 'delete'."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     batch_data = _make_batch_data(
@@ -898,7 +899,7 @@ def test_process_batch_delete_error_continues(
                 }
             ),
         ),
-        Mock(status_code=200),
+        Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     ]
 
     batch_data = _make_batch_data(
@@ -974,7 +975,7 @@ def test_handle_event_identity_processed_when_enabled(
     """When publish_identities is enabled, Identity objects are uploaded."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     connector._handle_event(
         Event(event="create", data=json.dumps({"data": event_data_identity}))
@@ -1008,7 +1009,7 @@ def test_process_batch_identity_skipped_by_default(
     """In batch mode, Identity objects are skipped when publish_identities is disabled."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     batch_data = _make_batch_data(
         [
@@ -1034,7 +1035,7 @@ def test_process_batch_identity_processed_when_enabled(
     """In batch mode, Identity objects are uploaded alongside Indicators when enabled."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     batch_data = _make_batch_data(
         [
@@ -1061,7 +1062,7 @@ def test_process_batch_identity_delete_skipped_when_enabled(
     """Identity delete events are filtered out in batch mode."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     batch_data = _make_batch_data(
         [

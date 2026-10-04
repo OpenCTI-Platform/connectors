@@ -300,8 +300,9 @@ class MicrosoftDefenderIntelConnector:
                 existing = [
                     (
                         observable,
-                        self.api.find_indicators(self._observable_value(observable))
-                        or [],
+                        self._own_defender_indicators(
+                            self._observable_value(observable), opencti_id
+                        ),
                     )
                     for observable in self._supported_observables(data)
                 ]
@@ -346,6 +347,24 @@ class MicrosoftDefenderIntelConnector:
                 "[UPDATE] Indicator not found on Microsoft Defender",
                 {"opencti_id": opencti_id},
             )
+
+    def _own_defender_indicators(self, value, opencti_id: str | None) -> list[dict]:
+        """
+        Return the Defender indicators of a value pushed for one OpenCTI indicator.
+        Defender can hold the same value for another application or another OpenCTI
+        indicator: only the indicators carrying its OpenCTI id as `externalId` are its own.
+        :param value: Observable value
+        :param opencti_id: OpenCTI id of the indicator
+        :return: The Defender indicators of the value pushed for that indicator
+        """
+        if opencti_id is None:
+            return []
+        return [
+            indicator
+            for indicator in self.api.find_indicators(value) or []
+            if (indicator.get("externalId") or indicator.get("externalID"))
+            == opencti_id
+        ]
 
     def _delete_external_reference(self, defender_id: str) -> None:
         """
@@ -393,7 +412,7 @@ class MicrosoftDefenderIntelConnector:
                         observable_value = observable["hashes"]["md5"]
                 else:
                     observable_value = observable["value"]
-                result = self.api.find_indicators(observable_value)
+                result = self._own_defender_indicators(observable_value, opencti_id)
                 for indicator_result in result:
                     self.api.delete_indicator(indicator_result["id"])
                     did_delete = True
