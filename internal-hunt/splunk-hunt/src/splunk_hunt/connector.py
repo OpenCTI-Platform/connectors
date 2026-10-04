@@ -5,6 +5,7 @@ from collections.abc import Sequence
 
 from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
+    HuntConnectionCheck,
     HuntEvent,
     HuntExecutionError,
     HuntLimits,
@@ -54,6 +55,34 @@ SPLUNK_INTERNAL_FIELDS = frozenset(
 """Raw event and Splunk bookkeeping fields, never sampled as evidence."""
 
 TSTATS_RE = re.compile(r"^\|\s*tstats\b", re.IGNORECASE)
+
+DOCUMENTATION_URL = "https://docs.opencti.io/latest/usage/hunt-connectors/#splunk"
+
+REQUIRED_PERMISSIONS = (
+    (
+        "search",
+        "Capability: create the search jobs of the hunts, read their status and results, cancel and delete them.",
+    ),
+    (
+        "Read on the app SPLUNK_HUNT_APP",
+        "The search jobs run in this app namespace (search by default).",
+    ),
+    (
+        "srchIndexesAllowed",
+        "Every index the hunts must cover, for example wineventlog, sysmon or main.",
+    ),
+    (
+        "edit_tokens_own",
+        "Optional: lets the account create its own authentication token.",
+    ),
+)
+"""Least-privilege permissions of the Splunk account, as (name, purpose)."""
+
+ACCESS_DENIED_HINTS = {
+    401: "Splunk refused the token (or the user name and password): check SPLUNK_HUNT_TOKEN in Settings > Tokens, enabled and not expired",
+    403: "the role of the account needs the search capability and read access to the app SPLUNK_HUNT_APP, in Settings > Roles",
+}
+"""What a refused account lacks, by HTTP status."""
 
 
 def split_first_pipe(query: str) -> tuple[str, str]:
@@ -239,6 +268,8 @@ class SplunkHuntConnector(InternalHuntConnector):
     evidence_excluded_fields = SPLUNK_INTERNAL_FIELDS
     # The lookup of indicator values aggregates them in Splunk: exact counts per value
     ioc_aggregated = True
+    required_permissions = REQUIRED_PERMISSIONS
+    documentation_url = DOCUMENTATION_URL
 
     def __init__(self, settings: ConnectorSettings) -> None:
         """Initialize the connector (the helper is created by ``start()``).
@@ -269,6 +300,49 @@ class SplunkHuntConnector(InternalHuntConnector):
             poll_interval=config.poll_interval,
             logger=self.logger,
         )
+        self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
+
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search: one event of the configured search scope."""
+        return NativeQuery(language="spl", query="index=* | head 1")
+
+    def connection_checks(self, deadline: RunDeadline) -> list[HuntConnectionCheck]:
+        """Check the credentials, the search capability, then run the test search.
+
+        Args:
+            deadline: Deadline of the connection test.
+
+        Returns:
+            The checks, stopping at the first failure.
+        """
+        if self.client is None:
+            raise RuntimeError("The Splunk client is created by start().")
+        client = self.client
+        context: dict[str, object] = {}
+        authentication = self.run_check(
+            "Authentication",
+            lambda: context.update(client.current_context(deadline)),
+            "Splunk accepted the credentials of the connector.",
+        )
+        if not authentication.ok:
+            return [authentication]
+        user = context.get("username") or "the account"
+        capabilities = context.get("capabilities")
+        if isinstance(capabilities, list) and "search" not in capabilities:
+            return [
+                authentication,
+                HuntConnectionCheck(
+                    name="search",
+                    ok=False,
+                    message=f"Access denied: the roles of {user} lack the search capability: add it to one of its roles in Settings > Roles.",
+                ),
+            ]
+        capability = HuntConnectionCheck(
+            name="search",
+            ok=True,
+            message=f"The roles of {user} hold the search capability.",
+        )
+        return [authentication, capability, *super().connection_checks(deadline)]
 
     def sigma_backend(self, pipeline: str | None) -> SplunkBackend:
         """Create the pySigma Splunk backend.

@@ -113,6 +113,27 @@ class SplunkClient(HuntApiClient):
                 self._active_jobs.pop(job_key, None)
             self._delete_job(sid)
 
+    def current_context(self, deadline: RunDeadline) -> dict[str, Any]:
+        """Read the account of the connector: its user name, roles and capabilities.
+
+        Args:
+            deadline: Deadline of the call.
+
+        Returns:
+            The ``content`` of the current context (``username``, ``roles``,
+            ``capabilities``).
+        """
+        response = self.hunt_request(
+            "GET",
+            "/services/authentication/current-context",
+            deadline,
+            "The Splunk authentication",
+            params={"output_mode": "json"},
+        )
+        entries = response.get("entry") if isinstance(response, dict) else None
+        content = (entries or [{}])[0].get("content")
+        return content if isinstance(content, dict) else {}
+
     def cancel(self, job_key: Hashable) -> None:
         """Cancel the running search job of a run, if any.
 

@@ -237,12 +237,13 @@ def test_process_message_reports_failures(
     # Given Splunk rejects the credentials
     requests_mock.post(f"{NAMESPACE}/search/v2/jobs", status_code=401, json={})
 
-    # When/Then the run fails, is reported as failed and sends no knowledge
-    with pytest.raises(HuntExecutionError, match="search job creation failed"):
+    # When/Then the run fails as access denied, naming the token to check, and sends no knowledge
+    with pytest.raises(HuntExecutionError, match="search job creation was refused"):
         connector_factory().process_message(hunt_event)
     args, kwargs = helper.report_hunt_run.call_args
     assert args == ("run-1", "failed")
-    assert "Unauthorized" in kwargs["error"]
+    assert kwargs["error"].startswith("HuntAccessDeniedError: Access denied:")
+    assert "SPLUNK_HUNT_TOKEN" in kwargs["error"]
     assert kwargs["translated_query"].startswith("Image=")
     helper.send_stix2_bundle.assert_not_called()
 
@@ -374,6 +375,11 @@ def test_start_registers_the_splunk_platform_and_listens():
         supports_preview=True,
         max_concurrent_runs=None,
         supports_indicators=True,
+        required_permissions=[
+            {"name": name, "purpose": purpose}
+            for name, purpose in SplunkHuntConnector.required_permissions
+        ],
+        documentation_url="https://docs.opencti.io/latest/usage/hunt-connectors/#splunk",
     )
     helper.listen_hunt.assert_called_once_with(
         message_callback=connector.process_message

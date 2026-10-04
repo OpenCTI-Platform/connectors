@@ -3,9 +3,51 @@
 The Splunk hunt connector executes the hunts of OpenCTI on Splunk Enterprise or Splunk Cloud. It is a connector of type
 `INTERNAL_HUNT` registered for the `splunk` hunt platform.
 
+## Before you start
+
+| | |
+|---|---|
+| Credential | An authentication token of a dedicated service account (user name and password when tokens are disabled). |
+| Console | Splunk Web: **Settings > Roles**, **Settings > Users**, **Settings > Tokens**. |
+| Network | The REST API (management port, `8089` by default) reachable from the connector. |
+
+Step by step:
+
+1. In **Settings > Roles > New Role**, create `opencti_hunt` without inherited roles: capability `search`, and on the **Indexes** tab the indexes the hunts must cover.
+2. Give the role read access to the app of `SPLUNK_HUNT_APP` (`search` by default): **Apps > Manage Apps > Permissions** of the app.
+3. In **Settings > Users > New User**, create `svc_opencti_hunt` with the role `opencti_hunt` only.
+4. In **Settings > Tokens**, enable token authentication if needed, then **New Token** for `svc_opencti_hunt`, and set it as `SPLUNK_HUNT_TOKEN`.
+
+Least-privilege permissions:
+
+| Permission | Why |
+|---|---|
+| Capability `search` | Create the search jobs of the hunts, read their status and results, cancel and delete them. |
+| Read on the app `SPLUNK_HUNT_APP` | The search jobs run in this app namespace (`search` by default). |
+| Indexes allowed to search (`srchIndexesAllowed`) | Every index the hunts must cover, for example `wineventlog`, `sysmon`, `main`. |
+| Capability `edit_tokens_own` | Optional: lets the account create its own authentication token. |
+| Read access to the data models | Only with the `splunk_cim` pipeline and the `data_model` output format (`tstats` searches). |
+
+Jobs run in the `SPLUNK_HUNT_OWNER` / `SPLUNK_HUNT_APP` namespace (`nobody` / `search` by default) and are deleted once their results are read.
+
+Copy-ready configuration (`.env` of the `docker-compose.yml`):
+
+```env
+OPENCTI_URL=https://opencti.example.com
+OPENCTI_TOKEN=ChangeMe
+CONNECTOR_ID=ChangeMe-UUIDv4
+SPLUNK_HUNT_URL=https://splunk.example.com:8089
+SPLUNK_HUNT_TOKEN=ChangeMe
+SPLUNK_HUNT_APP=search
+SPLUNK_HUNT_SEARCH_PREFIX=index=wineventlog OR index=sysmon
+```
+
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It checks the token, the `search` capability of the roles of the account, then runs one search in the app. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+
 Table of Contents
 
 - [OpenCTI Splunk Hunt Connector](#opencti-splunk-hunt-connector)
+  - [Before you start](#before-you-start)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -53,19 +95,7 @@ Raw events never leave Splunk: OpenCTI only receives counts and evidence values 
 
 ### Splunk permissions
 
-Create a dedicated service account (for example `svc_opencti_hunt`) with a role that grants:
-
-| Permission | Why |
-|---|---|
-| Capability `search` | Create search jobs, read their status and results, cancel and delete them. |
-| Read permission on the app `SPLUNK_HUNT_APP` | The search jobs run in this app namespace (`search` by default). |
-| Capability `edit_tokens_own` | Only to let the account create its own authentication token. |
-| Indexes allowed to search (`srchIndexesAllowed`) | Every index the hunts must cover (for example `wineventlog`, `sysmon`, `main`). |
-| Read access to the data models | Only with the `splunk_cim` pipeline and the `data_model` output format (`tstats` searches). |
-
-Create an authentication token for the account (Settings > Tokens) and set it as `SPLUNK_HUNT_TOKEN`; user name and
-password authentication is supported when tokens are disabled. Jobs run in the `SPLUNK_HUNT_OWNER` /
-`SPLUNK_HUNT_APP` namespace (`nobody` / `search` by default) and are deleted once their results are read.
+The account, the least-privilege permissions, the console steps and a configuration example are in [Before you start](#before-you-start).
 
 ## Configuration variables
 
