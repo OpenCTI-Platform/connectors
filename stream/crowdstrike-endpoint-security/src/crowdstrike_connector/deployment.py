@@ -68,30 +68,43 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
         self._clock = clock or (lambda: datetime.now(UTC))
 
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
-        """Read back the live IOCs managed by the connector.
+        """Read back the IOCs managed by the connector.
+
+        Expired IOCs and IOCs the connector deactivated stay in CrowdStrike: they
+        are listed as inactive, for a withdrawal to delete or deactivate them.
 
         Yields:
-            One vendor indicator per live IOC (IOC id and value).
+            One vendor indicator per IOC (IOC id and value).
 
         Raises:
             CrowdstrikeApiError: On any CrowdStrike error.
         """
         now = self._clock()
         for ioc in self._client.iter_connector_iocs():
-            if not self._is_live(ioc, now):
+            if not self._is_retained(ioc):
                 continue
             yield VendorIndicator(
                 external_id=str(ioc["id"]),
                 value=ioc.get("value"),
                 raw=ioc,
+                active=self._is_live(ioc, now),
             )
+
+    @staticmethod
+    def _is_retained(ioc: dict[str, Any]) -> bool:
+        """Tell whether an IOC read back from CrowdStrike is ours and not deleted."""
+        return (
+            bool(ioc.get("id"))
+            and ioc.get("source") == IOC_SOURCE
+            and ioc.get("deleted") is not True
+        )
 
     @staticmethod
     def _is_live(ioc: dict[str, Any], now: datetime) -> bool:
         """Tell whether an IOC read back from CrowdStrike is live and ours."""
-        if not ioc.get("id") or ioc.get("source") != IOC_SOURCE:
+        if not CrowdstrikeDeploymentAdapter._is_retained(ioc):
             return False
-        if ioc.get("deleted") is True or ioc.get("expired") is True:
+        if ioc.get("expired") is True:
             return False
         expiration = parse_datetime(ioc.get("expiration"))
         if expiration is not None and expiration <= now:

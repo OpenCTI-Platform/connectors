@@ -203,8 +203,9 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | Hits                                      | Falcon alerts whose IOC value matches a deployed indicator                                            |
 
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs created by the connector API client
-  (`created_by`) with the `OpenCTI IOC` source are read back with the IOC API (500 per page). Expired and deleted IOCs,
-  and IOCs withdrawn by the connector (tagged `TO_DELETE` with the `no_action` action), are not live. Deployments are
+  (`created_by`) with the `OpenCTI IOC` source are read back with the IOC API (500 per page). Deleted IOCs are ignored.
+  Expired IOCs, and IOCs withdrawn by the connector (tagged `TO_DELETE` with the `no_action` action), are not live: they
+  never confirm a deployment, but a withdrawal or an expiry still deletes or deactivates them. Deployments are
   matched by IOC id, then by IOC value. A withdrawal deletes the IOC when `CROWDSTRIKE_PERMANENT_DELETE=true`;
   otherwise the IOC is kept, tagged `TO_DELETE` and its action set to `no_action` so that it stops detecting. A
   read-back error skips the run: IOCs are never reported `removed` from a partial listing.

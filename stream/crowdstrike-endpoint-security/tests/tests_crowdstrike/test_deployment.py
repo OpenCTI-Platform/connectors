@@ -552,7 +552,9 @@ def make_adapter(client, permanent_delete=False):
     return CrowdstrikeDeploymentAdapter(client, config, clock=lambda: now)
 
 
-def test_adapter_lists_the_live_iocs_of_the_connector(adapter_client):
+def test_adapter_lists_the_iocs_of_the_connector(adapter_client):
+    """Expired and deactivated IOCs stay in CrowdStrike: listed inactive, so that
+    a withdrawal still deletes or deactivates them."""
     adapter_client.iter_connector_iocs.return_value = iter(
         [
             make_ioc(),
@@ -569,10 +571,13 @@ def test_adapter_lists_the_live_iocs_of_the_connector(adapter_client):
 
     vendor_indicators = list(make_adapter(adapter_client).list_vendor_indicators())
 
-    assert [item.external_id for item in vendor_indicators] == [
-        IOC_ID,
-        "soft-deleted",
-        "future",
+    assert [(item.external_id, item.active) for item in vendor_indicators] == [
+        (IOC_ID, True),
+        ("soft-deleted", True),
+        ("withdrawn", False),
+        ("expired", False),
+        ("past", False),
+        ("future", True),
     ]
     assert vendor_indicators[0] == VendorIndicator(
         external_id=IOC_ID, value="198.51.100.7"
