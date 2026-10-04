@@ -1,6 +1,7 @@
 """Deployment write-back of the Cloudflare Rules List connector."""
 
 import json
+from dataclasses import replace
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
@@ -965,6 +966,23 @@ def test_adapter_push(connector):
     connector.client.replace_list_items.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    "pattern, expected",
+    [
+        ("[ipv4-addr:value = '198.51.100.7']", {"198.51.100.7"}),
+        ("[ipv4-addr:value = '192.0.2.0/24']", {"192.0.2.0/24"}),
+        ("[domain-name:value = 'evil.example']", set()),
+        (None, set()),
+    ],
+)
+def test_adapter_expects_the_address_it_uploads(connector, pattern, expected):
+    deployment = replace(make_deployment(), pattern=pattern)
+
+    assert CloudflareDeploymentAdapter(connector).expected_values(deployment) == (
+        frozenset(expected)
+    )
+
+
 # Settings and wiring
 
 
@@ -1142,6 +1160,54 @@ def test_reconciliation_confirms_removes_and_withdraws(e2e_connector, router):
     assert reports[INDICATOR_ID]["externalId"] == "i-1"
     assert reports[OTHER_ID]["status"] == "removed"
     assert reports["withdrawn-id"]["status"] == "removed"
+
+
+def upload_new_address_failed(connector):
+    """Upload an indicator, then fail the upload of its changed address."""
+    connector.process_message(make_message("create", make_indicator()))
+    connector.client.replace_list_items.side_effect = CloudflareAPIError(
+        "API request failed: 503 Service Unavailable", status_code=503
+    )
+    connector.process_message(make_message("update", make_indicator(ip="203.0.113.9")))
+    connector.assurance.flush()
+    connector.client.replace_list_items.reset_mock(side_effect=True)
+    # The list still holds the previous address, under the comment of the indicator.
+    connector.client.iter_list_items.return_value = iter(
+        [{"id": "i-1", "ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"}]
+    )
+
+
+def test_reconciliation_never_confirms_the_previous_address(e2e_connector, router):
+    upload_new_address_failed(e2e_connector)
+    router.calls.clear()
+    router.deployments = [
+        deployment_node(INDICATOR_ID, "failed", "203.0.113.9", STIX_ID)
+    ]
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.confirmed_active == 0
+    assert summary.incomplete == 1
+    assert router.calls_of("IndicatorReportDeployments(") == []
+    e2e_connector.client.replace_list_items.assert_not_called()
+
+
+def test_reconciliation_uploads_the_current_address_again(e2e_connector, router):
+    upload_new_address_failed(e2e_connector)
+    router.calls.clear()
+    router.deployments = [
+        deployment_node(INDICATOR_ID, "deployed", "203.0.113.9", STIX_ID)
+    ]
+    export = e2e_connector.helper.api.stix2.get_stix_bundle_or_object_from_entity_id
+    export.return_value = make_indicator(ip="203.0.113.9")
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.confirmed_active == 0
+    assert summary.repushed == 1
+    e2e_connector.client.replace_list_items.assert_called_once_with(
+        "list-123", [{"ip": "203.0.113.9", "comment": f"OpenCTI: {STIX_ID}"}]
+    )
 
 
 def test_reconciliation_of_indicators_sharing_an_ip(e2e_connector, router):

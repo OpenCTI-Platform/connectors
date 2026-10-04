@@ -62,6 +62,19 @@ def failure_reason(error: CloudflareAPIError) -> str:
     return deployment_failure_reason(PLATFORM_NAME, UPLOAD_ACTION, error.status_code)
 
 
+def pattern_ipv4(pattern: Any) -> Optional[str]:
+    """Return the IPv4 address the connector uploads for an indicator pattern.
+
+    Args:
+        pattern: The STIX pattern of the indicator.
+
+    Returns:
+        The address of its `[ipv4-addr:value = '...']` comparison, or None.
+    """
+    match = _IPV4_PATTERN_RE.search(pattern) if isinstance(pattern, str) else None
+    return match.group(1) if match else None
+
+
 class Connector:
     """OpenCTI connector for Cloudflare Rules Lists (IPv4)."""
 
@@ -121,9 +134,7 @@ class Connector:
 
         # Indicator (stream: type=="indicator"; API: entity_type=="Indicator").
         if self._is_indicator(data):
-            pattern = data.get("pattern", "")
-            match = _IPV4_PATTERN_RE.search(pattern) if pattern else None
-            return match.group(1) if match else None
+            return pattern_ipv4(data.get("pattern"))
 
         # IPv4 observable (stream: type=="ipv4-addr"; API: entity_type=="IPv4-Addr").
         observable_type = entity_type or stix_type

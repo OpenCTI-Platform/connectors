@@ -6,7 +6,8 @@ the Cloudflare Rules List:
 - read-back: the items of the list (`rules/lists/{id}/items`, cursor pagination),
   one per IP address, matched with the deployments by the OpenCTI id of their
   comment (`OpenCTI: <id>`) and the indicators of the snapshot holding the address,
-  by item id, then by IP address;
+  by item id, then by IP address; a deployment is only confirmed by an item
+  holding the address of its current pattern;
 - removal: deletion of the list item when it belongs to the indicator (items of
   other objects are left in place) and no other object of the snapshot holds the
   address (the snapshot without the indicator is uploaded instead), and of the
@@ -21,7 +22,11 @@ from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
 from cloudflare_rules_list.client import CloudflareAPIError
-from cloudflare_rules_list.connector import COMMENT_PREFIX, failure_reason
+from cloudflare_rules_list.connector import (
+    COMMENT_PREFIX,
+    failure_reason,
+    pattern_ipv4,
+)
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentVendorAdapter,
@@ -125,6 +130,21 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
                     },
                 )
         connector.forget_absent(listed)
+
+    def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str]:
+        """Return the IPv4 address the connector uploads for a deployment.
+
+        The item comment identifies an indicator whatever address the item holds:
+        after the upload of a changed address failed, the list still holds the
+        previous one under the same comment. Declaring the current address makes
+        such an item incomplete, so the indicator is uploaded again instead of
+        being confirmed `active`.
+
+        :return: The normalized address of the pattern, or no value when the
+            pattern holds none (nothing is uploaded for it).
+        """
+        value = normalize_value(pattern_ipv4(deployment.pattern))
+        return frozenset({value}) if value else frozenset()
 
     def remove_vendor_indicator(
         self, vendor_indicator: VendorIndicator, deployment: IndicatorDeployment
