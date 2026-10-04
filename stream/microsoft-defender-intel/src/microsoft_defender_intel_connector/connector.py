@@ -214,6 +214,22 @@ class MicrosoftDefenderIntelConnector:
                 continue
             self._delete_external_reference(defender_id)
 
+    def _restore_defender_indicators(self, previous_indicators: list[dict]) -> None:
+        """
+        Write back the Defender indicators an update changed before it failed, so that
+        Defender keeps the previous version of every observable instead of a mix that
+        reconciliation would read as a complete deployment.
+        :param previous_indicators: The indicators as Defender returned them before the update
+        """
+        for previous in previous_indicators:
+            try:
+                self.api.restore_indicator(previous)
+            except Exception as err:
+                self.helper.connector_logger.warning(
+                    "[UPDATE] Cannot restore a Defender indicator of an incomplete update",
+                    meta={"defender_id": previous.get("id"), "error": str(err)},
+                )
+
     def push_indicator(self, data: dict) -> list[str]:
         """
         Create the Defender indicators of an OpenCTI indicator, one per observable.
@@ -279,6 +295,7 @@ class MicrosoftDefenderIntelConnector:
         if is_stix_indicator(data):
             deployed_ids: list[str] = []
             created_ids: list[str] = []
+            updated: list[dict] = []
             try:
                 existing = [
                     (
@@ -295,6 +312,7 @@ class MicrosoftDefenderIntelConnector:
                         if found:
                             defender_id = str(found[0]["id"])
                             self._update_defender_indicator(defender_id, observable)
+                            updated.append(found[0])
                             message = "[UPDATE] Indicator updated"
                         else:
                             defender_id = self._create_confirmed_defender_indicator(
@@ -309,6 +327,7 @@ class MicrosoftDefenderIntelConnector:
                         )
                     did_update = True
             except Exception as err:
+                self._restore_defender_indicators(updated)
                 self._roll_back_defender_indicators(created_ids)
                 self._report_failed(data, err)
                 raise

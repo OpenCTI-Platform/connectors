@@ -26,6 +26,24 @@ ALERTS_RESOURCE_PATH = "api/alerts"
 MAX_PAGE_SIZE = 10_000
 """Maximum `$top` accepted by the indicators and alerts APIs."""
 
+RESTORABLE_INDICATOR_FIELDS = (
+    "id",
+    "indicatorValue",
+    "indicatorType",
+    "application",
+    "action",
+    "title",
+    "description",
+    "externalId",
+    "lastUpdateTime",
+    "expirationTime",
+    "severity",
+    "recommendedActions",
+    "rbacGroupNames",
+    "generateAlert",
+)
+"""Fields of an indicator, as Defender returns it, that a submit-or-update request writes."""
+
 
 class DefenderApiHandlerError(Exception):
     def __init__(self, msg, metadata):
@@ -241,6 +259,23 @@ class DefenderApiHandler:
             json=request_body_observable,
         )
         return data
+
+    def restore_indicator(self, previous: dict) -> dict | None:
+        """
+        Write a Threat Intelligence Indicator back to the values read before an update.
+        :param previous: The indicator as Defender returned it before the update
+        :return: Threat Intelligence Indicator if request is successful, None otherwise
+        """
+        body = {
+            field: previous[field]
+            for field in RESTORABLE_INDICATOR_FIELDS
+            if previous.get(field) is not None
+        }
+        return self._send_request(
+            "post",
+            f"{self.base_url}/{self.resource_path.lstrip('/')}",
+            json=body,
+        )
 
     def post_indicators(self, observables: list[dict]) -> dict | None:
         """

@@ -363,6 +363,7 @@ def test_a_failed_update_deletes_only_the_defender_indicators_it_created(connect
         {"id": "1"},
         {"id": "2"},
         http_error(400, "Invalid indicator value"),
+        {"id": "1"},
         None,
     ]
 
@@ -375,6 +376,67 @@ def test_a_failed_update_deletes_only_the_defender_indicators_it_created(connect
     ]
     connector.assurance.report_push_failed.assert_called_once()
     connector.assurance.report_pushed.assert_not_called()
+
+
+PREVIOUS_IP = {
+    "id": "1",
+    "indicatorValue": "198.51.100.7",
+    "indicatorType": "IpAddress",
+    "application": "OpenCTI Microsoft Defender Intel",
+    "action": "Alert",
+    "title": "198.51.100.7",
+    "description": "Previous description",
+    "expirationTime": "2026-12-01T00:00:00Z",
+    "severity": "Low",
+    "generateAlert": True,
+    "createdBy": "not written back",
+}
+
+
+def test_a_failed_update_restores_the_defender_indicators_it_updated(connector):
+    """A half-applied update would be read back as complete: the updated
+    indicators get their previous values again."""
+    connector.api._send_request.side_effect = [
+        {"value": [PREVIOUS_IP]},
+        {"value": [{"id": "2"}]},
+        {"id": "1"},
+        http_error(400, "Invalid indicator value"),
+        {"id": "1"},
+    ]
+
+    connector.process_message(make_message("update", make_multi_indicator(IP, DOMAIN)))
+
+    assert _sent(connector) == [
+        ("get", ""),
+        ("get", ""),
+        ("post", ""),
+        ("post", ""),
+        ("post", ""),
+    ]
+    restored = connector.api._send_request.call_args_list[-1].kwargs["json"]
+    assert restored == {
+        key: value for key, value in PREVIOUS_IP.items() if key != "createdBy"
+    }
+    connector.assurance.report_push_failed.assert_called_once()
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def test_a_failed_restore_is_logged(connector):
+    connector.api._send_request.side_effect = [
+        {"value": [PREVIOUS_IP]},
+        {"value": [{"id": "2"}]},
+        {"id": "1"},
+        http_error(400, "Invalid indicator value"),
+        http_error(503, "Unavailable"),
+    ]
+
+    connector.process_message(make_message("update", make_multi_indicator(IP, DOMAIN)))
+
+    connector.helper.connector_logger.warning.assert_any_call(
+        "[UPDATE] Cannot restore a Defender indicator of an incomplete update",
+        meta={"defender_id": "1", "error": ANY},
+    )
+    connector.assurance.report_push_failed.assert_called_once()
 
 
 def make_pattern_deployment(pattern, pattern_type="stix"):
