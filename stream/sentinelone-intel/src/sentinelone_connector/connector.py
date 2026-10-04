@@ -96,18 +96,26 @@ class SentinelOneIntelConnector:
 
         :param indicator: The indicator, in the stream event shape.
         :return: True when IOCs were deleted, False when none carries the indicator id.
-        :raises SentinelOneApiError: When SentinelOne cannot list or delete the IOCs.
+        :raises SentinelOneApiError: When SentinelOne cannot list or delete the IOCs, or
+            lists an IOC of the indicator without `uuid` (it could not be deleted).
         """
         stix_id = indicator.get("id")
         if not isinstance(stix_id, str) or not stix_id.startswith(
             STIX_INDICATOR_PREFIX
         ):
             return False
-        uuids = [
-            str(ioc["uuid"])
+        iocs = [
+            ioc
             for ioc in self.client.find_iocs_by_external_id(stix_id)
-            if ioc.get("uuid") is not None and ioc.get("externalId") == stix_id
+            if ioc.get("externalId") == stix_id
         ]
+        if any(ioc.get("uuid") is None for ioc in iocs):
+            raise SentinelOneApiError(
+                "SentinelOne listed an IOC of the indicator without uuid, "
+                "it cannot be deleted",
+                status_code=200,
+            )
+        uuids = [str(ioc["uuid"]) for ioc in iocs]
         if not uuids:
             return False
         self.client.delete_iocs(uuids)

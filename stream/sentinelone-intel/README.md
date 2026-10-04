@@ -204,7 +204,7 @@ exist).
 | Indicator created in SentinelOne          | `deployed`, with the `uuid` of the first IOC returned by SentinelOne as external id (when returned)           |
 | Indicator rejected by SentinelOne         | `failed`, with a short reason such as "SentinelOne refused the IOC creation: permission denied" (the SentinelOne response is written to the connector log) |
 | Indicator with an unsupported pattern     | Nothing: the indicator is never pushed                                                                        |
-| Delete event, IOCs of the indicator found | `removed` once they are deleted (nothing is reported when no IOC carries the STIX id of the indicator)        |
+| Delete event, IOCs of the indicator found | `removed` once they are deleted (nothing is deleted nor reported when no IOC carries the STIX id of the indicator, or when one of them has no `uuid`) |
 | Reconciliation, indicator present         | `active`                                                                                                      |
 | Reconciliation, indicator absent          | `removed` (deleted or expired in SentinelOne)                                                                 |
 | Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`                                             |

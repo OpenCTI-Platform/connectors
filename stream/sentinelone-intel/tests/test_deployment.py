@@ -249,7 +249,7 @@ def test_delete_removes_the_iocs_created_from_the_indicator(connector):
                 "data": [
                     {"uuid": "uuid-1", "externalId": STIX_ID},
                     {"uuid": "uuid-2", "externalId": "other-source"},
-                    {"externalId": STIX_ID},
+                    {"externalId": "other-source"},
                 ],
                 "pagination": {"nextCursor": None},
             }
@@ -310,6 +310,27 @@ def test_delete_with_an_ignored_pagination_is_not_reported(connector):
 
     assert calls_of(connector.client.session, "DELETE") == []
     connector.assurance.report_removed.assert_not_called()
+
+
+def test_delete_with_an_ioc_of_the_indicator_without_uuid_is_aborted(connector):
+    connector.client.session.request.return_value = mock_response(
+        {
+            "data": [
+                {"uuid": "uuid-1", "externalId": STIX_ID},
+                {"externalId": STIX_ID},
+            ]
+        }
+    )
+
+    connector.process_message(make_message("delete", make_indicator()))
+
+    assert calls_of(connector.client.session, "DELETE") == []
+    connector.assurance.report_removed.assert_not_called()
+    _, meta = connector.helper.connector_logger.warning.call_args.args
+    assert meta == {
+        "error": "SentinelOne listed an IOC of the indicator without uuid, "
+        "it cannot be deleted"
+    }
 
 
 def test_delete_without_ioc_of_the_indicator_is_not_reported(connector):
