@@ -8,6 +8,7 @@ import pytest
 from connectors_sdk.connectors.stream.deployment.utils import (
     OPENCTI_EXTENSION_ID,
     PatternValue,
+    deployment_failure_reason,
     extract_pattern_values,
     format_datetime,
     get_opencti_extension,
@@ -70,6 +71,30 @@ def test_get_opencti_indicator_id_falls_back_to_the_stix_id():
 def test_get_opencti_indicator_id_returns_none_without_identifier(stix_object):
     """No identifier gives ``None``."""
     assert get_opencti_indicator_id(stix_object) is None
+
+
+@pytest.mark.parametrize(
+    "status_code, expected",
+    [
+        (400, "Cortex XDR refused the IOC upsert: invalid request"),
+        (401, "Cortex XDR refused the IOC upsert: authentication failed"),
+        (403, "Cortex XDR refused the IOC upsert: permission denied"),
+        (404, "Cortex XDR refused the IOC upsert: not found"),
+        (409, "Cortex XDR refused the IOC upsert: conflict with an existing item"),
+        (413, "Cortex XDR refused the IOC upsert: request too large"),
+        (422, "Cortex XDR refused the IOC upsert: invalid request"),
+        (429, "Cortex XDR refused the IOC upsert: rate limit reached"),
+        (500, "Cortex XDR refused the IOC upsert: server error"),
+        (503, "Cortex XDR refused the IOC upsert: server error"),
+        (418, "Cortex XDR refused the IOC upsert: unexpected response"),
+        (200, "Cortex XDR returned an unexpected response to the IOC upsert"),
+        (None, "Cortex XDR could not be reached for the IOC upsert"),
+    ],
+)
+def test_deployment_failure_reason(status_code, expected):
+    assert deployment_failure_reason("Cortex XDR", "IOC upsert", status_code) == (
+        expected
+    )
 
 
 def test_extract_pattern_values_parses_equality_comparisons():

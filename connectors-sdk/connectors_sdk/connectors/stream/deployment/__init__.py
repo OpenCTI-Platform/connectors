@@ -53,6 +53,7 @@ from connectors_sdk.connectors.stream.deployment.settings import (
 from connectors_sdk.connectors.stream.deployment.utils import (
     OPENCTI_EXTENSION_ID,
     PatternValue,
+    deployment_failure_reason,
     extract_pattern_values,
     get_opencti_indicator_id,
     is_stix_indicator,
@@ -89,6 +90,7 @@ __all__ = [
     "SecurityPlatformConfig",
     "VendorHit",
     "VendorIndicator",
+    "deployment_failure_reason",
     "extract_pattern_values",
     "get_opencti_indicator_id",
     "is_rate_limit_error",

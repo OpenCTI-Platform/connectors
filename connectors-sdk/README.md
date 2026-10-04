@@ -114,6 +114,14 @@ assurance.report_push_failed(stix_indicator, error)
 assurance.report_removed(stix_indicator)
 ```
 
+OpenCTI shows the failure reason in the Deployments tabs: report one short sentence naming the platform and the cause,
+never a vendor response. `deployment_failure_reason(platform, action, status_code)` writes it with the wording every
+connector shares (`deployment_failure_reason("Google SecOps", "entity ingestion", 403)` gives
+`"Google SecOps refused the entity ingestion: permission denied"`; for a success status whose response cannot be read,
+`"... returned an unexpected response to the ..."`; without a status, `"... could not be reached for the ..."`); log the
+vendor response with the indicator id instead. The re-push of the reconciliation reports the message
+of the exception `push_indicator` raises, so adapters raise the same sentence.
+
 On OpenCTI platforms without the write-back API, the module logs once and becomes a no-op. See the
 [TDR](TDRs/2026-10-03-Deployment_write_back_for_stream_connectors.md) for the design and the reconciliation algorithm.
 

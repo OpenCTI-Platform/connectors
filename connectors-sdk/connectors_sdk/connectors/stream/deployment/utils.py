@@ -193,6 +193,54 @@ def normalize_value(value: Any) -> str | None:
     return text.lower()
 
 
+_HTTP_FAILURE_CAUSES = {
+    400: "invalid request",
+    401: "authentication failed",
+    403: "permission denied",
+    404: "not found",
+    409: "conflict with an existing item",
+    413: "request too large",
+    422: "invalid request",
+    429: "rate limit reached",
+}
+
+
+def deployment_failure_reason(
+    platform: str, action: str, status_code: int | None = None
+) -> str:
+    """Write the reason of a failed deployment, as OpenCTI shows it.
+
+    One short sentence names the security platform and the cause, worded the same
+    way for the same cause by every stream connector. The vendor response belongs
+    in the connector log, never in the reason.
+
+    Args:
+        platform: The security platform, as users know it (``"Cortex XDR"``).
+        action: What the platform was asked to do (``"IOC upsert"``).
+        status_code: The HTTP status of the vendor response (a success status when
+            the response could not be read), ``None`` when the platform could not
+            be reached.
+
+    Returns:
+        ``"<platform> refused the <action>: <cause>"`` for an error status,
+        ``"<platform> returned an unexpected response to the <action>"`` for a
+        success status, or ``"<platform> could not be reached for the <action>"``.
+
+    Example:
+        >>> deployment_failure_reason("Google SecOps", "entity ingestion", 403)
+        'Google SecOps refused the entity ingestion: permission denied'
+    """
+    if status_code is None:
+        return f"{platform} could not be reached for the {action}"
+    if status_code < 400:
+        return f"{platform} returned an unexpected response to the {action}"
+    if status_code >= 500:
+        cause = "server error"
+    else:
+        cause = _HTTP_FAILURE_CAUSES.get(status_code, "unexpected response")
+    return f"{platform} refused the {action}: {cause}"
+
+
 def parse_datetime(value: datetime | str | None) -> datetime | None:
     """Parse an ISO 8601 date into a timezone-aware datetime.
 
