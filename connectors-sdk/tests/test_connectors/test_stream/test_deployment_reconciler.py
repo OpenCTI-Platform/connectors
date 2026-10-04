@@ -1018,6 +1018,35 @@ def test_truncated_read_back_neither_confirms_nor_pushes_a_partly_listed_indicat
     assert "a" not in reported()
 
 
+def test_truncated_read_back_withdraws_the_listed_items_without_reporting_the_removal(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """An item beyond the read-back limit may still be live: the removal waits for a
+    complete listing."""
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            status="active",
+            pattern=FILE_PATTERN,
+            external_id="1",
+            revoked=True,
+        )
+    )
+    listed = VendorIndicator(value="aa", external_id="1")
+    adapter = EveryValueAdapter(
+        vendor=[listed, VendorIndicator(value="bb", external_id="2")]
+    )
+
+    summary = make_reconciler(
+        make_reporter(graphql_helper), adapter, max_vendor_indicators=1
+    ).run_once()
+
+    assert summary.vendor_listing_truncated
+    assert [vendor_indicator for vendor_indicator, _ in adapter.removed] == [listed]
+    assert summary.withdrawn == 0
+    assert "a" not in reported()
+
+
 def test_truncated_read_back_skips_absence_decisions(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):

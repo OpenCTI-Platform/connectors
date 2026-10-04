@@ -1017,7 +1017,9 @@ class DeploymentReconciler:
         Returns:
             A ``removed`` report once every item is removed, or ``None`` when one
             removal failed (the next run retries the items still listed; OpenCTI
-            flags the deployment ``expired`` if no removal is confirmed in time).
+            flags the deployment ``expired`` if no removal is confirmed in time), and
+            when a truncated read-back listed only part of the items (the removal is
+            reported once a complete listing holds none of them).
         """
         for vendor_indicator in vendor_matches:
             if id(vendor_indicator) in removed:
@@ -1046,6 +1048,11 @@ class DeploymentReconciler:
                 )
                 return None
             removed.add(id(vendor_indicator))
+        if summary.vendor_listing_truncated and not adapter.is_complete(
+            deployment, vendor_matches
+        ):
+            # The other items may sit beyond the read-back limit, still live.
+            return None
         summary.withdrawn += 1
         return DeploymentReport(
             indicator_id=deployment.indicator_id,
