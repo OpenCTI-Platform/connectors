@@ -228,7 +228,9 @@ graph LR
 5. **Add/Remove**: Add or remove domain from URL category
 6. **Activation**: Activate the Zscaler configuration after each addition or removal (no activation when the blacklist
    did not change): `PENDING` changes are activated and an activation `INPROGRESS` is checked every 5 seconds until the
-   configuration is `ACTIVE`; a failed or unfinished activation after an addition reports the deployment `failed`
+   configuration is `ACTIVE`. The activation requests renew an expired session and wait out throttling like the other
+   requests, and a busy Zscaler (HTTP 503) is asked again after a growing delay; a failed or unfinished activation after
+   an addition reports the deployment `failed`
 
 ### Dissemination assurance (deployment write-back)
 

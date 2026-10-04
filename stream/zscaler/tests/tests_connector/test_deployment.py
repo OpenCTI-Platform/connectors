@@ -615,10 +615,11 @@ def test_activation_never_completing_is_a_failure(connector):
     )
 
 
-def test_unreadable_status_and_busy_activation_are_retried(connector):
+def test_unreadable_status_and_busy_zscaler_are_retried(connector):
     connector.session = MagicMock()
     connector.session.get.side_effect = [
-        response(500, text="unavailable"),
+        response(503, text="busy"),
+        response(json_data=ValueError("not JSON"), text="<html>"),
         response(json_data=ValueError("not JSON"), text="<html>"),
     ]
     connector.session.post.side_effect = [
@@ -627,16 +628,38 @@ def test_unreadable_status_and_busy_activation_are_retried(connector):
     ]
 
     assert not ZscalerConnector.activate_zscaler_changes.__wrapped__(
-        connector, max_retries=2, delay=0
+        connector, max_retries=3, delay=0
     )
+    assert connector.session.get.call_count == 3
     assert connector.session.post.call_count == 2
 
 
-def test_refused_activation_raises(connector):
-    with pytest.raises(Exception, match="Activation failed: 403 forbidden"):
-        activate(connector, ["PENDING"], [response(403, text="forbidden")])
-    with pytest.raises(Exception, match="Activation failed: No response"):
-        activate(connector, ["PENDING"], [None])
+def test_activation_renews_an_expired_session(connector):
+    connector.session = MagicMock()
+    connector.authenticate_with_zscaler = MagicMock()
+    connector.session.get.side_effect = [
+        response(401, text="SESSION_NOT_VALID"),
+        response(json_data={"status": "ACTIVE"}),
+    ]
+
+    assert ZscalerConnector.activate_zscaler_changes.__wrapped__(
+        connector, max_retries=1, delay=0
+    )
+    connector.authenticate_with_zscaler.assert_called_once_with()
+
+
+@pytest.mark.parametrize(
+    "activation, message, status_code",
+    [
+        (response(403, text="forbidden"), "status 403: forbidden", 403),
+        (None, "No response from Zscaler", None),
+    ],
+)
+def test_refused_activation_raises(connector, activation, message, status_code):
+    with pytest.raises(ZscalerApiError, match=message) as error:
+        activate(connector, ["PENDING"], [activation])
+    assert error.value.status_code == status_code
+    assert error.value.action == "configuration activation"
 
 
 def test_rejected_request_message_is_truncated(connector):

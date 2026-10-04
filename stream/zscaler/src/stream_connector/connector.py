@@ -186,13 +186,19 @@ class ZscalerConnector:
             return None
 
     def request_zscaler(
-        self, request_func, *args, reauthenticate: bool = True, **kwargs
+        self,
+        request_func,
+        *args,
+        reauthenticate: bool = True,
+        action: str = LIST_ACTION,
+        **kwargs,
     ) -> requests.Response:
         """Send a request to Zscaler: throttled requests (429) are retried after `Retry-After`,
         an expired session (401) is re-authenticated once per attempt.
 
         :param reauthenticate: False for the authentication request itself, whose 401 means
             rejected credentials.
+        :param action: What Zscaler is asked to do, named by the errors raised.
         :return: The successful (HTTP 200) response.
         :raises ZscalerApiError: When the request failed, with the HTTP status and the Zscaler
             response, or the transport error.
@@ -205,10 +211,12 @@ class ZscalerConnector:
                 response = request_func(*args, **kwargs)
             except requests.RequestException as err:
                 self.helper.connector_logger.error(f"Request failed: {err}")
-                raise ZscalerApiError(f"Zscaler request failed: {err}") from err
+                raise ZscalerApiError(
+                    f"Zscaler request failed: {err}", action=action
+                ) from err
             if response is None:
                 self.helper.connector_logger.error("Request failed: no response.")
-                raise ZscalerApiError("No response from Zscaler")
+                raise ZscalerApiError("No response from Zscaler", action=action)
 
             if response.status_code == 200:
                 return response
@@ -230,7 +238,9 @@ class ZscalerConnector:
                     "Authentication rejected by Zscaler (401)."
                 )
                 raise ZscalerApiError(
-                    "Authentication rejected by Zscaler (HTTP 401)", status_code=401
+                    "Authentication rejected by Zscaler (HTTP 401)",
+                    status_code=401,
+                    action=action,
                 )
 
             if response.status_code == 401:
@@ -242,7 +252,9 @@ class ZscalerConnector:
                         "Re-authentication failed, aborting retry."
                     )
                     raise ZscalerApiError(
-                        "Re-authentication with Zscaler failed", status_code=401
+                        "Re-authentication with Zscaler failed",
+                        status_code=401,
+                        action=action,
                     )
                 continue
 
@@ -252,11 +264,14 @@ class ZscalerConnector:
             raise ZscalerApiError(
                 f"Request failed with status {response.status_code}: {detail}",
                 status_code=response.status_code,
+                action=action,
             )
 
         self.helper.connector_logger.error("Max retries reached. Request failed.")
         raise ZscalerApiError(
-            "Max retries reached, the Zscaler request failed", status_code=429
+            "Max retries reached, the Zscaler request failed",
+            status_code=429,
+            action=action,
         )
 
     def extract_domain(self, pattern):
@@ -563,69 +578,59 @@ class ZscalerConnector:
 
         `ACTIVE` means every change is active; `PENDING` changes are activated with
         `POST /status/activate`; an `INPROGRESS` activation is checked again until it
-        completes. Refused activations are retried with backoff by tenacity.
+        completes. Both requests go through `request_zscaler` (expired session,
+        throttling); a busy Zscaler (503) is asked again after a growing delay, and
+        refused activations are retried with backoff by tenacity.
 
         :return: True once the configuration is `ACTIVE`, False when it is still not
             after `max_retries` checks.
+        :raises ZscalerApiError: When Zscaler refuses the status read or the activation.
         """
 
         status_url = f"{self.zscaler_base_url}/status"
         activate_url = f"{self.zscaler_base_url}/status/activate"
 
         for attempt in range(1, max_retries + 1):
-            status_resp = self.session.get(status_url)
-            status = (
-                _activation_status(status_resp)
-                if status_resp is not None and status_resp.status_code == 200
-                else None
-            )
-            if status == "ACTIVE":
-                self.helper.connector_logger.info("Zscaler configuration is active.")
-                return True
-            if status == "INPROGRESS":
-                self.helper.connector_logger.info(
-                    f"Zscaler activation in progress ({attempt}/{max_retries}), "
-                    f"checking again in {ACTIVATION_POLL_SECONDS}s..."
+            try:
+                status = _activation_status(
+                    self.request_zscaler(
+                        self.session.get, status_url, action=ACTIVATION_ACTION
+                    )
                 )
-                time.sleep(ACTIVATION_POLL_SECONDS)
-                continue
-
-            # PENDING changes (or an unreadable status): activate them.
-            resp = self.session.post(activate_url)
-            if resp is not None and resp.status_code == 200:
-                if _activation_status(resp) == "ACTIVE":
+                if status == "ACTIVE":
                     self.helper.connector_logger.info(
-                        "Zscaler configuration activated."
+                        "Zscaler configuration is active."
                     )
                     return True
-                self.helper.connector_logger.info(
-                    "Zscaler activation started, checking its status..."
+                if status == "INPROGRESS":
+                    self.helper.connector_logger.info(
+                        f"Zscaler activation in progress ({attempt}/{max_retries}), "
+                        f"checking again in {ACTIVATION_POLL_SECONDS}s..."
+                    )
+                    time.sleep(ACTIVATION_POLL_SECONDS)
+                    continue
+
+                # PENDING changes (or an unreadable status): activate them.
+                resp = self.request_zscaler(
+                    self.session.post, activate_url, action=ACTIVATION_ACTION
                 )
-                time.sleep(ACTIVATION_POLL_SECONDS)
-                continue
-            elif resp is not None and resp.status_code == 503:
-                try:
-                    msg = resp.json().get("message", resp.text)
-                except Exception:
-                    msg = resp.text
+            except ZscalerApiError as err:
+                if err.status_code != 503:
+                    raise
                 self.helper.connector_logger.warning(
-                    f"Activation attempt {attempt}/{max_retries} failed (503: {msg}). Retrying in {delay}s..."
+                    f"Activation attempt {attempt}/{max_retries} failed ({err}). "
+                    f"Retrying in {delay}s..."
                 )
                 time.sleep(delay)
                 delay *= 2
                 continue
-            else:
-                detail = (
-                    f"{resp.status_code} {resp.text}"
-                    if resp is not None
-                    else "No response"
-                )
-                self.helper.connector_logger.error(f"Activation failed: {detail}")
-                raise ZscalerApiError(
-                    f"Activation failed: {detail}",
-                    status_code=resp.status_code if resp is not None else None,
-                    action=ACTIVATION_ACTION,
-                )
+            if _activation_status(resp) == "ACTIVE":
+                self.helper.connector_logger.info("Zscaler configuration activated.")
+                return True
+            self.helper.connector_logger.info(
+                "Zscaler activation started, checking its status..."
+            )
+            time.sleep(ACTIVATION_POLL_SECONDS)
 
         self.helper.connector_logger.error(
             "Zscaler configuration still not active after all checks."
