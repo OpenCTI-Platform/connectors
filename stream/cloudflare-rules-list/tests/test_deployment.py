@@ -856,7 +856,14 @@ def test_adapter_lists_the_items(connector):
 
 
 @pytest.mark.parametrize(
-    "item", [{"id": "4", "ip": ""}, {"ip": "192.0.2.2"}, {"id": "5", "ip": 7}]
+    "item",
+    [
+        {"id": "4", "ip": ""},
+        {"ip": "192.0.2.2"},
+        {"id": "5", "ip": 7},
+        {"id": "", "ip": "192.0.2.3"},
+        {"id": 6, "ip": "192.0.2.4"},
+    ],
 )
 def test_adapter_rejects_an_item_without_ip_or_id(connector, item):
     connector.client.iter_list_items.return_value = iter([item])

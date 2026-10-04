@@ -81,7 +81,12 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
         for item in connector.client.iter_list_items(connector.list_id):
             ip = item.get("ip")
             item_id = item.get("id")
-            if not isinstance(ip, str) or not ip or item_id is None:
+            if (
+                not isinstance(ip, str)
+                or not ip
+                or not isinstance(item_id, str)
+                or not item_id
+            ):
                 raise CloudflareDeploymentError(
                     "Cloudflare listed a list item without IP address or id, "
                     "the read-back is incomplete"

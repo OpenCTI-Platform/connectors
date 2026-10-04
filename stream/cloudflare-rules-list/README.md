@@ -148,7 +148,7 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the items of the list are read back (cursor
   pagination). Deployments are matched by the OpenCTI id of the item comment when it is a STIX indicator id, by item
   id, then by IP address. A read-back error, a cursor repeated by the API or a malformed item (not an object, or
-  without IP address or id) skips the run: indicators are never reported `removed` from a partial listing.
+  without a non-empty IP address or id) skips the run: indicators are never reported `removed` from a partial listing.
 - **Withdrawal safety**: a withdrawal deletes the list item (`DELETE /rules/lists/{id}/items`, never an empty snapshot)
   only when it belongs to the indicator, and drops the indicator from the snapshot.
 - **Shared IP addresses**: a Cloudflare list holds an IP address once, so the objects sharing an address are uploaded
