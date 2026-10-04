@@ -2,11 +2,13 @@ import json
 import re
 import time
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 import requests
 import urllib3
 import validators
+from connectors_sdk.connectors.stream.deployment import parse_datetime
 from pycti import OpenCTIConnectorHelper
 from stream_connector.utils import obfuscate_api_key, sanitize_payload
 from tenacity import (
@@ -273,11 +275,13 @@ class ZscalerConnector:
                 "Unexpected URL category response: not a URL category"
             )
         urls = category.get("urls", [])
-        if not isinstance(urls, list):
+        if not isinstance(urls, list) or not all(
+            isinstance(url, str) and url for url in urls
+        ):
             raise ZscalerApiError(
-                "Unexpected URL category response: 'urls' is not a list"
+                "Unexpected URL category response: 'urls' is not a list of domains"
             )
-        return [url for url in urls if isinstance(url, str)]
+        return urls
 
     def get_current_configured_name(self):
         url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
@@ -348,7 +352,7 @@ class ZscalerConnector:
         """Remove a listed domain from the blacklist, unless another indicator blocks it.
 
         The blacklist only holds values: a domain shared by several OpenCTI indicators
-        stays listed while one of them is not revoked.
+        stays listed while one of them is valid (neither revoked nor expired).
 
         :param indicator_ids: The OpenCTI ids of the indicator removed.
         :raises ZscalerApiError: When Zscaler refuses the change.
@@ -363,12 +367,16 @@ class ZscalerConnector:
     def is_blocked_by_another_indicator(
         self, domain: str, indicator_ids: Iterable[str]
     ) -> bool:
-        """Tell whether an OpenCTI indicator not revoked, other than the given one, has the
+        """Tell whether a valid OpenCTI indicator, other than the given one, has the
         `[domain-name:value = '<domain>']` pattern.
+
+        Revoked indicators and indicators whose `valid_until` is past do not block the
+        domain: their own removal is due as well.
 
         :param indicator_ids: The OpenCTI ids (internal or STIX) of the indicator removed.
         :raises SharedDomainLookupError: When OpenCTI cannot be queried.
         """
+        now = datetime.now(UTC)
         excluded = {str(indicator_id).lower() for indicator_id in indicator_ids}
         try:
             indicators = self.helper.api.indicator.list(
@@ -394,6 +402,10 @@ class ZscalerConnector:
             str(indicator.get("id")).lower() not in excluded
             and str(indicator.get("standard_id")).lower() not in excluded
             and self.extract_domain(indicator.get("pattern") or "") == domain
+            and (
+                (valid_until := parse_datetime(indicator.get("valid_until"))) is None
+                or valid_until > now
+            )
             for indicator in indicators or []
         )
 

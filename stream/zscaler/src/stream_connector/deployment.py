@@ -5,8 +5,8 @@ Zscaler Internet Access blacklist URL category:
 
 - read-back: the domains of the category (`urlCategories/{id}`), matched with the
   deployments by value (the category does not store the OpenCTI id);
-- removal: `REMOVE_FROM_LIST` of the domain, then activation, unless another OpenCTI
-  indicator not revoked blocks the same domain;
+- removal: `REMOVE_FROM_LIST` of the domain, then activation; the reconciliation never
+  asks to remove a domain that a deployment staying on Zscaler shares;
 - re-push: the stream create path (`ADD_TO_LIST`, then activation).
 
 The ZIA API exposes no hit of a URL category (web logs go through Nanolog Streaming
@@ -51,13 +51,14 @@ class ZscalerDeploymentAdapter(DeploymentVendorAdapter):
     ) -> None:
         """Remove a domain from the blacklist (withdrawal, revocation or expiry).
 
-        The domain stays listed while another OpenCTI indicator not revoked blocks it.
+        The reconciliation only calls it when no deployment staying on Zscaler shares
+        the domain, and calls it once per domain even when several deployments leave
+        together, so no other indicator is looked up here.
 
         :raises ZscalerApiError: When Zscaler refuses the change.
-        :raises SharedDomainLookupError: When the other indicators of the domain cannot be read.
         """
         domain = vendor_indicator.raw.get("domain") or vendor_indicator.value
-        self._connector.remove_domain(domain, deployment.identifiers)
+        self._connector.send_to_zscaler(domain, "delete")
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
         """Add the domain of an indicator to the blacklist again.

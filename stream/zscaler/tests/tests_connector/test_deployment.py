@@ -303,22 +303,50 @@ def test_delete_without_the_other_indicators_is_not_applied(connector):
     )
 
 
-def test_adapter_keeps_a_domain_blocked_by_another_indicator(connector):
+def test_expired_indicators_do_not_keep_a_deleted_domain(connector):
     zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
     connector.helper.api.indicator.list.return_value = [
         {
             "id": OTHER_ID,
             "standard_id": "indicator--other",
             "pattern": "[domain-name:value = 'evil.example']",
+            "valid_until": "2020-01-01T00:00:00.000Z",
         }
     ]
+    indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    assert zscaler.urls == []
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
+def test_deleted_domain_kept_for_an_indicator_valid_in_the_future(connector):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": OTHER_ID,
+            "standard_id": "indicator--other",
+            "pattern": "[domain-name:value = 'evil.example']",
+            "valid_until": "2999-01-01T00:00:00.000Z",
+        }
+    ]
+
+    connector._process_message(make_message("delete", make_indicator()))
+
+    assert zscaler.urls == ["evil.example"]
+
+
+def test_adapter_removes_the_domain_without_looking_up_other_indicators(connector):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
 
     ZscalerDeploymentAdapter(connector).remove_vendor_indicator(
         VendorIndicator(value="evil.example", raw={"domain": "evil.example"}),
         make_deployment(),
     )
 
-    assert zscaler.puts == []
+    assert zscaler.urls == []
+    connector.helper.api.indicator.list.assert_not_called()
 
 
 def test_deleted_domain_already_absent_is_reported_removed(connector):
@@ -605,7 +633,7 @@ def test_rejected_request_message_is_truncated(connector):
 def test_list_blocked_domains(connector):
     connector.session = MagicMock()
     connector.session.get.side_effect = [
-        response(json_data={"id": "blacklist", "urls": ["a.example", 42]}),
+        response(json_data={"id": "blacklist", "urls": ["a.example"]}),
         response(json_data={"id": "blacklist", "configuredName": "Blacklist"}),
     ]
 
@@ -620,6 +648,14 @@ def test_list_blocked_domains(connector):
         (response(json_data=["a.example"]), "not a URL category"),
         (response(json_data={"message": "error"}), "not a URL category"),
         (response(json_data={"id": "blacklist", "urls": "a"}), "'urls' is not a list"),
+        (
+            response(json_data={"id": "blacklist", "urls": ["a.example", 42]}),
+            "'urls' is not a list of domains",
+        ),
+        (
+            response(json_data={"id": "blacklist", "urls": ["a.example", ""]}),
+            "'urls' is not a list of domains",
+        ),
         (response(403, text="Forbidden"), "status 403: Forbidden"),
     ],
 )
@@ -822,6 +858,31 @@ def test_reconciliation_confirms_removes_and_withdraws(e2e_connector, router):
         OTHER_ID: "removed",
         "withdrawn-id": "removed",
     }
+
+
+def test_reconciliation_removes_a_shared_domain_once_all_its_deployments_leave(
+    e2e_connector, router
+):
+    """Two withdrawn deployments of one domain remove it once; a live one keeps it."""
+    router.deployments = [
+        deployment_node("a", "active", "shared.example", revoked=True),
+        deployment_node("b", "active", "shared.example", revoked=True),
+        deployment_node("c", "active", "kept.example", revoked=True),
+        deployment_node("d", "active", "kept.example"),
+    ]
+    zscaler = FakeZscaler(urls=["shared.example", "kept.example"]).install(
+        e2e_connector
+    )
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.withdrawn == 3
+    assert zscaler.urls == ["kept.example"]
+    assert len(zscaler.puts) == 1
+    e2e_connector.helper.api.indicator.list.assert_not_called()
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    reports = {report["indicatorId"]: report["status"] for report in batch["reports"]}
+    assert reports == {"a": "removed", "b": "removed", "c": "removed", "d": "active"}
 
 
 def test_read_back_failure_skips_the_reconciliation(e2e_connector, router):

@@ -249,12 +249,14 @@ Platform entity (created if it does not exist).
 
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the domains of the blacklist URL category are
   read back (`GET /urlCategories/{id}`, one request). The category does not store the OpenCTI id, so deployments are
-  matched by value. A read-back error skips the run: indicators are never reported `removed` from a partial listing.
-  Each change made by the reconciliation is activated like the stream changes (mind the 400 requests per hour limit).
+  matched by value. A read-back error or a malformed category (an entry of `urls` that is not a domain) skips the run:
+  indicators are never reported `removed` from a partial listing. Each change made by the reconciliation is activated
+  like the stream changes (mind the 400 requests per hour limit).
 - **Shared domains**: the category only holds values, so a domain shared by several OpenCTI indicators stays listed
-  while one of them is not revoked. Before removing a domain (delete event or withdrawal), the connector looks for
-  another indicator with the same `[domain-name:value = '...']` pattern in OpenCTI; when one exists, the domain is kept
-  and the removed indicator is reported `removed`.
+  while one of them still needs it, and the removed indicator is reported `removed` all the same. On a delete event, the
+  connector looks for another valid indicator (neither revoked nor expired) with the same
+  `[domain-name:value = '...']` pattern in OpenCTI. During the reconciliation, a domain is kept while a deployment that
+  stays on Zscaler shares it, and a domain several withdrawn or expired deployments share is removed once.
 - **Hits**: not reported. The ZIA API exposes no hit of a URL category (web logs are exported through Nanolog Streaming
   Service feeds).
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
