@@ -867,7 +867,6 @@ def test_adapter_collects_hits_from_alert_evidence():
                 "alertCreationTime": "2026-10-03T10:00:00Z",
                 "evidence": [{"ipAddress": "198.51.100.7"}],
             },
-            {"evidence": [{"ipAddress": "198.51.100.7"}]},
         ]
     )
     deployments = [
@@ -951,6 +950,36 @@ def serve_alerts(minutes):
 
 HIT_SINCE = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
 HIT_UNTIL = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+
+
+@pytest.mark.parametrize(
+    "alert",
+    [
+        {"evidence": [{"ipAddress": "198.51.100.7"}]},
+        {
+            "alertCreationTime": "not a date",
+            "evidence": [{"ipAddress": "198.51.100.7"}],
+        },
+    ],
+)
+def test_adapter_hit_read_rejects_an_alert_without_creation_time(alert):
+    """A skipped alert would be lost: the hit window moves past its evidence."""
+    connector = build_connector()
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    connector.api.list_alerts = MagicMock(
+        return_value=[
+            {
+                "alertCreationTime": "2026-10-03T11:10:00Z",
+                "evidence": [{"ipAddress": "198.51.100.7"}],
+            },
+            alert,
+        ]
+    )
+    until = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    adapter = MicrosoftDefenderDeploymentAdapter(connector, clock=lambda: until)
+
+    with pytest.raises(DefenderDeploymentError, match="carries no creation time"):
+        adapter.collect_hits([make_deployment()], since)
 
 
 def test_adapter_halves_capped_alert_windows(monkeypatch):

@@ -268,7 +268,12 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
             timestamp = parse_datetime(
                 alert.get("alertCreationTime") or alert.get("firstEventTime")
             )
-            if timestamp is None or timestamp < since:
+            if timestamp is None:
+                # Never skipped: the hit window would move past its evidence.
+                raise DefenderDeploymentError(
+                    "A Microsoft Defender alert of the hit read carries no creation time"
+                )
+            if timestamp < since:
                 continue
             matched = {
                 deployment.indicator_id
