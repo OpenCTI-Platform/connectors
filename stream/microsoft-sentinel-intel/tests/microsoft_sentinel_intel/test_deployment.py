@@ -35,6 +35,7 @@ INDICATOR_ID = "0d8b4f0e-6a43-4f11-8f6c-1d2f5e6a7b8c"
 INDICATOR_STIX_ID = "indicator--5d4f2a3b-8c9d-4e1f-a2b3-c4d5e6f7a8b9"
 OTHER_ID = "1e9c5f1f-7b54-4a22-9e7d-2e3f6a7b8c9d"
 OTHER_STIX_ID = "indicator--7e8f9a0b-1c2d-4e3f-8a4b-5c6d7e8f9a0b"
+UPLOADED = json.dumps({"errors": []})
 WORKSPACE_PATH = (
     "/subscriptions/ChangeMe/resourceGroups/default/providers/"
     "Microsoft.OperationalInsights/workspaces/ChangeMe/providers/"
@@ -245,7 +246,7 @@ def test_create_reports_the_pushed_indicator(
 ) -> None:
     mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     indicator = make_indicator()
 
@@ -260,7 +261,7 @@ def test_upload_of_a_revoked_indicator_is_reported_removed(
 ) -> None:
     mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     indicator = make_indicator(revoked=True)
 
@@ -353,6 +354,45 @@ def test_batch_upload_reports_the_objects_listed_in_its_errors_failed(
     )
 
 
+@pytest.mark.parametrize(
+    ("raw", "pushed", "failed"),
+    [
+        ("<html>Bad gateway</html>", [], [0, 1]),
+        ('["not", "an", "object"]', [], [0, 1]),
+        (b"", [0, 1], []),
+    ],
+)
+def test_batch_upload_answered_with_an_unreadable_body_reports_every_object_failed(
+    mocker: MockerFixture, batch_connector: Connector, raw, pushed, failed
+) -> None:
+    """A body that is not a JSON object cannot tell which objects were imported;
+    an empty one lists no rejection."""
+    mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200, body=Mock(return_value=raw)),
+    )
+    indicators = [
+        make_indicator(),
+        make_indicator(indicator_id=OTHER_ID, stix_id=OTHER_STIX_ID),
+    ]
+
+    batch_connector.process_batch(
+        {"events": [make_event("create", indicator) for indicator in indicators]}
+    )
+
+    assurance = batch_connector.assurance
+    assert [call.args[0] for call in assurance.report_pushed.call_args_list] == [
+        indicators[index] for index in pushed
+    ]
+    assert [call.args[0] for call in assurance.report_push_failed.call_args_list] == [
+        indicators[index] for index in failed
+    ]
+    assert all(
+        "could not be read" in call.args[1]
+        for call in assurance.report_push_failed.call_args_list
+    )
+
+
 def test_delete_reports_the_removed_indicator(
     mocker: MockerFixture, connector: Connector
 ) -> None:
@@ -387,7 +427,7 @@ def test_identities_are_never_reported(
 ) -> None:
     mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     connector._report_uploaded([{"id": "identity--x", "type": "identity"}])
@@ -404,7 +444,7 @@ def test_batch_upload_reports_every_indicator(
 ) -> None:
     mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     delete = mocker.patch.object(batch_connector.client, "delete_indicator_by_id")
     first = make_indicator()
@@ -456,7 +496,7 @@ def test_connector_works_without_write_back(
 ) -> None:
     send = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
     connector.assurance = None
 
@@ -766,7 +806,7 @@ def test_list_incident_entities_rejects_a_malformed_response(
 def test_delete_ti_object(mocker: MockerFixture, connector: Connector) -> None:
     send = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
-        return_value=Mock(status_code=200),
+        return_value=Mock(status_code=200, body=Mock(return_value=UPLOADED)),
     )
 
     connector.client.delete_ti_object(RESOURCE_ID)
@@ -1368,7 +1408,7 @@ def test_stream_outcomes_are_reported_in_one_batch(
     mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
         side_effect=[
-            Mock(status_code=200),
+            Mock(status_code=200, body=Mock(return_value=UPLOADED)),
             HttpResponseError(message="400 Invalid pattern"),
         ],
     )

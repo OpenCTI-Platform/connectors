@@ -19,6 +19,9 @@ from microsoft_sentinel_intel.utils import (
 from pycti import OpenCTIConnectorHelper
 
 REJECTED_UPLOAD_MESSAGE = "[API] Microsoft Sentinel rejected the object"
+UNREADABLE_UPLOAD_REASON = (
+    "Microsoft Sentinel answered the upload with a response that could not be read"
+)
 
 
 def _rejected_objects(response: object, count: int) -> dict[int, str]:
@@ -27,16 +30,26 @@ def _rejected_objects(response: object, count: int) -> dict[int, str]:
     Sentinel answers 200 when at least one object is imported and lists the rejected
     ones in `errors` (`recordIndex`, `errorMessages`). An error that names no object
     of the upload rejects all of them: a rejected object is never reported live.
+    A body that is not a JSON object cannot tell which objects were imported: all
+    of them are rejected; an empty body lists no rejection.
 
     :param response: The upload response.
     :param count: The number of objects uploaded.
     :return: The rejection reason by object index (empty when all were imported).
     """
     try:
-        body = json.loads(response.body())
-    except (AttributeError, TypeError, ValueError):
+        raw = response.body()
+    except AttributeError:
+        return dict.fromkeys(range(count), UNREADABLE_UPLOAD_REASON)
+    if isinstance(raw, bytes | str) and not raw.strip():
         return {}
-    errors = body.get("errors") if isinstance(body, dict) else None
+    try:
+        body = json.loads(raw)
+    except (TypeError, ValueError):
+        return dict.fromkeys(range(count), UNREADABLE_UPLOAD_REASON)
+    if not isinstance(body, dict):
+        return dict.fromkeys(range(count), UNREADABLE_UPLOAD_REASON)
+    errors = body.get("errors")
     if not errors:
         return {}
     rejected: dict[int, str] = {}
