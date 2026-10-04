@@ -18,6 +18,46 @@ from microsoft_sentinel_intel.utils import (
 )
 from pycti import OpenCTIConnectorHelper
 
+REJECTED_UPLOAD_MESSAGE = "[API] Microsoft Sentinel rejected the object"
+
+
+def _rejected_objects(response: object, count: int) -> dict[int, str]:
+    """Return the reason of each object an upload response rejected, by index.
+
+    Sentinel answers 200 when at least one object is imported and lists the rejected
+    ones in `errors` (`recordIndex`, `errorMessages`). An error that names no object
+    of the upload rejects all of them: a rejected object is never reported live.
+
+    :param response: The upload response.
+    :param count: The number of objects uploaded.
+    :return: The rejection reason by object index (empty when all were imported).
+    """
+    try:
+        body = json.loads(response.body())
+    except (AttributeError, TypeError, ValueError):
+        return {}
+    errors = body.get("errors") if isinstance(body, dict) else None
+    if not errors:
+        return {}
+    rejected: dict[int, str] = {}
+    for entry in errors if isinstance(errors, list) else [errors]:
+        error = entry if isinstance(entry, dict) else {}
+        messages = error.get("errorMessages")
+        reason = (
+            "; ".join(str(message) for message in messages)
+            if isinstance(messages, list) and messages
+            else "rejected by Microsoft Sentinel"
+        )
+        index = error.get("recordIndex")
+        if (
+            not isinstance(index, int)
+            or isinstance(index, bool)
+            or not 0 <= index < count
+        ):
+            return dict.fromkeys(range(count), reason)
+        rejected[index] = reason
+    return rejected
+
 
 class Connector:
 
@@ -69,12 +109,17 @@ class Connector:
         Shared by the stream create/update path and the reconciliation re-push.
 
         :param stix_object: STIX object data dict (stream event shape).
-        :raises ConnectorClientError: If the upload API rejects the object.
+        :raises ConnectorClientError: If the upload API rejects the object (also
+            when it answers 200 with the object in its `errors`).
         """
-        self.client.upload_stix_objects(
+        response = self.client.upload_stix_objects(
             stix_objects=[self._prepare_stix_object(stix_object)],
             source_system=self.config.microsoft_sentinel_intel.source_system,
         )
+        if rejected := _rejected_objects(response, 1):
+            raise ConnectorClientError(
+                message=REJECTED_UPLOAD_MESSAGE, metadata={"error": rejected[0]}
+            )
 
     def _report_uploaded(self, stix_objects: list[dict]) -> None:
         """Report the indicators accepted by the upload API.
@@ -261,14 +306,34 @@ class Connector:
                     message=f"[BATCH] Uploading {len(prepared_objects)} objects",
                 )
                 try:
-                    self.client.upload_stix_objects(
+                    response = self.client.upload_stix_objects(
                         stix_objects=prepared_objects,
                         source_system=self.config.microsoft_sentinel_intel.source_system,
                     )
                 except Exception as err:
                     self._report_upload_failed(objects_to_upload, err)
                     raise
-                self._report_uploaded(objects_to_upload)
+                rejected = _rejected_objects(response, len(objects_to_upload))
+                if rejected:
+                    self.helper.connector_logger.warning(
+                        message=f"[BATCH] Microsoft Sentinel rejected {len(rejected)}/{len(objects_to_upload)} objects",
+                        meta={"errors": sorted(set(rejected.values()))},
+                    )
+                self._report_uploaded(
+                    [
+                        data
+                        for index, data in enumerate(objects_to_upload)
+                        if index not in rejected
+                    ]
+                )
+                for index in sorted(rejected):
+                    self._report_upload_failed(
+                        [objects_to_upload[index]],
+                        ConnectorClientError(
+                            message=REJECTED_UPLOAD_MESSAGE,
+                            metadata={"error": rejected[index]},
+                        ),
+                    )
 
             for data in objects_to_delete:
                 try:

@@ -289,6 +289,69 @@ def test_rejected_upload_is_reported_failed(
     connector.assurance.report_pushed.assert_not_called()
 
 
+def test_upload_answered_with_the_object_in_its_errors_is_reported_failed(
+    mocker: MockerFixture, connector: Connector
+) -> None:
+    """Sentinel answers 200 when an upload imports any object: the rejected ones
+    are listed in `errors` by `recordIndex`."""
+    mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=response(
+            {"errors": [{"recordIndex": 0, "errorMessages": ["Invalid pattern"]}]}
+        ),
+    )
+    indicator = make_indicator()
+
+    with pytest.raises(ConnectorClientError):
+        connector._handle_event(make_event("create", indicator))
+
+    reported, message = connector.assurance.report_push_failed.call_args.args
+    assert reported == indicator
+    assert message == "[API] Microsoft Sentinel rejected the object: Invalid pattern"
+    connector.assurance.report_pushed.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("body", "pushed", "failed"),
+    [
+        ({}, [0, 1], []),
+        ({"errors": []}, [0, 1], []),
+        ({"errors": [{"recordIndex": 1, "errorMessages": ["Invalid"]}]}, [0], [1]),
+        ({"errors": [{"errorMessages": ["Invalid"]}]}, [], [0, 1]),
+        ({"errors": [{"recordIndex": 7}]}, [], [0, 1]),
+        ({"errors": ["Invalid"]}, [], [0, 1]),
+    ],
+)
+def test_batch_upload_reports_the_objects_listed_in_its_errors_failed(
+    mocker: MockerFixture, batch_connector: Connector, body, pushed, failed
+) -> None:
+    """An error that names no object of the upload rejects all of them."""
+    mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=response(body),
+    )
+    indicators = [
+        make_indicator(),
+        make_indicator(indicator_id=OTHER_ID, stix_id=OTHER_STIX_ID),
+    ]
+
+    batch_connector.process_batch(
+        {"events": [make_event("create", indicator) for indicator in indicators]}
+    )
+
+    assurance = batch_connector.assurance
+    assert [call.args[0] for call in assurance.report_pushed.call_args_list] == [
+        indicators[index] for index in pushed
+    ]
+    assert [call.args[0] for call in assurance.report_push_failed.call_args_list] == [
+        indicators[index] for index in failed
+    ]
+    assert all(
+        call.args[1].startswith("[API] Microsoft Sentinel rejected the object: ")
+        for call in assurance.report_push_failed.call_args_list
+    )
+
+
 def test_delete_reports_the_removed_indicator(
     mocker: MockerFixture, connector: Connector
 ) -> None:
