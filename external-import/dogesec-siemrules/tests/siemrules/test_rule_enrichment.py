@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 from pycti import AttackPattern, StixCoreRelationship
 from rule_enrichment import (
+    IncompleteEnrichmentError,
     RuleEnricher,
     mitre_technique_names,
     parse_sigma_rule,
@@ -155,18 +156,33 @@ def test_lookups_are_cached_for_the_run_and_reset():
 
 def test_lookup_failure_never_renames_a_technique():
     enricher = _enricher(known=RuntimeError("platform down"))
-    objects = enricher.enrich([_indicator(), _mitre_attack_pattern()])
+    named_only = SIGMA_RULE.replace("  - attack.T1059.001\n", "")
+    objects = enricher.enrich([_indicator(named_only), _mitre_attack_pattern()])
 
     created = {
         o["x_mitre_id"]: o["name"]
         for o in objects
         if o["type"] == "attack-pattern" and "x_mitre_id" in o
     }
-    # The bundle carries T1059's real name: safe to create. T1059.001 has no
-    # known name: referenced only.
+    # The bundle carries T1059's real name: safe to create and link.
     assert created == {"T1059": "Command and Scripting Interpreter"}
-    assert len([o for o in objects if o["type"] == "relationship"]) == 2
+    assert len([o for o in objects if o["type"] == "relationship"]) == 1
     enricher.helper.connector_logger.warning.assert_called_once()
+
+
+def test_lookup_failure_on_an_unnamed_technique_asks_for_a_retry():
+    enricher = _enricher(known=RuntimeError("platform down"))
+    indicator = _indicator()
+    # T1059.001 is neither in the bundle nor named by it: the rule is not
+    # sent with a link to a technique that may not exist.
+    with pytest.raises(IncompleteEnrichmentError, match="T1059.001"):
+        enricher.enrich([indicator, _mitre_attack_pattern()])
+    # Once the platform answers, the next run links the rule.
+    enricher.reset()
+    enricher.helper.api.attack_pattern.list.side_effect = None
+    enricher.helper.api.attack_pattern.list.return_value = []
+    objects = enricher.enrich([_indicator(), _mitre_attack_pattern()])
+    assert len([o for o in objects if o["type"] == "relationship"]) == 2
 
 
 def test_non_sigma_objects_are_untouched():

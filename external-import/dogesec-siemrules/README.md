@@ -53,7 +53,7 @@ Each rule of the selected Detection Packs is imported with the STIX bundle SIEM 
 * `x_opencti_rule_level`: the Sigma `level` (`informational`, `low`, `medium`, `high`, `critical`),
 * `x_opencti_rule_logsource`: the Sigma `logsource` keys present in the rule (`category`, `product`, `service`), lowercased,
 
-and adds one `indicates` relationship per ATT&CK technique or sub-technique tag (`attack.t1059`, `attack.t1059.001`), targeting the Attack Pattern whose id is derived from the MITRE id, next to the `related-to` relationships SIEM Rules provides. Tactic tags (`attack.execution`) create no relationship. Techniques OpenCTI already holds are referenced as they are and never renamed; the others are created under the MITRE ATT&CK name carried by the bundle.
+and adds one `indicates` relationship per ATT&CK technique or sub-technique tag (`attack.t1059`, `attack.t1059.001`), targeting the Attack Pattern whose id is derived from the MITRE id, next to the `related-to` relationships SIEM Rules provides. Tactic tags (`attack.execution`) create no relationship. Techniques OpenCTI already holds are referenced as they are and never renamed; the others are created under the MITRE ATT&CK name carried by the bundle. When OpenCTI cannot be asked which techniques it holds and the bundle does not name a tagged technique, the rule is not imported with a link to a technique that may not exist: its Detection Pack stops at this rule and the next run imports it again.
 
 Requires `pycti==7.261002.0` (pinned in `requirements.txt`). The rule metadata properties are stored from the OpenCTI release shipping the Threat-Informed Defense Matrix; older platforms ignore them.
 

@@ -5,6 +5,7 @@ import freezegun
 import pytest
 from connector import SiemrulesConnector, SiemrulesException
 from pytest_mock import MockerFixture
+from rule_enrichment import IncompleteEnrichmentError
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
@@ -296,6 +297,65 @@ def test_process_updated_rules(
     connector.process_updated_rules(dpack, "work-id")
 
     assert process_rule_mock.call_count == 2
+
+
+@freezegun.freeze_time("2026-02-18T15:24:00Z")
+def test_incomplete_enrichment_keeps_the_rule_for_the_next_run(
+    mocker: MockerFixture, mock_session: MagicMock, connector: SiemrulesConnector
+) -> None:
+    """A rule whose techniques cannot be resolved stops its pack before the cursor moves"""
+    connector.helper.get_state.return_value = {"detection-packs": {}}
+    rules = [
+        {
+            "metadata": {"id": f"rule-{n}", "name": f"Rule {n}", "modified": f"T{n}"},
+            "rule_type": "base",
+        }
+        for n in (1, 2, 3)
+    ]
+    mocker.patch.object(connector, "retrieve", return_value=rules)
+    enrich = mocker.patch.object(
+        connector.enricher,
+        "enrich",
+        side_effect=[[], IncompleteEnrichmentError("T1059.001"), []],
+    )
+    update_pack_state = mocker.patch.object(connector, "update_pack_state")
+
+    with pytest.raises(IncompleteEnrichmentError):
+        connector.process_updated_rules({"id": "pack-1", "name": "Pack"}, "work-id")
+
+    # rule-1 was sent: the cursor stops on it, rule-2 is processed again next run
+    assert enrich.call_count == 2
+    update_pack_state.assert_called_once_with("pack-1", latest_update="T1")
+    connector.helper.send_stix2_bundle.assert_called_once()
+
+
+@freezegun.freeze_time("2026-02-18T15:24:00Z")
+def test_incomplete_enrichment_fails_only_its_pack_work(
+    mocker: MockerFixture, connector: SiemrulesConnector
+) -> None:
+    """The other packs of the run are still processed"""
+    packs = [{"id": "pack-1", "name": "Pack One"}, {"id": "pack-2", "name": "Pack Two"}]
+    mocker.patch.object(connector, "list_detection_packs", return_value=packs)
+    process = mocker.patch.object(
+        connector,
+        "process_updated_rules",
+        side_effect=[IncompleteEnrichmentError("T1059.001"), None],
+    )
+    update_pack_state = mocker.patch.object(connector, "update_pack_state")
+    mocker.patch.object(connector, "update_state")
+
+    connector.run_once()
+
+    assert process.call_count == 2
+    # The failed pack keeps its previous last run
+    assert call("pack-1", last_run=mocker.ANY) not in update_pack_state.call_args_list
+    assert call("pack-2", last_run=mocker.ANY) in update_pack_state.call_args_list
+    errors = [
+        c.kwargs
+        for c in connector.helper.api.work.to_processed.call_args_list
+        if c.kwargs["in_error"]
+    ]
+    assert len(errors) == 1
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")

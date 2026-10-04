@@ -115,6 +115,15 @@ def _to_dict(stix_object: Any) -> dict[str, Any]:
     return json.loads(stix_object.serialize())
 
 
+class IncompleteEnrichmentError(Exception):
+    """A rule tags a technique the platform could not be asked about.
+
+    Neither the platform nor the bundle tells whether the technique exists
+    or what its name is: the rule cannot be linked to it safely now and must
+    be processed again once the platform answers.
+    """
+
+
 class RuleEnricher:
     """Add rule metadata and ATT&CK ``indicates`` links to SIEM Rules bundles.
 
@@ -123,7 +132,9 @@ class RuleEnricher:
     re-attributes them; the others are created under their MITRE ATT&CK
     name when the bundle carries it, under their MITRE id otherwise. When
     the platform cannot be asked, a technique is only created when the
-    bundle carries its MITRE ATT&CK name, and referenced otherwise.
+    bundle carries its MITRE ATT&CK name; a rule tagging any other technique
+    raises ``IncompleteEnrichmentError`` rather than being sent with a link
+    to a technique that may not exist.
     """
 
     def __init__(self, helper: OpenCTIConnectorHelper) -> None:
@@ -173,7 +184,12 @@ class RuleEnricher:
         return not known
 
     def enrich(self, objects: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Return ``objects`` with the rule metadata and ``indicates`` links."""
+        """Return ``objects`` with the rule metadata and ``indicates`` links.
+
+        Raises:
+            IncompleteEnrichmentError: When a tagged technique is absent from
+                the bundle, unnamed by it, and the platform could not be asked.
+        """
         rules: list[tuple[dict[str, Any], list[str]]] = []
         for obj in objects:
             if obj.get("type") != "indicator" or obj.get("pattern_type") != "sigma":
@@ -191,6 +207,21 @@ class RuleEnricher:
         self._resolve(mitre_id for _, ids in rules for mitre_id in ids)
         names = mitre_technique_names(objects)
         existing_ids = {obj.get("id") for obj in objects}
+        unresolved = sorted(
+            {
+                mitre_id
+                for _, ids in rules
+                for mitre_id in ids
+                if attack_pattern_id(mitre_id) not in existing_ids
+                and self._known.get(attack_pattern_id(mitre_id)) is None
+                and mitre_id not in names
+            }
+        )
+        if unresolved:
+            raise IncompleteEnrichmentError(
+                "The platform could not be asked about the ATT&CK techniques "
+                f"{', '.join(unresolved)}"
+            )
         added: list[dict[str, Any]] = []
         for indicator, ids in rules:
             for mitre_id in ids:
