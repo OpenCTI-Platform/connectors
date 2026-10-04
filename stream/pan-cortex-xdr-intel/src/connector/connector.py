@@ -337,6 +337,12 @@ class Connector:
             for value in values
             if (normalized := normalize_value(value)) is not None
         }
+        # Hashes are written in either case in the patterns of other indicators.
+        spellings = dict.fromkeys(
+            spelling
+            for value in values
+            for spelling in (value, value.lower(), value.upper())
+        )
         try:
             indicators = self.helper.api.indicator.list(
                 filters={
@@ -344,7 +350,7 @@ class Connector:
                     "filters": [
                         {
                             "key": "pattern",
-                            "values": [f"'{value}'" for value in values],
+                            "values": [f"'{spelling}'" for spelling in spellings],
                             "operator": "contains",
                             "mode": "or",
                         },

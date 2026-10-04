@@ -299,7 +299,12 @@ def test_delete_keeps_the_iocs_another_valid_indicator_holds(connector):
     assert filters["filters"] == [
         {
             "key": "pattern",
-            "values": [f"'{SHA256}'", f"'{MD5}'"],
+            "values": [
+                f"'{SHA256}'",
+                f"'{SHA256.upper()}'",
+                f"'{MD5}'",
+                f"'{MD5.upper()}'",
+            ],
             "operator": "contains",
             "mode": "or",
         },
