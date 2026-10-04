@@ -93,10 +93,13 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
 5. **Suppression**: events matching a benign pattern (case-insensitive substring, or `/regex/`) are removed. Regular
    expressions run on the `regex` engine within what is left of `timeout_seconds`: a pattern that backtracks past it
    ends the run as a `timeout` instead of blocking its report.
-6. **Knowledge**: `to_stix()` maps the results; the bundle is sent with the run work id.
-7. **Report**: `completed` with hits, distinct entities, evidence, translated query, language, cost and result ids, or
-   `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the work in error). A reported
-   error carries `hunt_run_reported = True`, so the `listen_hunt` wrapper of pycti does not report the run a second time.
+6. **Report**: `completed` with hits, distinct entities, evidence, translated query, language, cost and the ids of the
+   objects `to_stix()` maps, or `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the
+   work in error). A reported error carries `hunt_run_reported = True`, so the `listen_hunt` wrapper of pycti does not
+   report the run a second time.
+7. **Knowledge**: the bundle is sent with the run work id once the run is reported completed. A run that could not be
+   reported is reported `failed` and sends no knowledge; a bundle that cannot be sent after the report ends the work in
+   error and leaves the run completed, never failed with knowledge.
 
 ## Implementing a hunt connector
 

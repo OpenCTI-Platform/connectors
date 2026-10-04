@@ -116,6 +116,19 @@ def _error_message(error: BaseException) -> str:
     return message[:ERROR_MESSAGE_MAX_LENGTH]
 
 
+def _mark_reported(error: BaseException) -> None:
+    """Flag an error whose run outcome is already reported.
+
+    The ``listen_hunt`` wrapper of pycti, which receives the error raised again
+    to mark the work in error, then does not report the run a second time.
+    """
+    try:
+        error.hunt_run_reported = True  # type: ignore[attr-defined]
+    except AttributeError:
+        # An exception type without instance attributes: the wrapper reports it again and OpenCTI refuses the duplicate
+        pass
+
+
 class InternalHuntConnector(ABC):
     """Base class for internal hunt connectors.
 
@@ -496,6 +509,8 @@ class InternalHuntConnector(ABC):
                 return self._complete_preview(request, native_query, started)
             return self._complete_execution(request, native_query, started)
         except Exception as err:
+            if getattr(err, "hunt_run_reported", False) is True:
+                raise
             self.logger.error(
                 "[HUNT] Hunt run failed",
                 {"hunt_run_id": run_id, "error": _error_message(err)},
@@ -521,11 +536,18 @@ class InternalHuntConnector(ABC):
     def _complete_execution(
         self, request: HuntRequest, native_query: NativeQuery, started: float
     ) -> str:
-        """Execute the query, send the knowledge and report the completed run."""
+        """Execute the query, report the completed run, then send its knowledge.
+
+        The run is reported completed before its bundle is sent: a run that
+        could not be reported ends failed with no knowledge sent, and a bundle
+        that cannot be sent after the report ends the work in error without
+        turning the completed run into a failed one.
+        """
         deadline = RunDeadline(request.limits.timeout_seconds)
         raw_result = self._execute_within_limits(request, native_query, deadline)
         result = suppress_benign(raw_result, request.hunt.benign_patterns, deadline)
-        result_ids = self.send_bundle(self.to_stix(request, result))
+        objects = self._bundle_objects(self.to_stix(request, result))
+        result_ids = list(objects)
         hits_count = result.hits_count
         self.report(
             request.hunt_run.id,
@@ -547,6 +569,15 @@ class InternalHuntConnector(ABC):
                 cost_ms=self._elapsed_ms(started),
             ),
         )
+        try:
+            self._send_objects(objects)
+        except Exception as err:
+            self.logger.error(
+                "[HUNT] Hunt run completed but its knowledge could not be sent",
+                {"hunt_run_id": request.hunt_run.id, "error": _error_message(err)},
+            )
+            _mark_reported(err)
+            raise
         self.logger.info(
             "[HUNT] Hunt run completed",
             {
@@ -619,12 +650,22 @@ class InternalHuntConnector(ABC):
         Returns:
             The STIX ids of the objects sent.
         """
+        objects = self._bundle_objects(stix_objects)
+        self._send_objects(objects)
+        return list(objects)
+
+    def _bundle_objects(self, stix_objects: Sequence[Any]) -> dict[str, dict[str, Any]]:
+        """The STIX dictionaries of a run's knowledge, by id (duplicates merged)."""
         objects: dict[str, dict[str, Any]] = {}
         for stix_object in stix_objects:
             stix_dict = self._to_stix_dict(stix_object)
             objects[stix_dict["id"]] = stix_dict
+        return objects
+
+    def _send_objects(self, objects: dict[str, dict[str, Any]]) -> None:
+        """Send STIX dictionaries to OpenCTI within the run work."""
         if not objects:
-            return []
+            return
         bundle = self.helper.stix2_create_bundle(list(objects.values()))
         # The bundle references entities that already exist in OpenCTI (techniques,
         # indicators, Security Platform, markings, author): cleaning up "inconsistent"
@@ -634,7 +675,6 @@ class InternalHuntConnector(ABC):
             work_id=self.helper.work_id,
             cleanup_inconsistent_bundle=False,
         )
-        return list(objects)
 
     def report(self, run_id: str, report: HuntRunReport) -> None:
         """Report the outcome of a hunt run to OpenCTI.
@@ -699,11 +739,7 @@ class InternalHuntConnector(ABC):
                 {"hunt_run_id": run_id, "error": _error_message(report_error)},
             )
             return
-        try:
-            error.hunt_run_reported = True  # type: ignore[attr-defined]
-        except AttributeError:
-            # An exception type without instance attributes: the wrapper reports it again and OpenCTI refuses the duplicate
-            pass
+        _mark_reported(error)
 
     @staticmethod
     def _raw_run_id(event: Mapping[str, Any]) -> str | None:

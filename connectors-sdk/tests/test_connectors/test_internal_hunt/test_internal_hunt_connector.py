@@ -629,6 +629,52 @@ def test_reported_flag_tolerates_errors_without_attributes(
     assert statuses == ["failed"]
 
 
+def test_completed_report_comes_before_the_knowledge(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given a run with results
+    connector = connector_factory(_results({"DestinationIp": "8.8.8.8"}))
+
+    # When the run is processed
+    connector.process_message(hunt_event())
+
+    # Then the run is reported completed, with the ids of its knowledge, before the bundle is sent
+    names = [call[0] for call in hunt_helper.mock_calls]
+    assert names.index("report_hunt_run") < names.index("send_stix2_bundle")
+    _, kwargs = _report_kwargs(hunt_helper)
+    sent = hunt_helper.stix2_create_bundle.call_args.args[0]
+    assert kwargs["result_ids"] == [obj["id"] for obj in sent]
+
+
+def test_unreported_run_sends_no_knowledge(connector_factory, hunt_event, hunt_helper):
+    # Given a platform refusing the completed report
+    connector = connector_factory(_results({"DestinationIp": "8.8.8.8"}))
+    hunt_helper.report_hunt_run.side_effect = [RuntimeError("report rejected"), None]
+
+    # When/Then the run is reported failed and no knowledge is sent
+    with pytest.raises(RuntimeError, match="report rejected"):
+        connector.process_message(hunt_event())
+    hunt_helper.send_stix2_bundle.assert_not_called()
+    statuses = [call.args[1] for call in hunt_helper.report_hunt_run.call_args_list]
+    assert statuses == ["completed", "failed"]
+
+
+def test_knowledge_failure_keeps_the_completed_run(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given a bundle that cannot be sent once the run is reported completed
+    connector = connector_factory(_results({"DestinationIp": "8.8.8.8"}))
+    hunt_helper.send_stix2_bundle.side_effect = RuntimeError("queue unavailable")
+
+    # When/Then the work ends in error and the run is never reported failed
+    with pytest.raises(RuntimeError, match="queue unavailable") as raised:
+        connector.process_message(hunt_event())
+    statuses = [call.args[1] for call in hunt_helper.report_hunt_run.call_args_list]
+    assert statuses == ["completed"]
+    assert raised.value.hunt_run_reported is True
+    connector.logger.error.assert_called()
+
+
 # ----------------------------------------------------------------------
 # Helpers
 # ----------------------------------------------------------------------
