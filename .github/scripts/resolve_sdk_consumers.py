@@ -77,17 +77,32 @@ def connector_dir(dependency_file: pathlib.Path) -> pathlib.Path:
     return parent.parent if parent.name == "src" else parent
 
 
-def python_version(dependency_file: pathlib.Path, fallback: str) -> str:
-    """Return the Python version of the connector image, read from its Dockerfile(s)."""
-    directory = connector_dir(dependency_file)
-    for dockerfile in sorted(directory.glob("Dockerfile*")):
+def dockerfile_versions(paths: list[pathlib.Path]) -> set[str]:
+    """Return every Python version stated by the given Dockerfiles (`FROM python:3.11-alpine`, `python3.12`)."""
+    found: set[str] = set()
+    for dockerfile in paths:
         for line in read_text(dockerfile).splitlines():
             if not line.lstrip().upper().startswith("FROM") and "python" not in line:
                 continue
             match = DOCKERFILE_PYTHON.search(line)
             if match:
-                return match.group(1)
-    return fallback
+                found.add(match.group(1))
+    return found
+
+
+def python_versions(
+    dependency_file: pathlib.Path, root: pathlib.Path, fallback: str
+) -> list[str]:
+    """Return the Python versions a connector is built with.
+
+    A connector is built from its own Dockerfile(s) (alpine images, `FROM python:3.11-alpine`) and
+    from the shared `Dockerfile_ubi9` at the repository root (`python3.12`), so both versions have
+    to resolve. The fallback applies only when no Dockerfile states a version.
+    """
+    directory = connector_dir(dependency_file)
+    versions = dockerfile_versions(sorted(directory.glob("Dockerfile*")))
+    versions |= dockerfile_versions(sorted(root.glob("Dockerfile_ubi9*")))
+    return sorted(versions) or [fallback]
 
 
 def rewrite_sdk_requirement(text: str, sdk: pathlib.Path) -> str:
@@ -111,12 +126,11 @@ def requirement_lines(dependency_file: pathlib.Path) -> list[str]:
 
 def resolve(
     dependency_file: pathlib.Path,
+    version: str,
     sdk: pathlib.Path,
-    fallback_python: str,
     root: pathlib.Path,
 ) -> tuple[pathlib.Path, str, bool, str]:
-    """Resolve one dependency file with the SDK taken from the local checkout."""
-    version = python_version(dependency_file, fallback_python)
+    """Resolve one dependency file for one Python version with the SDK taken from the local checkout."""
     rewritten = rewrite_sdk_requirement(
         "\n".join(requirement_lines(dependency_file)), sdk
     )
@@ -176,17 +190,24 @@ def main() -> int:
     if not (sdk / "pyproject.toml").is_file():
         print(f"no SDK at {sdk}", file=sys.stderr)
         return 2
-    targets = (
+    files = (
         [pathlib.Path(p).resolve() for p in args.only] if args.only else consumers(root)
     )
+    # one resolution per (dependency file, Python version the connector is built with)
+    targets = [
+        (dependency_file, version)
+        for dependency_file in files
+        for version in python_versions(dependency_file, root, args.python)
+    ]
     print(
-        f"Resolving {len(targets)} dependency file(s) of connectors that depend on connectors-sdk "
-        f"with the SDK of this checkout"
+        f"Resolving {len(files)} dependency file(s) of connectors that depend on connectors-sdk "
+        f"with the SDK of this checkout ({len(targets)} resolutions, one per Python version each "
+        f"connector is built with)"
     )
 
     failures: list[tuple[pathlib.Path, str, str]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        results = pool.map(lambda t: resolve(t, sdk, args.python, root), targets)
+        results = pool.map(lambda t: resolve(t[0], t[1], sdk, root), targets)
         for path, version, ok, detail in results:
             if ok:
                 print(f"  ok   py{version}  {path}")
