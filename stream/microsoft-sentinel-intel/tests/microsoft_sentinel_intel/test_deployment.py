@@ -872,7 +872,6 @@ def test_adapter_collects_hits_from_incident_entities(
     adapter_connector.client.iter_incidents.return_value = IncidentListing(
         [
             {"id": "incident-old", "properties": {"lastActivityTimeUtc": old}},
-            {"properties": {"lastActivityTimeUtc": recent}},
             {"id": "incident-1", "properties": {"lastActivityTimeUtc": recent}},
             {"id": "incident-2", "properties": {"createdTimeUtc": recent}},
         ]
@@ -897,6 +896,20 @@ def test_adapter_collects_hits_from_incident_entities(
         modified_since=since, page_size=100, max_pages=20
     )
     assert adapter_connector.client.list_incident_entities.call_count == 2
+
+
+def test_adapter_hit_read_rejects_an_incident_without_id(
+    adapter, adapter_connector
+) -> None:
+    """A skipped incident would be lost: the hit window moves past its entities."""
+    since = datetime.now(UTC) - timedelta(hours=1)
+    recent = (since + timedelta(minutes=30)).isoformat()
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
+        [{"properties": {"lastActivityTimeUtc": recent}}]
+    )
+
+    with pytest.raises(SentinelDeploymentError, match="incident of the hit read"):
+        list(adapter.collect_hits([make_deployment()], since))
 
 
 def test_adapter_hits_resume_at_an_incident_whose_entities_cannot_be_read(

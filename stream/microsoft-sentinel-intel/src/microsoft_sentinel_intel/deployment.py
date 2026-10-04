@@ -282,7 +282,12 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                     or modified_time
                 )
                 incident_id = incident.get("id") or incident.get("name")
-                if not incident_id or str(incident_id) in handled:
+                if not incident_id:
+                    # Never skipped: the hit window would move past its entities.
+                    raise SentinelDeploymentError(
+                        "A Microsoft Sentinel incident of the hit read carries no id"
+                    )
+                if str(incident_id) in handled:
                     continue
                 if activity_time is not None and activity_time >= since:
                     if inspected >= MAX_HIT_INCIDENTS:
