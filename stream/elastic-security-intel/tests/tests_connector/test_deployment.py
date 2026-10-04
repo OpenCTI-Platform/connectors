@@ -210,6 +210,7 @@ class TestAdapter:
             None,
             "indicator--future",
         ]
+        assert [v.active for v in listed] == [True, False, True]
         assert listed[0].external_id == f"doc-{INDICATOR_ID}"
         assert listed[0].raw == {"stix": live}
 
@@ -230,8 +231,9 @@ class TestAdapter:
             document(expired, "2000-01-01T00:00:00Z")["_source"],
         ]
         [listed] = ElasticDeploymentAdapter(connector).list_vendor_indicators()
-        # Still in the index: listed for removal, but never backfilled as active
+        # Still in the index: listed for removal, never confirmed or backfilled active
         assert listed.indicator_id is None
+        assert listed.active is False
         assert listed.external_id == "doc-indicator--expired"
         assert listed.raw == {"stix": expired}
 
