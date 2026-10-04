@@ -199,28 +199,53 @@ def test_feature_detection_failure_is_retried_later(
     assert reporter.is_supported() is True
 
 
-def test_feature_detection_ignores_malformed_fields(
-    graphql_helper, make_reporter, router
+MALFORMED_INTROSPECTIONS = [
+    None,
+    {"data": None},
+    {"data": {}},
+    {"data": {"__type": None}},
+    {"data": {"__type": {}}},
+    {"data": {"__type": {"fields": None}}},
+    {"data": {"__type": {"fields": {"name": "indicatorReportDeployment"}}}},
+    {"data": {"__type": {"fields": [None, {"name": "indicatorReportDeployment"}]}}},
+    {"data": {"__type": {"fields": [{"name": None}]}}},
+    {"data": {"__type": {"fields": [{"name": ""}]}}},
+]
+
+
+@pytest.mark.parametrize("response", MALFORMED_INTROSPECTIONS)
+def test_malformed_feature_detection_is_retried_later(
+    graphql_helper, make_reporter, router, response
 ):
-    """Malformed introspection fields are ignored."""
-    router.handlers["DeploymentWriteBackFeatures"] = {
-        "data": {
-            "__type": {
-                "fields": [None, {"name": None}, {"name": "indicatorReportDeployment"}]
-            }
-        }
-    }
-    reporter = make_reporter(graphql_helper)
+    """A malformed introspection is a failed detection, never a cached lack of support."""
+    clock = Clock()
+    original = router.handlers["DeploymentWriteBackFeatures"]
+    router.handlers["DeploymentWriteBackFeatures"] = response
+    reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
+
+    assert reporter.is_supported() is False
+    assert reporter._mutations is None
+    graphql_helper.connector_logger.warning.assert_called_once()
+
+    router.handlers["DeploymentWriteBackFeatures"] = original
+    clock.now += 61
     assert reporter.is_supported() is True
-    assert reporter.is_supported("indicatorReportHits") is False
 
 
-def test_feature_detection_with_an_empty_response(
+def test_feature_detection_with_an_empty_field_list(
     graphql_helper, make_reporter, router
 ):
-    """An empty introspection response means nothing is supported."""
-    router.handlers["DeploymentWriteBackFeatures"] = {"data": None}
-    assert make_reporter(graphql_helper).is_supported() is False
+    """A valid empty field list means nothing is supported, without detecting again."""
+    clock = Clock()
+    router.handlers["DeploymentWriteBackFeatures"] = {
+        "data": {"__type": {"fields": []}}
+    }
+    reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
+
+    assert reporter.is_supported() is False
+    clock.now += 61
+    assert reporter.is_supported() is False
+    assert len(router.calls_of("DeploymentWriteBackFeatures")) == 1
 
 
 # --- security platform ------------------------------------------------------------
@@ -1324,13 +1349,16 @@ def test_close_flushes_and_stops_queueing(graphql_helper, make_reporter, router)
     )
 
 
+@pytest.mark.parametrize(
+    "failed_detection", [ConnectionError("unreachable"), {"data": None}]
+)
 def test_queued_reports_wait_for_the_feature_detection(
-    graphql_helper, make_reporter, router
+    graphql_helper, make_reporter, router, failed_detection
 ):
     """Reports stay queued while the detection is retried, then are sent."""
     clock = Clock()
     detection = router.handlers["DeploymentWriteBackFeatures"]
-    router.handlers["DeploymentWriteBackFeatures"] = ConnectionError("unreachable")
+    router.handlers["DeploymentWriteBackFeatures"] = failed_detection
     reporter = make_reporter(graphql_helper, monotonic=clock, retry_delay=60.0)
     reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
     reporter.enqueue(DeploymentReport(indicator_id="b", status="deployed"))

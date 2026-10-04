@@ -207,6 +207,46 @@ def _deployments_page(response: Any) -> tuple[list[Mapping[str, Any]], str | Non
     return nodes, str(end_cursor)
 
 
+class _MalformedIntrospectionError(Exception):
+    """The ``Mutation`` introspection answered without a complete field list."""
+
+
+def _mutation_names(response: Any) -> frozenset[str]:
+    """Return the mutation names of a ``Mutation`` introspection response.
+
+    The detection result is cached, so a response that is not a complete field
+    list is never read as a platform without the write-back API.
+
+    Args:
+        response: The ``DeploymentWriteBackFeatures`` response.
+
+    Returns:
+        The mutation names (empty only for a valid empty field list).
+
+    Raises:
+        _MalformedIntrospectionError: When the response carries no ``Mutation``
+            type, no field list, or a field without its name.
+    """
+    data = response.get("data") if isinstance(response, Mapping) else None
+    mutation_type = data.get("__type") if isinstance(data, Mapping) else None
+    if not isinstance(mutation_type, Mapping):
+        raise _MalformedIntrospectionError("OpenCTI returned no Mutation type")
+    fields = mutation_type.get("fields")
+    if not isinstance(fields, list):
+        raise _MalformedIntrospectionError(
+            "OpenCTI returned the Mutation type without its fields"
+        )
+    names: set[str] = set()
+    for field in fields:
+        name = field.get("name") if isinstance(field, Mapping) else None
+        if not isinstance(name, str) or not name:
+            raise _MalformedIntrospectionError(
+                "OpenCTI returned a Mutation field without its name"
+            )
+        names.add(name)
+    return frozenset(names)
+
+
 def _is_folded_call_failure(
     chunk: Sequence[DeploymentReport], result: DeploymentBatchResult
 ) -> bool:
@@ -1107,8 +1147,9 @@ class DeploymentReporter:
         """Return the mutations of the platform (introspected once, then cached).
 
         Returns:
-            The mutation names, or ``None`` when the detection failed (retried after
-            ``retry_delay`` seconds) or is running in another thread.
+            The mutation names, or ``None`` when the detection failed or answered a
+            malformed introspection (retried after ``retry_delay`` seconds) or is
+            running in another thread.
         """
         if not self._detection_lock.acquire(blocking=False):
             with self._lock:
@@ -1121,14 +1162,8 @@ class DeploymentReporter:
                 if now < self._next_detection_at:
                     return None
             try:
-                response = self._helper.api.query(_graphql.MUTATION_FIELDS_QUERY)
-                fields = ((response.get("data") or {}).get("__type") or {}).get(
-                    "fields"
-                ) or []
-                mutations = frozenset(
-                    str(field["name"])
-                    for field in fields
-                    if isinstance(field, Mapping) and field.get("name")
+                mutations = _mutation_names(
+                    self._helper.api.query(_graphql.MUTATION_FIELDS_QUERY)
                 )
             except Exception as err:
                 with self._lock:
