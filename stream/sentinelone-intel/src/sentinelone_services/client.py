@@ -278,10 +278,20 @@ class SentinelOneClient:
                 "Unexpected IOC listing response: an IOC is not an object",
                 status_code=200,
             )
-        pagination = response.get("pagination") or {}
-        next_cursor = (
-            pagination.get("nextCursor") if isinstance(pagination, dict) else None
-        )
+        pagination = response.get("pagination")
+        if pagination is None:
+            pagination = {}
+        if not isinstance(pagination, dict):
+            raise SentinelOneApiError(
+                "Unexpected IOC listing response: 'pagination' is not an object",
+                status_code=200,
+            )
+        next_cursor = pagination.get("nextCursor")
+        if next_cursor is not None and not isinstance(next_cursor, str):
+            raise SentinelOneApiError(
+                "Unexpected IOC listing response: 'nextCursor' is not a string",
+                status_code=200,
+            )
         return data, next_cursor or None
 
     def _request(

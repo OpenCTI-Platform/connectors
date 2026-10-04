@@ -478,6 +478,14 @@ def test_iter_iocs_stops_at_the_page_limit(connector):
         (mock_response({"errors": []}), "'data' is not a list"),
         (mock_response(["unexpected"]), "'data' is not a list"),
         (mock_response({"data": [{"uuid": "1"}, "x"]}), "an IOC is not an object"),
+        (
+            mock_response({"data": [], "pagination": "next"}),
+            "'pagination' is not an object",
+        ),
+        (
+            mock_response({"data": [], "pagination": {"nextCursor": 42}}),
+            "'nextCursor' is not a string",
+        ),
         (mock_response(ValueError("no json"), text="<html>"), "not JSON"),
         (mock_response(status_code=403, text="Forbidden"), "HTTP 403 - Forbidden"),
     ],
