@@ -715,6 +715,22 @@ def test_delete_ti_object(mocker: MockerFixture, connector: Connector) -> None:
 # Vendor adapter
 
 
+def test_adapter_lists_an_indicator_at_its_valid_until_as_inactive() -> None:
+    """`valid_until` ends the validity window: at that instant it is expired."""
+    boundary = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    to_vendor_indicator = MicrosoftSentinelIntelDeploymentAdapter._to_vendor_indicator
+
+    at_boundary = to_vendor_indicator(
+        ti_object(valid_until=boundary.isoformat()), boundary
+    )
+    before = to_vendor_indicator(
+        ti_object(valid_until=boundary.isoformat()), boundary - timedelta(seconds=1)
+    )
+
+    assert at_boundary.active is False
+    assert before.active is True
+
+
 def test_adapter_lists_live_indicators_of_the_source_system(
     adapter, adapter_connector
 ) -> None:

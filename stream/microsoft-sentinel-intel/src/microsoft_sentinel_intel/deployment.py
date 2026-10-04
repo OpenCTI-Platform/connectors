@@ -142,7 +142,7 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
         """Read back the indicators uploaded with the connector `source_system`.
 
-        Revoked indicators and indicators whose `valid_until` is in the past are not
+        Revoked indicators and indicators whose `valid_until` is reached are not
         live in Sentinel, but Sentinel keeps them: they are listed as inactive, for a
         withdrawal to delete them.
 
@@ -182,7 +182,7 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                 "A Microsoft Sentinel indicator of the read-back carries no STIX id"
             )
         valid_until = parse_datetime(data.get("valid_until"))
-        expired = valid_until is not None and valid_until < now
+        expired = valid_until is not None and valid_until <= now
         resource_id = ti_object.get("id")
         resource_name = ti_object.get("name")
         return VendorIndicator(
