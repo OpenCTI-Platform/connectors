@@ -343,6 +343,26 @@ def test_deleted_domain_blocked_by_another_indicator_stays_listed(connector):
     )
 
 
+def test_deleted_domain_blocked_by_another_indicator_with_another_casing_stays_listed(
+    connector,
+):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": OTHER_ID,
+            "standard_id": "indicator--other",
+            "pattern": "[domain-name:value = 'Evil.EXAMPLE']",
+        }
+    ]
+    indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    assert zscaler.puts == []
+    assert zscaler.urls == ["evil.example"]
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
 def test_deleted_indicator_and_other_patterns_do_not_keep_the_domain(connector):
     zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
     indicator = make_indicator()

@@ -492,6 +492,8 @@ class ZscalerConnector:
         :raises SharedDomainLookupError: When OpenCTI cannot be queried.
         """
         now = datetime.now(UTC)
+        # Domain names are case-insensitive: Example.COM blocks example.com too.
+        canonical = domain.lower()
         excluded = {str(indicator_id).lower() for indicator_id in indicator_ids}
         try:
             indicators = self.helper.api.indicator.list(
@@ -516,7 +518,8 @@ class ZscalerConnector:
         return any(
             str(indicator.get("id")).lower() not in excluded
             and str(indicator.get("standard_id")).lower() not in excluded
-            and self.extract_domain(indicator.get("pattern") or "") == domain
+            and (self.extract_domain(indicator.get("pattern") or "") or "").lower()
+            == canonical
             and (
                 (valid_until := parse_datetime(indicator.get("valid_until"))) is None
                 or valid_until > now
