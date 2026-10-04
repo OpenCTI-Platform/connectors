@@ -58,7 +58,7 @@ MAX_ERROR_MESSAGE_LENGTH = 2000
 """Maximum length of a vendor error message stored on a deployment."""
 
 MAX_QUEUED_REPORTS = 10_000
-"""Maximum number of reports kept while the write-back is not available yet."""
+"""Maximum number of queued reports (write-back not available yet, sends held): the oldest are dropped beyond."""
 
 MAX_UNSENT_AGE = 24 * 3600.0
 """Seconds during which a report that never reached OpenCTI is sent again."""
@@ -341,6 +341,7 @@ class DeploymentReporter:
         # An immediate flush is scheduled and has not taken the queue yet.
         self._flush_soon = False
         self._waiting_for_write_back = False
+        self._queue_overflow_logged = False
         self._unsent_since: dict[str, tuple[DeploymentReport, float]] = {}
         self._unsent_retry_delay = 0.0
         self._closed = False
@@ -759,7 +760,9 @@ class DeploymentReporter:
         Reports are coalesced per indicator: the latest report of an indicator
         replaces any queued one. The batch is sent from a timer thread, after the
         flush interval or at once when ``MAX_BATCH_SIZE`` reports are queued: the
-        caller (the stream callback) never waits for OpenCTI.
+        caller (the stream callback) never waits for OpenCTI. Beyond
+        ``MAX_QUEUED_REPORTS`` queued reports (write-back unavailable, or sends
+        held by a reconciliation), the oldest one is dropped.
 
         Args:
             report: The report.
@@ -779,6 +782,15 @@ class DeploymentReporter:
         with self._buffer_lock:
             self._buffer.pop(report.indicator_id, None)
             self._buffer[report.indicator_id] = report
+            if len(self._buffer) > MAX_QUEUED_REPORTS:
+                del self._buffer[next(iter(self._buffer))]
+                if not self._queue_overflow_logged:
+                    self._queue_overflow_logged = True
+                    self._logger.warning(
+                        f"{_LOG_PREFIX} Too many queued deployment reports, "
+                        "dropping the oldest ones.",
+                        {"queued": MAX_QUEUED_REPORTS},
+                    )
             flush_now = (
                 len(self._buffer) >= MAX_BATCH_SIZE
                 and not self._waiting_for_write_back
@@ -849,6 +861,7 @@ class DeploymentReporter:
                 self._flush_timer.cancel()
                 self._flush_timer = None
             self._flush_soon = False
+            self._queue_overflow_logged = False
         if not reports:
             return DeploymentBatchResult()
         if self._awaiting_write_back():

@@ -1415,13 +1415,18 @@ def test_queued_reports_are_dropped_on_unsupported_platforms(
 def test_queued_reports_are_bounded_while_waiting(
     graphql_helper, make_reporter, router, monkeypatch
 ):
-    """The oldest reports are dropped beyond the queue limit."""
+    """The oldest reports are dropped beyond the queue limit when put back."""
     monkeypatch.setattr(
         "connectors_sdk.connectors.stream.deployment.reporter.MAX_QUEUED_REPORTS", 2
     )
-    router.handlers["DeploymentWriteBackFeatures"] = ConnectionError("unreachable")
     reporter = make_reporter(graphql_helper)
-    for indicator_id in ("a", "b", "c"):
+
+    def detection_queuing_a_report(_variables):
+        reporter.enqueue(DeploymentReport(indicator_id="c", status="deployed"))
+        return ConnectionError("unreachable")
+
+    router.handlers["DeploymentWriteBackFeatures"] = detection_queuing_a_report
+    for indicator_id in ("a", "b"):
         reporter.enqueue(DeploymentReport(indicator_id=indicator_id, status="deployed"))
 
     reporter.flush()
@@ -1431,6 +1436,37 @@ def test_queued_reports_are_bounded_while_waiting(
         "dropping" in call.args[0]
         for call in graphql_helper.connector_logger.warning.call_args_list
     )
+
+
+def test_enqueue_bounds_the_queue_before_any_flush(
+    graphql_helper, make_reporter, router, monkeypatch
+):
+    """A busy stream cannot grow the queue while no flush takes it, warning once per flush."""
+    monkeypatch.setattr(
+        "connectors_sdk.connectors.stream.deployment.reporter.MAX_QUEUED_REPORTS", 2
+    )
+    reporter = make_reporter(graphql_helper)
+
+    def overflow_warnings():
+        return [
+            call
+            for call in graphql_helper.connector_logger.warning.call_args_list
+            if "Too many queued" in call.args[0]
+        ]
+
+    for indicator_id in ("a", "b", "c", "d"):
+        reporter.enqueue(DeploymentReport(indicator_id=indicator_id, status="deployed"))
+    reporter.enqueue(DeploymentReport(indicator_id="c", status="active"))
+
+    assert list(reporter._buffer) == ["d", "c"]
+    assert len(overflow_warnings()) == 1
+
+    reporter.flush()
+    for indicator_id in ("e", "f", "g"):
+        reporter.enqueue(DeploymentReport(indicator_id=indicator_id, status="deployed"))
+
+    assert list(reporter._buffer) == ["f", "g"]
+    assert len(overflow_warnings()) == 2
 
 
 def test_full_queue_does_not_flush_while_waiting(
