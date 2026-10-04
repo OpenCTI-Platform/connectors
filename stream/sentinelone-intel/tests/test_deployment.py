@@ -158,7 +158,15 @@ def test_created_indicator_is_reported_deployed(connector):
     )
 
 
-@pytest.mark.parametrize("payload", [{}, {"data": {"affected": 1}}, None])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"data": {"affected": 1}},
+        None,
+        {"data": [{"uuid": ""}, {"uuid": 7}, "row"]},
+    ],
+)
 def test_created_indicator_without_returned_uuid(connector, payload):
     connector.client.session.request.return_value = mock_response(payload)
     indicator = make_indicator()

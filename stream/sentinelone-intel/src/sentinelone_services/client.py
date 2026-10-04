@@ -134,9 +134,11 @@ class SentinelOneClient:
         if not isinstance(data, list):
             return []
         return [
-            str(item["uuid"])
+            item["uuid"]
             for item in data
-            if isinstance(item, dict) and item.get("uuid") is not None
+            if isinstance(item, dict)
+            and isinstance(item.get("uuid"), str)
+            and item["uuid"]
         ]
 
     def _is_valid_pattern(self, pattern: str) -> bool:
