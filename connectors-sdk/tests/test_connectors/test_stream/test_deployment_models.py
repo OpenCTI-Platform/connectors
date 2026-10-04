@@ -298,4 +298,5 @@ def test_reconciliation_summary_log_meta():
         "hits_reported",
         "report_errors",
         "incomplete",
+        "absence_unconfirmed",
     }

@@ -401,17 +401,76 @@ def test_a_rule_created_for_a_document_not_written_is_deleted_again(
     assert _query(rollback)["id"] == ["rule-1"]
 
 
-def test_updated_rules_keep_the_previous_document_when_the_new_one_fails(
+PREVIOUS_RULE = {
+    "id": "rule-1",
+    "name": "OpenCTI: previous name",
+    "description": "Previous description",
+    "risk_score": 21,
+    "severity": "low",
+    "query": "dns.question.name : previous",
+    "language": "kuery",
+    "enabled": True,
+}
+PREVIOUS_RULE_2 = {**PREVIOUS_RULE, "id": "rule-2", "query": "dns.question.name : two"}
+
+
+def _restorable(rule):
+    return {key: value for key, value in rule.items() if key != "enabled"}
+
+
+def test_updated_rules_get_their_previous_definition_when_the_document_fails(
     kibana_handler, native_indicator, requests_mock
 ):
-    """Existing rules are not deleted: they match the previous document, kept."""
-    requests_mock.get(FIND_RULES_URL, json={"data": [{"id": "rule-1"}], "total": 1})
+    """Existing rules are not deleted: they get back the definition matching the
+    previous document, kept, so the read-back never sees a half-applied update."""
+    requests_mock.get(FIND_RULES_URL, json={"data": [PREVIOUS_RULE], "total": 1})
     requests_mock.patch(RULES_URL, json={"id": "rule-1"})
     requests_mock.post(DOC_URL, status_code=500, text="boom")
 
     assert kibana_handler.process_indicator(native_indicator, "update") is False
     assert _rule_requests(requests_mock, "DELETE") == []
     assert _delete_by_query_requests(requests_mock) == []
+    update, restore = _rule_requests(requests_mock, "PATCH")
+    assert update.json()["query"] == native_indicator["pattern"]
+    assert restore.json() == _restorable(PREVIOUS_RULE)
+
+
+def test_a_failed_rule_update_restores_the_rules_already_updated(
+    kibana_handler, native_indicator, requests_mock
+):
+    """All or nothing: the second rule refuses the update, the first one gets its
+    previous definition back and no threat intel document is written."""
+    requests_mock.get(
+        FIND_RULES_URL, json={"data": [PREVIOUS_RULE, PREVIOUS_RULE_2], "total": 2}
+    )
+    requests_mock.patch(
+        RULES_URL,
+        [
+            {"json": {"id": "rule-1"}},
+            {"status_code": 500, "text": "boom"},
+            {"json": {"id": "rule-1"}},
+        ],
+    )
+
+    assert kibana_handler.process_indicator(native_indicator, "update") is False
+    first, second, restore = _rule_requests(requests_mock, "PATCH")
+    assert (first.json()["id"], second.json()["id"]) == ("rule-1", "rule-2")
+    assert restore.json() == _restorable(PREVIOUS_RULE)
+    assert _doc_requests(requests_mock) == []
+
+
+def test_a_failed_rule_restore_is_logged(
+    kibana_handler, native_indicator, requests_mock
+):
+    requests_mock.get(FIND_RULES_URL, json={"data": [PREVIOUS_RULE], "total": 1})
+    requests_mock.patch(
+        RULES_URL,
+        [{"json": {"id": "rule-1"}}, {"status_code": 503, "text": "unavailable"}],
+    )
+    requests_mock.post(DOC_URL, status_code=500, text="boom")
+
+    assert kibana_handler.process_indicator(native_indicator, "update") is False
+    assert len(_rule_requests(requests_mock, "PATCH")) == 2
 
 
 def test_delete_docs_by_opencti_id_query_targets_doc_id(handler, requests_mock):

@@ -583,7 +583,7 @@ class DeploymentReporter:
         indicator_id: str,
         count: int,
         *,
-        last_hit: datetime | str | None = None,
+        last_hit: datetime | str,
         first_hit: datetime | str | None = None,
     ) -> bool:
         """Report new hits of an indicator on the security platform.
@@ -594,7 +594,8 @@ class DeploymentReporter:
         Args:
             indicator_id: OpenCTI internal id, standard id or STIX id of the indicator.
             count: Number of new hits (at least 1).
-            last_hit: Time of the last hit (defaults to now on the platform side).
+            last_hit: Vendor time of the most recent hit (required): the replay
+                watermark of the report, so a report sent again is not counted twice.
             first_hit: Time of the first hit (defaults to ``last_hit``).
 
         Returns:
@@ -612,7 +613,7 @@ class DeploymentReporter:
         indicator_id: str,
         count: int,
         *,
-        last_hit: datetime | str | None = None,
+        last_hit: datetime | str,
         first_hit: datetime | str | None = None,
     ) -> str:
         """Report new hits of an indicator and tell what became of the report.
@@ -620,7 +621,8 @@ class DeploymentReporter:
         Args:
             indicator_id: OpenCTI internal id, standard id or STIX id of the indicator.
             count: Number of new hits (at least 1).
-            last_hit: Time of the last hit (defaults to now on the platform side).
+            last_hit: Vendor time of the most recent hit (required): the replay
+                watermark of the report, so a report sent again is not counted twice.
             first_hit: Time of the first hit (defaults to ``last_hit``).
 
         Returns:
@@ -635,6 +637,13 @@ class DeploymentReporter:
         if not indicator_id or count < 1:
             self._logger.debug(
                 f"{_LOG_PREFIX} Ignoring an empty hit report.",
+                meta={"indicator_id": indicator_id, "count": count},
+            )
+            return REPORT_REJECTED
+        if not last_hit:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Ignoring a hit report without the time of its last hit "
+                "(OpenCTI refuses it: a retry could not be told from new hits).",
                 meta={"indicator_id": indicator_id, "count": count},
             )
             return REPORT_REJECTED
@@ -655,9 +664,8 @@ class DeploymentReporter:
                 "indicatorId": indicator_id,
                 "platformId": platform_id,
                 "count": count,
+                "lastHit": format_datetime(last_hit),
             }
-            if last_hit is not None:
-                variables["lastHit"] = format_datetime(last_hit)
             if first_hit is not None:
                 variables["firstHit"] = format_datetime(first_hit)
             _mutation_result(

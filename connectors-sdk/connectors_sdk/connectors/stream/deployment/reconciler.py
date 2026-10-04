@@ -66,6 +66,9 @@ vendor after their expiry are withdrawn and their removal confirmed.
 DEFAULT_MAX_VENDOR_INDICATORS = 1_000_000
 """Default read-back limit of a reconciliation run."""
 
+DEFAULT_MAX_ABSENCE_CHECKS = 100
+"""Default number of ``confirm_absent`` lookups of a reconciliation run."""
+
 MAX_HELD_HITS = 100_000
 """Maximum detections held while an instant capped by the vendor read is read over several runs."""
 
@@ -147,6 +150,14 @@ class DeploymentPushAdapter(ABC):
 class DeploymentVendorAdapter(DeploymentPushAdapter):
     """Vendor operations needed by the full reconciliation of a stream connector."""
 
+    confirms_absence: bool = False
+    """Whether ``confirm_absent`` looks indicators up on the vendor.
+
+    An adapter whose listing cannot guarantee completeness (offset pages of a
+    collection without a documented order) sets it: a live deployment missing from
+    the listing is then only reported ``removed`` once a direct lookup confirms it.
+    """
+
     @abstractmethod
     def list_vendor_indicators(self) -> Iterable[VendorIndicator]:
         """Read the indicators pushed by the connector back from the vendor.
@@ -206,6 +217,25 @@ class DeploymentVendorAdapter(DeploymentPushAdapter):
             for vendor_indicator in vendor_matches
             if (value := normalize_value(vendor_indicator.value))
         }
+
+    def confirm_absent(self, deployment: IndicatorDeployment) -> bool:
+        """Confirm with a direct vendor lookup that an indicator is not on the vendor.
+
+        Only called when ``confirms_absence`` is set, for the deployments missing from
+        the listing that the run would report ``removed``, within the lookup budget of
+        the run (``DeploymentReconciler(max_absence_checks=...)``).
+
+        Args:
+            deployment: The deployment missing from the listing.
+
+        Returns:
+            ``False`` when the vendor still holds the indicator: the run leaves the
+            deployment as it is.
+
+        Raises:
+            Exception: On any vendor error (the deployment is left to the next run).
+        """
+        return True
 
     def forget_indicator(self, deployment: IndicatorDeployment) -> None:
         """Drop the local copy of an indicator withdrawn while absent from the vendor.
@@ -345,6 +375,7 @@ class DeploymentReconciler:
         adapter: DeploymentPushAdapter,
         *,
         max_vendor_indicators: int = DEFAULT_MAX_VENDOR_INDICATORS,
+        max_absence_checks: int = DEFAULT_MAX_ABSENCE_CHECKS,
         hits_lookback: timedelta | None = None,
         initial_delay: float = 60.0,
         clock: Callable[[], datetime] | None = None,
@@ -357,6 +388,9 @@ class DeploymentReconciler:
                 reconciliation, ``DeploymentPushAdapter`` for re-push and hits only).
             max_vendor_indicators: Read-back limit of a run. When reached, absence
                 based decisions (``removed``, re-push) are skipped for that run.
+            max_absence_checks: ``confirm_absent`` lookups of a run, for adapters
+                that confirm absences; the next absent deployments wait for the
+                next run.
             hits_lookback: How far back detections are read on each run (overlap
                 with the previous run included). Defaults to the reconciliation
                 interval, at least one hour.
@@ -367,6 +401,8 @@ class DeploymentReconciler:
         self._adapter = adapter
         self._logger = reporter.logger
         self._max_vendor_indicators = max_vendor_indicators
+        self._max_absence_checks = max_absence_checks
+        self._absence_checks = 0
         interval = timedelta(minutes=reporter.options.reconciliation_interval)
         self._hits_lookback = hits_lookback or max(interval, timedelta(hours=1))
         self._initial_delay = initial_delay
@@ -475,6 +511,7 @@ class DeploymentReconciler:
                 skipped=True, reason="Security platform not resolved"
             )
         summary = ReconciliationSummary()
+        self._absence_checks = 0
         # From the vendor snapshot to its reports, the stream outcomes are held and sent
         # right after: a removal pushed meanwhile always lands after a stale `active`.
         with reporter.holding_queued_reports() as delivered:
@@ -741,6 +778,10 @@ class DeploymentReconciler:
                 # Pushed by the stream while the vendor was being read back.
                 summary.deferred += 1
                 return None
+            if (must_remove or deployment.is_live) and not self._absence_confirmed(
+                adapter, deployment, summary
+            ):
+                return None
         if must_remove:
             summary.marked_removed += 1
             self._forget(adapter, deployment)
@@ -784,6 +825,51 @@ class DeploymentReconciler:
                 f"{_LOG_PREFIX} Cannot forget a withdrawn indicator.",
                 meta={"indicator_id": deployment.indicator_id, "error": str(err)},
             )
+
+    def _absence_confirmed(
+        self,
+        adapter: DeploymentVendorAdapter,
+        deployment: IndicatorDeployment,
+        summary: ReconciliationSummary,
+    ) -> bool:
+        """Tell whether a deployment missing from the listing is absent from the vendor.
+
+        Adapters that do not confirm absences trust their listing. Otherwise the
+        adapter looks the indicator up, within the lookup budget of the run.
+
+        Args:
+            adapter: The vendor adapter.
+            deployment: The deployment missing from the listing.
+            summary: The run counters, updated.
+
+        Returns:
+            ``False`` when the vendor still holds the indicator, or when it could not
+            be looked up this run: no absence decision is taken.
+        """
+        if not adapter.confirms_absence:
+            return True
+        if self._absence_checks >= self._max_absence_checks:
+            summary.absence_unconfirmed += 1
+            return False
+        self._absence_checks += 1
+        try:
+            absent = adapter.confirm_absent(deployment)
+        except Exception as err:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Cannot confirm that an indicator left the vendor, "
+                "left to the next run.",
+                meta={"indicator_id": deployment.indicator_id, "error": str(err)},
+            )
+            summary.absence_unconfirmed += 1
+            return False
+        if not absent:
+            self._logger.info(
+                f"{_LOG_PREFIX} Indicator missing from the listing found on the vendor, "
+                "left as it is.",
+                meta={"indicator_id": deployment.indicator_id},
+            )
+            summary.absence_unconfirmed += 1
+        return absent
 
     def _confirm_present(
         self,

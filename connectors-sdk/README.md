@@ -105,6 +105,10 @@ class ConnectorSettings(BaseConnectorSettings):
    When the vendor API cannot read the indicators back, a `DeploymentPushAdapter` (`push_indicator`, optional
    `collect_hits`) still gets the periodic re-push of `pending` deployments and the hit reporting; presence, absence
    and withdrawal need the read-back.
+   When the listing cannot guarantee completeness (offset pages of a collection without a documented
+   order), set `confirms_absence = True` and implement `confirm_absent`: an indicator missing from the listing is then
+   only reported `removed` once a direct vendor lookup confirms it (at most `max_absence_checks` lookups per run, 100 by
+   default; the next ones wait for the next run).
 
 3. Wire the facade and report after each vendor call (reports are queued and sent in batches, never raise):
 
