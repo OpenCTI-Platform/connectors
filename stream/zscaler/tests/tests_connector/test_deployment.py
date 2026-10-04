@@ -1,6 +1,7 @@
 """Deployment write-back of the Zscaler connector."""
 
 import json
+from dataclasses import replace
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
@@ -1096,6 +1097,48 @@ def test_reconciliation_removes_a_shared_domain_once_all_its_deployments_leave(
     (batch,) = router.calls_of("IndicatorReportDeployments(")
     reports = {report["indicatorId"]: report["status"] for report in batch["reports"]}
     assert reports == {"a": "removed", "b": "removed", "c": "removed", "d": "active"}
+
+
+COMPOUND_PATTERN = (
+    "[domain-name:value = 'Evil.example'] OR [url:value = 'kept.example']"
+)
+
+
+def test_adapter_expects_only_the_domain_the_connector_pushes(connector):
+    adapter = ZscalerDeploymentAdapter(connector)
+    compound = IndicatorDeployment(
+        relationship_id="relationship-compound",
+        status="active",
+        indicator_id="compound",
+        pattern=COMPOUND_PATTERN,
+        pattern_type="stix",
+    )
+
+    assert adapter.expected_values(compound) == frozenset({"evil.example"})
+    assert (
+        adapter.expected_values(make_deployment(domain="not a domain")) == frozenset()
+    )
+    assert adapter.expected_values(replace(compound, pattern=None)) == frozenset()
+
+
+def test_reconciliation_never_withdraws_a_value_the_connector_did_not_push(
+    e2e_connector, router
+):
+    """Only the domain of the pattern is on the blacklist for the indicator: another
+    value of the pattern listed for another reason stays."""
+    node = deployment_node("a", "active", "evil.example", revoked=True)
+    node["from"]["pattern"] = COMPOUND_PATTERN
+    router.deployments = [node]
+    zscaler = FakeZscaler(urls=["evil.example", "kept.example"]).install(e2e_connector)
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert summary.withdrawn == 1
+    assert zscaler.urls == ["kept.example"]
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert {report["indicatorId"]: report["status"] for report in batch["reports"]} == {
+        "a": "removed"
+    }
 
 
 def test_read_back_failure_skips_the_reconciliation(e2e_connector, router):

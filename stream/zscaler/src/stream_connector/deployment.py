@@ -17,12 +17,14 @@ Service feeds), so no hit is reported.
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
+import validators
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentVendorAdapter,
     IndicatorDeployment,
     VendorIndicator,
 )
+from connectors_sdk.connectors.stream.deployment import normalize_value
 from stream_connector.connector import ZscalerApiError, failure_reason
 
 if TYPE_CHECKING:
@@ -70,6 +72,23 @@ class ZscalerDeploymentAdapter(DeploymentVendorAdapter):
         """
         domain = vendor_indicator.raw.get("domain") or vendor_indicator.value
         self._connector.send_to_zscaler(domain, "delete")
+
+    def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str]:
+        """Return the domain the connector adds to the blacklist for a deployment.
+
+        The blacklist only holds values: declaring the one domain the connector pushes
+        keeps the reconciliation from matching, confirming or removing a blacklist
+        entry for another value of the pattern.
+
+        :param deployment: A deployment of the platform.
+        :return: The normalized domain of a `[domain-name:value = '...']` pattern, or
+            no value when the connector pushes nothing for the pattern.
+        """
+        domain = self._connector.extract_domain(deployment.pattern or "")
+        value = (
+            normalize_value(domain) if domain and validators.domain(domain) else None
+        )
+        return frozenset({value}) if value else frozenset()
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
         """Add the domain of an indicator to the blacklist again.
