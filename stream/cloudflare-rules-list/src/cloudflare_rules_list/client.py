@@ -150,6 +150,38 @@ class CloudflareRulesListClient:
 
         return all_items
 
+    @staticmethod
+    def _next_cursor(response: dict) -> Optional[str]:
+        """Return the cursor of the next list items page, None after the last one.
+
+        Raises:
+            CloudflareAPIError: When the pagination metadata is malformed, so that a
+                read-back is never cut short.
+        """
+        result_info = response.get("result_info")
+        if result_info is None:
+            return None
+        if not isinstance(result_info, dict):
+            raise CloudflareAPIError(
+                "Unexpected list items response: 'result_info' is not an object",
+                status_code=200,
+            )
+        cursors = result_info.get("cursors")
+        if cursors is None:
+            return None
+        if not isinstance(cursors, dict):
+            raise CloudflareAPIError(
+                "Unexpected list items response: 'cursors' is not an object",
+                status_code=200,
+            )
+        after = cursors.get("after")
+        if after is not None and not isinstance(after, str):
+            raise CloudflareAPIError(
+                "Unexpected list items response: the 'after' cursor is not a string",
+                status_code=200,
+            )
+        return after or None
+
     def iter_list_items(self, list_id: str, max_pages: int = 10_000) -> Iterator[dict]:
         """Iterate over every item of a list (deployment reconciliation read-back).
 
@@ -171,8 +203,7 @@ class CloudflareRulesListClient:
                     "Unexpected list items response: an item is not an object"
                 )
             yield from items
-            result_info = response.get("result_info") or {}
-            next_cursor = (result_info.get("cursors") or {}).get("after")
+            next_cursor = self._next_cursor(response)
             if not next_cursor:
                 return
             if next_cursor == cursor:
