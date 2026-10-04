@@ -175,6 +175,23 @@ def test_reconciliation_is_skipped_when_the_vendor_read_back_fails(
     graphql_helper.connector_logger.warning.assert_called_once()
 
 
+def test_reconciliation_is_skipped_while_queued_stream_reports_are_undelivered(
+    graphql_helper, make_reporter, router
+):
+    """Sent again after the snapshot reports, older stream outcomes would overwrite
+    them: the snapshot is not taken until they are delivered."""
+    reporter = make_reporter(graphql_helper)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status=DeploymentStatus.FAILED))
+    router.handlers["IndicatorReportDeployments("] = ConnectionError("unreachable")
+
+    summary = make_reconciler(reporter, FakeAdapter()).run_once()
+
+    assert summary.skipped
+    assert summary.reason == "Queued stream reports not delivered"
+    assert router.calls_of("IndicatorDeploymentsOfPlatform") == []
+    assert list(reporter._buffer) == ["a"]
+
+
 def test_reconciliation_is_skipped_when_the_deployments_cannot_be_listed(
     graphql_helper, make_reporter, router
 ):

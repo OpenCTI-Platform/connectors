@@ -812,7 +812,7 @@ class DeploymentReporter:
         return True
 
     @contextmanager
-    def holding_queued_reports(self) -> Iterator[None]:
+    def holding_queued_reports(self) -> Iterator[bool]:
         """Hold the queued (stream) reports while a snapshot based batch is built and sent.
 
         The reports queued before are sent first, under the same hold, and the ones
@@ -820,12 +820,15 @@ class DeploymentReporter:
         outcome newer than the snapshot is always applied last.
 
         Yields:
-            Nothing; the queued reports are held until the block ends.
+            ``True`` when the reports queued before were delivered. ``False`` when
+            some of them are queued again (undelivered, or the write-back is not
+            available yet): sent after a snapshot based batch, these older outcomes
+            would overwrite it, so the caller skips that batch.
         """
         self._send_lock.acquire()
         try:
-            self._flush_queued()
-            yield
+            result = self._flush_queued()
+            yield not result.unsent and not self._waiting_for_write_back
         finally:
             self._send_lock.release()
             self.flush()

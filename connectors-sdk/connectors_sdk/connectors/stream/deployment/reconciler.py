@@ -406,7 +406,15 @@ class DeploymentReconciler:
         summary = ReconciliationSummary()
         # From the vendor snapshot to its reports, the stream outcomes are held and sent
         # right after: a removal pushed meanwhile always lands after a stale `active`.
-        with reporter.holding_queued_reports():
+        with reporter.holding_queued_reports() as delivered:
+            if not delivered:
+                self._logger.warning(
+                    f"{_LOG_PREFIX} Stream reports not delivered yet, reconciliation "
+                    "skipped (sent again later, they would overwrite its reports)."
+                )
+                return ReconciliationSummary(
+                    skipped=True, reason="Queued stream reports not delivered"
+                )
             now = self._clock()
             try:
                 vendor_indicators = self._read_vendor_indicators(summary)

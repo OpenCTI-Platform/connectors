@@ -1362,6 +1362,48 @@ def test_reports_queued_before_a_hold_are_sent_under_it(
     assert held_while_sending[0] is True
 
 
+@pytest.mark.parametrize(
+    ("failing_handler", "failure"),
+    [
+        ("IndicatorReportDeployments(", ConnectionError("unreachable")),
+        ("DeploymentWriteBackFeatures", ConnectionError("unreachable")),
+    ],
+)
+def test_hold_tells_when_reports_queued_before_are_not_delivered(
+    graphql_helper, make_reporter, router, failing_handler, failure
+):
+    reporter = make_reporter(graphql_helper)
+    with reporter.holding_queued_reports() as delivered:
+        assert delivered is True  # nothing was queued
+
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="failed"))
+    router.handlers[failing_handler] = failure
+    with reporter.holding_queued_reports() as delivered:
+        assert delivered is False
+
+    assert list(reporter._buffer) == ["a"]
+
+
+def test_hold_reports_delivery_despite_reports_queued_meanwhile(
+    graphql_helper, make_reporter, router
+):
+    """A busy stream queuing newer outcomes during the first send never makes the
+    reports queued before look undelivered."""
+    reporter = make_reporter(graphql_helper)
+    send = router.handlers["IndicatorReportDeployments("]
+
+    def send_while_the_stream_queues(variables):
+        reporter.enqueue(DeploymentReport(indicator_id="newer", status="removed"))
+        return send(variables)
+
+    router.handlers["IndicatorReportDeployments("] = send_while_the_stream_queues
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+
+    with reporter.holding_queued_reports() as delivered:
+        assert delivered is True
+        assert list(reporter._buffer) == ["newer"]
+
+
 def test_reports_held_by_a_failing_block_are_still_sent(
     graphql_helper, make_reporter, router
 ):
