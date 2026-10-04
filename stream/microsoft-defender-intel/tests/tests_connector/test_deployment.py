@@ -577,6 +577,41 @@ def test_adapter_confirms_an_absence_when_no_value_is_held_by_the_connector():
     assert adapter.confirm_absent(make_pattern_deployment(IP_AND_DOMAIN)) is True
 
 
+def test_adapter_confirms_an_absence_when_the_connector_indicators_expired():
+    """Defender keeps expired indicators: as in the read-back, they are not live."""
+    connector = build_connector()
+    now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    adapter = MicrosoftDefenderDeploymentAdapter(connector, clock=lambda: now)
+    connector.api._send_request.side_effect = [
+        {
+            "value": [
+                {
+                    "id": "9",
+                    "application": APPLICATION_NAME,
+                    "expirationTime": "2026-10-03T11:59:59Z",
+                }
+            ]
+        },
+        {"value": []},
+    ]
+
+    assert adapter.confirm_absent(make_pattern_deployment(IP_AND_DOMAIN)) is True
+
+    connector.api._send_request.side_effect = [
+        {
+            "value": [
+                {
+                    "id": "9",
+                    "application": APPLICATION_NAME,
+                    "expirationTime": "2026-10-03T12:00:01Z",
+                }
+            ]
+        },
+    ]
+
+    assert adapter.confirm_absent(make_pattern_deployment(IP_AND_DOMAIN)) is False
+
+
 def test_adapter_absence_lookup_errors_are_readable():
     connector = build_connector()
     adapter = MicrosoftDefenderDeploymentAdapter(connector)
