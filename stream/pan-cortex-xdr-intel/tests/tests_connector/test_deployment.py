@@ -333,6 +333,26 @@ def test_delete_keeps_the_iocs_another_valid_indicator_holds(connector):
     ]
 
 
+def test_delete_never_keeps_an_ioc_for_the_deleted_indicator_itself(connector):
+    """The indicator is identified by the OpenCTI id of its extension, the `id` the
+    API lists it with: the deleted indicator never keeps its own value."""
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": INDICATOR_ID,
+            "standard_id": "indicator--5d4f2a3b-8c9d-4e1f-a2b3-c4d5e6f7a8b9",
+            "pattern": "[ipv4-addr:value = '198.51.100.7']",
+        }
+    ]
+    indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    connector.client.delete_iocs.assert_called_once_with(
+        [{"field": "indicator", "operator": "IN", "value": ["198.51.100.7"]}]
+    )
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
 def test_delete_ignores_indicators_holding_the_value_in_an_unpushed_observable(
     connector,
 ):
