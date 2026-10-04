@@ -351,7 +351,7 @@ class ZscalerConnector:
             isinstance(url, str) and url for url in urls
         ):
             raise ZscalerApiError(
-                "Unexpected URL category response: 'urls' is not a list of domains",
+                "Unexpected URL category response: 'urls' is not a list of URL entries",
                 status_code=response.status_code,
                 action=READ_ACTION,
             )

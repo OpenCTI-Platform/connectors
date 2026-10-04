@@ -251,8 +251,10 @@ Platform entity (created if it does not exist).
 
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the domains of the blacklist URL category are
   read back (`GET /urlCategories/{id}`, one request). The category does not store the OpenCTI id, so deployments are
-  matched by value. A read-back error or a malformed category (an entry of `urls` that is not a domain) skips the run:
-  indicators are never reported `removed` from a partial listing. Each change made by the reconciliation is activated
+  matched by value. A read-back error or a malformed category (an entry of `urls` that is not a non-empty string)
+  skips the run: indicators are never reported `removed` from a partial listing. Other entries of the category (URLs
+  with a path, wildcard domains, entries added outside OpenCTI) are listed as they are and only matter when they are
+  the value of a deployment. Each change made by the reconciliation is activated
   like the stream changes (mind the 400 requests per hour limit).
 - **Shared domains**: the category only holds values, so a domain shared by several OpenCTI indicators stays listed
   while one of them still needs it, and the removed indicator is reported `removed` all the same. On a delete event, the

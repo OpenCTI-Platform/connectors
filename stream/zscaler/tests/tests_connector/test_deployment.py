@@ -691,11 +691,11 @@ def test_list_blocked_domains(connector):
         (response(json_data={"id": "blacklist", "urls": "a"}), "'urls' is not a list"),
         (
             response(json_data={"id": "blacklist", "urls": ["a.example", 42]}),
-            "'urls' is not a list of domains",
+            "'urls' is not a list of URL entries",
         ),
         (
             response(json_data={"id": "blacklist", "urls": ["a.example", ""]}),
-            "'urls' is not a list of domains",
+            "'urls' is not a list of URL entries",
         ),
         (response(403, text="Forbidden"), "status 403: Forbidden"),
     ],
