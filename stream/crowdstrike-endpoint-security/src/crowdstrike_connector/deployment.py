@@ -161,8 +161,8 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the Falcon alerts raised by deployed indicators since a date.
 
-        An alert counts as one hit of every deployed indicator whose value is the
-        alert IOC value (``ioc_value``, ``ioc_values`` or ``ioc_context``), at the
+        An alert counts as one hit of every deployed indicator whose pushed IOC value
+        is an alert IOC value (``ioc_value``, ``ioc_values`` or ``ioc_context``), at the
         alert creation time: the listing is filtered and ordered by it, so the
         reading cursor and the hit times never diverge.
 
@@ -179,7 +179,7 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
         """
         by_value: dict[str, list[IndicatorDeployment]] = {}
         for deployment in deployments:
-            for value in deployment.values:
+            if value := self._pushed_value(deployment):
                 by_value.setdefault(value, []).append(deployment)
         if not by_value:
             return []
@@ -223,6 +223,22 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
                 )
             return HitCollection(hits=hits, complete_until=newest)
         return hits
+
+    @staticmethod
+    def _pushed_value(deployment: IndicatorDeployment) -> str | None:
+        """Return the normalized IOC value the stream pushed for a deployment.
+
+        CrowdStrike holds one IOC per indicator, the first value of its pattern
+        (``CrowdstrikeClient._extract_indicator_value``): the other values of a
+        composite pattern were never pushed and raise no hit.
+        """
+        if deployment.pattern_type not in (None, "stix") or not deployment.pattern:
+            return None
+        try:
+            value = CrowdstrikeClient._extract_indicator_value(deployment.pattern)
+        except IndexError:
+            return None
+        return normalize_value(value) or None
 
     @staticmethod
     def _alert_values(alert: dict[str, Any]) -> set[str]:

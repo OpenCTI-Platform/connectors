@@ -211,7 +211,8 @@ it does not exist), and detection hits are counted with a sighting of the indica
   read-back error skips the run: IOCs are never reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the Falcon alerts created since the previous run are read (at most 10,000 per
   run, oldest first; when the limit is reached the next run resumes at the newest alert read). An alert counts one hit
-  for every deployed indicator whose value is the alert IOC value, at the alert creation time; hits already reported
+  for every deployed indicator whose pushed IOC value (the first value of its pattern) is the alert IOC value, at the
+  alert creation time; hits already reported
   are never counted twice. An alert without a creation time or with malformed IOC fields fails the read: the next run
   reads the same alerts again. The API client needs the **Alerts: Read** scope; without it, set
   `HITS_REPORTING_ENABLED=false`.

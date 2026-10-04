@@ -1,6 +1,7 @@
 """Deployment write-back of the CrowdStrike Endpoint Security connector."""
 
 import json
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
@@ -843,11 +844,49 @@ def test_adapter_credits_every_indicator_sharing_an_alert_value(adapter_client):
     assert sorted(hit.indicator_id for hit in hits) == sorted([INDICATOR_ID, other_id])
 
 
-def test_adapter_hits_without_values_read_no_alert(adapter_client):
-    deployment = IndicatorDeployment(
-        relationship_id="r", status="deployed", indicator_id=INDICATOR_ID
+def test_adapter_hits_match_the_pushed_value_only(adapter_client):
+    """CrowdStrike holds the first value of a composite pattern: an alert on another
+    value of the pattern was not raised by the pushed IOC."""
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    adapter_client.iter_alerts.return_value = iter(
+        [
+            {"timestamp": "2026-10-03T11:10:00Z", "ioc_value": "203.0.113.9"},
+            {"timestamp": "2026-10-03T11:20:00Z", "ioc_value": "198.51.100.7"},
+        ]
+    )
+    deployment = replace(
+        make_deployment(),
+        pattern="[ipv4-addr:value = '198.51.100.7' OR ipv4-addr:value = '203.0.113.9']",
     )
 
+    hits = list(make_adapter(adapter_client).collect_hits([deployment], since))
+
+    assert [hit.timestamp.minute for hit in hits] == [20]
+
+
+@pytest.mark.parametrize(
+    "deployment",
+    [
+        IndicatorDeployment(
+            relationship_id="r", status="deployed", indicator_id=INDICATOR_ID
+        ),
+        IndicatorDeployment(
+            relationship_id="r",
+            status="deployed",
+            indicator_id=INDICATOR_ID,
+            pattern="alert tcp any any -> any any",
+            pattern_type="snort",
+        ),
+        IndicatorDeployment(
+            relationship_id="r",
+            status="deployed",
+            indicator_id=INDICATOR_ID,
+            pattern="[ipv4-addr:value='198.51.100.7']",
+            pattern_type="stix",
+        ),
+    ],
+)
+def test_adapter_hits_without_values_read_no_alert(adapter_client, deployment):
     assert (
         make_adapter(adapter_client).collect_hits([deployment], datetime.now(UTC)) == []
     )
