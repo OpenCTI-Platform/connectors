@@ -4,7 +4,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import MagicMock, call
+from unittest.mock import ANY, MagicMock, call
 
 import pytest
 import requests
@@ -255,6 +255,207 @@ def test_failed_update_is_reported_failed(connector):
 
     message = connector.assurance.report_push_failed.call_args.args[1]
     assert message.endswith("403 Client Error - Forbidden")
+
+
+def make_multi_indicator(*observables):
+    indicator = make_indicator()
+    indicator["extensions"][OPENCTI_EXTENSION_ID]["observable_values"] = list(
+        observables
+    )
+    return indicator
+
+
+IP = {"type": "IPv4-Addr", "value": "198.51.100.7"}
+DOMAIN = {"type": "Domain-Name", "value": "evil.example"}
+URL = {"type": "Url", "value": "http://evil.example/x"}
+EMAIL = {"type": "Email-Addr", "value": "x@evil.example"}
+
+
+def _sent(connector):
+    return [
+        (method, url.removeprefix(INDICATORS_URL))
+        for method, url, *_ in (
+            entry.args for entry in connector.api._send_request.call_args_list
+        )
+    ]
+
+
+def test_a_failed_create_deletes_the_defender_indicators_it_created(connector):
+    """A partial push would be promoted to active by reconciliation: none survives."""
+    connector.api._send_request.side_effect = [
+        {"id": "1"},
+        http_error(400, "Invalid indicator value"),
+        None,
+    ]
+    connector.helper.api.external_reference.read.return_value = {"id": "ref"}
+    indicator = make_multi_indicator(IP, DOMAIN)
+
+    connector.process_message(make_message("create", indicator))
+
+    assert _sent(connector) == [("post", ""), ("post", ""), ("delete", "/1")]
+    connector.helper.api.external_reference.delete.assert_called_once_with("ref")
+    connector.assurance.report_push_failed.assert_called_once()
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def test_a_create_confirmed_without_its_id_is_a_failed_push(connector):
+    connector.api._send_request.side_effect = [{"id": "1"}, None, None]
+
+    connector.process_message(make_message("create", make_multi_indicator(IP, DOMAIN)))
+
+    assert _sent(connector)[-1] == ("delete", "/1")
+    connector.assurance.report_push_failed.assert_called_once()
+
+
+def test_a_failed_rollback_is_logged(connector):
+    connector.api._send_request.side_effect = [
+        {"id": "1"},
+        http_error(400, "Invalid indicator value"),
+        http_error(503, "Unavailable"),
+    ]
+
+    connector.process_message(make_message("create", make_multi_indicator(IP, DOMAIN)))
+
+    connector.helper.connector_logger.warning.assert_any_call(
+        "[CREATE] Cannot delete a Defender indicator of an incomplete push",
+        {"defender_id": "1", "error": ANY},
+    )
+    connector.helper.api.external_reference.delete.assert_not_called()
+    connector.assurance.report_push_failed.assert_called_once()
+
+
+def test_observables_defender_does_not_take_are_not_pushed(connector):
+    connector.api._send_request.return_value = {"id": "1"}
+    indicator = make_multi_indicator(IP, EMAIL)
+
+    connector.process_message(make_message("create", indicator))
+
+    assert _sent(connector) == [("post", "")]
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id="1"
+    )
+
+
+def test_an_update_creates_the_missing_defender_indicators(connector):
+    connector.api._send_request.side_effect = [
+        {"value": [{"id": "1"}]},
+        {"value": []},
+        {"id": "1"},
+        {"id": "2"},
+    ]
+    indicator = make_multi_indicator(IP, DOMAIN)
+
+    connector.process_message(make_message("update", indicator))
+
+    created = connector.api._send_request.call_args_list[-1].kwargs["json"]
+    assert created["indicatorValue"] == "evil.example"
+    assert "id" not in created
+    connector.assurance.report_pushed.assert_called_once_with(
+        indicator, external_id="1"
+    )
+
+
+def test_a_failed_update_deletes_only_the_defender_indicators_it_created(connector):
+    connector.api._send_request.side_effect = [
+        {"value": [{"id": "1"}]},
+        {"value": []},
+        {"value": []},
+        {"id": "1"},
+        {"id": "2"},
+        http_error(400, "Invalid indicator value"),
+        None,
+    ]
+
+    connector.process_message(
+        make_message("update", make_multi_indicator(IP, DOMAIN, URL))
+    )
+
+    assert [entry for entry in _sent(connector) if entry[0] == "delete"] == [
+        ("delete", "/2")
+    ]
+    connector.assurance.report_push_failed.assert_called_once()
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def make_pattern_deployment(pattern, pattern_type="stix"):
+    return IndicatorDeployment(
+        relationship_id="relationship",
+        status="active",
+        indicator_id=INDICATOR_ID,
+        pattern=pattern,
+        pattern_type=pattern_type,
+    )
+
+
+def vendor_values(*values):
+    return [
+        VendorIndicator(indicator_id=INDICATOR_ID, external_id=str(n), value=value)
+        for n, value in enumerate(values)
+    ]
+
+
+SHA256 = "a" * 64
+MD5 = "b" * 32
+
+
+@pytest.mark.parametrize(
+    "pattern, values, complete",
+    [
+        (
+            "[ipv4-addr:value = '198.51.100.7' OR domain-name:value = 'evil.example']",
+            ("198.51.100.7", "EVIL.example"),
+            True,
+        ),
+        (
+            "[ipv4-addr:value = '198.51.100.7' OR domain-name:value = 'evil.example']",
+            ("198.51.100.7",),
+            False,
+        ),
+        (
+            f"[file:hashes.'SHA-256' = '{SHA256}' OR file:hashes.MD5 = '{MD5}']",
+            (SHA256,),
+            True,
+        ),
+        (
+            f"[file:hashes.'SHA-256' = '{SHA256}' OR ipv4-addr:value = '198.51.100.7']",
+            ("198.51.100.7",),
+            False,
+        ),
+        (
+            "[ipv4-addr:value = '198.51.100.7' OR email-addr:value = 'x@evil.example']",
+            ("198.51.100.7",),
+            True,
+        ),
+        (
+            f"[file:hashes.'SHA-512' = '{'c' * 128}' OR ipv4-addr:value = '198.51.100.7']",
+            ("198.51.100.7",),
+            True,
+        ),
+    ],
+    ids=[
+        "every value",
+        "a value missing",
+        "a file by one of its hashes",
+        "a file missing",
+        "a type Defender does not take",
+        "a hash Defender does not take",
+    ],
+)
+def test_adapter_completeness_requires_every_observable(pattern, values, complete):
+    adapter = MicrosoftDefenderDeploymentAdapter(build_connector())
+
+    assert (
+        adapter.is_complete(make_pattern_deployment(pattern), vendor_values(*values))
+        is complete
+    )
+
+
+def test_adapter_completeness_of_a_non_stix_pattern():
+    adapter = MicrosoftDefenderDeploymentAdapter(build_connector())
+
+    assert adapter.is_complete(
+        make_pattern_deployment("process.name = 'x'", "kql"), vendor_values("x")
+    )
 
 
 def test_delete_is_reported_removed(connector):

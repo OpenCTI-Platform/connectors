@@ -85,6 +85,12 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
   page). Each one carries the OpenCTI id submitted by the connector (`externalId`); deployments are matched by OpenCTI
   id, Defender id, then value. A read-back error skips the run: indicators are never reported `removed` from a partial
   listing.
+- **Indicators with several observables**: the connector creates one Defender indicator per observable Defender takes
+  (IP addresses, domains, host names, URLs, and one hash per file: SHA-256, SHA-1 or MD5); other observable types are
+  not pushed. A push is all or nothing: when Defender refuses one of them, the ones created are deleted again and the
+  indicator is reported `failed`. An update creates the Defender indicators that are missing. Reconciliation confirms
+  `active` only when every observable has its Defender indicator (a file by any of its hashes); otherwise the indicator
+  is pushed again, or stays `failed` until a new push is requested.
 - **Hits**: during each reconciliation, the alerts created since the previous run are read with their evidence (alerts
   API, `$expand=evidence`, at most 10,000 per request). An alert counts one hit for every deployed indicator whose value
   is one of its evidence file hashes, IP addresses or URLs (domain indicators match the URL host); hits already

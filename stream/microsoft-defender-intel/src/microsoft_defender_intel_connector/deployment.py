@@ -26,13 +26,18 @@ from connectors_sdk import (
     VendorHit,
     VendorIndicator,
 )
-from connectors_sdk.connectors.stream.deployment import normalize_value, parse_datetime
+from connectors_sdk.connectors.stream.deployment import (
+    extract_pattern_values,
+    normalize_value,
+    parse_datetime,
+)
 from microsoft_defender_intel_connector.api_handler import (
     APPLICATION_NAME,
     MAX_PAGE_SIZE,
     DefenderApiHandler,
     DefenderApiHandlerError,
 )
+from microsoft_defender_intel_connector.utils import FILE_HASH_TYPES_MAPPER, IOC_TYPES
 
 if TYPE_CHECKING:
     from microsoft_defender_intel_connector.connector import (
@@ -53,6 +58,9 @@ MAX_ERROR_DETAIL_LENGTH = 500
 
 EVIDENCE_VALUE_FIELDS = ("sha1", "sha256", "md5", "ipAddress", "url")
 """Evidence fields compared with the indicator values (`domainName` is an account domain)."""
+
+PATTERN_VALUE_TYPES = frozenset(IOC_TYPES) - set(FILE_HASH_TYPES_MAPPER.values())
+"""Observable types pushed with their own value, one Defender indicator each."""
 
 
 def describe_error(error: BaseException) -> str:
@@ -173,6 +181,45 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         except DefenderApiHandlerError as err:
             if not _is_not_found(err):
                 raise DefenderDeploymentError(describe_error(err)) from err
+
+    def is_complete(
+        self,
+        deployment: IndicatorDeployment,
+        vendor_matches: Sequence[VendorIndicator],
+    ) -> bool:
+        """Tell whether every observable of the indicator has its Defender indicator.
+
+        The connector creates one Defender indicator per IP address, domain, host
+        name and URL of the pattern, and one per file (its SHA-256, SHA-1 or MD5).
+        The pattern does not tell which hashes belong to the same file: the files
+        are covered when one of their hashes is on Defender.
+
+        :param deployment: The deployment.
+        :param vendor_matches: Its Defender indicators.
+        :return: False when an observable has no Defender indicator.
+        """
+        if deployment.pattern_type not in (None, "stix"):
+            return True
+        vendor_values = {
+            normalized
+            for vendor_indicator in vendor_matches
+            if (normalized := normalize_value(vendor_indicator.value))
+        }
+        file_hashes: set[str] = set()
+        for pattern_value in extract_pattern_values(deployment.pattern):
+            value = normalize_value(pattern_value.value)
+            if not value:
+                continue
+            algorithm = pattern_value.hash_algorithm
+            if algorithm is not None:
+                if algorithm.lower() in FILE_HASH_TYPES_MAPPER:
+                    file_hashes.add(value)
+            elif (
+                pattern_value.object_type in PATTERN_VALUE_TYPES
+                and value not in vendor_values
+            ):
+                return False
+        return not file_hashes or not file_hashes.isdisjoint(vendor_values)
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
         """Push an indicator again, with the stream create path.

@@ -10,6 +10,7 @@ from microsoft_defender_intel_connector.deployment import describe_error
 from microsoft_defender_intel_connector.settings import ConnectorSettings
 from microsoft_defender_intel_connector.utils import (
     FILE_HASH_TYPES_MAPPER,
+    IOC_TYPES,
     is_observable,
     is_stix_indicator,
 )
@@ -158,19 +159,79 @@ class MicrosoftDefenderIntelConnector:
                 )
         return result
 
+    def _supported_observables(self, data: dict) -> list[dict]:
+        """
+        Return the observables of an OpenCTI indicator that Defender takes as indicators
+        (IP addresses, domains, host names, URLs, files with an MD5, SHA-1 or SHA-256).
+        :param data: OpenCTI indicator (stream event shape)
+        :return: The observables, one Defender indicator each
+        """
+        return [
+            observable
+            for observable in self._convert_indicator_to_observables(data) or []
+            if observable.get("type") == "file" or observable.get("type") in IOC_TYPES
+        ]
+
+    @staticmethod
+    def _observable_value(observable: dict) -> str | None:
+        """Return the value Defender stores for an observable (one hash per file)."""
+        if observable["type"] != "file":
+            return observable["value"]
+        for hash_type in ("sha256", "sha1", "md5"):
+            if hash_type in observable["hashes"]:
+                return observable["hashes"][hash_type]
+        return None
+
+    def _create_confirmed_defender_indicator(self, observable: dict) -> str:
+        """
+        Create the Defender indicator of an observable.
+        :param observable: OpenCTI observable data
+        :return: The Defender id
+        :raise DefenderApiHandlerError: When Defender does not confirm the indicator
+        """
+        result = self._create_defender_indicator(observable)
+        if not result or not result.get("id"):
+            raise DefenderApiHandlerError(
+                "[API] Microsoft Defender did not return the created indicator",
+                {"value": self._observable_value(observable)},
+            )
+        return str(result["id"])
+
+    def _roll_back_defender_indicators(self, defender_ids: list[str]) -> None:
+        """
+        Delete the Defender indicators created by a push that did not complete, so that
+        no surviving indicator makes a partial deployment look live.
+        :param defender_ids: Ids of the Defender indicators created by the push
+        """
+        for defender_id in defender_ids:
+            try:
+                self.api.delete_indicator(defender_id)
+            except Exception as err:
+                self.helper.connector_logger.warning(
+                    "[CREATE] Cannot delete a Defender indicator of an incomplete push",
+                    {"defender_id": defender_id, "error": str(err)},
+                )
+                continue
+            self._delete_external_reference(defender_id)
+
     def push_indicator(self, data: dict) -> list[str]:
         """
         Create the Defender indicators of an OpenCTI indicator, one per observable.
-        Shared by the stream create path and the reconciliation re-push.
+        Shared by the stream create path and the reconciliation re-push. All or
+        nothing: the indicators created by a push that fails are deleted again.
         :param data: OpenCTI indicator (stream event shape)
         :return: Ids of the Defender indicators created
         :raise DefenderApiHandlerError: When Defender rejects an indicator
         """
-        defender_ids = []
-        for observable in self._convert_indicator_to_observables(data) or []:
-            result = self._create_defender_indicator(observable)
-            if result and result.get("id"):
-                defender_ids.append(str(result["id"]))
+        defender_ids: list[str] = []
+        try:
+            for observable in self._supported_observables(data):
+                defender_ids.append(
+                    self._create_confirmed_defender_indicator(observable)
+                )
+        except Exception:
+            self._roll_back_defender_indicators(defender_ids)
+            raise
         return defender_ids
 
     def _report_failed(self, data: dict, error: BaseException) -> None:
@@ -216,33 +277,42 @@ class MicrosoftDefenderIntelConnector:
         did_update = False
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension("id", data)
         if is_stix_indicator(data):
-            observables = self._convert_indicator_to_observables(data) or []
-            updated_ids = []
+            deployed_ids: list[str] = []
+            created_ids: list[str] = []
             try:
-                for observable in observables:
-                    observable_value = None
-                    if observable["type"] == "file":
-                        if "sha256" in observable["hashes"]:
-                            observable_value = observable["hashes"]["sha256"]
-                        elif "sha1" in observable["hashes"]:
-                            observable_value = observable["hashes"]["sha1"]
-                        elif "md5" in observable["hashes"]:
-                            observable_value = observable["hashes"]["md5"]
-                    else:
-                        observable_value = observable["value"]
-                    result = self.api.find_indicators(observable_value)
-                    if len(result) > 0:
-                        self._update_defender_indicator(result[0]["id"], observable)
-                        did_update = True
-                        updated_ids.append(str(result[0]["id"]))
+                existing = [
+                    (
+                        observable,
+                        self.api.find_indicators(self._observable_value(observable))
+                        or [],
+                    )
+                    for observable in self._supported_observables(data)
+                ]
+                # An indicator with at least one Defender indicator is deployed: every
+                # observable must have its own, the missing ones are created.
+                if any(found for _, found in existing):
+                    for observable, found in existing:
+                        if found:
+                            defender_id = str(found[0]["id"])
+                            self._update_defender_indicator(defender_id, observable)
+                            message = "[UPDATE] Indicator updated"
+                        else:
+                            defender_id = self._create_confirmed_defender_indicator(
+                                observable
+                            )
+                            created_ids.append(defender_id)
+                            message = "[UPDATE] Missing indicator created"
+                        deployed_ids.append(defender_id)
                         self.helper.connector_logger.info(
-                            "[UPDATE] Indicator updated",
-                            {"defender_id": result[0]["id"], "opencti_id": opencti_id},
+                            message,
+                            {"defender_id": defender_id, "opencti_id": opencti_id},
                         )
+                    did_update = True
             except Exception as err:
+                self._roll_back_defender_indicators(created_ids)
                 self._report_failed(data, err)
                 raise
-            self._report_pushed(data, updated_ids)
+            self._report_pushed(data, deployed_ids)
         elif is_observable(data):
             result = self.api.find_indicators(data["value"])
             if len(result) > 0:
