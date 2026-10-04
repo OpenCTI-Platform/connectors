@@ -411,6 +411,7 @@ class SplunkConnector:
 
     def process_message(self, msg):
         payload = json.loads(msg.data)["data"]
+        # Without the OpenCTI extension, pycti returns the STIX id of the object.
         id = OpenCTIConnectorHelper.get_attribute_in_extension("id", payload)
 
         self.helper.log_info(f"processing message with id {id}")
