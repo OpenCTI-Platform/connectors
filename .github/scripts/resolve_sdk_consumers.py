@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import json
 import pathlib
 import re
 import subprocess
@@ -90,18 +91,28 @@ def dockerfile_versions(paths: list[pathlib.Path]) -> set[str]:
     return found
 
 
+def ubi9_connectors(root: pathlib.Path) -> set[str]:
+    """Return the connectors built with the shared `Dockerfile_ubi9` (`.github/ubi9-connectors.json`)."""
+    listing = root / ".github" / "ubi9-connectors.json"
+    if not listing.is_file():
+        return set()
+    return {entry.strip("/") for entry in json.loads(read_text(listing))}
+
+
 def python_versions(
-    dependency_file: pathlib.Path, root: pathlib.Path, fallback: str
+    dependency_file: pathlib.Path, root: pathlib.Path, fallback: str, ubi9: set[str]
 ) -> list[str]:
     """Return the Python versions a connector is built with.
 
-    A connector is built from its own Dockerfile(s) (alpine images, `FROM python:3.11-alpine`) and
-    from the shared `Dockerfile_ubi9` at the repository root (`python3.12`), so both versions have
-    to resolve. The fallback applies only when no Dockerfile states a version.
+    A connector is built from its own Dockerfile(s) (alpine images, `FROM python:3.11-alpine`) and,
+    when it is listed in `.github/ubi9-connectors.json`, from the shared `Dockerfile_ubi9` at the
+    repository root (`python3.12`) as well: every image it ships with has to resolve, and no other.
+    The fallback applies only when no Dockerfile states a version.
     """
     directory = connector_dir(dependency_file)
     versions = dockerfile_versions(sorted(directory.glob("Dockerfile*")))
-    versions |= dockerfile_versions(sorted(root.glob("Dockerfile_ubi9*")))
+    if directory.relative_to(root).as_posix() in ubi9:
+        versions |= dockerfile_versions(sorted(root.glob("Dockerfile_ubi9*")))
     return sorted(versions) or [fallback]
 
 
@@ -194,10 +205,11 @@ def main() -> int:
         [pathlib.Path(p).resolve() for p in args.only] if args.only else consumers(root)
     )
     # one resolution per (dependency file, Python version the connector is built with)
+    ubi9 = ubi9_connectors(root)
     targets = [
         (dependency_file, version)
         for dependency_file in files
-        for version in python_versions(dependency_file, root, args.python)
+        for version in python_versions(dependency_file, root, args.python, ubi9)
     ]
     print(
         f"Resolving {len(files)} dependency file(s) of connectors that depend on connectors-sdk "
@@ -216,7 +228,13 @@ def main() -> int:
                 print(f"  FAIL py{version}  {path}")
 
     if failures:
-        print(f"\n{len(failures)} connector(s) no longer resolve with this SDK:\n")
+        connectors_failing = {
+            connector_dir(root / path).relative_to(root) for path, _, _ in failures
+        }
+        print(
+            f"\n{len(failures)} resolution(s) failed, {len(connectors_failing)} connector(s) "
+            "no longer resolve with this SDK:\n"
+        )
         for path, version, detail in failures:
             print(f"== {path} (python {version})")
             for line in detail.splitlines()[-12:]:
