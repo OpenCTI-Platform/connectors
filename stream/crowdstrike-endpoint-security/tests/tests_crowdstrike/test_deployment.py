@@ -283,7 +283,7 @@ def test_failed_delete_is_not_reported_removed(permanent_connector):
 
     permanent_connector.assurance.report_removed.assert_not_called()
     permanent_connector.helper.connector_logger.warning.assert_called_once_with(
-        "[DELETE] IOC not deleted from Crowdstrike", {"error": "access denied"}
+        "[DELETE] IOC not deleted from Crowdstrike", meta={"error": "access denied"}
     )
 
 

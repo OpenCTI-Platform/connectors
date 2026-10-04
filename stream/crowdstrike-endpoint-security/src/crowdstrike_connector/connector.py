@@ -98,7 +98,7 @@ class CrowdstrikeConnector:
         elif result.status == IocOperationStatus.FAILED:
             self.helper.connector_logger.warning(
                 "[DELETE] IOC not deleted from Crowdstrike",
-                {"error": result.error},
+                meta={"error": result.error},
             )
         return result
 
