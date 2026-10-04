@@ -1245,6 +1245,9 @@ def test_reconciliation_of_indicators_sharing_an_ip(e2e_connector, router):
         OTHER_ID: "active",
         "revoked-id": "removed",
     }
+    # The withdrawn indicator leaves the snapshot although its item stays for the others
+    assert third_stix_id not in e2e_connector.indicators_of("198.51.100.7")
+    assert third_stix_id not in e2e_connector._indicator_cache
 
 
 def test_withdrawals_of_every_indicator_sharing_an_item_never_use_a_stale_id(
