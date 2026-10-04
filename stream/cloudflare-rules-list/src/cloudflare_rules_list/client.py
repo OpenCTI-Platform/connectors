@@ -14,7 +14,28 @@ from pydantic import HttpUrl
 
 
 class CloudflareAPIError(Exception):
-    """Exception raised for Cloudflare API errors."""
+    """Exception raised for Cloudflare API errors.
+
+    Attributes:
+        status_code: The HTTP status of the Cloudflare response, None when
+            Cloudflare could not be reached.
+    """
+
+    def __init__(self, message: str, status_code: Optional[int] = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+
+
+class CloudflareOperationError(CloudflareAPIError):
+    """A bulk operation Cloudflare accepted but failed or did not complete in time.
+
+    Attributes:
+        timed_out: Whether the operation was still running at the deadline.
+    """
+
+    def __init__(self, message: str, timed_out: bool = False) -> None:
+        super().__init__(message, status_code=200)
+        self.timed_out = timed_out
 
 
 class CloudflareRulesListClient:
@@ -81,13 +102,19 @@ class CloudflareRulesListClient:
                         error_msg = str(error_data["errors"])
                 except (json.JSONDecodeError, ValueError):
                     error_msg = err_response.text
-            raise CloudflareAPIError(f"API request failed: {error_msg}") from exc
+            raise CloudflareAPIError(
+                f"API request failed: {error_msg}",
+                status_code=(
+                    err_response.status_code if err_response is not None else None
+                ),
+            ) from exc
 
         try:
             return response.json()
         except (json.JSONDecodeError, ValueError) as exc:
             raise CloudflareAPIError(
-                f"Invalid JSON in Cloudflare response: {response.text[:200]}"
+                f"Invalid JSON in Cloudflare response: {response.text[:200]}",
+                status_code=response.status_code,
             ) from exc
 
     def list_lists(self) -> list[dict]:
@@ -211,11 +238,13 @@ class CloudflareRulesListClient:
             if state == "completed":
                 return status
             if state == "failed":
-                raise CloudflareAPIError(
+                raise CloudflareOperationError(
                     f"Bulk operation failed: {status.get('error')}"
                 )
 
             if time.monotonic() - start_time > timeout:
-                raise CloudflareAPIError(f"Bulk operation timed out after {timeout}s")
+                raise CloudflareOperationError(
+                    f"Bulk operation timed out after {timeout}s", timed_out=True
+                )
 
             time.sleep(poll_interval)

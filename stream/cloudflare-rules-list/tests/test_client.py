@@ -2,7 +2,11 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-from cloudflare_rules_list.client import CloudflareAPIError, CloudflareRulesListClient
+from cloudflare_rules_list.client import (
+    CloudflareAPIError,
+    CloudflareOperationError,
+    CloudflareRulesListClient,
+)
 
 
 @pytest.fixture
@@ -85,13 +89,14 @@ def test_make_request_uses_custom_timeout(client):
 
 def test_make_request_raises_with_structured_errors(client):
     err = requests.exceptions.HTTPError("400")
-    err.response = MagicMock()
+    err.response = MagicMock(status_code=400)
     err.response.json.return_value = {"errors": [{"code": 10001, "message": "bad"}]}
     client._session.request.return_value = _response(raise_exc=err)
 
     with pytest.raises(CloudflareAPIError) as exc:
         client._make_request("GET", "/x")
     assert "10001" in str(exc.value)
+    assert exc.value.status_code == 400
 
 
 def test_make_request_raises_with_text_body(client):
@@ -112,6 +117,7 @@ def test_make_request_raises_without_response(client):
     with pytest.raises(CloudflareAPIError) as exc:
         client._make_request("GET", "/x")
     assert "no network" in str(exc.value)
+    assert exc.value.status_code is None
 
 
 def test_list_lists(client):
@@ -168,9 +174,10 @@ def test_wait_for_operation_failed(client, monkeypatch):
     client._session.request.return_value = _response(
         {"result": {"status": "failed", "error": "boom"}}
     )
-    with pytest.raises(CloudflareAPIError) as exc:
+    with pytest.raises(CloudflareOperationError) as exc:
         client.wait_for_operation("op")
     assert "boom" in str(exc.value)
+    assert exc.value.timed_out is False
 
 
 def test_wait_for_operation_times_out(client, monkeypatch):
@@ -181,9 +188,10 @@ def test_wait_for_operation_times_out(client, monkeypatch):
     monkeypatch.setattr("cloudflare_rules_list.client.time.sleep", lambda _: None)
     client._session.request.return_value = _response({"result": {"status": "pending"}})
 
-    with pytest.raises(CloudflareAPIError) as exc:
+    with pytest.raises(CloudflareOperationError) as exc:
         client.wait_for_operation("op", timeout=10)
     assert "timed out" in str(exc.value)
+    assert exc.value.timed_out is True
 
 
 def test_wait_for_operation_polls_until_complete(client, monkeypatch):

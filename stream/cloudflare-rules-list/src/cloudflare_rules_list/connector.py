@@ -13,11 +13,16 @@ import time
 from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any, Optional
 
-from cloudflare_rules_list.client import CloudflareAPIError, CloudflareRulesListClient
+from cloudflare_rules_list.client import (
+    CloudflareAPIError,
+    CloudflareOperationError,
+    CloudflareRulesListClient,
+)
 from cloudflare_rules_list.settings import ConnectorSettings
 from connectors_sdk.connectors.stream.deployment import (
     DeploymentReport,
     DeploymentStatus,
+    deployment_failure_reason,
     normalize_value,
 )
 from pycti import OpenCTIConnectorHelper
@@ -30,6 +35,29 @@ _IPV4_PATTERN_RE = re.compile(r"\[ipv4-addr:value\s*=\s*'([^']+)'\]", re.IGNOREC
 
 # Prefix of the list item comments, followed by the OpenCTI id of the object.
 COMMENT_PREFIX = "OpenCTI: "
+
+PLATFORM_NAME = "Cloudflare"
+"""Name of the security platform in the deployment failure reasons."""
+
+UPLOAD_ACTION = "list update"
+"""What Cloudflare is asked to do when the snapshot is uploaded."""
+
+
+def failure_reason(error: CloudflareAPIError) -> str:
+    """Return the reason OpenCTI shows for indicators Cloudflare did not take.
+
+    Args:
+        error: The error raised while uploading the snapshot.
+
+    Returns:
+        One short sentence naming Cloudflare and the cause; the Cloudflare response
+        is left to the logs.
+    """
+    if isinstance(error, CloudflareOperationError):
+        if error.timed_out:
+            return f"{PLATFORM_NAME} did not complete the {UPLOAD_ACTION} in time"
+        return f"{PLATFORM_NAME} refused the {UPLOAD_ACTION}: the bulk operation failed"
+    return deployment_failure_reason(PLATFORM_NAME, UPLOAD_ACTION, error.status_code)
 
 
 class Connector:
@@ -289,7 +317,7 @@ class Connector:
                 self._report(
                     self._changed(indicators),
                     DeploymentStatus.FAILED,
-                    error_message=str(exc) or type(exc).__name__,
+                    error_message=failure_reason(exc),
                 )
                 raise
             self._report(self._changed(indicators), DeploymentStatus.DEPLOYED)

@@ -20,7 +20,8 @@ list, which the connector does not manage.
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
-from cloudflare_rules_list.connector import COMMENT_PREFIX
+from cloudflare_rules_list.client import CloudflareAPIError
+from cloudflare_rules_list.connector import COMMENT_PREFIX, failure_reason
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentVendorAdapter,
@@ -143,10 +144,19 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
         """Add an indicator to the snapshot and upload it.
 
         :return: None: the bulk replace returns no item id.
-        :raises CloudflareAPIError: When Cloudflare refuses the snapshot.
+        :raises CloudflareDeploymentError: When Cloudflare refuses the snapshot or
+            cannot be reached, with the reason OpenCTI shows (the Cloudflare
+            response is logged).
         :raises ValueError: When the indicator has no IPv4 pattern.
         """
-        self._connector.push_indicator(stix_indicator)
+        try:
+            self._connector.push_indicator(stix_indicator)
+        except CloudflareAPIError as err:
+            self._connector.logger.warning(
+                "[DEPLOYMENT] Cloudflare did not take an indicator pushed again.",
+                {"indicator_id": stix_indicator.get("id"), "error": str(err)},
+            )
+            raise CloudflareDeploymentError(failure_reason(err)) from err
         return None
 
 

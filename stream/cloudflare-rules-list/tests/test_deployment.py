@@ -7,7 +7,11 @@ from unittest.mock import MagicMock
 
 import pytest
 from cloudflare_rules_list import Connector, ConnectorSettings
-from cloudflare_rules_list.client import CloudflareAPIError, CloudflareRulesListClient
+from cloudflare_rules_list.client import (
+    CloudflareAPIError,
+    CloudflareOperationError,
+    CloudflareRulesListClient,
+)
 from cloudflare_rules_list.deployment import (
     CloudflareDeploymentAdapter,
     CloudflareDeploymentError,
@@ -242,7 +246,8 @@ def test_failed_upload_reports_the_new_indicators_failed(connector, assurance):
     connector.process_message(make_message("create", make_indicator()))
     assurance.reporter.enqueue.reset_mock()
     connector.client.replace_list_items.side_effect = CloudflareAPIError(
-        "API request failed: [{'code': 10000, 'message': 'Authentication error'}]"
+        "API request failed: [{'code': 10000, 'message': 'Authentication error'}]",
+        status_code=403,
     )
 
     connector.process_message(
@@ -252,8 +257,14 @@ def test_failed_upload_reports_the_new_indicators_failed(connector, assurance):
     reports = enqueued(assurance)
     assert set(reports) == {OTHER_STIX_ID}
     assert reports[OTHER_STIX_ID].status == "failed"
-    assert "Authentication error" in reports[OTHER_STIX_ID].error_message
+    assert reports[OTHER_STIX_ID].error_message == (
+        "Cloudflare refused the list update: permission denied"
+    )
     connector.logger.error.assert_called_once()
+    assert (
+        "Authentication error"
+        in connector.logger.error.call_args.kwargs["meta"]["error"]
+    )
 
     connector.client.replace_list_items.side_effect = None
     assurance.reporter.enqueue.reset_mock()
@@ -261,12 +272,51 @@ def test_failed_upload_reports_the_new_indicators_failed(connector, assurance):
     assert set(enqueued(assurance)) == {OTHER_STIX_ID}
 
 
-def test_failed_upload_without_message_uses_the_error_type(connector, assurance):
-    connector.client.replace_list_items.side_effect = CloudflareAPIError()
+@pytest.mark.parametrize(
+    "error, reason",
+    [
+        (
+            CloudflareAPIError("API request failed: timed out"),
+            "Cloudflare could not be reached for the list update",
+        ),
+        (
+            CloudflareOperationError("Bulk operation failed: invalid item"),
+            "Cloudflare refused the list update: the bulk operation failed",
+        ),
+        (
+            CloudflareOperationError("Bulk operation timed out", timed_out=True),
+            "Cloudflare did not complete the list update in time",
+        ),
+    ],
+)
+def test_failed_upload_reasons_name_cloudflare_and_the_cause(
+    connector, assurance, error, reason
+):
+    connector.client.replace_list_items.side_effect = error
 
     connector.process_message(make_message("create", make_indicator()))
 
-    assert enqueued(assurance)[STIX_ID].error_message == "CloudflareAPIError"
+    assert enqueued(assurance)[STIX_ID].error_message == reason
+
+
+def test_adapter_push_raises_the_reason_and_logs_the_detail(connector):
+    connector.client.replace_list_items.side_effect = CloudflareAPIError(
+        "API request failed: [{'code': 10000}]", status_code=429
+    )
+    indicator = make_indicator()
+
+    with pytest.raises(CloudflareDeploymentError) as raised:
+        CloudflareDeploymentAdapter(connector).push_indicator(indicator)
+
+    assert str(raised.value) == "Cloudflare refused the list update: rate limit reached"
+    message, meta = connector.logger.warning.call_args.args
+    assert message == (
+        "[DEPLOYMENT] Cloudflare did not take an indicator pushed again."
+    )
+    assert meta == {
+        "indicator_id": indicator["id"],
+        "error": "API request failed: [{'code': 10000}]",
+    }
 
 
 def test_full_sync_reports_the_indicators_only(connector, assurance):
@@ -968,7 +1018,7 @@ def fixture_e2e_connector(no_atexit, router):
 def test_snapshot_outcomes_are_reported_in_one_batch(e2e_connector, router):
     e2e_connector.process_message(make_message("create", make_indicator()))
     e2e_connector.client.replace_list_items.side_effect = CloudflareAPIError(
-        "API request failed: quota exceeded"
+        "API request failed: quota exceeded", status_code=429
     )
     e2e_connector.process_message(
         make_message("create", make_indicator(stix_id=OTHER_STIX_ID, ip="203.0.113.9"))
@@ -984,7 +1034,9 @@ def test_snapshot_outcomes_are_reported_in_one_batch(e2e_connector, router):
     assert deployed == {"indicatorId": STIX_ID, "status": "deployed"}
     assert failed["indicatorId"] == OTHER_STIX_ID
     assert failed["status"] == "failed"
-    assert failed["metadata"]["error_message"].endswith("quota exceeded")
+    assert failed["metadata"]["error_message"] == (
+        "Cloudflare refused the list update: rate limit reached"
+    )
 
 
 def test_reconciliation_confirms_removes_and_withdraws(e2e_connector, router):
