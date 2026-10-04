@@ -95,7 +95,9 @@ def within_window(result: SourceResult, window: HuntTimeWindow) -> SourceResult:
     Censys and Silent Push search their current view of the internet, without
     time bounds: a host whose last scan falls outside the window is dropped,
     and a host without scan time is kept. The records read still count against
-    the run budget.
+    the run budget. Once a host is dropped, the source total, which also counts
+    hosts outside the window, is no longer a hit count: only the hosts kept
+    count, and the truncation of the source is kept apart.
 
     Args:
         result: Hosts found by one source query.
@@ -109,7 +111,9 @@ def within_window(result: SourceResult, window: HuntTimeWindow) -> SourceResult:
         for host in result.hosts
         if host.last_seen is None or window.start <= host.last_seen <= window.end
     ]
-    return SourceResult(hosts, result.total, result.read)
+    if len(hosts) == len(result.hosts):
+        return result
+    return SourceResult(hosts, None, result.read, more=result.truncated)
 
 
 def describe_rule(rule: FingerprintRule, max_items: int = 5) -> str:
@@ -266,8 +270,8 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
                     continue
                 answered += 1
                 remaining -= result.read
+                truncated = truncated or result.truncated
                 if result.total is not None and result.total > result.read:
-                    truncated = True
                     reported_total = max(reported_total, result.total)
                 for host in result.hosts:
                     if host.key in hosts:

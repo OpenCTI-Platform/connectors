@@ -119,8 +119,13 @@ def test_within_window_keeps_the_hosts_scanned_during_the_run_window():
     unknown = Host(key="9.9.9.9")
     result = within_window(SourceResult([inside, before, after, unknown], 12), WINDOW)
     assert [host.key for host in result.hosts] == ["8.8.8.8", "9.9.9.9"]
-    assert result.total == 12
+    # The source total also counted the hosts dropped: it is not kept, the truncation is
+    assert result.total is None
     assert result.read == 4
+    assert result.truncated is True
+    complete = SourceResult([inside, unknown], 2)
+    assert within_window(complete, WINDOW) is complete
+    assert within_window(SourceResult([before], 1), WINDOW).truncated is False
 
 
 def test_infrastructure_name_carries_the_hunt_id():
@@ -467,6 +472,29 @@ def test_execute_flags_truncation(connector_factory, requests_mock):
     assert result.truncated is True
     assert result.total_hits == 500
     assert [event.fields["ip"] for event in result.events] == ["8.8.8.8"]
+
+
+def test_execute_does_not_count_hosts_outside_the_window(
+    connector_factory, requests_mock
+):
+    # Given a current-view source whose hosts were all last scanned before the run window
+    requests_mock.post(
+        CENSYS_URL,
+        json=censys_answer(
+            [censys_host("8.8.8.8", scan_time="2026-09-01T08:00:00Z")], total=500
+        ),
+    )
+    connector = connector_factory()
+
+    # When the run executes
+    result = connector.execute(
+        plan_query({"censys": ["q1"]}), WINDOW, HuntLimits(max_results=2)
+    )
+
+    # Then nothing is a hit, and the source still reads as truncated
+    assert result.events == []
+    assert result.total_hits == 0
+    assert result.truncated is True
 
 
 def test_execute_shares_the_result_budget_across_queries(connector_factory):

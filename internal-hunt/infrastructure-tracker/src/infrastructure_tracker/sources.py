@@ -157,16 +157,24 @@ class SourceResult:
         total: Number of matches reported by the source, when it reports one.
         records: Number of records read (hits, scans or IP addresses), whether
             they map to a host or not, when it differs from the number of hosts.
+        more: Whether the source holds more matches than it returned, when
+            its total is not kept (a total that also counts hosts filtered out).
     """
 
     hosts: list[Host]
     total: int | None = None
     records: int | None = None
+    more: bool = False
 
     @property
     def read(self) -> int:
         """Number of records the query read from the source."""
         return len(self.hosts) if self.records is None else self.records
+
+    @property
+    def truncated(self) -> bool:
+        """Whether the source holds more matches than the query read."""
+        return self.more or (self.total is not None and self.total > self.read)
 
 
 def _text(value: Any) -> str:
