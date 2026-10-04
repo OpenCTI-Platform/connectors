@@ -415,6 +415,16 @@ def test_rule_ids_of_prefers_the_response_ids():
     assert rule_ids_of(None, []) == []
 
 
+def test_rule_ids_of_unwraps_the_reply_envelope():
+    sent = [CortexXdrIoc(indicator="evil.com", type="DOMAIN_NAME", rule_id=7)]
+
+    assert rule_ids_of(
+        {"reply": {"added_objects": [{"id": 123}], "updated_objects": [{"id": 4}]}},
+        sent,
+    ) == ["123", "4"]
+    assert rule_ids_of({"reply": None}, sent) == ["7"]
+
+
 # Settings and factory
 
 

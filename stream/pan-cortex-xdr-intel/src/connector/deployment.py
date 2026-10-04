@@ -155,14 +155,16 @@ def failure_reason(error: BaseException) -> str:
 def rule_ids_of(response: Any, xdr_iocs: Sequence[CortexXdrIoc]) -> list[str]:
     """Return the `rule_id`s of upserted IOCs.
 
-    :param response: The `insert_iocs` response (`added_objects` / `updated_objects`).
+    :param response: The `insert_iocs` response (`added_objects` / `updated_objects`,
+        at its root or in the optional `reply` envelope).
     :param xdr_iocs: The IOCs sent, carrying the `rule_id` of the existing ones.
     :return: The ids returned by Cortex XDR, else the ids resolved before the upsert.
     """
     rule_ids: list[str] = []
-    if isinstance(response, Mapping):
+    reply = response.get("reply", response) if isinstance(response, Mapping) else None
+    if isinstance(reply, Mapping):
         for key in ("added_objects", "updated_objects"):
-            for item in response.get(key) or []:
+            for item in reply.get(key) or []:
                 if isinstance(item, Mapping) and item.get("id") is not None:
                     rule_ids.append(str(item["id"]))
     if not rule_ids:
