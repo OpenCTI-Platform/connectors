@@ -191,9 +191,10 @@ Connectors with the `internet` platform hunt adversary infrastructure on interne
 rules stored as hunt native queries (`platform: internet`, `language: internet`). They have no Security Platform and
 override `to_stix()` to produce `infrastructure`, observables (`ipv4-addr`, `domain-name`, `x509-certificate`) and
 detection indicators, linked with `consists-of`, `based-on`, `related-to` and `indicates` relationships, plus the
-run-scoped observed-data of the observables found (`build_observed_data`, one per number of hosts) as the link to the
-run (see `internal-hunt/infrastructure-tracker`). The infrastructure, observables, indicators and relationships keep
-their standard ids, so every run of a hunt grows the same infrastructure.
+run-scoped observed-data of the observables found (`build_observed_data`, one per observable, `number_observed` being
+the number of hosts holding it) as the link to the run (see `internal-hunt/infrastructure-tracker`). The observables,
+indicators and relationships keep their standard ids and the infrastructure takes an id seeded from the hunt id alone,
+so every run of a hunt, renamed or not, grows the same infrastructure.
 
 ## Testing
 

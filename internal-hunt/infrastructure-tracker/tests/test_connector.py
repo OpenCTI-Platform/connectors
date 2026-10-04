@@ -501,7 +501,40 @@ def test_execute_skips_scout_for_old_windows(_, connector_factory, requests_mock
 
     assert requests_mock.call_count == 0
     assert result.events == []
+    # Nothing of the window was searched: the run is partial, never a verified zero
+    assert result.truncated is True
     connector.logger.info.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "window, truncated",
+    [
+        pytest.param(WINDOW, False, id="searched-whole"),
+        pytest.param(
+            HuntTimeWindow(
+                start=datetime(2026, 8, 1, tzinfo=timezone.utc),
+                end=datetime(2026, 10, 4, tzinfo=timezone.utc),
+            ),
+            True,
+            id="start-clipped",
+        ),
+    ],
+)
+@patch(f"{TRACKER}._today", return_value=date(2026, 10, 4))
+def test_execute_flags_a_clipped_scout_window(
+    _, connector_factory, requests_mock, window, truncated
+):
+    # Given a Scout search answering one IP address
+    requests_mock.get(SCOUT_URL, json={"ips": [{"ip": "8.8.8.8"}]})
+    connector = connector_factory(ALL_SOURCES)
+
+    # When the run window is searched whole, or clipped to the Scout search range
+    result = connector.execute(
+        plan_query({"cymru_scout": [JARM]}), window, HuntLimits()
+    )
+
+    # Then unsearched days make the result partial
+    assert result.truncated is truncated
 
 
 def test_execute_flags_truncation(connector_factory, requests_mock):

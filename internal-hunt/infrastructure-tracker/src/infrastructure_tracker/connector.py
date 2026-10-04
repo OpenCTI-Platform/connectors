@@ -1,6 +1,7 @@
 """Infrastructure tracker: hunts adversary infrastructure on internet scanning sources."""
 
 import math
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, NoReturn
 
@@ -328,8 +329,14 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
                     "[TRACKER] Run window older than the Team Cymru Scout history, skipped",
                     {"start": window.start.isoformat()},
                 )
-                return SourceResult([])
-            return client.search(query, dates[0], dates[1], limit, deadline)
+                # Nothing of the window was searched: no host found proves nothing
+                return SourceResult([], more=True)
+            result = client.search(query, dates[0], dates[1], limit, deadline)
+            # Days cut from the start of the window (older than the Scout history or beyond its search range) were
+            # not searched; days after today hold no scan yet
+            if dates[0] > window.start.astimezone(timezone.utc).date():
+                return replace(result, more=True)
+            return result
         return within_window(client.search(query, limit, deadline), window)
 
     def _enrich(self, hosts: list[Host], deadline: RunDeadline) -> None:
