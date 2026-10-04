@@ -353,7 +353,7 @@ def test_ingest_raises_without_response(secops_client, monkeypatch):
 
 
 def test_list_ioc_matches_sends_the_time_range(secops_client):
-    payload = {"matches": [{"id": "1"}, "not a match"], "moreDataAvailable": True}
+    payload = {"matches": [{"id": "1"}], "moreDataAvailable": True}
     secops_client.chronicle_http_session.request.return_value = mock_response(payload)
 
     matches, more_available = secops_client.list_ioc_matches(
@@ -389,6 +389,7 @@ def test_list_ioc_matches_without_match(secops_client):
         (mock_response(ValueError("no json"), text="<html>"), "not JSON"),
         (mock_response({"matches": "oops"}), "'matches' is not a list"),
         (mock_response(["unexpected"]), "'matches' is not a list"),
+        (mock_response({"matches": [{"id": "1"}, "x"]}), "a match is not an object"),
     ],
 )
 def test_list_ioc_matches_errors(secops_client, response, message):
@@ -434,8 +435,6 @@ def test_adapter_collects_hits_from_ioc_matches(connector):
                 "lastSeenTimestamp": format_timestamp(recent),
             },
             ioc_match(since - timedelta(minutes=1), domain="evil.example"),
-            ioc_match(None, domain="evil.example"),
-            ioc_match("not a date", domain="evil.example"),
             ioc_match(recent, domain="unknown.example"),
             {"artifactIndicator": "oops", "lastSeenTimestamp": "2026-10-03T11:00:00Z"},
         ],
@@ -464,6 +463,21 @@ def test_adapter_collects_hits_from_ioc_matches(connector):
     assert start == since
     assert limit == MAX_HIT_MATCHES
     connector.helper.connector_logger.warning.assert_not_called()
+
+
+@pytest.mark.parametrize("last_seen", [None, "not a date"])
+def test_adapter_fails_the_hit_read_on_a_match_without_last_seen_time(
+    connector, last_seen
+):
+    connector.api_client.list_ioc_matches.return_value = (
+        [ioc_match(last_seen, domain="evil.example")],
+        False,
+    )
+
+    with pytest.raises(SecOpsApiError, match="without last seen time"):
+        SecOpsDeploymentAdapter(connector).collect_hits(
+            [make_deployment()], datetime.now(UTC) - timedelta(hours=1)
+        )
 
 
 def test_adapter_credits_every_indicator_sharing_a_value(connector):

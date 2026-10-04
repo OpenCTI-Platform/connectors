@@ -292,6 +292,8 @@ does not exist), and detection hits are counted with a sighting of the indicator
   that minute are a lower bound. A match counts one hit for every deployed indicator whose value is its artifact (domain,
   destination IP address, MD5, SHA-1 or SHA-256 hash), at the time Google SecOps last saw the artifact in the
   environment; hits already reported are never counted twice. URL indicators have no IoC match artifact and get no hit.
+  A malformed match (not an object, or without last seen time) fails the hit read, and the next run reads the same
+  window again.
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
   the requests only target indicators this connector reports `deployed`. The retry requested by an analyst
   (`pending`) is handled by the periodic run.

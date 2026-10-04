@@ -25,6 +25,7 @@ from connectors_sdk import (
     VendorHit,
 )
 from connectors_sdk.connectors.stream.deployment import normalize_value, parse_datetime
+from secops_siem_services import SecOpsApiError
 
 if TYPE_CHECKING:
     from secops_siem_connector.connector import SecOpsSIEMConnector
@@ -99,7 +100,8 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
         A match counts one hit per matching indicator, at the time Google SecOps last saw
         the artifact in the environment (hits already reported are filtered by the SDK).
 
-        :raises SecOpsApiError: When the IoC matches cannot be listed.
+        :raises SecOpsApiError: When the IoC matches cannot be listed, or a match has
+            no last seen time (the window is read again).
         """
         by_value: dict[str, list[IndicatorDeployment]] = {}
         for deployment in deployments:
@@ -111,7 +113,12 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
         hits: list[VendorHit] = []
         for match in matches:
             timestamp = parse_datetime(match.get("lastSeenTimestamp"))
-            if timestamp is None or timestamp < since:
+            if timestamp is None:
+                raise SecOpsApiError(
+                    "Google SecOps listed an IoC match without last seen time, "
+                    "the hit read is incomplete"
+                )
+            if timestamp < since:
                 continue
             matched = {
                 deployment.indicator_id

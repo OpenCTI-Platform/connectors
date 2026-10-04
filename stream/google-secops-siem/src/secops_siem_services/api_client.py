@@ -303,7 +303,8 @@ class SecOpsEntitiesClient:
             raise SecOpsApiError(
                 "Unexpected IoC matches response: 'matches' is not a list"
             )
-        return (
-            [match for match in matches if isinstance(match, dict)],
-            bool(payload.get("moreDataAvailable")),
-        )
+        if not all(isinstance(match, dict) for match in matches):
+            raise SecOpsApiError(
+                "Unexpected IoC matches response: a match is not an object"
+            )
+        return matches, bool(payload.get("moreDataAvailable"))
