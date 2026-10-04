@@ -337,7 +337,7 @@ class DeploymentReconciler:
         self._thread.start()
         self._logger.info(
             f"{_LOG_PREFIX} Deployment reconciliation scheduled.",
-            {"interval_minutes": self._reporter.options.reconciliation_interval},
+            meta={"interval_minutes": self._reporter.options.reconciliation_interval},
         )
         return True
 
@@ -365,7 +365,8 @@ class DeploymentReconciler:
             summary = self._reconcile()
         except Exception as err:
             self._logger.warning(
-                f"{_LOG_PREFIX} Deployment reconciliation failed.", {"error": str(err)}
+                f"{_LOG_PREFIX} Deployment reconciliation failed.",
+                meta={"error": str(err)},
             )
             summary = ReconciliationSummary(skipped=True, reason=str(err))
         finally:
@@ -373,7 +374,7 @@ class DeploymentReconciler:
         log = self._logger.debug if summary.skipped else self._logger.info
         log(
             f"{_LOG_PREFIX} Deployment reconciliation completed.",
-            summary.as_log_meta(),
+            meta=summary.as_log_meta(),
         )
         return summary
 
@@ -422,7 +423,7 @@ class DeploymentReconciler:
                 self._logger.warning(
                     f"{_LOG_PREFIX} Cannot read the indicators back from the vendor, "
                     "reconciliation skipped.",
-                    {"error": str(err)},
+                    meta={"error": str(err)},
                 )
                 return ReconciliationSummary(
                     skipped=True, reason=f"Vendor read-back failed: {err}"
@@ -432,7 +433,7 @@ class DeploymentReconciler:
             except DeploymentListingError as err:
                 self._logger.warning(
                     f"{_LOG_PREFIX} Cannot list the deployments, reconciliation skipped.",
-                    {"error": str(err)},
+                    meta={"error": str(err)},
                 )
                 return ReconciliationSummary(skipped=True, reason=str(err))
             summary.deployments = len(deployments)
@@ -515,7 +516,7 @@ class DeploymentReconciler:
                 self._logger.warning(
                     f"{_LOG_PREFIX} Vendor read-back limit reached, absent indicators "
                     "are not reported removed during this run.",
-                    {"limit": self._max_vendor_indicators},
+                    meta={"limit": self._max_vendor_indicators},
                 )
                 break
             vendor_indicators.append(vendor_indicator)
@@ -666,7 +667,7 @@ class DeploymentReconciler:
                 self._logger.info(
                     f"{_LOG_PREFIX} Vendor indicator kept, another deployment still "
                     "uses it.",
-                    {
+                    meta={
                         "indicator_id": deployment.indicator_id,
                         "external_id": vendor_indicator.external_id,
                     },
@@ -678,7 +679,7 @@ class DeploymentReconciler:
                 summary.withdrawal_failed += 1
                 self._logger.warning(
                     f"{_LOG_PREFIX} Cannot remove an indicator from the vendor.",
-                    {
+                    meta={
                         "indicator_id": deployment.indicator_id,
                         "external_id": vendor_indicator.external_id,
                         "error": str(err),
@@ -760,7 +761,7 @@ class DeploymentReconciler:
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot read an indicator to push it again.",
-                {"indicator_id": deployment.indicator_id, "error": str(err)},
+                meta={"indicator_id": deployment.indicator_id, "error": str(err)},
             )
             return None
         if not isinstance(exported, Mapping) or exported.get("type") != "indicator":
@@ -846,7 +847,7 @@ class DeploymentReconciler:
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot read the detections from the vendor.",
-                {"error": str(err)},
+                meta={"error": str(err)},
             )
             # The continuation may be stale: the capped instant is read again from its start.
             self._hits_resume = None
@@ -860,7 +861,10 @@ class DeploymentReconciler:
         self._logger.warning(
             f"{_LOG_PREFIX} Detection read capped by the vendor, the next run "
             "resumes where this one stopped.",
-            {"since": since.isoformat(), "complete_until": complete_until.isoformat()},
+            meta={
+                "since": since.isoformat(),
+                "complete_until": complete_until.isoformat(),
+            },
         )
         return [
             hit
@@ -893,7 +897,10 @@ class DeploymentReconciler:
             self._logger.info(
                 f"{_LOG_PREFIX} Detection read capped at the start of its window, the "
                 "next run continues reading the same instant.",
-                {"since": since.isoformat(), "held": len(self._held_hits) + len(hits)},
+                meta={
+                    "since": since.isoformat(),
+                    "held": len(self._held_hits) + len(hits),
+                },
             )
             self._hits_resume = resume
             self._held_hits.extend(hits)
@@ -901,7 +908,7 @@ class DeploymentReconciler:
         self._logger.warning(
             f"{_LOG_PREFIX} Detection read capped at the start of its window and not "
             "continued, the detections of that instant are a lower bound.",
-            {
+            meta={
                 "since": since.isoformat(),
                 "next_since": (since + CAPPED_INSTANT_STEP).isoformat(),
             },
@@ -1047,6 +1054,6 @@ class DeploymentReconciler:
             self._logger.warning(
                 f"{_LOG_PREFIX} Some hit reports were not delivered, they are sent "
                 "again with the next run.",
-                {"kept": len(self._pending_hits), "dropped": dropped},
+                meta={"kept": len(self._pending_hits), "dropped": dropped},
             )
         return reported

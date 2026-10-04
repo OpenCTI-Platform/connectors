@@ -658,7 +658,7 @@ def test_undelivered_reports_are_dropped_after_the_maximum_age(
     assert reporter._unsent_since == {}
     graphql_helper.connector_logger.warning.assert_any_call(
         "[DEPLOYMENT] Dropping deployment reports undelivered for too long.",
-        {"dropped": 1, "max_age_seconds": MAX_UNSENT_AGE},
+        meta={"dropped": 1, "max_age_seconds": MAX_UNSENT_AGE},
     )
 
 

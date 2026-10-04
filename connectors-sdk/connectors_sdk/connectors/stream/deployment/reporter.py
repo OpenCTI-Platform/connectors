@@ -415,7 +415,7 @@ class DeploymentReporter:
             return False
         self._logger.info(
             f"{_LOG_PREFIX} Deployment write-back enabled.",
-            {
+            meta={
                 "security_platform_id": platform_id,
                 "security_platform_name": self.options.security_platform_name,
                 "batch_reports": self.is_supported(REPORT_DEPLOYMENTS_MUTATION),
@@ -448,7 +448,7 @@ class DeploymentReporter:
                 self._logger.info(
                     f"{_LOG_PREFIX} The OpenCTI platform does not support '{mutation}', "
                     "the related write-back is disabled.",
-                    {"mutation": mutation},
+                    meta={"mutation": mutation},
                 )
         return False
 
@@ -481,7 +481,7 @@ class DeploymentReporter:
             self._resolution_lock.release()
         self._logger.info(
             f"{_LOG_PREFIX} Security platform resolved.",
-            {
+            meta={
                 "security_platform_id": platform_id,
                 "security_platform_name": self.options.security_platform_name,
                 "security_platform_type": self.options.security_platform_type,
@@ -568,7 +568,7 @@ class DeploymentReporter:
             # where they happen.
             self._logger.info(
                 f"{_LOG_PREFIX} Some deployment reports were not applied by OpenCTI.",
-                {
+                meta={
                     "rejected": len(result.errors),
                     "sample": [
                         {"indicator_id": error.indicator_id, "message": error.message}
@@ -635,7 +635,7 @@ class DeploymentReporter:
         if not indicator_id or count < 1:
             self._logger.debug(
                 f"{_LOG_PREFIX} Ignoring an empty hit report.",
-                {"indicator_id": indicator_id, "count": count},
+                meta={"indicator_id": indicator_id, "count": count},
             )
             return REPORT_REJECTED
         platform_id = self._ready(REPORT_HITS_MUTATION)
@@ -668,7 +668,7 @@ class DeploymentReporter:
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot report indicator hits.",
-                {"indicator_id": indicator_id, "count": count, "error": str(err)},
+                meta={"indicator_id": indicator_id, "count": count, "error": str(err)},
             )
             return REPORT_REJECTED if is_rejection_error(err) else REPORT_UNSENT
 
@@ -792,7 +792,7 @@ class DeploymentReporter:
                     self._logger.warning(
                         f"{_LOG_PREFIX} Too many queued deployment reports, "
                         "dropping the oldest ones.",
-                        {"queued": MAX_QUEUED_REPORTS},
+                        meta={"queued": MAX_QUEUED_REPORTS},
                     )
             flush_now = (
                 len(self._buffer) >= MAX_BATCH_SIZE
@@ -917,7 +917,7 @@ class DeploymentReporter:
         if expired:
             self._logger.warning(
                 f"{_LOG_PREFIX} Dropping deployment reports undelivered for too long.",
-                {"dropped": expired, "max_age_seconds": MAX_UNSENT_AGE},
+                meta={"dropped": expired, "max_age_seconds": MAX_UNSENT_AGE},
             )
         self._unsent_retry_delay = min(
             max(self._flush_interval, self._unsent_retry_delay * 2), MAX_RETRY_DELAY
@@ -972,7 +972,7 @@ class DeploymentReporter:
                 self._logger.warning(
                     f"{_LOG_PREFIX} Deployment write-back unavailable, dropping the "
                     "oldest queued reports.",
-                    {"dropped": overflow, "queued": MAX_QUEUED_REPORTS},
+                    meta={"dropped": overflow, "queued": MAX_QUEUED_REPORTS},
                 )
             self._buffer = merged
             if write_back_unavailable:
@@ -1003,7 +1003,7 @@ class DeploymentReporter:
             self._logger.warning(
                 f"{_LOG_PREFIX} Deployment reports held by a running reconciliation, "
                 "left for it to send.",
-                {"timeout_seconds": timeout},
+                meta={"timeout_seconds": timeout},
             )
             return
         try:
@@ -1139,7 +1139,7 @@ class DeploymentReporter:
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot flush the deployment reports.",
-                {"error": str(err)},
+                meta={"error": str(err)},
             )
 
     def _build_report(self, **fields: Any) -> DeploymentReport | None:
@@ -1163,7 +1163,10 @@ class DeploymentReporter:
         except (TypeError, ValueError) as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Ignoring an invalid deployment report.",
-                {"report": {k: str(v) for k, v in fields.items()}, "error": str(err)},
+                meta={
+                    "report": {k: str(v) for k, v in fields.items()},
+                    "error": str(err),
+                },
             )
             return None
 
@@ -1192,7 +1195,7 @@ class DeploymentReporter:
             )
         self._logger.warning(
             f"{_LOG_PREFIX} Ignoring a deployment report of an unexpected type.",
-            {"type": type(report).__name__},
+            meta={"type": type(report).__name__},
         )
         return None
 
@@ -1240,7 +1243,7 @@ class DeploymentReporter:
                 log(
                     f"{_LOG_PREFIX} Cannot detect the deployment write-back support of "
                     "the OpenCTI platform, retrying later.",
-                    {"error": str(err), "retry_in_seconds": self._retry_delay},
+                    meta={"error": str(err), "retry_in_seconds": self._retry_delay},
                 )
                 return None
             with self._lock:
@@ -1275,14 +1278,14 @@ class DeploymentReporter:
             if not platform_id:
                 self._logger.warning(
                     f"{_LOG_PREFIX} Cannot resolve the security platform, retrying later.",
-                    {"security_platform_name": name},
+                    meta={"security_platform_name": name},
                 )
                 return None
             return str(platform_id)
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot resolve the security platform, retrying later.",
-                {"security_platform_name": name, "error": str(err)},
+                meta={"security_platform_name": name, "error": str(err)},
             )
             return None
 
@@ -1315,7 +1318,7 @@ class DeploymentReporter:
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot report the deployment status.",
-                {
+                meta={
                     "indicator_id": report.indicator_id,
                     "status": report.status.value,
                     "error": str(err),
@@ -1411,7 +1414,7 @@ class DeploymentReporter:
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot report a batch of deployment statuses.",
-                {"reports": len(chunk), "error": str(err)},
+                meta={"reports": len(chunk), "error": str(err)},
             )
             failure = DeploymentBatchResult.failure(chunk, str(err))
             if is_rejection_error(err):
@@ -1447,6 +1450,6 @@ class DeploymentReporter:
                 attempt += 1
                 self._logger.debug(
                     f"{_LOG_PREFIX} OpenCTI rate limit reached, backing off.",
-                    {"attempt": attempt, "delay_seconds": delay},
+                    meta={"attempt": attempt, "delay_seconds": delay},
                 )
                 self._sleep(delay)
