@@ -187,14 +187,13 @@ class KVStore:
             last_key = items[-1]["_key"]
 
     def run_saved_search(
-        self, name: str, earliest: datetime, max_results: int, offset: int = 0
+        self, name: str, earliest: datetime, max_results: int
     ) -> list[dict]:
         """Run a saved search as a oneshot search job and return its results.
 
         The `savedsearch` command uses the time range of the request instead of
         the time range saved with the search. Results are sorted oldest first (then
-        by OpenCTI id and value, so the order of results sharing a time is stable
-        from one run to the next), so a bounded read is complete up to its newest
+        by OpenCTI id and value), so a bounded read is complete up to its newest
         result, and bounded twice: by `head` in the search and by the `count` of the
         oneshot output (100 by default).
 
@@ -202,7 +201,6 @@ class KVStore:
             name: The saved search name, visible in the owner/app namespace.
             earliest: Start of the time range (the end is now).
             max_results: Maximum number of results returned.
-            offset: Number of leading results (in that order) to skip.
 
         Returns:
             The result rows.
@@ -212,18 +210,12 @@ class KVStore:
             ValueError: When Splunk returns an unexpected payload.
         """
         escaped_name = name.replace("\\", "\\\\").replace('"', '\\"')
-        window = (
-            f"| streamstats count AS opencti_row | where opencti_row > {offset} "
-            "| fields - opencti_row "
-            if offset > 0
-            else ""
-        )
         r = requests.post(
             f"{self.splunk_url}/servicesNS/{self.splunk_owner}/{self.splunk_app}/search/jobs",
             data={
                 "search": (
                     f'| savedsearch "{escaped_name}" | sort 0 _time opencti_id value '
-                    f"{window}| head {max_results}"
+                    f"| head {max_results}"
                 ),
                 "exec_mode": "oneshot",
                 "output_mode": "json",
