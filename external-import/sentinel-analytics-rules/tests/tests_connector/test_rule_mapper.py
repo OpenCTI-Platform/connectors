@@ -12,8 +12,15 @@ def test_scheduled_rule():
     assert detection_rule.external_id == "73e01a99-5cd7-4139-a149-9f2736ff2ab5"
     assert detection_rule.name == "Encoded PowerShell"
     assert detection_rule.description == "Detects encoded PowerShell command lines."
-    assert detection_rule.pattern == SCHEDULED_RULE["properties"]["query"]
-    assert detection_rule.pattern_type == "kql"
+    # The lookback is part of the logic of a Scheduled rule
+    assert detection_rule.pattern_type == "sentinel-rule"
+    assert json.loads(detection_rule.pattern) == {
+        "kind": "Scheduled",
+        "query": SCHEDULED_RULE["properties"]["query"],
+        "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
+    }
     assert detection_rule.enabled is True
     assert detection_rule.level == "high"
     # Seven fractional digits are truncated to microseconds.
@@ -34,6 +41,7 @@ def test_trigger_threshold_is_part_of_the_pattern():
     assert json.loads(detection_rule.pattern) == {
         "kind": "Scheduled",
         "query": SCHEDULED_RULE["properties"]["query"],
+        "queryPeriod": "PT1H",
         "triggerOperator": "GreaterThan",
         "triggerThreshold": 100,
     }
@@ -47,10 +55,26 @@ def test_trigger_change_changes_the_pattern():
     assert len(patterns) == 4
 
 
-def test_default_trigger_keeps_the_query_as_pattern():
+def test_lookback_is_part_of_the_pattern():
+    # Same query and trigger, one-hour and one-day lookbacks: two rules
+    hourly = map_rule(rule(SCHEDULED_RULE, queryPeriod="PT1H"))
+    daily = map_rule(rule(SCHEDULED_RULE, queryPeriod="P1D"))
+    assert hourly.pattern != daily.pattern
+    assert json.loads(daily.pattern)["queryPeriod"] == "P1D"
+    # A lookback-only edit is a change of logic
+    edited = map_rule(rule(SCHEDULED_RULE, queryPeriod="PT5H"))
+    assert edited.pattern not in (hourly.pattern, daily.pattern)
+
+
+def test_rule_without_lookback_nor_trigger_keeps_the_query_as_pattern():
     for raw in (
-        rule(SCHEDULED_RULE, triggerOperator=None, triggerThreshold=None),
-        rule(SCHEDULED_RULE, triggerThreshold="0"),
+        rule(
+            SCHEDULED_RULE,
+            queryPeriod=None,
+            triggerOperator=None,
+            triggerThreshold=None,
+        ),
+        rule(SCHEDULED_RULE, queryPeriod="", triggerThreshold="0"),
     ):
         detection_rule = map_rule(raw)
         assert (detection_rule.pattern_type, detection_rule.pattern) == (

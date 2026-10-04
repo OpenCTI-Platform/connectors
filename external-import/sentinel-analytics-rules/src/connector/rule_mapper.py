@@ -24,28 +24,33 @@ _DEFAULT_TRIGGER = ("GreaterThan", 0)
 def rule_pattern(kind: str, properties: dict[str, Any]) -> tuple[str, str]:
     """Return the Indicator ``pattern`` and ``pattern_type`` of a rule.
 
-    The KQL query is the pattern when the rule alerts as soon as it returns a
-    result. A Scheduled rule with another trigger (``triggerOperator`` and
-    ``triggerThreshold`` are applied outside the query) is represented by
-    the canonical JSON of its kind, query and trigger, under the
-    ``sentinel-rule`` pattern type: its Indicator changes with the trigger,
-    and two rules sharing a query but not their trigger are two Indicators.
+    The logic of a Scheduled rule is not its query alone: the lookback
+    (``queryPeriod``) decides which events the query sees, and the trigger
+    (``triggerOperator`` and ``triggerThreshold``) is applied to its results.
+    Such a rule is represented by the canonical JSON of its kind, query,
+    lookback and trigger, under the ``sentinel-rule`` pattern type: its
+    Indicator changes with any of them, and two rules sharing a query but not
+    their lookback or trigger are two Indicators. The KQL query is the pattern
+    of an NRT rule, and of a Scheduled rule without lookback or trigger.
     """
     query = str(properties["query"])
+    if kind != "Scheduled":
+        return query, "kql"
+    period = properties.get("queryPeriod")
+    period = str(period).strip() if period is not None else ""
     operator = properties.get("triggerOperator")
     threshold = properties.get("triggerThreshold")
-    if kind != "Scheduled" or (operator is None and threshold is None):
-        return query, "kql"
     try:
         trigger = (operator or _DEFAULT_TRIGGER[0], int(threshold or 0))
     except (TypeError, ValueError):
         trigger = (operator or _DEFAULT_TRIGGER[0], threshold)
-    if trigger == _DEFAULT_TRIGGER:
+    if not period and trigger == _DEFAULT_TRIGGER:
         return query, "kql"
     pattern = json.dumps(
         {
             "kind": kind,
             "query": query,
+            "queryPeriod": period or None,
             "triggerOperator": trigger[0],
             "triggerThreshold": trigger[1],
         },

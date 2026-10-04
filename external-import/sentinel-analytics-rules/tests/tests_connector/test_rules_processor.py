@@ -7,6 +7,7 @@ from conftest import SCHEMA_WITHOUT_DEPLOYED_ON, make_settings
 from connector import ConnectorState, SentinelRulesProcessor
 from connector.attack_patterns import attack_pattern_id
 from connector.deployed_rules_processor import RULES_PER_BUNDLE
+from connector.rule_mapper import map_rule
 from pycti import Identity, Indicator, StixCoreRelationship
 from sentinel_samples import FUSION_RULE, NRT_RULE, SCHEDULED_RULE, rule
 
@@ -41,7 +42,7 @@ def _of_type(objects, stix_type, relationship_type=None):
 
 
 def _indicator_id(raw):
-    return Indicator.generate_id(raw["properties"]["query"])
+    return Indicator.generate_id(map_rule(raw).pattern)
 
 
 def test_rules_become_indicators_linked_to_techniques_and_deployed(helper):
@@ -58,7 +59,8 @@ def test_rules_become_indicators_linked_to_techniques_and_deployed(helper):
         _indicator_id(NRT_RULE),
     }
     scheduled = indicators[_indicator_id(SCHEDULED_RULE)]
-    assert scheduled.pattern_type == "kql"
+    assert scheduled.pattern_type == "sentinel-rule"
+    assert indicators[_indicator_id(NRT_RULE)].pattern_type == "kql"
     assert scheduled.x_opencti_rule_level == "high"
     assert scheduled.external_references[0].external_id == SCHEDULED_RULE["name"]
 
@@ -337,7 +339,8 @@ def test_triggers_sharing_a_query_are_distinct_deployments(helper):
     objects = _run(processor)[0]
 
     indicators = _of_type(objects, "indicator")
-    assert {i.pattern_type for i in indicators} == {"kql", "sentinel-rule"}
+    assert {i.pattern_type for i in indicators} == {"sentinel-rule"}
+    assert len({i.id for i in indicators}) == 2
     deployments = _of_type(objects, "relationship", "deployed-on")
     assert {d.external_id for d in deployments} == {
         SCHEDULED_RULE["name"],
