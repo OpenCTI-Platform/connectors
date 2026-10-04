@@ -28,4 +28,5 @@ jobs:
         uses: astral-sh/setup-uv@v6
 
       - name: Resolve the consumers with the SDK of this pull request
-        run: python3 .github/scripts/resolve_sdk_consumers.py --python 3.12 --jobs 8
+        # requirements.txt and pyproject.toml consumers, each resolved for the Python version its Dockerfile runs
+        run: python3 .github/scripts/resolve_sdk_consumers.py --jobs 8
