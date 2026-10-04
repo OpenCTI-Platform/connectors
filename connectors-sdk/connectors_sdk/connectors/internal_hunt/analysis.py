@@ -204,8 +204,8 @@ def suppress_benign(
     """Remove the benign events of a result.
 
     Suppression applies to the events returned by the platform. When the result
-    is truncated and suppression removed some of them, the post-suppression
-    total is unknown (any unreturned event may be benign too): the platform
+    is truncated, the post-suppression total is unknown whether or not the
+    returned events matched (any unreturned event may be benign): the platform
     total is dropped and the hit count is the non-benign returned events, a
     verified lower bound that never inflates escalation or sighting counts.
 
@@ -224,7 +224,7 @@ def suppress_benign(
     if not matcher:
         return result
     kept = [event for event in result.events if not matcher.matches(event)]
-    if len(kept) == len(result.events):
+    if len(kept) == len(result.events) and not result.truncated:
         return result
     return HuntResult(events=kept, total_hits=None, truncated=result.truncated)
 
