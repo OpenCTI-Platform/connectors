@@ -712,6 +712,66 @@ def test_vendor_adapters_confirm_any_vendor_item_by_default():
     assert FakeAdapter().is_complete(None, [VendorIndicator(indicator_id="a")])
 
 
+def test_vendor_adapters_keep_no_local_copy_by_default():
+    assert FakeAdapter().forget_indicator(None) is None
+
+
+class ForgettingAdapter(FakeAdapter):
+    """Vendor whose adapter keeps a local snapshot of the pushed indicators."""
+
+    def __init__(self, error=None, **kwargs):
+        super().__init__(**kwargs)
+        self.error = error
+        self.forgotten = []
+
+    def forget_indicator(self, deployment):
+        if self.error:
+            raise self.error
+        self.forgotten.append(deployment.indicator_id)
+
+
+def test_deployments_withdrawn_while_absent_are_forgotten(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """Only a deployment leaving the vendor and absent from it is forgotten."""
+    list_nodes(
+        node_factory(indicator_id="withdrawn-absent", status="active", revoked=True),
+        node_factory(indicator_id="expired-absent", status="expired"),
+        node_factory(indicator_id="withdrawn-present", status="active", revoked=True),
+        node_factory(indicator_id="live-absent", status="active"),
+    )
+    adapter = ForgettingAdapter(
+        vendor=[VendorIndicator(indicator_id="withdrawn-present", external_id="v")]
+    )
+
+    make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert adapter.forgotten == ["withdrawn-absent", "expired-absent"]
+    reports = reported()
+    assert {key: reports[key]["status"] for key in reports} == {
+        "withdrawn-absent": "removed",
+        "expired-absent": "removed",
+        "withdrawn-present": "removed",
+        "live-absent": "removed",
+    }
+
+
+def test_a_failed_forget_is_logged_and_the_deployment_still_removed(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(node_factory(indicator_id="withdrawn", status="active", revoked=True))
+    adapter = ForgettingAdapter(error=RuntimeError("snapshot locked"))
+    reporter = make_reporter(graphql_helper)
+
+    make_reconciler(reporter, adapter).run_once()
+
+    assert reported()["withdrawn"]["status"] == "removed"
+    reporter.logger.warning.assert_any_call(
+        "[DEPLOYMENT] Cannot forget a withdrawn indicator.",
+        {"indicator_id": "withdrawn", "error": "snapshot locked"},
+    )
+
+
 class EveryValueAdapter(FakeAdapter):
     """Vendor keeping one item per value, without the OpenCTI id."""
 

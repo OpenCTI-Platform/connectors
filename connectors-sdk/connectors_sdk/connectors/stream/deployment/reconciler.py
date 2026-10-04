@@ -12,7 +12,8 @@ vendor content with the ``deployed-on`` relationships of the platform in OpenCTI
 4. Absent and ``deployed`` / ``active`` -> report ``removed``.
 5. ``pending`` (analyst retry) and absent -> push again, report the outcome.
 6. Withdrawal requested (relationship revoked), indicator revoked or expired, and
-   present -> remove from the vendor, report ``removed`` (absent -> ``removed``).
+   present -> remove from the vendor, report ``removed`` (absent -> ``removed``,
+   and ``DeploymentVendorAdapter.forget_indicator`` drops any local copy).
 7. Vendor indicators carrying an OpenCTI id with no deployment -> report
    ``active`` (backfill of indicators pushed before the write-back existed).
 
@@ -205,6 +206,19 @@ class DeploymentVendorAdapter(DeploymentPushAdapter):
             for vendor_indicator in vendor_matches
             if (value := normalize_value(vendor_indicator.value))
         }
+
+    def forget_indicator(self, deployment: IndicatorDeployment) -> None:
+        """Drop the local copy of an indicator withdrawn while absent from the vendor.
+
+        Called when the run reports a deployment ``removed`` because it must leave
+        the vendor (withdrawal, revocation or expiry) and the vendor no longer holds
+        it, so ``remove_vendor_indicator`` is not called. Adapters keeping what they
+        push in a local snapshot uploaded as a whole override it, so that the next
+        upload does not restore the indicator. By default, nothing is kept.
+
+        Args:
+            deployment: The withdrawn deployment.
+        """
 
     def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str] | None:
         """Return the values the connector pushes to the vendor for a deployment.
@@ -719,6 +733,7 @@ class DeploymentReconciler:
                 return None
         if must_remove:
             summary.marked_removed += 1
+            self._forget(adapter, deployment)
             return DeploymentReport(
                 indicator_id=deployment.indicator_id,
                 status=DeploymentStatus.REMOVED,
@@ -742,6 +757,23 @@ class DeploymentReconciler:
         if deployment.status == DeploymentStatus.PENDING:
             return self._repush(deployment, now, summary)
         return None
+
+    def _forget(
+        self, adapter: DeploymentVendorAdapter, deployment: IndicatorDeployment
+    ) -> None:
+        """Let the adapter drop an indicator withdrawn while absent from the vendor.
+
+        Args:
+            adapter: The vendor adapter.
+            deployment: The withdrawn deployment, reported ``removed`` all the same.
+        """
+        try:
+            adapter.forget_indicator(deployment)
+        except Exception as err:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Cannot forget a withdrawn indicator.",
+                {"indicator_id": deployment.indicator_id, "error": str(err)},
+            )
 
     def _confirm_present(
         self,
