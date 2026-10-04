@@ -457,12 +457,14 @@ class ReconciliationSummary:
         marked_removed: Deployments found absent and reported ``removed``.
         deferred: Absent deployments confirmed after the read-back started (pushed
             meanwhile by the stream), left to the next run.
-        repushed: ``pending`` deployments pushed again successfully.
-        repush_failed: ``pending`` deployments whose push failed again.
+        repushed: ``pending`` (or incomplete) deployments pushed again successfully.
+        repush_failed: ``pending`` (or incomplete) deployments whose push failed again.
         withdrawn: Indicators removed from the platform (withdrawal or expiry).
         withdrawal_failed: Indicators whose removal failed.
         hits_reported: Indicators with new hits reported.
         report_errors: Reports rejected by OpenCTI.
+        incomplete: Deployments whose vendor items cover only part of the indicator
+            (pushed again, or left ``failed`` until a new push is requested).
     """
 
     skipped: bool = False
@@ -480,6 +482,7 @@ class ReconciliationSummary:
     withdrawal_failed: int = 0
     hits_reported: int = 0
     report_errors: int = 0
+    incomplete: int = 0
 
     def as_log_meta(self) -> dict[str, Any]:
         """Return the summary as logging metadata."""
@@ -499,4 +502,5 @@ class ReconciliationSummary:
             "withdrawal_failed": self.withdrawal_failed,
             "hits_reported": self.hits_reported,
             "report_errors": self.report_errors,
+            "incomplete": self.incomplete,
         }

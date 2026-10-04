@@ -597,6 +597,68 @@ def test_repush_failures_are_reported_failed(
     assert reports["not-indicator"]["status"] == "failed"
 
 
+class PartialAdapter(FakeAdapter):
+    """Vendor holding only part of the observables of some indicators."""
+
+    def __init__(self, incomplete, **kwargs):
+        super().__init__(**kwargs)
+        self.incomplete = set(incomplete)
+        self.checked = {}
+
+    def is_complete(self, deployment, vendor_matches):
+        self.checked[deployment.indicator_id] = [
+            match.external_id for match in vendor_matches
+        ]
+        return deployment.indicator_id not in self.incomplete
+
+
+def test_deployments_only_partly_on_the_vendor_are_pushed_again(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """An indicator with an observable missing on the vendor is pushed again instead
+    of being confirmed active; a failed one stays failed until a new push is asked."""
+    list_nodes(
+        node_factory(indicator_id="partial", status="active"),
+        node_factory(indicator_id="partial-failed", status="failed"),
+        node_factory(indicator_id="complete", status="deployed"),
+    )
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--p",
+        "pattern": "[url:value = 'x']",
+    }
+    adapter = PartialAdapter(
+        incomplete={"partial", "partial-failed"},
+        vendor=[
+            VendorIndicator(indicator_id="partial", external_id="v-1"),
+            VendorIndicator(indicator_id="partial-failed", external_id="v-2"),
+            VendorIndicator(indicator_id="complete", external_id="v-3"),
+        ],
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert (summary.incomplete, summary.repushed, summary.confirmed_active) == (
+        2,
+        1,
+        1,
+    )
+    assert adapter.checked == {
+        "partial": ["v-1"],
+        "partial-failed": ["v-2"],
+        "complete": ["v-3"],
+    }
+    assert len(adapter.pushed) == 1
+    reports = reported()
+    assert reports["partial"]["status"] == "deployed"
+    assert "partial-failed" not in reports
+    assert reports["complete"]["status"] == "active"
+
+
+def test_vendor_adapters_confirm_any_vendor_item_by_default():
+    assert FakeAdapter().is_complete(None, [VendorIndicator(indicator_id="a")])
+
+
 def test_truncated_read_back_skips_absence_decisions(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):

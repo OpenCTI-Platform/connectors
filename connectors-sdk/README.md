@@ -87,7 +87,9 @@ class ConnectorSettings(BaseConnectorSettings):
 | `SECURITY_PLATFORM_ID` | | Bind an existing Security Platform entity instead of resolving it by name. |
 
 2. Implement a `DeploymentVendorAdapter` when the vendor API can read the pushed indicators back (`list_vendor_indicators`,
-   `remove_vendor_indicator`, `push_indicator`, and `collect_hits` when detections are available).
+   `remove_vendor_indicator`, `push_indicator`, `collect_hits` when detections are available, and `is_complete` when the
+   vendor holds one item per observable, so that an indicator only partly on the vendor is pushed again instead of being
+   confirmed `active`).
 
 3. Wire the facade and report after each vendor call (reports are queued and sent in batches, never raise):
 

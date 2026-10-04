@@ -7,7 +7,8 @@ vendor content with the ``deployed-on`` relationships of the platform in OpenCTI
 1. List the vendor indicators (bounded, paginated by the adapter).
 2. List the deployments of the platform (``pending``, ``deployed``, ``active``,
    ``failed`` and ``expired``).
-3. Present on the vendor -> report ``active`` (with the vendor id).
+3. Present on the vendor -> report ``active`` (with the vendor id); only partly
+   present (``DeploymentVendorAdapter.is_complete``) -> push again, unless ``failed``.
 4. Absent and ``deployed`` / ``active`` -> report ``removed``.
 5. ``pending`` (analyst retry) and absent -> push again, report the outcome.
 6. Withdrawal requested (relationship revoked), indicator revoked or expired, and
@@ -132,6 +133,26 @@ class DeploymentVendorAdapter(ABC):
         Raises:
             Exception: When the vendor rejected the push (reported ``failed``).
         """
+
+    def is_complete(
+        self,
+        deployment: IndicatorDeployment,
+        vendor_matches: Sequence[VendorIndicator],
+    ) -> bool:
+        """Tell whether the vendor items of a deployment cover the whole indicator.
+
+        Adapters pushing one vendor item per observable override it, so that an
+        indicator only partly on the vendor is pushed again instead of being
+        confirmed ``active``. By default, any vendor item confirms the deployment.
+
+        Args:
+            deployment: The deployment.
+            vendor_matches: Its vendor items (at least one).
+
+        Returns:
+            ``False`` when an observable of the indicator has no vendor item.
+        """
+        return True
 
     def collect_hits(
         self,
@@ -525,13 +546,12 @@ class DeploymentReconciler:
         Returns:
             The report to send, if any.
         """
-        vendor_indicator = vendor_matches[0] if vendor_matches else None
         must_remove = self._must_remove(deployment, now)
         if must_remove and vendor_matches:
             return self._withdraw(
                 deployment, vendor_matches, now, summary, kept, removed
             )
-        if vendor_indicator is None:
+        if not vendor_matches:
             if summary.vendor_listing_truncated:
                 return None
             if deployment.last_sync_at is not None and deployment.last_sync_at >= now:
@@ -547,14 +567,8 @@ class DeploymentReconciler:
                 synced_at=now,
                 removed_at=now,
             )
-        if vendor_indicator is not None:
-            summary.confirmed_active += 1
-            return DeploymentReport(
-                indicator_id=deployment.indicator_id,
-                status=DeploymentStatus.ACTIVE,
-                external_id=vendor_indicator.external_id or deployment.external_id,
-                synced_at=now,
-            )
+        if vendor_matches:
+            return self._confirm_present(deployment, vendor_matches, now, summary)
         if deployment.is_live:
             summary.marked_removed += 1
             return DeploymentReport(
@@ -567,6 +581,39 @@ class DeploymentReconciler:
         if deployment.status == DeploymentStatus.PENDING:
             return self._repush(deployment, now, summary)
         return None
+
+    def _confirm_present(
+        self,
+        deployment: IndicatorDeployment,
+        vendor_matches: Sequence[VendorIndicator],
+        now: datetime,
+        summary: ReconciliationSummary,
+    ) -> DeploymentReport | None:
+        """Confirm a deployment found on the vendor, or push it again when partly there.
+
+        Args:
+            deployment: The deployment, not to be withdrawn.
+            vendor_matches: Its vendor items (at least one).
+            now: The start of the run.
+            summary: The run counters, updated.
+
+        Returns:
+            An ``active`` report, the report of the new push, or ``None`` for a
+            ``failed`` deployment only partly on the vendor.
+        """
+        if not self._adapter.is_complete(deployment, vendor_matches):
+            summary.incomplete += 1
+            if deployment.status == DeploymentStatus.FAILED:
+                # Stays failed until an analyst requests a new push.
+                return None
+            return self._repush(deployment, now, summary)
+        summary.confirmed_active += 1
+        return DeploymentReport(
+            indicator_id=deployment.indicator_id,
+            status=DeploymentStatus.ACTIVE,
+            external_id=vendor_matches[0].external_id or deployment.external_id,
+            synced_at=now,
+        )
 
     def _withdraw(
         self,
@@ -639,10 +686,10 @@ class DeploymentReconciler:
         now: datetime,
         summary: ReconciliationSummary,
     ) -> DeploymentReport:
-        """Push a ``pending`` indicator again.
+        """Push a ``pending`` indicator, or one only partly on the vendor, again.
 
         Args:
-            deployment: The pending deployment.
+            deployment: The pending or incomplete deployment.
             now: The reference time.
             summary: The run counters, updated.
 

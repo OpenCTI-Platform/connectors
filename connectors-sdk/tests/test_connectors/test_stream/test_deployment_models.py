@@ -294,4 +294,5 @@ def test_reconciliation_summary_log_meta():
         "withdrawal_failed",
         "hits_reported",
         "report_errors",
+        "incomplete",
     }
