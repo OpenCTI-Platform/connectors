@@ -3,9 +3,48 @@
 The Elastic Security hunt connector executes the hunts of OpenCTI on the Elasticsearch cluster of Elastic Security. It
 is a connector of type `INTERNAL_HUNT` registered for the `elastic-security` hunt platform.
 
+## Before you start
+
+| | |
+|---|---|
+| Credential | An Elasticsearch API key (or a user name and password) holding a dedicated role. |
+| Console | Kibana: **Stack Management > Security > Roles** and **Stack Management > Security > API keys** (or `POST /_security/api_key`). |
+| Network | The Elasticsearch HTTP API (port `9200` by default, or the Elastic Cloud endpoint) reachable from the connector. |
+
+Step by step:
+
+1. In **Stack Management > Roles > Create role**, create `opencti_hunt`: no cluster privilege; index privileges `read` and `view_index_metadata` on the indices of `ELASTIC_SECURITY_HUNT_INDICES`; for cross-cluster search, `read` as a remote index privilege.
+2. In **Stack Management > API keys > Create API key**, restrict the key to the privileges of `opencti_hunt` (or call `POST /_security/api_key` with `role_descriptors` holding them).
+3. Copy the `encoded` value of the key into `ELASTIC_SECURITY_HUNT_API_KEY`.
+
+Least-privilege permissions:
+
+| Permission | Why |
+|---|---|
+| Index privilege `read` on `ELASTIC_SECURITY_HUNT_INDICES` | Run ES\|QL, EQL and Lucene searches on the hunted data. |
+| Index privilege `view_index_metadata` on the same indices | Resolve index patterns and field mappings. |
+| Remote index privilege `read` (cross-cluster search only) | Hunt `remote:index` patterns. |
+
+No cluster privilege is needed: the connector only deletes its own async searches, and never writes to the cluster.
+
+Copy-ready configuration (`.env` of the `docker-compose.yml`):
+
+```env
+OPENCTI_URL=https://opencti.example.com
+OPENCTI_TOKEN=ChangeMe
+CONNECTOR_ID=ChangeMe-UUIDv4
+ELASTIC_SECURITY_HUNT_URL=https://elastic.example.com:9200
+ELASTIC_SECURITY_HUNT_API_KEY=ChangeMe
+ELASTIC_SECURITY_HUNT_INDICES=logs-*,winlogbeat-*
+ELASTIC_SECURITY_HUNT_QUERY_LANGUAGE=esql
+```
+
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It runs one search on the hunted indices. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+
 Table of Contents
 
 - [OpenCTI Elastic Security Hunt Connector](#opencti-elastic-security-hunt-connector)
+  - [Before you start](#before-you-start)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -50,17 +89,7 @@ truncated.
 
 ### Elasticsearch permissions
 
-Create a role (for example `opencti_hunt`) and an API key or a user holding it:
-
-| Privilege | Why |
-|---|---|
-| Index privilege `read` on `ELASTIC_SECURITY_HUNT_INDICES` | Run ES\|QL, EQL and Lucene searches on the hunted data. |
-| Index privilege `view_index_metadata` on the same indices | Resolve index patterns and field mappings. |
-| Remote index privilege `read` (cross-cluster search only) | Hunt `remote:index` patterns. |
-
-No cluster privilege is needed: the connector only deletes its own async searches, and never writes to the cluster.
-Create the API key with `POST /_security/api_key` (`role_descriptors` holding the privileges above) and set its
-`encoded` value as `ELASTIC_SECURITY_HUNT_API_KEY`.
+The account, the least-privilege permissions, the console steps and a configuration example are in [Before you start](#before-you-start).
 
 ## Configuration variables
 

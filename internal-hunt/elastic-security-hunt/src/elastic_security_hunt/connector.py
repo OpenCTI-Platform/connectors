@@ -46,10 +46,39 @@ def strip_statement_end(query: str) -> str:
     return query.strip().rstrip(";").rstrip()
 
 
+DOCUMENTATION_URL = (
+    "https://docs.opencti.io/latest/usage/hunt-connectors/#elastic-security"
+)
+
+REQUIRED_PERMISSIONS = (
+    (
+        "read on ELASTIC_SECURITY_HUNT_INDICES",
+        "Index privilege: run the ES|QL, EQL and Lucene searches of the hunts on the hunted data.",
+    ),
+    (
+        "view_index_metadata on ELASTIC_SECURITY_HUNT_INDICES",
+        "Index privilege: resolve the index patterns and the field mappings.",
+    ),
+    (
+        "read on remote indices",
+        "Remote index privilege, only for cross-cluster search: hunt remote:index patterns.",
+    ),
+)
+"""Least-privilege permissions of the account of the connector, as (name, purpose)."""
+
+ACCESS_DENIED_HINTS = {
+    401: "Elasticsearch refused the API key (or the user name and password): check the encoded value of ELASTIC_SECURITY_HUNT_API_KEY, and that the key is neither expired nor invalidated",
+    403: "the role of the API key needs the read and view_index_metadata index privileges on ELASTIC_SECURITY_HUNT_INDICES",
+}
+"""What a refused account lacks, by HTTP status."""
+
+
 class ElasticSecurityHuntConnector(InternalHuntConnector):
     """Hunt connector running Sigma, ES|QL, EQL and Lucene hunts on Elastic Security."""
 
     languages = ("esql", "eql", "lucene")
+    required_permissions = REQUIRED_PERMISSIONS
+    documentation_url = DOCUMENTATION_URL
     evidence_excluded_fields = RAW_FIELDS
 
     def __init__(self, settings: ConnectorSettings) -> None:
@@ -75,6 +104,11 @@ class ElasticSecurityHuntConnector(InternalHuntConnector):
             timestamp_field=config.timestamp_field,
             logger=self.logger,
         )
+        self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
+
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search: one event of the hunted indices."""
+        return NativeQuery(language="lucene", query="*")
 
     def sigma_backend(self, pipeline: str | None) -> Backend:
         """Create the pySigma backend of the configured query language.

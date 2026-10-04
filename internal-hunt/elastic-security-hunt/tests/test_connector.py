@@ -403,6 +403,11 @@ def test_start_registers_the_elastic_platform_and_listens():
         supports_preview=True,
         max_concurrent_runs=None,
         supports_indicators=False,
+        required_permissions=[
+            {"name": name, "purpose": purpose}
+            for name, purpose in ElasticSecurityHuntConnector.required_permissions
+        ],
+        documentation_url=ElasticSecurityHuntConnector.documentation_url,
     )
     helper.listen_hunt.assert_called_once_with(
         message_callback=connector.process_message
