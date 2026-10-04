@@ -297,7 +297,11 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
             raise CortexXdrDeploymentError(failure_reason(err)) from err
 
     def collect_hits(
-        self, deployments: Sequence[IndicatorDeployment], since: datetime
+        self,
+        deployments: Sequence[IndicatorDeployment],
+        since: datetime,
+        *,
+        resume: Any = None,
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the IOC alerts whose events match deployed indicators.
 
@@ -306,8 +310,12 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         query window, the continuation and the hit dates share one axis. Alerts are
         read by creation time, oldest first: when `MAX_HIT_ALERTS` alerts were read,
         the collection is complete until the creation time of the newest alert read
-        and the next run resumes there.
+        and the next run resumes there. When every alert read shares the start
+        instant (more alerts at that instant than the limit), the collection
+        returns the number of alerts read at that instant as `resume`, and the next
+        run reads the same instant from there.
 
+        :param resume: The `resume` of the previous collection, if any.
         :raises CortexXdrDeploymentError: When the alerts cannot be listed, or an
             alert has no creation or detection time (the window is read again).
         """
@@ -317,8 +325,9 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
                 by_value.setdefault(value, []).append(deployment)
         if not by_value:
             return []
+        offset = resume if isinstance(resume, int) and resume > 0 else 0
         with _readable_errors():
-            alerts = self._client.get_ioc_alerts(since, MAX_HIT_ALERTS)
+            alerts = self._client.get_ioc_alerts(since, MAX_HIT_ALERTS, offset)
         hits: list[VendorHit] = []
         newest_created = since
         for alert in alerts:
@@ -343,7 +352,11 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
                 for indicator_id in sorted(matched)
             )
         if len(alerts) >= MAX_HIT_ALERTS:
-            return HitCollection(hits=hits, complete_until=newest_created)
+            return HitCollection(
+                hits=hits,
+                complete_until=newest_created,
+                resume=offset + len(alerts) if newest_created <= since else None,
+            )
         return hits
 
 

@@ -132,7 +132,8 @@ does not exist), and detection hits are counted with a sighting of the indicator
   without value) skips the run: indicators are never reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the IOC alerts created since the previous run are read with their events
   (`alerts/get_alerts_multi_events`, oldest creation time first, at most 10,000 per run: a capped read is complete until
-  the creation time of the newest alert read and the next run resumes there, so no alert is lost). An alert counts one
+  the creation time of the newest alert read and the next run resumes there; when more alerts share one creation time
+  than the limit, the next runs read that instant further from the alerts already read, so no alert is lost). An alert counts one
   hit, dated at its creation time, for every deployed indicator whose value is one of its IP addresses, host names, DNS
   queries, email addresses or file hashes (domain indicators match the host of a URL value); an alert detected before
   the previous run but created after it is counted; hits already reported are never counted twice. A malformed alert

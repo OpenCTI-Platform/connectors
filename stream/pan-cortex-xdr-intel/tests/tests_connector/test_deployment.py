@@ -514,6 +514,17 @@ def test_get_ioc_alerts_stops_on_a_short_page_and_raises_on_errors(xdr_client):
             xdr_client.get_ioc_alerts(datetime.now(UTC))
 
 
+def test_get_ioc_alerts_skips_the_alerts_already_read(xdr_client):
+    with patch.object(xdr_client._session, "request") as request:
+        request.return_value = mock_response({"reply": {"alerts": [{"alert_id": 9}]}})
+
+        alerts = xdr_client.get_ioc_alerts(datetime.now(UTC), max_alerts=3, offset=5)
+
+    assert [alert["alert_id"] for alert in alerts] == [9]
+    request_data = request.call_args.kwargs["json"]["request_data"]
+    assert (request_data["search_from"], request_data["search_to"]) == (5, 8)
+
+
 def test_get_ioc_alerts_detects_an_ignored_pagination(xdr_client, monkeypatch):
     monkeypatch.setattr("cortex_xdr_client.client.PAGE_SIZE", 2)
     page = {"reply": {"alerts": [{"alert_id": 1}, {"alert_id": 2}]}}
@@ -687,7 +698,7 @@ def test_adapter_collects_hits_from_ioc_alerts():
         (OTHER_ID, 20),
         ("hash-indicator", 20),
     ]
-    connector.client.get_ioc_alerts.assert_called_once_with(since, 10_000)
+    connector.client.get_ioc_alerts.assert_called_once_with(since, 10_000, 0)
 
 
 def test_adapter_fails_the_hit_read_on_an_alert_without_creation_time():
@@ -747,7 +758,29 @@ def test_adapter_capped_read_is_complete_until_the_newest_alert(monkeypatch):
     assert [(hit.indicator_id, hit.timestamp.minute) for hit in collected.hits] == [
         (INDICATOR_ID, 5)
     ]
-    assert connector.client.get_ioc_alerts.call_args.args == (since, 2)
+    assert collected.resume is None
+    assert connector.client.get_ioc_alerts.call_args.args == (since, 2, 0)
+
+
+def test_adapter_read_capped_at_its_start_continues_the_same_instant(monkeypatch):
+    monkeypatch.setattr("connector.deployment.MAX_HIT_ALERTS", 2)
+    connector = build_connector()
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    created = int(since.timestamp() * 1000)
+    connector.client.get_ioc_alerts.return_value = [
+        {"local_insert_ts": created, "action_remote_ip": "198.51.100.7"},
+        {"local_insert_ts": created, "action_remote_ip": "203.0.113.9"},
+    ]
+    adapter = CortexXdrDeploymentAdapter(connector)
+
+    first = adapter.collect_hits([make_deployment()], since)
+    second = adapter.collect_hits([make_deployment()], since, resume=first.resume)
+
+    assert (first.complete_until, first.resume) == (since, 2)
+    assert connector.client.get_ioc_alerts.call_args_list[0].args == (since, 2, 0)
+    assert connector.client.get_ioc_alerts.call_args_list[1].args == (since, 2, 2)
+    assert second.resume == 4
+    assert [hit.indicator_id for hit in first.hits] == [INDICATOR_ID]
 
 
 def test_adapter_counts_alerts_created_in_the_window_but_detected_before():
