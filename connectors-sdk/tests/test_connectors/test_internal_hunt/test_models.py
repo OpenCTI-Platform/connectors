@@ -86,6 +86,21 @@ def test_hunt_result_hits_count():
     assert HuntResult(events=events, total_hits=1).hits_count == 2
 
 
+def test_hunt_result_counts_a_detection_once():
+    # Given two detections referencing three events, and one event of no detection
+    events = [
+        HuntEvent(fields={"a": 1}, detection="d1"),
+        HuntEvent(fields={"a": 2}, detection="d1"),
+        HuntEvent(fields={"a": 3}, detection="d2"),
+        HuntEvent(fields={"a": 4}),
+    ]
+
+    # When/Then a hit is a detection or an event outside any detection
+    assert HuntResult(events=events).hits_count == 3
+    assert HuntResult(events=events, total_hits=2).hits_count == 3
+    assert HuntResult(events=events, total_hits=8).hits_count == 8
+
+
 def test_native_query_and_report_models():
     # Given/When the result models are built
     query = NativeQuery(language="spl", query="index=main")

@@ -226,6 +226,7 @@ def test_run_rule_collects_detection_events(requests_mock):
     }
     # And the events of the detections are returned, the result being truncated
     assert result.events == [event, {"detectionTime": "2026-10-03T11:00:00Z"}]
+    assert result.event_detections == ["detection-1", "detection-2"]
     assert (result.detections, result.truncated) == (2, True)
 
 
@@ -237,6 +238,7 @@ def test_run_rule_accepts_a_single_object(requests_mock):
     result = make_client().run_rule("rule x {}", START, END, 20000, RunDeadline(30))
     assert requests_mock.last_request.json()["maxResults"] == MAX_RESULTS
     assert (result.events, result.detections, result.truncated) == ([], 0, False)
+    assert result.event_detections == []
 
 
 @pytest.mark.parametrize(

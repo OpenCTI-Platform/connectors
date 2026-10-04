@@ -257,6 +257,14 @@ class HuntEvent(BaseModel):
         default_factory=dict,
         description="Event fields, flattened with dotted names.",
     )
+    detection: str | None = Field(
+        default=None,
+        description=(
+            "Detection referencing the event, when the platform groups matching "
+            "events into detections (a YARA-L rule): the events of one detection "
+            "are one hit."
+        ),
+    )
 
 
 class HuntResult(BaseModel):
@@ -270,7 +278,10 @@ class HuntResult(BaseModel):
     total_hits: int | None = Field(
         default=None,
         ge=0,
-        description="Total number of matching events, when the platform reports it.",
+        description=(
+            "Total number of hits, when the platform reports it: matching events, "
+            "or detections for events grouped into detections."
+        ),
     )
     truncated: bool = Field(
         default=False,
@@ -283,10 +294,16 @@ class HuntResult(BaseModel):
 
     @property
     def hits_count(self) -> int:
-        """Return the number of hits of the run."""
+        """Return the number of hits of the run.
+
+        A hit is a returned event, or a detection for the events a detection
+        groups: the events one detection references count once.
+        """
+        detections = {event.detection for event in self.events if event.detection}
+        returned = len(detections) + sum(1 for e in self.events if not e.detection)
         if self.total_hits is None:
-            return len(self.events)
-        return max(self.total_hits, len(self.events))
+            return returned
+        return max(self.total_hits, returned)
 
 
 class HuntEvidence(BaseModel):

@@ -174,14 +174,18 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
             result = self.client.udm_search(
                 query, time_window.start, time_window.end, limits.max_results, deadline
             )
+        detections = result.event_detections or [None] * len(result.events)
         events = []
-        for raw in result.events:
+        for raw, detection in zip(result.events, detections, strict=True):
             fields = flatten_fields(raw)
-            events.append(HuntEvent(timestamp=_event_time(fields), fields=fields))
+            events.append(
+                HuntEvent(
+                    timestamp=_event_time(fields), fields=fields, detection=detection
+                )
+            )
+        # A YARA-L hit is a detection, whatever the number of events it references
         return HuntResult(
-            events=events,
-            total_hits=max(len(events), result.detections or 0),
-            truncated=result.truncated,
+            events=events, total_hits=result.detections, truncated=result.truncated
         )
 
 

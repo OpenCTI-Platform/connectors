@@ -47,10 +47,16 @@ class SearchResult:
         events: UDM events (UDM search, or the events of the YARA-L detections).
         detections: Number of YARA-L detections (``None`` for a UDM search).
         truncated: True when SecOps holds more results than returned.
+        event_detections: Detection of each event, in the order of ``events``
+            (YARA-L), or ``None`` (UDM search).
     """
 
     def __init__(
-        self, events: list[dict[str, Any]], detections: int | None, truncated: bool
+        self,
+        events: list[dict[str, Any]],
+        detections: int | None,
+        truncated: bool,
+        event_detections: list[str] | None = None,
     ) -> None:
         """Initialize the result.
 
@@ -58,10 +64,12 @@ class SearchResult:
             events: UDM events.
             detections: Number of YARA-L detections, or ``None``.
             truncated: Whether more results exist.
+            event_detections: Detection of each event (YARA-L), or ``None``.
         """
         self.events = events
         self.detections = detections
         self.truncated = truncated
+        self.event_detections = event_detections
 
 
 class _BoundedAuthRequest:
@@ -194,7 +202,8 @@ class SecOpsClient(HuntApiClient):
             deadline: Run deadline.
 
         Returns:
-            The events of the detections and the number of detections.
+            The events of the detections, the detection of each event and the
+            number of detections.
 
         Raises:
             HuntExecutionError: If the rule does not compile or fails.
@@ -216,6 +225,7 @@ class SecOpsClient(HuntApiClient):
         )
         items = answer if isinstance(answer, list) else [answer]
         events: list[dict[str, Any]] = []
+        event_detections: list[str] = []
         detections = 0
         truncated = False
         for item in items:
@@ -235,8 +245,12 @@ class SecOpsClient(HuntApiClient):
             detection = item.get("detection")
             if isinstance(detection, dict):
                 detections += 1
-                events.extend(_detection_events(detection))
-        return SearchResult(events, detections, truncated)
+                detection_events = _detection_events(detection)
+                events.extend(detection_events)
+                event_detections.extend(
+                    [f"detection-{detections}"] * len(detection_events)
+                )
+        return SearchResult(events, detections, truncated, event_detections)
 
 
 def _udm(event: dict[str, Any]) -> dict[str, Any]:

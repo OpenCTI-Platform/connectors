@@ -144,6 +144,9 @@ Rules:
   `on_timeout()`.
 - Fetch at most `limits.max_results` events in total for the run (shared by every query when a run issues several)
   and report the platform total when it is available.
+- When the platform groups matching events into detections (a YARA-L rule), a hit is a detection: name it on each of
+  its events (`HuntEvent.detection`) and report the detection count as `total_hits`, so the events one detection
+  references count once in `hits_count` and after benign suppression.
 - Declare `evidence_excluded_fields` for raw payload fields (e.g. Splunk `_raw`), `entity_fields` for the host, user
   and peer fields of the platform, and `observable_fields` for platform fields the name heuristics do not recognize.
 - Add `pysigma` and the backend package of the platform to `src/requirements.txt` (the SDK `hunt` extra cannot be

@@ -155,6 +155,40 @@ def test_execute_yara_l_counts_detections(connector_factory):
     connector.client.udm_search.assert_not_called()
 
 
+def test_execute_yara_l_counts_a_detection_once_whatever_its_events(
+    connector_factory,
+):
+    # Given one detection referencing three events and another referencing one
+    connector = connector_factory()
+    connector.client = MagicMock()
+    connector.client.run_rule.return_value = SearchResult(
+        [
+            udm_event("2026-10-03T10:00:00Z", principal={"hostname": "ws1"}),
+            udm_event("2026-10-03T10:00:01Z", principal={"hostname": "ws2"}),
+            udm_event("2026-10-03T10:00:02Z", principal={"hostname": "ws3"}),
+            udm_event("2026-10-03T11:00:00Z", principal={"hostname": "ws4"}),
+        ],
+        2,
+        False,
+        ["detection-1", "detection-1", "detection-1", "detection-2"],
+    )
+
+    # When the YARA-L rule runs
+    result = connector.execute(
+        NativeQuery(language="yara-l", query="rule x {}"), WINDOW, HuntLimits()
+    )
+
+    # Then the hits are the two detections, every referenced event kept as evidence
+    assert result.hits_count == 2
+    assert len(result.events) == 4
+    assert [event.detection for event in result.events] == [
+        "detection-1",
+        "detection-1",
+        "detection-1",
+        "detection-2",
+    ]
+
+
 def test_execute_events_without_time(connector_factory):
     # Given a client returning an event without time
     connector = connector_factory()

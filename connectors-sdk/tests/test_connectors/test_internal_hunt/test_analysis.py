@@ -115,6 +115,26 @@ def test_suppress_benign_removes_matching_events():
     assert suppressed.hits_count == 1
 
 
+def test_suppress_benign_counts_the_detections_left_with_relevant_events():
+    # Given two detections: one referencing a benign and a relevant event, the
+    # other only a benign one
+    result = HuntResult(
+        events=[
+            HuntEvent(fields={"u": "svc"}, detection="d1"),
+            HuntEvent(fields={"u": "alice"}, detection="d1"),
+            HuntEvent(fields={"u": "svc"}, detection="d2"),
+        ],
+        total_hits=2,
+    )
+
+    # When benign events are suppressed
+    suppressed = suppress_benign(result, ["svc"], _deadline())
+
+    # Then the detection left with a relevant event is the only hit
+    assert [e.fields["u"] for e in suppressed.events] == ["alice"]
+    assert suppressed.hits_count == 1
+
+
 def test_suppress_benign_on_truncated_results_reports_the_verified_hits_only():
     # Given a truncated result whose returned events include a benign one
     result = HuntResult(
