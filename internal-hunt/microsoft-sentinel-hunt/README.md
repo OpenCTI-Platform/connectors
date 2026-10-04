@@ -3,9 +3,48 @@
 The Microsoft Sentinel hunt connector executes the hunts of OpenCTI on the Log Analytics workspace of Microsoft
 Sentinel. It is a connector of type `INTERNAL_HUNT` registered for the `microsoft-sentinel` hunt platform.
 
+## Before you start
+
+| | |
+|---|---|
+| Credential | A Microsoft Entra ID app registration with a client secret, or a managed identity (`MICROSOFT_SENTINEL_HUNT_AUTH_TYPE=azure_credential`). |
+| Console | Azure portal: **Microsoft Entra ID > App registrations**, then the Log Analytics workspace of Microsoft Sentinel, **Access control (IAM)**. |
+| Network | `login.microsoftonline.com` and `api.loganalytics.io` reachable from the connector. |
+
+Step by step:
+
+1. In **Microsoft Entra ID > App registrations > New registration**, register `opencti-hunt` (single tenant); note its **Directory (tenant) ID** and **Application (client) ID**.
+2. In the app, **Certificates & secrets > New client secret**, and copy its value.
+3. In the Log Analytics workspace, **Access control (IAM) > Add role assignment**: role **Log Analytics Reader** (or **Microsoft Sentinel Reader**), member `opencti-hunt`. Repeat on every workspace of `MICROSOFT_SENTINEL_HUNT_ADDITIONAL_WORKSPACES`.
+4. Copy the **Workspace ID** from the **Overview** of the workspace.
+
+Least-privilege permissions:
+
+| Permission | Why |
+|---|---|
+| Azure role `Log Analytics Reader` (or `Microsoft Sentinel Reader`) on the workspace | Run read-only queries on the workspace tables. |
+| The same role on every workspace of `MICROSOFT_SENTINEL_HUNT_ADDITIONAL_WORKSPACES` | Cross-workspace queries. |
+
+No API permission (Microsoft Graph or Log Analytics API) is required with an Azure role assignment, and the connector never writes to the workspace. The access token is requested for the `<api_url>/.default` scope.
+
+Copy-ready configuration (`.env` of the `docker-compose.yml`):
+
+```env
+OPENCTI_URL=https://opencti.example.com
+OPENCTI_TOKEN=ChangeMe
+CONNECTOR_ID=ChangeMe-UUIDv4
+MICROSOFT_SENTINEL_HUNT_TENANT_ID=ChangeMe
+MICROSOFT_SENTINEL_HUNT_CLIENT_ID=ChangeMe
+MICROSOFT_SENTINEL_HUNT_CLIENT_SECRET=ChangeMe
+MICROSOFT_SENTINEL_HUNT_WORKSPACE_ID=ChangeMe
+```
+
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It requests a token and runs one query on the workspace. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+
 Table of Contents
 
 - [OpenCTI Microsoft Sentinel Hunt Connector](#opencti-microsoft-sentinel-hunt-connector)
+  - [Before you start](#before-you-start)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -51,16 +90,7 @@ truncated.
 
 ### Azure permissions
 
-Register an application in Microsoft Entra ID (or use a managed identity with `MICROSOFT_SENTINEL_HUNT_AUTH_TYPE=
-azure_credential`) and grant it:
-
-| Permission | Why |
-|---|---|
-| Azure role `Log Analytics Reader` (or `Microsoft Sentinel Reader`) on the workspace | Run read-only queries on the workspace tables. |
-| The same role on every workspace of `MICROSOFT_SENTINEL_HUNT_ADDITIONAL_WORKSPACES` | Cross-workspace queries. |
-
-No API permission (Microsoft Graph or Log Analytics API) is required with an Azure role assignment, and the connector
-never writes to the workspace. The access token is requested for the `<api_url>/.default` scope.
+The account, the least-privilege permissions, the console steps and a configuration example are in [Before you start](#before-you-start).
 
 ## Configuration variables
 

@@ -158,7 +158,7 @@ def test_query_reports_the_log_analytics_error(requests_mock):
     "response",
     [
         pytest.param({"exc": requests.exceptions.ConnectionError}, id="network"),
-        pytest.param({"status_code": 401}, id="no_body"),
+        pytest.param({"status_code": 404}, id="no_body"),
         pytest.param(
             {"status_code": 500, "json": {"error": {"code": "x"}}}, id="no_message"
         ),

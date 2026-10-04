@@ -79,10 +79,35 @@ def strip_statement_end(query: str) -> str:
     return query.strip().rstrip(";").rstrip()
 
 
+DOCUMENTATION_URL = (
+    "https://docs.opencti.io/latest/usage/hunt-connectors/#microsoft-sentinel"
+)
+
+REQUIRED_PERMISSIONS = (
+    (
+        "Log Analytics Reader",
+        "Azure role on the workspace (or Microsoft Sentinel Reader): run read-only queries on its tables.",
+    ),
+    (
+        "Log Analytics Reader on each additional workspace",
+        "Only with MICROSOFT_SENTINEL_HUNT_ADDITIONAL_WORKSPACES: cross-workspace queries.",
+    ),
+)
+"""Least-privilege permissions of the account of the connector, as (name, purpose)."""
+
+ACCESS_DENIED_HINTS = {
+    401: "Microsoft Entra ID refused the credentials: check the tenant ID, the client ID and the client secret of the app registration, and that the secret has not expired",
+    403: "the app registration (or managed identity) needs the Log Analytics Reader or Microsoft Sentinel Reader role on the workspace, in Access control (IAM)",
+}
+"""What a refused account lacks, by HTTP status."""
+
+
 class MicrosoftSentinelHuntConnector(InternalHuntConnector):
     """Hunt connector running Sigma and KQL hunts on Microsoft Sentinel."""
 
     languages = ("kql",)
+    required_permissions = REQUIRED_PERMISSIONS
+    documentation_url = DOCUMENTATION_URL
     evidence_excluded_fields = RAW_COLUMNS | BOOKKEEPING_COLUMNS
     entity_fields = (
         *DEFAULT_ENTITY_FIELDS,
@@ -138,6 +163,11 @@ class MicrosoftSentinelHuntConnector(InternalHuntConnector):
             raw_columns=RAW_COLUMNS,
             token_transport=transport,
         )
+        self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
+
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search: a query on the workspace."""
+        return NativeQuery(language="kql", query="print connection_test = 1")
 
     def sigma_backend(self, pipeline: str | None) -> KustoBackend:
         """Create the pySigma Kusto backend.

@@ -447,6 +447,11 @@ def test_start_registers_the_sentinel_platform_and_listens(credential):
         supports_preview=True,
         max_concurrent_runs=None,
         supports_indicators=False,
+        required_permissions=[
+            {"name": name, "purpose": purpose}
+            for name, purpose in MicrosoftSentinelHuntConnector.required_permissions
+        ],
+        documentation_url=MicrosoftSentinelHuntConnector.documentation_url,
     )
     helper.listen_hunt.assert_called_once_with(
         message_callback=connector.process_message
