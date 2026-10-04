@@ -34,6 +34,7 @@ from import_doc_ai.util import (
 )
 
 APPLICANT_ID = "88ec0c6a-13ce-5e39-b486-354fe4a7084f"
+OCTI_EXTENSION = "extension-definition--ea279b3e-5c71-4632-ac08-831c66a786ba"
 UNKNOWN_FIELD_MESSAGE = 'Cannot query field "curationResolve" on type "Query".'
 
 
@@ -716,7 +717,30 @@ def test_bind_looks_up_the_objects_with_a_name_and_a_known_type_only():
         pytest.param(
             {"country": "US", "x_opencti_location_type": "Administrative-Area"},
             "Administrative-Area",
-            id="declared type kept",
+            id="declared location type kept",
+        ),
+        pytest.param(
+            {"country": "US", "x_opencti_type": "Administrative-Area"},
+            "Administrative-Area",
+            id="declared OpenCTI type kept",
+        ),
+        pytest.param(
+            {
+                "country": "US",
+                "extensions": {
+                    OCTI_EXTENSION: {
+                        "extension_type": "property-extension",
+                        "type": "Administrative-Area",
+                    }
+                },
+            },
+            "Administrative-Area",
+            id="type of the OpenCTI extension kept",
+        ),
+        pytest.param(
+            {"country": "US", "x_opencti_type": "Position"},
+            "Country",
+            id="declared type that is no location type ignored",
         ),
     ],
 )

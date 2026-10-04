@@ -970,9 +970,11 @@ def convert_location_to_octi_location(
 ) -> stix2.v21.Location:
     """Convert a STIX location object to an OpenCTI-compatible location object.
 
-    This adds the x_opencti_location_type property if missing, from the most
-    specific populated field: a city or an administrative area also names the
-    country (and the region) it belongs to, and a country its region.
+    This sets the x_opencti_location_type property: to the location type the
+    object declares (x_opencti_location_type, x_opencti_type or the type of
+    the OpenCTI extension), else to the most specific populated field - a
+    city or an administrative area also names the country (and the region)
+    it belongs to, and a country its region.
     Args:
         stix_location (stix2.v21.Location): The STIX location object to convert.
 
@@ -985,8 +987,22 @@ def convert_location_to_octi_location(
         "country": "Country",
         "region": "Region",
     }
-    if stix_location.get("x_opencti_location_type") in mapper.values():
-        return stix_location
+    declared_types = (
+        stix_location.get("x_opencti_location_type"),
+        stix_location.get("x_opencti_type"),
+        pycti.OpenCTIConnectorHelper.get_attribute_in_extension("type", stix_location),
+    )
+    declared = next(
+        (value for value in declared_types if value in mapper.values()), None
+    )
+    if declared:
+        if stix_location.get("x_opencti_location_type") == declared:
+            return stix_location
+        return update_custom_properties(
+            custom_properties={"x_opencti_location_type": declared},
+            stix_object=stix_location,
+            extend=True,
+        )
     for stix_property in mapper.keys():
         if stix_location.get(stix_property):
             octi_type = mapper[stix_property]
