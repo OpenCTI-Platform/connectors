@@ -81,10 +81,13 @@ class ProvenanceSummary(BaseModel):
     model_config = ConfigDict(frozen=True, extra="ignore")
 
     corroboration_count: _Count = Field(
-        description="Number of distinct sources asserting the fact.",
+        description="Number of distinct sources asserting the fact, every source counted.",
     )
     assertions_count: _Count = Field(
-        description="Sum of the assertion counts of all sources.",
+        description=(
+            "Sum of the assertion counts of the sources OpenCTI details "
+            "(up to 200 per fact: the earliest and the most recently active)."
+        ),
     )
     first_asserted: AwareDatetime | None = Field(
         default=None,
@@ -109,7 +112,10 @@ class ProvenanceSummary(BaseModel):
     )
     sources_by_kind: _SourcesByKind = Field(
         default_factory=_no_sources,
-        description="Number of distinct sources asserting the fact, per kind of source.",
+        description=(
+            "Number of distinct sources asserting the fact, per kind of source, "
+            "among the sources OpenCTI details (up to 200 per fact)."
+        ),
     )
     extension_type: Literal["property-extension"] = Field(
         default="property-extension",

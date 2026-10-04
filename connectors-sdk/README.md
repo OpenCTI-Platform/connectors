@@ -75,16 +75,17 @@ def process_message(self, msg) -> None:
 
 | Field                 | Type                                | Meaning                                                            |
 |-----------------------|-------------------------------------|--------------------------------------------------------------------|
-| `corroboration_count` | `int` (>= 0)                        | Number of distinct sources asserting the fact                      |
-| `assertions_count`    | `int` (>= 0)                        | Sum of the assertion counts of all sources                         |
+| `corroboration_count` | `int` (>= 0)                        | Number of distinct sources asserting the fact, every source counted |
+| `assertions_count`    | `int` (>= 0)                        | Sum of the assertion counts of the sources detailed by OpenCTI (see below) |
 | `first_asserted`      | `datetime` or `None`                | When a source asserted the fact for the first time                 |
 | `last_asserted`       | `datetime` or `None`                | When a source asserted the fact for the last time                  |
 | `single_sourced`      | `bool`                              | Exactly one source asserts the fact                                |
 | `has_conflicts`       | `bool`                              | Sources proposed conflicting values for some attributes            |
 | `conflicting_fields`  | `tuple[str, ...]`                   | Names of the attributes with conflicting values                    |
 | `freshness_stale`     | `bool`                              | A knowledge freshness rule flagged the fact as stale               |
-| `sources_by_kind`     | read-only mapping `ProvenanceSourceKind` -> `int` | Distinct sources per kind: `connector`, `feed`, `author`, `user`, `inference`, `emulation` |
+| `sources_by_kind`     | read-only mapping `ProvenanceSourceKind` -> `int` | Distinct sources per kind among the sources detailed by OpenCTI (see below): `connector`, `feed`, `author`, `user`, `inference`, `emulation` |
 
+- OpenCTI keeps the details of up to 200 sources per element (the earliest source and the most recently active ones). `corroboration_count` and `single_sourced` always count every source; `assertions_count` and `sources_by_kind` are computed from the detailed sources, so on an element asserted by more than 200 sources their total can be lower than `corroboration_count`.
 - `from_stix` returns `None` when the object carries no provenance extension. It raises `ProvenanceSummaryError` (a `ValueError`) when the extension is malformed, with the pydantic `ValidationError` as cause when the content fails validation.
 - The summary is read-only: the model is frozen and its collections are immutable. It is not a write model: it has no `to_stix2_object` method and no write model accepts it. Connectors never send provenance: OpenCTI computes it from who writes the data.
 - Forward compatibility: payload fields unknown to the SDK version are ignored, and unknown source kinds are kept in `sources_by_kind` (with a `UserWarning`).
