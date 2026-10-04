@@ -226,12 +226,25 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
 
     @staticmethod
     def _alert_values(alert: dict[str, Any]) -> set[str]:
-        """Return the normalized IOC values carried by an alert."""
-        raw_values: list[Any] = [alert.get("ioc_value")]
-        raw_values.extend(alert.get("ioc_values") or [])
-        for context in alert.get("ioc_context") or []:
-            if isinstance(context, dict):
-                raw_values.append(context.get("ioc_value"))
+        """Return the normalized IOC values carried by an alert.
+
+        Raises:
+            CrowdstrikeApiError: When ``ioc_values`` or ``ioc_context`` is not a list,
+                or an IOC context is not an object: skipped, its matches would be
+                lost as the hit cursor moves past the alert.
+        """
+        ioc_values = alert.get("ioc_values") or []
+        ioc_context = alert.get("ioc_context") or []
+        if not isinstance(ioc_values, list) or not isinstance(ioc_context, list):
+            raise CrowdstrikeApiError("An alert of the hit read carries malformed IOCs")
+        raw_values: list[Any] = [alert.get("ioc_value"), *ioc_values]
+        for context in ioc_context:
+            if not isinstance(context, dict):
+                raise CrowdstrikeApiError(
+                    "An alert of the hit read carries an IOC context that is not an "
+                    "object"
+                )
+            raw_values.append(context.get("ioc_value"))
         return {
             normalized
             for raw_value in raw_values

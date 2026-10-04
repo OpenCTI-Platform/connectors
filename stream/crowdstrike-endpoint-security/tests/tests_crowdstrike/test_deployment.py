@@ -707,7 +707,7 @@ def test_adapter_collects_hits_from_alerts(adapter_client):
             },
             {
                 "timestamp": "2026-10-03T11:30:00Z",
-                "ioc_context": [{"ioc_value": "198.51.100.7"}, "ignored"],
+                "ioc_context": [{"ioc_value": "198.51.100.7"}],
             },
             {"timestamp": "2026-10-03T10:00:00Z", "ioc_value": "198.51.100.7"},
             {"timestamp": "2026-10-03T11:40:00Z", "ioc_value": "unrelated.example"},
@@ -744,6 +744,27 @@ def test_adapter_hit_read_rejects_an_alert_without_creation_time(adapter_client,
     )
 
     with pytest.raises(CrowdstrikeApiError, match="carries no creation time"):
+        make_adapter(adapter_client).collect_hits([make_deployment()], since)
+
+
+@pytest.mark.parametrize(
+    ("iocs", "message"),
+    [
+        ({"ioc_values": "198.51.100.7"}, "carries malformed IOCs"),
+        ({"ioc_context": {"ioc_value": "198.51.100.7"}}, "carries malformed IOCs"),
+        ({"ioc_context": ["198.51.100.7"]}, "IOC context that is not an object"),
+    ],
+)
+def test_adapter_hit_read_rejects_an_alert_with_malformed_iocs(
+    adapter_client, iocs, message
+):
+    """A skipped IOC would be lost: the hit cursor moves past its matches."""
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    adapter_client.iter_alerts.return_value = iter(
+        [{"created_timestamp": "2026-10-03T11:10:00Z", **iocs}]
+    )
+
+    with pytest.raises(CrowdstrikeApiError, match=message):
         make_adapter(adapter_client).collect_hits([make_deployment()], since)
 
 
