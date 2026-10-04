@@ -176,7 +176,7 @@ A document names an entity its own way ("Clop", "Graceful Spider", "USA"), and t
 | Attack Pattern without MITRE ATT&CK id | Attack-Pattern | `aliases` |
 | Vulnerability, Course of Action | the same type | `x_opencti_aliases` |
 | Identity | Organization, Individual, Sector or System (`identity_class`) | `x_opencti_aliases` |
-| Location | Country, Region, City or Administrative-Area (`x_opencti_location_type`) | `x_opencti_aliases` |
+| Location | City, Administrative-Area, Country or Region (`x_opencti_location_type`, else the most specific populated field of `city`, `administrative_area`, `country`, `region`: a city naming its country is a city) | `x_opencti_aliases` |
 
 When OpenCTI returns an existing entity of the same type, the extracted object is bound to it:
 

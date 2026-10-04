@@ -694,6 +694,72 @@ def test_bind_looks_up_the_objects_with_a_name_and_a_known_type_only():
 
 
 @pytest.mark.parametrize(
+    "fields, location_type",
+    [
+        pytest.param(
+            {"city": "Houston", "country": "US"}, "City", id="city in a country"
+        ),
+        pytest.param(
+            {"city": "Atlanta", "administrative_area": "Georgia", "country": "US"},
+            "City",
+            id="city in an administrative area",
+        ),
+        pytest.param(
+            {"administrative_area": "Georgia", "country": "US", "region": "americas"},
+            "Administrative-Area",
+            id="administrative area in a country",
+        ),
+        pytest.param(
+            {"country": "FR", "region": "europe"}, "Country", id="country in a region"
+        ),
+        pytest.param({"region": "europe"}, "Region", id="region"),
+        pytest.param(
+            {"country": "US", "x_opencti_location_type": "Administrative-Area"},
+            "Administrative-Area",
+            id="declared type kept",
+        ),
+    ],
+)
+def test_location_type_is_the_most_specific_populated_field(
+    fields: dict, location_type: str
+):
+    converted = convert_location_to_octi_location(
+        stix2.Location(
+            id=pycti.Location.generate_id("Somewhere", location_type),
+            name="Somewhere",
+            allow_custom=True,
+            **fields,
+        )
+    )
+
+    assert converted["x_opencti_location_type"] == location_type
+    assert resolve_entity_type(converted) == location_type
+
+
+def test_bind_looks_an_administrative_area_up_as_such_whatever_country_it_names():
+    # Given the US state of Georgia, which also names its country
+    georgia_state = location("Georgia", administrative_area="Georgia", country="US")
+    platform = FakePlatform(
+        {
+            ("Country", "Georgia"): resolution(
+                "Country", "Georgia", pycti.Location.generate_id("Georgia", "Country")
+            ),
+            ("Administrative-Area", "Georgia"): None,
+        }
+    )
+    binder, _ = build_binder(platform)
+    bundle = bundle_of(georgia_state)
+
+    bound_bundle, summary = binder.bind(bundle)
+
+    # Then it is looked up as an administrative area, and never bound to the
+    # country of the same name
+    assert platform.calls == [("Administrative-Area", "Georgia")]
+    assert bound_bundle is bundle
+    assert summary.bindings == []
+
+
+@pytest.mark.parametrize(
     "stix_object, entity_type",
     [
         ({"type": "intrusion-set", "name": "APT29"}, "Intrusion-Set"),

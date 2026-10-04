@@ -970,7 +970,9 @@ def convert_location_to_octi_location(
 ) -> stix2.v21.Location:
     """Convert a STIX location object to an OpenCTI-compatible location object.
 
-    This add x_opencti_location_type property if missing.
+    This adds the x_opencti_location_type property if missing, from the most
+    specific populated field: a city or an administrative area also names the
+    country (and the region) it belongs to, and a country its region.
     Args:
         stix_location (stix2.v21.Location): The STIX location object to convert.
 
@@ -978,11 +980,13 @@ def convert_location_to_octi_location(
         (stix2.v21.Location): The converted OpenCTI-compatible location object.
     """
     mapper = {
-        "country": "Country",
-        "region": "Region",
         "city": "City",
         "administrative_area": "Administrative-Area",
+        "country": "Country",
+        "region": "Region",
     }
+    if stix_location.get("x_opencti_location_type") in mapper.values():
+        return stix_location
     for stix_property in mapper.keys():
         if stix_location.get(stix_property):
             octi_type = mapper[stix_property]
