@@ -148,6 +148,20 @@ does not exist), and detection hits are counted with a sighting of the indicator
 - **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
   once). Write-back errors are logged as warnings and never block the dissemination.
 
+#### What you see in OpenCTI
+
+The [Deployments tabs](https://docs.opencti.io/latest/usage/dissemination-assurance/#viewing-deployments) of an
+indicator and of the `Palo Alto Cortex XDR` Security Platform show one row per deployment, with its status, the time
+of the last report and the hits counted from the IOC alerts.
+
+- A `failed` deployment shows the reason the connector reported, for example "Cortex XDR refused the IOC upsert:
+  permission denied" or "Cortex XDR could not be reached for the IOC upsert"; the HTTP status and the Cortex XDR
+  response are in the connector log.
+- **Deploy again** sets the deployment to `pending`: the next reconciliation upserts the indicator again and reports
+  `deployed` or `failed`.
+- **Remove from this platform** withdraws the indicator: the next reconciliation deletes its IOCs, except the ones
+  another live indicator shares, and reports it `removed`.
+
 | Environment variable                 | Default                | Description                                                           |
 |--------------------------------------|------------------------|-----------------------------------------------------------------------|
 | `DEPLOYMENT_REPORTING_ENABLED`       | `true`                 | Report the deployment status of the pushed indicators.                |

@@ -229,6 +229,20 @@ exist).
 - **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
   once). Write-back errors are logged as warnings and never block the dissemination.
 
+#### What you see in OpenCTI
+
+The [Deployments tabs](https://docs.opencti.io/latest/usage/dissemination-assurance/#viewing-deployments) of an
+indicator and of the `SentinelOne` Security Platform show one row per deployment, with its status and the time of the
+last report (no hit count: SentinelOne exposes none for these IOCs).
+
+- A `failed` deployment shows the reason the connector reported, for example "SentinelOne refused the IOC creation:
+  permission denied" or "SentinelOne could not be reached for the IOC creation"; the HTTP status and the SentinelOne
+  response are in the connector log.
+- **Deploy again** sets the deployment to `pending`: the next reconciliation pushes the indicator again and reports
+  `deployed` or `failed`.
+- **Remove from this platform** withdraws the indicator: the next reconciliation deletes the IOCs created from it and
+  reports it `removed`.
+
 | Environment variable                 | Default       | Description                                                           |
 |--------------------------------------|---------------|-----------------------------------------------------------------------|
 | `DEPLOYMENT_REPORTING_ENABLED`       | `true`        | Report the deployment status of the pushed indicators.                |

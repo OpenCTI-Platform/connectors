@@ -168,6 +168,20 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
 - **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
   once). Write-back errors are logged as warnings and never block the dissemination.
 
+#### What you see in OpenCTI
+
+The [Deployments tabs](https://docs.opencti.io/latest/usage/dissemination-assurance/#viewing-deployments) of an
+indicator and of the `Cloudflare` Security Platform show one row per IPv4 indicator, with its status and the time of
+the last report (no hit count: the firewall events belong to the rules using the list).
+
+- A `failed` deployment shows the reason the connector reported, for example "Cloudflare refused the list update:
+  permission denied" or "Cloudflare did not complete the list update in time"; the HTTP status and the Cloudflare
+  response are in the connector log.
+- **Deploy again** sets the deployment to `pending`: the next reconciliation adds the indicator to the snapshot,
+  uploads it and reports `deployed` or `failed`.
+- **Remove from this platform** withdraws the indicator: the next reconciliation deletes its list item, unless another
+  object holds the same address, and reports it `removed`.
+
 | Environment variable                 | Default      | Description                                                                   |
 |--------------------------------------|--------------|-------------------------------------------------------------------------------|
 | `DEPLOYMENT_REPORTING_ENABLED`       | `true`       | Report the deployment status of the uploaded indicators.                      |

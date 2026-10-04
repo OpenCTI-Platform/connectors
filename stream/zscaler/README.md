@@ -265,6 +265,20 @@ Platform entity (created if it does not exist).
 - **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
   once). Write-back errors are logged as warnings and never block the dissemination.
 
+#### What you see in OpenCTI
+
+The [Deployments tabs](https://docs.opencti.io/latest/usage/dissemination-assurance/#viewing-deployments) of an
+indicator and of the `Zscaler Internet Access` Security Platform show one row per deployment, with its status and the
+time of the last report (no hit count: the ZIA API exposes none for a URL category).
+
+- A `failed` deployment shows the reason the connector reported, for example "Zscaler refused the blacklist update:
+  permission denied" or "Zscaler did not complete the configuration activation in time"; the HTTP status and the
+  Zscaler response are in the connector log.
+- **Deploy again** sets the deployment to `pending`: the next reconciliation adds the domain again, activates the change
+  and reports `deployed` or `failed`.
+- **Remove from this platform** withdraws the indicator: the next reconciliation removes its domain from the category,
+  unless a deployment staying on Zscaler shares it, and reports it `removed`.
+
 | Environment variable                 | Default                   | Description                                                                   |
 |--------------------------------------|---------------------------|-------------------------------------------------------------------------------|
 | `DEPLOYMENT_REPORTING_ENABLED`       | `true`                    | Report the deployment status of the pushed domains.                           |

@@ -303,6 +303,21 @@ does not exist), and detection hits are counted with a sighting of the indicator
 - **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
   once). Write-back errors are logged as warnings and never block the dissemination.
 
+#### What you see in OpenCTI
+
+The [Deployments tabs](https://docs.opencti.io/latest/usage/dissemination-assurance/#viewing-deployments) of an
+indicator and of the `Google SecOps SIEM` Security Platform show one row per deployment, with its status, the time of
+the last report and the hits counted from the IoC matches.
+
+- A deployment stays `deployed` and never turns `active`: Google SecOps cannot read the imported entities back.
+- A `failed` deployment shows the reason the connector reported, for example "Google SecOps refused the entity
+  ingestion: permission denied" or "Google SecOps could not be reached for the entity ingestion"; the HTTP status and
+  the Google SecOps response are in the connector log.
+- **Deploy again** sets the deployment to `pending`: the next periodic run ingests the indicator again and reports
+  `deployed` or `failed`.
+- **Remove from this platform** cannot be applied by this connector: the entity stays in Google SecOps until the end of
+  its validity interval, and OpenCTI then flags the deployment `expired`.
+
 | Environment variable                 | Default              | Description                                                                       |
 |--------------------------------------|----------------------|-----------------------------------------------------------------------------------|
 | `DEPLOYMENT_REPORTING_ENABLED`       | `true`               | Report the deployment status of the ingested indicators.                          |
