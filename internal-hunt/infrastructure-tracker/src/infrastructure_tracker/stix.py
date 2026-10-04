@@ -9,8 +9,9 @@ For a run with hits, the bundle holds:
 - one detection ``indicator`` per observable, ``based-on`` it;
 - ``related-to`` relationships from the infrastructure and ``indicates``
   relationships from every indicator to the threats the hunt targets;
-- one ``observed-data`` per number of hosts, referencing the observables that
-  many hosts hold, stamped with the hunt run.
+- one ``observed-data`` per observable (``build_observed_data`` of the SDK),
+  ``number_observed`` being the number of hosts holding it, stamped with the
+  hunt run.
 
 Every object inherits the markings and the author of the hunt. The
 infrastructure, its observables, indicators and relationships keep their
