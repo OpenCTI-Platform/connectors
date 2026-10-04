@@ -274,7 +274,11 @@ class HuntResult(BaseModel):
     )
     truncated: bool = Field(
         default=False,
-        description="True when more events matched than were returned.",
+        description=(
+            "True when the platform did not return every matching event: more "
+            "matches than returned, shard or source failures, partial answers or "
+            "an exhausted result budget. The hit count is then a lower bound."
+        ),
     )
 
     @property
@@ -315,6 +319,13 @@ class HuntRunReport(BaseModel):
         default=None, description="Language of the executed query."
     )
     hits_count: int | None = Field(default=None, ge=0, description="Number of hits.")
+    truncated: bool | None = Field(
+        default=None,
+        description=(
+            "Partial results (see HuntResult.truncated): OpenCTI reads the hit count "
+            "as a lower bound and never concludes benign from zero hits."
+        ),
+    )
     distinct_entities: int | None = Field(
         default=None, ge=0, description="Number of distinct entities hit."
     )

@@ -144,7 +144,7 @@ Investigate).
    query text) and is capped with `| tail(limit=<max_results>)`. When the cap is reached, the total hit count is read
    with a second `| count()` query job.
 2. Query jobs are polled at the `pollAfter` pace LogScale returns (or every `CROWDSTRIKE_LOGSCALE_HUNT_POLL_INTERVAL`
-   seconds) until done, then deleted; they are also deleted when the run times out. LogScale warnings are logged.
+   seconds) until done, then deleted; they are also deleted when the run times out. LogScale warnings are logged, and a run with warnings is reported as partial results (OpenCTI then reads its hit count as a lower bound and never concludes benign from zero hits).
 3. Events matching a benign pattern of the hunt are suppressed.
 4. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
    CrowdStrike Falcon Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event, read from

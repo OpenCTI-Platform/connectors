@@ -556,6 +556,7 @@ class InternalHuntConnector(ABC):
                 translated_query=native_query.query,
                 query_language=native_query.language,
                 hits_count=hits_count,
+                truncated=result.truncated,
                 distinct_entities=count_distinct_entities(
                     result.events, self.entity_fields
                 ),
@@ -698,6 +699,7 @@ class InternalHuntConnector(ABC):
             cost_ms=report.cost_ms,
             result_ids=report.result_ids,
             error=report.error,
+            truncated=report.truncated,
         )
 
     # ------------------------------------------------------------------

@@ -382,12 +382,29 @@ def test_execution_without_hits_sends_nothing(
     # When the run is processed
     connector.process_message(hunt_event())
 
-    # Then nothing is sent and zero hits are reported
+    # Then nothing is sent and zero hits of complete results are reported
     hunt_helper.send_stix2_bundle.assert_not_called()
     _, kwargs = _report_kwargs(hunt_helper)
     assert kwargs["hits_count"] == 0
+    assert kwargs["truncated"] is False
     assert kwargs["result_ids"] == []
     assert kwargs["evidence_sample"] == []
+
+
+def test_execution_reports_partial_results_as_truncated(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given an empty result the platform marked as partial (shard failures)
+    connector = connector_factory(HuntResult(truncated=True))
+
+    # When the run is processed
+    connector.process_message(hunt_event())
+
+    # Then the report says so, so that OpenCTI never reads zero hits as benign
+    args, kwargs = _report_kwargs(hunt_helper)
+    assert args == ("run-1", "completed")
+    assert kwargs["hits_count"] == 0
+    assert kwargs["truncated"] is True
 
 
 def test_execution_without_security_platform_logs_a_warning(

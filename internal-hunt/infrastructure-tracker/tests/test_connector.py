@@ -428,12 +428,13 @@ def test_execute_merges_the_sources_and_skips_failures(
     # When the plan runs
     result = connector.execute(plan_query(plan), WINDOW, HuntLimits())
 
-    # Then the failure is logged and the hosts merged
+    # Then the failure is logged, the hosts merged, and the result reported as
+    # partial: the failed source may have held other hosts
     connector.logger.warning.assert_called_once()
     (event,) = result.events
     assert event.fields["source"] == ["urlscan", "cymru_scout"]
     assert event.fields["domain"] == ["evil.example", "c2.example"]
-    assert result.total_hits == 1 and result.truncated is False
+    assert result.total_hits == 1 and result.truncated is True
 
 
 def test_execute_keeps_the_urlscan_scans_of_a_sub_day_window(

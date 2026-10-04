@@ -168,10 +168,12 @@ class CrowdstrikeLogscaleHuntConnector(InternalHuntConnector):
         for raw in result.events:
             fields = flatten_fields(raw)
             events.append(HuntEvent(timestamp=_event_time(fields), fields=fields))
+        # LogScale warnings flag partial results (segments not searched, limits
+        # reached) without a structured flag: they are kept as truncation.
         return HuntResult(
             events=events,
             total_hits=total,
-            truncated=total > len(events),
+            truncated=total > len(events) or bool(result.warnings),
         )
 
     def on_timeout(self, native_query: NativeQuery) -> None:

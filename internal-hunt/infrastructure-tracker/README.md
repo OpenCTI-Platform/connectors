@@ -174,7 +174,7 @@ configured source supports its fingerprints.
 3. The queries share the run `max_results`: each query reads at most an equal share of what is left of it, so the run
    never reads more than `max_results` records in total, whatever the number of queries. Hosts are merged by IP
    address (or host name for web properties without one); the run is reported as truncated when a source holds more
-   matches than were read, or when the budget is spent before every query ran.
+   matches than were read, when the budget is spent before every query ran, or when a source query failed while others answered (OpenCTI then never concludes benign from zero hits).
 4. Up to `INFRASTRUCTURE_TRACKER_INTERNETDB_MAX_LOOKUPS` public IP addresses are enriched with Shodan InternetDB. The
    enrichment is best effort: an error is logged, and it stops when the run timeout is close.
 5. Hosts matching a benign pattern of the hunt are suppressed.

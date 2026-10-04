@@ -288,6 +288,9 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
             )
         if errors and not answered:
             raise errors[0]
+        if errors:
+            # Some source queries failed: the hosts found are a partial view.
+            truncated = True
         self._enrich(list(hosts.values()), deadline)
         events = [
             HuntEvent(timestamp=host.last_seen, fields=host.fields())

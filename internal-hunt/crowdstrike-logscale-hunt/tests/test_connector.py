@@ -101,6 +101,29 @@ def test_execute_caps_and_maps_events(connector_factory, requests_mock):
     assert result.events[0].timestamp == datetime(2026, 10, 3, 10, tzinfo=timezone.utc)
 
 
+def test_execute_marks_a_result_with_warnings_as_partial(
+    connector_factory, requests_mock
+):
+    # Given a job below the cap that LogScale answers with a warning
+    mock_falcon_job(
+        requests_mock,
+        [
+            done(
+                [{"@timestamp": int(TEN_AM_MS), "ComputerName": "ws1"}],
+                warnings=[{"message": "Some segments could not be searched"}],
+            )
+        ],
+    )
+
+    # When the query runs
+    result = connector_factory().execute(
+        NativeQuery(language="logscale", query="q"), WINDOW, HuntLimits()
+    )
+
+    # Then the result is kept and reported as partial
+    assert (result.hits_count, result.truncated) == (1, True)
+
+
 def test_execute_counts_when_the_cap_is_reached(connector_factory, requests_mock):
     # Given more events than the cap
     requests_mock.post(TOKEN_URL, json={"access_token": "tok"})
