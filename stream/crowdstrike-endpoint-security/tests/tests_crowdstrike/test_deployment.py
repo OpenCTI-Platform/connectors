@@ -711,7 +711,6 @@ def test_adapter_collects_hits_from_alerts(adapter_client):
             },
             {"timestamp": "2026-10-03T10:00:00Z", "ioc_value": "198.51.100.7"},
             {"timestamp": "2026-10-03T11:40:00Z", "ioc_value": "unrelated.example"},
-            {"ioc_value": "198.51.100.7"},
         ]
     )
 
@@ -725,6 +724,27 @@ def test_adapter_collects_hits_from_alerts(adapter_client):
     adapter_client.iter_alerts.assert_called_once_with(
         since, 10_000, exclude_ids=frozenset()
     )
+
+
+@pytest.mark.parametrize(
+    "alert",
+    [
+        {"ioc_value": "198.51.100.7"},
+        {"created_timestamp": "not a date", "ioc_value": "198.51.100.7"},
+    ],
+)
+def test_adapter_hit_read_rejects_an_alert_without_creation_time(adapter_client, alert):
+    """A skipped alert would be lost: the hit cursor moves past its IOC matches."""
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    adapter_client.iter_alerts.return_value = iter(
+        [
+            {"created_timestamp": "2026-10-03T11:10:00Z", "ioc_value": "198.51.100.7"},
+            alert,
+        ]
+    )
+
+    with pytest.raises(CrowdstrikeApiError, match="carries no creation time"):
+        make_adapter(adapter_client).collect_hits([make_deployment()], since)
 
 
 def test_adapter_capped_hit_read_is_complete_until_the_newest_alert(adapter_client):

@@ -195,11 +195,16 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
             timestamp = parse_datetime(
                 alert.get("created_timestamp") or alert.get("timestamp")
             )
-            if timestamp is None or timestamp <= since:
+            if timestamp is None:
+                # Never skipped: the hit cursor would move past its IOC matches.
+                raise CrowdstrikeApiError(
+                    "An alert of the hit read carries no creation time"
+                )
+            if timestamp <= since:
                 identifier = alert_id(alert)
                 if identifier:
                     read_at_start.add(identifier)
-            if timestamp is None or timestamp < since:
+            if timestamp < since:
                 continue
             newest = max(newest, timestamp)
             matched = {
