@@ -14,7 +14,7 @@ import pytest
 import stix2
 from import_doc_ai import connector as connector_module
 from import_doc_ai.connector import Connector
-from import_doc_ai.entity_binding import CURATION_RESOLVE_QUERY
+from import_doc_ai.entity_binding import curation_resolve_query
 from import_doc_ai.util import OpenCTIFileObject
 
 APT29_ID = pycti.IntrusionSet.generate_id("APT29")
@@ -71,10 +71,17 @@ class Platform:
     def __init__(self, error: Exception | None = None):
         self.error = error
         self.calls = []
+        self.requests = 0
 
     def query(self, query: str, variables: dict) -> dict:
-        assert query == CURATION_RESOLVE_QUERY
-        self.calls.append((variables["type"], variables["name"]))
+        size = len(variables) // 2
+        assert query == curation_resolve_query(size)
+        names = [
+            (variables[f"type{index}"], variables[f"name{index}"])
+            for index in range(size)
+        ]
+        self.calls.extend(names)
+        self.requests += 1
         if self.error is not None:
             raise self.error
         answers = {
@@ -99,7 +106,7 @@ class Platform:
         }
         return {
             "data": {
-                "curationResolve": answers.get((variables["type"], variables["name"]))
+                f"resolve{index}": answers.get(name) for index, name in enumerate(names)
             }
         }
 
@@ -207,6 +214,7 @@ def test_global_import_sends_the_existing_entities_the_document_names(
             "bound": 2,
             "aliases_added": 2,
             "lookups": 3,
+            "requests": 1,
             "cache_hits": 0,
             "failed_lookups": 0,
             "rejected_resolutions": 0,
@@ -325,7 +333,7 @@ def test_import_against_a_platform_without_curation_resolve_is_unchanged(
     first_call, second_call = helper.send_stix2_bundle.call_args_list
     assert sent(first_call) == expected
     assert sent(second_call) == expected
-    assert len(platform.calls) == 1
+    assert platform.requests == 1
     fallback_logs = [
         call
         for call in helper.connector_logger.info.call_args_list

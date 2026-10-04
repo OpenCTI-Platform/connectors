@@ -16,12 +16,13 @@ import pytest
 import requests
 import stix2
 from import_doc_ai.entity_binding import (
-    CURATION_RESOLVE_QUERY,
-    MAX_CONSECUTIVE_FAILED_LOOKUPS,
+    LOOKUPS_PER_REQUEST,
+    MAX_CONSECUTIVE_FAILED_REQUESTS,
     BindingSummary,
     EntityResolution,
     ExistingEntityBinder,
     ResolutionCache,
+    curation_resolve_query,
     is_schema_error,
     is_stix_id,
     resolve_entity_type,
@@ -40,7 +41,12 @@ UNKNOWN_FIELD_MESSAGE = 'Cannot query field "curationResolve" on type "Query".'
 # A platform answering curationResolve
 # --------------------------------------------------------------------------- #
 class FakePlatform:
-    """Answer ``curationResolve`` from a catalog, keyed by (type, name)."""
+    """Answer batched ``curationResolve`` requests from a catalog, keyed by (type, name).
+
+    An exception answering a name fails the whole request carrying it, and a
+    ``Response`` is returned as the whole response; ``MISSING`` leaves the
+    answer of its name out of the response.
+    """
 
     def __init__(self, answers: dict[tuple[str, str], object] | None = None):
         self.answers = {
@@ -48,16 +54,36 @@ class FakePlatform:
             for (entity_type, name), answer in (answers or {}).items()
         }
         self.calls: list[tuple[str, str]] = []
+        self.requests: list[list[tuple[str, str]]] = []
 
     def query(self, query: str, variables: dict) -> object:
-        assert query == CURATION_RESOLVE_QUERY
-        self.calls.append((variables["type"], variables["name"]))
-        answer = self.answers.get((variables["type"], variables["name"].casefold()))
-        if isinstance(answer, BaseException):
-            raise answer
-        if isinstance(answer, Response):
-            return answer.body
-        return {"data": {"curationResolve": answer}}
+        size = len(variables) // 2
+        assert query == curation_resolve_query(size)
+        assert set(variables) == {
+            f"{prefix}{index}" for index in range(size) for prefix in ("name", "type")
+        }
+        names = [
+            (variables[f"type{index}"], variables[f"name{index}"])
+            for index in range(size)
+        ]
+        self.calls.extend(names)
+        self.requests.append(names)
+        answers = [
+            self.answers.get((entity_type, name.casefold()))
+            for entity_type, name in names
+        ]
+        for answer in answers:
+            if isinstance(answer, BaseException):
+                raise answer
+            if isinstance(answer, Response):
+                return answer.body
+        return {
+            "data": {
+                f"resolve{index}": answer
+                for index, answer in enumerate(answers)
+                if answer is not MISSING
+            }
+        }
 
 
 class Response:
@@ -65,6 +91,9 @@ class Response:
 
     def __init__(self, body: object):
         self.body = body
+
+
+MISSING = object()
 
 
 def resolution(
@@ -216,7 +245,7 @@ def test_bind_sends_the_lookups_with_the_permissions_of_the_importing_user():
     binder.bind(bundle_of(malware("Clop")))
 
     helper.api_impersonate.query.assert_called_once_with(
-        CURATION_RESOLVE_QUERY, {"name": "Clop", "type": "Malware"}
+        curation_resolve_query(1), {"name0": "Clop", "type0": "Malware"}
     )
     helper.api.query.assert_not_called()
 
@@ -915,10 +944,11 @@ def test_bind_turns_itself_off_on_a_platform_without_curation_resolve(
     # When importing a first document
     bound_bundle, summary = binder.bind(bundle)
 
-    # Then the first lookup reveals it: nothing is bound, nothing else is sent
+    # Then the first request reveals it: nothing is bound, nothing else is sent
     assert bound_bundle is bundle
-    assert len(platform.calls) == 1
-    assert summary.lookups == 1
+    assert len(platform.requests) == 1
+    assert summary.requests == 1
+    assert summary.lookups == 2
     assert summary.unresolved_names == 2
     assert summary.failed_lookups == 0
     assert binder.active is False
@@ -932,8 +962,26 @@ def test_bind_turns_itself_off_on_a_platform_without_curation_resolve(
     # And the next documents are imported as extracted, without any lookup
     # nor log
     assert binder.bind(bundle)[0] is bundle
-    assert len(platform.calls) == 1
+    assert len(platform.requests) == 1
     helper.connector_logger.info.assert_called_once()
+
+
+def test_bind_stops_at_the_first_request_a_platform_without_curation_resolve_rejects():
+    # Given a document naming more entities than one request carries, on a
+    # platform that does not know the curationResolve query
+    names = ["Akira", "BlackCat", "Conti", "Hive", "LockBit"]
+    platform = FakePlatform(
+        {("Malware", name): SCHEMA_ERRORS[0].values[0] for name in names}
+    )
+    binder, _ = build_binder(platform, lookups_per_request=2)
+
+    _, summary = binder.bind(bundle_of(*(malware(name) for name in names)))
+
+    # Then the batches after the rejected one are not sent
+    assert platform.requests == [[("Malware", "Akira"), ("Malware", "BlackCat")]]
+    assert summary.lookups == 2
+    assert summary.unresolved_names == len(names)
+    assert binder.active is False
 
 
 @pytest.mark.parametrize(
@@ -954,56 +1002,13 @@ def test_bind_turns_itself_off_on_a_platform_without_curation_resolve(
             ValueError({"name": "BAD_USER_INPUT", "error_message": "name too long"}),
             id="invalid value",
         ),
-        pytest.param(Response({"data": {}}), id="response without the field"),
+        pytest.param(Response({"data": {}}), id="response without the fields"),
+        pytest.param(Response({"data": None}), id="response without data"),
         pytest.param(Response(["not", "an", "object"]), id="response not an object"),
-        pytest.param(
-            Response({"data": {"curationResolve": {"name": "Cl0p"}}}),
-            id="resolution without standard id",
-        ),
-        pytest.param(
-            Response({"data": {"curationResolve": "Cl0p"}}),
-            id="resolution not an object",
-        ),
-        pytest.param(
-            Response(
-                {
-                    "data": {
-                        "curationResolve": resolution(
-                            "Malware", "Cl0p", "malware--invalid"
-                        )
-                    }
-                }
-            ),
-            id="standard id without uuid",
-        ),
-        pytest.param(
-            Response(
-                {
-                    "data": {
-                        "curationResolve": resolution(
-                            "Malware", "Cl0p", pycti.Malware.generate_id("Cl0p").upper()
-                        )
-                    }
-                }
-            ),
-            id="standard id not canonical",
-        ),
-        pytest.param(
-            Response(
-                {
-                    "data": {
-                        "curationResolve": resolution(
-                            "Malware", "", pycti.Malware.generate_id("Cl0p")
-                        )
-                    }
-                }
-            ),
-            id="resolution without name",
-        ),
     ],
 )
-def test_bind_imports_a_name_whose_lookup_fails_as_extracted(error: object):
-    # Given a lookup failing for one name and succeeding for another
+def test_bind_imports_the_names_of_a_failed_request_as_extracted(error: object):
+    # Given a request failing as a whole
     clop = malware("Clop")
     ta505 = intrusion_set("TA505")
     ta505_id = pycti.IntrusionSet.generate_id("TA 505")
@@ -1014,14 +1019,76 @@ def test_bind_imports_a_name_whose_lookup_fails_as_extracted(error: object):
         }
     )
     binder, helper = build_binder(platform)
+    bundle = bundle_of(clop, ta505)
+
+    bound_bundle, summary = binder.bind(bundle)
+
+    # Then every name it carried is imported as extracted, with one warning
+    assert bound_bundle is bundle
+    assert summary.requests == 1
+    assert summary.failed_lookups == 2
+    assert binder.active is True
+    helper.connector_logger.warning.assert_called_once()
+    warning_message, warning_context = helper.connector_logger.warning.call_args.args
+    assert warning_message == (
+        "Could not resolve extracted entities against OpenCTI, "
+        "importing them as extracted"
+    )
+    assert warning_context["entities"] == [
+        {"type": "Intrusion-Set", "name": "TA505"},
+        {"type": "Malware", "name": "Clop"},
+    ]
+    assert warning_context["error"]
+    helper.connector_logger.info.assert_not_called()
+
+    # And a failure is not cached: the next document looks the names up again
+    binder.bind(bundle)
+    assert platform.calls.count(("Malware", "Clop")) == 2
+    assert platform.calls.count(("Intrusion-Set", "TA505")) == 2
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        pytest.param(MISSING, id="answer missing from the response"),
+        pytest.param({"name": "Cl0p"}, id="resolution without standard id"),
+        pytest.param("Cl0p", id="resolution not an object"),
+        pytest.param(
+            resolution("Malware", "Cl0p", "malware--invalid"),
+            id="standard id without uuid",
+        ),
+        pytest.param(
+            resolution("Malware", "Cl0p", pycti.Malware.generate_id("Cl0p").upper()),
+            id="standard id not canonical",
+        ),
+        pytest.param(
+            resolution("Malware", "", pycti.Malware.generate_id("Cl0p")),
+            id="resolution without name",
+        ),
+    ],
+)
+def test_bind_imports_a_name_whose_answer_is_invalid_as_extracted(answer: object):
+    # Given a request answering one name with something unreadable and
+    # resolving the other one
+    clop = malware("Clop")
+    ta505 = intrusion_set("TA505")
+    ta505_id = pycti.IntrusionSet.generate_id("TA 505")
+    platform = FakePlatform(
+        {
+            ("Malware", "Clop"): answer,
+            ("Intrusion-Set", "TA505"): resolution("Intrusion-Set", "TA 505", ta505_id),
+        }
+    )
+    binder, helper = build_binder(platform)
 
     bound_bundle, summary = binder.bind(bundle_of(clop, ta505))
 
-    # Then the failing name is imported as extracted, with a warning, and the
-    # other one is bound
+    # Then that name is imported as extracted, with a warning, and the other
+    # one is bound
     objects = as_json(bound_bundle)
     assert objects[clop["id"]] == json.loads(clop.serialize())
     assert objects[ta505_id]["name"] == "TA 505"
+    assert summary.requests == 1
     assert summary.failed_lookups == 1
     assert binder.active is True
     helper.connector_logger.warning.assert_called_once()
@@ -1041,38 +1108,103 @@ def test_bind_imports_a_name_whose_lookup_fails_as_extracted(error: object):
     assert platform.calls.count(("Intrusion-Set", "TA505")) == 1
 
 
-def test_bind_stops_looking_up_after_consecutive_failures():
-    names = ["Akira", "BlackCat", "Conti", "Hive", "LockBit"]
+def test_bind_stops_looking_up_after_consecutive_failed_requests():
+    names = ["Akira", "BlackCat", "Conti", "Hive", "LockBit", "Play", "Royal"]
     platform = FakePlatform(
         {("Malware", name): requests.ConnectionError("down") for name in names}
     )
-    binder, helper = build_binder(platform)
+    binder, helper = build_binder(platform, lookups_per_request=2)
 
     bound_bundle, summary = binder.bind(bundle_of(*(malware(name) for name in names)))
 
-    assert len(platform.calls) == MAX_CONSECUTIVE_FAILED_LOOKUPS
-    assert summary.failed_lookups == MAX_CONSECUTIVE_FAILED_LOOKUPS
-    assert summary.unresolved_names == len(names) - MAX_CONSECUTIVE_FAILED_LOOKUPS
+    assert len(platform.requests) == MAX_CONSECUTIVE_FAILED_REQUESTS
+    assert summary.requests == MAX_CONSECUTIVE_FAILED_REQUESTS
+    assert summary.failed_lookups == 2 * MAX_CONSECUTIVE_FAILED_REQUESTS
+    assert summary.unresolved_names == len(names) - 2 * MAX_CONSECUTIVE_FAILED_REQUESTS
     assert summary.bindings == []
     assert binder.active is True
     assert logged(helper.connector_logger.warning)[-1] == (
         "Stopped resolving the extracted entities of the document after "
-        "consecutive failed lookups, importing the others as extracted"
+        "consecutive failed requests, importing the others as extracted"
     )
+    assert helper.connector_logger.warning.call_args.args[1] == {
+        "failed_requests": MAX_CONSECUTIVE_FAILED_REQUESTS,
+        "unresolved": 1,
+    }
 
 
-def test_a_successful_lookup_resets_the_failure_count():
+def test_a_successful_request_resets_the_failure_count():
     names = ["Akira", "BlackCat", "Conti", "Hive", "LockBit"]
     answers = {("Malware", name): requests.ConnectionError("down") for name in names}
     answers[("Malware", "Conti")] = None
     platform = FakePlatform(answers)
+    binder, _ = build_binder(platform, lookups_per_request=1)
+
+    _, summary = binder.bind(bundle_of(*(malware(name) for name in names)))
+
+    assert len(platform.requests) == len(names)
+    assert summary.failed_lookups == 4
+    assert summary.unresolved_names == 0
+
+
+def test_bind_sends_the_lookups_in_bounded_requests():
+    # Given a document naming more entities than one request carries
+    names = [f"Ransomware {index:02d}" for index in range(2 * LOOKUPS_PER_REQUEST + 5)]
+    bound_id = pycti.Malware.generate_id("Ransomware 07")
+    platform = FakePlatform(
+        {
+            ("Malware", "Ransomware 07"): resolution(
+                "Malware", "Ransomware 07", bound_id, match_type="exact"
+            )
+        }
+    )
     binder, _ = build_binder(platform)
 
     _, summary = binder.bind(bundle_of(*(malware(name) for name in names)))
 
-    assert len(platform.calls) == len(names)
-    assert summary.failed_lookups == 4
-    assert summary.unresolved_names == 0
+    # Then the names are resolved in requests of at most LOOKUPS_PER_REQUEST
+    # names, each name once, in the order of the document
+    assert [len(request) for request in platform.requests] == [
+        LOOKUPS_PER_REQUEST,
+        LOOKUPS_PER_REQUEST,
+        5,
+    ]
+    assert platform.calls == [("Malware", name) for name in names]
+    assert (summary.requests, summary.lookups) == (3, len(names))
+    assert [binding.extracted_name for binding in summary.bindings] == ["Ransomware 07"]
+
+
+def test_the_lookup_budget_bounds_the_requests_of_a_document():
+    platform = FakePlatform()
+    binder, _ = build_binder(
+        platform, max_lookups_per_document=5, lookups_per_request=2
+    )
+
+    _, summary = binder.bind(
+        bundle_of(*(malware(f"Ransomware {index}") for index in range(8)))
+    )
+
+    assert [len(request) for request in platform.requests] == [2, 2, 1]
+    assert (summary.requests, summary.lookups, summary.unresolved_names) == (3, 5, 3)
+
+
+@pytest.mark.parametrize("lookups_per_request", [0, LOOKUPS_PER_REQUEST + 1])
+def test_binder_rejects_a_request_size_out_of_bounds(lookups_per_request: int):
+    with pytest.raises(ValueError, match="lookups_per_request"):
+        build_binder(FakePlatform(), lookups_per_request=lookups_per_request)
+
+
+def test_curation_resolve_query_aliases_one_field_per_name():
+    selection = "entity_id standard_id entity_type name match_type score matched_value"
+    assert curation_resolve_query(2) == (
+        "query CurationResolve($name0: String!, $type0: String!, "
+        "$name1: String!, $type1: String!) {\n"
+        f"  resolve0: curationResolve(name: $name0, type: $type0) {{ {selection} }}\n"
+        f"  resolve1: curationResolve(name: $name1, type: $type1) {{ {selection} }}\n"
+        "}"
+    )
+    with pytest.raises(ValueError):
+        curation_resolve_query(0)
 
 
 @pytest.mark.parametrize("error", SCHEMA_ERRORS)

@@ -190,10 +190,11 @@ The lookups:
 
 - Run with the permissions of the user who triggered the import, and in the draft the import targets, so that a document is never bound to an entity this user cannot see there.
 - Are sent once per distinct name and type of a document. The answers, matches and misses alike, are cached across documents for 10 minutes, per user and draft, 1,024 entries at most.
+- Are batched: one request resolves up to 20 names (one aliased `curationResolve` field per name), so a document costs at most 25 requests.
 - Are bounded to 500 per document. Beyond, the threat entities (intrusion sets, threat actors, campaigns, malware, tools) are looked up first and the others imported as extracted, with a warning.
-- Stop for the rest of a document after 3 consecutive failures, the remaining entities being imported as extracted, with a warning.
+- Stop for the rest of a document after 3 consecutive failed requests, the remaining entities being imported as extracted, with a warning.
 
-The `curationResolve` query comes with the autonomous curation of OpenCTI ([OpenCTI-Platform/opencti#18675](https://github.com/OpenCTI-Platform/opencti/issues/18675)). On a platform that does not expose it, the first lookup fails with a GraphQL validation error: the connector logs it once at info level, then imports every document as extracted, as before, until it restarts. Any other failure of a lookup (network, HTTP status, permission) is logged as a warning and leaves that one entity as extracted.
+The `curationResolve` query comes with the autonomous curation of OpenCTI ([OpenCTI-Platform/opencti#18675](https://github.com/OpenCTI-Platform/opencti/issues/18675)). On a platform that does not expose it, the first request fails with a GraphQL validation error: the connector logs it once at info level, then imports every document as extracted, as before, until it restarts. Any other failure of a request (network, HTTP status, permission) is logged as a warning and leaves the entities it carried as extracted; an answer that cannot be read leaves its one entity as extracted.
 
 Set `IMPORT_DOCUMENT_AI_RESOLVE_EXISTING_ENTITIES=false` (`import_document_ai.resolve_existing_entities: false` in `config.yml`) to turn the binding off.
 

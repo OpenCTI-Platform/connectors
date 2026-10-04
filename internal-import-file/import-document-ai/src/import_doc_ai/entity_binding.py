@@ -10,14 +10,15 @@ entity's standard id and canonical name, keeps the spelling of the document as
 an alias, and every reference to its former id follows.
 
 The lookups run with the permissions of the user who triggered the import, in
-the draft the import targets, are cached and bounded per document, and never
-block the import: a platform that
-does not expose ``curationResolve`` is detected on the first lookup and the
+the draft the import targets, are sent in batches of names per request, are
+cached and bounded per document, and never block the import: a platform that
+does not expose ``curationResolve`` is detected on the first request and the
 binding is skipped for the lifetime of the process, and any other failure
-leaves the entity as extracted.
+leaves the entities as extracted.
 """
 
 import enum
+import functools
 import json
 import re
 import threading
@@ -37,22 +38,13 @@ from import_doc_ai.util import (
 )
 from pycti import OpenCTIConnectorHelper
 
-CURATION_RESOLVE_QUERY = """
-query CurationResolve($name: String!, $type: String!) {
-  curationResolve(name: $name, type: $type) {
-    entity_id
-    standard_id
-    entity_type
-    name
-    match_type
-    score
-    matched_value
-  }
-}
-"""
+_RESOLUTION_SELECTION = (
+    "entity_id standard_id entity_type name match_type score matched_value"
+)
 
 MAX_LOOKUPS_PER_DOCUMENT = 500
-MAX_CONSECUTIVE_FAILED_LOOKUPS = 3
+LOOKUPS_PER_REQUEST = 20
+MAX_CONSECUTIVE_FAILED_REQUESTS = 3
 RESOLUTION_CACHE_SIZE = 1024
 RESOLUTION_CACHE_TTL_SECONDS = 600.0
 
@@ -116,6 +108,32 @@ _LOOKUP_PRIORITY = {
 _SCHEMA_ERROR_CODE = "GRAPHQL_VALIDATION_FAILED"
 _UNKNOWN_QUERY_MESSAGE = 'Cannot query field "curationResolve"'
 _STIX_TYPE_RE = re.compile(r"[a-z][a-z0-9-]*[a-z0-9]")
+
+
+@functools.lru_cache(maxsize=LOOKUPS_PER_REQUEST)
+def curation_resolve_query(size: int) -> str:
+    """The query resolving ``size`` names in one request.
+
+    Name ``i`` is sent in the variables ``name<i>`` and ``type<i>``, and
+    answered by the aliased field ``resolve<i>``.
+
+    Args:
+        size (int): The number of names the request resolves, at least 1.
+
+    Returns:
+        (str): The GraphQL query.
+    """
+    if size < 1:
+        raise ValueError("A curationResolve request resolves at least one name")
+    variables = ", ".join(
+        f"$name{index}: String!, $type{index}: String!" for index in range(size)
+    )
+    fields = "".join(
+        f"\n  resolve{index}: curationResolve(name: $name{index}, type: $type{index})"
+        f" {{ {_RESOLUTION_SELECTION} }}"
+        for index in range(size)
+    )
+    return f"query CurationResolve({variables}) {{{fields}\n}}"
 
 
 def is_stix_id(value: object) -> bool:
@@ -312,13 +330,16 @@ class EntityBinding:
 class BindingSummary:
     """What binding the entities of a bundle did.
 
-    ``unresolved_names`` counts the distinct names that were not looked up:
-    the document named more entities than the lookup budget, too many lookups
-    failed in a row, or the platform does not expose ``curationResolve``.
+    ``lookups`` counts the names sent to the platform, ``requests`` the
+    requests that carried them. ``unresolved_names`` counts the distinct
+    names that were not looked up: the document named more entities than the
+    lookup budget, too many requests failed in a row, or the platform does
+    not expose ``curationResolve``.
     """
 
     bindings: list[EntityBinding] = field(default_factory=list)
     lookups: int = 0
+    requests: int = 0
     cache_hits: int = 0
     failed_lookups: int = 0
     rejected_resolutions: int = 0
@@ -440,8 +461,37 @@ class _LookupResult:
     error: str | None = None
 
 
+@dataclass(frozen=True)
+class _RequestResult:
+    """What a request answered: its status, and one result per name it carried."""
+
+    status: _LookupStatus
+    results: tuple[_LookupResult, ...] = ()
+    error: str | None = None
+
+
 def _describe(error: Exception) -> str:
     return f"{type(error).__name__}: {error}"[:_MAX_ERROR_LENGTH]
+
+
+def _read_resolution(data: dict, field_name: str) -> _LookupResult:
+    """Read the answer to one name from the ``data`` of a batched response."""
+    if field_name not in data:
+        return _LookupResult(
+            _LookupStatus.FAILED,
+            error=f"unexpected response: no {field_name} data",
+        )
+    payload = data[field_name]
+    if payload is None:
+        return _LookupResult(_LookupStatus.ANSWERED)
+    try:
+        resolution = EntityResolution.from_payload(payload)
+    except ValueError as error:
+        return _LookupResult(
+            _LookupStatus.FAILED,
+            error=f"unexpected curationResolve result: {error}"[:_MAX_ERROR_LENGTH],
+        )
+    return _LookupResult(_LookupStatus.ANSWERED, resolution)
 
 
 def _bind_object(
@@ -511,6 +561,7 @@ class ExistingEntityBinder:
         helper: OpenCTIConnectorHelper,
         enabled: bool = True,
         max_lookups_per_document: int = MAX_LOOKUPS_PER_DOCUMENT,
+        lookups_per_request: int = LOOKUPS_PER_REQUEST,
         cache: ResolutionCache | None = None,
     ) -> None:
         """Initialize the binder.
@@ -520,15 +571,22 @@ class ExistingEntityBinder:
                 through its impersonating API client, so that they only see
                 what the user who triggered the import can see.
             enabled (bool): Whether to bind at all.
-            max_lookups_per_document (int): The most ``curationResolve``
-                queries a single document may send.
+            max_lookups_per_document (int): The most names a single document
+                may look up.
+            lookups_per_request (int): The most names a single request looks
+                up, between 1 and ``LOOKUPS_PER_REQUEST``.
             cache (ResolutionCache | None): The cross-document cache
                 (a new one by default).
         """
+        if not 1 <= lookups_per_request <= LOOKUPS_PER_REQUEST:
+            raise ValueError(
+                f"lookups_per_request must be between 1 and {LOOKUPS_PER_REQUEST}"
+            )
         self._helper = helper
         self._enabled = enabled
         self._platform_supported = True
         self._max_lookups_per_document = max_lookups_per_document
+        self._lookups_per_request = lookups_per_request
         self._cache = cache if cache is not None else ResolutionCache()
 
     @property
@@ -634,39 +692,64 @@ class ExistingEntityBinder:
             getattr(self._helper, "draft_id", None) or None,
         )
         resolutions = {}
-        consecutive_failures = 0
         over_budget = 0
-        after_failures = 0
+        to_look_up: list[tuple[tuple, _Candidate]] = []
         for key, candidate in pending.items():
             cache_key = (*scope, *key)
             cached, resolution = self._cache.get(cache_key)
             if cached:
                 summary.cache_hits += 1
+                if resolution is not None:
+                    resolutions[key] = resolution
             elif not self._platform_supported:
                 summary.unresolved_names += 1
-                continue
-            elif consecutive_failures >= MAX_CONSECUTIVE_FAILED_LOOKUPS:
-                summary.unresolved_names += 1
-                after_failures += 1
-                continue
-            elif summary.lookups >= self._max_lookups_per_document:
+            elif len(to_look_up) >= self._max_lookups_per_document:
                 summary.unresolved_names += 1
                 over_budget += 1
-                continue
             else:
-                summary.lookups += 1
-                result = self._lookup(candidate)
-                if result.status is _LookupStatus.UNSUPPORTED:
-                    self._platform_supported = False
-                    summary.unresolved_names += 1
-                    self._helper.connector_logger.info(
-                        "OpenCTI does not expose the curationResolve query, "
-                        "extracted entities are imported as extracted",
-                        {"error": result.error},
-                    )
-                    continue
+                to_look_up.append((cache_key, candidate))
+
+        consecutive_failures = 0
+        after_failures = 0
+        for start in range(0, len(to_look_up), self._lookups_per_request):
+            batch = to_look_up[start : start + self._lookups_per_request]
+            if not self._platform_supported:
+                summary.unresolved_names += len(batch)
+                continue
+            if consecutive_failures >= MAX_CONSECUTIVE_FAILED_REQUESTS:
+                summary.unresolved_names += len(batch)
+                after_failures += len(batch)
+                continue
+            summary.requests += 1
+            summary.lookups += len(batch)
+            answer = self._lookup([candidate for _, candidate in batch])
+            if answer.status is _LookupStatus.UNSUPPORTED:
+                self._platform_supported = False
+                summary.unresolved_names += len(batch)
+                self._helper.connector_logger.info(
+                    "OpenCTI does not expose the curationResolve query, "
+                    "extracted entities are imported as extracted",
+                    {"error": answer.error},
+                )
+                continue
+            if answer.status is _LookupStatus.FAILED:
+                consecutive_failures += 1
+                summary.failed_lookups += len(batch)
+                self._helper.connector_logger.warning(
+                    "Could not resolve extracted entities against OpenCTI, "
+                    "importing them as extracted",
+                    {
+                        "entities": [
+                            {"type": candidate.entity_type, "name": candidate.name}
+                            for _, candidate in batch
+                        ],
+                        "error": answer.error,
+                    },
+                )
+                continue
+            consecutive_failures = 0
+            for (cache_key, candidate), result in zip(batch, answer.results):
                 if result.status is _LookupStatus.FAILED:
-                    consecutive_failures += 1
                     summary.failed_lookups += 1
                     self._helper.connector_logger.warning(
                         "Could not resolve an extracted entity against OpenCTI, "
@@ -678,17 +761,15 @@ class ExistingEntityBinder:
                         },
                     )
                     continue
-                consecutive_failures = 0
-                resolution = result.resolution
-                self._cache.put(cache_key, resolution)
-            if resolution is not None:
-                resolutions[key] = resolution
+                self._cache.put(cache_key, result.resolution)
+                if result.resolution is not None:
+                    resolutions[candidate.key] = result.resolution
         if after_failures:
             self._helper.connector_logger.warning(
                 "Stopped resolving the extracted entities of the document after "
-                "consecutive failed lookups, importing the others as extracted",
+                "consecutive failed requests, importing the others as extracted",
                 {
-                    "failed_lookups": MAX_CONSECUTIVE_FAILED_LOOKUPS,
+                    "failed_requests": MAX_CONSECUTIVE_FAILED_REQUESTS,
                     "unresolved": after_failures,
                 },
             )
@@ -703,12 +784,20 @@ class ExistingEntityBinder:
             )
         return resolutions
 
-    def _lookup(self, candidate: _Candidate) -> _LookupResult:
-        """Send one ``curationResolve`` query, never raising."""
+    def _lookup(self, candidates: list[_Candidate]) -> _RequestResult:
+        """Resolve a batch of names in one ``curationResolve`` request, never raising.
+
+        A request that fails, or whose response carries none of the names,
+        fails every name of the batch; an answer that cannot be read fails
+        its name only.
+        """
+        variables = {}
+        for index, candidate in enumerate(candidates):
+            variables[f"name{index}"] = candidate.name
+            variables[f"type{index}"] = candidate.entity_type
         try:
             response = self._helper.api_impersonate.query(
-                CURATION_RESOLVE_QUERY,
-                {"name": candidate.name, "type": candidate.entity_type},
+                curation_resolve_query(len(candidates)), variables
             )
         except Exception as error:  # the binding never fails an import
             status = (
@@ -716,24 +805,18 @@ class ExistingEntityBinder:
                 if is_schema_error(error)
                 else _LookupStatus.FAILED
             )
-            return _LookupResult(status, error=_describe(error))
+            return _RequestResult(status, error=_describe(error))
         data = response.get("data") if isinstance(response, dict) else None
-        if not isinstance(data, dict) or "curationResolve" not in data:
-            return _LookupResult(
+        fields = [f"resolve{index}" for index in range(len(candidates))]
+        if not isinstance(data, dict) or not any(name in data for name in fields):
+            return _RequestResult(
                 _LookupStatus.FAILED,
                 error="unexpected response: no curationResolve data",
             )
-        payload = data["curationResolve"]
-        if payload is None:
-            return _LookupResult(_LookupStatus.ANSWERED)
-        try:
-            resolution = EntityResolution.from_payload(payload)
-        except ValueError as error:
-            return _LookupResult(
-                _LookupStatus.FAILED,
-                error=f"unexpected curationResolve result: {error}"[:_MAX_ERROR_LENGTH],
-            )
-        return _LookupResult(_LookupStatus.ANSWERED, resolution)
+        return _RequestResult(
+            _LookupStatus.ANSWERED,
+            tuple(_read_resolution(data, name) for name in fields),
+        )
 
     @staticmethod
     def _rewrite_bundle(

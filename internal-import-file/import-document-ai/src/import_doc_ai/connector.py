@@ -133,6 +133,7 @@ class Connector:
                         binding.alias_added for binding in summary.bindings
                     ),
                     "lookups": summary.lookups,
+                    "requests": summary.requests,
                     "cache_hits": summary.cache_hits,
                     "failed_lookups": summary.failed_lookups,
                     "rejected_resolutions": summary.rejected_resolutions,
