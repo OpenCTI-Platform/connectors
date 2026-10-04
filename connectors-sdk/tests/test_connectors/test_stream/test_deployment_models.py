@@ -2,7 +2,7 @@
 # type: ignore
 """Tests of the deployment write-back models."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from connectors_sdk.connectors.stream.deployment.models import (
@@ -235,6 +235,9 @@ def test_indicator_deployment_lifecycle_helpers():
     )
     assert expired.is_expired(now)
     assert expired.requires_removal(now)
+    at_boundary = IndicatorDeployment("r", "active", "i", valid_until=now)
+    assert at_boundary.is_expired(now)
+    assert not at_boundary.is_expired(now - timedelta(seconds=1))
     assert IndicatorDeployment("r", "active", "i", revoked=True).requires_removal(now)
     assert IndicatorDeployment(
         "r", "active", "i", indicator_revoked=True

@@ -331,9 +331,9 @@ class IndicatorDeployment:
             now: The reference time (timezone-aware).
 
         Returns:
-            ``True`` when ``valid_until`` is in the past.
+            ``True`` when ``valid_until`` is reached (the end of the validity window).
         """
-        return self.valid_until is not None and self.valid_until < now
+        return self.valid_until is not None and self.valid_until <= now
 
     def requires_removal(self, now: datetime) -> bool:
         """Tell whether the indicator must be withdrawn from the platform.
