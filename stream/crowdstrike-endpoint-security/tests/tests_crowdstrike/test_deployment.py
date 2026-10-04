@@ -406,6 +406,18 @@ def test_listings_reject_a_resource_that_is_not_an_object():
         list(connector.client.iter_alerts(datetime(2026, 10, 3, 11, 0, tzinfo=UTC), 10))
 
 
+def test_alert_listing_rejects_an_alert_without_id():
+    """A capped read continues by excluding the ids already read: an alert without
+    id would be returned, and counted, on every continuation."""
+    connector = build_connector()
+    connector.client._alerts.get_alerts_combined.return_value = api_response(
+        resources=[{"composite_id": "a1"}, {"ioc_value": "198.51.100.7"}]
+    )
+
+    with pytest.raises(CrowdstrikeApiError, match="an alert carries no id"):
+        list(connector.client.iter_alerts(datetime(2026, 10, 3, 11, 0, tzinfo=UTC), 10))
+
+
 def test_iter_connector_iocs_raises_on_api_errors():
     connector = build_connector()
     connector.client.cs.indicator_combined.return_value = api_response(
@@ -952,8 +964,16 @@ def test_reconciliation_and_hits_are_reported(e2e_connector, router):
     )
     e2e_connector.client._alerts.get_alerts_combined.return_value = api_response(
         resources=[
-            {"timestamp": alert_time, "ioc_value": "198.51.100.7"},
-            {"timestamp": alert_time, "ioc_values": ["198.51.100.7"]},
+            {
+                "composite_id": "alert-1",
+                "timestamp": alert_time,
+                "ioc_value": "198.51.100.7",
+            },
+            {
+                "composite_id": "alert-2",
+                "timestamp": alert_time,
+                "ioc_values": ["198.51.100.7"],
+            },
         ]
     )
 

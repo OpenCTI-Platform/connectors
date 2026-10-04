@@ -662,6 +662,12 @@ class CrowdstrikeClient:
                 200,
             )
             resources = self._resources_of(body, "alert")
+            if not all(alert_id(resource) for resource in resources):
+                # A capped read continues by excluding the ids already read: an alert
+                # without id would be returned, and counted, again and again.
+                raise CrowdstrikeApiError(
+                    "Unexpected alert listing response (an alert carries no id)"
+                )
             for resource in resources:
                 if returned >= max_alerts:
                     return
