@@ -154,26 +154,33 @@ class CrowdstrikeLogscaleHuntConnector(InternalHuntConnector):
         result = self.client.query(
             f"{query}\n| tail(limit={cap})", start, end, deadline, job_key
         )
-        if result.warnings:
-            self.logger.warning(
-                "[LOGSCALE] Query warnings", {"warnings": result.warnings[:5]}
-            )
+        warnings = list(result.warnings)
         total = len(result.events)
+        count_unknown = False
         if total >= cap:
             counted = self.client.query(
                 f"{query}\n| count()", start, end, deadline, job_key
             )
-            total = max(total, _count(counted.events))
+            warnings.extend(counted.warnings)
+            counted_total = _count(counted.events)
+            # A full page without a usable count (missing, not a number or below
+            # the page size) cannot prove that every match was returned: the
+            # page size is kept as a lower bound.
+            count_unknown = counted_total is None or counted_total < total
+            total = max(total, counted_total or 0)
+        if warnings:
+            self.logger.warning("[LOGSCALE] Query warnings", {"warnings": warnings[:5]})
         events = []
         for raw in result.events:
             fields = flatten_fields(raw)
             events.append(HuntEvent(timestamp=_event_time(fields), fields=fields))
         # LogScale warnings flag partial results (segments not searched, limits
-        # reached) without a structured flag: they are kept as truncation.
+        # reached) without a structured flag: they are kept as truncation, for
+        # the count query as much as for the data query.
         return HuntResult(
             events=events,
             total_hits=total,
-            truncated=total > len(events) or bool(result.warnings),
+            truncated=total > len(events) or count_unknown or bool(warnings),
         )
 
     def on_timeout(self, native_query: NativeQuery) -> None:
@@ -195,9 +202,11 @@ def _event_time(fields: dict[str, Any]) -> Any:
     return None
 
 
-def _count(events: list[dict[str, Any]]) -> int:
-    """Read the result of a ``count()`` query."""
+def _count(events: list[dict[str, Any]]) -> int | None:
+    """Read the result of a ``count()`` query, None when it is unusable."""
     value = events[0].get(COUNT_FIELD) if events else None
     if isinstance(value, str) and value.strip().isdigit():
         return int(value)
-    return int(value) if isinstance(value, (int, float)) else 0
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return int(value)
+    return None

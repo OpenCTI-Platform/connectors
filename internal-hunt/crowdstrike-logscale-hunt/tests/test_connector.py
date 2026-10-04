@@ -145,14 +145,17 @@ def test_execute_counts_when_the_cap_is_reached(connector_factory, requests_mock
 
 
 @pytest.mark.parametrize(
-    "count_events, expected",
+    "count_events, expected, truncated",
     [
-        pytest.param([{"_count": 7}], 7, id="number"),
-        pytest.param([], 1, id="no_event"),
-        pytest.param([{"_count": "n/a"}], 1, id="not_a_number"),
+        pytest.param([{"_count": 7}], 7, True, id="number"),
+        pytest.param([{"_count": 1}], 1, False, id="exactly_the_cap"),
+        pytest.param([], 1, True, id="no_event"),
+        pytest.param([{"_count": "n/a"}], 1, True, id="not_a_number"),
+        pytest.param([{"_count": True}], 1, True, id="boolean"),
+        pytest.param([{"_count": 0}], 1, True, id="below_the_page"),
     ],
 )
-def test_execute_reads_the_count(connector_factory, count_events, expected):
+def test_execute_reads_the_count(connector_factory, count_events, expected, truncated):
     # Given a client whose count query answers in various shapes
     connector = connector_factory()
     connector.client = MagicMock()
@@ -161,12 +164,37 @@ def test_execute_reads_the_count(connector_factory, count_events, expected):
         QueryResult(count_events, []),
     ]
 
-    # When/Then the hit count is read when usable
+    # When the cap-filled query runs
     result = connector.execute(
         NativeQuery(language="logscale", query="q"), WINDOW, HuntLimits(max_results=1)
     )
-    assert result.hits_count == expected
+
+    # Then the hit count is read when usable, and an unusable count leaves the
+    # page size as a lower bound of a partial result
+    assert (result.hits_count, result.truncated) == (expected, truncated)
     assert result.events[0].timestamp is None
+
+
+def test_execute_marks_a_warned_count_as_partial(connector_factory):
+    # Given a cap-filled query whose count query answers with a warning
+    connector = connector_factory()
+    connector.client = MagicMock()
+    connector.client.query.side_effect = [
+        QueryResult([{"a": 1}], []),
+        QueryResult([{"_count": 1}], ["Some segments could not be searched"]),
+    ]
+
+    # When the query runs
+    result = connector.execute(
+        NativeQuery(language="logscale", query="q"), WINDOW, HuntLimits(max_results=1)
+    )
+
+    # Then the warned count does not prove completeness and is logged
+    assert (result.hits_count, result.truncated) == (1, True)
+    connector.logger.warning.assert_called_once_with(
+        "[LOGSCALE] Query warnings",
+        {"warnings": ["Some segments could not be searched"]},
+    )
 
 
 def test_execute_logs_warnings(connector_factory):

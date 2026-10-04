@@ -155,17 +155,30 @@ def test_ppl_date_window_and_platform_cap(requests_mock):
     [
         pytest.param(ppl_answer(["opencti_hit_count"], []), id="no_row"),
         pytest.param(ppl_answer(["opencti_hit_count"], [["many"]]), id="not_a_number"),
+        pytest.param(ppl_answer(["opencti_hit_count"], [[True]]), id="boolean"),
         pytest.param(count_answer(0), id="lower"),
     ],
 )
 def test_ppl_keeps_the_row_count_without_a_usable_count(requests_mock, count):
-    # Given rows and an unusable or lower count
+    # Given a full page and an unusable or lower count
     requests_mock.post(
         PPL_URL, [{"json": ppl_answer(["a"], [[1], [2]])}, {"json": count}]
     )
 
-    # When/Then the total is the number of rows
-    assert _client().ppl("source=x", START, END, 2, RunDeadline(30)).total == 2
+    # When/Then the total is the number of rows, a lower bound of a partial result
+    result = _client().ppl("source=x", START, END, 2, RunDeadline(30))
+    assert (result.total, result.partial) == (2, True)
+
+
+def test_ppl_reports_a_count_equal_to_the_page_as_complete(requests_mock):
+    # Given a full page whose count confirms there is nothing more
+    requests_mock.post(
+        PPL_URL, [{"json": ppl_answer(["a"], [[1], [2]])}, {"json": count_answer(2)}]
+    )
+
+    # When/Then the result is complete
+    result = _client().ppl("source=x", START, END, 2, RunDeadline(30))
+    assert (result.total, result.partial) == (2, False)
 
 
 def test_ppl_reports_the_error_details(requests_mock):
@@ -316,7 +329,27 @@ def test_lucene_without_total(requests_mock):
 
     # When/Then the total is the number of documents
     result = _client().lucene(["ocsf-*"], "a:1", START, END, 5, RunDeadline(30))
-    assert (result.rows, result.total) == ([{}], 1)
+    assert (result.rows, result.total, result.partial) == ([{}], 1, False)
+
+
+def test_lucene_full_page_without_total_is_partial(requests_mock):
+    # Given a full page answered without a total
+    requests_mock.post(SEARCH_URL, json={"hits": {"hits": [{"_id": "1"}]}})
+
+    # When/Then the page size is a lower bound of a partial result
+    result = _client().lucene(["ocsf-*"], "a:1", START, END, 1, RunDeadline(30))
+    assert (result.total, result.partial) == (1, True)
+
+
+def test_lucene_lower_bound_total_is_partial(requests_mock):
+    # Given a total that OpenSearch reports as a lower bound
+    answer = hits_answer([{"a": 1}], total=10000)
+    answer["hits"]["total"]["relation"] = "gte"
+    requests_mock.post(SEARCH_URL, json=answer)
+
+    # When/Then the result is partial
+    result = _client().lucene(["ocsf-*"], "a:1", START, END, 5, RunDeadline(30))
+    assert (result.total, result.partial) == (10000, True)
 
 
 def test_lucene_rejects_unexpected_answers(requests_mock):

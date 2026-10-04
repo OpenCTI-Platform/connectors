@@ -141,6 +141,7 @@ def test_execute_counts_when_the_cap_is_reached(connector_factory, requests_mock
     [
         pytest.param(table([("Count", "long")], []), 1, id="no_rows"),
         pytest.param(table([("Count", "string")], [["x"]]), 1, id="not_a_number"),
+        pytest.param(table([("Count", "long")], [[0]]), 1, id="below_the_page"),
     ],
 )
 def test_execute_keeps_the_returned_rows_when_the_count_is_unusable(
@@ -155,13 +156,55 @@ def test_execute_keeps_the_returned_rows_when_the_count_is_unusable(
         ],
     )
 
-    # When/Then the hit count is the number of returned rows
+    # When/Then the hit count is the number of returned rows, a lower bound of
+    # a partial result
     result = connector_factory().execute(
         NativeQuery(language="kql", query="T"), WINDOW, HuntLimits(max_results=1)
     )
     assert result.hits_count == expected
     assert result.events[0].timestamp is None
-    assert result.truncated is False
+    assert result.truncated is True
+
+
+def test_execute_flags_a_partial_count(connector_factory, requests_mock):
+    # Given a full page whose count query answers with a partial error
+    counted = table([("Count", "long")], [[1]])
+    counted["error"] = {"code": "PartialError", "message": "Count truncated"}
+    requests_mock.post(
+        QUERY_URL,
+        [{"json": table([("Computer", "string")], [["ws1"]])}, {"json": counted}],
+    )
+    connector = connector_factory()
+
+    # When the query is executed with a cap of one result
+    result = connector.execute(
+        NativeQuery(language="kql", query="T"), WINDOW, HuntLimits(max_results=1)
+    )
+
+    # Then the partial count does not prove completeness and is logged
+    assert (result.hits_count, result.truncated) == (1, True)
+    connector.logger.warning.assert_called_once_with(
+        "[SENTINEL] Partial count results", {"error": "Count truncated"}
+    )
+
+
+def test_execute_reports_a_complete_count_equal_to_the_cap(
+    connector_factory, requests_mock
+):
+    # Given a full page whose count query confirms there is nothing more
+    requests_mock.post(
+        QUERY_URL,
+        [
+            {"json": table([("Computer", "string")], [["ws1"]])},
+            {"json": table([("Count", "long")], [[1]])},
+        ],
+    )
+
+    # When/Then the result is complete
+    result = connector_factory().execute(
+        NativeQuery(language="kql", query="T"), WINDOW, HuntLimits(max_results=1)
+    )
+    assert (result.hits_count, result.truncated) == (1, False)
 
 
 def test_execute_flags_partial_results(connector_factory, requests_mock):

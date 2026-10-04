@@ -140,7 +140,22 @@ def test_esql_counts_when_the_cap_is_reached(requests_mock):
         "from x\n| limit 2",
         "from x\n| stats opencti_hit_count = count(*)",
     ]
-    assert result.total == 57
+    assert (result.total, result.partial) == (57, False)
+
+
+def test_esql_propagates_a_partial_count(requests_mock):
+    # Given a full page whose count query is flagged partial by Elasticsearch
+    requests_mock.post(
+        ESQL_URL,
+        [
+            {"json": esql_answer(["a"], [[1]])},
+            {"json": {**esql_answer(["opencti_hit_count"], [[1]]), "is_partial": True}},
+        ],
+    )
+
+    # When/Then the partial count makes the result partial
+    result = _client().esql("from x", START, END, 1, RunDeadline(30), "k")
+    assert (result.total, result.partial) == (1, True)
 
 
 @pytest.mark.parametrize(
@@ -148,6 +163,8 @@ def test_esql_counts_when_the_cap_is_reached(requests_mock):
     [
         pytest.param(esql_answer(["opencti_hit_count"], []), id="no_rows"),
         pytest.param(esql_answer(["opencti_hit_count"], [["x"]]), id="not_a_number"),
+        pytest.param(esql_answer(["opencti_hit_count"], [[True]]), id="boolean"),
+        pytest.param(esql_answer(["opencti_hit_count"], [[0]]), id="below_the_page"),
     ],
 )
 def test_esql_keeps_the_rows_when_the_count_is_unusable(requests_mock, count_answer):
@@ -156,9 +173,9 @@ def test_esql_keeps_the_rows_when_the_count_is_unusable(requests_mock, count_ans
         ESQL_URL, [{"json": esql_answer(["a"], [[1]])}, {"json": count_answer}]
     )
 
-    # When/Then the total is the number of rows
+    # When/Then the total is the number of rows, a lower bound of a partial result
     result = _client().esql("from x", START, END, 1, RunDeadline(30), "k")
-    assert result.total == 1
+    assert (result.total, result.partial) == (1, True)
 
 
 def test_esql_caps_at_the_result_window(requests_mock):

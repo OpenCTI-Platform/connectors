@@ -211,8 +211,23 @@ class MicrosoftSentinelHuntConnector(InternalHuntConnector):
             counted = self.client.query(
                 f"{query}\n| count", time_window.start, time_window.end, deadline
             )
-            total = max(total, _count(counted.rows))
-            truncated = truncated or total > len(result.rows)
+            if counted.partial_error:
+                self.logger.warning(
+                    "[SENTINEL] Partial count results",
+                    {"error": counted.partial_error},
+                )
+            counted_total = _count(counted.rows)
+            # A full page without a usable count (missing, not a number or below
+            # the page size) cannot prove that every match was returned: the
+            # page size is kept as a lower bound.
+            count_unknown = counted_total is None or counted_total < total
+            total = max(total, counted_total or 0)
+            truncated = (
+                truncated
+                or counted.partial_error is not None
+                or count_unknown
+                or total > len(result.rows)
+            )
         events = [
             HuntEvent(timestamp=_event_time(row), fields=flatten_fields(row))
             for row in result.rows
@@ -229,9 +244,9 @@ def _event_time(row: dict[str, Any]) -> Any:
     return None
 
 
-def _count(rows: list[dict[str, Any]]) -> int:
-    """Read the result of a ``count`` query."""
-    if not rows:
-        return 0
-    value = rows[0].get("Count")
-    return int(value) if isinstance(value, (int, float)) else 0
+def _count(rows: list[dict[str, Any]]) -> int | None:
+    """Read the result of a ``count`` query, None when it is unusable."""
+    value = rows[0].get("Count") if rows else None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return int(value)
+    return None

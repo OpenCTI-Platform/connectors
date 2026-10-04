@@ -141,15 +141,21 @@ class OpenSearchClient(HuntApiClient):
         cap = min(max_results, MAX_RESULTS)
         rows = ppl_rows(self._ppl(f"{filtered} | head {cap}", deadline))
         total = len(rows)
+        partial = False
         # Fewer rows than the cap is already the exact count: only a full page needs the count query
         if len(rows) >= cap:
             counted = ppl_rows(
                 self._ppl(f"{filtered} | stats count() as {COUNT_COLUMN}", deadline)
             )
             value = counted[0].get(COUNT_COLUMN) if counted else None
-            if isinstance(value, (int, float)):
-                total = max(total, int(value))
-        return SearchResult(rows, total, False)
+            if _usable_count(value, total):
+                total = int(value)
+            else:
+                # A full page without a usable count (missing, not a number or
+                # below the page size) cannot prove that every match was
+                # returned: the page size is kept as a lower bound.
+                partial = True
+        return SearchResult(rows, total, partial)
 
     def _ppl(self, query: str, deadline: RunDeadline) -> dict[str, Any]:
         """Run one PPL query and return its answer."""
@@ -240,8 +246,15 @@ class OpenSearchClient(HuntApiClient):
         rows = [_source(hit) for hit in hits.get("hits") or []]
         total = hits.get("total")
         count = total.get("value") if isinstance(total, dict) else None
+        relation = total.get("relation") if isinstance(total, dict) else None
         shards = answer.get("_shards") or {}
-        partial = bool(answer.get("timed_out")) or bool(shards.get("failed"))
+        partial = (
+            bool(answer.get("timed_out"))
+            or bool(shards.get("failed"))
+            or relation == "gte"
+            # A full page without a usable total cannot prove that every match was returned
+            or (not isinstance(count, int) and len(rows) >= body["size"])
+        )
         return SearchResult(
             rows,
             max(count, len(rows)) if isinstance(count, int) else len(rows),
@@ -276,6 +289,15 @@ def ppl_rows(answer: dict[str, Any]) -> list[dict[str, Any]]:
         dict(zip(names, values, strict=False))
         for values in answer.get("datarows") or []
     ]
+
+
+def _usable_count(value: Any, page_size: int) -> bool:
+    """Tell whether a count answer can be the total of a full page of rows."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and value >= page_size
+    )
 
 
 def index_path(indices: list[str]) -> str:

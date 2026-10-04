@@ -167,8 +167,14 @@ class ElasticsearchClient(HuntApiClient):
             )
             count_rows = esql_rows(counted)
             value = count_rows[0].get(COUNT_COLUMN) if count_rows else None
-            if isinstance(value, (int, float)):
-                total = max(total, int(value))
+            partial = partial or bool(counted.get("is_partial"))
+            if _usable_count(value, total):
+                total = int(value)
+            else:
+                # A full page without a usable count (missing, not a number or
+                # below the page size) cannot prove that every match was
+                # returned: the page size is kept as a lower bound.
+                partial = True
         return SearchResult(rows, total, partial)
 
     def _esql_rows(
@@ -406,6 +412,15 @@ def esql_rows(answer: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         dict(zip(names, values, strict=False)) for values in answer.get("values") or []
     ]
+
+
+def _usable_count(value: Any, page_size: int) -> bool:
+    """Tell whether a count answer can be the total of a full page of rows."""
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and value >= page_size
+    )
 
 
 def _source(hit: dict[str, Any]) -> dict[str, Any]:
