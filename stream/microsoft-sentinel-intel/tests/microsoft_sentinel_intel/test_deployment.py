@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock
 
 import pytest
+import requests
 from azure.core.exceptions import HttpResponseError, ResourceNotFoundError
 from connectors_sdk import (
     DeploymentAssurance,
@@ -711,14 +712,14 @@ def test_iter_incidents_filters_on_the_modification_time(
     assert incidents == [{"id": "incident-1"}]
     request = send.call_args.kwargs["request"]
     assert request.method == "GET"
-    assert f"{WORKSPACE_PATH}/incidents?" in request.url
-    assert "api-version=2025-03-01" in request.url
-    assert (
-        "$filter=properties/lastModifiedTimeUtc%20ge%202026-10-03T10:00:00Z"
-        in request.url
-    )
-    assert "$orderby=properties/lastModifiedTimeUtc%20asc" in request.url
-    assert "$top=50" in request.url
+    # The URL the requests transport sends: every expression encoded exactly once
+    sent = requests.Request("GET", request.url).prepare().url
+    assert f"{WORKSPACE_PATH}/incidents?" in sent
+    assert "api-version=2025-03-01" in sent
+    assert "$filter=properties/lastModifiedTimeUtc%20ge%202026-10-03T10:00:00Z" in sent
+    assert "$orderby=properties/lastModifiedTimeUtc%20asc" in sent
+    assert "%25" not in sent
+    assert "$top=50" in sent
 
 
 def test_list_incident_entities(mocker: MockerFixture, connector: Connector) -> None:

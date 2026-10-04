@@ -2,7 +2,6 @@ import json
 from collections.abc import Callable, Iterable, Iterator
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import quote
 
 from azure.core import PipelineClient
 from azure.core.exceptions import HttpResponseError
@@ -230,10 +229,9 @@ class ConnectorClient:
             url=f"{self.security_insights_endpoint}/incidents",
             params={
                 "api-version": api_version,
-                "$filter": quote(
-                    f"properties/lastModifiedTimeUtc ge {since}", safe="/:"
-                ),
-                "$orderby": quote("properties/lastModifiedTimeUtc asc", safe="/"),
+                # Raw OData expressions: the transport encodes the query string
+                "$filter": f"properties/lastModifiedTimeUtc ge {since}",
+                "$orderby": "properties/lastModifiedTimeUtc asc",
                 "$top": str(page_size),
             },
         )
