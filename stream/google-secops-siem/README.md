@@ -273,7 +273,7 @@ does not exist), and detection hits are counted with a sighting of the indicator
 | When                                       | Reported to OpenCTI                                                                                  |
 |--------------------------------------------|------------------------------------------------------------------------------------------------------|
 | Indicator ingested in Google SecOps        | `deployed`, with the STIX id of the indicator (`metadata.product_entity_id` of its entities) as external id |
-| Indicator rejected by Google SecOps        | `failed`, with the API error, the HTTP status and the Google SecOps response                         |
+| Indicator rejected by Google SecOps        | `failed`, with a short reason such as "Google SecOps refused the entity ingestion: permission denied" (the Google SecOps response is written to the connector log) |
 | Indicator without any supported observable | Nothing: the indicator is never ingested                                                             |
 | Delete event                               | Nothing: imported entities cannot be deleted, they stay live until their `valid_until`               |
 | Periodic run, `pending` (analyst retry)    | The indicator is ingested again and reported `deployed` or `failed`                                  |

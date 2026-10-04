@@ -2,6 +2,7 @@ import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, List, Optional
 
+from google.auth.exceptions import RefreshError
 from google.auth.transport import requests as ChronicleRequests
 from google.oauth2 import service_account
 from requests import Response
@@ -20,7 +21,17 @@ REQUEST_TIMEOUT = 60
 
 
 class SecOpsApiError(Exception):
-    """Error raised when Google SecOps rejects a request or cannot be reached."""
+    """Error raised when Google SecOps rejects a request or cannot be reached.
+
+    Attributes:
+        status_code: The HTTP status of the Google SecOps response (401 when the
+            service account credentials are refused), None when Google SecOps could
+            not be reached.
+    """
+
+    def __init__(self, message: str, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def describe_response(response: Response) -> str:
@@ -244,6 +255,10 @@ class SecOpsEntitiesClient:
             response = self._send_request(
                 entities=entities, retry_status_forcelist=[429]
             )
+        except RefreshError as err:
+            raise SecOpsApiError(
+                f"Cannot import the entities: {err}", status_code=401
+            ) from err
         except Exception as err:
             raise SecOpsApiError(f"Cannot import the entities: {err}") from err
 
@@ -253,7 +268,8 @@ class SecOpsEntitiesClient:
             )
         if response.status_code != 200 or not response.ok:
             raise SecOpsApiError(
-                f"Entities import rejected: {describe_response(response)}"
+                f"Entities import rejected: {describe_response(response)}",
+                status_code=response.status_code,
             )
         return True
 
@@ -290,7 +306,8 @@ class SecOpsEntitiesClient:
             raise SecOpsApiError(f"Cannot list the IoC matches: {err}") from err
         if response.status_code != 200:
             raise SecOpsApiError(
-                f"IoC matches listing rejected: {describe_response(response)}"
+                f"IoC matches listing rejected: {describe_response(response)}",
+                status_code=response.status_code,
             )
         try:
             payload = response.json()

@@ -3,12 +3,29 @@ import sys
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Any
 
+from connectors_sdk.connectors.stream.deployment import deployment_failure_reason
 from pycti import OpenCTIConnectorHelper
 from secops_siem_connector.settings import ConnectorSettings
 from secops_siem_services import CTIConverter, SecOpsApiError, SecOpsEntitiesClient
 
 if TYPE_CHECKING:
     from connectors_sdk import DeploymentAssurance
+
+PLATFORM_NAME = "Google SecOps"
+"""Name of the security platform in the deployment failure reasons."""
+
+PUSH_ACTION = "entity ingestion"
+"""What Google SecOps is asked to do when an indicator is pushed."""
+
+
+def failure_reason(error: SecOpsApiError) -> str:
+    """Return the reason OpenCTI shows for an indicator Google SecOps did not take.
+
+    :param error: The error raised by the client.
+    :return: One short sentence naming Google SecOps and the cause; the Google SecOps
+        response is left to the logs.
+    """
+    return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, error.status_code)
 
 
 class SecOpsSIEMConnector:
@@ -142,7 +159,7 @@ class SecOpsSIEMConnector:
                 {"indicator_id": indicator.get("id"), "error": str(err)},
             )
             if self.assurance is not None:
-                self.assurance.report_push_failed(indicator, err)
+                self.assurance.report_push_failed(indicator, failure_reason(err))
             return
         if ingested and self.assurance is not None:
             self.assurance.report_pushed(indicator, external_id=str(indicator["id"]))

@@ -14,11 +14,13 @@ from connectors_sdk import (
     HitCollection,
     IndicatorDeployment,
 )
+from google.auth.exceptions import RefreshError
 from pycti import OpenCTIConnectorHelper
 from secops_siem_connector import ConnectorSettings, SecOpsSIEMConnector
 from secops_siem_connector.deployment import (
     MAX_HIT_MATCHES,
     SecOpsDeploymentAdapter,
+    SecOpsDeploymentError,
     build_deployment_assurance,
 )
 from secops_siem_services import SecOpsApiError, SecOpsEntitiesClient
@@ -181,13 +183,17 @@ def test_ingested_indicator_is_reported_deployed(connector, event):
 
 
 def test_rejected_indicator_is_reported_failed_and_the_stream_continues(connector):
-    error = SecOpsApiError("Entities import rejected: HTTP 400 - invalid entity")
+    error = SecOpsApiError(
+        "Entities import rejected: HTTP 400 - invalid entity", status_code=400
+    )
     connector.api_client.ingest.side_effect = error
     indicator = make_indicator()
 
     connector.process_message(make_message("create", indicator))
 
-    connector.assurance.report_push_failed.assert_called_once_with(indicator, error)
+    connector.assurance.report_push_failed.assert_called_once_with(
+        indicator, "Google SecOps refused the entity ingestion: invalid request"
+    )
     connector.assurance.report_pushed.assert_not_called()
     connector.helper.connector_logger.error.assert_called_once_with(
         "[API] Error while ingesting indicator",
@@ -334,6 +340,7 @@ def test_ingest_raises_a_readable_error_when_rejected(secops_client):
     assert str(error.value) == (
         'Entities import rejected: HTTP 400 - {"error": "invalid entity"}'
     )
+    assert error.value.status_code == 400
 
 
 def test_ingest_raises_when_google_secops_cannot_be_reached(secops_client):
@@ -341,8 +348,21 @@ def test_ingest_raises_when_google_secops_cannot_be_reached(secops_client):
         requests.exceptions.ConnectionError("connection refused")
     )
 
-    with pytest.raises(SecOpsApiError, match="connection refused"):
+    with pytest.raises(SecOpsApiError, match="connection refused") as error:
         secops_client.ingest([{}])
+    assert error.value.status_code is None
+
+
+def test_ingest_reads_refused_credentials_as_an_authentication_failure(
+    secops_client,
+):
+    secops_client.chronicle_http_session.request.side_effect = RefreshError(
+        "invalid_grant"
+    )
+
+    with pytest.raises(SecOpsApiError, match="invalid_grant") as error:
+        secops_client.ingest([{}])
+    assert error.value.status_code == 401
 
 
 def test_ingest_raises_without_response(secops_client, monkeypatch):
@@ -420,6 +440,34 @@ def test_adapter_push_uses_the_ingest_path(connector):
 
     assert adapter.push_indicator(make_indicator()) == STIX_ID
     connector.api_client.ingest.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "error, reason",
+    [
+        (
+            SecOpsApiError("Entities import rejected: HTTP 403 - denied", 403),
+            "Google SecOps refused the entity ingestion: permission denied",
+        ),
+        (
+            SecOpsApiError("Cannot import the entities: timed out"),
+            "Google SecOps could not be reached for the entity ingestion",
+        ),
+    ],
+)
+def test_adapter_push_raises_the_reason_and_logs_the_detail(connector, error, reason):
+    connector.api_client.ingest.side_effect = error
+    indicator = make_indicator()
+
+    with pytest.raises(SecOpsDeploymentError) as raised:
+        SecOpsDeploymentAdapter(connector).push_indicator(indicator)
+
+    assert str(raised.value) == reason
+    message, meta = connector.helper.connector_logger.warning.call_args.args
+    assert message == (
+        "[DEPLOYMENT] Google SecOps did not take an indicator pushed again."
+    )
+    assert meta == {"indicator_id": STIX_ID, "error": str(error)}
 
 
 def test_adapter_collects_hits_from_ioc_matches(connector):
@@ -674,7 +722,9 @@ def fixture_e2e_connector(no_atexit, router):
 def test_stream_outcomes_are_reported_in_one_batch(e2e_connector, router):
     e2e_connector.api_client.ingest.side_effect = [
         True,
-        SecOpsApiError("Entities import rejected: HTTP 400 - invalid entity"),
+        SecOpsApiError(
+            "Entities import rejected: HTTP 400 - invalid entity", status_code=400
+        ),
     ]
 
     e2e_connector.process_message(make_message("create", make_indicator()))
@@ -702,7 +752,9 @@ def test_stream_outcomes_are_reported_in_one_batch(e2e_connector, router):
     }
     assert failed["indicatorId"] == OTHER_ID
     assert failed["status"] == "failed"
-    assert failed["metadata"]["error_message"].endswith("HTTP 400 - invalid entity")
+    assert failed["metadata"]["error_message"] == (
+        "Google SecOps refused the entity ingestion: invalid request"
+    )
 
 
 def test_periodic_run_repushes_pending_deployments_and_reports_hits(

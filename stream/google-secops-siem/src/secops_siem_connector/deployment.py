@@ -25,10 +25,16 @@ from connectors_sdk import (
     VendorHit,
 )
 from connectors_sdk.connectors.stream.deployment import normalize_value, parse_datetime
+from secops_siem_connector.connector import failure_reason
 from secops_siem_services import SecOpsApiError
 
 if TYPE_CHECKING:
     from secops_siem_connector.connector import SecOpsSIEMConnector
+
+
+class SecOpsDeploymentError(Exception):
+    """A re-push refused by Google SecOps, with the reason OpenCTI shows."""
+
 
 MAX_HIT_MATCHES = 10_000
 """Maximum number of IoC matches read by one request of a hit collection."""
@@ -87,10 +93,19 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
         """Ingest an indicator again, with the stream ingest path.
 
         :return: The STIX id of the indicator (`product_entity_id` of its entities).
-        :raises SecOpsApiError: When Google SecOps rejects the entities.
+        :raises SecOpsDeploymentError: When Google SecOps rejects the entities or
+            cannot be reached, with the reason OpenCTI shows (the Google SecOps
+            response is logged).
         :raises ValueError: When no observable of the indicator can be ingested.
         """
-        return self._connector.push_indicator(stix_indicator)
+        try:
+            return self._connector.push_indicator(stix_indicator)
+        except SecOpsApiError as err:
+            self._connector.helper.connector_logger.warning(
+                "[DEPLOYMENT] Google SecOps did not take an indicator pushed again.",
+                {"indicator_id": stix_indicator.get("id"), "error": str(err)},
+            )
+            raise SecOpsDeploymentError(failure_reason(err)) from err
 
     def collect_hits(
         self, deployments: Sequence[IndicatorDeployment], since: datetime
