@@ -610,6 +610,28 @@ def test_adapter_rejects_an_ioc_without_uuid_or_value(connector, ioc):
         list(SentinelOneDeploymentAdapter(connector).list_vendor_indicators())
 
 
+@pytest.mark.parametrize("valid_until", ["next week", 1893456000000, True, {}])
+def test_adapter_rejects_an_ioc_with_an_unreadable_expiry(connector, valid_until):
+    connector.client.session.request.return_value = mock_response(
+        {"data": [{"uuid": "7", "value": "evil.example", "validUntil": valid_until}]}
+    )
+
+    with pytest.raises(SentinelOneDeploymentError, match="unreadable validUntil"):
+        list(SentinelOneDeploymentAdapter(connector).list_vendor_indicators())
+
+
+def test_adapter_reads_a_blank_expiry_as_none(connector):
+    connector.client.session.request.return_value = mock_response(
+        {"data": [{"uuid": "8", "value": "evil.example", "validUntil": " "}]}
+    )
+
+    indicators = list(SentinelOneDeploymentAdapter(connector).list_vendor_indicators())
+
+    assert indicators == [
+        VendorIndicator(indicator_id=None, external_id="8", value="evil.example")
+    ]
+
+
 def test_adapter_removes_only_the_iocs_of_the_indicator(connector):
     connector.client.session.request.return_value = mock_response({})
     adapter = SentinelOneDeploymentAdapter(connector)

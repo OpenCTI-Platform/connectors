@@ -37,6 +37,24 @@ class SentinelOneDeploymentError(Exception):
     """A read-back or removal refused by the reconciliation, with a readable message."""
 
 
+def _valid_until(ioc: dict[str, Any]) -> datetime | None:
+    """Return the expiry of an IOC, `None` when it has none.
+
+    :raises SentinelOneDeploymentError: On a `validUntil` that is not an ISO 8601
+        date, which would otherwise read as no expiry and confirm an expired IOC.
+    """
+    raw = ioc.get("validUntil")
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return None
+    valid_until = parse_datetime(raw) if isinstance(raw, str) else None
+    if valid_until is None:
+        raise SentinelOneDeploymentError(
+            "SentinelOne listed an IOC with an unreadable validUntil, "
+            "the read-back is incomplete"
+        )
+    return valid_until
+
+
 class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
     """Vendor operations of the deployment reconciliation for SentinelOne."""
 
@@ -56,7 +74,7 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
 
         :raises SentinelOneApiError: On any API error (never a partial listing).
         :raises SentinelOneDeploymentError: On an IOC without `uuid` or value, which
-            would otherwise read as absent.
+            would otherwise read as absent, or with an unreadable `validUntil`.
         """
         now = datetime.now(UTC)
         for ioc in self._connector.client.iter_iocs():
@@ -72,7 +90,7 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
                     "SentinelOne listed an IOC without uuid or value, "
                     "the read-back is incomplete"
                 )
-            valid_until = parse_datetime(ioc.get("validUntil"))
+            valid_until = _valid_until(ioc)
             external_id = ioc.get("externalId")
             opencti_id = (
                 external_id
