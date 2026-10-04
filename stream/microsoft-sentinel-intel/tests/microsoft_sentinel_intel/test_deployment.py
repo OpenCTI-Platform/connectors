@@ -729,12 +729,25 @@ def test_adapter_lists_live_indicators_of_the_source_system(
 
     vendor_indicators = list(adapter.list_vendor_indicators())
 
+    resource_name = RESOURCE_ID.rsplit("/", 1)[-1]
     assert vendor_indicators == [
         VendorIndicator(
             indicator_id=INDICATOR_STIX_ID,
-            external_id=RESOURCE_ID.rsplit("/", 1)[-1],
+            external_id=resource_name,
             value="198.51.100.7",
-        )
+        ),
+        VendorIndicator(
+            indicator_id=OTHER_STIX_ID,
+            external_id=resource_name,
+            value="198.51.100.7",
+            active=False,
+        ),
+        VendorIndicator(
+            indicator_id="indicator--expired",
+            external_id=resource_name,
+            value="198.51.100.7",
+            active=False,
+        ),
     ]
     assert vendor_indicators[0].raw == {
         "id": RESOURCE_ID,
@@ -1243,6 +1256,31 @@ def test_reconciliation_and_hits_are_reported(
     (hits,) = router.calls_of("IndicatorReportHits(")
     assert hits["indicatorId"] == INDICATOR_ID
     assert hits["count"] == 1
+
+
+def test_withdrawal_deletes_a_resource_sentinel_retains_revoked(
+    mocker: MockerFixture, e2e_connector: Connector, router: GraphQLRouter
+) -> None:
+    """A revoked TI object stays in Sentinel: the withdrawal still deletes it."""
+    router.deployments = [
+        deployment_node(INDICATOR_ID, INDICATOR_STIX_ID, "active", revoked=True)
+    ]
+    send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        side_effect=[response({"value": [ti_object(revoked=True)]}), response({})],
+    )
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert (summary.withdrawn, summary.discovered) == (1, 0)
+    deleted = [
+        call.kwargs["request"].url
+        for call in send_request.call_args_list
+        if call.kwargs["request"].method == "DELETE"
+    ]
+    assert len(deleted) == 1 and RESOURCE_ID in deleted[0]
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert batch["reports"][0]["status"] == "removed"
 
 
 def test_withdrawal_deletes_every_resource_of_the_stix_id(

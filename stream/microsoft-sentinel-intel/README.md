@@ -227,7 +227,8 @@ it does not exist), and detection hits are counted with a sighting of the indica
 
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the threat intelligence indicators of the
   connector `source_system` are read back with the `threatIntelligence/main/query` API (`query_api_version`). Revoked
-  and expired Sentinel indicators are not considered live. A read-back error skips the run: indicators are never
+  and expired Sentinel indicators are not considered live: they never confirm a deployment, but a withdrawal or an
+  expiry still deletes them. A read-back error skips the run: indicators are never
   reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the incidents modified since the previous run are listed with the incidents API
   (`management_api_version`), oldest first, and the entities of at most 200 incidents are read. Each incident

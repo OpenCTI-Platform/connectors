@@ -137,10 +137,11 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         return self._connector.helper.connector_logger
 
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
-        """Read back the live indicators uploaded with the connector `source_system`.
+        """Read back the indicators uploaded with the connector `source_system`.
 
         Revoked indicators and indicators whose `valid_until` is in the past are not
-        live in Sentinel and are not returned.
+        live in Sentinel, but Sentinel keeps them: they are listed as inactive, for a
+        withdrawal to delete them.
 
         :raises SentinelDeploymentError: On any API error (never a partial listing).
         """
@@ -163,18 +164,16 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
 
         :param ti_object: The TI object (`id`, `name`, `properties.data`...).
         :param now: The reference time of the expiry check.
-        :return: The vendor indicator, or `None` when it is not a live indicator.
+        :return: The vendor indicator (inactive when revoked or expired), or `None`
+            when it is not an indicator.
         """
         properties = ti_object.get("properties") or {}
         data = properties.get("data") or {}
         stix_id = data.get("id")
         if data.get("type", "indicator") != "indicator" or not stix_id:
             return None
-        if data.get("revoked") is True:
-            return None
         valid_until = parse_datetime(data.get("valid_until"))
-        if valid_until is not None and valid_until < now:
-            return None
+        expired = valid_until is not None and valid_until < now
         resource_id = ti_object.get("id")
         resource_name = ti_object.get("name")
         return VendorIndicator(
@@ -183,6 +182,7 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
             external_id=str(resource_name or resource_id or stix_id),
             value=_first_pattern_value(data),
             raw={"id": resource_id, "name": resource_name},
+            active=data.get("revoked") is not True and not expired,
         )
 
     def remove_vendor_indicator(
