@@ -16,6 +16,16 @@ READ_BACK_FIELDS = ["opencti_doc_id", "stix", "threat.indicator.valid_until"]
 SIEM_RULE_TYPES = {"eql": "eql", "esql": "esql"}
 SIEM_RULE_INDICES = ["logs-*", "filebeat-*", "packetbeat-*", "winlogbeat-*"]
 SIEM_RULE_LOOKUP_PAGE_SIZE = 100
+# The fields an indicator update changes on a SIEM rule, restored when the update cannot complete
+RESTORABLE_SIEM_RULE_FIELDS = (
+    "id",
+    "name",
+    "description",
+    "risk_score",
+    "severity",
+    "query",
+    "language",
+)
 
 
 def _kql_string(value: str) -> str:
@@ -456,6 +466,15 @@ class ElasticApiHandler:
         return f"{self.opencti_url}/dashboard/id/{opencti_id}"
 
     def _find_siem_rule_ids(self, opencti_id: str) -> List[str]:
+        """Find the ids of the SIEM rules created from an indicator.
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: The ids of the rules, every page read
+        :raises Exception: When Kibana cannot be queried (the rules are unknown)
+        """
+        return [str(rule["id"]) for rule in self._find_siem_rules(opencti_id)]
+
+    def _find_siem_rules(self, opencti_id: str) -> List[dict]:
         """Find the SIEM rules created from an indicator.
 
         Rule parameters are stored under ``alert.attributes.params``: a rule is
@@ -463,7 +482,7 @@ class ElasticApiHandler:
         ``meta.opencti_id`` it carries until the rule is edited in Kibana.
 
         :param opencti_id: OpenCTI ID of the indicator
-        :return: The ids of the rules, every page read
+        :return: The rules as Kibana returns them, every page read
         :raises Exception: When Kibana cannot be queried (the rules are unknown)
         """
         # The detection engine is a Kibana API, like the other SIEM rule calls
@@ -474,7 +493,7 @@ class ElasticApiHandler:
             " or alert.attributes.params.meta.opencti_id:"
             f"{_kql_string(opencti_id)}"
         )
-        rule_ids: List[str] = []
+        found: List[dict] = []
         page = 1
         while True:
             response = requests.get(
@@ -492,19 +511,28 @@ class ElasticApiHandler:
             response.raise_for_status()
             body = response.json()
             rules = body.get("data") or []
-            rule_ids.extend(str(rule["id"]) for rule in rules)
-            if not rules or len(rule_ids) >= int(body.get("total") or 0):
-                return rule_ids
+            found.extend(rules)
+            if not rules or len(found) >= int(body.get("total") or 0):
+                return found
             page += 1
 
     def _lookup_siem_rule_ids(self, opencti_id: str) -> Optional[List[str]]:
-        """Find the SIEM rules of an indicator, logging a failed lookup.
+        """Find the ids of the SIEM rules of an indicator, logging a failed lookup.
 
         :param opencti_id: OpenCTI ID of the indicator
         :return: The ids of the rules, None when the lookup failed
         """
+        rules = self._lookup_siem_rules(opencti_id)
+        return None if rules is None else [str(rule["id"]) for rule in rules]
+
+    def _lookup_siem_rules(self, opencti_id: str) -> Optional[List[dict]]:
+        """Find the SIEM rules of an indicator, logging a failed lookup.
+
+        :param opencti_id: OpenCTI ID of the indicator
+        :return: The rules, None when the lookup failed
+        """
         try:
-            return self._find_siem_rule_ids(opencti_id)
+            return self._find_siem_rules(opencti_id)
         except Exception as e:
             self.helper.connector_logger.warning(
                 "Cannot look up the SIEM rule of the indicator",
@@ -514,32 +542,71 @@ class ElasticApiHandler:
 
     def _write_siem_rules_of_indicator(
         self, indicator_data: dict, opencti_id: str
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> Tuple[bool, Optional[str], List[dict]]:
         """Update the SIEM rules created from an indicator, or create its rule.
 
         Looking the rules up first keeps a replayed or pushed again indicator
-        from creating a second rule.
+        from creating a second rule. All or nothing: when an update fails, the
+        rules already updated get their previous definition back.
 
         :param indicator_data: STIX indicator data with a native Elastic pattern
         :param opencti_id: OpenCTI ID of the indicator
-        :return: False when the rule lookup, creation or an update failed, and
-            the id of the rule created (None when existing rules were updated)
+        :return: False when the rule lookup, creation or an update failed, the
+            id of the rule created (None when existing rules were updated), and
+            the previous definition of the rules updated
         """
-        rule_ids = self._lookup_siem_rule_ids(opencti_id)
-        if rule_ids is None:
-            return False, None
-        if not rule_ids:
+        rules = self._lookup_siem_rules(opencti_id)
+        if rules is None:
+            return False, None, []
+        if not rules:
             rule = self._create_siem_rule(indicator_data)
             if rule is None:
-                return False, None
-            return True, str(rule["id"]) if rule.get("id") else None
-        updated = all(
-            [
-                self._update_siem_rule(indicator_data, rule_id) is not None
-                for rule_id in rule_ids
-            ]
-        )
-        return updated, None
+                return False, None, []
+            return True, str(rule["id"]) if rule.get("id") else None, []
+        updated_rules: List[dict] = []
+        for rule in rules:
+            if self._update_siem_rule(indicator_data, str(rule["id"])) is None:
+                self._restore_siem_rules(updated_rules, opencti_id)
+                return False, None, []
+            updated_rules.append(rule)
+        return True, None, updated_rules
+
+    def _restore_siem_rules(self, previous_rules: List[dict], opencti_id: str) -> None:
+        """Give updated rules back the definition they had before the update.
+
+        A rule left on the new indicator next to the previous threat intel
+        document would hide a partial update from the deployment read-back.
+
+        :param previous_rules: The rules as Kibana returned them before the update
+        :param opencti_id: OpenCTI ID of the indicator
+        """
+        url = f"{self._get_kibana_url()}/api/detection_engine/rules"
+        for previous in previous_rules:
+            rule_restore = {
+                field: previous[field]
+                for field in RESTORABLE_SIEM_RULE_FIELDS
+                if field in previous
+            }
+            try:
+                response = requests.patch(
+                    url,
+                    headers=self.headers,
+                    json=rule_restore,
+                    verify=self._get_verify_config(),
+                    cert=self.cert,
+                    timeout=30,
+                )
+                response.raise_for_status()
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    "SIEM rule of an incomplete update not restored, "
+                    "the next event or push of the indicator updates it",
+                    meta={
+                        "rule_id": previous.get("id"),
+                        "opencti_id": opencti_id,
+                        "error": str(e),
+                    },
+                )
 
     def _roll_back_siem_rule(self, rule_id: str, opencti_id: str) -> None:
         """Delete a rule created for a threat intel entry that was not written.
@@ -1042,6 +1109,7 @@ class ElasticApiHandler:
         )
         pattern_type = indicator_data.get("pattern_type", "stix")
         created_rule_id: Optional[str] = None
+        updated_rules: List[dict] = []
 
         try:
             # Handle pattern-based indicators as SIEM rules only if native Elastic pattern
@@ -1049,8 +1117,8 @@ class ElasticApiHandler:
                 pattern_type
             ):
                 if operation in ("create", "update"):
-                    written, created_rule_id = self._write_siem_rules_of_indicator(
-                        indicator_data, opencti_id
+                    written, created_rule_id, updated_rules = (
+                        self._write_siem_rules_of_indicator(indicator_data, opencti_id)
                     )
                     if not written:
                         # The threat intel document is the trace the deployment
@@ -1083,9 +1151,12 @@ class ElasticApiHandler:
                     written_document = bool(write(indicator_data))
                 finally:
                     # A rule without its threat intel entry would detect unseen
-                    # by the deployment read-back.
+                    # by the deployment read-back, and a rule on the new indicator
+                    # next to the previous entry would hide a partial update.
                     if not written_document and created_rule_id is not None:
                         self._roll_back_siem_rule(created_rule_id, opencti_id)
+                    if not written_document and updated_rules:
+                        self._restore_siem_rules(updated_rules, opencti_id)
                 if not written_document:
                     success = False
                 else:
