@@ -586,9 +586,47 @@ def test_report_failure_does_not_mask_the_error(
     hunt_helper.report_hunt_run.side_effect = RuntimeError("report rejected")
 
     # When/Then the original error is raised and the report error logged
-    with pytest.raises(HuntExecutionError, match="boom"):
+    with pytest.raises(HuntExecutionError, match="boom") as raised:
         connector.process_message(hunt_event())
     assert connector.logger.error.call_count == 2
+    # And the listen_hunt wrapper of pycti still reports the failure itself
+    assert getattr(raised.value, "hunt_run_reported", False) is False
+
+
+def test_reported_failure_is_not_reported_again_by_pycti(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given a run that times out
+    connector = connector_factory(HuntResult())
+    connector.block = True
+
+    # When the run is processed
+    with pytest.raises(HuntTimeoutError) as raised:
+        connector.process_message(hunt_event(limits={"timeout_seconds": 1}))
+
+    # Then the timeout is reported once, and flagged so that the wrapper does not report it as failed
+    assert raised.value.hunt_run_reported is True
+    statuses = [call.args[1] for call in hunt_helper.report_hunt_run.call_args_list]
+    assert statuses == ["timeout"]
+
+
+def test_reported_flag_tolerates_errors_without_attributes(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given an execute hook raising an exception type without instance attributes
+    class SlotError(Exception):
+        __slots__ = ()
+
+        def __setattr__(self, name, value):
+            raise AttributeError(name)
+
+    connector = connector_factory(SlotError("no attributes"))
+
+    # When/Then the run is reported failed and the original error is raised unchanged
+    with pytest.raises(SlotError):
+        connector.process_message(hunt_event())
+    statuses = [call.args[1] for call in hunt_helper.report_hunt_run.call_args_list]
+    assert statuses == ["failed"]
 
 
 # ----------------------------------------------------------------------

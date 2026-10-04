@@ -95,7 +95,8 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
    ends the run as a `timeout` instead of blocking its report.
 6. **Knowledge**: `to_stix()` maps the results; the bundle is sent with the run work id.
 7. **Report**: `completed` with hits, distinct entities, evidence, translated query, language, cost and result ids, or
-   `failed` with the error (the error is then raised so that OpenCTI marks the work in error).
+   `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the work in error). A reported
+   error carries `hunt_run_reported = True`, so the `listen_hunt` wrapper of pycti does not report the run a second time.
 
 ## Implementing a hunt connector
 

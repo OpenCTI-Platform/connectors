@@ -671,7 +671,12 @@ class InternalHuntConnector(ABC):
         started: float,
         error: BaseException,
     ) -> None:
-        """Report a failed or timed out run without masking the original error."""
+        """Report a failed or timed out run without masking the original error.
+
+        Once reported, the error carries ``hunt_run_reported = True`` so that
+        the ``listen_hunt`` wrapper of pycti, which receives it re-raised to
+        mark the work in error, does not report the run a second time.
+        """
         status = (
             HuntRunStatus.TIMEOUT
             if isinstance(error, HuntTimeoutError)
@@ -693,6 +698,12 @@ class InternalHuntConnector(ABC):
                 "[HUNT] Unable to report the failed hunt run",
                 {"hunt_run_id": run_id, "error": _error_message(report_error)},
             )
+            return
+        try:
+            error.hunt_run_reported = True  # type: ignore[attr-defined]
+        except AttributeError:
+            # An exception type without instance attributes: the wrapper reports it again and OpenCTI refuses the duplicate
+            pass
 
     @staticmethod
     def _raw_run_id(event: Mapping[str, Any]) -> str | None:
