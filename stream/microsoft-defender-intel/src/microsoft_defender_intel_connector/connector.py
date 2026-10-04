@@ -155,7 +155,7 @@ class MicrosoftDefenderIntelConnector:
             except Exception as err:
                 self.helper.connector_logger.warning(
                     "[CREATE] Cannot add the Microsoft Defender external reference",
-                    {"defender_id": result["id"], "error": str(err)},
+                    meta={"defender_id": result["id"], "error": str(err)},
                 )
         return result
 
@@ -209,7 +209,7 @@ class MicrosoftDefenderIntelConnector:
             except Exception as err:
                 self.helper.connector_logger.warning(
                     "[CREATE] Cannot delete a Defender indicator of an incomplete push",
-                    {"defender_id": defender_id, "error": str(err)},
+                    meta={"defender_id": defender_id, "error": str(err)},
                 )
                 continue
             self._delete_external_reference(defender_id)
@@ -305,7 +305,7 @@ class MicrosoftDefenderIntelConnector:
                         deployed_ids.append(defender_id)
                         self.helper.connector_logger.info(
                             message,
-                            {"defender_id": defender_id, "opencti_id": opencti_id},
+                            meta={"defender_id": defender_id, "opencti_id": opencti_id},
                         )
                     did_update = True
             except Exception as err:
@@ -350,7 +350,7 @@ class MicrosoftDefenderIntelConnector:
         except Exception as err:
             self.helper.connector_logger.warning(
                 "[DELETE] Cannot delete the Microsoft Defender external reference",
-                {"defender_id": defender_id, "error": str(err)},
+                meta={"defender_id": defender_id, "error": str(err)},
             )
 
     def _handle_delete_event(self, data):

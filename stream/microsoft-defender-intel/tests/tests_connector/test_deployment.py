@@ -186,7 +186,7 @@ def test_external_reference_errors_do_not_abort_the_dissemination(connector):
     connector.assurance.report_pushed.assert_called_once()
     connector.helper.connector_logger.warning.assert_called_once_with(
         "[CREATE] Cannot add the Microsoft Defender external reference",
-        {"defender_id": DEFENDER_ID, "error": "boom"},
+        meta={"defender_id": DEFENDER_ID, "error": "boom"},
     )
 
 
@@ -318,7 +318,7 @@ def test_a_failed_rollback_is_logged(connector):
 
     connector.helper.connector_logger.warning.assert_any_call(
         "[CREATE] Cannot delete a Defender indicator of an incomplete push",
-        {"defender_id": "1", "error": ANY},
+        meta={"defender_id": "1", "error": ANY},
     )
     connector.helper.api.external_reference.delete.assert_not_called()
     connector.assurance.report_push_failed.assert_called_once()
@@ -508,7 +508,7 @@ def test_external_reference_cleanup_errors_are_logged(connector):
     connector.assurance.report_removed.assert_called_once()
     connector.helper.connector_logger.warning.assert_called_once_with(
         "[DELETE] Cannot delete the Microsoft Defender external reference",
-        {"defender_id": DEFENDER_ID, "error": "boom"},
+        meta={"defender_id": DEFENDER_ID, "error": "boom"},
     )
 
 
