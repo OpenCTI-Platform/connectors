@@ -383,6 +383,7 @@ class SilentPushClient(HuntApiClient):
         """
         hosts: list[Host] = []
         read = 0
+        exhausted = False
         while read < limit:
             size = min(SILENTPUSH_PAGE_SIZE, limit - read)
             answer = _answer(
@@ -403,8 +404,10 @@ class SilentPushClient(HuntApiClient):
                 if host is not None:
                     hosts.append(host)
             if len(scans) < size:
+                exhausted = True
                 break
-        return SourceResult(hosts, records=read)
+        # A read that stops at the limit never saw the end of the results: more matches may exist
+        return SourceResult(hosts, records=read, more=not exhausted and limit > 0)
 
 
 def _silentpush_host(scan: dict[str, Any]) -> Host | None:
@@ -555,6 +558,7 @@ class ScoutClient(HuntApiClient):
         Returns:
             The hosts found.
         """
+        size = max(1, min(SCOUT_MAX_SIZE, limit))
         answer = _answer(
             self.hunt_request(
                 "GET",
@@ -565,18 +569,20 @@ class ScoutClient(HuntApiClient):
                     "query": query,
                     "start_date": start.isoformat(),
                     "end_date": end.isoformat(),
-                    "size": max(1, min(SCOUT_MAX_SIZE, limit)),
+                    "size": size,
                 },
             ),
             "The Team Cymru Scout search",
         )
-        items = _list(answer.get("ips"))[:limit]
+        returned = _list(answer.get("ips"))
+        items = returned[:limit]
         hosts = []
         for item in items:
             host = _scout_host(_dict(item))
             if host is not None:
                 hosts.append(host)
-        return SourceResult(hosts, records=len(items))
+        # A full page never shows the end of the results: more matches may exist
+        return SourceResult(hosts, records=len(items), more=len(returned) >= size)
 
 
 def _scout_host(item: dict[str, Any]) -> Host | None:

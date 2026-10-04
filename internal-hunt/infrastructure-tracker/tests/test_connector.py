@@ -41,7 +41,11 @@ from infrastructure_tracker.sources import (
     SourceResult,
     UrlscanClient,
 )
-from infrastructure_tracker.stix import infrastructure_name
+from infrastructure_tracker.stix import (
+    HuntInfrastructure,
+    infrastructure_name,
+    infrastructure_stix_id,
+)
 
 SDK_CONNECTOR = "connectors_sdk.connectors.internal_hunt.internal_hunt_connector"
 TRACKER = "infrastructure_tracker.connector"
@@ -128,11 +132,26 @@ def test_within_window_keeps_the_hosts_scanned_during_the_run_window():
     assert within_window(SourceResult([before], 1), WINDOW).truncated is False
 
 
-def test_infrastructure_name_carries_the_hunt_id():
+def test_infrastructure_name_carries_the_full_hunt_id():
     first = infrastructure_name("C2 servers", "3f2a9c1d-0000-4000-8000-000000000001")
-    second = infrastructure_name("C2 servers", "7b10e4aa-0000-4000-8000-000000000002")
-    assert first == "C2 servers (hunt 3f2a9c1d)"
+    # Same name and same id prefix: still two infrastructures
+    second = infrastructure_name("C2 servers", "3f2a9c1d-0000-4000-8000-000000000002")
+    assert first == "C2 servers (hunt 3f2a9c1d-0000-4000-8000-000000000001)"
     assert first != second
+
+
+def test_infrastructure_id_follows_the_hunt_not_its_name():
+    hunt_id = "3f2a9c1d-0000-4000-8000-000000000001"
+    before = HuntInfrastructure(
+        hunt_id=hunt_id, name=infrastructure_name("C2", hunt_id)
+    )
+    renamed = HuntInfrastructure(
+        hunt_id=hunt_id, name=infrastructure_name("C2 servers", hunt_id)
+    )
+    other = infrastructure_stix_id("3f2a9c1d-0000-4000-8000-000000000002")
+    assert before.id == renamed.id == infrastructure_stix_id(hunt_id)
+    assert before.id.startswith("infrastructure--") and before.id != other
+    assert "hunt_id" not in before.to_stix2_object()
 
 
 def test_today_is_the_utc_date():
@@ -205,6 +224,7 @@ def test_process_message_maps_the_infrastructure(
     }
     (infrastructure,) = [obj for obj in sent if obj["type"] == "infrastructure"]
     assert infrastructure["name"] == "Cobalt Strike team servers (hunt hunt-1)"
+    assert infrastructure["id"] == infrastructure_stix_id("hunt-1")
     assert "run-1" in infrastructure["description"]
     assert infrastructure["first_seen"] == "2026-10-03T08:00:00Z"
     assert [o["value"] for o in sent if o["type"] == "ipv4-addr"] == ["8.8.8.8"]
@@ -579,14 +599,18 @@ def test_execute_caps_the_merged_hosts(connector_factory):
     connector.clients["censys"] = MagicMock()
     connector.clients["censys"].search.side_effect = [
         SourceResult([Host(key="a", sources=["censys"])]),
-        SourceResult([Host(key="a", sources=["censys"]), Host(key="b")]),
+        SourceResult([Host(key="a", sources=["censys"]), Host(key="b"), Host(key="c")]),
     ]
 
     result = connector.execute(
-        plan_query({"censys": ["q1", "q2"]}), WINDOW, HuntLimits(max_results=1)
+        plan_query({"censys": ["q1", "q2"]}), WINDOW, HuntLimits(max_results=2)
     )
 
-    assert [event.fields.get("source") for event in result.events] == [["censys"]]
+    # The second query still had budget: its new hosts fill the cap, the rest is cut
+    assert [event.fields.get("source") for event in result.events] == [
+        ["censys"],
+        None,
+    ]
     assert result.truncated is True
 
 

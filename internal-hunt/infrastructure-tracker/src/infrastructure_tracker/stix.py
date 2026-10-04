@@ -20,6 +20,7 @@ identifiers scoped to the run.
 """
 
 import json
+import uuid
 from collections import Counter
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field, replace
@@ -47,6 +48,10 @@ from connectors_sdk.models import (
 )
 from connectors_sdk.models.enums import HashAlgorithm, RelationshipType
 from infrastructure_tracker.sources import CERTIFICATES_FIELD
+from pydantic import Field
+
+OPENCTI_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
+"""Namespace of the deterministic identifiers OpenCTI and pycti generate."""
 
 IPV4 = "IPv4-Addr"
 DOMAIN = "Domain-Name"
@@ -157,18 +162,53 @@ def _indicator_name(observable: TrackedObservable) -> str:
 def infrastructure_name(hunt_name: str, hunt_id: str) -> str:
     """Name of the infrastructure tracked by a hunt.
 
-    OpenCTI derives the identifier of an infrastructure from its name, so the
-    name carries the immutable OpenCTI id of the hunt next to its display name:
-    two hunts sharing a name never grow the same infrastructure.
+    OpenCTI derives the standard identifier of an infrastructure from its
+    name, so the name carries the full, immutable OpenCTI id of the hunt next
+    to its display name: two hunts sharing a name never grow the same
+    infrastructure.
 
     Args:
         hunt_name: Name of the hunt.
         hunt_id: OpenCTI internal id of the hunt.
 
     Returns:
-        The hunt name followed by the first eight characters of its id.
+        The hunt name followed by its id.
     """
-    return f"{hunt_name} (hunt {hunt_id[:8]})"
+    return f"{hunt_name} (hunt {hunt_id})"
+
+
+def infrastructure_stix_id(hunt_id: str) -> str:
+    """STIX id of the infrastructure tracked by a hunt, seeded from the hunt id only.
+
+    The name follows the display name of the hunt; the id does not, so the
+    runs of a renamed hunt keep growing the same infrastructure (OpenCTI
+    matches an incoming object on its STIX id as well as on its name).
+
+    Args:
+        hunt_id: OpenCTI internal id of the hunt.
+
+    Returns:
+        A deterministic ``infrastructure--`` STIX id.
+    """
+    seed = json.dumps({"x_opencti_hunt_id": hunt_id}, sort_keys=True)
+    return f"infrastructure--{uuid.uuid5(OPENCTI_NAMESPACE, seed)}"
+
+
+class HuntInfrastructure(Infrastructure):
+    """The infrastructure a hunt tracks, identified by the hunt rather than by its name."""
+
+    hunt_id: str = Field(
+        description="OpenCTI internal id of the hunt tracking the infrastructure.",
+        min_length=1,
+        exclude=True,
+    )
+
+    def to_stix2_object(self) -> Any:
+        """Make the STIX object with the id of the hunt."""
+        stix_object = super().to_stix2_object()
+        properties = {key: stix_object[key] for key in stix_object}
+        properties["id"] = infrastructure_stix_id(self.hunt_id)
+        return type(stix_object)(allow_custom=True, **properties)
 
 
 def build_infrastructure_objects(
@@ -197,7 +237,8 @@ def build_infrastructure_objects(
     author = hunt_author(request)
     markings = hunt_markings(request) or None
     hunt = request.hunt
-    infrastructure = Infrastructure(
+    infrastructure = HuntInfrastructure(
+        hunt_id=hunt.id,
         name=infrastructure_name(hunt.name, hunt.id),
         description=(
             f"Internet infrastructure matching the fingerprints of the hunt '{hunt.name}' "

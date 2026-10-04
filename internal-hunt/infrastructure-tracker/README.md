@@ -179,9 +179,10 @@ configured source supports its fingerprints.
    enrichment is best effort: an error is logged, and it stops when the run timeout is close.
 5. Hosts matching a benign pattern of the hunt are suppressed.
 6. With hits, the connector sends:
-   - one `infrastructure` named after the hunt and the first eight characters of its OpenCTI id ("Cobalt Strike team
-     servers (hunt 3f2a9c1d)"), so two hunts sharing a name never grow the same infrastructure, active between the
-     first and last observation of its hosts;
+   - one `infrastructure` named after the hunt and its OpenCTI id ("Cobalt Strike team servers (hunt
+     3f2a9c1d-...)"), so two hunts sharing a name never grow the same infrastructure, with a STIX id seeded from the
+     hunt id alone, so the runs of a renamed hunt keep growing the same infrastructure, active between the first and
+     last observation of its hosts;
    - the public IPv4 addresses, public domain names and X.509 certificates (SHA-256, subject, issuer) found, the most
      frequent first, each `consists-of` the infrastructure, restricted to `CONNECTOR_OBSERVABLE_TYPES`, to the
      observable types the hunt expects and to `INFRASTRUCTURE_TRACKER_CREATE_CERTIFICATES`;

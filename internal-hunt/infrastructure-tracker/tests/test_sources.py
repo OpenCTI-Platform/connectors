@@ -259,6 +259,8 @@ def test_silentpush_search_pages_with_skip(requests_mock, deadline):
     assert second.qs == {"limit": ["500"], "skip": ["1000"]}
     assert len(result.hosts) == 1001 and result.total is None
     assert result.read == 1002
+    # The second page came back short: every match was read
+    assert result.more is False
     host = result.hosts[0]
     assert host.domains == ["c2.evil.example", "evil.example"]
     assert host.certificates[0].subject == "CN=evil.example"
@@ -278,6 +280,23 @@ def test_silentpush_search_stops_at_the_limit(requests_mock, deadline):
     assert requests_mock.call_count == 1
     assert len(result.hosts) == 2
     assert result.hosts[0].certificates == []
+    # The read stopped at the limit: more matches may exist
+    assert result.more is True
+
+
+def test_silentpush_search_reading_exactly_the_limit_may_have_more(
+    requests_mock, deadline
+):
+    requests_mock.post(
+        SILENTPUSH_URL,
+        json={"response": {"scandata_raw": [{"ip": "8.8.8.8"}] * 2}},
+    )
+    client = SilentPushClient("https://api.silentpush.com", "key")
+
+    result = client.search("q", 2, deadline)
+
+    assert requests_mock.call_count == 1
+    assert (result.read, result.more) == (2, True)
 
 
 def test_urlscan_search_dates_the_query_and_follows_search_after(
@@ -382,6 +401,21 @@ def test_scout_search_maps_ips(requests_mock, deadline):
     assert first.ports == [443] and first.tags == ["cobalt-strike"]
     assert first.last_seen == datetime(2026, 10, 3, tzinfo=timezone.utc)
     assert second.domains == ["one.example"] and second.ports == [53]
+    # Three IP addresses for a page of 5000: every match was read
+    assert result.more is False
+
+
+def test_scout_search_filling_the_page_may_have_more(requests_mock, deadline):
+    requests_mock.get(
+        SCOUT_URL,
+        json={"ips": [{"ip": "8.8.8.8"}, {"ip": "1.1.1.1"}, {"ip": "9.9.9.9"}]},
+    )
+    client = ScoutClient("https://scout.cymru.com/api/scout", "key")
+
+    result = client.search(JARM, START, END, 2, deadline)
+
+    assert requests_mock.last_request.qs["size"] == ["2"]
+    assert (result.read, result.more) == (2, True)
 
 
 def test_internetdb_lookup_enriches_hosts(requests_mock, deadline):
