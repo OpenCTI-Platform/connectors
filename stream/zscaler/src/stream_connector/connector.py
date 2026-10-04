@@ -434,13 +434,17 @@ class ZscalerConnector:
         return domain
 
     def deploy_domain(self, domain: str) -> None:
-        """Add a domain to the blacklist, unless it is already listed.
+        """Add a domain to the blacklist; an already listed one gets its change activated.
 
-        :raises ZscalerApiError: When Zscaler refuses the change.
+        An analyst retry or a repeated create of a listed domain whose earlier
+        activation timed out activates it again, so it is only reported once enforced.
+
+        :raises ZscalerApiError: When Zscaler refuses the change or the activation.
         """
         if domain in self.get_zscaler_blocked_domains():
             msg = f"The domain {domain} is already in the Blacklist."
             self.helper.connector_logger.info(msg)
+            self.ensure_configuration_active()
             return
         msg = f"Sending domain {domain} to Zscaler..."
         self.helper.connector_logger.info(msg)
@@ -544,6 +548,18 @@ class ZscalerConnector:
         self.request_zscaler(self.session.put, base_url, json=payload)
         msg = f"Successfully sent {event_type} for {domain}."
         self.helper.connector_logger.info(msg)
+        self.ensure_configuration_active()
+
+    def ensure_configuration_active(self) -> None:
+        """Activate the pending configuration changes, if any, and wait until they are active.
+
+        Called after every change of the blacklist, before every read-back (a domain
+        staged but not active is not enforced, so it is never confirmed) and when a
+        domain to deploy is already listed (its change may still be pending).
+
+        :raises ZscalerActivationPendingError: When the configuration is still not active.
+        :raises ZscalerApiError: When Zscaler refuses the status read or the activation.
+        """
         try:
             activated = self.activate_zscaler_changes()
         except ZscalerApiError:

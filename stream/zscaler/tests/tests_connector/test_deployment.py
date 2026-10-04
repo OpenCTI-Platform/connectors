@@ -15,7 +15,7 @@ from connectors_sdk import (
 from connectors_sdk.connectors.stream.deployment import VendorIndicator
 from pycti import OpenCTIConnectorHelper
 from stream_connector import ZscalerConnector
-from stream_connector.connector import ZscalerApiError
+from stream_connector.connector import ZscalerActivationPendingError, ZscalerApiError
 from stream_connector.deployment import (
     ZscalerDeploymentAdapter,
     ZscalerDeploymentError,
@@ -191,15 +191,28 @@ def test_created_domain_is_added_and_reported_deployed(connector):
     connector.activate_zscaler_changes.assert_called_once()
 
 
-def test_already_listed_domain_is_reported_deployed(connector):
+def test_already_listed_domain_is_activated_then_reported_deployed(connector):
     zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
     indicator = make_indicator()
 
     connector._process_message(make_message("create", indicator))
 
     assert zscaler.puts == []
+    connector.activate_zscaler_changes.assert_called_once()
     connector.assurance.report_pushed.assert_called_once_with(indicator)
-    connector.activate_zscaler_changes.assert_not_called()
+
+
+def test_already_listed_domain_still_pending_is_reported_failed(connector):
+    zscaler = FakeZscaler(urls=["evil.example"]).install(connector)
+    connector.activate_zscaler_changes.return_value = False
+    indicator = make_indicator()
+
+    connector._process_message(make_message("create", indicator))
+
+    assert zscaler.puts == []
+    connector.assurance.report_pushed.assert_not_called()
+    (reported, _error), _ = connector.assurance.report_push_failed.call_args
+    assert reported == indicator
 
 
 def test_refused_domain_is_reported_failed(connector):
@@ -789,6 +802,45 @@ def test_adapter_lists_removes_and_pushes(connector):
 
     assert adapter.push_indicator(make_indicator(domain="new.example")) is None
     assert zscaler.urls == ["other.example", "new.example"]
+
+
+def test_adapter_reads_back_only_an_active_configuration(connector):
+    FakeZscaler(urls=["evil.example"]).install(connector)
+    adapter = ZscalerDeploymentAdapter(connector)
+
+    assert list(adapter.list_vendor_indicators()) == [
+        VendorIndicator(value="evil.example")
+    ]
+    connector.activate_zscaler_changes.assert_called_once()
+
+    # Changes staged but not active: no listing, so no domain is confirmed
+    connector.activate_zscaler_changes.return_value = False
+    with pytest.raises(ZscalerActivationPendingError):
+        list(adapter.list_vendor_indicators())
+
+
+def test_adapter_push_of_a_listed_domain_activates_it_again(connector):
+    zscaler = FakeZscaler(urls=["new.example"]).install(connector)
+
+    assert (
+        ZscalerDeploymentAdapter(connector).push_indicator(
+            make_indicator(domain="new.example")
+        )
+        is None
+    )
+
+    assert zscaler.puts == []
+    connector.activate_zscaler_changes.assert_called_once()
+
+
+def test_adapter_push_of_a_listed_domain_still_pending_raises_the_reason(connector):
+    FakeZscaler(urls=["new.example"]).install(connector)
+    connector.activate_zscaler_changes.return_value = False
+
+    with pytest.raises(ZscalerDeploymentError):
+        ZscalerDeploymentAdapter(connector).push_indicator(
+            make_indicator(domain="new.example")
+        )
 
 
 def test_adapter_push_raises_the_reason_and_logs_the_detail(connector):

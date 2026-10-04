@@ -246,11 +246,13 @@ Platform entity (created if it does not exist).
 | Delete event processed                    | `removed` (also when the domain was already absent, or kept for another indicator); nothing when the blacklist or the other indicators cannot be read |
 | Reconciliation, domain present            | `active`                                                                                               |
 | Reconciliation, domain absent             | `removed` (removed from the category outside of OpenCTI)                                               |
-| Reconciliation, `pending` (analyst retry) | The domain is added again and reported `deployed` or `failed`                                          |
+| Reconciliation, `pending` (analyst retry) | The domain is added again (or, when already listed, its change activated again) and reported `deployed` or `failed` |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still listed are removed from the category and reported `removed` |
 
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the domains of the blacklist URL category are
-  read back (`GET /urlCategories/{id}`, one request). The category does not store the OpenCTI id, so deployments are
+  read back (`GET /urlCategories/{id}`, one request) once the configuration is `ACTIVE`: pending changes are activated
+  first, and the run is skipped while they cannot be, so a domain staged but not enforced is never reported `active`.
+  The category does not store the OpenCTI id, so deployments are
   matched by value. A read-back error or a malformed category (an entry of `urls` that is not a non-empty string)
   skips the run: indicators are never reported `removed` from a partial listing. Other entries of the category (URLs
   with a path, wildcard domains, entries added outside OpenCTI) are listed as they are and only matter when they are

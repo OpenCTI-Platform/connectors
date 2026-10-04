@@ -4,7 +4,8 @@ The `ZscalerDeploymentAdapter` gives the connectors SDK reconciliation access to
 Zscaler Internet Access blacklist URL category:
 
 - read-back: the domains of the category (`urlCategories/{id}`), matched with the
-  deployments by value (the category does not store the OpenCTI id);
+  deployments by value (the category does not store the OpenCTI id), read once the
+  configuration is active (pending changes are activated first, or the run is skipped);
 - removal: `REMOVE_FROM_LIST` of the domain, then activation; the reconciliation never
   asks to remove a domain that a deployment staying on Zscaler shares;
 - re-push: the stream create path (`ADD_TO_LIST`, then activation).
@@ -44,10 +45,15 @@ class ZscalerDeploymentAdapter(DeploymentVendorAdapter):
         self._connector = connector
 
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
-        """Read back the domains of the blacklist URL category.
+        """Read back the domains of the blacklist URL category, once its changes are active.
 
-        :raises ZscalerApiError: On any API error (never a partial listing).
+        A domain staged in the category but not activated is not enforced: the pending
+        changes are activated first, and the run is skipped while they cannot be.
+
+        :raises ZscalerApiError: On any API error (never a partial listing), or when the
+            configuration does not become active.
         """
+        self._connector.ensure_configuration_active()
         for domain in self._connector.list_blocked_domains():
             yield VendorIndicator(value=domain, raw={"domain": domain})
 
