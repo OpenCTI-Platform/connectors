@@ -28,6 +28,52 @@ _TRUE_VALUES = {"1", "true", "t", "yes", "y", "on"}
 _SEPARATORS_RE = re.compile(r"[\s,;|]+")
 # Saved search setting holding the ATT&CK annotations (JSON object).
 ANNOTATIONS_KEY = "action.correlationsearch.annotations"
+# ``pattern_type`` of a saved search whose detection logic is not its search alone.
+RULE_PATTERN_TYPE = "splunk-rule"
+# Trigger condition settings, applied by Splunk to the results of the search.
+_TRIGGER_KEYS = ("alert_type", "alert_comparator", "alert_threshold", "alert_condition")
+
+
+def _trigger(content: dict[str, Any]) -> dict[str, str]:
+    """Return the trigger condition of a saved search, empty when it alerts on any result.
+
+    A search alerting ``always`` or when its number of events is greater than
+    0 alerts on its results: the search holds its whole detection logic.
+    """
+    trigger = {
+        key: str(content[key]).strip()
+        for key in _TRIGGER_KEYS
+        if content.get(key) is not None and str(content[key]).strip()
+    }
+    alert_type = trigger.get("alert_type", "always").lower()
+    if alert_type != "custom":
+        trigger.pop("alert_condition", None)
+    if alert_type == "always" or (
+        alert_type == "number of events"
+        and trigger.get("alert_comparator", "greater than").lower() == "greater than"
+        and trigger.get("alert_threshold", "0") in ("0", "0.0")
+    ):
+        return {}
+    return trigger
+
+
+def rule_pattern(search: str, content: dict[str, Any]) -> tuple[str, str]:
+    """Return the Indicator ``pattern`` and ``pattern_type`` of a saved search.
+
+    The SPL search is the pattern when the saved search alerts on any result.
+    Another trigger condition (a number of events, hosts or sources compared
+    to a threshold, or a custom condition) is represented by the canonical
+    JSON of the search and its trigger, under the ``splunk-rule`` pattern
+    type: its Indicator changes with the trigger, and two saved searches
+    sharing a search but not their trigger are two Indicators.
+    """
+    trigger = _trigger(content)
+    if not trigger:
+        return search, "spl"
+    return (
+        json.dumps({"search": search, **trigger}, sort_keys=True, indent=2),
+        RULE_PATTERN_TYPE,
+    )
 
 
 def is_true(value: Any) -> bool:
@@ -151,14 +197,15 @@ def map_saved_search(
         mitre_id: None
         for mitre_id in extract_technique_ids(str(name), label, description)
     }
+    pattern, pattern_type = rule_pattern(str(search), content)
     return DetectionRule(
         external_id=saved_search_id(
             acl.get("app") or "-", acl.get("owner") or "-", str(name)
         ),
         name=label or str(name),
         description=description,
-        pattern=str(search),
-        pattern_type="spl",
+        pattern=pattern,
+        pattern_type=pattern_type,
         enabled=is_running(content),
         modified_at=parse_timestamp(entry.get("updated")),
         level=_level(content),

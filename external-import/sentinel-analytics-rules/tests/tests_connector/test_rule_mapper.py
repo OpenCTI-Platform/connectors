@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -24,6 +25,38 @@ def test_scheduled_rule():
     assert detection_rule.platforms == []
     assert detection_rule.logsource is None
     assert detection_rule.url is None
+
+
+def test_trigger_threshold_is_part_of_the_pattern():
+    raw = rule(SCHEDULED_RULE, triggerThreshold=100)
+    detection_rule = map_rule(raw)
+    assert detection_rule.pattern_type == "sentinel-rule"
+    assert json.loads(detection_rule.pattern) == {
+        "kind": "Scheduled",
+        "query": SCHEDULED_RULE["properties"]["query"],
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 100,
+    }
+
+
+def test_trigger_change_changes_the_pattern():
+    patterns = {
+        map_rule(rule(SCHEDULED_RULE, triggerThreshold=threshold)).pattern
+        for threshold in (0, 5, 100)
+    } | {map_rule(rule(SCHEDULED_RULE, triggerOperator="LessThan")).pattern}
+    assert len(patterns) == 4
+
+
+def test_default_trigger_keeps_the_query_as_pattern():
+    for raw in (
+        rule(SCHEDULED_RULE, triggerOperator=None, triggerThreshold=None),
+        rule(SCHEDULED_RULE, triggerThreshold="0"),
+    ):
+        detection_rule = map_rule(raw)
+        assert (detection_rule.pattern_type, detection_rule.pattern) == (
+            "kql",
+            SCHEDULED_RULE["properties"]["query"],
+        )
 
 
 def test_nrt_rule():

@@ -147,6 +147,7 @@ graph LR
 | Sentinel alert rule | OpenCTI |
 |---|---|
 | `properties.query` | Indicator `pattern`, `pattern_type: kql` |
+| Scheduled rule with a trigger other than "more than 0 results" (`triggerOperator`, `triggerThreshold`) | Indicator `pattern_type: sentinel-rule`, `pattern` = canonical JSON of the rule `kind`, `query`, `triggerOperator` and `triggerThreshold` |
 | `properties.displayName`, `properties.description` | Indicator `name`, `description` |
 | `systemData.createdAt` (or `properties.lastModifiedUtc`) | Indicator `valid_from`, `deployed-on` `deployed_at` |
 | `properties.severity` (`Informational`, `Low`, `Medium`, `High`) | Indicator `x_opencti_rule_level` |
@@ -172,7 +173,8 @@ by the previous run (keyed by its rule GUID), so that:
 
 - a rule deleted since the previous run gets the status `removed` and a `removed_at` time;
 - a rule whose query changed gets a new Indicator; the Indicator of the previous query gets the status
-  `removed`.
+  `removed`. A change of the trigger of a `sentinel-rule` Indicator is a change of logic as well, and
+  two rules sharing a query with different triggers are two Indicators.
 
 A removed rule whose Indicator was deleted from OpenCTI in the meantime is skipped. If OpenCTI cannot be
 asked whether the Indicator still exists, the removal is retried on the next run.

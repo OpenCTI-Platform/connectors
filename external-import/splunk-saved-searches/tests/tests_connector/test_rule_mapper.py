@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -95,6 +96,59 @@ def test_correlation_search():
     assert rule.created_at is None
     assert rule.modified_at == datetime(2026, 9, 1, 10, tzinfo=timezone.utc)
     assert rule.url == f"https://web/{CORRELATION_SEARCH['name']}"
+
+
+def test_trigger_condition_is_part_of_the_pattern():
+    raw = entry(CORRELATION_SEARCH, alert_threshold="10")
+    rule = map_saved_search(raw, "alerts", _url)
+    assert rule.pattern_type == "splunk-rule"
+    assert json.loads(rule.pattern) == {
+        "search": CORRELATION_SEARCH["content"]["search"],
+        "alert_type": "number of events",
+        "alert_comparator": "greater than",
+        "alert_threshold": "10",
+    }
+
+
+def test_custom_trigger_condition_is_part_of_the_pattern():
+    raw = entry(
+        CORRELATION_SEARCH,
+        alert_type="custom",
+        alert_condition="search count > 5",
+    )
+    pattern = json.loads(map_saved_search(raw, "alerts", _url).pattern)
+    assert pattern["alert_type"] == "custom"
+    assert pattern["alert_condition"] == "search count > 5"
+
+
+def test_trigger_change_changes_the_pattern():
+    patterns = {
+        map_saved_search(entry(CORRELATION_SEARCH, **trigger), "alerts", _url).pattern
+        for trigger in (
+            {},
+            {"alert_threshold": "10"},
+            {"alert_threshold": "20"},
+            {"alert_type": "number of hosts"},
+            {"alert_comparator": "rises by", "alert_threshold": "10"},
+        )
+    }
+    assert len(patterns) == 5
+
+
+@pytest.mark.parametrize(
+    "trigger",
+    [
+        {"alert_type": "always", "alert_threshold": "10"},
+        {"alert_type": None, "alert_comparator": None, "alert_threshold": None},
+        {"alert_condition": "search count > 5"},
+    ],
+)
+def test_triggers_alerting_on_any_result_keep_the_search(trigger):
+    rule = map_saved_search(entry(CORRELATION_SEARCH, **trigger), "alerts", _url)
+    assert (rule.pattern_type, rule.pattern) == (
+        "spl",
+        CORRELATION_SEARCH["content"]["search"],
+    )
 
 
 def test_scheduled_alert_without_annotations():

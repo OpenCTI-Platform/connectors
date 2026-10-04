@@ -26,6 +26,10 @@ CORRELATION_SEARCH: dict[str, Any] = {
         '"type": "TTP"}',
         "action.notable.param.severity": "high",
         "alert.severity": 3,
+        "alert_type": "number of events",
+        "alert_comparator": "greater than",
+        "alert_threshold": "0",
+        "alert_condition": "",
     },
 }
 

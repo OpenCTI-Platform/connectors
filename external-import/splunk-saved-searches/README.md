@@ -162,6 +162,7 @@ Saved searches without a search string are always left out (`no_query`).
 | Splunk saved search | OpenCTI |
 |---|---|
 | `search` | Indicator `pattern`, `pattern_type: spl` |
+| Trigger condition other than "always" or "number of events greater than 0" (`alert_type`, `alert_comparator`, `alert_threshold`, `alert_condition` for a custom condition) | Indicator `pattern_type: splunk-rule`, `pattern` = canonical JSON of the `search` and its trigger condition |
 | `action.correlationsearch.label` (or the saved search name), `description` | Indicator `name`, `description` |
 | `updated` | Indicator `valid_from` |
 | `action.notable.param.severity`, else `alert.severity` | Indicator `x_opencti_rule_level` (see below) |
@@ -203,7 +204,8 @@ imported by the previous run (keyed by its saved search id), so that:
 - a search deleted since the previous run (or no longer in scope) gets the status `removed` and a
   `removed_at` time;
 - a search whose SPL changed gets a new Indicator; the Indicator of the previous SPL gets the status
-  `removed`.
+  `removed`. A change of the trigger condition of a `splunk-rule` Indicator is a change of logic as
+  well, and two saved searches sharing a search with different trigger conditions are two Indicators.
 
 A removed search whose Indicator was deleted from OpenCTI in the meantime is skipped. If OpenCTI cannot be
 asked whether the Indicator still exists, the removal is retried on the next run.

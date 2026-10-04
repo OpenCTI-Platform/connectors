@@ -30,6 +30,8 @@ SCHEDULED_RULE: dict[str, Any] = {
         "query": 'SecurityEvent | where CommandLine has "-enc"',
         "queryFrequency": "PT1H",
         "queryPeriod": "PT1H",
+        "triggerOperator": "GreaterThan",
+        "triggerThreshold": 0,
         "lastModifiedUtc": "2026-09-01T10:00:00Z",
         "alertRuleTemplateName": None,
     },

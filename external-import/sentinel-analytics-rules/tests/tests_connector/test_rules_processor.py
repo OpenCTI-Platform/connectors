@@ -328,3 +328,41 @@ def test_switched_platform_is_reconciled_while_the_former_removals_wait(helper):
     assert processor.state.deployed_rules == {}
     assert processor.state.pending_removals is None
     assert processor.state.former_platform_removals is None
+
+
+def test_triggers_sharing_a_query_are_distinct_deployments(helper):
+    stricter = rule(SCHEDULED_RULE, triggerThreshold=20)
+    stricter["name"] = "stricter-rule"
+    processor = _processor(helper, [SCHEDULED_RULE, stricter])
+    objects = _run(processor)[0]
+
+    indicators = _of_type(objects, "indicator")
+    assert {i.pattern_type for i in indicators} == {"kql", "sentinel-rule"}
+    deployments = _of_type(objects, "relationship", "deployed-on")
+    assert {d.external_id for d in deployments} == {
+        SCHEDULED_RULE["name"],
+        "stricter-rule",
+    }
+    assert len(set(processor.state.deployed_rules.values())) == 2
+
+
+def test_trigger_change_removes_the_former_logic(helper):
+    processor = _processor(helper, [SCHEDULED_RULE])
+    _run(processor)
+    (former_indicator,) = processor.state.deployed_rules.values()
+
+    helper.api.indicator.list.return_value = [
+        {"standard_id": former_indicator, "x_opencti_stix_ids": []}
+    ]
+    raised = rule(SCHEDULED_RULE, triggerThreshold=20)
+    processor = _processor(helper, [raised], state=processor.state)
+    bundles = _run(processor)
+
+    (current,) = _of_type(bundles[0], "relationship", "deployed-on")
+    assert current.source_ref != former_indicator
+    (removed,) = _of_type(bundles[1], "relationship", "deployed-on")
+    assert (removed.source_ref, removed.deployment_status) == (
+        former_indicator,
+        "removed",
+    )
+    assert removed.external_id == SCHEDULED_RULE["name"]

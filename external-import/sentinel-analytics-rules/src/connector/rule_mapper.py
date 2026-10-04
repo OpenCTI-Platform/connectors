@@ -1,5 +1,6 @@
 """Microsoft Sentinel alert rule -> ``DetectionRule``."""
 
+import json
 from typing import Any
 
 from connector.attack_patterns import normalize_technique_id
@@ -14,6 +15,44 @@ from connector.detection_rule import (
 # Intelligence and Microsoft Security Incident Creation rules are built-in
 # correlations without detection logic to represent as a pattern.
 QUERY_RULE_KINDS = ("Scheduled", "NRT")
+# ``pattern_type`` of a rule whose detection logic is not its query alone.
+RULE_PATTERN_TYPE = "sentinel-rule"
+# Trigger of a rule alerting as soon as its query returns a result.
+_DEFAULT_TRIGGER = ("GreaterThan", 0)
+
+
+def rule_pattern(kind: str, properties: dict[str, Any]) -> tuple[str, str]:
+    """Return the Indicator ``pattern`` and ``pattern_type`` of a rule.
+
+    The KQL query is the pattern when the rule alerts as soon as it returns a
+    result. A Scheduled rule with another trigger (``triggerOperator`` and
+    ``triggerThreshold`` are applied outside the query) is represented by
+    the canonical JSON of its kind, query and trigger, under the
+    ``sentinel-rule`` pattern type: its Indicator changes with the trigger,
+    and two rules sharing a query but not their trigger are two Indicators.
+    """
+    query = str(properties["query"])
+    operator = properties.get("triggerOperator")
+    threshold = properties.get("triggerThreshold")
+    if kind != "Scheduled" or (operator is None and threshold is None):
+        return query, "kql"
+    try:
+        trigger = (operator or _DEFAULT_TRIGGER[0], int(threshold or 0))
+    except (TypeError, ValueError):
+        trigger = (operator or _DEFAULT_TRIGGER[0], threshold)
+    if trigger == _DEFAULT_TRIGGER:
+        return query, "kql"
+    pattern = json.dumps(
+        {
+            "kind": kind,
+            "query": query,
+            "triggerOperator": trigger[0],
+            "triggerThreshold": trigger[1],
+        },
+        sort_keys=True,
+        indent=2,
+    )
+    return pattern, RULE_PATTERN_TYPE
 
 
 def _techniques(properties: dict[str, Any]) -> dict[str, str | None]:
@@ -44,13 +83,14 @@ def map_rule(raw: dict[str, Any]) -> DetectionRule:
     if not rule_name:
         raise RuleSkippedError("no_rule_id")
     system_data = raw.get("systemData") or {}
+    pattern, pattern_type = rule_pattern(str(kind), properties)
 
     return DetectionRule(
         external_id=str(rule_name),
         name=properties.get("displayName") or str(rule_name),
         description=properties.get("description") or None,
-        pattern=str(query),
-        pattern_type="kql",
+        pattern=pattern,
+        pattern_type=pattern_type,
         enabled=bool(properties.get("enabled")),
         created_at=parse_timestamp(system_data.get("createdAt")),
         modified_at=parse_timestamp(

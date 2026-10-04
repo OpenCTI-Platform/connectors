@@ -382,3 +382,36 @@ def test_switched_platform_is_reconciled_while_the_former_removals_wait(helper):
     assert processor.state.deployed_rules == {}
     assert processor.state.pending_removals is None
     assert processor.state.former_platform_removals is None
+
+
+def test_triggers_sharing_a_search_are_distinct_deployments(helper):
+    stricter = entry(CORRELATION_SEARCH, alert_threshold="20")
+    stricter["name"] = "Stricter encoded PowerShell"
+    processor = _processor(helper, [CORRELATION_SEARCH, stricter])
+    objects = _run(processor)[0]
+
+    indicators = _of_type(objects, "indicator")
+    assert {i.pattern_type for i in indicators} == {"spl", "splunk-rule"}
+    assert len(set(processor.state.deployed_rules.values())) == 2
+
+
+def test_trigger_change_removes_the_former_logic(helper):
+    processor = _processor(helper, [CORRELATION_SEARCH])
+    _run(processor)
+    (former_indicator,) = processor.state.deployed_rules.values()
+
+    helper.api.indicator.list.return_value = [
+        {"standard_id": former_indicator, "x_opencti_stix_ids": []}
+    ]
+    raised = entry(CORRELATION_SEARCH, alert_threshold="20")
+    processor = _processor(helper, [raised], state=processor.state)
+    bundles = _run(processor)
+
+    (current,) = _of_type(bundles[0], "relationship", "deployed-on")
+    assert current.source_ref != former_indicator
+    (removed,) = _of_type(bundles[1], "relationship", "deployed-on")
+    assert (removed.source_ref, removed.deployment_status) == (
+        former_indicator,
+        "removed",
+    )
+    assert removed.external_id == CORRELATION_ID
