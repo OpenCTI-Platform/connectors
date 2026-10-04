@@ -5,9 +5,49 @@ The OpenSearch OCSF hunt connector executes the hunts of OpenCTI on security eve
 Amazon OpenSearch Service, Amazon Security Lake data indexed in OpenSearch...). It is a connector of type
 `INTERNAL_HUNT` registered for the `opensearch` hunt platform.
 
+## Before you start
+
+| | |
+|---|---|
+| Credential | An internal user of the OpenSearch security plugin (HTTP basic authentication); none for a cluster without the security plugin. |
+| Console | OpenSearch Dashboards: **Security > Roles** and **Security > Internal users**. |
+| Network | The OpenSearch REST API (port `9200` by default) reachable from the connector. |
+
+Step by step:
+
+1. In **Security > Roles > Create role**, create `opencti_hunt`: cluster permission `cluster:admin/opensearch/ppl` (PPL only); index permissions `read` and `indices:admin/mappings/get` on the index patterns of `OPENSEARCH_OCSF_HUNT_INDICES`.
+2. In **Security > Internal users > Create internal user**, create `svc_opencti_hunt` with a strong password.
+3. Open the role `opencti_hunt`, tab **Mapped users > Manage mapping**, and map `svc_opencti_hunt`.
+4. On Amazon OpenSearch Service, enable fine-grained access control and use a user of the internal user database.
+
+Least-privilege permissions:
+
+| Permission | Why |
+|---|---|
+| Cluster permission `cluster:admin/opensearch/ppl` | Run PPL queries (not needed with `opensearch-lucene` only). |
+| Index permission `read` on the index patterns of `OPENSEARCH_OCSF_HUNT_INDICES` | Search the OCSF events. |
+| Index permission `indices:admin/mappings/get` on the same patterns | PPL reads the index mappings to resolve fields. |
+
+Leave `OPENSEARCH_OCSF_HUNT_USERNAME` and `OPENSEARCH_OCSF_HUNT_PASSWORD` empty for a cluster without the security plugin.
+
+Copy-ready configuration (`.env` of the `docker-compose.yml`):
+
+```env
+OPENCTI_URL=https://opencti.example.com
+OPENCTI_TOKEN=ChangeMe
+CONNECTOR_ID=ChangeMe-UUIDv4
+OPENSEARCH_OCSF_HUNT_URL=https://opensearch.example.com:9200
+OPENSEARCH_OCSF_HUNT_USERNAME=svc_opencti_hunt
+OPENSEARCH_OCSF_HUNT_PASSWORD=ChangeMe
+OPENSEARCH_OCSF_HUNT_INDICES=ocsf-*
+```
+
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It runs one search on the hunted indices. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+
 Table of Contents
 
 - [OpenCTI OpenSearch OCSF Hunt Connector](#opencti-opensearch-ocsf-hunt-connector)
+  - [Before you start](#before-you-start)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -54,17 +94,7 @@ truncated.
 
 ### OpenSearch permissions
 
-With the security plugin, create a dedicated internal user (for example `svc_opencti_hunt`) mapped to a role granting:
-
-| Permission | Why |
-|---|---|
-| Cluster permission `cluster:admin/opensearch/ppl` | Run PPL queries (not needed with `opensearch-lucene` only). |
-| Index permissions `read` on the index patterns of `OPENSEARCH_OCSF_HUNT_INDICES` | Search the OCSF events. |
-| Index permission `indices:admin/mappings/get` on the same patterns | PPL reads the index mappings to resolve fields. |
-
-The connector authenticates with HTTP basic authentication. On Amazon OpenSearch Service, enable fine-grained access
-control and use a user of the internal user database. Leave `OPENSEARCH_OCSF_HUNT_USERNAME` and
-`OPENSEARCH_OCSF_HUNT_PASSWORD` empty for a cluster without the security plugin.
+The account, the least-privilege permissions, the console steps and a configuration example are in [Before you start](#before-you-start).
 
 ## Configuration variables
 

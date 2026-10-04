@@ -46,10 +46,39 @@ def strip_statement_end(query: str) -> str:
     return query.strip().rstrip(";").rstrip()
 
 
+DOCUMENTATION_URL = (
+    "https://docs.opencti.io/latest/usage/hunt-connectors/#opensearch-ocsf"
+)
+
+REQUIRED_PERMISSIONS = (
+    (
+        "cluster:admin/opensearch/ppl",
+        "Cluster permission: run the PPL queries of the hunts (not needed with opensearch-lucene only).",
+    ),
+    (
+        "read on OPENSEARCH_OCSF_HUNT_INDICES",
+        "Index permission: search the OCSF events.",
+    ),
+    (
+        "indices:admin/mappings/get on OPENSEARCH_OCSF_HUNT_INDICES",
+        "Index permission: PPL reads the index mappings to resolve the fields.",
+    ),
+)
+"""Least-privilege permissions of the account of the connector, as (name, purpose)."""
+
+ACCESS_DENIED_HINTS = {
+    401: "OpenSearch refused the user name and password: check OPENSEARCH_OCSF_HUNT_USERNAME and OPENSEARCH_OCSF_HUNT_PASSWORD, an internal user of the security plugin",
+    403: "the role mapped to the user needs cluster:admin/opensearch/ppl, and read and indices:admin/mappings/get on OPENSEARCH_OCSF_HUNT_INDICES",
+}
+"""What a refused account lacks, by HTTP status."""
+
+
 class OpenSearchOcsfHuntConnector(InternalHuntConnector):
     """Hunt connector running Sigma, PPL and Lucene hunts on OCSF events in OpenSearch."""
 
     languages = ("ppl", "opensearch-lucene")
+    required_permissions = REQUIRED_PERMISSIONS
+    documentation_url = DOCUMENTATION_URL
     evidence_excluded_fields = RAW_FIELDS
 
     def __init__(self, settings: ConnectorSettings) -> None:
@@ -74,6 +103,11 @@ class OpenSearchOcsfHuntConnector(InternalHuntConnector):
             timestamp_field=config.timestamp_field,
             timestamp_format=config.timestamp_format,
         )
+        self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
+
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search: one event of the hunted indices."""
+        return NativeQuery(language="opensearch-lucene", query="*")
 
     def sigma_backend(self, pipeline: str | None) -> Backend:
         """Create the pySigma backend of the configured query language.

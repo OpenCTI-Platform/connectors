@@ -374,6 +374,11 @@ def test_start_registers_the_opensearch_platform_and_listens():
         supports_preview=True,
         max_concurrent_runs=None,
         supports_indicators=False,
+        required_permissions=[
+            {"name": name, "purpose": purpose}
+            for name, purpose in OpenSearchOcsfHuntConnector.required_permissions
+        ],
+        documentation_url=OpenSearchOcsfHuntConnector.documentation_url,
     )
     helper.listen_hunt.assert_called_once_with(
         message_callback=connector.process_message

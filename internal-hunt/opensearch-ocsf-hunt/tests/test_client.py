@@ -222,8 +222,8 @@ def test_ppl_keeps_generic_errors(requests_mock, response):
     # Given a failure without PPL error details
     requests_mock.post(PPL_URL, **response)
 
-    # When/Then the generic hunt error is raised
-    with pytest.raises(HuntExecutionError, match="The PPL query failed"):
+    # When/Then the generic hunt error is raised (access denied for a refused account)
+    with pytest.raises(HuntExecutionError, match="The PPL query (failed|was refused)"):
         _client().ppl("source=x", START, END, 10, RunDeadline(30))
 
 
