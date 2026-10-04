@@ -252,8 +252,9 @@ does not exist). Observables streamed directly (not as indicators) are pushed as
 - **Detection rules**: an indicator with a native Elastic pattern (KQL, Lucene, EQL, ES|QL) is a SIEM rule (type
   `query`, `eql` or `esql`) plus its threat intel document. The document is written only once the rule is created or
   updated, and deleted only once the rule is: when the rule cannot be looked up, written or deleted, the indicator is
-  reported `failed` (or not reported `removed`) and the next push or removal tries again. An indicator pushed again or
-  replayed updates the rules created from it instead of creating a second one.
+  reported `failed` (or not reported `removed`) and the next push or removal tries again. A rule created for a document
+  that cannot be written is deleted again, and a new document replaces the previous one only once it is stored. An
+  indicator pushed again or replayed updates the rules created from it instead of creating a second one.
 - **Hits**: not reported. Elastic records indicator matches as alerts of its detection rules, which this connector does
   not read.
 - **Permissions**: the API key needs the `read` and `view_index_metadata` privileges on the index (point in time and

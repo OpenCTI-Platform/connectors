@@ -2,16 +2,20 @@
 Regression tests for issue #6344: duplicate indicators caused by
 ``version_conflict_engine_exception`` (HTTP 409) during indicator deletion.
 
-The fix makes ``create_indicator`` idempotent (deduplicate before insert) and
-runs every ``_delete_by_query`` with ``conflicts=proceed`` so a version conflict
-can no longer abort the deletion and leave stale duplicates behind.
+The fix makes ``create_indicator`` idempotent (the other copies are deleted once
+the new document is stored, so a failed write keeps the previous one) and runs
+every ``_delete_by_query`` with ``conflicts=proceed`` so a version conflict can no
+longer abort the deletion and leave stale duplicates behind.
 """
 
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 import requests_mock as rm_module
-from elastic_security_intel_connector.api_handler import ElasticApiHandler
+from elastic_security_intel_connector.api_handler import (
+    ElasticApiHandler,
+    ElasticApiHandlerError,
+)
 
 ELASTIC_URL = "http://elastic.test:9200"
 INDEX_NAME = "logs-ti_custom_opencti.indicator"
@@ -82,26 +86,51 @@ def _doc_requests(mock):
     return [r for r in mock.request_history if r.path.endswith("/_doc")]
 
 
-def test_create_indicator_deduplicates_before_insert(
-    handler, observable, requests_mock
+@pytest.mark.parametrize("write", ["create_indicator", "update_indicator"])
+def test_a_write_stores_the_document_then_deletes_the_other_copies(
+    handler, observable, requests_mock, write
 ):
-    """A create must first delete any existing doc, so a replayed create event
-    cannot accumulate duplicates."""
+    """A replayed create cannot accumulate duplicates, and the previous document
+    stays until the new one is stored."""
     requests_mock.post(DELETE_URL, json={"deleted": 1})
     requests_mock.post(
         DOC_URL, json={"_id": "abc", "result": "created"}, status_code=201
     )
 
-    handler.create_indicator(observable)
+    assert getattr(handler, write)(observable)["id"] == "abc"
 
-    deletes = _delete_by_query_requests(requests_mock)
-    docs = _doc_requests(requests_mock)
-    assert len(deletes) == 1, "create_indicator must deduplicate before inserting"
-    assert len(docs) == 1
-    # deletion must happen before the insertion
-    assert requests_mock.request_history.index(
-        deletes[0]
-    ) < requests_mock.request_history.index(docs[0])
+    (delete,) = _delete_by_query_requests(requests_mock)
+    (doc,) = _doc_requests(requests_mock)
+    history = requests_mock.request_history
+    assert history.index(doc) < history.index(delete)
+    assert delete.json()["query"]["bool"] == {
+        "filter": [{"term": {"opencti_doc_id": doc.json()["opencti_doc_id"]}}],
+        "must_not": [{"ids": {"values": ["abc"]}}],
+    }
+
+
+@pytest.mark.parametrize("write", ["create_indicator", "update_indicator"])
+def test_a_failed_write_keeps_the_previous_document(
+    handler, observable, requests_mock, write
+):
+    requests_mock.post(DELETE_URL, json={"deleted": 1})
+    requests_mock.post(DOC_URL, status_code=500, text="boom")
+
+    with pytest.raises(ElasticApiHandlerError):
+        getattr(handler, write)(observable)
+    assert _delete_by_query_requests(requests_mock) == []
+
+
+def test_a_failed_cleanup_after_a_stored_write_is_not_a_failed_write(
+    handler, observable, requests_mock
+):
+    """The object is written; the remaining copies are deleted by its next write."""
+    requests_mock.post(DELETE_URL, status_code=500, text="busy")
+    requests_mock.post(
+        DOC_URL, json={"_id": "abc", "result": "created"}, status_code=201
+    )
+
+    assert handler.update_indicator(observable)["id"] == "abc"
 
 
 def test_create_indicator_uses_conflicts_proceed(handler, observable, requests_mock):
@@ -116,7 +145,7 @@ def test_create_indicator_uses_conflicts_proceed(handler, observable, requests_m
     assert delete.qs.get("conflicts") == ["proceed"]
 
 
-def test_update_indicator_deletes_then_recreates_with_proceed(
+def test_update_indicator_recreates_then_deletes_with_proceed(
     handler, observable, requests_mock
 ):
     requests_mock.post(DELETE_URL, json={"deleted": 1})
@@ -353,6 +382,35 @@ def test_update_leaves_the_threat_intel_document_when_the_rule_update_fails(
 
     assert kibana_handler.process_indicator(native_indicator, "update") is False
     assert _doc_requests(requests_mock) == []
+    assert _delete_by_query_requests(requests_mock) == []
+
+
+@pytest.mark.parametrize("rollback_status", [200, 500])
+def test_a_rule_created_for_a_document_not_written_is_deleted_again(
+    kibana_handler, native_indicator, requests_mock, rollback_status
+):
+    """A rule without its threat intel entry would detect unseen by the read-back."""
+    requests_mock.get(FIND_RULES_URL, json={"data": [], "total": 0})
+    requests_mock.post(RULES_URL, json={"id": "rule-1"})
+    requests_mock.delete(RULES_URL, status_code=rollback_status, json={})
+    requests_mock.post(DOC_URL, status_code=500, text="boom")
+
+    assert kibana_handler.process_indicator(native_indicator, "create") is False
+
+    (rollback,) = _rule_requests(requests_mock, "DELETE")
+    assert _query(rollback)["id"] == ["rule-1"]
+
+
+def test_updated_rules_keep_the_previous_document_when_the_new_one_fails(
+    kibana_handler, native_indicator, requests_mock
+):
+    """Existing rules are not deleted: they match the previous document, kept."""
+    requests_mock.get(FIND_RULES_URL, json={"data": [{"id": "rule-1"}], "total": 1})
+    requests_mock.patch(RULES_URL, json={"id": "rule-1"})
+    requests_mock.post(DOC_URL, status_code=500, text="boom")
+
+    assert kibana_handler.process_indicator(native_indicator, "update") is False
+    assert _rule_requests(requests_mock, "DELETE") == []
     assert _delete_by_query_requests(requests_mock) == []
 
 
