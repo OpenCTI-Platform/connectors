@@ -81,6 +81,43 @@ def test_make_request_raises_on_non_json_success(client):
     assert "Invalid JSON" in str(exc.value)
 
 
+@pytest.mark.parametrize(
+    "body, message",
+    [
+        (["unexpected"], "the body is not a JSON object"),
+        (
+            {"success": False, "errors": [{"code": 10000, "message": "denied"}]},
+            "API request failed: [{'code': 10000, 'message': 'denied'}]",
+        ),
+    ],
+)
+def test_make_request_rejects_an_unexpected_success_body(client, body, message):
+    resp = _response(body)
+    resp.status_code = 200
+    client._session.request.return_value = resp
+    with pytest.raises(CloudflareAPIError) as exc:
+        client._make_request("PUT", "/x", data=[])
+    assert message in str(exc.value)
+    assert exc.value.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda c: c.replace_list_items("list-1", [{"ip": "192.0.2.1"}]),
+        lambda c: c.delete_list_items("list-1", ["item-1"]),
+        lambda c: c.get_bulk_operation("op-1"),
+        lambda c: c.get_list("list-1"),
+    ],
+)
+def test_a_result_that_is_not_an_object_is_rejected(client, call):
+    client._session.request.return_value = _response({"result": ["op-1"]})
+    with pytest.raises(CloudflareAPIError) as exc:
+        call(client)
+    assert "'result' is not an object" in str(exc.value)
+    assert exc.value.status_code == 200
+
+
 def test_make_request_uses_custom_timeout(client):
     client._session.request.return_value = _response({"result": {}})
     client._make_request("PUT", "/x", data=[], timeout=300)

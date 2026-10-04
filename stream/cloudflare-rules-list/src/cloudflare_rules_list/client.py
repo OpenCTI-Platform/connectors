@@ -38,6 +38,24 @@ class CloudflareOperationError(CloudflareAPIError):
         self.timed_out = timed_out
 
 
+def _result_object(payload: dict) -> dict:
+    """Return the ``result`` object of a Cloudflare response (empty when absent).
+
+    Raises:
+        CloudflareAPIError: When ``result`` is not an object, with a success status
+            so that the shared "unexpected response" reason applies.
+    """
+    result = payload.get("result")
+    if result is None:
+        return {}
+    if not isinstance(result, dict):
+        raise CloudflareAPIError(
+            "Unexpected Cloudflare response: 'result' is not an object",
+            status_code=200,
+        )
+    return result
+
+
 class CloudflareRulesListClient:
     """Client for the Cloudflare Rules Lists API."""
 
@@ -110,12 +128,23 @@ class CloudflareRulesListClient:
             ) from exc
 
         try:
-            return response.json()
+            payload = response.json()
         except (json.JSONDecodeError, ValueError) as exc:
             raise CloudflareAPIError(
                 f"Invalid JSON in Cloudflare response: {response.text[:200]}",
                 status_code=response.status_code,
             ) from exc
+        if not isinstance(payload, dict):
+            raise CloudflareAPIError(
+                "Unexpected Cloudflare response: the body is not a JSON object",
+                status_code=response.status_code,
+            )
+        if payload.get("success") is False:
+            raise CloudflareAPIError(
+                f"API request failed: {payload.get('errors')}",
+                status_code=response.status_code,
+            )
+        return payload
 
     def list_lists(self) -> list[dict]:
         """List all rules lists in the account."""
@@ -125,7 +154,7 @@ class CloudflareRulesListClient:
     def get_list(self, list_id: str) -> dict:
         """Get a specific list's metadata."""
         response = self._make_request("GET", f"/rules/lists/{list_id}")
-        return response.get("result", {})
+        return _result_object(response)
 
     def get_list_items(self, list_id: str, cursor: Optional[str] = None) -> dict:
         """Get a page of items from a list."""
@@ -227,7 +256,7 @@ class CloudflareRulesListClient:
             f"/rules/lists/{list_id}/items",
             data={"items": [{"id": item_id} for item_id in item_ids]},
         )
-        return response.get("result", {})
+        return _result_object(response)
 
     def replace_list_items(self, list_id: str, items: list[dict]) -> dict:
         """Replace ALL items in a list with the provided items (snapshot).
@@ -243,14 +272,14 @@ class CloudflareRulesListClient:
         response = self._make_request(
             "PUT", f"/rules/lists/{list_id}/items", data=items, timeout=300
         )
-        return response.get("result", {})
+        return _result_object(response)
 
     def get_bulk_operation(self, operation_id: str) -> dict:
         """Get the status of a bulk operation."""
         response = self._make_request(
             "GET", f"/rules/lists/bulk_operations/{operation_id}"
         )
-        return response.get("result", {})
+        return _result_object(response)
 
     def wait_for_operation(
         self, operation_id: str, timeout: int = 300, poll_interval: int = 2

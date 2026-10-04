@@ -288,6 +288,13 @@ def test_failed_upload_reports_the_new_indicators_failed(connector, assurance):
             CloudflareOperationError("Bulk operation timed out", timed_out=True),
             "Cloudflare did not complete the list update in time",
         ),
+        (
+            CloudflareAPIError(
+                "Unexpected Cloudflare response: 'result' is not an object",
+                status_code=200,
+            ),
+            "Cloudflare returned an unexpected response to the list update",
+        ),
     ],
 )
 def test_failed_upload_reasons_name_cloudflare_and_the_cause(
