@@ -899,12 +899,14 @@ class DeploymentReconciler:
 
         Returns:
             An ``active`` report, the report of the new push, or ``None`` for a
-            ``failed`` deployment only partly on the vendor.
+            ``failed`` deployment only partly on the vendor, and for a deployment
+            only partly listed by a truncated read-back.
         """
-        # A truncated read-back may hold the other vendor items beyond its limit.
-        if not summary.vendor_listing_truncated and not adapter.is_complete(
-            deployment, vendor_matches
-        ):
+        if not adapter.is_complete(deployment, vendor_matches):
+            if summary.vendor_listing_truncated:
+                # The other vendor items may sit beyond the read-back limit: they
+                # are unknown, so the deployment is neither confirmed nor pushed.
+                return None
             summary.incomplete += 1
             if deployment.status == DeploymentStatus.FAILED:
                 # Stays failed until an analyst requests a new push.

@@ -987,10 +987,11 @@ def test_a_hit_matched_by_value_only_credits_the_indicators_pushing_it(
     ] == ["b"]
 
 
-def test_truncated_read_back_does_not_push_a_partly_listed_indicator_again(
+def test_truncated_read_back_neither_confirms_nor_pushes_a_partly_listed_indicator(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):
-    """The vendor items beyond the read-back limit are unknown, not missing."""
+    """The vendor items beyond the read-back limit are unknown: neither missing,
+    nor present."""
     list_nodes(
         node_factory(
             indicator_id="a", status="active", pattern=FILE_PATTERN, external_id="1"
@@ -1008,9 +1009,13 @@ def test_truncated_read_back_does_not_push_a_partly_listed_indicator_again(
     ).run_once()
 
     assert summary.vendor_listing_truncated
-    assert (summary.incomplete, summary.repushed) == (0, 0)
+    assert (summary.incomplete, summary.repushed, summary.confirmed_active) == (
+        0,
+        0,
+        0,
+    )
     assert adapter.pushed == []
-    assert reported()["a"]["status"] == "active"
+    assert "a" not in reported()
 
 
 def test_truncated_read_back_skips_absence_decisions(
