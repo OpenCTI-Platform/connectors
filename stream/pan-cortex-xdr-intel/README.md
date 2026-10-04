@@ -136,8 +136,8 @@ does not exist), and detection hits are counted with a sighting of the indicator
   hit, dated at its creation time, for every deployed indicator whose value is one of its IP addresses, host names, DNS
   queries, email addresses or file hashes (domain indicators match the host of a URL value); an alert detected before
   the previous run but created after it is counted; hits already reported are never counted twice. A malformed alert
-  (a row that is not an object, or an alert without creation or detection time) fails the hit read, and the next run
-  reads the same window again.
+  (a row that is not an object, or an alert without creation or detection time) or an alert page repeated by the API
+  fails the hit read, and the next run reads the same window again.
 - **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
   the requests only target indicators this connector reports `deployed` or `active`. The two analyst requests carried by
   a deployment are handled by the reconciliation: a retry (`pending`) upserts the indicator again, a withdrawal deletes

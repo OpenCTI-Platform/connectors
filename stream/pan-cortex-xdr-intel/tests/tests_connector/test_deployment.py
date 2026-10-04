@@ -514,6 +514,18 @@ def test_get_ioc_alerts_stops_on_a_short_page_and_raises_on_errors(xdr_client):
             xdr_client.get_ioc_alerts(datetime.now(UTC))
 
 
+def test_get_ioc_alerts_detects_an_ignored_pagination(xdr_client, monkeypatch):
+    monkeypatch.setattr("cortex_xdr_client.client.PAGE_SIZE", 2)
+    page = {"reply": {"alerts": [{"alert_id": 1}, {"alert_id": 2}]}}
+    with patch.object(xdr_client._session, "request") as request:
+        request.return_value = mock_response(page)
+
+        with pytest.raises(CortexXdrApiError, match="same alert page twice"):
+            xdr_client.get_ioc_alerts(datetime.now(UTC), max_alerts=10)
+
+    assert request.call_count == 2
+
+
 # Vendor adapter
 
 

@@ -252,13 +252,16 @@ class CortexXdrClient(BaseClientApi):
         is complete until the newest alert returned.
 
         Raises:
-            CortexXdrApiError: On any API error or an unexpected payload.
+            CortexXdrApiError: On any API error, an unexpected payload or a page
+                repeating the previous one (pagination not honored): the same alerts
+                are never returned twice.
 
         Reference:
             https://cortex-docs.paloaltonetworks.com/xdr-5-api/cortex-xdr-api/get-alerts-multi-events
         """
         since_ms = int(since.timestamp() * 1000)
         alerts: list[dict[str, Any]] = []
+        previous_first: Any = None
         while len(alerts) < max_alerts:
             size = min(PAGE_SIZE, max_alerts - len(alerts))
             try:
@@ -288,6 +291,18 @@ class CortexXdrClient(BaseClientApi):
             except ApiClientError as err:
                 raise CortexXdrApiError("Error while fetching Cortex XDR API") from err
             page = _reply_list(response, "alerts", "alerts/get_alerts_multi_events")
+            if page:
+                first = (
+                    page[0].get("alert_id"),
+                    page[0].get("local_insert_ts"),
+                    page[0].get("detection_timestamp"),
+                )
+                if alerts and first == previous_first:
+                    raise CortexXdrApiError(
+                        "Cortex XDR returned the same alert page twice, "
+                        "the alert pagination is not honored"
+                    )
+                previous_first = first
             alerts.extend(page[:size])
             if len(page) < size:
                 break
