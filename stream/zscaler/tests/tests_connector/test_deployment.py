@@ -218,6 +218,69 @@ def test_refused_domain_is_reported_failed(connector):
     )
 
 
+@pytest.mark.parametrize(
+    "category",
+    [
+        response(json_data=ValueError("no json"), text="<html>"),
+        response(json_data=["evil.example"]),
+        response(json_data={"id": "blacklist", "urls": "evil.example.org"}),
+    ],
+)
+def test_malformed_blacklist_on_create_is_reported_failed(connector, category):
+    zscaler = FakeZscaler().install(connector)
+    connector.session.get.side_effect = None
+    connector.session.get.return_value = category
+    indicator = make_indicator()
+
+    connector._process_message(make_message("create", indicator))
+
+    (reported, error), _ = connector.assurance.report_push_failed.call_args
+    assert reported == indicator
+    assert error == "Zscaler returned an unexpected response to the blacklist read"
+    assert zscaler.puts == []
+    connector.assurance.report_pushed.assert_not_called()
+
+
+def test_malformed_configured_name_read_on_create_is_reported_failed(connector):
+    zscaler = FakeZscaler().install(connector)
+    connector.session.get.side_effect = [
+        response(json_data={"id": "blacklist", "configuredName": "Blacklist"}),
+        response(json_data=[]),
+    ]
+    indicator = make_indicator()
+
+    connector._process_message(make_message("create", indicator))
+
+    (reported, error), _ = connector.assurance.report_push_failed.call_args
+    assert reported == indicator
+    assert error == "Zscaler returned an unexpected response to the blacklist read"
+    assert zscaler.puts == []
+
+
+@pytest.mark.parametrize(
+    "lookup",
+    [
+        response(json_data=ValueError("no json"), text="<html>"),
+        response(json_data=["MISCELLANEOUS"]),
+    ],
+)
+def test_unreadable_classification_does_not_block_the_create(connector, lookup):
+    zscaler = FakeZscaler().install(connector)
+    connector.session.post.side_effect = None
+    connector.session.post.return_value = lookup
+    indicator = make_indicator()
+
+    connector._process_message(make_message("create", indicator))
+
+    assert [url for url, _payload in zscaler.puts] == [
+        f"{CATEGORY_URL}?action=ADD_TO_LIST"
+    ]
+    connector.assurance.report_pushed.assert_called_once_with(indicator)
+    connector.helper.connector_logger.error.assert_any_call(
+        "Failed to lookup domain evil.example in Zscaler."
+    )
+
+
 def test_deleted_domain_is_removed_and_reported(connector):
     zscaler = FakeZscaler(urls=["evil.example", "other.example"]).install(connector)
     indicator = make_indicator()
@@ -745,6 +808,22 @@ def test_adapter_push_raises_the_reason_and_logs_the_detail(connector):
         "indicator_id": indicator["id"],
         "error": "Request failed with status 403: INVALID_INPUT_ARGUMENT",
     }
+
+
+def test_adapter_push_with_a_malformed_blacklist_raises_the_reason(connector):
+    zscaler = FakeZscaler().install(connector)
+    connector.session.get.side_effect = None
+    connector.session.get.return_value = response(json_data=["new.example"])
+
+    with pytest.raises(ZscalerDeploymentError) as raised:
+        ZscalerDeploymentAdapter(connector).push_indicator(
+            make_indicator(domain="new.example")
+        )
+
+    assert str(raised.value) == (
+        "Zscaler returned an unexpected response to the blacklist read"
+    )
+    assert zscaler.puts == []
 
 
 # Settings and wiring

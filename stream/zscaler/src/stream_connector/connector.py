@@ -85,6 +85,50 @@ ACTIVATION_POLL_SECONDS = 5
 """Seconds between two checks of a Zscaler configuration activation in progress."""
 
 
+def _category_of(response: requests.Response) -> dict[str, Any]:
+    """Return the URL category of a successful Zscaler response.
+
+    :raises ZscalerApiError: With the response status when the body is not a URL
+        category, so that the shared "unexpected response" reason applies.
+    """
+    try:
+        category = response.json()
+    except ValueError as err:
+        raise ZscalerApiError(
+            "Unexpected URL category response: the body is not JSON",
+            status_code=response.status_code,
+            action=READ_ACTION,
+        ) from err
+    if not isinstance(category, dict) or not (
+        "id" in category or "configuredName" in category
+    ):
+        raise ZscalerApiError(
+            "Unexpected URL category response: not a URL category",
+            status_code=response.status_code,
+            action=READ_ACTION,
+        )
+    return category
+
+
+def _category_urls(response: requests.Response) -> list[str]:
+    """Return the URLs of the URL category of a successful Zscaler response.
+
+    :raises ZscalerApiError: With the response status when the body is not a URL
+        category or its `urls` is not a list of URL entries: a partial listing is
+        never returned.
+    """
+    urls = _category_of(response).get("urls", [])
+    if not isinstance(urls, list) or not all(
+        isinstance(url, str) and url for url in urls
+    ):
+        raise ZscalerApiError(
+            "Unexpected URL category response: 'urls' is not a list of URL entries",
+            status_code=response.status_code,
+            action=READ_ACTION,
+        )
+    return urls
+
+
 def _activation_status(response) -> str | None:
     """Return the activation status (`ACTIVE`, `PENDING`, `INPROGRESS`) of a ZIA response."""
     try:
@@ -288,7 +332,11 @@ class ZscalerConnector:
         return None
 
     def get_domain_classification_in_zscaler(self, domain):
-        """Retrieve the classification of a domain in Zscaler via the urlLookup API."""
+        """Retrieve the classification of a domain in Zscaler via the urlLookup API.
+
+        The classification is only logged: a failed lookup, or a reply that is not a
+        list of lookup results, is logged and returns None.
+        """
 
         lookup_url = f"{self.zscaler_base_url}/urlLookup"
         payload = json.dumps([domain])
@@ -298,8 +346,15 @@ class ZscalerConnector:
         msg = f"=== Checking domain {domain} ==="
         self.helper.connector_logger.debug(msg)
         if response and response.status_code == 200:
-            lookup_data = response.json()
-            if isinstance(lookup_data, list) and len(lookup_data) > 0:
+            try:
+                lookup_data = response.json()
+            except ValueError:
+                lookup_data = None
+            if (
+                isinstance(lookup_data, list)
+                and len(lookup_data) > 0
+                and isinstance(lookup_data[0], dict)
+            ):
                 return lookup_data[0].get("urlClassifications", [])
         self.helper.connector_logger.error(
             f"Failed to lookup domain {domain} in Zscaler."
@@ -307,14 +362,18 @@ class ZscalerConnector:
         return None
 
     def get_zscaler_blocked_domains(self):
-        """Retrieve the list of blocked domains in the specified Zscaler blacklist."""
+        """Retrieve the list of blocked domains in the specified Zscaler blacklist.
+
+        :raises ZscalerApiError: When the successful response is not a URL category
+            with a list of URL entries.
+        """
 
         # Dynamic URL for blacklisting
         url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
         response = self.handle_rate_limit(self.session.get, url)
 
         if response and response.status_code == 200:
-            return response.json().get("urls", [])
+            return _category_urls(response)
         code = response.status_code if response else "No response"
         text = response.text if response else "No text"
 
@@ -329,39 +388,17 @@ class ZscalerConnector:
             a partial listing is never returned.
         """
         url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
-        response = self.request_zscaler(self.session.get, url)
-        try:
-            category = response.json()
-        except ValueError as err:
-            raise ZscalerApiError(
-                "Unexpected URL category response: the body is not JSON",
-                status_code=response.status_code,
-                action=READ_ACTION,
-            ) from err
-        if not isinstance(category, dict) or not (
-            "id" in category or "configuredName" in category
-        ):
-            raise ZscalerApiError(
-                "Unexpected URL category response: not a URL category",
-                status_code=response.status_code,
-                action=READ_ACTION,
-            )
-        urls = category.get("urls", [])
-        if not isinstance(urls, list) or not all(
-            isinstance(url, str) and url for url in urls
-        ):
-            raise ZscalerApiError(
-                "Unexpected URL category response: 'urls' is not a list of URL entries",
-                status_code=response.status_code,
-                action=READ_ACTION,
-            )
-        return urls
+        return _category_urls(self.request_zscaler(self.session.get, url))
 
     def get_current_configured_name(self):
+        """Return the configured name of the blacklist URL category.
+
+        :raises ZscalerApiError: When the successful response is not a URL category.
+        """
         url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
         response = self.handle_rate_limit(self.session.get, url)
         if response and response.status_code == 200:
-            return response.json().get("configuredName")
+            return _category_of(response).get("configuredName")
         return None
 
     def check_and_send_to_zscaler(self, data, event_type, indicator_ids=()):

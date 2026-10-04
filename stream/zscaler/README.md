@@ -241,7 +241,7 @@ Platform entity (created if it does not exist).
 | When                                      | Reported to OpenCTI                                                                                    |
 |-------------------------------------------|--------------------------------------------------------------------------------------------------------|
 | Domain added (or already listed)          | `deployed`                                                                                             |
-| Domain rejected by Zscaler                | `failed`, with a short reason such as "Zscaler refused the blacklist update: permission denied" or "Zscaler did not complete the configuration activation in time" (the Zscaler response is written to the connector log) |
+| Domain rejected by Zscaler                | `failed`, with a short reason such as "Zscaler refused the blacklist update: permission denied" or "Zscaler did not complete the configuration activation in time" (the Zscaler response is written to the connector log); a malformed URL category read before the update is reported "Zscaler returned an unexpected response to the blacklist read" |
 | Invalid domain pattern                    | Nothing: the indicator is never pushed                                                                 |
 | Delete event processed                    | `removed` (also when the domain was already absent, or kept for another indicator); nothing when the blacklist or the other indicators cannot be read |
 | Reconciliation, domain present            | `active`                                                                                               |
