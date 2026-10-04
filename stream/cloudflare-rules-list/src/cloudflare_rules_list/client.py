@@ -183,15 +183,14 @@ class CloudflareRulesListClient:
         """Return the cursor of the next list items page, None after the last one.
 
         Raises:
-            CloudflareAPIError: When the pagination metadata is malformed, so that a
-                read-back is never cut short.
+            CloudflareAPIError: When the pagination metadata is missing or malformed
+                (Cloudflare always returns ``result_info`` on list items pages), so that
+                a read-back is never cut short.
         """
         result_info = response.get("result_info")
-        if result_info is None:
-            return None
         if not isinstance(result_info, dict):
             raise CloudflareAPIError(
-                "Unexpected list items response: 'result_info' is not an object",
+                "Unexpected list items response: 'result_info' is missing or not an object",
                 status_code=200,
             )
         cursors = result_info.get("cursors")

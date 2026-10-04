@@ -781,7 +781,12 @@ def test_iter_list_items_follows_the_cursors():
     [
         ([{"errors": []}], "'result' is not a list"),
         ([{"result": [{"id": "1"}, "junk"]}], "an item is not an object"),
-        ([{"result": [], "result_info": []}], "'result_info' is not an object"),
+        (
+            [{"result": [], "result_info": []}],
+            "'result_info' is missing or not an object",
+        ),
+        # A page without its pagination metadata never ends the read-back
+        ([{"result": [{"id": "1"}]}], "'result_info' is missing or not an object"),
         (
             [{"result": [], "result_info": {"cursors": "c1"}}],
             "'cursors' is not an object",
