@@ -402,6 +402,7 @@ def test_start_registers_the_elastic_platform_and_listens():
         security_platform_type="SIEM",
         supports_preview=True,
         max_concurrent_runs=None,
+        supports_indicators=False,
     )
     helper.listen_hunt.assert_called_once_with(
         message_callback=connector.process_message

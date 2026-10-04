@@ -17,6 +17,7 @@ Table of Contents
   - [Usage](#usage)
   - [Query languages](#query-languages)
   - [Behavior](#behavior)
+    - [Indicator hunts](#indicator-hunts)
   - [Limits](#limits)
   - [Debugging](#debugging)
   - [Additional information](#additional-information)
@@ -33,6 +34,9 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
 3. sends the resulting knowledge to OpenCTI: a sighting of every technique and indicator of the hunt on the Splunk
    Security Platform identity, and observed-data referencing the IOC observables found in the results;
 4. reports the run (hit count, distinct hosts/users/peers, translated query, redacted evidence sample).
+
+Indicator hunts (a list of IP addresses, domains, URLs or hashes, no query language) are looked up value by value, see
+[Indicator hunts](#indicator-hunts).
 
 Raw events never leave Splunk: OpenCTI only receives counts and evidence values that are SHA-256 hashed and truncated.
 
@@ -166,6 +170,23 @@ The connector executes `spl`.
 
 No incident is created by the connector: OpenCTI drafts incidents itself when the hits exceed the escalation threshold
 of the hunt.
+
+### Indicator hunts
+
+An indicator hunt carries a list of values instead of a query: IP addresses, domains, host names, URLs, email
+addresses, MAC addresses and file hashes, taken by OpenCTI from indicators, observables, reports, threats or pasted as
+text. The connector registers as supporting indicator lookups and, for each run:
+
+1. groups the values by observable type in batches of `limits.ioc_batch_size` values (50 by default);
+2. runs one search per batch over the run window, within the search prefix:
+   `search (<prefix>) ("198.51.100.7" OR "198.51.100.8") | eval ioc=mvappend(if(match(_raw, ...), "<key>", null()), ...) | stats count as hits min(_time) as first_seen max(_time) as last_seen values(host) as hosts by ioc`.
+   Each event is credited to every value its raw text holds as a whole token (`198.51.100.7` never matches
+   `198.51.100.70`, `evil.com` matches `cdn.evil.com` but not `evil.com.au`), so the counts are exact;
+3. reports, for every value, whether it was seen, its hits, its first and last event and at most ten hosts;
+4. sends one sighting per seen value on the Splunk Security Platform, for each indicator or observable the value comes
+   from (a pasted value is created as an observable and sighted), with the hits as `count`.
+
+Preview the query in OpenCTI shows the searches of every batch without running them.
 
 ## Limits
 

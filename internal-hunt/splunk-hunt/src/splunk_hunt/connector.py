@@ -11,10 +11,12 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntResult,
     HuntTimeWindow,
     HuntTranslationError,
+    IocBatch,
     NativeQuery,
     RunDeadline,
     build_pipeline,
     parse_timestamp,
+    value_pattern,
 )
 from sigma.backends.splunk import SplunkBackend
 from sigma.pipelines.splunk import pipelines as splunk_pipelines
@@ -145,6 +147,48 @@ def constrain_tstats(search: str, search_prefix: str) -> str:
     return f"{constrained} {rest}" if rest else constrained
 
 
+def spl_string(value: str) -> str:
+    """Quote a value as an SPL string literal (backslashes and double quotes escaped)."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def build_ioc_lookup(batch: IocBatch, host_field: str = "host") -> str:
+    """Build the SPL lookup of a batch of indicator values, one result row per value found.
+
+    The search keeps the events whose raw text holds one of the values (phrase
+    terms, fast on the index); each event is then attributed to every value its
+    raw text holds as a whole token (``match`` with the SDK value pattern, case
+    insensitive except for URLs), and the rows aggregate the hits, the first and
+    last event time (epoch seconds) and at most ten hosts per value key.
+
+    Args:
+        batch: Values of one observable type.
+        host_field: Field naming the host of an event.
+
+    Returns:
+        The SPL query, to run within the run window.
+    """
+    terms = " OR ".join(spl_string(value) for value in batch.values)
+    attributions = ", ".join(
+        "if(match(_raw, {pattern}), {key}, null())".format(
+            pattern=spl_string(
+                value_pattern(ioc).pattern
+                if ioc.observable_type == "Url"
+                else f"(?i){value_pattern(ioc).pattern}"
+            ),
+            key=spl_string(ioc.key),
+        )
+        for ioc in batch.iocs
+    )
+    return (
+        f"({terms}) "
+        f"| eval ioc=mvappend({attributions}) "
+        "| where isnotnull(ioc) "
+        f"| stats count as hits min(_time) as first_seen max(_time) as last_seen values({host_field}) as hosts by ioc "
+        "| eval first_seen=floor(first_seen), last_seen=floor(last_seen), hosts=mvindex(hosts, 0, 9)"
+    )
+
+
 def build_search(query: str, search_prefix: str) -> str:
     """Build the SPL search of a hunt query.
 
@@ -189,10 +233,12 @@ def build_search(query: str, search_prefix: str) -> str:
 
 
 class SplunkHuntConnector(InternalHuntConnector):
-    """Hunt connector running Sigma and SPL hunts on Splunk."""
+    """Hunt connector running Sigma, SPL and indicator hunts on Splunk."""
 
     languages = ("spl",)
     evidence_excluded_fields = SPLUNK_INTERNAL_FIELDS
+    # The lookup of indicator values aggregates them in Splunk: exact counts per value
+    ioc_aggregated = True
 
     def __init__(self, settings: ConnectorSettings) -> None:
         """Initialize the connector (the helper is created by ``start()``).
@@ -238,6 +284,17 @@ class SplunkHuntConnector(InternalHuntConnector):
                 pipeline or self.splunk_config.sigma_pipeline, splunk_pipelines
             )
         )
+
+    def ioc_query(self, batch: IocBatch) -> NativeQuery:
+        """Look up a batch of indicator values in the events of the configured search scope.
+
+        Args:
+            batch: Values of one observable type.
+
+        Returns:
+            The aggregating SPL lookup (one row per value found).
+        """
+        return NativeQuery(language="spl", query=build_ioc_lookup(batch))
 
     def combine_queries(self, queries: Sequence[str]) -> str:
         """Join several plain searches with ``OR`` (generating commands cannot be joined).
