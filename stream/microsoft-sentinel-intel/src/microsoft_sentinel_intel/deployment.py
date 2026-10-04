@@ -11,7 +11,7 @@ access to Microsoft Sentinel:
   entities (IP addresses, URLs, domains, file hashes) match deployed indicators.
 """
 
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -89,12 +89,15 @@ class IncidentCursor:
     """Where a hit read stopped early continues.
 
     The incident listing restarts at `modified_since` (a modification time) and
-    skips the incidents already handled by the read, whose hit-time lower bound
-    stays the `since` of the reconciler.
+    skips the incidents already handled by the read at their current activity
+    time, whose hit-time lower bound stays the `since` of the reconciler. An
+    incident active again since it was handled is read again, as the next window
+    of an uncapped read would.
     """
 
     modified_since: datetime
-    handled: frozenset[str]
+    handled: Mapping[str, datetime]
+    """The activity time at which each incident was handled, by incident id."""
 
 
 class SentinelDeploymentError(Exception):
@@ -245,7 +248,8 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         unread can have any activity time after `since`, so the collection is then
         complete only until `since`. The reconciler holds its hits, and the next
         run continues the listing where this one stopped (`resume`), skipping the
-        incidents already handled, with the same `since` for the activity time.
+        incidents already handled at their current activity time (an incident
+        active again is read again), with the same `since` for the activity time.
         Beyond `MAX_HANDLED_INCIDENTS` handled incidents, the read is not
         continued and its hits are a lower bound.
 
@@ -261,7 +265,7 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         if not indicators_by_value:
             return []
         listed_since = resume.modified_since if resume else since
-        handled: set[str] = set(resume.handled) if resume else set()
+        handled: dict[str, datetime] = dict(resume.handled) if resume else {}
         cursor = listed_since
         hits: list[VendorHit] = []
         inspected = 0
@@ -287,14 +291,15 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                     raise SentinelDeploymentError(
                         "A Microsoft Sentinel incident of the hit read carries no id"
                     )
-                if str(incident_id) in handled:
-                    continue
                 if activity_time is None:
                     # Never skipped: the hit window would move past its entities.
                     raise SentinelDeploymentError(
                         "A Microsoft Sentinel incident of the hit read carries no "
                         "activity time"
                     )
+                handled_at = handled.get(str(incident_id))
+                if handled_at is not None and activity_time <= handled_at:
+                    continue
                 if activity_time >= since:
                     if inspected >= MAX_HIT_INCIDENTS:
                         self._logger.warning(
@@ -324,7 +329,7 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                         VendorHit(timestamp=activity_time, indicator_id=indicator_id)
                         for indicator_id in sorted(matched)
                     )
-                handled.add(str(incident_id))
+                handled[str(incident_id)] = activity_time
                 if modified_time is not None and modified_time > cursor:
                     cursor = modified_time
         if not stopped and not listing.truncated:
@@ -339,7 +344,7 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         return HitCollection(
             hits=hits,
             complete_until=since,
-            resume=IncidentCursor(modified_since=cursor, handled=frozenset(handled)),
+            resume=IncidentCursor(modified_since=cursor, handled=handled),
         )
 
     @staticmethod

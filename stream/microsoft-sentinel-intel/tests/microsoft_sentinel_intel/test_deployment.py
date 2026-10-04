@@ -969,7 +969,7 @@ def test_adapter_hits_resume_at_an_incident_whose_entities_cannot_be_read(
     assert isinstance(collection, HitCollection)
     assert collection.complete_until == since
     assert collection.resume == IncidentCursor(
-        modified_since=first, handled=frozenset({"incident-1"})
+        modified_since=first, handled={"incident-1": first}
     )
     assert [hit.timestamp for hit in collection.hits] == [first]
     assert adapter_connector.client.list_incident_entities.call_count == 2
@@ -1005,7 +1005,11 @@ def test_adapter_hits_resume_after_the_last_listed_page(
         hits=[],
         complete_until=since,
         resume=IncidentCursor(
-            modified_since=last, handled=frozenset({"incident-1", "incident-2"})
+            modified_since=last,
+            handled={
+                "incident-1": since - timedelta(minutes=10),
+                "incident-2": last,
+            },
         ),
     )
 
@@ -1097,9 +1101,7 @@ def test_adapter_hits_inspect_a_bounded_number_of_incidents(
         complete_until=since,
         resume=IncidentCursor(
             modified_since=recent + timedelta(seconds=MAX_HIT_INCIDENTS - 1),
-            handled=frozenset(
-                f"incident-{index}" for index in range(MAX_HIT_INCIDENTS)
-            ),
+            handled={f"incident-{index}": recent for index in range(MAX_HIT_INCIDENTS)},
         ),
     )
     assert (
@@ -1131,14 +1133,14 @@ def test_adapter_hits_capped_at_their_start_continue_after_the_incidents_inspect
     collection = adapter.collect_hits(
         [make_deployment()],
         since,
-        resume=IncidentCursor(modified_since=since, handled=frozenset({"incident-0"})),
+        resume=IncidentCursor(modified_since=since, handled={"incident-0": since}),
     )
 
     assert isinstance(collection, HitCollection)
     assert collection.complete_until == since
     assert collection.resume == IncidentCursor(
         modified_since=since,
-        handled=frozenset({"incident-0", "incident-1", "incident-2"}),
+        handled={"incident-0": since, "incident-1": since, "incident-2": since},
     )
     assert len(collection.hits) == 2
     assert [
@@ -1176,7 +1178,7 @@ def test_adapter_hits_continued_later_keep_the_activity_lower_bound(
     hits = adapter.collect_hits(
         [make_deployment()],
         since,
-        resume=IncidentCursor(modified_since=cursor, handled=frozenset({"incident-1"})),
+        resume=IncidentCursor(modified_since=cursor, handled={"incident-1": cursor}),
     )
 
     assert [hit.timestamp for hit in hits] == [since + timedelta(minutes=5)]
@@ -1185,6 +1187,51 @@ def test_adapter_hits_continued_later_keep_the_activity_lower_bound(
     )
     adapter_connector.client.list_incident_entities.assert_called_once_with(
         "incident-2"
+    )
+
+
+def test_adapter_hits_continued_later_read_again_an_incident_active_again(
+    adapter, adapter_connector
+) -> None:
+    """An incident handled by the read and active again since is read again (as the
+    next window of an uncapped read would); one with the same activity is not."""
+    since = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=1)
+    handled_at = since + timedelta(minutes=5)
+    active_again = since + timedelta(minutes=30)
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
+        [
+            {
+                "id": "incident-1",
+                "properties": {
+                    "lastActivityTimeUtc": active_again.isoformat(),
+                    "lastModifiedTimeUtc": active_again.isoformat(),
+                },
+            },
+            {
+                "id": "incident-2",
+                "properties": {
+                    "lastActivityTimeUtc": handled_at.isoformat(),
+                    "lastModifiedTimeUtc": active_again.isoformat(),
+                },
+            },
+        ]
+    )
+    adapter_connector.client.list_incident_entities.return_value = [
+        {"kind": "Ip", "properties": {"address": "198.51.100.7"}}
+    ]
+
+    hits = adapter.collect_hits(
+        [make_deployment()],
+        since,
+        resume=IncidentCursor(
+            modified_since=handled_at,
+            handled={"incident-1": handled_at, "incident-2": handled_at},
+        ),
+    )
+
+    assert [hit.timestamp for hit in hits] == [active_again]
+    adapter_connector.client.list_incident_entities.assert_called_once_with(
+        "incident-1"
     )
 
 

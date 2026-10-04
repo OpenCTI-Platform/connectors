@@ -235,7 +235,8 @@ it does not exist), and detection hits are counted with a sighting of the indica
   counts one hit per matching indicator, at the incident last activity time; hits already reported are never counted
   twice. When the 200 incidents are reached, the listing stops at its page limit or the entities of an incident cannot
   be read, the next run continues the listing at that incident instead of skipping the remaining ones; the hits read
-  so far are reported once the listing is complete, so an incident modified later but active earlier is never missed.
+  so far are reported once the listing is complete, so an incident modified later but active earlier is never missed;
+  an incident already read and active again since is read again.
   An incident without an id or any activity, creation or modification time fails the read: the next run reads the
   same incidents again.
 - **Permissions**: the **Microsoft Sentinel Contributor** role already required by the connector covers the read-back,
