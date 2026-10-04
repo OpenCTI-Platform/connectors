@@ -58,11 +58,16 @@ Stream connectors can report to OpenCTI whether each indicator they push is actu
 ```python
 from connectors_sdk import (
     BaseConnectorSettings,
+    BaseStreamConnectorConfig,
     DeploymentConfig,
     HitsConfig,
     SecurityPlatformConfig,
 )
 from pydantic import Field
+
+
+class StreamConnectorConfig(BaseStreamConnectorConfig):
+    name: str = Field(default="My EDR", description="The name of the connector.")
 
 
 class MyEdrSecurityPlatformConfig(SecurityPlatformConfig):
