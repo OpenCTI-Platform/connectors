@@ -44,10 +44,35 @@ BOOKKEEPING_FIELDS = frozenset(
 """UDM bookkeeping fields, never sampled as evidence."""
 
 
+DOCUMENTATION_URL = (
+    "https://docs.opencti.io/latest/usage/hunt-connectors/#google-secops"
+)
+
+REQUIRED_PERMISSIONS = (
+    (
+        "Chronicle API Editor (roles/chronicle.editor)",
+        "Role of the service account on the project: run UDM searches and test YARA-L rules, never saved nor enabled.",
+    ),
+    (
+        "Chronicle API enabled",
+        "On the Google Cloud project of the SecOps instance.",
+    ),
+)
+"""Least-privilege permissions of the account of the connector, as (name, purpose)."""
+
+ACCESS_DENIED_HINTS = {
+    401: "Google refused the service account key: check the private key, the key ID and the client email of the JSON key",
+    403: "the service account needs the Chronicle API Editor role (roles/chronicle.editor) on the project of the SecOps instance, with the Chronicle API enabled",
+}
+"""What a refused account lacks, by HTTP status."""
+
+
 class GoogleSecopsHuntConnector(InternalHuntConnector):
     """Hunt connector running Sigma, UDM search and YARA-L hunts on Google SecOps."""
 
     languages = ("udm", "yara-l")
+    required_permissions = REQUIRED_PERMISSIONS
+    documentation_url = DOCUMENTATION_URL
     evidence_excluded_fields = BOOKKEEPING_FIELDS
     entity_fields = (
         *DEFAULT_ENTITY_FIELDS,
@@ -99,6 +124,13 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
             region=config.project_region,
             instance=config.project_instance,
             credentials=self.build_credentials(),
+        )
+        self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
+
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search: one UDM event."""
+        return NativeQuery(
+            language="udm", query='metadata.event_type != "EVENTTYPE_UNSPECIFIED"'
         )
 
     def sigma_backend(self, pipeline: str | None) -> SecOpsBackend:

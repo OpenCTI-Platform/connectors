@@ -4,9 +4,52 @@ The Google SecOps hunt connector executes the hunts of OpenCTI on Google Securit
 Chronicle) as UDM searches or YARA-L 2.0 rule tests. It is a connector of type `INTERNAL_HUNT` registered for the
 `google-secops` hunt platform.
 
+## Before you start
+
+| | |
+|---|---|
+| Credential | The JSON key of a Google Cloud service account. |
+| Console | Google Cloud console: **APIs & Services > Library**, **IAM & Admin > Service accounts**, **IAM & Admin > IAM**; SecOps: **SIEM Settings > Profile**. |
+| Network | `chronicle.googleapis.com` (or its regional endpoint) and `oauth2.googleapis.com` reachable from the connector. |
+
+Step by step:
+
+1. In the Google Cloud project of the SecOps instance, **APIs & Services > Library**: enable the **Chronicle API**.
+2. In **IAM & Admin > Service accounts > Create service account**, create `opencti-hunt`.
+3. In **IAM & Admin > IAM > Grant access**, give the service account the role **Chronicle API Editor** (`roles/chronicle.editor`), as for the other Google SecOps connectors; a custom role holding the UDM search and rule test permissions works as well.
+4. In the service account, **Keys > Add key > Create new key > JSON**, and copy its `private_key`, `private_key_id`, `client_email`, `client_id` and `client_x509_cert_url` values into the configuration.
+5. In SecOps, **SIEM Settings > Profile**: copy the project ID, the region (`us`, `europe`, `asia-southeast1`...) and the customer ID (instance UUID).
+
+Least-privilege permissions:
+
+| Permission | Why |
+|---|---|
+| Role `roles/chronicle.editor` (Chronicle API Editor) on the project | Run the UDM searches and test the YARA-L rules of the hunts: a test runs the rule over the window without saving it, enabling it or creating alerts. |
+| Chronicle API enabled on the project | Every call of the connector goes through it. |
+
+The connector only reads: it never saves, enables nor alerts on a rule.
+
+Copy-ready configuration (`.env` of the `docker-compose.yml`):
+
+```env
+OPENCTI_URL=https://opencti.example.com
+OPENCTI_TOKEN=ChangeMe
+CONNECTOR_ID=ChangeMe-UUIDv4
+GOOGLE_SECOPS_HUNT_PROJECT_ID=my-project
+GOOGLE_SECOPS_HUNT_PROJECT_REGION=us
+GOOGLE_SECOPS_HUNT_PROJECT_INSTANCE=ChangeMe-instance-UUID
+GOOGLE_SECOPS_HUNT_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nChangeMe\n-----END PRIVATE KEY-----\n"
+GOOGLE_SECOPS_HUNT_PRIVATE_KEY_ID=ChangeMe
+GOOGLE_SECOPS_HUNT_CLIENT_EMAIL=opencti-hunt@my-project.iam.gserviceaccount.com
+GOOGLE_SECOPS_HUNT_CLIENT_ID=ChangeMe
+```
+
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It requests a token and runs one UDM search. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+
 Table of Contents
 
 - [OpenCTI Google SecOps Hunt Connector](#opencti-google-secops-hunt-connector)
+  - [Before you start](#before-you-start)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -50,16 +93,7 @@ Raw events never leave SecOps: OpenCTI only receives counts and evidence values 
 
 ### Google Cloud permissions
 
-1. In the Google Cloud project of the SecOps instance, enable the Chronicle API.
-2. Create a service account (for example `opencti-hunt`) and grant it the **Chronicle API Editor** role
-   (`roles/chronicle.editor`) on the project, as for the other Google SecOps connectors. The connector only reads:
-   it runs UDM searches and tests YARA-L rules (the test runs the rule over the window without saving it, enabling it
-   or creating alerts). A custom role holding the UDM search and rule test permissions works as well.
-3. Create a JSON key for the service account and copy its `private_key`, `private_key_id`, `client_email`,
-   `client_id` and `client_x509_cert_url` values into the configuration.
-
-The project ID, region (`us`, `europe`, `asia-southeast1`...) and customer ID (instance UUID) are shown in the SecOps
-settings (`SIEM Settings > Profile`).
+The account, the least-privilege permissions, the console steps and a configuration example are in [Before you start](#before-you-start).
 
 ## Configuration variables
 
