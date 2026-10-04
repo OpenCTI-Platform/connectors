@@ -305,7 +305,7 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                         self._logger.warning(
                             f"{_LOG_PREFIX} Incident limit reached, the next run "
                             "continues at the first incident not inspected.",
-                            {"limit": MAX_HIT_INCIDENTS},
+                            meta={"limit": MAX_HIT_INCIDENTS},
                         )
                         stopped = True
                         break
@@ -315,7 +315,10 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                         self._logger.warning(
                             f"{_LOG_PREFIX} Cannot read the entities of an incident, "
                             "the next run continues at it.",
-                            {"incident_id": incident_id, "error": describe_error(err)},
+                            meta={
+                                "incident_id": incident_id,
+                                "error": describe_error(err),
+                            },
                         )
                         stopped = True
                         break
@@ -338,7 +341,7 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
             self._logger.warning(
                 f"{_LOG_PREFIX} Too many incidents to continue the capped read, its "
                 "hits are a lower bound.",
-                {"handled": len(handled), "limit": MAX_HANDLED_INCIDENTS},
+                meta={"handled": len(handled), "limit": MAX_HANDLED_INCIDENTS},
             )
             return HitCollection(hits=hits, complete_until=since)
         return HitCollection(
