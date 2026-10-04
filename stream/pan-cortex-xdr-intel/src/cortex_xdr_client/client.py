@@ -31,8 +31,9 @@ def _reply_list(response: Any, key: str, endpoint: str) -> list[dict[str, Any]]:
     """Return the `key` list of a response, unwrapping the optional `reply` envelope.
 
     Raises:
-        CortexXdrApiError: When the list is missing, so that a read-back is never
-            mistaken for an empty listing.
+        CortexXdrApiError: When the list is missing or holds a row that is not an
+            object, so that a read-back is never mistaken for an empty or shorter
+            listing.
     """
     reply = response.get("reply", response) if isinstance(response, dict) else None
     items = reply.get(key) if isinstance(reply, dict) else None
@@ -40,7 +41,11 @@ def _reply_list(response: Any, key: str, endpoint: str) -> list[dict[str, Any]]:
         raise CortexXdrApiError(
             f"Unexpected response format of {endpoint}: missing '{key}' list"
         )
-    return [item for item in items if isinstance(item, dict)]
+    if not all(isinstance(item, dict) for item in items):
+        raise CortexXdrApiError(
+            f"Unexpected response format of {endpoint}: a '{key}' row is not an object"
+        )
+    return items
 
 
 class CortexXdrClient(BaseClientApi):

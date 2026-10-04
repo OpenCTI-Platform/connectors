@@ -180,26 +180,31 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         return self._connector.client
 
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
-        """Read back the IOCs of the tenant that are still valid.
+        """Read back the IOCs of the tenant.
 
-        IOCs whose `expiration_date` is in the past are not live.
+        IOCs whose `expiration_date` is in the past are retained by Cortex XDR but no
+        longer enforced: they are listed inactive, so that a withdrawal deletes them
+        and they never confirm a deployment.
 
-        :raises CortexXdrDeploymentError: On any API error (never a partial listing).
+        :raises CortexXdrDeploymentError: On any API error, or an IOC without value
+            (never a partial listing).
         """
         now = datetime.now(UTC)
         with _readable_errors():
             for ioc in self._client.iter_iocs():
                 value = ioc.get("indicator")
                 if not isinstance(value, str) or not value:
-                    continue
+                    raise CortexXdrDeploymentError(
+                        "Cortex XDR listed an IOC without value, "
+                        "the read-back is incomplete"
+                    )
                 expiration = _timestamp(ioc.get("expiration_date"))
-                if expiration is not None and expiration <= now:
-                    continue
                 rule_id = ioc.get("rule_id")
                 yield VendorIndicator(
                     external_id=str(rule_id) if rule_id is not None else None,
                     value=value,
                     raw={"indicator": value, "type": ioc.get("type")},
+                    active=expiration is None or expiration > now,
                 )
 
     def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str] | None:
@@ -266,7 +271,8 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         the collection is complete until the creation time of the newest alert read
         and the next run resumes there.
 
-        :raises CortexXdrDeploymentError: When the alerts cannot be listed.
+        :raises CortexXdrDeploymentError: When the alerts cannot be listed, or an
+            alert has no creation or detection time (the window is read again).
         """
         by_value: dict[str, list[IndicatorDeployment]] = {}
         for deployment in deployments:
@@ -283,7 +289,10 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
                 alert.get("detection_timestamp")
             )
             if timestamp is None:
-                continue
+                raise CortexXdrDeploymentError(
+                    "Cortex XDR listed an IOC alert without creation time, "
+                    "the hit read is incomplete"
+                )
             newest_created = max(newest_created, timestamp)
             if timestamp < since:
                 continue

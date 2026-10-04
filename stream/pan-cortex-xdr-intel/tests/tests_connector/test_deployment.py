@@ -336,7 +336,7 @@ def test_iter_iocs_pages_with_search_from_and_search_to(xdr_client):
     with patch.object(xdr_client._session, "request") as request:
         request.side_effect = [
             mock_response({"objects": [{"rule_id": 1}, {"rule_id": 2}]}),
-            mock_response({"reply": {"objects": [{"rule_id": 3}, "ignored"]}}),
+            mock_response({"reply": {"objects": [{"rule_id": 3}]}}),
         ]
 
         iocs = list(xdr_client.iter_iocs(page_size=2))
@@ -372,7 +372,11 @@ def test_iter_iocs_detects_an_ignored_pagination(xdr_client):
 
 @pytest.mark.parametrize(
     "response",
-    [mock_response({"objects_count": 0}), mock_response({"message": "x"}, 500)],
+    [
+        mock_response({"objects_count": 0}),
+        mock_response({"objects": [{"rule_id": 1}, "row"]}),
+        mock_response({"message": "x"}, 500),
+    ],
 )
 def test_iter_iocs_errors(xdr_client, response):
     with patch.object(xdr_client._session, "request") as request:
@@ -418,11 +422,15 @@ def test_get_ioc_alerts_stops_on_a_short_page_and_raises_on_errors(xdr_client):
         with pytest.raises(CortexXdrApiError):
             xdr_client.get_ioc_alerts(datetime.now(UTC))
 
+        request.return_value = mock_response({"reply": {"alerts": ["row"]}})
+        with pytest.raises(CortexXdrApiError, match="row is not an object"):
+            xdr_client.get_ioc_alerts(datetime.now(UTC))
+
 
 # Vendor adapter
 
 
-def test_adapter_lists_the_valid_iocs():
+def test_adapter_lists_the_iocs_and_the_expired_ones_inactive():
     connector = build_connector()
     future = int((datetime.now(UTC) + timedelta(days=1)).timestamp() * 1000)
     past = int((datetime.now(UTC) - timedelta(days=1)).timestamp() * 1000)
@@ -436,7 +444,6 @@ def test_adapter_lists_the_valid_iocs():
                 "expiration_date": future,
             },
             {"rule_id": 3, "indicator": "old.example", "expiration_date": past},
-            {"rule_id": 4, "indicator": ""},
             {"indicator": "no-id.example", "expiration_date": True},
             {"rule_id": 6, "indicator": "far.example", "expiration_date": 10**20},
         ]
@@ -449,6 +456,7 @@ def test_adapter_lists_the_valid_iocs():
     assert vendor_indicators == [
         VendorIndicator(external_id="1", value="198.51.100.7"),
         VendorIndicator(external_id="2", value="evil.example"),
+        VendorIndicator(external_id="3", value="old.example", active=False),
         VendorIndicator(external_id=None, value="no-id.example"),
         VendorIndicator(external_id="6", value="far.example"),
     ]
@@ -456,6 +464,15 @@ def test_adapter_lists_the_valid_iocs():
         "indicator": "evil.example",
         "type": "DOMAIN_NAME",
     }
+
+
+@pytest.mark.parametrize("value", ["", None, 7])
+def test_adapter_rejects_an_ioc_without_value(value):
+    connector = build_connector()
+    connector.client.iter_iocs.return_value = iter([{"rule_id": 4, "indicator": value}])
+
+    with pytest.raises(CortexXdrDeploymentError, match="IOC without value"):
+        list(CortexXdrDeploymentAdapter(connector).list_vendor_indicators())
 
 
 def test_adapter_read_back_errors_are_readable():
@@ -528,7 +545,6 @@ def test_adapter_collects_hits_from_ioc_alerts():
         },
         {"detection_timestamp": at(30), "host_ip": "198.51.100.7"},
         {"detection_timestamp": int(since.timestamp() * 1000) - 1},
-        {"events": [{"action_remote_ip": "198.51.100.7"}]},
     ]
     deployments = [
         make_deployment(),
@@ -544,6 +560,18 @@ def test_adapter_collects_hits_from_ioc_alerts():
         ("hash-indicator", 20),
     ]
     connector.client.get_ioc_alerts.assert_called_once_with(since, 10_000)
+
+
+def test_adapter_fails_the_hit_read_on_an_alert_without_creation_time():
+    connector = build_connector()
+    connector.client.get_ioc_alerts.return_value = [
+        {"events": [{"action_remote_ip": "198.51.100.7"}]}
+    ]
+
+    with pytest.raises(CortexXdrDeploymentError, match="without creation time"):
+        CortexXdrDeploymentAdapter(connector).collect_hits(
+            [make_deployment()], datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+        )
 
 
 def test_adapter_credits_every_indicator_sharing_a_value():
@@ -625,7 +653,7 @@ def test_adapter_capped_read_without_creation_time_uses_the_detection(monkeypatc
     detection = int(datetime(2026, 10, 3, 11, 7, tzinfo=UTC).timestamp() * 1000)
     connector.client.get_ioc_alerts.return_value = [
         {"detection_timestamp": detection, "action_remote_ip": "198.51.100.7"},
-        {"severity": "high"},
+        {"detection_timestamp": detection - 60_000, "severity": "high"},
     ]
 
     collected = CortexXdrDeploymentAdapter(connector).collect_hits(
