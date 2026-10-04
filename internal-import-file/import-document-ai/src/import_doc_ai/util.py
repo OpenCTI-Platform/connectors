@@ -562,6 +562,7 @@ def update_custom_properties(
     custom_properties: dict, stix_object: stix2.v21._STIXBase21, extend=True
 ) -> stix2.v21._STIXBase21:
     """Attach custom properties to a STIX object.
+    A given property replaces the value the object already carries.
     Args:
         custom_properties (dict): The custom properties to attach.
         stix_object (stix2.v21._STIXBase21): The STIX object to process.
@@ -574,6 +575,9 @@ def update_custom_properties(
         >>> ip_with_custom = update_custom_properties({"x_opencti_custom": "value"}, ip)
     """
     object_dict = json.loads(stix_object.serialize())
+    # stix2 gives a serialized top-level value precedence over custom_properties
+    for key in custom_properties:
+        object_dict.pop(key, None)
     if extend is False:
         object_dict["custom_properties"] = custom_properties
         return stix2.parse(object_dict, allow_custom=True)

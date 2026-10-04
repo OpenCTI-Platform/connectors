@@ -812,6 +812,20 @@ def test_bind_looks_up_the_objects_with_a_name_and_a_known_type_only():
             "Country",
             id="declared type that is no location type ignored",
         ),
+        pytest.param(
+            {"country": "US", "x_opencti_location_type": "Position"},
+            "Country",
+            id="declared location type that is no location type replaced",
+        ),
+        pytest.param(
+            {
+                "country": "US",
+                "x_opencti_location_type": "Position",
+                "x_opencti_type": "Administrative-Area",
+            },
+            "Administrative-Area",
+            id="invalid location type replaced by the declared OpenCTI type",
+        ),
     ],
 )
 def test_location_type_is_the_most_specific_populated_field(
