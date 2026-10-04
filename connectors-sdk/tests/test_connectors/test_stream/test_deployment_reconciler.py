@@ -1499,6 +1499,120 @@ def test_complete_hit_collection_advances_the_window(
     assert reconciler._hits_since == NOW - reconciler._hits_lookback
 
 
+def stateful_helper(router, state):
+    """GraphQL helper keeping a connector state, as pycti does between restarts."""
+    helper = MagicMock(spec=["api", "connector_logger", "get_state", "set_state"])
+    helper.api.query.side_effect = router
+    holder = {"state": state}
+    helper.get_state.side_effect = lambda: (
+        dict(holder["state"]) if holder["state"] is not None else None
+    )
+    helper.set_state.side_effect = lambda new_state: holder.update(state=new_state)
+    helper.holder = holder
+    return helper
+
+
+def checkpoint_of(helper):
+    return helper.holder["state"][reconciler_module.HITS_CHECKPOINT_STATE_KEY]
+
+
+def test_hit_checkpoint_is_kept_in_the_connector_state(
+    router, make_reporter, list_nodes, node_factory
+):
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    helper = stateful_helper(router, {"start_from": "1-0"})
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 1
+
+    assert helper.holder["state"]["start_from"] == "1-0"
+    assert checkpoint_of(helper) == "2026-10-03T11:00:00.000Z"
+
+
+@pytest.mark.parametrize(
+    "stopped_for, since",
+    [
+        (timedelta(days=3), NOW - timedelta(days=3)),
+        (timedelta(days=30), NOW - reconciler_module.MAX_HITS_RECOVERY),
+        (timedelta(minutes=10), NOW - timedelta(hours=1)),
+    ],
+)
+def test_first_hit_read_after_a_start_resumes_at_the_checkpoint(
+    router, make_reporter, list_nodes, node_factory, stopped_for, since
+):
+    """The detections of a stop longer than the lookback are read too, within the
+    recovery window; a short stop keeps the lookback overlap."""
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    state = {
+        "start_from": "1-0",
+        reconciler_module.HITS_CHECKPOINT_STATE_KEY: (NOW - stopped_for).isoformat(),
+    }
+    adapter = FakeAdapter(vendor=[VendorIndicator(indicator_id="a")])
+    reconciler = make_reconciler(make_reporter(stateful_helper(router, state)), adapter)
+
+    reconciler.run_once()
+
+    assert adapter.hits_calls[0][1] == since
+
+
+def test_hit_checkpoint_never_passes_an_undelivered_report(
+    router, make_reporter, list_nodes, node_factory
+):
+    router.handlers["IndicatorReportHits("] = ValueError("unavailable")
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    helper = stateful_helper(router, {"start_from": "1-0"})
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=50), indicator_id="a")],
+    )
+    clock = [NOW]
+    reconciler = make_reconciler(make_reporter(helper), adapter, clock=lambda: clock[0])
+    reconciler.run_once()
+    adapter.hits = []
+    clock[0] = NOW + timedelta(hours=2)
+
+    reconciler.run_once()
+
+    assert reconciler._hits_since == clock[0] - reconciler._hits_lookback
+    assert checkpoint_of(helper) == "2026-10-03T11:10:00.000Z"
+
+
+def test_a_reset_connector_state_is_never_replaced(
+    router, make_reporter, list_nodes, node_factory
+):
+    """pycti reads a state set to None as a reset and starts the stream over."""
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    helper = stateful_helper(router, None)
+    adapter = FakeAdapter(vendor=[VendorIndicator(indicator_id="a")])
+    reconciler = make_reconciler(make_reporter(helper), adapter)
+
+    reconciler.run_once()
+
+    assert adapter.hits_calls[0][1] == NOW - reconciler._hits_lookback
+    helper.set_state.assert_not_called()
+
+
+def test_connector_state_errors_never_stop_the_hits(
+    router, make_reporter, list_nodes, node_factory
+):
+    list_nodes(node_factory(indicator_id="a", status="active"))
+    helper = stateful_helper(router, {})
+    helper.get_state.side_effect = RuntimeError("state unavailable")
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), indicator_id="a")],
+    )
+    reconciler = make_reconciler(make_reporter(helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 1
+    assert adapter.hits_calls[0][1] == NOW - reconciler._hits_lookback
+    helper.set_state.assert_not_called()
+
+
 def test_stream_reports_queued_during_the_snapshot_are_sent_after_it(
     graphql_helper, make_reporter, router, list_nodes, node_factory
 ):

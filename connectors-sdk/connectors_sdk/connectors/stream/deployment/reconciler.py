@@ -51,6 +51,7 @@ from connectors_sdk.connectors.stream.deployment.reporter import (
     DeploymentReporter,
 )
 from connectors_sdk.connectors.stream.deployment.utils import (
+    format_datetime,
     normalize_value,
     parse_datetime,
     to_stream_indicator,
@@ -77,6 +78,12 @@ CAPPED_INSTANT_STEP = timedelta(seconds=1)
 
 MAX_PENDING_HITS_AGE = timedelta(hours=24)
 """How long a hit report that never reached OpenCTI is sent again with the following runs."""
+
+HITS_CHECKPOINT_STATE_KEY = "deployment_hits_since"
+"""Key of the connector state holding where the next hit read starts, kept across restarts."""
+
+MAX_HITS_RECOVERY = timedelta(days=7)
+"""How far back the first hit read after a start goes, however long the connector was stopped."""
 
 
 @dataclass(slots=True)
@@ -581,6 +588,7 @@ class DeploymentReconciler:
                 and deployment.indicator_id not in withdrawn
             ]
             summary.hits_reported = self._report_hits(live, now)
+            self._save_hits_checkpoint()
         return summary
 
     def _compare(
@@ -1226,7 +1234,11 @@ class DeploymentReconciler:
             self._hits_since = next_since
             self._release_held_hits([])
             return self._send_hit_reports({}, now)
-        since = self._hits_since if self._hits_since is not None else next_since
+        since = (
+            self._hits_since
+            if self._hits_since is not None
+            else self._restored_hits_since(now, next_since)
+        )
         collected = self._read_hits(deployments, since, next_since)
         if collected is None:
             return self._send_hit_reports({}, now)
@@ -1274,6 +1286,85 @@ class DeploymentReconciler:
             if expected is not None:
                 return expected
         return deployment.values
+
+    def _hits_checkpoint(self) -> datetime | None:
+        """Return where a hit read loses no detection: the start of the next read,
+        or the first hit of a report not delivered yet when it is older.
+
+        Returns:
+            The checkpoint, or ``None`` before the first hit read.
+        """
+        checkpoint = self._hits_since
+        for queue in self._pending_hits.values():
+            for pending in queue:
+                if checkpoint is None or pending.first_hit < checkpoint:
+                    checkpoint = pending.first_hit
+        return checkpoint
+
+    def _connector_state(self) -> dict[str, Any] | None:
+        """Return the state of the connector, or ``None`` when it has none.
+
+        A ``None`` state is never replaced: pycti reads it as a state reset from the
+        platform and starts the stream over.
+        """
+        get_state = getattr(self._reporter.helper, "get_state", None)
+        if not callable(get_state):
+            return None
+        state = get_state()
+        return state if isinstance(state, dict) else None
+
+    def _restored_hits_since(self, now: datetime, next_since: datetime) -> datetime:
+        """Return where the first hit read after a start begins.
+
+        The read resumes at the checkpoint saved before the stop, so the detections
+        of a stop longer than the lookback are read too, within ``MAX_HITS_RECOVERY``.
+
+        Args:
+            now: The reference time.
+            next_since: The start of a read without checkpoint (the lookback).
+
+        Returns:
+            The earlier of the saved checkpoint and ``next_since``, never before
+            ``now - MAX_HITS_RECOVERY``.
+        """
+        try:
+            state = self._connector_state()
+        except Exception as err:  # noqa: BLE001 - a start never fails on the state
+            self._logger.warning(
+                f"{_LOG_PREFIX} The hit checkpoint could not be read, the hits are "
+                "read from the lookback window.",
+                meta={"error": str(err)},
+            )
+            return next_since
+        checkpoint = parse_datetime(
+            state.get(HITS_CHECKPOINT_STATE_KEY) if state else None
+        )
+        if checkpoint is None or checkpoint >= next_since:
+            return next_since
+        return max(checkpoint, now - MAX_HITS_RECOVERY)
+
+    def _save_hits_checkpoint(self) -> None:
+        """Keep the hit checkpoint in the state of the connector, for the next start.
+
+        The stream listener of pycti writes its position in the same state: the
+        state is read right before it is written and only the checkpoint changes.
+        """
+        checkpoint = format_datetime(self._hits_checkpoint())
+        set_state = getattr(self._reporter.helper, "set_state", None)
+        if checkpoint is None or not callable(set_state):
+            return
+        try:
+            state = self._connector_state()
+            if state is None or state.get(HITS_CHECKPOINT_STATE_KEY) == checkpoint:
+                return
+            state[HITS_CHECKPOINT_STATE_KEY] = checkpoint
+            set_state(state)
+        except Exception as err:  # noqa: BLE001 - the hits are reported anyway
+            self._logger.warning(
+                f"{_LOG_PREFIX} The hit checkpoint could not be saved, a restart reads "
+                "the hits from the lookback window.",
+                meta={"error": str(err)},
+            )
 
     def _hit_watermark(self, deployment: IndicatorDeployment) -> datetime | None:
         """Return the time up to which the hits of a deployment are already counted.
