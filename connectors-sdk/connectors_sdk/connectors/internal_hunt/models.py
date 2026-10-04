@@ -266,6 +266,24 @@ class HuntRequest(_HuntRequestModel):
         return HuntLimits() if value is None else value
 
 
+class HuntConnectionCheck(BaseModel):
+    """One check of the connection test of a hunt connector, as OpenCTI shows it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str = Field(
+        min_length=1,
+        max_length=256,
+        description="What is checked: the credentials, or a permission by its platform name.",
+    )
+    ok: bool = Field(description="Whether the check passed.")
+    message: str = Field(
+        min_length=1,
+        max_length=2048,
+        description="What the connector found, in plain words; for a failure, what to grant or fix.",
+    )
+
+
 class NativeQuery(BaseModel):
     """Query a connector executes on its platform."""
 

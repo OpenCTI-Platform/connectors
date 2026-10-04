@@ -16,6 +16,7 @@ import requests
 from connectors_sdk.client.base_client_api import BaseClientApi
 from connectors_sdk.client.exceptions import ApiClientError
 from connectors_sdk.connectors.internal_hunt.errors import (
+    HuntAccessDeniedError,
     HuntExecutionError,
     HuntTimeoutError,
 )
@@ -29,6 +30,14 @@ RETRY_STATUSES = frozenset({408, 429, 500, 502, 503, 504})
 
 RETRY_METHODS = frozenset({"DELETE", "GET", "HEAD", "OPTIONS", "PUT", "TRACE"})
 """Idempotent methods retried by ``hunt_request`` (a search job is never sent twice)."""
+
+ACCESS_DENIED_STATUSES = frozenset({401, 403})
+"""HTTP statuses of a refused credential (401) or a missing permission (403)."""
+
+_ACCESS_DENIED_DEFAULTS = {
+    401: "the platform refused the credentials of the connector: check that they are valid and not expired",
+    403: "the account of the connector lacks a permission this call needs",
+}
 
 _MESSAGE_KEYS = ("message", "reason", "error_description", "detail", "text", "msg")
 _NESTED_KEYS = ("error", "errors", "messages", "root_cause", "innererror")
@@ -78,6 +87,41 @@ def api_error_message(body: Any, max_length: int = API_ERROR_MAX_LENGTH) -> str 
     return " ".join(message.split())[:max_length]
 
 
+def access_denied_message(
+    operation: str,
+    status_code: int,
+    hint: str | None = None,
+    details: str | None = None,
+) -> str:
+    """Explain a refused call in plain words, naming what the account lacks.
+
+    Args:
+        operation: Description of the call (``"The Splunk search"``).
+        status_code: HTTP status of the refusal (401 or 403).
+        hint: What the account needs, as the connector documents it
+            (``"the account needs the search capability"``); a generic
+            sentence of the status when None.
+        details: The message of the platform, if any.
+
+    Returns:
+        ``"Access denied: <operation> was refused (<status>): <hint>."``, then
+        the answer of the platform.
+
+    Examples:
+        >>> access_denied_message("The search", 403, "the role needs search")
+        'Access denied: The search was refused (403): the role needs search.'
+    """
+    reason = hint or _ACCESS_DENIED_DEFAULTS.get(
+        status_code, _ACCESS_DENIED_DEFAULTS[403]
+    )
+    message = (
+        f"Access denied: {operation} was refused ({status_code}): {reason.rstrip('.')}."
+    )
+    if details:
+        message += f" The platform answered: {details}"
+    return message
+
+
 class HuntApiClient(BaseClientApi):
     """Base client of the platform APIs queried by hunt connectors.
 
@@ -101,6 +145,7 @@ class HuntApiClient(BaseClientApi):
         *,
         max_retries: int = 3,
         backoff_factor: float = 1.0,
+        access_denied_hints: Mapping[int, str] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize the client.
@@ -109,12 +154,15 @@ class HuntApiClient(BaseClientApi):
             base_url: Base URL of the platform API.
             max_retries: Maximum number of retries of a transient failure.
             backoff_factor: Multiplier of the exponential backoff between retries.
+            access_denied_hints: What the account needs, by refusal status (401,
+                403), in plain words: the message of a refused call names it.
             **kwargs: Other ``BaseClientApi`` arguments (``ssl_verify``...).
         """
         super().__init__(
             base_url, max_retries=0, backoff_factor=backoff_factor, **kwargs
         )
         self._hunt_max_retries = max_retries
+        self.access_denied_hints: dict[int, str] = dict(access_denied_hints or {})
 
     def _retry_delay(self, method: str, attempt: int, error: Exception) -> float | None:
         """Return the backoff before retrying a failed call, or ``None``."""
@@ -173,11 +221,19 @@ class HuntApiClient(BaseClientApi):
             deadline.sleep(delay)
             attempt += 1
 
-    @staticmethod
-    def _hunt_error(operation: str, error: Exception) -> HuntExecutionError:
+    def _hunt_error(self, operation: str, error: Exception) -> HuntExecutionError:
         """Build the hunt error of a failed platform call."""
         if isinstance(error, ApiClientError):
             details = api_error_message(error.response_body)
+            if error.status_code in ACCESS_DENIED_STATUSES:
+                return HuntAccessDeniedError(
+                    access_denied_message(
+                        operation,
+                        int(error.status_code),
+                        self.access_denied_hints.get(int(error.status_code)),
+                        details,
+                    )
+                )
             suffix = f": {details}" if details else ""
             return HuntExecutionError(f"{operation} failed ({error}){suffix}")
         return HuntExecutionError(

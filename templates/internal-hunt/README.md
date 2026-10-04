@@ -122,8 +122,13 @@ and internal domain names are never turned into observables.
    exact counts. Return `None` for a type the platform cannot look up: its values are reported not searched. The base
    batches the values, reports one result per value and sights the seen ones; overriding `ioc_query` makes the
    connector register as supporting indicator lookups.
-5. **Requirements**: add the pySigma backend package of the platform to `src/requirements.txt`.
-6. Regenerate `__metadata__/connector_config_schema.json` and `CONNECTOR_CONFIG_DOC.md` from the settings model, never
+5. **Permissions and Test connection**: declare `required_permissions` (`(name, purpose)` of each least-privilege
+   permission) and `documentation_url`, shown on the connector page in OpenCTI; return a cheap search from
+   `connection_test_query()` (or override `connection_checks()`, each check through `run_check()`); and set
+   `client.access_denied_hints` (`{401: ..., 403: ...}`) so that a refused call names what the account lacks. Start
+   the README with a "Before you start" block: credential, console steps, permissions table, configuration example.
+6. **Requirements**: add the pySigma backend package of the platform to `src/requirements.txt`.
+7. Regenerate `__metadata__/connector_config_schema.json` and `CONNECTOR_CONFIG_DOC.md` from the settings model, never
    edit these generated files by hand.
 
 ## Debugging

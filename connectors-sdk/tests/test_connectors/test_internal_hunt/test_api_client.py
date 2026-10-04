@@ -7,10 +7,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 from connectors_sdk.connectors.internal_hunt import (
+    HuntAccessDeniedError,
     HuntApiClient,
     HuntExecutionError,
     HuntTimeoutError,
     RunDeadline,
+    access_denied_message,
     api_error_message,
 )
 
@@ -168,8 +170,8 @@ def test_hunt_request_refuses_expired_deadlines(client):
             id="with_details",
         ),
         pytest.param(
-            _response(401),
-            r"The search failed \(Unauthorized \(401\) on GET /x\)$",
+            _response(404),
+            r"The search failed \(Not found \(404\) on GET /x\)$",
             id="without_details",
         ),
     ],
@@ -180,6 +182,44 @@ def test_hunt_request_maps_http_errors(client, response, expected):
         # When/Then a hunt execution error explains the failure
         with pytest.raises(HuntExecutionError, match=expected):
             client.hunt_request("GET", "/x", RunDeadline(30), "The search")
+
+
+@pytest.mark.parametrize(
+    "response, hints, expected",
+    [
+        pytest.param(
+            _response(401),
+            None,
+            "Access denied: The search was refused (401): the platform refused the credentials of the connector: check that they are valid and not expired.",
+            id="credentials_default",
+        ),
+        pytest.param(
+            _response(403, {"messages": [{"text": "no search capability"}]}),
+            {403: "the role of the account needs the search capability."},
+            "Access denied: The search was refused (403): the role of the account needs the search capability. The platform answered: no search capability",
+            id="permission_hint",
+        ),
+    ],
+)
+def test_hunt_request_names_what_a_refused_account_lacks(response, hints, expected):
+    # Given a platform refusing the credentials or a permission
+    client = HuntApiClient(
+        "https://siem.example.com", max_retries=2, access_denied_hints=hints
+    )
+    with patch.object(client._session, "request", return_value=response) as request:
+        # When/Then the refusal is an access denied error naming what is missing
+        with pytest.raises(HuntAccessDeniedError) as raised:
+            client.hunt_request("GET", "/x", RunDeadline(30), "The search")
+    assert str(raised.value) == expected
+    # A refusal is not transient: it is never retried
+    assert request.call_count == 1
+
+
+def test_access_denied_message_falls_back_to_the_permission_sentence():
+    # Given/When/Then an unexpected refusal status reads as a missing permission
+    assert access_denied_message("The call", 407) == (
+        "Access denied: The call was refused (407): the account of the connector lacks a permission this call needs."
+    )
 
 
 def test_hunt_request_maps_network_errors(client):

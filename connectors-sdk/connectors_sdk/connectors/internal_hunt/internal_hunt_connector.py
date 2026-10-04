@@ -25,7 +25,8 @@ import json
 import threading
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from datetime import UTC, datetime, timedelta
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -38,6 +39,7 @@ from connectors_sdk.connectors.internal_hunt.analysis import (
     suppress_benign,
 )
 from connectors_sdk.connectors.internal_hunt.errors import (
+    HuntError,
     HuntExecutionError,
     HuntRequestError,
     HuntTimeoutError,
@@ -56,6 +58,7 @@ from connectors_sdk.connectors.internal_hunt.indicators import (
     match_events,
 )
 from connectors_sdk.connectors.internal_hunt.models import (
+    HuntConnectionCheck,
     HuntLimits,
     HuntRequest,
     HuntResult,
@@ -98,6 +101,15 @@ ERROR_MESSAGE_MAX_LENGTH = 2000
 
 INDICATOR_HUNT = "indicators"
 """Hunt type of indicator hunts, whose values are looked up instead of a query."""
+
+CONNECTION_CHECK_MODE = "check"
+"""Mode of the message of a connection test, which carries no hunt run."""
+
+CONNECTION_CHECK_TIMEOUT_SECONDS = 60
+"""Time budget of a connection test."""
+
+CONNECTION_CHECK_WINDOW = timedelta(minutes=15)
+"""Time window of the search a default connection test runs."""
 
 
 def _accepts_keyword(function: Any, keyword: str) -> bool:
@@ -143,6 +155,14 @@ def _error_message(error: BaseException) -> str:
     text = str(error).strip()
     message = f"{type(error).__name__}: {text}" if text else type(error).__name__
     return message[:ERROR_MESSAGE_MAX_LENGTH]
+
+
+def _check_message(error: BaseException) -> str:
+    """Format an exception for a connection check: the plain-words message first."""
+    text = str(error).strip()
+    if not text or not isinstance(error, HuntError):
+        text = f"{type(error).__name__}: {text}" if text else type(error).__name__
+    return text[:2048]
 
 
 def _mark_reported(error: BaseException) -> None:
@@ -194,6 +214,10 @@ class InternalHuntConnector(ABC):
             value (``ioc``, ``hits``, ``first_seen``, ``last_seen``, ``hosts``),
             False when it returns raw events the base searches for the values.
         ioc_host_fields: Result fields naming the host of an event.
+        required_permissions: Permissions the account of the connector needs on
+            its platform, as ``(name, purpose)``: OpenCTI shows them on the
+            connector, next to its connection test.
+        documentation_url: Setup documentation of the connector (https).
         settings: Connector settings.
         config: Connector-level settings (``BaseInternalHuntConnectorConfig``).
 
@@ -216,6 +240,8 @@ class InternalHuntConnector(ABC):
     observable_fields: ClassVar[Mapping[str, str]] = MappingProxyType({})
     ioc_aggregated: ClassVar[bool] = False
     ioc_host_fields: ClassVar[tuple[str, ...]] = HOST_FIELDS
+    required_permissions: ClassVar[tuple[tuple[str, str], ...]] = ()
+    documentation_url: ClassVar[str | None] = None
 
     def __init__(self, settings: BaseConnectorSettings) -> None:
         """Initialize the hunt connector.
@@ -294,6 +320,17 @@ class InternalHuntConnector(ABC):
         # A pycti without indicator hunts registers the connector without them
         if _accepts_keyword(self.helper.register_hunt_platform, "supports_indicators"):
             capabilities["supports_indicators"] = self.supports_indicators
+        if self.required_permissions and _accepts_keyword(
+            self.helper.register_hunt_platform, "required_permissions"
+        ):
+            capabilities["required_permissions"] = [
+                {"name": name, "purpose": purpose}
+                for name, purpose in self.required_permissions
+            ]
+        if self.documentation_url and _accepts_keyword(
+            self.helper.register_hunt_platform, "documentation_url"
+        ):
+            capabilities["documentation_url"] = self.documentation_url
         registration = self.helper.register_hunt_platform(
             platform=self.platform,
             languages=list(self.languages),
@@ -386,6 +423,123 @@ class InternalHuntConnector(ABC):
     def supports_indicators(self) -> bool:
         """Return whether the connector looks up the values of indicator hunts."""
         return type(self).ioc_query is not InternalHuntConnector.ioc_query
+
+    # ------------------------------------------------------------------
+    # Connection test
+    # ------------------------------------------------------------------
+
+    def connection_test_query(self) -> NativeQuery | None:
+        """Build the cheapest search proving the account can query the platform.
+
+        The default connection test runs it over the last 15 minutes, with at
+        most one result.
+
+        Returns:
+            The search, or ``None`` when the connector has none: the test then
+            reports that it cannot check the search.
+        """
+        return None
+
+    def connection_checks(self, deadline: RunDeadline) -> list[HuntConnectionCheck]:
+        """Test the connection of the connector and the permissions it needs.
+
+        Override it to check the permissions one by one (for instance by
+        reading the capabilities of the account), each through ``run_check``.
+        By default, runs ``connection_test_query``.
+
+        Args:
+            deadline: Deadline of the connection test, bounding every call.
+
+        Returns:
+            One check per permission or step, in the order they are tested.
+        """
+        query = self.connection_test_query()
+        if query is None:
+            return [
+                HuntConnectionCheck(
+                    name="Search",
+                    ok=False,
+                    message="This connector cannot test its search: run a hunt with Run now to check it.",
+                )
+            ]
+        end = datetime.now(UTC)
+        window = HuntTimeWindow(start=end - CONNECTION_CHECK_WINDOW, end=end)
+        limits = HuntLimits(
+            max_results=1, timeout_seconds=CONNECTION_CHECK_TIMEOUT_SECONDS
+        )
+        outcome: dict[str, HuntResult] = {}
+
+        def _search() -> None:
+            outcome["result"] = self.execute(query, window, limits, deadline)
+
+        check = self.run_check(
+            "Search", _search, "The account can run searches on the platform."
+        )
+        result = outcome.get("result")
+        if check.ok and isinstance(result, HuntResult) and not result.events:
+            # Allowed, yet blind: the account may not read the hunted data
+            check = HuntConnectionCheck(
+                name="Search",
+                ok=True,
+                message="The account can run searches, which found no event in the last 15 minutes: check that it can read the hunted data.",
+            )
+        return [check]
+
+    def run_check(
+        self, name: str, call: Callable[[], Any], success: str
+    ) -> HuntConnectionCheck:
+        """Run one check of the connection test.
+
+        Args:
+            name: What is checked (``"Authentication"``, a permission name...).
+            call: The platform call proving it; it raises when refused.
+            success: What a passing check means, in plain words.
+
+        Returns:
+            The check: passed, or failed with the plain-words reason (a refused
+            call names what the account lacks, see ``HuntAccessDeniedError``).
+        """
+        try:
+            call()
+        except HuntTimeoutError:
+            return HuntConnectionCheck(
+                name=name,
+                ok=False,
+                message="The platform did not answer in time: check its URL and the network path from the connector.",
+            )
+        except Exception as err:
+            return HuntConnectionCheck(name=name, ok=False, message=_check_message(err))
+        return HuntConnectionCheck(name=name, ok=True, message=success)
+
+    def _complete_connection_check(self, event: Mapping[str, Any]) -> str:
+        """Run the connection test OpenCTI asked for and report its checks."""
+        check_id = str((event.get("connection_check") or {}).get("id") or "").strip()
+        if not check_id:
+            raise HuntRequestError(
+                "The connection test message has no connection_check.id."
+            )
+        report = getattr(self.helper, "report_hunt_connection_check", None)
+        if not callable(report):
+            raise HuntUnsupportedPyctiError(
+                "The installed pycti cannot report connection tests: install the "
+                "pycti release matching the OpenCTI platform."
+            )
+        checks = self.connection_checks(RunDeadline(CONNECTION_CHECK_TIMEOUT_SECONDS))
+        if not checks:
+            checks = [
+                HuntConnectionCheck(
+                    name="Connection", ok=False, message="The connector ran no check."
+                )
+            ]
+        report(check_id, [check.model_dump() for check in checks])
+        failed = [check for check in checks if not check.ok]
+        self.logger.info(
+            "[HUNT] Connection tested",
+            {"platform": self.platform, "failed": [check.name for check in failed]},
+        )
+        if failed:
+            return f"Connection test failed: {failed[0].message}"
+        return "Connection test passed"
 
     def on_timeout(self, native_query: NativeQuery) -> None:  # noqa: B027
         """Hook called when ``execute`` exceeds the run timeout.
@@ -549,6 +703,8 @@ class InternalHuntConnector(ABC):
         Returns:
             The work completion message.
         """
+        if event.get("mode") == CONNECTION_CHECK_MODE:
+            return self._complete_connection_check(event)
         started = time.monotonic()
         try:
             request = self.parse_request(event)

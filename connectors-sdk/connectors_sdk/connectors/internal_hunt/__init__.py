@@ -25,9 +25,11 @@ from connectors_sdk.connectors.internal_hunt.analysis import (
 )
 from connectors_sdk.connectors.internal_hunt.api_client import (
     HuntApiClient,
+    access_denied_message,
     api_error_message,
 )
 from connectors_sdk.connectors.internal_hunt.errors import (
+    HuntAccessDeniedError,
     HuntError,
     HuntExecutionError,
     HuntRequestError,
@@ -52,6 +54,7 @@ from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
     ensure_pycti_hunt_support,
 )
 from connectors_sdk.connectors.internal_hunt.models import (
+    HuntConnectionCheck,
     HuntDefinition,
     HuntEvent,
     HuntEvidence,
@@ -100,6 +103,7 @@ __all__ = [
     "InternalHuntConnector",
     "ensure_pycti_hunt_support",
     # Protocol models
+    "HuntConnectionCheck",
     "HuntDefinition",
     "HuntEvent",
     "HuntEvidence",
@@ -152,6 +156,7 @@ __all__ = [
     "parse_timestamp",
     # HTTP
     "HuntApiClient",
+    "access_denied_message",
     "api_error_message",
     # Observables and STIX mapping
     "ObservableValue",
@@ -164,6 +169,7 @@ __all__ = [
     "hunt_author",
     "hunt_markings",
     # Errors
+    "HuntAccessDeniedError",
     "HuntError",
     "HuntExecutionError",
     "HuntRequestError",
