@@ -171,12 +171,20 @@ class KVStore:
             items = r.json()
             if not isinstance(items, list):
                 raise ValueError("Unexpected KV store response (a list is expected)")
+            # A skipped item would make its deployment look absent.
+            if not all(
+                isinstance(item, dict)
+                and isinstance(item.get("_key"), str)
+                and item["_key"]
+                for item in items
+            ):
+                raise ValueError(
+                    "Unexpected KV store response (every item must carry a _key)"
+                )
             yield from items
             if len(items) < page_size:
                 return
-            last_key = items[-1].get("_key")
-            if last_key is None:
-                raise ValueError("KV store items are expected to carry a _key")
+            last_key = items[-1]["_key"]
 
     def run_saved_search(
         self, name: str, earliest: datetime, max_results: int, offset: int = 0

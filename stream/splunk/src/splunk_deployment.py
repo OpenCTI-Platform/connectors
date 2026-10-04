@@ -134,13 +134,13 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
 
         Raises:
             requests.HTTPError: When the collection cannot be read.
+            ValueError: When an item carries no key (never skipped: its deployment
+                would look absent).
         """
         for item in self._kvstore.list_indicators():
-            if not isinstance(item, Mapping):
-                continue
-            key = item.get("_key")
+            key = item.get("_key") if isinstance(item, Mapping) else None
             if not isinstance(key, str) or not key:
-                continue
+                raise ValueError("A KV store item of the read-back carries no _key")
             yield VendorIndicator(
                 indicator_id=key,
                 external_id=key,

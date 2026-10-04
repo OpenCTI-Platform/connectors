@@ -43,7 +43,7 @@ def test_list_vendor_indicators_maps_the_kv_store_items(kvstore):
         "values": ["198.51.100.7", "evil.example"],
     }
     kvstore.list_indicators.return_value = iter(
-        [item, {"_key": "other", "type": "indicator"}, {"type": "indicator"}, "x"]
+        [item, {"_key": "other", "type": "indicator"}]
     )
 
     vendor_indicators = list(make_adapter(kvstore).list_vendor_indicators())
@@ -55,6 +55,14 @@ def test_list_vendor_indicators_maps_the_kv_store_items(kvstore):
         VendorIndicator(indicator_id="other", external_id="other", value=None),
     ]
     assert vendor_indicators[0].raw == item
+
+
+@pytest.mark.parametrize("malformed", [{"type": "indicator"}, "x"])
+def test_list_vendor_indicators_rejects_an_item_without_key(kvstore, malformed):
+    kvstore.list_indicators.return_value = iter([malformed])
+
+    with pytest.raises(ValueError, match="carries no _key"):
+        list(make_adapter(kvstore).list_vendor_indicators())
 
 
 def test_list_vendor_indicators_propagates_read_errors(kvstore):

@@ -80,6 +80,19 @@ def test_list_indicators_raises_when_a_full_page_has_no_key(kvstore, requests_mo
         list(kvstore.list_indicators(page_size=2))
 
 
+@pytest.mark.parametrize(
+    "malformed", ["x", {"type": "indicator"}, {"_key": ""}, {"_key": 1}]
+)
+def test_list_indicators_rejects_an_item_without_key_anywhere(
+    kvstore, requests_mock, malformed
+):
+    """A skipped item would make its deployment look absent."""
+    requests_mock.get(DATA_URL, json=[malformed, {"_key": "b"}])
+
+    with pytest.raises(ValueError, match="every item must carry a _key"):
+        list(kvstore.list_indicators(page_size=5))
+
+
 def test_run_saved_search_runs_a_bounded_oneshot_job(kvstore, requests_mock):
     requests_mock.post(SEARCH_URL, json={"results": [{"opencti_id": "a"}]})
     earliest = datetime(2026, 10, 3, 8, 0, tzinfo=UTC)
