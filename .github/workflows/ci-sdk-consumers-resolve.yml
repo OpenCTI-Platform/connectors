@@ -1,0 +1,31 @@
+name: SDK consumers resolve
+
+# A dependency pin changed in connectors-sdk must still resolve for every connector that installs the SDK, including
+# the connectors the pull request does not touch (their images are only rebuilt on master).
+
+on:
+  pull_request:
+    paths:
+      - 'connectors-sdk/pyproject.toml'
+      - '.github/scripts/resolve_sdk_consumers.py'
+      - '.github/workflows/ci-sdk-consumers-resolve.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve every connector that depends on connectors-sdk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Resolve the consumers with the SDK of this pull request
+        run: python3 .github/scripts/resolve_sdk_consumers.py --python 3.12 --jobs 8
