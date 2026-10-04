@@ -229,7 +229,8 @@ does not exist), and hits are counted with a sighting of the indicator on that e
   you define, visible in the `SPLUNK_OWNER` / `SPLUNK_APP` namespace, run as a oneshot job over the time range of each
   hit collection (since the previous run). Each result carries `opencti_id` (the KV Store `_key`) or `value` (the
   matched observable value), `_time` and optionally `count`; at most 10,000 results are read per run, oldest first
-  (`| sort 0 _time` is appended), and when the limit is reached the next run resumes at the newest result read.
+  (`| sort 0 _time` is appended), and when the limit is reached the next run resumes at the newest result read. A result
+  without `_time` fails the hit read (logged), which is retried over the same time range on the next run.
   Example, with a lookup definition `opencti_lookup` on the KV Store collection:
 
   ```spl

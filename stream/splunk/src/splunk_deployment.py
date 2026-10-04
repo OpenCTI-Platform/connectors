@@ -200,6 +200,8 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
 
         Raises:
             requests.HTTPError: When the saved search cannot be run.
+            ValueError: When a result is not an object or carries no `_time` (never
+                skipped: the hit window would move past it).
         """
         if self._hits_saved_search is None or not deployments:
             return []
@@ -210,10 +212,14 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
         hits: list[VendorHit] = []
         newest = since
         for row in rows:
-            if not isinstance(row, Mapping):
-                continue
-            timestamp = parse_splunk_time(row.get("_time"))
-            if timestamp is None or timestamp < since:
+            timestamp = (
+                parse_splunk_time(row.get("_time"))
+                if isinstance(row, Mapping)
+                else None
+            )
+            if timestamp is None:
+                raise ValueError("A result of the hits saved search carries no _time")
+            if timestamp < since:
                 continue
             newest = max(newest, timestamp)
             opencti_id = _text(row.get("opencti_id"))

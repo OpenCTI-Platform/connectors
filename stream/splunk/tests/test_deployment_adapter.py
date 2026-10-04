@@ -130,10 +130,8 @@ def test_collect_hits_maps_the_saved_search_results(kvstore):
         {"opencti_id": INDICATOR_ID, "_time": recent.isoformat(), "count": "3"},
         {"value": ["198.51.100.7", "x"], "_time": str(recent.timestamp())},
         {"opencti_id": "too-old", "_time": (SINCE - timedelta(seconds=1)).isoformat()},
-        {"opencti_id": "no-time"},
         {"_time": recent.isoformat(), "count": 2},
         {"opencti_id": "bad-count", "_time": recent.isoformat(), "count": "n/a"},
-        "not a row",
     ]
     adapter = make_adapter(
         kvstore, hits_saved_search=" OpenCTI matches ", hits_max_results=500
@@ -154,6 +152,21 @@ def test_collect_hits_maps_the_saved_search_results(kvstore):
         VendorHit(timestamp=recent, value="198.51.100.7"),
         VendorHit(timestamp=recent, indicator_id="bad-count", external_id="bad-count"),
     ]
+
+
+@pytest.mark.parametrize(
+    "malformed", [{"opencti_id": "no-time"}, {"_time": "never"}, "not a row"]
+)
+def test_collect_hits_rejects_a_result_without_time(kvstore, malformed):
+    """A skipped result would be lost: the hit window moves past it."""
+    kvstore.run_saved_search.return_value = [
+        {"opencti_id": INDICATOR_ID, "_time": SINCE.isoformat()},
+        malformed,
+    ]
+    adapter = make_adapter(kvstore, hits_saved_search="matches")
+
+    with pytest.raises(ValueError, match="carries no _time"):
+        adapter.collect_hits([DEPLOYMENT], SINCE)
 
 
 def test_collect_hits_is_complete_until_the_newest_result_when_capped(kvstore):
