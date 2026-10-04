@@ -212,16 +212,17 @@ def test_process_message_maps_the_infrastructure(
         "x509-certificate": 1,
         "indicator": 3,
         "relationship": 2 + 3 * 2 + 3 * 2,
-        "observed-data": 1,
+        "observed-data": 3,
     }
-    (observed,) = [obj for obj in sent if obj["type"] == "observed-data"]
-    assert observed["x_opencti_hunt_run_id"] == "run-1"
-    assert observed["number_observed"] == 1
-    assert set(observed["object_refs"]) == {
+    # One observed-data per observable, each observed on the one host
+    observed = [obj for obj in sent if obj["type"] == "observed-data"]
+    assert {o["x_opencti_hunt_run_id"] for o in observed} == {"run-1"}
+    assert {o["number_observed"] for o in observed} == {1}
+    assert sorted(ref for o in observed for ref in o["object_refs"]) == sorted(
         obj["id"]
         for obj in sent
         if obj["type"] in ("ipv4-addr", "domain-name", "x509-certificate")
-    }
+    )
     (infrastructure,) = [obj for obj in sent if obj["type"] == "infrastructure"]
     assert infrastructure["name"] == "Cobalt Strike team servers (hunt hunt-1)"
     assert infrastructure["id"] == infrastructure_stix_id("hunt-1")
@@ -319,18 +320,21 @@ def test_process_message_records_what_each_run_observed(
     connector.process_message(hunt_event)
     second = helper.stix2_create_bundle.call_args.args[0]
 
-    # Then each run records one observed-data per number of hosts
+    # Then each run records one observed-data per observable, with the number of
+    # hosts holding it, the most observed first
     ids = {obj["id"]: obj for obj in first}
-    most, least = [obj for obj in first if obj["type"] == "observed-data"]
-    assert most["number_observed"] == 2
-    assert [ids[ref]["type"] for ref in most["object_refs"]] == [
-        "domain-name",
-        "x509-certificate",
+    observed = [obj for obj in first if obj["type"] == "observed-data"]
+    assert all(len(obj["object_refs"]) == 1 for obj in observed)
+    counts = [
+        (ids[obj["object_refs"][0]].get("value", "certificate"), obj["number_observed"])
+        for obj in observed
     ]
-    assert least["number_observed"] == 1
-    assert sorted(ids[ref]["value"] for ref in least["object_refs"]) == [
-        "8.8.8.8",
-        "9.9.9.9",
+    assert [count for _, count in counts] == [2, 2, 1, 1]
+    assert sorted(counts) == [
+        ("8.8.8.8", 1),
+        ("9.9.9.9", 1),
+        ("c2.update-cdn.net", 2),
+        ("certificate", 2),
     ]
 
     # And the runs share the tracked infrastructure, never their observed-data

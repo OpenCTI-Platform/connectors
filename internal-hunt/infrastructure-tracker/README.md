@@ -189,8 +189,8 @@ configured source supports its fingerprints.
    - one indicator per observable (STIX pattern, `x_opencti_detection` set, main observable type) `based-on` it;
    - `related-to` relationships from the infrastructure and `indicates` relationships from every indicator to the
      threats the hunt targets;
-   - one observed-data per number of hosts, referencing the observables that many hosts hold, stamped with the hunt
-     run (`x_opencti_hunt_run_id`).
+   - one observed-data per observable, with the number of hosts holding it, stamped with the hunt run
+     (`x_opencti_hunt_run_id`).
 
    Every object inherits the markings and the author of the hunt and has a deterministic identifier. The
    infrastructure, observables, indicators and relationships keep their standard identifiers, so every run of the hunt

@@ -6,8 +6,8 @@ For a run with hits, the bundle holds:
   Security Platform identity, counting the hits between the first and the last
   matching event;
 - the IOC observables extracted from the results, restricted to the observable
-  types the hunt expects, and one ``observed-data`` per number of observations,
-  referencing the observables that many result events hold.
+  types the hunt expects, and one ``observed-data`` per observable, with the
+  number of result events holding it.
 
 Every object inherits the markings and the author of the hunt. Identifiers are
 deterministic: observables keep their standard identifiers, while sightings and
@@ -62,9 +62,10 @@ def build_observed_data(
 ) -> list[ObservedData]:
     """Build the observed-data of the observables found by a hunt run.
 
-    ``number_observed`` is the number of observations of each referenced
-    object, so the observables are grouped by their number of observations:
-    one observed-data per count, the most observed first.
+    One observed-data per observable, the most observed first, its
+    ``number_observed`` being the observations of that observable. Its
+    identifier derives from the hunt run and the observable only, so a retry
+    of the run upserts the same observed-data whatever the counts it sees.
 
     Args:
         request: The hunt run request.
@@ -76,9 +77,6 @@ def build_observed_data(
     Returns:
         The observed-data, stamped with the hunt run (empty without observable).
     """
-    groups: dict[int, list[BaseIdentifiedEntity]] = {}
-    for entity, count in observations:
-        groups.setdefault(count, []).append(entity)
     author = hunt_author(request)
     markings = hunt_markings(request) or None
     return [
@@ -86,12 +84,12 @@ def build_observed_data(
             first_observed=first_seen,
             last_observed=last_seen,
             number_observed=count,
-            entities=entities,
+            entities=[entity],
             hunt_run_id=request.hunt_run.id,
             author=author,
             markings=markings,
         )
-        for count, entities in sorted(groups.items(), key=lambda item: -item[0])
+        for entity, count in sorted(observations, key=lambda item: -item[1])
     ]
 
 

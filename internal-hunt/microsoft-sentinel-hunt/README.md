@@ -148,8 +148,8 @@ The connector executes `kql`.
 3. Events matching a benign pattern of the hunt are suppressed.
 4. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
    Microsoft Sentinel Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event, read from
-   `TimeGenerated`, `Timestamp`, `EventStartTime` or `TimeCreated`) and one observed-data per number of observations,
-   referencing the public IP addresses, domains, URLs, file hashes and email addresses that many result events hold,
+   `TimeGenerated`, `Timestamp`, `EventStartTime` or `TimeCreated`) and one observed-data per public IP address,
+   domain, URL, file hash or email address found, with the number of result events holding it,
    restricted to the observable types the hunt expects. Objects inherit the markings and author of the hunt and have
    deterministic identifiers; those of the sightings and observed-data derive from the hunt run too, so a retry of a run
    updates its own objects and two runs never share one.

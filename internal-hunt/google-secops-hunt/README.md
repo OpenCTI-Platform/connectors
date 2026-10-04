@@ -158,8 +158,8 @@ The connector executes `udm` and `yara-l`.
 4. Events matching a benign pattern of the hunt are suppressed.
 5. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
    Google SecOps Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event) and one
-   observed-data per number of observations, referencing the public IP addresses, domains, URLs, file hashes and email
-   addresses that many result events hold, restricted to the observable types the hunt expects. Objects inherit the
+   observed-data per public IP address, domain, URL, file hash or email address found, with the number of result events
+   holding it, restricted to the observable types the hunt expects. Objects inherit the
    markings and author of the hunt and have deterministic identifiers; those of the sightings and observed-data derive
    from the hunt run too, so a retry of a run updates its own objects and two runs never share one.
 6. The run is reported with the hit count, the distinct hosts, users and network peers, the query executed and an

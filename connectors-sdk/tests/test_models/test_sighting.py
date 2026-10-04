@@ -170,6 +170,13 @@ def test_sighting_identity_is_scoped_to_the_hunt_run(
     assert len({standard.id, run_1.id, run_2.id}) == 3
     assert run_2.id.startswith("sighting--")
     assert run_2["x_opencti_hunt_run_id"] == "run-2"
+    # And: A retry that sees later telemetry keeps the identity of its run
+    later = {**kwargs, "last_seen": datetime(2026, 3, 2, tzinfo=timezone.utc)}
+    run_1_later = Sighting(**later, hunt_run_id="run-1").to_stix2_object()
+    assert run_1_later.id == run_1.id
+    assert run_1_later["last_seen"] == later["last_seen"]
+    # And: Outside of a hunt, the bounds still take part in the identity
+    assert Sighting(**later).to_stix2_object().id != standard.id
 
 
 def test_sighting_to_stix2_object_with_reference_objects() -> None:

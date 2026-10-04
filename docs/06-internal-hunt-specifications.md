@@ -163,9 +163,8 @@ For a telemetry run with hits:
 - one **sighting** per technique and per indicator of the hunt: `sighting_of_ref` is the technique or indicator,
   `where_sighted_refs` the Security Platform identity, `count` the hits, `first_seen`/`last_seen` the first and last
   matching events, and the description names the hunt and the run;
-- one **observed-data** per number of observations, referencing the IOC observables extracted from the results that
-  many result events hold: `number_observed` is the count of each referenced observable (an observable is counted once
-  per event), only for the observable types the hunt expects and the connector allows.
+- one **observed-data** per IOC observable extracted from the results, `number_observed` being the number of result
+  events holding it (an observable is counted once per event), so that a retry of the run upserts the same objects, only for the observable types the hunt expects and the connector allows.
 
 Objects inherit the markings and the author of the hunt, and every sighting and observed-data carries its run in
 `x_opencti_hunt_run_id`. Identifiers are deterministic: observables keep their standard pycti ids, while the ids of the

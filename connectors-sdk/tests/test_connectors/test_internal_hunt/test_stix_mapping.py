@@ -32,8 +32,8 @@ def test_build_telemetry_objects_maps_sightings_and_observed_data(hunt_event):
     for item in stix:
         by_type.setdefault(item["type"], []).append(item)
 
-    # Then observables, one observed-data per observation count and one sighting
-    # per technique and indicator are produced
+    # Then observables, one observed-data per observable and one sighting per
+    # technique and indicator are produced
     assert len(by_type["ipv4-addr"]) == 1
     assert len(by_type["domain-name"]) == 1
     most_observed, least_observed = by_type["observed-data"]
@@ -61,6 +61,42 @@ def test_build_telemetry_objects_maps_sightings_and_observed_data(hunt_event):
         assert sighting["object_marking_refs"] == request.hunt.object_marking_refs
     assert isinstance(objects[-1], Sighting)
     assert any(isinstance(obj, ObservedData) for obj in objects)
+
+
+def test_a_retry_upserts_the_knowledge_of_its_run(hunt_event):
+    # Given two attempts of one run: the second sees more events, so the counts
+    # and the time bounds of its observables move
+    request = HuntRequest.model_validate(hunt_event())
+    first = build_telemetry_objects(
+        request,
+        2,
+        FIRST,
+        LAST,
+        [
+            ObservableValue("IPv4-Addr", "8.8.8.8"),
+            ObservableValue("Domain-Name", "evil.com"),
+        ],
+    )
+    later = datetime(2026, 10, 3, 9, tzinfo=timezone.utc)
+    second = build_telemetry_objects(
+        request,
+        5,
+        FIRST,
+        later,
+        [
+            ObservableValue("IPv4-Addr", "8.8.8.8", count=4),
+            ObservableValue("Domain-Name", "evil.com"),
+        ],
+    )
+
+    # When/Then both attempts produce the same observed-data and sightings:
+    # the retry upserts them instead of adding new ones
+    def ids(objects, stix_type):
+        return {obj.id for obj in objects if obj.to_stix2_object()["type"] == stix_type}
+
+    assert len(ids(first, "observed-data")) == 2
+    assert ids(first, "observed-data") == ids(second, "observed-data")
+    assert ids(first, "sighting") == ids(second, "sighting")
 
 
 def test_build_telemetry_objects_is_deterministic_per_run(hunt_event):

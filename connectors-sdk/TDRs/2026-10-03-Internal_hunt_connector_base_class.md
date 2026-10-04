@@ -24,7 +24,7 @@ Every hunt connector repeats the same pipeline:
 4. execute the query within the run limits (`timeout_seconds`, `max_results`);
 5. suppress the benign events of the hunt;
 6. map the results to STIX (sightings of the techniques and indicators on the Security Platform identity,
-   one observed-data per observation count with IOC observables only), with deterministic ids scoped to the hunt
+   one observed-data per IOC observable, with its number of observations), with deterministic ids scoped to the hunt
    run for sightings and observed-data, markings and author inherited from the hunt;
 7. send the bundle within the run work;
 8. report the run: hits, distinct entities, redacted evidence (SHA-256 hashes and truncated previews), translated
