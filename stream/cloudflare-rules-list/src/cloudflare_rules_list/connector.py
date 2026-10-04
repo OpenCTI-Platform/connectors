@@ -62,7 +62,9 @@ class Connector:
         self._full_sync_done = False
         # The stream and the deployment reconciliation both change the snapshot.
         self._lock = threading.RLock()
-        self._last_sync_time = 0.0
+        # time.monotonic() counts from the host boot: never synced must open the
+        # throttle window whatever the uptime.
+        self._last_sync_time = float("-inf")
         # Deployment write-back (dissemination assurance), set by `main.py`.
         self.assurance: "DeploymentAssurance | None" = None
 

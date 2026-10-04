@@ -408,6 +408,22 @@ def test_full_sync_retry_waits_for_the_sync_interval(connector, assurance):
     connector.client.replace_list_items.assert_not_called()
 
 
+def test_first_full_sync_retry_runs_on_a_host_booted_recently(
+    connector, assurance, monkeypatch
+):
+    """The throttle window starts closed whatever the host uptime."""
+    monkeypatch.setattr("cloudflare_rules_list.connector.time.monotonic", lambda: 5.0)
+    connector._full_sync_done = False
+    connector.sync_interval = 3600
+    connector.helper.api.indicator.list.return_value = []
+    connector.helper.api.stix_cyber_observable.list.return_value = []
+
+    connector.process_message(make_message("create", make_indicator()))
+
+    connector.helper.api.indicator.list.assert_called_once()
+    assert connector._full_sync_done is True
+
+
 def test_stream_events_after_a_full_sync_share_its_keys(connector, assurance):
     connector.helper.api.indicator.list.return_value = [
         {
