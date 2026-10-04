@@ -48,10 +48,10 @@ MAX_CONSECUTIVE_FAILED_REQUESTS = 3
 RESOLUTION_CACHE_SIZE = 1024
 RESOLUTION_CACHE_TTL_SECONDS = 600.0
 
-# OpenCTI rejects names shorter than 2 characters, and a longer text than this
-# is a sentence the extraction mistook for a name.
-_MIN_NAME_LENGTH = 2
-_MAX_NAME_LENGTH = 256
+# The bounds of curationResolve (1 to 512 characters once trimmed): every name it
+# accepts is looked up, a name it would refuse is never sent.
+_MIN_NAME_LENGTH = 1
+_MAX_NAME_LENGTH = 512
 _MAX_ERROR_LENGTH = 500
 
 _SINGLE_ENTITY_TYPES = {

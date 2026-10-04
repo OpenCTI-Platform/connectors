@@ -255,6 +255,20 @@ def test_bind_sends_the_lookups_with_the_permissions_of_the_importing_user():
     helper.api.query.assert_not_called()
 
 
+def test_bind_looks_up_every_name_the_resolver_accepts():
+    # curationResolve takes 1 to 512 characters once trimmed: a one-letter name
+    # and a long one are looked up, a longer one is never sent.
+    long_name = "L" * 512
+    platform = FakePlatform()
+    binder, _ = build_binder(platform)
+
+    binder.bind(
+        bundle_of(malware("X"), malware(f"  {long_name}  "), malware("T" * 513))
+    )
+
+    assert sorted(platform.calls) == [("Malware", long_name), ("Malware", "X")]
+
+
 @pytest.mark.parametrize(
     "extracted_aliases, resolved, expected_aliases, alias_added",
     [
@@ -741,8 +755,7 @@ def test_bind_looks_up_the_objects_with_a_name_and_a_known_type_only():
         id=pycti.AttackPattern.generate_id("Spearphishing"),
         name="Spearphishing",
     )
-    too_short = malware("X")
-    too_long = malware("ransomware " * 30)
+    too_long = malware("ransomware " * 47)
     security_platform = stix2.Identity(
         id=pycti.Identity.generate_id("EDR", "organization"),
         name="EDR",
@@ -759,7 +772,6 @@ def test_bind_looks_up_the_objects_with_a_name_and_a_known_type_only():
             nameless_location,
             mitre_attack_pattern,
             named_attack_pattern,
-            too_short,
             too_long,
             security_platform,
             report([ip]),
