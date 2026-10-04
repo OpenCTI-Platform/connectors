@@ -139,7 +139,11 @@ class CloudflareRulesListClient:
                 raise CloudflareAPIError(
                     "Unexpected list items response: 'result' is not a list"
                 )
-            yield from (item for item in items if isinstance(item, dict))
+            if not all(isinstance(item, dict) for item in items):
+                raise CloudflareAPIError(
+                    "Unexpected list items response: an item is not an object"
+                )
+            yield from items
             result_info = response.get("result_info") or {}
             next_cursor = (result_info.get("cursors") or {}).get("after")
             if not next_cursor:

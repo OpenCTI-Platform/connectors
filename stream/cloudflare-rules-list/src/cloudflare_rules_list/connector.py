@@ -311,6 +311,22 @@ class Connector:
         with self._lock:
             return [key for key, value in self._synced.items() if value == ip]
 
+    def forget_absent(self, listed: set[str]) -> None:
+        """Forget the uploaded indicators whose IP address the list no longer holds.
+
+        The reconciliation reports an item deleted outside the connector `removed`;
+        once forgotten, the indicator differs from the last upload, so the upload
+        restoring its item reports it `deployed` again.
+
+        Args:
+            listed: Every IP address of the list, read back in full.
+        """
+        with self._lock:
+            for key in [
+                key for key, value in self._synced.items() if value not in listed
+            ]:
+                del self._synced[key]
+
     def _changed(self, indicators: dict[str, str]) -> list[str]:
         """Return the indicators whose value differs from the last uploaded snapshot."""
         return [

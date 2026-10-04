@@ -44,7 +44,7 @@ def comment_id(item: dict[str, Any]) -> str | None:
 
 
 class CloudflareDeploymentError(Exception):
-    """A removal refused by the reconciliation, with a readable message."""
+    """A read-back or removal refused by the reconciliation, with a readable message."""
 
 
 class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
@@ -65,14 +65,26 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
         holding that address: one vendor indicator is returned for each. Other items
         (observables, or comments carrying an internal id) are matched by IP address.
 
+        Once the whole list is read, the indicators uploaded with an address the
+        list no longer holds (item deleted outside the connector, reported
+        `removed`) are forgotten, so that the upload restoring the item reports
+        them `deployed` again.
+
         :raises CloudflareAPIError: On any API error (never a partial listing).
+        :raises CloudflareDeploymentError: On an item without IP address or id,
+            which would otherwise read as absent.
         """
         connector = self._connector
+        listed: set[str] = set()
         for item in connector.client.iter_list_items(connector.list_id):
             ip = item.get("ip")
             item_id = item.get("id")
             if not isinstance(ip, str) or not ip or item_id is None:
-                continue
+                raise CloudflareDeploymentError(
+                    "Cloudflare listed a list item without IP address or id, "
+                    "the read-back is incomplete"
+                )
+            listed.add(ip)
             opencti_id = comment_id(item)
             indicator_ids = list(
                 dict.fromkeys(
@@ -97,6 +109,7 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
                     value=ip,
                     raw={"item_id": str(item_id), "opencti_id": indicator_id},
                 )
+        connector.forget_absent(listed)
 
     def remove_vendor_indicator(
         self, vendor_indicator: VendorIndicator, deployment: IndicatorDeployment

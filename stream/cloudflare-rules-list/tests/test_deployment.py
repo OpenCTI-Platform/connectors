@@ -599,7 +599,7 @@ def test_iter_list_items_follows_the_cursors():
     client.get_list_items = MagicMock(
         side_effect=[
             {
-                "result": [{"id": "1"}, "junk"],
+                "result": [{"id": "1"}],
                 "result_info": {"cursors": {"after": "c1"}},
             },
             {"result": [{"id": "2"}], "result_info": {}},
@@ -614,6 +614,7 @@ def test_iter_list_items_follows_the_cursors():
     "pages, message",
     [
         ([{"errors": []}], "'result' is not a list"),
+        ([{"result": [{"id": "1"}, "junk"]}], "an item is not an object"),
         (
             [{"result": [], "result_info": {"cursors": {"after": "same"}}}] * 2,
             "same list items cursor twice",
@@ -669,8 +670,6 @@ def test_adapter_lists_the_items(connector):
             {"id": "1", "ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"},
             {"id": "2", "ip": "203.0.113.9", "comment": f"OpenCTI: {INDICATOR_ID}"},
             {"id": "3", "ip": "192.0.2.1"},
-            {"id": "4", "ip": ""},
-            {"ip": "192.0.2.2"},
         ]
     )
 
@@ -683,6 +682,48 @@ def test_adapter_lists_the_items(connector):
     ]
     assert indicators[1].raw == {"item_id": "2", "opencti_id": INDICATOR_ID}
     connector.client.iter_list_items.assert_called_once_with("list-123")
+
+
+@pytest.mark.parametrize(
+    "item", [{"id": "4", "ip": ""}, {"ip": "192.0.2.2"}, {"id": "5", "ip": 7}]
+)
+def test_adapter_rejects_an_item_without_ip_or_id(connector, item):
+    connector.client.iter_list_items.return_value = iter([item])
+
+    with pytest.raises(CloudflareDeploymentError, match="without IP address or id"):
+        list(CloudflareDeploymentAdapter(connector).list_vendor_indicators())
+
+
+def test_externally_removed_item_is_reported_deployed_once_uploaded_again(
+    connector, assurance
+):
+    connector._indicator_cache = {STIX_ID: "198.51.100.7", OTHER_STIX_ID: "203.0.113.9"}
+    connector._indicator_keys = {STIX_ID, OTHER_STIX_ID}
+    connector._synced = dict(connector._indicator_cache)
+    connector.client.iter_list_items.return_value = iter(
+        [{"id": "2", "ip": "203.0.113.9", "comment": f"OpenCTI: {OTHER_STIX_ID}"}]
+    )
+
+    list(CloudflareDeploymentAdapter(connector).list_vendor_indicators())
+
+    assert connector._synced == {OTHER_STIX_ID: "203.0.113.9"}
+    connector._upload_snapshot()
+    reports = enqueued(assurance)
+    assert set(reports) == {STIX_ID}
+    assert reports[STIX_ID].status == "deployed"
+
+
+def test_truncated_read_back_forgets_no_upload(connector):
+    connector._synced = {STIX_ID: "198.51.100.7"}
+    connector.client.iter_list_items.return_value = iter(
+        [{"id": "2", "ip": "203.0.113.9"}, {"id": "3", "ip": "192.0.2.1"}]
+    )
+    listing = CloudflareDeploymentAdapter(connector).list_vendor_indicators()
+
+    next(listing)
+    listing.close()
+
+    assert connector._synced == {STIX_ID: "198.51.100.7"}
 
 
 def test_adapter_lists_every_indicator_holding_an_item(connector):

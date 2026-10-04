@@ -138,15 +138,15 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
 | Snapshot rejected by Cloudflare           | `failed` for those indicators, with the API error (they are retried with the next upload)             |
 | Snapshot uploaded without an indicator    | `removed` for the indicators of the previous upload dropped by a delete event (when the last object is deleted, an empty snapshot clears the list) |
 | Reconciliation, indicator present         | `active`, with the Cloudflare list item id as external id                                             |
-| Reconciliation, indicator absent          | `removed` (deleted from the list outside of OpenCTI)                                                  |
+| Reconciliation, indicator absent          | `removed` (deleted from the list outside of OpenCTI); the next upload restores the item and reports the indicator `deployed` again |
 | Reconciliation, `pending` (analyst retry) | The indicator is added to the snapshot, uploaded and reported `deployed` or `failed`                  |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still listed are deleted from the list and reported `removed` |
 | Reconciliation, unknown indicator         | Items whose comment carries the STIX id of an indicator with no deployment are reported `active` (backfill) |
 
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the items of the list are read back (cursor
   pagination). Deployments are matched by the OpenCTI id of the item comment when it is a STIX indicator id, by item
-  id, then by IP address. A read-back error, or a cursor repeated by the API, skips the run: indicators are never
-  reported `removed` from a partial listing.
+  id, then by IP address. A read-back error, a cursor repeated by the API or a malformed item (not an object, or
+  without IP address or id) skips the run: indicators are never reported `removed` from a partial listing.
 - **Withdrawal safety**: a withdrawal deletes the list item (`DELETE /rules/lists/{id}/items`, never an empty snapshot)
   only when it belongs to the indicator, and drops the indicator from the snapshot.
 - **Shared IP addresses**: a Cloudflare list holds an IP address once, so the objects sharing an address are uploaded
