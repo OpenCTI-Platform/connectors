@@ -224,7 +224,7 @@ def test_streamed_observables_are_not_reported(connector):
 
 def test_updated_indicator_is_reported_deployed(connector):
     connector.api._send_request.side_effect = [
-        {"value": [{"id": DEFENDER_ID}]},
+        {"value": [own(DEFENDER_ID)]},
         {"id": DEFENDER_ID},
     ]
     indicator = make_indicator()
@@ -234,6 +234,19 @@ def test_updated_indicator_is_reported_deployed(connector):
     connector.assurance.report_pushed.assert_called_once_with(
         indicator, external_id=DEFENDER_ID
     )
+
+
+def test_update_never_takes_a_defender_indicator_of_another_indicator(connector):
+    """Defender may hold the value for another application or another OpenCTI
+    indicator: that one is neither updated nor reported as this deployment."""
+    connector.api._send_request.return_value = {
+        "value": [own("77", opencti_id="another-indicator"), {"id": "78"}]
+    }
+
+    connector.process_message(make_message("update", make_indicator()))
+
+    assert [entry for entry in _sent(connector) if entry[0] != "get"] == []
+    connector.assurance.report_pushed.assert_not_called()
 
 
 def test_update_of_an_absent_indicator_is_not_reported(connector):
@@ -247,7 +260,7 @@ def test_update_of_an_absent_indicator_is_not_reported(connector):
 
 def test_failed_update_is_reported_failed(connector):
     connector.api._send_request.side_effect = [
-        {"value": [{"id": DEFENDER_ID}]},
+        {"value": [own(DEFENDER_ID)]},
         http_error(403, "Forbidden"),
     ]
 
@@ -255,6 +268,11 @@ def test_failed_update_is_reported_failed(connector):
 
     message = connector.assurance.report_push_failed.call_args.args[1]
     assert message.endswith("403 Client Error - Forbidden")
+
+
+def own(defender_id, opencti_id=INDICATOR_ID):
+    """A Defender indicator the connector pushed for an OpenCTI indicator."""
+    return {"id": defender_id, "externalId": opencti_id}
 
 
 def make_multi_indicator(*observables):
@@ -338,7 +356,7 @@ def test_observables_defender_does_not_take_are_not_pushed(connector):
 
 def test_an_update_creates_the_missing_defender_indicators(connector):
     connector.api._send_request.side_effect = [
-        {"value": [{"id": "1"}]},
+        {"value": [own("1")]},
         {"value": []},
         {"id": "1"},
         {"id": "2"},
@@ -357,7 +375,7 @@ def test_an_update_creates_the_missing_defender_indicators(connector):
 
 def test_a_failed_update_deletes_only_the_defender_indicators_it_created(connector):
     connector.api._send_request.side_effect = [
-        {"value": [{"id": "1"}]},
+        {"value": [own("1")]},
         {"value": []},
         {"value": []},
         {"id": "1"},
@@ -380,6 +398,7 @@ def test_a_failed_update_deletes_only_the_defender_indicators_it_created(connect
 
 PREVIOUS_IP = {
     "id": "1",
+    "externalId": INDICATOR_ID,
     "indicatorValue": "198.51.100.7",
     "indicatorType": "IpAddress",
     "application": "OpenCTI Microsoft Defender Intel",
@@ -398,7 +417,7 @@ def test_a_failed_update_restores_the_defender_indicators_it_updated(connector):
     indicators get their previous values again."""
     connector.api._send_request.side_effect = [
         {"value": [PREVIOUS_IP]},
-        {"value": [{"id": "2"}]},
+        {"value": [own("2")]},
         {"id": "1"},
         http_error(400, "Invalid indicator value"),
         {"id": "1"},
@@ -424,7 +443,7 @@ def test_a_failed_update_restores_the_defender_indicators_it_updated(connector):
 def test_a_failed_restore_is_logged(connector):
     connector.api._send_request.side_effect = [
         {"value": [PREVIOUS_IP]},
-        {"value": [{"id": "2"}]},
+        {"value": [own("2")]},
         {"id": "1"},
         http_error(400, "Invalid indicator value"),
         http_error(503, "Unavailable"),
@@ -569,7 +588,7 @@ def test_adapter_absence_lookup_errors_are_readable():
 
 def test_delete_is_reported_removed(connector):
     connector.api._send_request.side_effect = [
-        {"value": [{"id": DEFENDER_ID}]},
+        {"value": [own(DEFENDER_ID)]},
         None,
     ]
     connector.helper.api.external_reference.read.return_value = {"id": "ref"}
@@ -581,6 +600,20 @@ def test_delete_is_reported_removed(connector):
         indicator, external_id=DEFENDER_ID
     )
     connector.helper.api.external_reference.delete.assert_called_once_with("ref")
+
+
+def test_delete_never_removes_a_defender_indicator_of_another_indicator(connector):
+    connector.api._send_request.return_value = {
+        "value": [own("77", opencti_id="another-indicator"), {"id": "78"}]
+    }
+    indicator = make_indicator()
+
+    connector.process_message(make_message("delete", indicator))
+
+    assert [entry for entry in _sent(connector) if entry[0] == "delete"] == []
+    connector.assurance.report_removed.assert_called_once_with(
+        indicator, external_id=None
+    )
 
 
 def test_delete_of_an_absent_indicator_is_reported_removed(connector):
@@ -596,7 +629,7 @@ def test_delete_of_an_absent_indicator_is_reported_removed(connector):
 
 def test_failed_delete_is_not_reported_removed(connector):
     connector.api._send_request.side_effect = [
-        {"value": [{"id": DEFENDER_ID}]},
+        {"value": [own(DEFENDER_ID)]},
         http_error(500, "Internal error"),
     ]
 
@@ -607,7 +640,7 @@ def test_failed_delete_is_not_reported_removed(connector):
 
 def test_external_reference_cleanup_errors_are_logged(connector):
     connector.api._send_request.side_effect = [
-        {"value": [{"id": DEFENDER_ID}]},
+        {"value": [own(DEFENDER_ID)]},
         None,
     ]
     connector.helper.api.external_reference.read.side_effect = ValueError("boom")
