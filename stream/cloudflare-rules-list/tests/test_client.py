@@ -110,11 +110,15 @@ def test_make_request_rejects_an_unexpected_success_body(client, body, message):
         lambda c: c.get_list("list-1"),
     ],
 )
-def test_a_result_that_is_not_an_object_is_rejected(client, call):
-    client._session.request.return_value = _response({"result": ["op-1"]})
+@pytest.mark.parametrize(
+    "body",
+    [{"result": ["op-1"]}, {"success": True}, {"success": True, "result": None}],
+)
+def test_a_missing_or_malformed_result_is_rejected(client, call, body):
+    client._session.request.return_value = _response(body)
     with pytest.raises(CloudflareAPIError) as exc:
         call(client)
-    assert "'result' is not an object" in str(exc.value)
+    assert "'result' is missing or not an object" in str(exc.value)
     assert exc.value.status_code == 200
 
 

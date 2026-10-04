@@ -290,7 +290,7 @@ def test_failed_upload_reports_the_new_indicators_failed(connector, assurance):
         ),
         (
             CloudflareAPIError(
-                "Unexpected Cloudflare response: 'result' is not an object",
+                "Unexpected Cloudflare response: 'result' is missing or not an object",
                 status_code=200,
             ),
             "Cloudflare returned an unexpected response to the list update",

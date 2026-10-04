@@ -39,18 +39,17 @@ class CloudflareOperationError(CloudflareAPIError):
 
 
 def _result_object(payload: dict) -> dict:
-    """Return the ``result`` object of a Cloudflare response (empty when absent).
+    """Return the ``result`` object of a Cloudflare response.
 
     Raises:
-        CloudflareAPIError: When ``result`` is not an object, with a success status
-            so that the shared "unexpected response" reason applies.
+        CloudflareAPIError: When ``result`` is missing, null or not an object, with
+            a success status so that the shared "unexpected response" reason
+            applies: a bulk change is never taken as done without its result.
     """
     result = payload.get("result")
-    if result is None:
-        return {}
     if not isinstance(result, dict):
         raise CloudflareAPIError(
-            "Unexpected Cloudflare response: 'result' is not an object",
+            "Unexpected Cloudflare response: 'result' is missing or not an object",
             status_code=200,
         )
     return result
