@@ -157,7 +157,10 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
             for indicator in self._api.iter_application_indicators(APPLICATION_NAME):
                 defender_id = indicator.get("id")
                 if defender_id is None:
-                    continue
+                    # Never skipped: its deployment would look absent.
+                    raise DefenderDeploymentError(
+                        "A Microsoft Defender indicator of the read-back carries no id"
+                    )
                 expiration = parse_datetime(indicator.get("expirationTime"))
                 opencti_id = indicator.get("externalId") or indicator.get("externalID")
                 yield VendorIndicator(

@@ -749,7 +749,6 @@ def test_adapter_lists_the_indicators_of_the_connector():
                 },
                 {"id": 2, "indicatorValue": "203.0.113.9", "externalId": None},
                 {"id": 3, "indicatorValue": "old.example", "expirationTime": past},
-                {"indicatorValue": "no-id.example"},
             ]
         )
     )
@@ -768,6 +767,17 @@ def test_adapter_lists_the_indicators_of_the_connector():
         ),
     ]
     connector.api.iter_application_indicators.assert_called_once_with(APPLICATION_NAME)
+
+
+def test_adapter_read_back_rejects_an_indicator_without_id():
+    """A skipped indicator would make its deployment look absent."""
+    connector = build_connector()
+    connector.api.iter_application_indicators = MagicMock(
+        return_value=iter([{"id": 1}, {"indicatorValue": "no-id.example"}])
+    )
+
+    with pytest.raises(DefenderDeploymentError, match="carries no id"):
+        list(MicrosoftDefenderDeploymentAdapter(connector).list_vendor_indicators())
 
 
 def test_adapter_read_back_errors_are_readable():
