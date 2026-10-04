@@ -11,11 +11,14 @@ class ConnectorState(ExternalImportConnectorState):
     logic changed) gets the ``removed`` deployment status under the same
     external id. ``pending_removals`` keeps, as Indicator id -> external id,
     the removals the platform could not be asked about, retried on the next
-    run. ``platform_id`` is the Security
-    Platform those deployments target: when the platform is renamed, they
-    get the ``removed`` status on the former one.
+    run. ``platform_id`` is the Security Platform those deployments target.
+    When the targeted platform changes (renamed, or another configured
+    platform), the deployments of the former one owe it a ``removed`` status:
+    ``former_platform_removals`` keeps them per former platform until they
+    are sent, while ``deployed_rules`` already follows the new platform.
     """
 
     deployed_rules: dict[str, str] | None = None
     pending_removals: dict[str, str] | None = None
     platform_id: str | None = None
+    former_platform_removals: dict[str, dict[str, str]] | None = None

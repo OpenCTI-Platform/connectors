@@ -142,6 +142,7 @@ graph LR
 |---|---|
 | `query` | Indicator `pattern` |
 | `language` (`kuery`, `lucene`, `eql`, `esql`) | Indicator `pattern_type`: `kuery`, `lucene`, `eql`, `esql` |
+| Threshold, new terms and indicator match rules, and rules with active query filters | Indicator `pattern_type` `elastic-rule`, `pattern` = canonical JSON of the rule `type`, `language`, `query` and its conditions (`threshold`; `new_terms_fields` and `history_window_start`; the `threat_*` fields; the active `filters`) |
 | `name`, `description` | Indicator `name`, `description` |
 | `created_at` (or `updated_at`) | Indicator `valid_from` |
 | `severity` (`low`, `medium`, `high`, `critical`) | Indicator `x_opencti_rule_level` |
@@ -164,7 +165,9 @@ state keeps the Indicator of every rule imported by the previous run (keyed by `
 - a rule deleted since the previous run (or no longer selected by the filter) gets the status `removed`
   and a `removed_at` time;
 - a rule whose query changed gets a new Indicator; the Indicator of the previous query gets the status
-  `removed`.
+  `removed`. For an `elastic-rule` Indicator, a change of any condition (a new threshold, other new
+  terms fields, another indicator mapping or filter) is a change of logic as well, and two rules
+  sharing a query with different conditions are two Indicators.
 
 A removed rule whose Indicator was deleted from OpenCTI in the meantime is skipped. If OpenCTI cannot be
 asked whether the Indicator still exists, the removal is retried on the next run.
@@ -203,3 +206,5 @@ rate limit, a server error or a network error are logged with the delay before t
   `CONNECTOR_ID` and, when the spaces are distinct deployments, distinct `ELASTIC_DETECTION_RULES_PLATFORM_NAME` or `ELASTIC_DETECTION_RULES_PLATFORM_ID`).
 - Switching from the platform name to a platform id (or between ids) moves the deployments: the
   previous platform gets every deployment marked `removed` and the new one gets the current ones.
+  When OpenCTI cannot be asked about those removals, they are retried on the next runs while the new
+  platform is reconciled normally from the first run on.

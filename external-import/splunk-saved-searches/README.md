@@ -302,3 +302,5 @@ unreachable requests are logged with the delay before the next attempt.
   `CONNECTOR_ID` and `SPLUNK_SAVED_SEARCHES_PLATFORM_NAME` or `SPLUNK_SAVED_SEARCHES_PLATFORM_ID`).
 - Switching from the platform name to a platform id (or between ids) moves the deployments: the
   previous platform gets every deployment marked `removed` and the new one gets the current ones.
+  When OpenCTI cannot be asked about those removals, they are retried on the next runs while the new
+  platform is reconciled normally from the first run on.

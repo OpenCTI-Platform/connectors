@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -9,6 +10,9 @@ from elastic_samples import (
     KUERY_RULE,
     LUCENE_RULE,
     ML_RULE,
+    NEW_TERMS_RULE,
+    THREAT_MATCH_RULE,
+    THRESHOLD_RULE,
     rule,
 )
 
@@ -59,6 +63,73 @@ def test_other_languages(raw, pattern_type):
     assert detection_rule.pattern_type == pattern_type
     assert detection_rule.techniques == {}
     assert detection_rule.platforms == []
+
+
+def test_threshold_rule_pattern_holds_the_threshold():
+    detection_rule = map_rule(THRESHOLD_RULE, _url)
+    assert detection_rule.pattern_type == "elastic-rule"
+    assert json.loads(detection_rule.pattern) == {
+        "type": "threshold",
+        "language": "kuery",
+        "query": THRESHOLD_RULE["query"],
+        "threshold": THRESHOLD_RULE["threshold"],
+    }
+
+
+def test_threshold_change_changes_the_pattern():
+    original = map_rule(THRESHOLD_RULE, _url).pattern
+    raised = rule(
+        THRESHOLD_RULE, threshold={**THRESHOLD_RULE["threshold"], "value": 20}
+    )
+    regrouped = rule(
+        THRESHOLD_RULE,
+        threshold={**THRESHOLD_RULE["threshold"], "field": ["user.name"]},
+    )
+    patterns = {
+        original,
+        map_rule(raised, _url).pattern,
+        map_rule(regrouped, _url).pattern,
+    }
+    assert len(patterns) == 3
+
+
+def test_new_terms_rule_pattern_holds_the_new_terms():
+    detection_rule = map_rule(NEW_TERMS_RULE, _url)
+    assert detection_rule.pattern_type == "elastic-rule"
+    pattern = json.loads(detection_rule.pattern)
+    assert pattern["new_terms_fields"] == ["user.name", "host.name"]
+    assert pattern["history_window_start"] == "now-14d"
+    widened = rule(NEW_TERMS_RULE, history_window_start="now-30d")
+    assert map_rule(widened, _url).pattern != detection_rule.pattern
+
+
+def test_indicator_match_rule_pattern_holds_the_threat_conditions():
+    detection_rule = map_rule(THREAT_MATCH_RULE, _url)
+    assert detection_rule.pattern_type == "elastic-rule"
+    pattern = json.loads(detection_rule.pattern)
+    assert pattern["threat_query"] == THREAT_MATCH_RULE["threat_query"]
+    assert pattern["threat_mapping"] == THREAT_MATCH_RULE["threat_mapping"]
+    assert pattern["threat_index"] == THREAT_MATCH_RULE["threat_index"]
+    # Performance settings are not detection logic.
+    assert "items_per_search" not in pattern
+
+
+def test_query_filters_are_part_of_the_logic():
+    phrase = {
+        "meta": {"negate": True, "disabled": False, "alias": "not the lab"},
+        "query": {"match_phrase": {"host.name": "lab-01"}},
+    }
+    filtered = map_rule(rule(KUERY_RULE, filters=[phrase]), _url)
+    assert filtered.pattern_type == "elastic-rule"
+    assert json.loads(filtered.pattern)["filters"] == [
+        {"query": {"match_phrase": {"host.name": "lab-01"}}, "negate": True}
+    ]
+    disabled = {**phrase, "meta": {**phrase["meta"], "disabled": True}}
+    unfiltered = map_rule(rule(KUERY_RULE, filters=[disabled]), _url)
+    assert (unfiltered.pattern_type, unfiltered.pattern) == (
+        "kuery",
+        KUERY_RULE["query"],
+    )
 
 
 def test_missing_dates_and_severity():

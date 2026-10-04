@@ -7,7 +7,7 @@ from conftest import SCHEMA_WITHOUT_DEPLOYED_ON, make_settings
 from connector import ConnectorState, ElasticRulesProcessor
 from connector.attack_patterns import attack_pattern_id
 from connector.deployed_rules_processor import RULES_PER_BUNDLE
-from elastic_samples import EQL_RULE, KUERY_RULE, ML_RULE, rule
+from elastic_samples import EQL_RULE, KUERY_RULE, ML_RULE, THRESHOLD_RULE, rule
 from pycti import Identity, Indicator, StixCoreRelationship
 
 OLD_INDICATOR = Indicator.generate_id("an older version of the rule")
@@ -212,6 +212,51 @@ def test_rules_sharing_their_logic_share_one_deployment(helper):
     }
 
 
+def test_thresholds_sharing_a_query_are_distinct_deployments(helper):
+    stricter = rule(
+        THRESHOLD_RULE,
+        rule_id="kuery-brute-force-strict",
+        id="strict-saved-object",
+        threshold={**THRESHOLD_RULE["threshold"], "value": 20},
+    )
+    processor = _processor(helper, [THRESHOLD_RULE, stricter])
+    objects = _run(processor)[0]
+
+    indicators = _of_type(objects, "indicator")
+    assert len(indicators) == 2
+    assert {i.pattern_type for i in indicators} == {"elastic-rule"}
+    deployments = _of_type(objects, "relationship", "deployed-on")
+    assert {d.external_id for d in deployments} == {
+        THRESHOLD_RULE["rule_id"],
+        stricter["rule_id"],
+    }
+    assert len(set(processor.state.deployed_rules.values())) == 2
+
+
+def test_threshold_change_removes_the_former_logic(helper):
+    processor = _processor(helper, [THRESHOLD_RULE])
+    _run(processor)
+    (former_indicator,) = processor.state.deployed_rules.values()
+
+    helper.api.indicator.list.return_value = [
+        {"standard_id": former_indicator, "x_opencti_stix_ids": []}
+    ]
+    raised = rule(
+        THRESHOLD_RULE, threshold={**THRESHOLD_RULE["threshold"], "value": 20}
+    )
+    processor = _processor(helper, [raised], state=processor.state)
+    bundles = _run(processor)
+
+    (current,) = _of_type(bundles[0], "relationship", "deployed-on")
+    assert current.source_ref != former_indicator
+    (removed,) = _of_type(bundles[1], "relationship", "deployed-on")
+    assert (removed.source_ref, removed.deployment_status) == (
+        former_indicator,
+        "removed",
+    )
+    assert removed.external_id == THRESHOLD_RULE["rule_id"]
+
+
 def test_large_removals_are_split_into_bundles(helper):
     gone = {
         f"gone-{index}": Indicator.generate_id(f"gone rule {index}")
@@ -261,16 +306,78 @@ def test_renamed_platform_gets_the_previous_deployments_removed(helper):
     assert processor.state.platform_id == processor.builder.platform.id
 
 
-def test_renamed_platform_keeps_its_state_until_removals_are_sent(helper):
+def _every_indicator_exists(**kwargs):
+    return [
+        {"standard_id": indicator_id, "x_opencti_stix_ids": []}
+        for indicator_id in kwargs["filters"]["filters"][0]["values"]
+    ]
+
+
+def test_switched_platform_is_reconciled_while_the_former_removals_wait(helper):
     former_platform = "identity--3a9e2b6c-5a51-5d3c-9b07-4f1f3c1d9a10"
+    # Run 1: the platform changed and the former one cannot be asked.
     helper.api.indicator.list.side_effect = RuntimeError("platform down")
-    previous = {"gone-rule": GONE_INDICATOR}
-    state = ConnectorState(deployed_rules=previous, platform_id=former_platform)
-    processor = _processor(helper, [KUERY_RULE], state=state)
-    assert len(_run(processor)) == 1
-    assert processor.state.platform_id == former_platform
-    assert processor.state.deployed_rules == previous
+    state = ConnectorState(
+        deployed_rules={"gone-rule": GONE_INDICATOR}, platform_id=former_platform
+    )
+    processor = _processor(helper, [KUERY_RULE, EQL_RULE], state=state)
+    (bundle,) = _run(processor)
+    platform = processor.builder.platform_id
+    new_indicators = {
+        r.source_ref for r in _of_type(bundle, "relationship", "deployed-on")
+    }
+    assert new_indicators == {_indicator_id(KUERY_RULE), _indicator_id(EQL_RULE)}
+    assert processor.state.platform_id == platform
+    assert set(processor.state.deployed_rules.values()) == new_indicators
     assert processor.state.pending_removals is None
+    assert processor.state.former_platform_removals == {
+        former_platform: {GONE_INDICATOR: "gone-rule"}
+    }
+
+    # Run 2: every rule was deleted from the new platform before the recovery.
+    helper.api.indicator.list.side_effect = _every_indicator_exists
+    processor = _processor(helper, [], state=processor.state)
+    removals = [
+        r for b in _run(processor) for r in _of_type(b, "relationship", "deployed-on")
+    ]
+    assert {r.deployment_status for r in removals} == {"removed"}
+    assert {(r.source_ref, r.target_ref) for r in removals} == {
+        (GONE_INDICATOR, former_platform),
+        *((indicator_id, platform) for indicator_id in new_indicators),
+    }
+    assert processor.state.deployed_rules == {}
+    assert processor.state.pending_removals is None
+    assert processor.state.former_platform_removals is None
+
+
+def test_platform_targeted_again_keeps_the_rules_it_still_deploys(helper):
+    other_platform = "identity--3a9e2b6c-5a51-5d3c-9b07-4f1f3c1d9a10"
+    platform = _processor(helper, []).builder.platform_id
+    helper.api.indicator.list.side_effect = _every_indicator_exists
+    state = ConnectorState(
+        deployed_rules={"gone-rule": GONE_INDICATOR},
+        platform_id=other_platform,
+        former_platform_removals={
+            platform: {
+                _indicator_id(KUERY_RULE): KUERY_RULE["rule_id"],
+                OLD_INDICATOR: "old-rule",
+            }
+        },
+    )
+    processor = _processor(helper, [KUERY_RULE], state=state)
+    bundles = _run(processor)
+
+    removals = {
+        (r.source_ref, r.target_ref, r.deployment_status)
+        for b in bundles[1:]
+        for r in _of_type(b, "relationship", "deployed-on")
+    }
+    assert removals == {
+        (OLD_INDICATOR, platform, "removed"),
+        (GONE_INDICATOR, other_platform, "removed"),
+    }
+    assert processor.state.platform_id == platform
+    assert processor.state.former_platform_removals is None
 
 
 def test_first_run_records_the_platform(helper):

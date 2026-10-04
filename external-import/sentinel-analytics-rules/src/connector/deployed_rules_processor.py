@@ -8,6 +8,9 @@ or whose logic changed (new Indicator), get the ``removed`` status: the
 connector state keeps the Indicator of every rule of the previous run.
 When a rule fails to map, the rules missing from the run are not removed:
 they cannot be told apart from it, and the next complete run reconciles them.
+When the targeted Security Platform changes, the deployments of the former
+one get the ``removed`` status there, retried until sent, while the new
+platform is reconciled from the first run on.
 Rules sharing the same logic share one Indicator and one deployment.
 The external id of a rule (unique in the platform) keys the connector state,
 so a removed deployment carries the same external id as when it was current.
@@ -118,8 +121,30 @@ class DeployedRulesProcessor(BaseDataProcessor):
             {mitre_id for rule in rules for mitre_id in rule.techniques}
         )
 
+        platform_id = self.builder.platform_id
         previous: dict[str, str] = dict(self.state.deployed_rules or {})
         pending: dict[str, str] = dict(self.state.pending_removals or {})
+        owed: dict[str, dict[str, str]] = {
+            platform: dict(removals)
+            for platform, removals in (
+                self.state.former_platform_removals or {}
+            ).items()
+        }
+        former_platform = self.state.platform_id
+        if former_platform not in (None, platform_id):
+            # Switched platform: every deployment of the previous run targets
+            # the former identity and owes a removal there, whatever happens
+            # to this run; the new platform starts with no deployment.
+            former = owed.setdefault(former_platform, {})
+            for indicator_id, external_id in pending.items():
+                former.setdefault(indicator_id, external_id)
+            for external_id, indicator_id in previous.items():
+                former.setdefault(indicator_id, external_id)
+            previous, pending = {}, {}
+        # Removals owed to the platform targeted again are its pending
+        # removals: the ones its current rules deploy are filtered out below.
+        for indicator_id, external_id in owed.pop(platform_id, {}).items():
+            pending.setdefault(indicator_id, external_id)
         current: dict[str, str] = {}
         statuses: Counter[str] = Counter()
         linked_techniques: set[str] = set()
@@ -170,23 +195,34 @@ class DeployedRulesProcessor(BaseDataProcessor):
         # removed, their state is kept until a run maps every rule.
         complete = skipped[SKIP_INVALID] == 0
         carried: dict[str, str] = {}
-        former_platform = self.state.platform_id
-        if former_platform in (None, self.builder.platform_id):
-            former_platform = None
-            if not complete:
-                carried = {k: v for k, v in previous.items() if k not in current}
-                self.logger.warning(
-                    "Some rules could not be mapped: the rules missing from this "
-                    "run keep their deployment until a complete run",
-                    {"platform": self.platform_label, "kept": len(carried)},
-                )
-            reconciled = {k: v for k, v in previous.items() if k not in carried}
-            removed, still_pending = self._removed_rules(reconciled, current, pending)
-        else:
-            # Renamed platform: every deployment of the previous run targets
-            # the former identity and is removed from it.
-            removed, still_pending = self._removed_rules(previous, {}, pending)
-        removals = list(removed.items())
+        if not complete:
+            carried = {k: v for k, v in previous.items() if k not in current}
+            self.logger.warning(
+                "Some rules could not be mapped: the rules missing from this "
+                "run keep their deployment until a complete run",
+                {"platform": self.platform_label, "kept": len(carried)},
+            )
+        reconciled = {k: v for k, v in previous.items() if k not in carried}
+        candidates = self._removal_candidates(reconciled, current, pending)
+        existing = self._existing_or_none(
+            set(candidates).union(*(set(owed_ids) for owed_ids in owed.values()))
+        )
+        # A removal the platform could not be asked about is retried on the
+        # next run, on the platform it targets.
+        still_pending = candidates if existing is None else {}
+        still_owed = owed if existing is None else {}
+        removals: list[tuple[str | None, str, str]] = []
+        if existing is not None:
+            removals = [
+                (None, indicator_id, external_id)
+                for indicator_id, external_id in candidates.items()
+                if indicator_id in existing
+            ] + [
+                (platform, indicator_id, external_id)
+                for platform, platform_removals in owed.items()
+                for indicator_id, external_id in platform_removals.items()
+                if indicator_id in existing
+            ]
         for start in range(0, len(removals), RULES_PER_BUNDLE):
             yield list(self.builder.common_objects) + [
                 self.builder.deployment(
@@ -196,19 +232,21 @@ class DeployedRulesProcessor(BaseDataProcessor):
                     last_sync_at=run_time,
                     deployed_on_supported=deployed_on_supported,
                     removed_at=run_time,
-                    platform_id=former_platform,
+                    platform_id=target_platform,
                 )
-                for indicator_id, external_id in removals[
+                for target_platform, indicator_id, external_id in removals[
                     start : start + RULES_PER_BUNDLE
                 ]
             ]
 
-        # A former platform keeps its state until its removals are sent.
-        if former_platform is None or not still_pending:
-            self.state.deployed_rules = {**carried, **current}
-            # Removals that could not be checked are retried on the next run.
-            self.state.pending_removals = still_pending or None
-            self.state.platform_id = self.builder.platform_id
+        self.state.deployed_rules = {**carried, **current}
+        self.state.pending_removals = still_pending or None
+        self.state.former_platform_removals = {
+            platform: platform_removals
+            for platform, platform_removals in still_owed.items()
+            if platform_removals
+        } or None
+        self.state.platform_id = platform_id
         self.logger.info(
             "Detection rules reconciled",
             {
@@ -216,7 +254,7 @@ class DeployedRulesProcessor(BaseDataProcessor):
                 "rules": len(rules),
                 "active": statuses[STATUS_ACTIVE],
                 "disabled": statuses[STATUS_DEPLOYED],
-                "removed": len(removed),
+                "removed": len(removals),
                 "updated_since_last_run": sum(
                     1
                     for rule in rules
@@ -282,47 +320,47 @@ class DeployedRulesProcessor(BaseDataProcessor):
             result.append((indicator, rule, [member[1] for member in members]))
         return result
 
-    def _removed_rules(
-        self,
+    @staticmethod
+    def _removal_candidates(
         previous: dict[str, str],
         current: dict[str, str],
         pending: dict[str, str],
-    ) -> tuple[dict[str, str], dict[str, str]]:
-        """Find the rule Indicators no longer deployed.
+    ) -> dict[str, str]:
+        """Find the rule Indicators of the current platform no longer deployed.
 
         ``previous`` / ``current`` map rule external ids to Indicator ids;
         ``pending`` maps Indicator ids to external ids of removals not checked
-        yet. Returns, as Indicator id -> external id, the removals to send (the
-        Indicator still exists on the platform) and the ones to retry on the
-        next run (the platform could not be asked). An Indicator deleted from
-        the platform, or still deployed through another rule, needs nothing.
+        yet. Returns them as Indicator id -> external id; an Indicator still
+        deployed through another rule needs nothing.
         """
         live_indicators = set(current.values())
         candidates = dict(pending)
         for external_id, indicator_id in previous.items():
             if current.get(external_id) != indicator_id:
                 candidates.setdefault(indicator_id, external_id)
-        candidates = {
+        return {
             indicator_id: external_id
             for indicator_id, external_id in candidates.items()
             if indicator_id not in live_indicators
         }
-        if not candidates:
-            return {}, {}
+
+    def _existing_or_none(self, indicator_ids: set[str]) -> set[str] | None:
+        """Return the Indicators the platform still holds among ``indicator_ids``.
+
+        An Indicator deleted from the platform needs no removal. Returns
+        ``None`` when the platform cannot be asked.
+        """
+        if not indicator_ids:
+            return set()
         try:
-            existing = self._existing_indicators(candidates)
+            return self._existing_indicators(indicator_ids)
         except Exception as err:  # noqa: BLE001 - retried on the next run
             self.logger.warning(
                 "Could not check the removed rules against the platform, "
                 "retrying on the next run",
                 {"platform": self.platform_label, "error": str(err)},
             )
-            return {}, candidates
-        return {
-            indicator_id: external_id
-            for indicator_id, external_id in candidates.items()
-            if indicator_id in existing
-        }, {}
+            return None
 
     def _existing_indicators(self, indicator_ids: Iterable[str]) -> set[str]:
         wanted = sorted(set(indicator_ids))

@@ -288,3 +288,43 @@ def test_unmapped_rule_keeps_the_deployments_missing_from_the_run(helper):
     summary = helper.connector_logger.info.call_args_list[-1].args[1]
     assert summary["complete"] is False
     assert summary["skipped"]["invalid"] == 1
+
+
+def test_switched_platform_is_reconciled_while_the_former_removals_wait(helper):
+    former_platform = "identity--3a9e2b6c-5a51-5d3c-9b07-4f1f3c1d9a10"
+    # Run 1: the platform changed and the former one cannot be asked.
+    helper.api.indicator.list.side_effect = RuntimeError("platform down")
+    state = ConnectorState(
+        deployed_rules={"gone-rule": GONE_INDICATOR}, platform_id=former_platform
+    )
+    processor = _processor(helper, [SCHEDULED_RULE, NRT_RULE], state=state)
+    (bundle,) = _run(processor)
+    platform = processor.builder.platform_id
+    new_indicators = {
+        r.source_ref for r in _of_type(bundle, "relationship", "deployed-on")
+    }
+    assert new_indicators == {_indicator_id(SCHEDULED_RULE), _indicator_id(NRT_RULE)}
+    assert processor.state.platform_id == platform
+    assert set(processor.state.deployed_rules.values()) == new_indicators
+    assert processor.state.pending_removals is None
+    assert processor.state.former_platform_removals == {
+        former_platform: {GONE_INDICATOR: "gone-rule"}
+    }
+
+    # Run 2: every rule was deleted from the new platform before the recovery.
+    helper.api.indicator.list.side_effect = lambda **kwargs: [
+        {"standard_id": indicator_id, "x_opencti_stix_ids": []}
+        for indicator_id in kwargs["filters"]["filters"][0]["values"]
+    ]
+    processor = _processor(helper, [], state=processor.state)
+    removals = [
+        r for b in _run(processor) for r in _of_type(b, "relationship", "deployed-on")
+    ]
+    assert {r.deployment_status for r in removals} == {"removed"}
+    assert {(r.source_ref, r.target_ref) for r in removals} == {
+        (GONE_INDICATOR, former_platform),
+        *((indicator_id, platform) for indicator_id in new_indicators),
+    }
+    assert processor.state.deployed_rules == {}
+    assert processor.state.pending_removals is None
+    assert processor.state.former_platform_removals is None

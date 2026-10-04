@@ -77,13 +77,69 @@ ESQL_RULE: dict[str, Any] = {
 
 LUCENE_RULE: dict[str, Any] = {
     "id": "1c4e2a77-63a4-4b0e-8d3b-6a3a3b2c1d33",
-    "rule_id": "lucene-threshold",
-    "name": "Brute Force",
-    "type": "threshold",
+    "rule_id": "lucene-failures",
+    "name": "Authentication Failure",
+    "type": "query",
     "language": "lucene",
     "query": "event.outcome:failure",
     "enabled": True,
     "severity": "medium",
+}
+
+THRESHOLD_RULE: dict[str, Any] = {
+    "id": "5a8c6e11-07b8-4f42-8c7f-0e7e7f6a5b77",
+    "rule_id": "kuery-brute-force",
+    "name": "Brute Force",
+    "type": "threshold",
+    "language": "kuery",
+    "query": "event.category:authentication and event.outcome:failure",
+    "threshold": {
+        "field": ["source.ip", "user.name"],
+        "value": 5,
+        "cardinality": [{"field": "host.name", "value": 2}],
+    },
+    "enabled": True,
+    "severity": "medium",
+}
+
+NEW_TERMS_RULE: dict[str, Any] = {
+    "id": "6b9d7f22-18c9-4053-9d80-1f8f8a7b6c88",
+    "rule_id": "new-terms-admin",
+    "name": "First Time Seen Administrator Logon",
+    "type": "new_terms",
+    "language": "kuery",
+    "query": "event.category:authentication and user.roles:admin",
+    "new_terms_fields": ["user.name", "host.name"],
+    "history_window_start": "now-14d",
+    "enabled": True,
+    "severity": "low",
+}
+
+THREAT_MATCH_RULE: dict[str, Any] = {
+    "id": "7cae8033-29da-4164-ae91-2090ab8c7d99",
+    "rule_id": "indicator-match-ip",
+    "name": "Threat Intel IP Address Indicator Match",
+    "type": "threat_match",
+    "language": "kuery",
+    "query": "destination.ip:*",
+    "threat_query": "threat.indicator.type:ipv4-addr",
+    "threat_language": "kuery",
+    "threat_index": ["filebeat-*", "logs-ti_*"],
+    "threat_mapping": [
+        {
+            "entries": [
+                {
+                    "field": "destination.ip",
+                    "type": "mapping",
+                    "value": "threat.indicator.ip",
+                }
+            ]
+        }
+    ],
+    "threat_indicator_path": "threat.indicator",
+    "items_per_search": 100,
+    "enabled": True,
+    "severity": "high",
 }
 
 ML_RULE: dict[str, Any] = {
