@@ -33,6 +33,8 @@ from connectors_sdk.connectors.stream.deployment.settings import (
 )
 
 RATE_LIMITED = ValueError({"name": "RATE_LIMIT", "error_message": "Too many requests"})
+# Vendor time of the newest hit of a report: its replay watermark
+LAST_HIT = "2026-10-03T10:00:00Z"
 
 
 class Clock:
@@ -65,7 +67,7 @@ def test_hits_are_disabled_when_reporting_is_disabled(
     """Disabling the write-back disables hits too."""
     reporter = make_reporter(graphql_helper, replace(options, reporting_enabled=False))
     assert reporter.hits_enabled is False
-    assert reporter.report_indicator_hits("indicator-id", 1) is False
+    assert reporter.report_indicator_hits("indicator-id", 1, last_hit=LAST_HIT) is False
 
 
 def test_start_when_disabled_by_configuration(
@@ -868,7 +870,9 @@ def test_report_indicator_hits_with_graphql(graphql_helper, make_reporter, route
         last_hit=datetime(2026, 10, 3, 10, tzinfo=UTC),
         first_hit="2026-10-03T08:00:00Z",
     )
-    assert reporter.report_indicator_hits(ids.indicator, 1)
+    assert reporter.report_indicator_hits(
+        ids.indicator, 1, last_hit="2026-10-03T11:00:00Z"
+    )
 
     assert router.calls_of("IndicatorReportHits(") == [
         {
@@ -878,7 +882,12 @@ def test_report_indicator_hits_with_graphql(graphql_helper, make_reporter, route
             "lastHit": "2026-10-03T10:00:00.000Z",
             "firstHit": "2026-10-03T08:00:00.000Z",
         },
-        {"indicatorId": ids.indicator, "platformId": ids.platform, "count": 1},
+        {
+            "indicatorId": ids.indicator,
+            "platformId": ids.platform,
+            "count": 1,
+            "lastHit": "2026-10-03T11:00:00.000Z",
+        },
     ]
 
 
@@ -905,8 +914,24 @@ def test_report_indicator_hits_ignores_empty_reports(
 ):
     """Empty hit reports are never sent."""
     reporter = make_reporter(graphql_helper)
-    assert reporter.report_indicator_hits(indicator_id, count) is False
+    assert (
+        reporter.report_indicator_hits(indicator_id, count, last_hit=LAST_HIT) is False
+    )
     assert router.calls == []
+
+
+@pytest.mark.parametrize("last_hit", ["", None])
+def test_report_indicator_hits_requires_the_time_of_the_last_hit(
+    graphql_helper, make_reporter, router, last_hit
+):
+    """A report without its replay watermark is never sent: OpenCTI refuses it."""
+    reporter = make_reporter(graphql_helper)
+    assert (
+        reporter.report_indicator_hits_outcome("indicator-id", 1, last_hit=last_hit)
+        == REPORT_REJECTED
+    )
+    assert router.calls_of("IndicatorReportHits(") == []
+    graphql_helper.connector_logger.warning.assert_called_once()
 
 
 def test_report_indicator_hits_on_a_platform_without_hits(
@@ -917,7 +942,7 @@ def test_report_indicator_hits_on_a_platform_without_hits(
         router_factory(mutations=("indicatorReportDeployment",)).handlers
     )
     reporter = make_reporter(graphql_helper)
-    assert reporter.report_indicator_hits("indicator-id", 1) is False
+    assert reporter.report_indicator_hits("indicator-id", 1, last_hit=LAST_HIT) is False
 
 
 def test_report_indicator_hits_errors_never_raise(
@@ -926,7 +951,7 @@ def test_report_indicator_hits_errors_never_raise(
     """GraphQL errors of hit reports are logged as warnings."""
     router.handlers["IndicatorReportHits("] = ValueError("boom")
     reporter = make_reporter(graphql_helper)
-    assert reporter.report_indicator_hits("indicator-id", 1) is False
+    assert reporter.report_indicator_hits("indicator-id", 1, last_hit=LAST_HIT) is False
     graphql_helper.connector_logger.warning.assert_called_once()
 
 
@@ -951,19 +976,30 @@ def test_report_indicator_hits_outcome_tells_rejections_from_undelivered_calls(
 ):
     router.handlers["IndicatorReportHits("] = error
     reporter = make_reporter(graphql_helper)
-    assert reporter.report_indicator_hits_outcome("indicator-id", 1) == outcome
+    assert (
+        reporter.report_indicator_hits_outcome("indicator-id", 1, last_hit=LAST_HIT)
+        == outcome
+    )
 
 
 def test_report_indicator_hits_outcome(
     graphql_helper, pycti_helper, make_reporter, router, router_factory
 ):
     reporter = make_reporter(graphql_helper)
-    assert reporter.report_indicator_hits_outcome("indicator-id", 1) == REPORT_SENT
-    assert reporter.report_indicator_hits_outcome("indicator-id", 0) == REPORT_REJECTED
+    assert (
+        reporter.report_indicator_hits_outcome("indicator-id", 1, last_hit=LAST_HIT)
+        == REPORT_SENT
+    )
+    assert (
+        reporter.report_indicator_hits_outcome("indicator-id", 0, last_hit=LAST_HIT)
+        == REPORT_REJECTED
+    )
 
     pycti_helper.report_indicator_hits.return_value = None
     assert (
-        make_reporter(pycti_helper).report_indicator_hits_outcome("indicator-id", 1)
+        make_reporter(pycti_helper).report_indicator_hits_outcome(
+            "indicator-id", 1, last_hit=LAST_HIT
+        )
         == REPORT_UNSENT
     )
 
@@ -971,7 +1007,9 @@ def test_report_indicator_hits_outcome(
         router_factory(mutations=("indicatorReportDeployment",)).handlers
     )
     assert (
-        make_reporter(graphql_helper).report_indicator_hits_outcome("indicator-id", 1)
+        make_reporter(graphql_helper).report_indicator_hits_outcome(
+            "indicator-id", 1, last_hit=LAST_HIT
+        )
         == REPORT_REJECTED
     )
 
@@ -982,7 +1020,10 @@ def test_report_indicator_hits_outcome_while_the_write_back_is_awaited(
     """OpenCTI unreachable at detection time: the report can be sent later."""
     router.handlers["DeploymentWriteBackFeatures"] = ValueError("Connection refused")
     reporter = make_reporter(graphql_helper)
-    assert reporter.report_indicator_hits_outcome("indicator-id", 1) == REPORT_UNSENT
+    assert (
+        reporter.report_indicator_hits_outcome("indicator-id", 1, last_hit=LAST_HIT)
+        == REPORT_UNSENT
+    )
 
 
 # --- listing ---------------------------------------------------------------------------
