@@ -228,13 +228,17 @@ class DeploymentVendorAdapter(DeploymentPushAdapter):
         deployment then matches every vendor item holding one of them, so that each
         one is removed on withdrawal (except an item a deployment staying on the
         vendor shares) and the indicator is pushed again while one of them is
-        missing. By default, value matching keeps a single vendor item.
+        missing. Value matching, for vendor items and for hits, then only uses
+        these values: a pattern value the connector does not push never matches a
+        vendor item, so a withdrawal never removes it. By default, value matching
+        uses every value of the pattern and keeps a single vendor item.
 
         Args:
             deployment: A deployment of the platform.
 
         Returns:
-            The expected normalized values, or ``None``.
+            The expected normalized values (empty when the connector pushes none of
+            the pattern values), or ``None`` when the adapter does not declare them.
         """
         return None
 
@@ -278,7 +282,11 @@ class _Index:
         return index
 
     @classmethod
-    def of_deployments(cls, deployments: Iterable[IndicatorDeployment]) -> "_Index":
+    def of_deployments(
+        cls,
+        deployments: Iterable[IndicatorDeployment],
+        values_of: Callable[[IndicatorDeployment], Iterable[str]],
+    ) -> "_Index":
         index = cls()
         for deployment in deployments:
             for identifier in deployment.identifiers:
@@ -288,7 +296,7 @@ class _Index:
                 normalize_value(deployment.external_id),
                 deployment,
             )
-            for value in deployment.values:
+            for value in values_of(deployment):
                 index._add(index.by_value, value, deployment)
         return index
 
@@ -311,7 +319,7 @@ class _Index:
         normalized_external_id = normalize_value(external_id)
         if normalized_external_id and normalized_external_id in self.by_external_id:
             return list(self.by_external_id[normalized_external_id])
-        for value in values:
+        for value in sorted(values):
             if value in self.by_value:
                 return self.by_value[value][:1]
         return []
@@ -613,10 +621,12 @@ class DeploymentReconciler:
             The items matched by OpenCTI id, vendor id or value, plus every item
             holding one of the ``expected_values`` of the adapter.
         """
-        vendor_matches: list[VendorIndicator] = vendor_index.find_all(
-            deployment.identifiers, deployment.external_id, deployment.values
-        )
         expected = adapter.expected_values(deployment)
+        vendor_matches: list[VendorIndicator] = vendor_index.find_all(
+            deployment.identifiers,
+            deployment.external_id,
+            deployment.values if expected is None else expected,
+        )
         if not expected:
             return vendor_matches
         return list(
@@ -1135,7 +1145,7 @@ class DeploymentReconciler:
         if collected is None:
             return self._send_hit_reports({}, now)
         hits, next_since = collected
-        index = _Index.of_deployments(deployments)
+        index = _Index.of_deployments(deployments, self._matched_values)
         aggregated: dict[str, list[Any]] = {}
         for hit in hits:
             timestamp = parse_datetime(hit.timestamp)
@@ -1161,6 +1171,23 @@ class DeploymentReconciler:
                 entry[2] = max(entry[2], timestamp)
         self._hits_since = next_since
         return self._send_hit_reports(aggregated, now)
+
+    def _matched_values(self, deployment: IndicatorDeployment) -> frozenset[str]:
+        """Return the values a hit without OpenCTI id or vendor id is matched on.
+
+        Args:
+            deployment: A live deployment.
+
+        Returns:
+            The ``expected_values`` of a vendor adapter declaring them, every value
+            of the pattern otherwise.
+        """
+        adapter = self._adapter
+        if isinstance(adapter, DeploymentVendorAdapter):
+            expected = adapter.expected_values(deployment)
+            if expected is not None:
+                return expected
+        return deployment.values
 
     def _hit_watermark(self, deployment: IndicatorDeployment) -> datetime | None:
         """Return the time up to which the hits of a deployment are already counted.

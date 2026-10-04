@@ -96,7 +96,10 @@ class ConnectorSettings(BaseConnectorSettings):
    vendor holds one item per observable, so that an indicator only partly on the vendor is pushed again instead of being
    confirmed `active`). A vendor keeping one item per observable value without the OpenCTI id overrides
    `expected_values` instead: every item holding one of those values is matched (and removed on withdrawal), and the
-   indicator is pushed again while one of them is missing. An item another live deployment shares is never withdrawn.
+   indicator is pushed again while one of them is missing. Value matching, for the vendor items and the hits alike, then
+   only uses those values (an empty set when the connector pushes none of the pattern values), so an item holding a
+   pattern value the connector does not push is never withdrawn. An item another live deployment shares is never
+   withdrawn.
    An adapter keeping a local snapshot of what it pushes (uploaded as a whole) overrides `forget_indicator`, called
    for a deployment withdrawn while the vendor no longer holds it, so that the next upload does not restore it.
    When the vendor API cannot read the indicators back, a `DeploymentPushAdapter` (`push_indicator`, optional

@@ -865,6 +865,99 @@ def test_withdrawal_removes_every_expected_value_but_the_shared_ones(
     assert reported()["b"]["status"] == "active"
 
 
+class PushedValuesAdapter(FakeAdapter):
+    """Vendor keeping one item per value, the connector pushing no file name."""
+
+    def expected_values(self, deployment):
+        return frozenset(
+            value for value in deployment.values if not value.endswith(".exe")
+        )
+
+
+MIXED_PATTERN = "[ipv4-addr:value = '198.51.100.7' OR process:name = '0day.exe']"
+
+
+def test_withdrawal_never_removes_an_item_of_a_value_the_connector_does_not_push(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            standard_id="indicator--a",
+            status="active",
+            revoked=True,
+            pattern=MIXED_PATTERN,
+        )
+    )
+    adapter = PushedValuesAdapter(
+        vendor=[
+            VendorIndicator(value="0day.exe", external_id="tenant"),
+            VendorIndicator(value="198.51.100.7", external_id="pushed"),
+        ]
+    )
+
+    make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert [vendor.external_id for vendor, _deployment in adapter.removed] == ["pushed"]
+    assert reported()["a"]["status"] == "removed"
+
+
+def test_no_expected_value_matches_no_vendor_item_by_value(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            standard_id="indicator--a",
+            status="active",
+            revoked=True,
+            pattern="[process:name = '0day.exe']",
+        )
+    )
+    adapter = PushedValuesAdapter(
+        vendor=[VendorIndicator(value="0day.exe", external_id="tenant")]
+    )
+
+    make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert adapter.removed == []
+    assert reported()["a"]["status"] == "removed"
+
+
+def test_a_hit_matched_by_value_only_credits_the_indicators_pushing_it(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            standard_id="indicator--a",
+            status="active",
+            pattern=MIXED_PATTERN,
+        ),
+        node_factory(
+            indicator_id="b",
+            standard_id="indicator--b",
+            status="active",
+            pattern="[ipv4-addr:value = '203.0.113.9' OR process:name = '0day.exe']",
+        ),
+    )
+    adapter = PushedValuesAdapter(
+        vendor=[
+            VendorIndicator(value="198.51.100.7", external_id="1"),
+            VendorIndicator(value="203.0.113.9", external_id="2"),
+        ],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), value="0day.exe")]
+        + [VendorHit(timestamp=NOW - timedelta(minutes=4), value="203.0.113.9")],
+    )
+
+    assert (
+        make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+    ).hits_reported == 1
+    assert [
+        call["indicatorId"] for call in router.calls_of("IndicatorReportHits(")
+    ] == ["b"]
+
+
 def test_truncated_read_back_does_not_push_a_partly_listed_indicator_again(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):
