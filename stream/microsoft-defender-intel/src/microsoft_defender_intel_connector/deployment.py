@@ -145,9 +145,10 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         return self._connector.api
 
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
-        """Read back the active Defender indicators created by the connector.
+        """Read back the Defender indicators created by the connector.
 
-        Indicators whose `expirationTime` is in the past are not live.
+        Indicators whose `expirationTime` is in the past are not live, but Defender
+        keeps them: they are listed as inactive, for a withdrawal to delete them.
 
         :raises DefenderDeploymentError: On any API error (never a partial listing).
         """
@@ -158,14 +159,13 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
                 if defender_id is None:
                     continue
                 expiration = parse_datetime(indicator.get("expirationTime"))
-                if expiration is not None and expiration <= now:
-                    continue
                 opencti_id = indicator.get("externalId") or indicator.get("externalID")
                 yield VendorIndicator(
                     indicator_id=str(opencti_id) if opencti_id else None,
                     external_id=str(defender_id),
                     value=indicator.get("indicatorValue"),
                     raw={"id": defender_id},
+                    active=expiration is None or expiration > now,
                 )
 
     def remove_vendor_indicator(

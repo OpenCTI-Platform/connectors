@@ -80,11 +80,12 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
 | Reconciliation, unknown indicator         | Defender indicators of the connector with no deployment yet are reported `active` (backfill)         |
 | Hits                                      | Defender alerts whose evidence carries the value of a deployed indicator                             |
 
-- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the active Defender indicators of the
-  connector (`application eq 'OpenCTI Microsoft Defender Intel'`) are read back with the indicators API (10,000 per
-  page). Each one carries the OpenCTI id submitted by the connector (`externalId`); deployments are matched by OpenCTI
-  id, Defender id, then value. A read-back error skips the run: indicators are never reported `removed` from a partial
-  listing.
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the Defender indicators of the connector
+  (`application eq 'OpenCTI Microsoft Defender Intel'`) are read back with the indicators API (10,000 per page). Each
+  one carries the OpenCTI id submitted by the connector (`externalId`); deployments are matched by OpenCTI id, Defender
+  id, then value. Indicators past their `expirationTime` are not live: they never confirm a deployment, but a
+  withdrawal or an expiry still deletes them. A read-back error skips the run: indicators are never reported `removed`
+  from a partial listing.
 - **Indicators with several observables**: the connector creates one Defender indicator per observable Defender takes
   (IP addresses, domains, host names, URLs, and one hash per file: SHA-256, SHA-1 or MD5); other observable types are
   not pushed. A push is all or nothing: when Defender refuses one of them, the ones created are deleted again and the

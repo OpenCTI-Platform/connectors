@@ -715,7 +715,9 @@ def test_list_alerts_stops_on_a_short_page():
 # Vendor adapter
 
 
-def test_adapter_lists_the_live_indicators_of_the_connector():
+def test_adapter_lists_the_indicators_of_the_connector():
+    """Expired Defender indicators stay in Defender: listed inactive, so that a
+    withdrawal still deletes them."""
     connector = build_connector()
     future = (datetime.now(UTC) + timedelta(days=1)).isoformat()
     past = (datetime.now(UTC) - timedelta(days=1)).isoformat()
@@ -744,6 +746,9 @@ def test_adapter_lists_the_live_indicators_of_the_connector():
             indicator_id=INDICATOR_ID, external_id="1", value="198.51.100.7"
         ),
         VendorIndicator(indicator_id=None, external_id="2", value="203.0.113.9"),
+        VendorIndicator(
+            indicator_id=None, external_id="3", value="old.example", active=False
+        ),
     ]
     connector.api.iter_application_indicators.assert_called_once_with(APPLICATION_NAME)
 
