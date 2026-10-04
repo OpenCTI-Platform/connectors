@@ -27,6 +27,27 @@ class CortexXdrApiError(Exception):
     pass
 
 
+class CortexXdrRejectedIocsError(CortexXdrApiError):
+    """Raised when Cortex XDR answers an upsert with IOCs it did not take.
+
+    The HTTP status is a success, but the reply lists `errors`: none or only some of
+    the IOCs of the indicator were inserted or updated.
+    """
+
+    def __init__(self, message: str, errors: list[Any]) -> None:
+        super().__init__(message)
+        self.errors = errors
+
+
+def _reply_errors(response: Any) -> list[Any]:
+    """Return the `errors` of a response, unwrapping the optional `reply` envelope."""
+    reply = response.get("reply", response) if isinstance(response, dict) else None
+    errors = reply.get("errors") if isinstance(reply, dict) else None
+    if not errors:
+        return []
+    return errors if isinstance(errors, list) else [errors]
+
+
 def _reply_list(response: Any, key: str, endpoint: str) -> list[dict[str, Any]]:
     """Return the `key` list of a response, unwrapping the optional `reply` envelope.
 
@@ -140,6 +161,11 @@ class CortexXdrClient(BaseClientApi):
 
         Reference:
             https://cortex-docs.paloaltonetworks.com/xdr-5-api/cortex-platform/iocs#post-public_api-v1-indicators-insert
+
+        Raises:
+            CortexXdrRejectedIocsError: When the reply lists `errors`, even with a
+                success status and some IOCs inserted.
+            CortexXdrApiError: When the request fails.
         """
         request_data = [
             {
@@ -160,13 +186,20 @@ class CortexXdrClient(BaseClientApi):
             for ioc in iocs
         ]
         try:
-            return self._post(
+            response = self._post(
                 "/public_api/v1/indicators/insert",
                 headers=self._build_auth_headers(),
                 json={"request_data": request_data},
             )
         except ApiClientError as err:
             raise CortexXdrApiError("Error while fetching Cortex XDR API") from err
+        errors = _reply_errors(response)
+        if errors:
+            raise CortexXdrRejectedIocsError(
+                f"Cortex XDR rejected {len(errors)} of the {len(iocs)} IOC(s) sent",
+                errors,
+            )
+        return response
 
     def delete_iocs(self, filters: list[IocFilter]) -> dict:
         """Delete IOCs selected by the given filters (single batched request).

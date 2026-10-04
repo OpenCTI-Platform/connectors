@@ -25,7 +25,7 @@ from connectors_sdk import (
     IndicatorDeployment,
     VendorIndicator,
 )
-from cortex_xdr_client import CortexXdrApiError
+from cortex_xdr_client import CortexXdrApiError, CortexXdrRejectedIocsError
 from cortex_xdr_client.client import CortexXdrClient
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
@@ -201,6 +201,26 @@ def test_rejected_indicator_is_reported_failed_and_the_stream_continues(connecto
     assert logged == (
         'Error while fetching Cortex XDR API: Bad request (HTTP 400) - {"err_msg": '
         '"invalid IOC"}'
+    )
+
+
+def test_iocs_refused_in_a_success_reply_are_reported_failed(connector):
+    connector.client.insert_iocs.side_effect = CortexXdrRejectedIocsError(
+        "Cortex XDR rejected 1 of the 1 IOC(s) sent",
+        [{"index": 0, "status": "invalid IOC value"}],
+    )
+    indicator = make_indicator()
+
+    connector._process_message(make_message("create", indicator))
+
+    reported, message = connector.assurance.report_push_failed.call_args.args
+    assert reported == indicator
+    assert message == "Cortex XDR refused the IOC upsert: invalid request"
+    connector.assurance.report_pushed.assert_not_called()
+    logged = connector.helper.connector_logger.error.call_args.args[1]["error"]
+    assert logged == (
+        "Cortex XDR rejected 1 of the 1 IOC(s) sent - "
+        '[{"index": 0, "status": "invalid IOC value"}]'
     )
 
 
@@ -658,6 +678,12 @@ def test_adapter_push():
         (
             api_error(ValueError("invalid")),
             "Cortex XDR returned an unexpected response to the IOC upsert",
+        ),
+        (
+            CortexXdrRejectedIocsError(
+                "Cortex XDR rejected 1 of the 2 IOC(s) sent", [{"index": 1}]
+            ),
+            "Cortex XDR refused the IOC upsert: invalid request",
         ),
         (
             ConnectionError("reset"),

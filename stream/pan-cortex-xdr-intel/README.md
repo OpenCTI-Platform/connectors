@@ -113,7 +113,7 @@ does not exist), and detection hits are counted with a sighting of the indicator
 | When                                        | Reported to OpenCTI                                                                                       |
 |---------------------------------------------|-----------------------------------------------------------------------------------------------------------|
 | Indicator upserted in Cortex XDR            | `deployed`, with the Cortex XDR `rule_id` of its first IOC as external id                                 |
-| Indicator rejected by Cortex XDR            | `failed`, with a short reason such as "Cortex XDR refused the IOC upsert: permission denied" (the Cortex XDR response is written to the connector log) |
+| Indicator rejected by Cortex XDR            | `failed`, with a short reason such as "Cortex XDR refused the IOC upsert: permission denied" (the Cortex XDR response is written to the connector log); a success reply listing `errors` for any IOC of the indicator is a rejection too ("Cortex XDR refused the IOC upsert: invalid request") |
 | Indicator without any supported observable  | Nothing: the indicator is never pushed                                                                    |
 | Delete event processed                      | `removed` (also when the IOC was already absent from Cortex XDR); the IOCs of values another valid OpenCTI indicator (neither revoked nor expired) pushes too are kept; a failed deletion, or a deletion skipped because the other indicators cannot be read, is not reported |
 | Reconciliation, indicator present           | `active` when Cortex XDR holds an IOC for every value of the indicator                                    |

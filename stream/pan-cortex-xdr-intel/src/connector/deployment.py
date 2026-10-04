@@ -37,7 +37,7 @@ from connectors_sdk.connectors.stream.deployment import (
     extract_pattern_values,
     normalize_value,
 )
-from cortex_xdr_client import CortexXdrApiError
+from cortex_xdr_client import CortexXdrApiError, CortexXdrRejectedIocsError
 
 if TYPE_CHECKING:
     from connector.connector import Connector
@@ -98,6 +98,9 @@ def describe_error(error: BaseException) -> str:
         if body:
             detail = body if isinstance(body, str) else json.dumps(body, default=str)
             message = f"{message} - {detail[:MAX_ERROR_DETAIL_LENGTH]}"
+    elif isinstance(error, CortexXdrRejectedIocsError):
+        detail = json.dumps(error.errors, default=str)
+        message = f"{message} - {detail[:MAX_ERROR_DETAIL_LENGTH]}"
     elif cause is not None:
         message = f"{message}: {cause}"
     return message
@@ -133,6 +136,9 @@ def failure_reason(error: BaseException) -> str:
     cause = error.__cause__
     if isinstance(cause, ApiClientError):
         return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, cause.status_code)
+    if isinstance(error, CortexXdrRejectedIocsError):
+        # IOCs refused in a success reply are worded like a validation error (422).
+        return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, 422)
     if isinstance(error, CortexXdrApiError):
         # Raised by the client on a successful response it cannot read.
         return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, 200)
