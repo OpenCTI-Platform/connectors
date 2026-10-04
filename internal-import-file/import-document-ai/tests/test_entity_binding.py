@@ -220,11 +220,14 @@ def test_bind_turns_the_extracted_entity_into_the_existing_one():
         "name": "Cl0p",
         "aliases": ["Clop"],
     }
-    # And every reference follows: the relationship and the report point to it
-    assert objects[uses["id"]]["target_ref"] == cl0p_id
-    assert objects[uses["id"]]["source_ref"] == ta505["id"]
-    assert objects[container["id"]]["object_refs"] == [ta505["id"], cl0p_id, uses["id"]]
+    # And every reference follows: the relationship points to it under the id
+    # of its new identity, and the report points to both
+    uses_id = pycti.StixCoreRelationship.generate_id("uses", ta505["id"], cl0p_id)
+    assert objects[uses_id]["target_ref"] == cl0p_id
+    assert objects[uses_id]["source_ref"] == ta505["id"]
+    assert objects[container["id"]]["object_refs"] == [ta505["id"], cl0p_id, uses_id]
     assert clop["id"] not in json.dumps(objects)
+    assert uses["id"] not in json.dumps(objects)
     # And the unmatched intrusion set is sent as extracted
     assert objects[ta505["id"]] == json.loads(ta505.serialize())
     assert [binding.extracted_name for binding in summary.bindings] == ["Clop"]
@@ -515,20 +518,22 @@ def test_bind_merges_the_extracted_objects_naming_the_same_entity():
     )
 
     # Then one intrusion set remains, holding both alias sets, one "uses"
-    # relationship remains, and the self "related-to" is gone
+    # relationship remains, under the id of "APT29 uses WellMess" (never the
+    # one generated from "Cozy Bear"), and the self "related-to" is gone
     objects = as_json(bound_bundle)
     assert list(objects) == [
         apt29_id,
         wellmess["id"],
-        cozy_bear_uses["id"],
+        apt29_uses["id"],
         container["id"],
     ]
     assert objects[apt29_id]["aliases"] == ["The Dukes", "Cozy Bear"]
-    assert objects[cozy_bear_uses["id"]]["source_ref"] == apt29_id
+    assert objects[apt29_uses["id"]]["source_ref"] == apt29_id
+    assert cozy_bear_uses["id"] not in json.dumps(objects)
     assert objects[container["id"]]["object_refs"] == [
         apt29_id,
         wellmess["id"],
-        cozy_bear_uses["id"],
+        apt29_uses["id"],
     ]
     assert summary.merged_objects == 2
     assert summary.dropped_relationships == 1

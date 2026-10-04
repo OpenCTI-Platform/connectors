@@ -163,7 +163,7 @@ Reports often defang their indicators so that nobody follows them by mistake (`a
 - Brackets must pair up (`[.]` is refanged, `[.}` is not), and a notation is only refanged in the types listed for it (`[at]` is not refanged in a domain name): a value holding a notation that is not refanged is sent unchanged and logged as a warning.
 - A refanged value is only kept when it is a valid value of its type: it must pass the checks OpenCTI applies to domain names, hostnames, email addresses and IP addresses, and a URL must be well-formed (a valid host, or valid addresses for a `mailto:` URL). Otherwise the observable is sent unchanged, as it was before, and logged as a warning.
 - Only the notations are refanged, with the whitespace inside and around them (`filigran [ . ] io`): any other whitespace is kept, so a value with stray leading or trailing whitespace does not refang.
-- A refanged observable gets the deterministic STIX id derived from its new value and loses its `defanged` flag. Every reference to its former id (report `object_refs`, relationship `source_ref` / `target_ref`, any `*_ref` / `*_refs`) is rewritten, and two spellings of one value, as well as the relationships they end up sharing, are merged.
+- A refanged observable gets the deterministic STIX id derived from its new value and loses its `defanged` flag. Every reference to its former id (report `object_refs`, relationship `source_ref` / `target_ref`, any `*_ref` / `*_refs`) is rewritten, and two spellings of one value, as well as the relationships they end up sharing, are merged. A relationship whose endpoint was refanged takes the deterministic id of its new type, endpoints and time frame.
 
 ### Binding to existing entities
 
@@ -182,7 +182,7 @@ When OpenCTI returns an existing entity of the same type, the extracted object i
 
 - It takes the standard id and the canonical name of the existing entity; every other extracted property is kept.
 - The spelling of the document is kept as an alias (in the alias property of the type), unless the entity already holds it: its name, the alias that matched, or a spelling another object of the document brings.
-- Every reference to its former id follows: relationship `source_ref` / `target_ref`, report and container `object_refs`, any `*_ref` / `*_refs`. The objects and the relationships that end up identical are merged, and a relationship the binding turns into a self-reference ("Cozy Bear related-to APT29") is dropped.
+- Every reference to its former id follows: relationship `source_ref` / `target_ref`, report and container `object_refs`, any `*_ref` / `*_refs`. The objects and the relationships that end up identical are merged, and a relationship the binding turns into a self-reference ("Cozy Bear related-to APT29") is dropped. A relationship whose endpoint was bound takes the deterministic id of its new type, endpoints and time frame: "Cozy Bear uses WellMess" bound to APT29 is sent as "APT29 uses WellMess", under the id a document naming APT29 directly produces, and the id generated from "Cozy Bear" is not sent.
 
 Nothing is bound when OpenCTI matches nothing, or matches an entity of another type: the entity is imported as extracted. Attack patterns holding a MITRE ATT&CK id keep being reunified by that id.
 

@@ -896,13 +896,16 @@ def with_id(
 def merge_rewritten_relationships(
     bundle: stix2.Bundle, rewritten_ids: set[str]
 ) -> stix2.Bundle:
-    """Give the relationships a rewrite made identical their first one's id.
+    """Give the relationships a rewrite touched the id of their new identity.
 
-    OpenCTI identifies a relationship by its type, endpoints and time frame:
-    once two objects are merged, their relationships to the same object are
-    one relationship. Every relationship sharing that identity with a
-    rewritten one is merged, whatever their order in the bundle; a group the
-    rewrite did not touch is left as it is.
+    OpenCTI identifies a relationship by its type, endpoints and time frame,
+    and so does its deterministic id. A rewritten relationship takes the id
+    generated from its new endpoints: another document naming them directly
+    emits the same id, and the id generated from the former endpoints never
+    designates a relationship it no longer describes. Every relationship
+    sharing that identity with a rewritten one takes the same id, whatever
+    its order in the bundle, and the references to a changed id follow it; a
+    group the rewrite did not touch is left as it is.
 
     Args:
         bundle (stix2.Bundle): The STIX bundle to process.
@@ -910,9 +913,10 @@ def merge_rewritten_relationships(
             endpoints were rewritten.
 
     Returns:
-        (stix2.Bundle): The STIX bundle where the relationships made
-            identical share one id (``bundle`` itself when there are none),
-            the duplicates still to be merged by ``merge_duplicate_objects``.
+        (stix2.Bundle): The STIX bundle where the rewritten relationships
+            carry the id of their identity (``bundle`` itself when no id
+            changes), the duplicates still to be merged by
+            ``merge_duplicate_objects``.
     """
     ids_by_key: dict[tuple, list[str]] = {}
     for obj in bundle.get("objects", []):
@@ -926,21 +930,25 @@ def merge_rewritten_relationships(
             obj.get("stop_time"),
         )
         ids_by_key.setdefault(key, []).append(obj["id"])
-    duplicate_ids = {
-        duplicate_id: ids[0]
-        for ids in ids_by_key.values()
-        if len(ids) > 1 and rewritten_ids.intersection(ids)
-        for duplicate_id in ids[1:]
-    }
-    if not duplicate_ids:
+    new_ids: dict[str, str] = {}
+    for key, ids in ids_by_key.items():
+        if not rewritten_ids.intersection(ids):
+            continue
+        identity = StixCoreRelationship.generate_id(*key)
+        new_ids.update({former: identity for former in ids if former != identity})
+    if not new_ids:
         return bundle
     objects = [
-        with_id(obj, duplicate_ids[obj["id"]]) if obj["id"] in duplicate_ids else obj
+        (
+            with_id(obj, new_ids[obj["id"]])
+            if obj.get("type") == "relationship" and obj["id"] in new_ids
+            else obj
+        )
         for obj in bundle.get("objects", [])
     ]
     return remap_references_in_bundle(
         stix2.Bundle(type=bundle["type"], objects=objects, allow_custom=True),
-        duplicate_ids,
+        new_ids,
     )
 
 

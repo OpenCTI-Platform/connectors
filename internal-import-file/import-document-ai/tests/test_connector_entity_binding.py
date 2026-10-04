@@ -193,15 +193,22 @@ def test_global_import_sends_the_existing_entities_the_document_names(
     assert objects[UNITED_STATES_ID]["x_opencti_aliases"] == ["USA"]
     assert objects[UNITED_STATES_ID]["x_opencti_location_type"] == "Country"
     assert objects[WELLMESS["id"]] == json.loads(WELLMESS.serialize())
-    # And the relationships and the report created for the file point to them
-    assert objects[USES["id"]]["source_ref"] == APT29_ID
-    assert objects[TARGETS["id"]]["source_ref"] == APT29_ID
-    assert objects[TARGETS["id"]]["target_ref"] == UNITED_STATES_ID
+    # And the relationships, under the ids of their new identities, and the
+    # report created for the file point to them
+    uses_id = pycti.StixCoreRelationship.generate_id("uses", APT29_ID, WELLMESS["id"])
+    targets_id = pycti.StixCoreRelationship.generate_id(
+        "targets", APT29_ID, UNITED_STATES_ID
+    )
+    assert objects[uses_id]["source_ref"] == APT29_ID
+    assert objects[targets_id]["source_ref"] == APT29_ID
+    assert objects[targets_id]["target_ref"] == UNITED_STATES_ID
     [created_report] = [obj for obj in objects.values() if obj["type"] == "report"]
     assert set(created_report["object_refs"]) == set(objects) - {created_report["id"]}
     serialized = json.dumps(objects)
     assert not [
-        extracted_id for extracted_id in EXTRACTED_IDS if extracted_id in serialized
+        extracted_id
+        for extracted_id in (*EXTRACTED_IDS, USES["id"], TARGETS["id"])
+        if extracted_id in serialized
     ]
     assert sorted(platform.calls) == [
         ("Country", "USA"),
