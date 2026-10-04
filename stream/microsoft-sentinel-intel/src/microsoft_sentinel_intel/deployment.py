@@ -289,7 +289,13 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                     )
                 if str(incident_id) in handled:
                     continue
-                if activity_time is not None and activity_time >= since:
+                if activity_time is None:
+                    # Never skipped: the hit window would move past its entities.
+                    raise SentinelDeploymentError(
+                        "A Microsoft Sentinel incident of the hit read carries no "
+                        "activity time"
+                    )
+                if activity_time >= since:
                     if inspected >= MAX_HIT_INCIDENTS:
                         self._logger.warning(
                             f"{_LOG_PREFIX} Incident limit reached, the next run "

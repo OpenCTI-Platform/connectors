@@ -912,6 +912,31 @@ def test_adapter_hit_read_rejects_an_incident_without_id(
         list(adapter.collect_hits([make_deployment()], since))
 
 
+@pytest.mark.parametrize(
+    "properties",
+    [
+        {},
+        {
+            "lastActivityTimeUtc": "not a date",
+            "createdTimeUtc": "",
+            "lastModifiedTimeUtc": None,
+        },
+    ],
+)
+def test_adapter_hit_read_rejects_an_incident_without_activity_time(
+    adapter, adapter_connector, properties
+) -> None:
+    """A skipped incident would be lost: the hit window moves past its entities."""
+    since = datetime.now(UTC) - timedelta(hours=1)
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
+        [{"id": "incident-1", "properties": properties}]
+    )
+
+    with pytest.raises(SentinelDeploymentError, match="carries no activity time"):
+        list(adapter.collect_hits([make_deployment()], since))
+    adapter_connector.client.list_incident_entities.assert_not_called()
+
+
 def test_adapter_hits_resume_at_an_incident_whose_entities_cannot_be_read(
     adapter, adapter_connector
 ) -> None:
@@ -957,7 +982,13 @@ def test_adapter_hits_resume_after_the_last_listed_page(
     last = since + timedelta(minutes=5)
     listing = IncidentListing(
         [
-            {"id": "incident-1", "properties": {"lastModifiedTimeUtc": "invalid"}},
+            {
+                "id": "incident-1",
+                "properties": {
+                    "lastModifiedTimeUtc": "invalid",
+                    "lastActivityTimeUtc": (since - timedelta(minutes=10)).isoformat(),
+                },
+            },
             {
                 "id": "incident-2",
                 "properties": {"lastModifiedTimeUtc": last.isoformat()},
