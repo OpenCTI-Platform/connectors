@@ -11,13 +11,16 @@ Architecture::
     ├── OpenCTIConnectorHelper → pycti bridge (register_hunt_platform, listen_hunt, report_hunt_run)
     ├── resolve_query()        → native query override, or translate() of the Sigma rule
     │   └── sigma_backend()    → pySigma backend of the platform (abstract)
+    ├── ioc_query()            → indicator hunts: the lookup of a batch of values (optional)
     ├── execute()              → query execution on the platform (abstract), time-boxed
     ├── to_stix()              → sightings + observed-data (telemetry), overridable
-    └── report                 → hits, distinct entities, hashed evidence, result ids
+    └── report                 → hits, distinct entities, hashed evidence, result ids,
+                                 and one result per value for indicator hunts
 """
 
 from __future__ import annotations
 
+import inspect
 import json
 import threading
 import time
@@ -40,6 +43,17 @@ from connectors_sdk.connectors.internal_hunt.errors import (
     HuntTimeoutError,
     HuntTranslationError,
     HuntUnsupportedPyctiError,
+)
+from connectors_sdk.connectors.internal_hunt.indicators import (
+    HOST_FIELDS,
+    IocBatch,
+    IocObservation,
+    aggregated_observations,
+    batch_iocs,
+    build_indicator_objects,
+    build_ioc_evidence,
+    build_ioc_results,
+    match_events,
 )
 from connectors_sdk.connectors.internal_hunt.models import (
     HuntLimits,
@@ -81,6 +95,21 @@ REQUIRED_HELPER_METHODS: tuple[str, ...] = (
 
 ERROR_MESSAGE_MAX_LENGTH = 2000
 """Maximum length of the error reported for a failed run."""
+
+INDICATOR_HUNT = "indicators"
+"""Hunt type of indicator hunts, whose values are looked up instead of a query."""
+
+
+def _accepts_keyword(function: Any, keyword: str) -> bool:
+    """Whether a callable accepts a keyword argument (a newer pycti helper parameter)."""
+    try:
+        parameters = inspect.signature(function).parameters
+    except (TypeError, ValueError):
+        return False
+    return keyword in parameters or any(
+        parameter.kind is inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters.values()
+    )
 
 
 def ensure_pycti_hunt_support() -> None:
@@ -137,12 +166,17 @@ class InternalHuntConnector(ABC):
     - ``languages``: query languages the connector executes (the first one is
       the language produced by ``translate``);
     - ``sigma_backend()``: the pySigma backend (and pipeline) of the platform;
-    - ``execute()``: the query execution on the platform API.
+    - ``execute()``: the query execution on the platform API;
+    - ``ioc_query()`` (optional): the lookup of a batch of values of one
+      observable type, which makes the connector run indicator hunts.
 
     Everything else is handled here: pycti compatibility check, platform
     registration, message parsing, native query override, preview mode,
     timeout and ``max_results`` enforcement, benign suppression, STIX mapping,
-    bundle sending, evidence redaction and run reporting.
+    bundle sending, evidence redaction and run reporting. For indicator hunts:
+    the batching of the values by type, the matching of the values in the
+    results (or the reading of aggregated rows, see ``ioc_aggregated``), one
+    result per value, and the sightings of the seen values.
 
     The ``OpenCTIConnectorHelper`` is created lazily by ``start()`` so that the
     connector can be instantiated and tested without an OpenCTI platform.
@@ -156,6 +190,10 @@ class InternalHuntConnector(ABC):
         entity_fields: Result fields identifying hosts, users and network peers.
         observable_fields: Result field to observable type mapping that takes
             precedence over the field name heuristics.
+        ioc_aggregated: True when ``ioc_query`` returns one aggregated row per
+            value (``ioc``, ``hits``, ``first_seen``, ``last_seen``, ``hosts``),
+            False when it returns raw events the base searches for the values.
+        ioc_host_fields: Result fields naming the host of an event.
         settings: Connector settings.
         config: Connector-level settings (``BaseInternalHuntConnectorConfig``).
 
@@ -176,6 +214,8 @@ class InternalHuntConnector(ABC):
     evidence_excluded_fields: ClassVar[frozenset[str]] = frozenset()
     entity_fields: ClassVar[tuple[str, ...]] = DEFAULT_ENTITY_FIELDS
     observable_fields: ClassVar[Mapping[str, str]] = MappingProxyType({})
+    ioc_aggregated: ClassVar[bool] = False
+    ioc_host_fields: ClassVar[tuple[str, ...]] = HOST_FIELDS
 
     def __init__(self, settings: BaseConnectorSettings) -> None:
         """Initialize the hunt connector.
@@ -250,6 +290,10 @@ class InternalHuntConnector(ABC):
             The hunt connector registration returned by OpenCTI.
         """
         is_internet = self.platform == HUNT_INTERNET_PLATFORM
+        capabilities: dict[str, Any] = {}
+        # A pycti without indicator hunts registers the connector without them
+        if _accepts_keyword(self.helper.register_hunt_platform, "supports_indicators"):
+            capabilities["supports_indicators"] = self.supports_indicators
         registration = self.helper.register_hunt_platform(
             platform=self.platform,
             languages=list(self.languages),
@@ -259,6 +303,7 @@ class InternalHuntConnector(ABC):
             security_platform_type=self.config.security_platform_type,
             supports_preview=True,
             max_concurrent_runs=self.config.max_concurrent_runs,
+            **capabilities,
         )
         self.logger.info(
             "[HUNT] Hunt platform registered",
@@ -266,6 +311,7 @@ class InternalHuntConnector(ABC):
                 "platform": self.platform,
                 "languages": list(self.languages),
                 "security_platform": self.config.security_platform_name,
+                "supports_indicators": capabilities.get("supports_indicators", False),
             },
         )
         return dict(registration or {})
@@ -317,6 +363,29 @@ class InternalHuntConnector(ABC):
         Returns:
             The query results.
         """
+
+    def ioc_query(self, batch: IocBatch) -> NativeQuery | None:
+        """Build the platform lookup of a batch of values of one observable type.
+
+        Override it to run indicator hunts: the connector then registers as
+        supporting indicator lookups, and ``execute`` runs the returned query
+        within the run window. Return raw events (the base finds the values in
+        them) or, with ``ioc_aggregated``, one row per value key.
+
+        Args:
+            batch: Values of one observable type (and hash algorithm), at most
+                ``limits.ioc_batch_size``.
+
+        Returns:
+            The lookup, or ``None`` when the platform cannot look this type up
+            (its values are reported not searched).
+        """
+        return None
+
+    @property
+    def supports_indicators(self) -> bool:
+        """Return whether the connector looks up the values of indicator hunts."""
+        return type(self).ioc_query is not InternalHuntConnector.ioc_query
 
     def on_timeout(self, native_query: NativeQuery) -> None:  # noqa: B027
         """Hook called when ``execute`` exceeds the run timeout.
@@ -504,6 +573,8 @@ class InternalHuntConnector(ABC):
         )
         native_query: NativeQuery | None = None
         try:
+            if request.hunt.hunt_type == INDICATOR_HUNT:
+                return self._complete_indicator_run(request, started)
             native_query = self.resolve_query(request)
             if request.mode is HuntRunMode.PREVIEW:
                 return self._complete_preview(request, native_query, started)
@@ -591,6 +662,121 @@ class InternalHuntConnector(ABC):
         return (
             f"Hunt run {request.hunt_run.id} completed: {hits_count} hit(s), "
             f"{len(result_ids)} object(s) sent."
+        )
+
+    def plan_ioc_lookups(
+        self, request: HuntRequest
+    ) -> list[tuple[IocBatch, NativeQuery | None]]:
+        """Return the lookups of an indicator hunt run: its values batched by type, each with its query.
+
+        Args:
+            request: The hunt run request.
+
+        Returns:
+            Each batch with its lookup, ``None`` for a type the platform cannot look up.
+        """
+        return [
+            (batch, self.ioc_query(batch))
+            for batch in batch_iocs(request.hunt.iocs, request.limits.ioc_batch_size)
+        ]
+
+    def _complete_indicator_run(self, request: HuntRequest, started: float) -> str:
+        """Look up the values of an indicator hunt, report one result per value, then send the sightings.
+
+        A preview reports the lookups without running them. A type the platform
+        cannot look up is reported not searched, so that OpenCTI never concludes
+        benign about it.
+        """
+        if not self.supports_indicators:
+            raise HuntTranslationError(
+                f"The '{self.platform}' hunt connector does not look up indicator values."
+            )
+        lookups = self.plan_ioc_lookups(request)
+        queries = [query for _, query in lookups if query is not None]
+        language = queries[0].language if queries else self.languages[0]
+        translated = "\n\n".join(query.query for query in queries) or None
+        if request.mode is HuntRunMode.PREVIEW:
+            self.report(
+                request.hunt_run.id,
+                HuntRunReport(
+                    status=HuntRunStatus.COMPLETED,
+                    translated_query=translated,
+                    query_language=language,
+                    cost_ms=self._elapsed_ms(started),
+                ),
+            )
+            return f"Hunt run {request.hunt_run.id} preview completed ({len(queries)} lookup(s))."
+        deadline = RunDeadline(request.limits.timeout_seconds)
+        observations: dict[str, IocObservation] = {}
+        unsearched: dict[str, str] = {}
+        truncated = False
+        for batch, query in lookups:
+            if query is None:
+                reason = f"The {self.platform} hunt connector does not look up {batch.observable_type} values."
+                unsearched.update({ioc.key: reason for ioc in batch.iocs})
+                continue
+            raw_result = self._execute_within_limits(request, query, deadline)
+            result = suppress_benign(raw_result, request.hunt.benign_patterns, deadline)
+            truncated = truncated or result.truncated
+            found = (
+                aggregated_observations(batch, result.events)
+                if self.ioc_aggregated
+                else match_events(batch, result.events, self.ioc_host_fields)
+            )
+            for key, observation in found.items():
+                observations.setdefault(key, IocObservation()).merge(observation)
+        ioc_results = build_ioc_results(request.hunt.iocs, observations, unsearched)
+        objects = self._bundle_objects(build_indicator_objects(request, ioc_results))
+        if request.security_platform is None and any(
+            result.seen for result in ioc_results
+        ):
+            self.logger.warning(
+                "[HUNT] No Security Platform in the hunt run, sightings are skipped",
+                {"hunt_run_id": request.hunt_run.id},
+            )
+        hits_count = sum(result.hits_count for result in ioc_results)
+        self.report(
+            request.hunt_run.id,
+            HuntRunReport(
+                status=HuntRunStatus.COMPLETED,
+                translated_query=translated,
+                query_language=language,
+                hits_count=hits_count,
+                truncated=truncated,
+                distinct_entities=len(
+                    {host for result in ioc_results for host in result.hosts}
+                ),
+                evidence_sample=build_ioc_evidence(
+                    request.hunt.iocs, ioc_results, request.limits
+                ),
+                result_ids=list(objects),
+                cost_ms=self._elapsed_ms(started),
+                ioc_results=ioc_results,
+            ),
+        )
+        try:
+            self._send_objects(objects)
+        except Exception as err:
+            self.logger.error(
+                "[HUNT] Hunt run completed but its knowledge could not be sent",
+                {"hunt_run_id": request.hunt_run.id, "error": _error_message(err)},
+            )
+            _mark_reported(err)
+            raise
+        seen = sum(1 for result in ioc_results if result.seen)
+        self.logger.info(
+            "[HUNT] Indicator hunt run completed",
+            {
+                "hunt_run_id": request.hunt_run.id,
+                "values": len(ioc_results),
+                "seen": seen,
+                "not_searched": len(unsearched),
+                "objects_sent": len(objects),
+            },
+        )
+        return (
+            f"Hunt run {request.hunt_run.id} completed: {seen} of {len(ioc_results)} "
+            f"value(s) seen, {len(objects)} object(s) sent."
         )
 
     def _execute_within_limits(
@@ -689,6 +875,16 @@ class InternalHuntConnector(ABC):
             run_id: OpenCTI id of the hunt run.
             report: Outcome of the run.
         """
+        extra: dict[str, Any] = {}
+        if report.ioc_results is not None:
+            if not _accepts_keyword(self.helper.report_hunt_run, "ioc_results"):
+                raise HuntUnsupportedPyctiError(
+                    "The installed pycti cannot report the results of indicator hunts: "
+                    "install the pycti release matching the OpenCTI platform."
+                )
+            extra["ioc_results"] = [
+                result.model_dump(mode="json") for result in report.ioc_results
+            ]
         self.helper.report_hunt_run(
             run_id,
             report.status.value,
@@ -705,6 +901,7 @@ class InternalHuntConnector(ABC):
             result_ids=report.result_ids,
             error=report.error,
             truncated=report.truncated,
+            **extra,
         )
 
     # ------------------------------------------------------------------

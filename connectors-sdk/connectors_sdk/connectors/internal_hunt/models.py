@@ -91,6 +91,37 @@ class HuntIndicator(_HuntRequestModel):
     pattern: str | None = Field(default=None, description="Indicator pattern.")
 
 
+class HuntIocSource(_HuntRequestModel):
+    """Indicator or observable a value of an indicator hunt comes from."""
+
+    standard_id: str = Field(description="STIX id of the indicator or observable.")
+    entity_type: str | None = Field(default=None, description="OpenCTI entity type.")
+    name: str | None = Field(default=None, description="Name or value.")
+
+
+class HuntIoc(_HuntRequestModel):
+    """One value an indicator hunt looks up on the platform."""
+
+    key: str = Field(description="Key of the value, echoed in the run report.")
+    observable_type: str = Field(
+        description="OpenCTI observable type (IPv4-Addr, Domain-Name, StixFile...)."
+    )
+    hash_algorithm: str | None = Field(
+        default=None, description="Hash algorithm of a StixFile value (MD5, SHA-1...)."
+    )
+    value: str = Field(min_length=1, description="Normalized value to look up.")
+    sources: list[HuntIocSource] = Field(
+        default_factory=list,
+        description="Indicators and observables of the value, none for a pasted value.",
+    )
+
+    @field_validator("sources", mode="before")
+    @classmethod
+    def _none_to_empty_list(cls, value: Any) -> Any:
+        """Turn a null list sent by the platform into an empty list."""
+        return [] if value is None else value
+
+
 class HuntDefinition(_HuntRequestModel):
     """Hunt to execute, as sent in the dispatch message."""
 
@@ -98,7 +129,7 @@ class HuntDefinition(_HuntRequestModel):
     standard_id: str = Field(description="STIX id of the hunt.")
     name: str = Field(description="Name of the hunt.")
     hypothesis: str | None = Field(default=None, description="Hunt hypothesis.")
-    hunt_type: Literal["telemetry", "infrastructure"] = Field(
+    hunt_type: Literal["telemetry", "indicators", "infrastructure"] = Field(
         default="telemetry", description="Kind of hunt."
     )
     sigma_rule: str | None = Field(
@@ -134,6 +165,10 @@ class HuntDefinition(_HuntRequestModel):
     indicators: list[HuntIndicator] = Field(
         default_factory=list, description="Indicators the hunt is based on."
     )
+    iocs: list[HuntIoc] = Field(
+        default_factory=list,
+        description="Indicator hunts: the values to look up on the platform.",
+    )
 
     @field_validator(
         "expected_observables",
@@ -142,6 +177,7 @@ class HuntDefinition(_HuntRequestModel):
         "techniques",
         "targets",
         "indicators",
+        "iocs",
         mode="before",
     )
     @classmethod
@@ -186,6 +222,11 @@ class HuntLimits(_HuntRequestModel):
     )
     evidence_max_value_length: int = Field(
         default=256, ge=1, description="Maximum length of an evidence preview."
+    )
+    ioc_batch_size: int = Field(
+        default=50,
+        ge=1,
+        description="Indicator hunts: maximum number of values in one platform lookup.",
     )
 
 
@@ -319,6 +360,30 @@ class HuntEvidence(BaseModel):
     count: int = Field(ge=0, description="Occurrences of the value in the results.")
 
 
+class HuntIocResult(BaseModel):
+    """What the platform reported for one value of an indicator hunt run."""
+
+    model_config = ConfigDict(frozen=True)
+
+    key: str = Field(description="Key of the value in the run message.")
+    searched: bool = Field(
+        default=True,
+        description="False when the platform cannot look this type of value up.",
+    )
+    seen: bool = Field(default=False, description="The value was found.")
+    hits_count: int = Field(default=0, ge=0, description="Events holding the value.")
+    first_seen: AwareDatetime | None = Field(
+        default=None, description="Time of the first event holding the value."
+    )
+    last_seen: AwareDatetime | None = Field(
+        default=None, description="Time of the last event holding the value."
+    )
+    hosts: list[str] = Field(
+        default_factory=list, description="Hosts the value was seen on."
+    )
+    reason: str | None = Field(default=None, description="Why it was not searched.")
+
+
 class HuntRunReport(BaseModel):
     """Outcome of a hunt run reported to OpenCTI."""
 
@@ -356,3 +421,6 @@ class HuntRunReport(BaseModel):
         default=None, ge=0, description="Execution time of the run in milliseconds."
     )
     error: str | None = Field(default=None, description="Error of a failed run.")
+    ioc_results: list[HuntIocResult] | None = Field(
+        default=None, description="Indicator hunts: the result of each value."
+    )

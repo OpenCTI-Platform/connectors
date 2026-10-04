@@ -116,8 +116,14 @@ and internal domain names are never turned into observables.
    the platform message.
 3. **Connector** (`src/connector/connector.py`): set `languages`, the pySigma backend and pipelines, and map the
    platform events in `execute()`. Override `on_timeout()` when the platform runs asynchronous jobs.
-4. **Requirements**: add the pySigma backend package of the platform to `src/requirements.txt`.
-5. Regenerate `__metadata__/connector_config_schema.json` and `CONNECTOR_CONFIG_DOC.md` from the settings model, never
+4. **Indicator hunts** (optional): override `ioc_query(batch)` to look up a batch of values of one observable type
+   (`batch.observable_type`, `batch.values`). Return a query whose events the base searches for the values, or set
+   `ioc_aggregated = True` and return one row per value key (`ioc`, `hits`, `first_seen`, `last_seen`, `hosts`) for
+   exact counts. Return `None` for a type the platform cannot look up: its values are reported not searched. The base
+   batches the values, reports one result per value and sights the seen ones; overriding `ioc_query` makes the
+   connector register as supporting indicator lookups.
+5. **Requirements**: add the pySigma backend package of the platform to `src/requirements.txt`.
+6. Regenerate `__metadata__/connector_config_schema.json` and `CONNECTOR_CONFIG_DOC.md` from the settings model, never
    edit these generated files by hand.
 
 ## Debugging
