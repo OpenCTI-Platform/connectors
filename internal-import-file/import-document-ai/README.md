@@ -67,7 +67,7 @@ For more information regarding variables, please refer to [OpenCTI's documentati
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==7.261002.0`. If you don't, it will take the latest version, but sometimes the OpenCTI SDK fails to initialize.
+The image installs the pycti version pinned in `src/requirements.txt` (currently `pycti==7.261002.0`), never a newer one. If your OpenCTI platform runs another version, set that pin to the version of your platform before building the Docker container: a pycti that does not match the platform can fail to initialize.
 
 Build a Docker Image using the provided `Dockerfile`.
 
