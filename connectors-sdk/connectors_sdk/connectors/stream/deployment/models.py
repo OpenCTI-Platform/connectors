@@ -386,12 +386,16 @@ class VendorIndicator:
         external_id: The id of the indicator on the vendor side.
         value: The observable value of the indicator.
         raw: The vendor payload, available to ``remove_vendor_indicator``.
+        active: ``False`` for an object the vendor retains but no longer enforces
+            (expired, revoked, deactivated): it is removed for a deployment that
+            must be withdrawn, and never confirms or backfills a deployment.
     """
 
     indicator_id: str | None = None
     external_id: str | None = None
     value: str | None = None
     raw: Mapping[str, Any] = field(default_factory=dict, compare=False)
+    active: bool = True
 
 
 @dataclass(frozen=True, slots=True)

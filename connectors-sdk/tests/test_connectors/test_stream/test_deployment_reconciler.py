@@ -655,6 +655,41 @@ def test_deployments_only_partly_on_the_vendor_are_pushed_again(
     assert reports["complete"]["status"] == "active"
 
 
+def test_retained_inactive_vendor_objects_are_only_removed(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """An expired or revoked object the vendor keeps is removed for a deployment that
+    must be withdrawn, never confirms a live one and is never backfilled."""
+    list_nodes(
+        node_factory(indicator_id="withdrawn", status="active", revoked=True),
+        node_factory(indicator_id="expired", status="expired"),
+        node_factory(indicator_id="live", status="active"),
+    )
+    inactive = [
+        VendorIndicator(indicator_id=identifier, external_id=f"v-{identifier}")
+        for identifier in ("withdrawn", "expired", "live", "unknown")
+    ]
+    adapter = FakeAdapter(vendor=[replace(vendor, active=False) for vendor in inactive])
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert sorted(vendor.external_id for vendor, _ in adapter.removed) == [
+        "v-expired",
+        "v-withdrawn",
+    ]
+    assert (summary.withdrawn, summary.confirmed_active, summary.discovered) == (
+        2,
+        0,
+        0,
+    )
+    reports = reported()
+    assert {key: reports[key]["status"] for key in reports} == {
+        "withdrawn": "removed",
+        "expired": "removed",
+        "live": "removed",
+    }
+
+
 def test_vendor_adapters_confirm_any_vendor_item_by_default():
     assert FakeAdapter().is_complete(None, [VendorIndicator(indicator_id="a")])
 

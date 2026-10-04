@@ -95,7 +95,9 @@ class DeploymentVendorAdapter(ABC):
         """Read the indicators pushed by the connector back from the vendor.
 
         The adapter paginates the vendor API and only returns the indicators the
-        connector manages (same source, list or tag).
+        connector manages (same source, list or tag). Objects the vendor retains
+        but no longer enforces (expired, revoked, deactivated) are returned with
+        ``active=False``, so that a withdrawal still removes them.
 
         Returns:
             The vendor indicators.
@@ -431,11 +433,16 @@ class DeploymentReconciler:
             deployment_matches = [
                 (
                     deployment,
-                    vendor_index.find_all(
-                        deployment.identifiers,
-                        deployment.external_id,
-                        deployment.values,
-                    ),
+                    [
+                        vendor
+                        for vendor in vendor_index.find_all(
+                            deployment.identifiers,
+                            deployment.external_id,
+                            deployment.values,
+                        )
+                        # A retained inactive object is only removed, never live.
+                        if vendor.active or self._must_remove(deployment, now)
+                    ],
                 )
                 for deployment in deployments
             ]
@@ -760,7 +767,7 @@ class DeploymentReconciler:
         now: datetime,
         summary: ReconciliationSummary,
     ) -> list[DeploymentReport]:
-        """Report vendor indicators carrying an OpenCTI id but no deployment.
+        """Report active vendor indicators carrying an OpenCTI id but no deployment.
 
         Args:
             vendor_indicators: The vendor indicators.
@@ -780,7 +787,8 @@ class DeploymentReconciler:
         for vendor_indicator in vendor_indicators:
             identifier = normalize_value(vendor_indicator.indicator_id)
             if (
-                vendor_indicator.indicator_id is None
+                not vendor_indicator.active
+                or vendor_indicator.indicator_id is None
                 or identifier is None
                 or id(vendor_indicator) in matched
                 or identifier in known
