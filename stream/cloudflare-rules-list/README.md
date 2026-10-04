@@ -136,11 +136,11 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
 |-------------------------------------------|-------------------------------------------------------------------------------------------------------|
 | Snapshot uploaded                         | `deployed` for the indicators added or whose IP changed since the previous upload                     |
 | Snapshot rejected by Cloudflare           | `failed` for those indicators, with the API error (they are retried with the next upload)             |
-| Snapshot uploaded without an indicator    | `removed` for the indicators of the previous upload dropped by a delete event (when the last object is deleted, an empty snapshot clears the list) |
+| Snapshot uploaded without an indicator    | `removed` for the indicators of the previous upload dropped by a delete event, or by an update that revokes them or leaves them without an IPv4 value (when the last object is dropped, an empty snapshot clears the list) |
 | Reconciliation, indicator present         | `active`, with the Cloudflare list item id as external id                                             |
 | Reconciliation, indicator absent          | `removed` (deleted from the list outside of OpenCTI); the next upload restores the item and reports the indicator `deployed` again |
 | Reconciliation, `pending` (analyst retry) | The indicator is added to the snapshot, uploaded and reported `deployed` or `failed`                  |
-| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still listed are deleted from the list and reported `removed` |
+| Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still listed are deleted from the list and reported `removed`; the ones already absent are reported `removed` and dropped from the snapshot, so no upload restores them |
 | Reconciliation, unknown indicator         | Items whose comment carries the STIX id of an indicator with no deployment are reported `active` (backfill) |
 
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the items of the list are read back (cursor

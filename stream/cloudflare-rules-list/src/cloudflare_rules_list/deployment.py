@@ -134,6 +134,11 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
             str(item_id), vendor_indicator.value or "", deployment.identifiers
         )
 
+    def forget_indicator(self, deployment: IndicatorDeployment) -> None:
+        """Drop an indicator withdrawn while absent from the list from the snapshot,
+        so that the next upload does not restore its item."""
+        self._connector.forget_indicator(deployment.identifiers)
+
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
         """Add an indicator to the snapshot and upload it.
 

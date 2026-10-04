@@ -170,6 +170,46 @@ def test_dropped_indicators_are_reported_removed(connector, assurance):
     assert reports[STIX_ID].status == "removed"
 
 
+@pytest.mark.parametrize(
+    "update",
+    [
+        {"pattern": "[domain-name:value = 'evil.example']"},
+        {"revoked": True},
+    ],
+)
+def test_updated_indicators_no_longer_eligible_leave_the_list(
+    connector, assurance, update
+):
+    connector.process_message(make_message("create", make_indicator()))
+    connector.process_message(
+        make_message("create", make_indicator(stix_id=OTHER_STIX_ID, ip="203.0.113.9"))
+    )
+    assurance.reporter.enqueue.reset_mock()
+
+    connector.process_message(make_message("update", {**make_indicator(), **update}))
+
+    assert STIX_ID not in connector._indicator_cache
+    assert connector.client.replace_list_items.call_args.args == (
+        "list-123",
+        [{"ip": "203.0.113.9", "comment": f"OpenCTI: {OTHER_STIX_ID}"}],
+    )
+    reports = enqueued(assurance)
+    assert set(reports) == {STIX_ID}
+    assert reports[STIX_ID].status == "removed"
+
+
+def test_unrelated_updates_without_ipv4_change_nothing(connector, assurance):
+    connector.process_message(
+        make_message(
+            "update",
+            {**make_indicator(), "pattern": "[domain-name:value = 'evil.example']"},
+        )
+    )
+
+    connector.client.replace_list_items.assert_not_called()
+    assurance.reporter.enqueue.assert_not_called()
+
+
 def test_deleting_the_last_object_clears_the_list(connector, assurance):
     connector.process_message(make_message("create", make_indicator()))
     assurance.reporter.enqueue.reset_mock()
@@ -518,6 +558,38 @@ def test_push_indicator_errors(connector):
     connector.client.replace_list_items.side_effect = CloudflareAPIError("refused")
     with pytest.raises(CloudflareAPIError, match="refused"):
         connector.push_indicator(make_indicator())
+
+
+def test_push_indicator_without_ipv4_evicts_the_previous_address(connector):
+    connector._indicator_cache = {STIX_ID: "198.51.100.7"}
+    connector._indicator_keys = {STIX_ID}
+
+    with pytest.raises(ValueError, match="no IPv4 pattern"):
+        connector.push_indicator(
+            {**make_indicator(), "pattern": "[domain-name:value = 'evil.example']"}
+        )
+
+    assert connector._indicator_cache == {}
+    assert connector._indicator_keys == set()
+
+
+def test_forget_indicator_drops_it_without_any_upload(connector, assurance):
+    connector._indicator_cache = {STIX_ID: "198.51.100.7", OTHER_STIX_ID: "203.0.113.9"}
+    connector._indicator_keys = {STIX_ID, OTHER_STIX_ID}
+    connector._synced = dict(connector._indicator_cache)
+
+    CloudflareDeploymentAdapter(connector).forget_indicator(make_deployment())
+
+    assert connector._indicator_cache == {OTHER_STIX_ID: "203.0.113.9"}
+    assert connector._indicator_keys == {OTHER_STIX_ID}
+    assert connector._synced == {OTHER_STIX_ID: "203.0.113.9"}
+    connector.client.replace_list_items.assert_not_called()
+    connector._upload_snapshot()
+    assert connector.client.replace_list_items.call_args.args == (
+        "list-123",
+        [{"ip": "203.0.113.9", "comment": f"OpenCTI: {OTHER_STIX_ID}"}],
+    )
+    assurance.reporter.enqueue.assert_not_called()
 
 
 def test_withdraw_item_deletes_the_item_and_drops_the_indicator(connector):

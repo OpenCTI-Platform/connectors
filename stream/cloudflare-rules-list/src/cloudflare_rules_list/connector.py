@@ -153,16 +153,18 @@ class Connector:
     def _handle_upsert(self, data: dict) -> bool:
         """Cache the IPv4 value of a created or updated object.
 
+        An object updated without an IPv4 value, or revoked, leaves the snapshot.
+
         Returns:
             Whether the snapshot was updated.
         """
-        value = self._extract_ipv4(data)
-        if not value:
-            return False
-
         indicator_id = self._object_id(data)
         if not indicator_id:
             return False
+
+        value = self._extract_ipv4(data)
+        if not value or data.get("revoked") is True:
+            return self._evict(indicator_id)
 
         with self._lock:
             self._indicator_cache[indicator_id] = value
@@ -180,8 +182,16 @@ class Connector:
             Whether the snapshot was updated.
         """
         indicator_id = self._object_id(data)
+        return bool(indicator_id) and self._evict(indicator_id)
+
+    def _evict(self, indicator_id: str) -> bool:
+        """Drop an object from the snapshot; the next upload reports it `removed`.
+
+        Returns:
+            Whether the snapshot held the object.
+        """
         with self._lock:
-            if not indicator_id or indicator_id not in self._indicator_cache:
+            if indicator_id not in self._indicator_cache:
                 return False
             del self._indicator_cache[indicator_id]
             self._indicator_keys.discard(indicator_id)
@@ -360,11 +370,33 @@ class Connector:
         value = self._extract_ipv4(indicator)
         indicator_id = self._object_id(indicator)
         if not value or not indicator_id:
+            if indicator_id:
+                self._evict(indicator_id)
             raise ValueError("The indicator has no IPv4 pattern for Cloudflare")
         with self._lock:
             self._indicator_cache[indicator_id] = value
             self._indicator_keys.add(indicator_id)
             self._upload_snapshot()
+
+    def forget_indicator(self, identifiers: Iterable[str]) -> None:
+        """Drop an indicator withdrawn while absent from the list from the snapshot.
+
+        The list no longer holds its item, so nothing is deleted and nothing is
+        reported: the next upload simply does not restore it.
+
+        Args:
+            identifiers: The normalized identifiers of the indicator (OpenCTI ids).
+        """
+        identifiers = set(identifiers)
+        with self._lock:
+            for key in [
+                key
+                for key in self._indicator_cache
+                if normalize_value(key) in identifiers
+            ]:
+                del self._indicator_cache[key]
+                self._indicator_keys.discard(key)
+                self._synced.pop(key, None)
 
     def withdraw_item(self, item_id: str, ip: str, identifiers: Iterable[str]) -> None:
         """Withdraw an indicator from the list and drop it from the snapshot.
