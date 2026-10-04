@@ -102,11 +102,23 @@ def _is_not_found(error: DefenderApiHandlerError) -> bool:
 
 
 def _evidence_values(alert: dict[str, Any]) -> set[str]:
-    """Return the normalized observable values of the evidence of an alert."""
+    """Return the normalized observable values of the evidence of an alert.
+
+    :raises DefenderDeploymentError: When the evidence is not a list of objects:
+        skipped, its matches would be lost as the hit window moves past the alert.
+    """
+    evidence_list = alert.get("evidence")
+    if not isinstance(evidence_list, list):
+        raise DefenderDeploymentError(
+            "A Microsoft Defender alert of the hit read carries no evidence list"
+        )
     values: set[str] = set()
-    for evidence in alert.get("evidence") or []:
+    for evidence in evidence_list:
         if not isinstance(evidence, dict):
-            continue
+            raise DefenderDeploymentError(
+                "A Microsoft Defender alert of the hit read carries an evidence "
+                "that is not an object"
+            )
         for field_name in EVIDENCE_VALUE_FIELDS:
             raw_value = evidence.get(field_name)
             if not isinstance(raw_value, str) or not (

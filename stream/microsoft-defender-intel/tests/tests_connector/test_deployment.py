@@ -856,7 +856,6 @@ def test_adapter_collects_hits_from_alert_evidence():
                 "evidence": [
                     {"entityType": "Url", "url": "https://evil.example/payload"},
                     {"entityType": "File", "sha256": sha256.upper()},
-                    "ignored",
                 ],
             },
             {
@@ -979,6 +978,29 @@ def test_adapter_hit_read_rejects_an_alert_without_creation_time(alert):
     adapter = MicrosoftDefenderDeploymentAdapter(connector, clock=lambda: until)
 
     with pytest.raises(DefenderDeploymentError, match="carries no creation time"):
+        adapter.collect_hits([make_deployment()], since)
+
+
+@pytest.mark.parametrize(
+    ("alert", "message"),
+    [
+        ({}, "carries no evidence list"),
+        ({"evidence": None}, "carries no evidence list"),
+        ({"evidence": {"ipAddress": "198.51.100.7"}}, "carries no evidence list"),
+        ({"evidence": ["198.51.100.7"]}, "evidence that is not an object"),
+    ],
+)
+def test_adapter_hit_read_rejects_an_alert_with_malformed_evidence(alert, message):
+    """A skipped evidence would be lost: the hit window moves past its matches."""
+    connector = build_connector()
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+    connector.api.list_alerts = MagicMock(
+        return_value=[{"alertCreationTime": "2026-10-03T11:10:00Z", **alert}]
+    )
+    until = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    adapter = MicrosoftDefenderDeploymentAdapter(connector, clock=lambda: until)
+
+    with pytest.raises(DefenderDeploymentError, match=message):
         adapter.collect_hits([make_deployment()], since)
 
 
