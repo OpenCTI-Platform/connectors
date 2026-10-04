@@ -129,12 +129,14 @@ class ConnectorClient:
             body = self._parse_body(self._send_request(self.management_client, request))
             pages += 1
             items = body.get("value")
-            if not isinstance(items, list):
+            if not isinstance(items, list) or not all(
+                isinstance(item, dict) for item in items
+            ):
                 raise ConnectorClientError(
-                    message="[API] Unexpected response format: missing 'value' key",
+                    message="[API] Unexpected response format: 'value' is not a list of objects",
                     metadata={"response_body": str(body)[:1000]},
                 )
-            yield from (item for item in items if isinstance(item, dict))
+            yield from items
             next_link = body.get("nextLink")
             if not next_link:
                 return
@@ -267,16 +269,18 @@ class ConnectorClient:
             )
         )
         entities = body.get("entities")
-        if not isinstance(entities, list):
+        if not isinstance(entities, list) or not all(
+            isinstance(entity, dict) for entity in entities
+        ):
             # Never read as "no match": the hit window would move past this incident.
             raise ConnectorClientError(
-                message="[API] Unexpected response format: missing 'entities' list",
+                message="[API] Unexpected response format: 'entities' is not a list of objects",
                 metadata={
                     "incident_id": incident_id,
                     "response_body": str(body)[:1000],
                 },
             )
-        return [entity for entity in entities if isinstance(entity, dict)]
+        return entities
 
     def upload_stix_objects(
         self, stix_objects: list[dict[str, Any]], source_system: str

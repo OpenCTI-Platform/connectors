@@ -471,7 +471,7 @@ def test_iter_indicators_follows_next_links(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
         side_effect=[
             response({"value": [ti_object()], "nextLink": next_link}),
-            response({"value": [ti_object(stix_id=OTHER_STIX_ID), "ignored"]}),
+            response({"value": [ti_object(stix_id=OTHER_STIX_ID)]}),
         ],
     )
 
@@ -540,7 +540,7 @@ def test_iter_indicators_never_exceeds_the_page_limit(
 
 @pytest.mark.parametrize(
     "body",
-    [{"unexpected": True}, ["not", "an", "object"]],
+    [{"unexpected": True}, ["not", "an", "object"], {"value": [{}, "not an object"]}],
 )
 def test_iter_indicators_rejects_unexpected_payloads(
     mocker: MockerFixture, connector: Connector, body
@@ -662,7 +662,7 @@ def test_list_incident_entities(mocker: MockerFixture, connector: Connector) -> 
     send = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request",
         return_value=response(
-            {"entities": [{"kind": "Ip", "properties": {"address": "1.2.3.4"}}, 3]}
+            {"entities": [{"kind": "Ip", "properties": {"address": "1.2.3.4"}}]}
         ),
     )
 
@@ -680,7 +680,10 @@ def test_list_incident_entities(mocker: MockerFixture, connector: Connector) -> 
     )
 
 
-@pytest.mark.parametrize("body", [{}, {"entities": None}, {"entities": {"kind": "Ip"}}])
+@pytest.mark.parametrize(
+    "body",
+    [{}, {"entities": None}, {"entities": {"kind": "Ip"}}, {"entities": [{}, 3]}],
+)
 def test_list_incident_entities_rejects_a_malformed_response(
     mocker: MockerFixture, connector: Connector, body: dict
 ) -> None:
