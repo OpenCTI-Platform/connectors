@@ -508,7 +508,7 @@ class ElasticApiHandler:
         except Exception as e:
             self.helper.connector_logger.warning(
                 "Cannot look up the SIEM rule of the indicator",
-                {"opencti_id": opencti_id, "error": str(e)},
+                meta={"opencti_id": opencti_id, "error": str(e)},
             )
             return None
 
@@ -552,7 +552,7 @@ class ElasticApiHandler:
         self.helper.connector_logger.error(
             "SIEM rule created without its threat intel entry not deleted, "
             "the next event or push of the indicator updates or deletes it",
-            {"rule_id": rule_id, "opencti_id": opencti_id},
+            meta={"rule_id": rule_id, "opencti_id": opencti_id},
         )
 
     def _delete_siem_rule_of_indicator(self, opencti_id: str) -> bool:
@@ -1057,7 +1057,7 @@ class ElasticApiHandler:
                         # read-back sees: it is only written once the rule is.
                         self.helper.connector_logger.warning(
                             "SIEM rule of the indicator not written, threat intel entry not written",
-                            {"opencti_id": opencti_id, "operation": operation},
+                            meta={"opencti_id": opencti_id, "operation": operation},
                         )
                         return False
 
@@ -1068,7 +1068,7 @@ class ElasticApiHandler:
                         # the next removal retries the rule cleanup.
                         self.helper.connector_logger.warning(
                             "SIEM rule of the indicator not removed, threat intel entry kept",
-                            {"opencti_id": opencti_id},
+                            meta={"opencti_id": opencti_id},
                         )
                         return False
 
@@ -1091,7 +1091,7 @@ class ElasticApiHandler:
                 else:
                     self.helper.connector_logger.info(
                         f"Wrote threat intel entry for {pattern_type} indicator",
-                        {"opencti_id": opencti_id, "operation": operation},
+                        meta={"opencti_id": opencti_id, "operation": operation},
                     )
             elif operation == "delete":
                 if not self.delete_indicator(indicator_data):
@@ -1201,16 +1201,16 @@ class ElasticApiHandler:
                 deleted = self._delete_docs_by_opencti_id(doc_id, keep=elastic_id)
                 self.helper.connector_logger.debug(
                     f"Deleted {deleted} previous indicator document(s)",
-                    {"opencti_doc_id": doc_id},
+                    meta={"opencti_doc_id": doc_id},
                 )
             except (ElasticApiHandlerError, requests.exceptions.RequestException) as e:
                 self.helper.connector_logger.warning(
                     "Previous threat intel entries not removed, removed with the next write",
-                    {"opencti_doc_id": doc_id, "error": str(e)},
+                    meta={"opencti_doc_id": doc_id, "error": str(e)},
                 )
         self.helper.connector_logger.debug(
             f"Successfully wrote indicator in Elastic ({action})",
-            {
+            meta={
                 "elastic_id": elastic_id,
                 "opencti_doc_id": doc_id,
                 "result": result.get("result"),
