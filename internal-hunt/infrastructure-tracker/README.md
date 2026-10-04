@@ -7,9 +7,50 @@ fingerprints of adversary infrastructure (JARM, JA4X, certificates, HTTP banners
 [Shodan InternetDB](https://internetdb.shodan.io/), and creates the infrastructure in OpenCTI. It is a connector of
 type `INTERNAL_HUNT` registered for the `internet` hunt platform.
 
+## Before you start
+
+| | |
+|---|---|
+| Credential | An API key (or token) per internet scanning source you subscribe to; Shodan InternetDB needs none. |
+| Console | The API key page of each source account. |
+| Network | The API of each configured source reachable from the connector. |
+
+Step by step:
+
+1. Censys Platform: create a personal access token with access to the Global Search API, and copy the organization ID of an organization account; set `INFRASTRUCTURE_TRACKER_CENSYS_TOKEN` (and `INFRASTRUCTURE_TRACKER_CENSYS_ORGANISATION_ID`).
+2. Silent Push: copy an API key whose plan includes the Explore web scan data API into `INFRASTRUCTURE_TRACKER_SILENTPUSH_API_KEY`.
+3. urlscan.io: create an API key with search access (**Settings & API**) and set `INFRASTRUCTURE_TRACKER_URLSCAN_API_KEY`.
+4. Team Cymru Scout: copy an API key with search queries into `INFRASTRUCTURE_TRACKER_CYMRU_SCOUT_API_KEY`.
+
+Least-privilege permissions:
+
+| Permission | Why |
+|---|---|
+| Censys Platform: personal access token with the Global Search API (and the organization ID of an organization account) | Hosts and web properties (CenQL) on every fingerprint kind. |
+| Silent Push: API key with the Explore web scan data API | Web scans (SPQL) on JARM, certificate SHA-256, HTTP title, body hash and `Server` header. |
+| urlscan.io: API key with search access | Scans of the run window on HTTP title, `Server` header, TLS issuer, body hash and ASN. |
+| Team Cymru Scout: API key with search queries | IP addresses of the last 90 days on JARM, JA4X, JA4S and certificate SHA-256. |
+| Shodan InternetDB: none (free service, subject to its terms of use) | Enrichment only: host names, open ports and tags of the IP addresses found. |
+
+A source without a key is disabled. Each source answers with the data its plan includes, and each search counts against the quota of your account.
+
+Copy-ready configuration (`.env` of the `docker-compose.yml`):
+
+```env
+OPENCTI_URL=https://opencti.example.com
+OPENCTI_TOKEN=ChangeMe
+CONNECTOR_ID=ChangeMe-UUIDv4
+INFRASTRUCTURE_TRACKER_CENSYS_TOKEN=ChangeMe
+INFRASTRUCTURE_TRACKER_URLSCAN_API_KEY=ChangeMe
+INFRASTRUCTURE_TRACKER_INTERNETDB_ENABLED=true
+```
+
+Once the connector runs, open it in OpenCTI (**Data > Ingestion > Connectors**) and click **Test connection** on its **Hunted platform** card. It runs one search per source with a key, unlikely to match, which counts against the quota of the source. A missing permission is named in plain words, with what to grant; a hunt run refused by the platform reports the same sentence.
+
 Table of Contents
 
 - [OpenCTI Infrastructure Tracker Connector](#opencti-infrastructure-tracker-connector)
+  - [Before you start](#before-you-start)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -50,16 +91,7 @@ title of its phishing kit...). For every hunt run dispatched by OpenCTI (one hun
 
 ### Source accounts
 
-Configure the sources you have access to; a source without a key is disabled. Each source answers with the data its
-plan includes, and each search counts against the quota of your account.
-
-| Source | Credentials | Searches |
-|---|---|---|
-| Censys Platform | Personal access token with access to the Global Search API, and the organization ID for organization accounts. | Hosts and web properties (CenQL) on every fingerprint kind. |
-| Silent Push | API key with access to the Explore web scan data API. | Web scans (SPQL) on JARM, certificate SHA-256, HTTP title, body hash and `Server` header. |
-| urlscan.io | API key with search access. | Scans of the run window on HTTP title, `Server` header, TLS issuer, body hash and ASN. |
-| Team Cymru Scout | API key with search queries. | IP addresses of the last 90 days on JARM, JA4X, JA4S and certificate SHA-256. |
-| Shodan InternetDB | None (free service, subject to its terms of use). | Enrichment only: host names, open ports and tags of the IP addresses found. |
+The account, the least-privilege permissions, the console steps and a configuration example are in [Before you start](#before-you-start).
 
 ## Configuration variables
 

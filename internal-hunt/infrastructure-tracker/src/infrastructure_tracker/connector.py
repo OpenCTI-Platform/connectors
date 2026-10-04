@@ -7,6 +7,7 @@ from typing import Any, NoReturn
 
 from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
+    HuntConnectionCheck,
     HuntEvent,
     HuntExecutionError,
     HuntLimits,
@@ -132,10 +133,76 @@ def _today() -> date:
     return datetime.now(timezone.utc).date()
 
 
+DOCUMENTATION_URL = (
+    "https://docs.opencti.io/latest/usage/hunt-connectors/#infrastructure-tracker"
+)
+
+REQUIRED_PERMISSIONS = (
+    (
+        "Censys Platform: Global Search API",
+        "Personal access token (and the organization ID of an organization account): search hosts and web properties.",
+    ),
+    (
+        "Silent Push: Explore web scan data API",
+        "API key: search the web scans on JARM, certificates, HTTP titles, bodies and Server headers.",
+    ),
+    (
+        "urlscan.io: search API",
+        "API key with search access: search the scans of the run window.",
+    ),
+    (
+        "Team Cymru Scout: search queries",
+        "API key: search the IP addresses of the last 90 days on TLS fingerprints.",
+    ),
+    (
+        "Shodan InternetDB",
+        "No key: enrichment of the IP addresses found (open ports, host names, tags).",
+    ),
+)
+"""What each source needs, as (name, purpose): a source without a key is disabled."""
+
+SOURCE_LABELS = {
+    "censys": "Censys Platform",
+    "silentpush": "Silent Push",
+    "urlscan": "urlscan.io",
+    "cymru_scout": "Team Cymru Scout",
+}
+
+ACCESS_DENIED_HINTS = {
+    "censys": {
+        401: "Censys refused the personal access token: check INFRASTRUCTURE_TRACKER_CENSYS_TOKEN",
+        403: "the Censys account needs access to the Global Search API, and an organization account needs INFRASTRUCTURE_TRACKER_CENSYS_ORGANISATION_ID",
+    },
+    "silentpush": {
+        401: "Silent Push refused the API key: check INFRASTRUCTURE_TRACKER_SILENTPUSH_API_KEY",
+        403: "the Silent Push plan of the key needs the Explore web scan data API",
+    },
+    "urlscan": {
+        401: "urlscan.io refused the API key: check INFRASTRUCTURE_TRACKER_URLSCAN_API_KEY",
+        403: "the urlscan.io plan of the key needs search access",
+    },
+    "cymru_scout": {
+        401: "Team Cymru Scout refused the API key: check INFRASTRUCTURE_TRACKER_CYMRU_SCOUT_API_KEY",
+        403: "the Team Cymru Scout plan of the key needs search queries",
+    },
+}
+"""What a refused source account lacks, by source and HTTP status."""
+
+CONNECTION_TEST_QUERIES = {
+    "censys": 'host.services.endpoints.http.html_title = "OpenCTI connection test"',
+    "silentpush": 'htmltitle = "OpenCTI connection test"',
+    "urlscan": 'page.title:"OpenCTI connection test"',
+    "cymru_scout": "0" * 62,
+}
+"""One search per source, unlikely to match: it proves the key can search (and counts in its quota)."""
+
+
 class InfrastructureTrackerConnector(InternalHuntConnector):
     """Hunt connector tracking infrastructure fingerprints on the internet."""
 
     languages = (LANGUAGE,)
+    required_permissions = REQUIRED_PERMISSIONS
+    documentation_url = DOCUMENTATION_URL
     entity_fields = ("ip", "domain")
     evidence_excluded_fields = frozenset({CERTIFICATES_FIELD})
 
@@ -174,8 +241,31 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
                 self.clients[source] = UrlscanClient(str(config.urlscan_api_url), key)
             else:
                 self.clients[source] = ScoutClient(str(config.cymru_scout_api_url), key)
+            self.clients[source].access_denied_hints = dict(ACCESS_DENIED_HINTS[source])
         if config.internetdb_enabled and config.internetdb_max_lookups > 0:
             self.internetdb = InternetDbClient(base_url=str(config.internetdb_url))
+
+    def connection_checks(self, deadline: RunDeadline) -> list[HuntConnectionCheck]:
+        """Run one search per source with a key (a source without one is disabled).
+
+        Args:
+            deadline: Deadline of the connection test.
+
+        Returns:
+            One check per source.
+        """
+        end = datetime.now(timezone.utc)
+        window = HuntTimeWindow(start=end - timedelta(days=1), end=end)
+        return [
+            self.run_check(
+                SOURCE_LABELS[source],
+                lambda source=source: self._search(
+                    source, CONNECTION_TEST_QUERIES[source], window, 1, deadline
+                ),
+                f"{SOURCE_LABELS[source]} accepted the key and ran a search.",
+            )
+            for source in self.tracker_config.sources
+        ]
 
     def sigma_backend(self, pipeline: str | None) -> NoReturn:
         """Reject Sigma rules: infrastructure hunts search fingerprints.
