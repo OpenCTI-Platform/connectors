@@ -22,10 +22,15 @@ from connectors_sdk import (
     IndicatorDeployment,
     VendorIndicator,
 )
+from stream_connector.connector import ZscalerApiError, failure_reason
 
 if TYPE_CHECKING:
     from stream_connector.connector import ZscalerConnector
     from stream_connector.settings import ConnectorSettings
+
+
+class ZscalerDeploymentError(Exception):
+    """A re-push refused by Zscaler, with the reason OpenCTI shows."""
 
 
 class ZscalerDeploymentAdapter(DeploymentVendorAdapter):
@@ -64,10 +69,18 @@ class ZscalerDeploymentAdapter(DeploymentVendorAdapter):
         """Add the domain of an indicator to the blacklist again.
 
         :return: None: the category does not give a per-domain id.
-        :raises ZscalerApiError: When Zscaler refuses the change.
+        :raises ZscalerDeploymentError: When Zscaler refuses the change or cannot be
+            reached, with the reason OpenCTI shows (the Zscaler response is logged).
         :raises ValueError: When the pattern is not a valid domain-name pattern.
         """
-        self._connector.push_indicator(stix_indicator)
+        try:
+            self._connector.push_indicator(stix_indicator)
+        except ZscalerApiError as err:
+            self._connector.helper.connector_logger.warning(
+                "[DEPLOYMENT] Zscaler did not take an indicator pushed again.",
+                {"indicator_id": stix_indicator.get("id"), "error": str(err)},
+            )
+            raise ZscalerDeploymentError(failure_reason(err)) from err
         return None
 
 

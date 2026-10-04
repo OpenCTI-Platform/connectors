@@ -18,6 +18,7 @@ from stream_connector import ZscalerConnector
 from stream_connector.connector import ZscalerApiError
 from stream_connector.deployment import (
     ZscalerDeploymentAdapter,
+    ZscalerDeploymentError,
     build_deployment_assurance,
 )
 from stream_connector.settings import ConnectorSettings
@@ -209,8 +210,12 @@ def test_refused_domain_is_reported_failed(connector):
 
     (reported, error), _ = connector.assurance.report_push_failed.call_args
     assert reported == indicator
-    assert str(error) == "Request failed with status 400: INVALID_INPUT_ARGUMENT"
+    assert error == "Zscaler refused the blacklist update: invalid request"
     connector.assurance.report_pushed.assert_not_called()
+    connector.helper.connector_logger.error.assert_any_call(
+        "Failed to send create event: "
+        "Request failed with status 400: INVALID_INPUT_ARGUMENT"
+    )
 
 
 def test_deleted_domain_is_removed_and_reported(connector):
@@ -532,20 +537,33 @@ def test_transport_error_on_create_is_reported_failed(connector):
 
     (reported, error), _ = connector.assurance.report_push_failed.call_args
     assert reported == indicator
-    assert "timed out" in str(error)
+    assert error == "Zscaler could not be reached for the blacklist update"
 
 
 @pytest.mark.parametrize(
-    "activation, message",
+    "activation, reason",
     [
-        ({"return_value": False}, "activation failed after all retries"),
         (
-            {"side_effect": Exception("Activation failed: 503")},
-            "Activation failed: 503",
+            {"return_value": False},
+            "Zscaler did not complete the configuration activation in time",
+        ),
+        (
+            {
+                "side_effect": ZscalerApiError(
+                    "Activation failed: 500 boom",
+                    status_code=500,
+                    action="configuration activation",
+                )
+            },
+            "Zscaler refused the configuration activation: server error",
+        ),
+        (
+            {"side_effect": requests.ConnectionError("reset")},
+            "Zscaler could not be reached for the configuration activation",
         ),
     ],
 )
-def test_activation_failure_is_reported_failed(connector, activation, message):
+def test_activation_failure_is_reported_failed(connector, activation, reason):
     FakeZscaler().install(connector)
     connector.activate_zscaler_changes = MagicMock(**activation)
     indicator = make_indicator()
@@ -554,7 +572,7 @@ def test_activation_failure_is_reported_failed(connector, activation, message):
 
     (reported, error), _ = connector.assurance.report_push_failed.call_args
     assert reported == indicator
-    assert message in str(error)
+    assert error == reason
     connector.assurance.report_pushed.assert_not_called()
 
 
@@ -685,6 +703,24 @@ def test_adapter_lists_removes_and_pushes(connector):
 
     assert adapter.push_indicator(make_indicator(domain="new.example")) is None
     assert zscaler.urls == ["other.example", "new.example"]
+
+
+def test_adapter_push_raises_the_reason_and_logs_the_detail(connector):
+    FakeZscaler(put_status=403).install(connector)
+    indicator = make_indicator(domain="new.example")
+
+    with pytest.raises(ZscalerDeploymentError) as raised:
+        ZscalerDeploymentAdapter(connector).push_indicator(indicator)
+
+    assert str(raised.value) == (
+        "Zscaler refused the blacklist update: permission denied"
+    )
+    message, meta = connector.helper.connector_logger.warning.call_args.args
+    assert message == "[DEPLOYMENT] Zscaler did not take an indicator pushed again."
+    assert meta == {
+        "indicator_id": indicator["id"],
+        "error": "Request failed with status 403: INVALID_INPUT_ARGUMENT",
+    }
 
 
 # Settings and wiring
@@ -831,7 +867,9 @@ def test_stream_outcomes_are_reported_in_one_batch(e2e_connector, router):
     assert deployed == {"indicatorId": INDICATOR_ID, "status": "deployed"}
     assert failed["indicatorId"] == OTHER_ID
     assert failed["status"] == "failed"
-    assert failed["metadata"]["error_message"].endswith("INVALID_INPUT_ARGUMENT")
+    assert failed["metadata"]["error_message"] == (
+        "Zscaler refused the blacklist update: invalid request"
+    )
 
 
 def test_reconciliation_confirms_removes_and_withdraws(e2e_connector, router):

@@ -8,7 +8,10 @@ from typing import TYPE_CHECKING, Any
 import requests
 import urllib3
 import validators
-from connectors_sdk.connectors.stream.deployment import parse_datetime
+from connectors_sdk.connectors.stream.deployment import (
+    deployment_failure_reason,
+    parse_datetime,
+)
 from pycti import OpenCTIConnectorHelper
 from stream_connector.utils import obfuscate_api_key, sanitize_payload
 from tenacity import (
@@ -26,9 +29,52 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 MAX_ERROR_DETAIL_LENGTH = 500
 """Maximum length of the Zscaler response body kept in an error message."""
 
+PLATFORM_NAME = "Zscaler"
+"""Name of the security platform in the deployment failure reasons."""
+
+LIST_ACTION = "blacklist update"
+"""What Zscaler is asked to do when a domain is added to or removed from the blacklist."""
+
+ACTIVATION_ACTION = "configuration activation"
+"""What Zscaler is asked to do after each change of the blacklist."""
+
+READ_ACTION = "blacklist read"
+"""What Zscaler is asked to do when the blacklist is read back."""
+
 
 class ZscalerApiError(Exception):
-    """Error raised when Zscaler rejects a request or cannot be reached."""
+    """Error raised when Zscaler rejects a request or cannot be reached.
+
+    Attributes:
+        status_code: The HTTP status of the Zscaler response, None when Zscaler
+            could not be reached.
+        action: What Zscaler was asked to do.
+    """
+
+    def __init__(
+        self, message: str, status_code: int | None = None, action: str = LIST_ACTION
+    ) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.action = action
+
+
+class ZscalerActivationPendingError(ZscalerApiError):
+    """Error raised when a configuration activation is still not active after the checks."""
+
+
+def failure_reason(error: BaseException) -> str:
+    """Return the reason OpenCTI shows for a domain Zscaler did not take.
+
+    :param error: The error raised while adding the domain to the blacklist.
+    :return: One short sentence naming Zscaler and the cause; the Zscaler response is
+        left to the logs.
+    """
+    if isinstance(error, ZscalerActivationPendingError):
+        return f"{PLATFORM_NAME} did not complete the {ACTIVATION_ACTION} in time"
+    if isinstance(error, ZscalerApiError):
+        return deployment_failure_reason(PLATFORM_NAME, error.action, error.status_code)
+    return str(error) or type(error).__name__
 
 
 class SharedDomainLookupError(Exception):
@@ -183,7 +229,9 @@ class ZscalerConnector:
                 self.helper.connector_logger.error(
                     "Authentication rejected by Zscaler (401)."
                 )
-                raise ZscalerApiError("Authentication rejected by Zscaler (HTTP 401)")
+                raise ZscalerApiError(
+                    "Authentication rejected by Zscaler (HTTP 401)", status_code=401
+                )
 
             if response.status_code == 401:
                 msg = "Request failed with status 401 : SESSION_NOT_VALID. Re-authentication has started..."
@@ -193,18 +241,23 @@ class ZscalerConnector:
                     self.helper.connector_logger.error(
                         "Re-authentication failed, aborting retry."
                     )
-                    raise ZscalerApiError("Re-authentication with Zscaler failed")
+                    raise ZscalerApiError(
+                        "Re-authentication with Zscaler failed", status_code=401
+                    )
                 continue
 
             msg = f"Request failed with status {response.status_code}: {response.text}"
             self.helper.connector_logger.error(msg)
             detail = (response.text or "").strip()[:MAX_ERROR_DETAIL_LENGTH]
             raise ZscalerApiError(
-                f"Request failed with status {response.status_code}: {detail}"
+                f"Request failed with status {response.status_code}: {detail}",
+                status_code=response.status_code,
             )
 
         self.helper.connector_logger.error("Max retries reached. Request failed.")
-        raise ZscalerApiError("Max retries reached, the Zscaler request failed")
+        raise ZscalerApiError(
+            "Max retries reached, the Zscaler request failed", status_code=429
+        )
 
     def extract_domain(self, pattern):
         """Extract domain from the STIX pattern if it follows the format [domain-name:value = 'example.com']"""
@@ -266,20 +319,26 @@ class ZscalerConnector:
             category = response.json()
         except ValueError as err:
             raise ZscalerApiError(
-                "Unexpected URL category response: the body is not JSON"
+                "Unexpected URL category response: the body is not JSON",
+                status_code=response.status_code,
+                action=READ_ACTION,
             ) from err
         if not isinstance(category, dict) or not (
             "id" in category or "configuredName" in category
         ):
             raise ZscalerApiError(
-                "Unexpected URL category response: not a URL category"
+                "Unexpected URL category response: not a URL category",
+                status_code=response.status_code,
+                action=READ_ACTION,
             )
         urls = category.get("urls", [])
         if not isinstance(urls, list) or not all(
             isinstance(url, str) and url for url in urls
         ):
             raise ZscalerApiError(
-                "Unexpected URL category response: 'urls' is not a list of domains"
+                "Unexpected URL category response: 'urls' is not a list of domains",
+                status_code=response.status_code,
+                action=READ_ACTION,
             )
         return urls
 
@@ -435,13 +494,17 @@ class ZscalerConnector:
         self.helper.connector_logger.info(msg)
         try:
             activated = self.activate_zscaler_changes()
+        except ZscalerApiError:
+            raise
         except Exception as err:
             raise ZscalerApiError(
-                f"Zscaler configuration activation failed: {err}"
+                f"Zscaler configuration activation failed: {err}",
+                action=ACTIVATION_ACTION,
             ) from err
         if not activated:
-            raise ZscalerApiError(
-                "Zscaler configuration activation failed after all retries"
+            raise ZscalerActivationPendingError(
+                "Zscaler configuration activation failed after all retries",
+                action=ACTIVATION_ACTION,
             )
 
     def push_indicator(self, indicator: dict[str, Any]) -> None:
@@ -480,7 +543,7 @@ class ZscalerConnector:
                 f"Failed to send {event_type} event: {err}"
             )
             if event_type == "create" and self.assurance is not None:
-                self.assurance.report_push_failed(data, err)
+                self.assurance.report_push_failed(data, failure_reason(err))
             return
         if domain is None or self.assurance is None:
             return
@@ -558,7 +621,11 @@ class ZscalerConnector:
                     else "No response"
                 )
                 self.helper.connector_logger.error(f"Activation failed: {detail}")
-                raise Exception(f"Activation failed: {detail}")
+                raise ZscalerApiError(
+                    f"Activation failed: {detail}",
+                    status_code=resp.status_code if resp is not None else None,
+                    action=ACTIVATION_ACTION,
+                )
 
         self.helper.connector_logger.error(
             "Zscaler configuration still not active after all checks."
