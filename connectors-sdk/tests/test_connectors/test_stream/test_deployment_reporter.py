@@ -3,6 +3,7 @@
 """Tests of the deployment reporter."""
 
 import threading
+import time
 from dataclasses import replace
 from datetime import UTC, datetime
 from types import SimpleNamespace
@@ -1219,13 +1220,73 @@ def test_stream_failure_messages_are_bounded(
     assert reports[1]["metadata"]["error_message"] == "TimeoutError"
 
 
-def test_queue_flushes_at_the_batch_size(graphql_helper, make_reporter, router):
-    """Reaching 500 queued reports flushes immediately."""
+def _wait_until(predicate, timeout=5.0):
+    deadline = time.monotonic() + timeout
+    while not predicate():
+        assert time.monotonic() < deadline, "condition not reached"
+        time.sleep(0.01)
+
+
+def _sent_reports(router):
+    return sum(
+        len(call["reports"]) for call in router.calls_of("IndicatorReportDeployments(")
+    )
+
+
+def _record_senders(router):
+    senders = []
+    batch_handler = router.handlers["IndicatorReportDeployments("]
+
+    def handler(variables):
+        senders.append(threading.current_thread())
+        return batch_handler(variables)
+
+    router.handlers["IndicatorReportDeployments("] = handler
+    return senders
+
+
+def test_queue_flushes_at_the_batch_size_without_blocking_the_caller(
+    graphql_helper, make_reporter, router
+):
+    """Reaching 500 queued reports flushes at once, from a timer thread: the caller
+    (the stream callback) never waits for OpenCTI."""
+    senders = _record_senders(router)
     reporter = make_reporter(graphql_helper)
     for index in range(MAX_BATCH_SIZE):
         reporter.enqueue(DeploymentReport(indicator_id=f"i-{index}", status="active"))
+
+    _wait_until(lambda: _sent_reports(router) == MAX_BATCH_SIZE)
     calls = router.calls_of("IndicatorReportDeployments(")
     assert [len(call["reports"]) for call in calls] == [MAX_BATCH_SIZE]
+    assert threading.current_thread() not in senders
+
+
+def test_a_pending_immediate_flush_is_scheduled_once(
+    graphql_helper, make_reporter, router, monkeypatch
+):
+    """While the queue is held, more reports never start more immediate flushes."""
+    intervals = []
+    real_timer = threading.Timer
+
+    def recording_timer(interval, function):
+        intervals.append(interval)
+        return real_timer(interval, function)
+
+    monkeypatch.setattr(threading, "Timer", recording_timer)
+    reporter = make_reporter(graphql_helper)
+    reporter._send_lock.acquire()
+    try:
+        for index in range(MAX_BATCH_SIZE + 10):
+            reporter.enqueue(
+                DeploymentReport(indicator_id=f"i-{index}", status="active")
+            )
+        assert reporter._flush_soon is True
+    finally:
+        reporter._send_lock.release()
+
+    _wait_until(lambda: _sent_reports(router) == MAX_BATCH_SIZE + 10)
+    assert intervals.count(0.0) == 1
+    assert reporter._flush_soon is False
 
 
 def test_queue_flushes_on_a_timer(graphql_helper, make_reporter, router):
@@ -1355,6 +1416,7 @@ def test_full_queue_does_not_flush_while_waiting(
     reporter = make_reporter(graphql_helper)
     reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
     reporter.enqueue(DeploymentReport(indicator_id="b", status="deployed"))
+    _wait_until(lambda: reporter._waiting_for_write_back)
     detections = len(router.calls_of("DeploymentWriteBackFeatures"))
 
     reporter.enqueue(DeploymentReport(indicator_id="c", status="deployed"))

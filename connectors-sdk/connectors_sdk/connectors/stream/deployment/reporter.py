@@ -298,6 +298,8 @@ class DeploymentReporter:
         self._buffer_lock = threading.Lock()
         self._send_lock = threading.Lock()
         self._flush_timer: threading.Timer | None = None
+        # An immediate flush is scheduled and has not taken the queue yet.
+        self._flush_soon = False
         self._waiting_for_write_back = False
         self._unsent_since: dict[str, tuple[DeploymentReport, float]] = {}
         self._unsent_retry_delay = 0.0
@@ -715,7 +717,9 @@ class DeploymentReporter:
         """Queue a report, flushed with the next batch.
 
         Reports are coalesced per indicator: the latest report of an indicator
-        replaces any queued one.
+        replaces any queued one. The batch is sent from a timer thread, after the
+        flush interval or at once when ``MAX_BATCH_SIZE`` reports are queued: the
+        caller (the stream callback) never waits for OpenCTI.
 
         Args:
             report: The report.
@@ -735,16 +739,21 @@ class DeploymentReporter:
         with self._buffer_lock:
             self._buffer.pop(report.indicator_id, None)
             self._buffer[report.indicator_id] = report
-            queued = len(self._buffer)
-            if self._flush_timer is None:
-                timer = threading.Timer(self._flush_interval, self._flush_on_timer)
+            flush_now = (
+                len(self._buffer) >= MAX_BATCH_SIZE
+                and not self._waiting_for_write_back
+                and not self._flush_soon
+            )
+            if flush_now or self._flush_timer is None:
+                if self._flush_timer is not None:
+                    self._flush_timer.cancel()
+                timer = threading.Timer(
+                    0.0 if flush_now else self._flush_interval, self._flush_on_timer
+                )
                 timer.daemon = True
                 self._flush_timer = timer
+                self._flush_soon = self._flush_soon or flush_now
                 timer.start()
-            flush_now = queued >= MAX_BATCH_SIZE and not self._waiting_for_write_back
-        if flush_now:
-            # Never blocks the stream: a held queue is sent when the holder releases it.
-            self.flush(wait=False)
         return True
 
     @contextmanager
@@ -799,6 +808,7 @@ class DeploymentReporter:
             if self._flush_timer is not None:
                 self._flush_timer.cancel()
                 self._flush_timer = None
+            self._flush_soon = False
         if not reports:
             return DeploymentBatchResult()
         if self._awaiting_write_back():
