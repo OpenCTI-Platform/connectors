@@ -104,13 +104,15 @@ fetched from its repository.
 ## Behavior
 
 1. **Verify** the configured Cloudflare Rules List exists (and log its kind).
-2. **Full sync** on startup: load all IPv4 indicators and `IPv4-Addr`
+2. **Full sync** on startup: load all IPv4 indicators (except the revoked ones and
+   the ones past their `valid_until`) and `IPv4-Addr`
    observables from OpenCTI into an in-memory snapshot, then immediately push
    that snapshot to Cloudflare. When a listing fails or Cloudflare rejects the
    snapshot, the next live-stream events retry the full sync (at most once per
    `CLOUDFLARE_SYNC_INTERVAL`) until it succeeds.
 3. **Listen** to the OpenCTI live stream — cache IPv4 values on create/update,
-   drop them on delete.
+   drop them on delete, and on an update that revokes them, expires them or
+   leaves them without an IPv4 value.
 4. **Replace** the entire Cloudflare list with the current snapshot, then poll
    the resulting bulk operation to completion. This push is triggered by
    live-stream events and throttled to **at most once per

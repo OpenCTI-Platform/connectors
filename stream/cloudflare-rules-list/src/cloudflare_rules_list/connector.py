@@ -11,6 +11,7 @@ import sys
 import threading
 import time
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Optional
 
 from cloudflare_rules_list.client import (
@@ -24,6 +25,7 @@ from connectors_sdk.connectors.stream.deployment import (
     DeploymentStatus,
     deployment_failure_reason,
     normalize_value,
+    parse_datetime,
 )
 from pycti import OpenCTIConnectorHelper
 
@@ -144,6 +146,15 @@ class Connector:
         """Tell whether a stream or API object is an indicator (deployment reported)."""
         return data.get("type") == "indicator" or data.get("entity_type") == "Indicator"
 
+    @staticmethod
+    def _is_live(data: dict) -> bool:
+        """Tell whether an object may be uploaded: neither revoked nor past its
+        `valid_until` (objects without validity, such as observables, always are)."""
+        if data.get("revoked") is True:
+            return False
+        valid_until = parse_datetime(data.get("valid_until"))
+        return valid_until is None or valid_until > datetime.now(UTC)
+
     # ------------------------------------------------------------------ #
     # Stream handling
     # ------------------------------------------------------------------ #
@@ -181,7 +192,8 @@ class Connector:
     def _handle_upsert(self, data: dict) -> bool:
         """Cache the IPv4 value of a created or updated object.
 
-        An object updated without an IPv4 value, or revoked, leaves the snapshot.
+        An object updated without an IPv4 value, revoked or past its `valid_until`
+        leaves the snapshot.
 
         Returns:
             Whether the snapshot was updated.
@@ -191,7 +203,7 @@ class Connector:
             return False
 
         value = self._extract_ipv4(data)
-        if not value or data.get("revoked") is True:
+        if not value or not self._is_live(data):
             return self._evict(indicator_id)
 
         with self._lock:
@@ -489,7 +501,7 @@ class Connector:
         for indicator in indicators:
             value = self._extract_ipv4(indicator)
             indicator_id = self._api_object_id(indicator)
-            if value and indicator_id:
+            if value and indicator_id and self._is_live(indicator):
                 cache[indicator_id] = value
                 indicator_keys.add(indicator_id)
 

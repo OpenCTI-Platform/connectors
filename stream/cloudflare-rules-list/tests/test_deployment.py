@@ -179,6 +179,7 @@ def test_dropped_indicators_are_reported_removed(connector, assurance):
     [
         {"pattern": "[domain-name:value = 'evil.example']"},
         {"revoked": True},
+        {"valid_until": "2020-01-01T00:00:00.000Z"},
     ],
 )
 def test_updated_indicators_no_longer_eligible_leave_the_list(
@@ -348,6 +349,41 @@ def test_full_sync_reports_the_indicators_only(connector, assurance):
     assert set(reports) == {STIX_ID, OTHER_ID}
     assert connector._indicator_keys == {STIX_ID, OTHER_ID}
     assert set(connector._indicator_cache) == {STIX_ID, OTHER_ID, "ipv4-addr--1"}
+
+
+def test_full_sync_skips_revoked_and_expired_indicators(connector, assurance):
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": INDICATOR_ID,
+            "standard_id": STIX_ID,
+            "entity_type": "Indicator",
+            "pattern": "[ipv4-addr:value = '198.51.100.7']",
+            "valid_until": "2999-01-01T00:00:00.000Z",
+        },
+        {
+            "id": OTHER_ID,
+            "standard_id": OTHER_STIX_ID,
+            "entity_type": "Indicator",
+            "pattern": "[ipv4-addr:value = '203.0.113.9']",
+            "revoked": True,
+        },
+        {
+            "id": "expired-id",
+            "standard_id": "indicator--expired",
+            "entity_type": "Indicator",
+            "pattern": "[ipv4-addr:value = '192.0.2.9']",
+            "valid_until": "2020-01-01T00:00:00.000Z",
+        },
+    ]
+    connector.helper.api.stix_cyber_observable.list.return_value = []
+
+    connector._full_sync()
+
+    assert connector._indicator_cache == {STIX_ID: "198.51.100.7"}
+    assert set(enqueued(assurance)) == {STIX_ID}
+    connector.client.replace_list_items.assert_called_once_with(
+        "list-123", [{"ip": "198.51.100.7", "comment": f"OpenCTI: {STIX_ID}"}]
+    )
 
 
 def test_empty_full_sync_clears_the_items_of_a_previous_run(connector, assurance):
