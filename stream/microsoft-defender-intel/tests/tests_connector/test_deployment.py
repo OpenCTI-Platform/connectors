@@ -603,7 +603,7 @@ def test_iter_application_indicators_pages_with_top_and_overlapping_skip():
     connector.api._send_request.side_effect = [
         {"value": [{"id": "1"}, {"id": "2"}]},
         {"value": [{"id": "2"}, {"id": "3"}]},
-        {"value": [{"id": "3"}, "ignored"]},
+        {"value": [{"id": "3"}]},
     ]
 
     indicators = list(connector.api.iter_application_indicators(page_size=2))
@@ -677,6 +677,23 @@ def test_iter_application_indicators_never_returns_a_partial_listing():
     with pytest.raises(DefenderApiHandlerError) as error:
         list(connector.api.iter_application_indicators())
     assert error.value.msg.startswith("[API] Unexpected response format")
+
+
+def test_a_page_with_a_malformed_row_is_rejected_not_shortened():
+    """A shortened full page would end the listing early: the indicators of the
+    following pages would be reported removed."""
+    connector = build_connector()
+    connector.api._send_request.return_value = {
+        "value": [{"id": "1"}, "not an indicator", {"id": "3"}]
+    }
+
+    with pytest.raises(DefenderApiHandlerError) as error:
+        list(connector.api.iter_application_indicators(page_size=3))
+    assert error.value.msg == (
+        "[API] Unexpected response format: a 'value' row is not an object"
+    )
+    with pytest.raises(DefenderApiHandlerError):
+        connector.api.list_alerts(datetime(2026, 10, 3, 10, 0, tzinfo=UTC))
 
 
 def test_list_alerts_expands_the_evidence_and_is_bounded(monkeypatch):

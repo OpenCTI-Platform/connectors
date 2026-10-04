@@ -290,6 +290,9 @@ class DefenderApiHandler:
     def _get_page(self, url: str, params: str) -> list[dict[str, Any]]:
         """
         Read one page of an OData collection.
+
+        The callers detect the last page from its length: a page with a row that is
+        not an object is rejected, never shortened.
         :param url: Collection URL
         :param params: Encoded query string
         :return: Items of the page
@@ -302,7 +305,12 @@ class DefenderApiHandler:
                 "[API] Unexpected response format: missing 'value' list",
                 {"url_path": f"GET {url}"},
             )
-        return [item for item in items if isinstance(item, dict)]
+        if not all(isinstance(item, dict) for item in items):
+            raise DefenderApiHandlerError(
+                "[API] Unexpected response format: a 'value' row is not an object",
+                {"url_path": f"GET {url}"},
+            )
+        return items
 
     def iter_application_indicators(
         self,
