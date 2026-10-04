@@ -125,11 +125,13 @@ does not exist), and detection hits are counted with a sighting of the indicator
 
 - **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs of the tenant are read back with the
   `indicators/get` API (100 per call, `search_from` / `search_to`); IOCs whose `expiration_date` is in the past are not
-  live: they never confirm a deployment, and the ones of a withdrawn or expired indicator are deleted. Cortex XDR does
+  live (`-1` means the IOC never expires): they never confirm a deployment, and the ones of a withdrawn or expired
+  indicator are deleted. Cortex XDR does
   not store the OpenCTI id, so deployments are matched by `rule_id` and by value: the IOCs of an indicator are the ones
   holding the hashes, domain names, IPv4 addresses, email addresses and URLs of its pattern (the values the connector
   pushes). A read-back error, a page repeated by the API or a malformed IOC (a row that is not an object, or an IOC
-  without value) skips the run: indicators are never reported `removed` from a partial listing.
+  without value or whose `expiration_date` is not a number of milliseconds) skips the run: indicators are never
+  reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the IOC alerts created since the previous run are read with their events
   (`alerts/get_alerts_multi_events`, oldest creation time first, at most 10,000 per run: a capped read is complete until
   the creation time of the newest alert read and the next run resumes there; when more alerts share one creation time

@@ -17,6 +17,7 @@ Palo Alto Cortex XDR:
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -58,6 +59,9 @@ PLATFORM_NAME = "Cortex XDR"
 
 PUSH_ACTION = "IOC upsert"
 """What Cortex XDR is asked to do when an indicator is pushed."""
+
+NEVER_EXPIRES = -1
+"""`expiration_date` Cortex XDR gives an IOC that never expires."""
 
 EVENT_VALUE_FIELDS = (
     "action_remote_ip",
@@ -189,6 +193,31 @@ def _timestamp(value: Any) -> datetime | None:
         return None
 
 
+def _is_expired(expiration_date: Any, now: datetime) -> bool:
+    """Tell whether the `expiration_date` of an IOC, in milliseconds, is past.
+
+    An IOC without `expiration_date`, or with `NEVER_EXPIRES`, never expires.
+
+    :raises CortexXdrDeploymentError: On an `expiration_date` that is not a number of
+        milliseconds, which would otherwise read as no expiry and confirm an expired
+        IOC.
+    """
+    if expiration_date is None:
+        return False
+    if (
+        isinstance(expiration_date, bool)
+        or not isinstance(expiration_date, int | float)
+        or not math.isfinite(expiration_date)
+    ):
+        raise CortexXdrDeploymentError(
+            "Cortex XDR listed an IOC with an unreadable expiration_date, "
+            "the read-back is incomplete"
+        )
+    if expiration_date == NEVER_EXPIRES:
+        return False
+    return expiration_date <= now.timestamp() * 1000
+
+
 def _candidate_values(item: Mapping[str, Any]) -> set[str]:
     """Return the normalized values of the matching fields of an alert or event."""
     values: set[str] = set()
@@ -238,8 +267,8 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         longer enforced: they are listed inactive, so that a withdrawal deletes them
         and they never confirm a deployment.
 
-        :raises CortexXdrDeploymentError: On any API error, or an IOC without value
-            (never a partial listing).
+        :raises CortexXdrDeploymentError: On any API error, or an IOC without value or
+            with an unreadable `expiration_date` (never a partial listing).
         """
         now = datetime.now(UTC)
         with _readable_errors():
@@ -250,13 +279,13 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
                         "Cortex XDR listed an IOC without value, "
                         "the read-back is incomplete"
                     )
-                expiration = _timestamp(ioc.get("expiration_date"))
+                expired = _is_expired(ioc.get("expiration_date"), now)
                 rule_id = ioc.get("rule_id")
                 yield VendorIndicator(
                     external_id=str(rule_id) if rule_id is not None else None,
                     value=value,
                     raw={"indicator": value, "type": ioc.get("type")},
-                    active=expiration is None or expiration > now,
+                    active=not expired,
                 )
 
     def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str]:

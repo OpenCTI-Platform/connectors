@@ -10,6 +10,7 @@ import pytest
 import requests
 from connector import Connector, ConnectorSettings
 from connector.deployment import (
+    NEVER_EXPIRES,
     CortexXdrDeploymentAdapter,
     CortexXdrDeploymentError,
     build_deployment_assurance,
@@ -590,7 +591,7 @@ def test_adapter_lists_the_iocs_and_the_expired_ones_inactive():
                 "expiration_date": future,
             },
             {"rule_id": 3, "indicator": "old.example", "expiration_date": past},
-            {"indicator": "no-id.example", "expiration_date": True},
+            {"indicator": "no-id.example", "expiration_date": NEVER_EXPIRES},
             {"rule_id": 6, "indicator": "far.example", "expiration_date": 10**20},
         ]
     )
@@ -618,6 +619,23 @@ def test_adapter_rejects_an_ioc_without_value(value):
     connector.client.iter_iocs.return_value = iter([{"rule_id": 4, "indicator": value}])
 
     with pytest.raises(CortexXdrDeploymentError, match="IOC without value"):
+        list(CortexXdrDeploymentAdapter(connector).list_vendor_indicators())
+
+
+@pytest.mark.parametrize("expiration_date", [True, "Never", float("nan"), []])
+def test_adapter_rejects_an_ioc_with_an_unreadable_expiry(expiration_date):
+    connector = build_connector()
+    connector.client.iter_iocs.return_value = iter(
+        [
+            {
+                "rule_id": 5,
+                "indicator": "evil.example",
+                "expiration_date": expiration_date,
+            }
+        ]
+    )
+
+    with pytest.raises(CortexXdrDeploymentError, match="unreadable expiration_date"):
         list(CortexXdrDeploymentAdapter(connector).list_vendor_indicators())
 
 
