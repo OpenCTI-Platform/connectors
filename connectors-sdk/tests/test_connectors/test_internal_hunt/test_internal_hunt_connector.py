@@ -495,6 +495,28 @@ def test_timeout_cancels_and_fails_the_run(connector_factory, hunt_event, hunt_h
     assert kwargs["error"].startswith("HuntTimeoutError")
 
 
+def test_query_finishing_after_the_deadline_times_out(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given a query that returns once the run deadline has passed, before the
+    # wait for it ends
+    connector = connector_factory(_results({"DestinationIp": "8.8.8.8"}))
+    late = MagicMock(spec=RunDeadline)
+    late.remaining.return_value = 5.0
+    late.expired.return_value = True
+
+    # When/Then the run is a timeout, not a completed run, and the finished
+    # query has nothing to cancel
+    with patch(f"{MODULE}.RunDeadline", return_value=late):
+        with pytest.raises(HuntTimeoutError, match="30 seconds"):
+            connector.process_message(hunt_event(limits={"timeout_seconds": 30}))
+    assert connector.deadlines == [late]
+    assert connector.timeouts == []
+    args, _ = _report_kwargs(hunt_helper)
+    assert args == ("run-1", "timeout")
+    hunt_helper.send_stix2_bundle.assert_not_called()
+
+
 def test_execute_shares_the_run_deadline(connector_factory, hunt_event):
     # Given a run with a 30 seconds timeout
     connector = connector_factory(_results({"DestinationIp": "8.8.8.8"}))

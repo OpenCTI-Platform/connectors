@@ -611,20 +611,25 @@ class InternalHuntConnector(ABC):
                 )
             except BaseException as err:
                 outcome["error"] = err
+            # Judged when the query finished, not when the caller looks: a query
+            # ending between the end of the wait and the check is still late
+            outcome["late"] = deadline.expired()
 
         worker = threading.Thread(
             target=_run, name=f"hunt-run-{request.hunt_run.id}", daemon=True
         )
         worker.start()
         worker.join(deadline.remaining())
-        if worker.is_alive():
-            try:
-                self.on_timeout(native_query)
-            except Exception as err:
-                self.logger.warning(
-                    "[HUNT] Unable to cancel the timed out query",
-                    {"error": _error_message(err)},
-                )
+        alive = worker.is_alive()
+        if alive or outcome.get("late"):
+            if alive:
+                try:
+                    self.on_timeout(native_query)
+                except Exception as err:
+                    self.logger.warning(
+                        "[HUNT] Unable to cancel the timed out query",
+                        {"error": _error_message(err)},
+                    )
             raise HuntTimeoutError(
                 f"The hunt query did not complete within {request.limits.timeout_seconds} seconds."
             )
