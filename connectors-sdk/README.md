@@ -64,7 +64,7 @@ def process_message(self, msg) -> None:
     try:
         summary = ProvenanceSummary.from_stix(stix_object)
     except ProvenanceSummaryError as err:
-        self.helper.connector_logger.warning("Malformed provenance", {"error": str(err)})
+        self.helper.connector_logger.warning("Malformed provenance", meta={"error": str(err)})
         return
     if summary is None:
         return  # OpenCTI exported no provenance for this object
