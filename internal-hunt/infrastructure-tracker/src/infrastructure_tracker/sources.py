@@ -473,6 +473,7 @@ class UrlscanClient(HuntApiClient):
         hosts: list[Host] = []
         total: int | None = None
         read = 0
+        has_more = False
         search_after: str | None = None
         while read < limit:
             size = min(URLSCAN_PAGE_SIZE, limit - read)
@@ -499,9 +500,13 @@ class UrlscanClient(HuntApiClient):
                     hosts.append(host)
             sort = _list(_dict(results[-1]).get("sort")) if results else []
             search_after = ",".join(str(value) for value in sort) or None
-            if not answer.get("has_more") or not search_after:
+            has_more = bool(answer.get("has_more"))
+            if not has_more or not search_after:
                 break
-        return SourceResult(hosts, total, read)
+        # The query is bounded by whole days, so its total also counts scans outside the run window: it is never a hit
+        # count, only a sign that matches were left unread (as is `has_more`, kept when the cursor is missing)
+        more = has_more or (total is not None and total > read)
+        return SourceResult(hosts, records=read, more=more)
 
 
 def _urlscan_host(item: dict[str, Any]) -> Host | None:

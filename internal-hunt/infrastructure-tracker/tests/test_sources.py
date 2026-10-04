@@ -333,7 +333,8 @@ def test_urlscan_search_dates_the_query_and_follows_search_after(
     assert first.qs["size"] == ["10"]
     assert second.qs["search_after"] == ["1759478400000,abc"]
     assert second.qs["size"] == ["9"]
-    assert result.total == 3
+    # The day-bounded total is not a hit count of the run window; every match was read
+    assert (result.total, result.more) == (None, False)
     assert len(result.hosts) == 2 and result.read == 3
     host = result.hosts[0]
     assert host.asn == 15169 and host.as_name == "GOOGLE"
@@ -355,6 +356,21 @@ def test_urlscan_search_stops_without_sort_values(requests_mock, deadline):
 
     assert requests_mock.call_count == 1
     assert result.total is None and len(result.hosts) == 1
+    # urlscan.io said more matches exist: the missing cursor does not make the result complete
+    assert result.more is True
+
+
+def test_urlscan_search_flags_a_total_beyond_the_scans_read(requests_mock, deadline):
+    requests_mock.get(
+        URLSCAN_URL,
+        json={"results": [{"page": {"ip": "8.8.8.8"}}], "total": 40, "has_more": False},
+    )
+    client = UrlscanClient("https://urlscan.io", "key")
+
+    result = client.search("q", START, END, 10, deadline)
+
+    # The total stays out of the hit count but tells that matches were left unread
+    assert (result.total, result.read, result.more) == (None, 1, True)
 
 
 def test_scout_search_maps_ips(requests_mock, deadline):
