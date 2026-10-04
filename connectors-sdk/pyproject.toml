@@ -13,7 +13,7 @@ dependencies = [
     "pycti==7.261002.0",
     "pydantic>=2.8.2,<3", # ISO pycti https://github.com/OpenCTI-Platform/client-python/blob/master/requirements.txt#L8
     "pydantic_settings>= 2.9.1,<3", # Actual minimal version used in the connectors
-    "regex>=2024.11.6", # Time-bounded matching of the hunt benign patterns; already required by pycti (datefinder)
+    "regex>=2023.12.25", # Time-bounded matching (timeout) of the hunt benign patterns; already required by pycti (datefinder); floor = the version stix-shifter 8.0.2 pins (stream/splunk) so every SDK consumer resolves
     "requests>=2.31.0,<3",
 ]
 
