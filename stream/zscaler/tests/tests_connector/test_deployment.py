@@ -271,6 +271,27 @@ def test_malformed_configured_name_read_on_create_is_reported_failed(connector):
     assert zscaler.puts == []
 
 
+@pytest.mark.parametrize("failed_read", [0, 1])
+def test_failed_category_read_on_create_stops_the_change(connector, failed_read):
+    """Neither the blacklist read nor the configured name read lets a change through."""
+    zscaler = FakeZscaler().install(connector)
+    reads = [
+        response(json_data={"id": "blacklist", "configuredName": "Blacklist"}),
+        response(json_data={"id": "blacklist", "configuredName": "Blacklist"}),
+    ]
+    reads[failed_read] = response(status_code=503, text="Unavailable")
+    connector.session.get.side_effect = reads
+    indicator = make_indicator()
+
+    connector._process_message(make_message("create", indicator))
+
+    (reported, error), _ = connector.assurance.report_push_failed.call_args
+    assert reported == indicator
+    assert error == "Zscaler refused the blacklist read: server error"
+    assert zscaler.puts == []
+    connector.assurance.report_pushed.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "lookup",
     [

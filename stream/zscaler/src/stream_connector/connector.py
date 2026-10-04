@@ -361,26 +361,6 @@ class ZscalerConnector:
         )
         return None
 
-    def get_zscaler_blocked_domains(self):
-        """Retrieve the list of blocked domains in the specified Zscaler blacklist.
-
-        :raises ZscalerApiError: When the successful response is not a URL category
-            with a list of URL entries.
-        """
-
-        # Dynamic URL for blacklisting
-        url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
-        response = self.handle_rate_limit(self.session.get, url)
-
-        if response and response.status_code == 200:
-            return _category_urls(response)
-        code = response.status_code if response else "No response"
-        text = response.text if response else "No text"
-
-        msg = f"Failed to retrieve blocked domains: {code} - {text}"
-        self.helper.connector_logger.error(msg)
-        return []
-
     def list_blocked_domains(self) -> list[str]:
         """Read the domains of the blacklist URL category back (deployment reconciliation).
 
@@ -388,18 +368,21 @@ class ZscalerConnector:
             a partial listing is never returned.
         """
         url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
-        return _category_urls(self.request_zscaler(self.session.get, url))
+        return _category_urls(
+            self.request_zscaler(self.session.get, url, action=READ_ACTION)
+        )
 
     def get_current_configured_name(self):
         """Return the configured name of the blacklist URL category.
 
-        :raises ZscalerApiError: When the successful response is not a URL category.
+        The change of the blacklist names it, so a failed read stops the change.
+
+        :raises ZscalerApiError: When the category cannot be read or the response is
+            not a URL category.
         """
         url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
-        response = self.handle_rate_limit(self.session.get, url)
-        if response and response.status_code == 200:
-            return _category_of(response).get("configuredName")
-        return None
+        response = self.request_zscaler(self.session.get, url, action=READ_ACTION)
+        return _category_of(response).get("configuredName")
 
     def check_and_send_to_zscaler(self, data, event_type, indicator_ids=()):
         """Verify the classification of a domain, then add it to (create) or remove it from
@@ -439,9 +422,10 @@ class ZscalerConnector:
         An analyst retry or a repeated create of a listed domain whose earlier
         activation timed out activates it again, so it is only reported once enforced.
 
-        :raises ZscalerApiError: When Zscaler refuses the change or the activation.
+        :raises ZscalerApiError: When the blacklist cannot be read, or Zscaler refuses the
+            change or the activation.
         """
-        if domain in self.get_zscaler_blocked_domains():
+        if domain in self.list_blocked_domains():
             msg = f"The domain {domain} is already in the Blacklist."
             self.helper.connector_logger.info(msg)
             self.ensure_configuration_active()
