@@ -310,7 +310,8 @@ def test_adapter_push_raises_the_reason_and_logs_the_detail(connector):
         CloudflareDeploymentAdapter(connector).push_indicator(indicator)
 
     assert str(raised.value) == "Cloudflare refused the list update: rate limit reached"
-    message, meta = connector.logger.warning.call_args.args
+    logged = connector.logger.warning.call_args
+    message, meta = logged.args[0], logged.kwargs["meta"]
     assert message == (
         "[DEPLOYMENT] Cloudflare did not take an indicator pushed again."
     )

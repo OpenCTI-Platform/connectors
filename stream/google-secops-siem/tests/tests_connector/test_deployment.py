@@ -197,7 +197,7 @@ def test_rejected_indicator_is_reported_failed_and_the_stream_continues(connecto
     connector.assurance.report_pushed.assert_not_called()
     connector.helper.connector_logger.error.assert_called_once_with(
         "[API] Error while ingesting indicator",
-        {"indicator_id": STIX_ID, "error": str(error)},
+        meta={"indicator_id": STIX_ID, "error": str(error)},
     )
 
 
@@ -463,7 +463,8 @@ def test_adapter_push_raises_the_reason_and_logs_the_detail(connector, error, re
         SecOpsDeploymentAdapter(connector).push_indicator(indicator)
 
     assert str(raised.value) == reason
-    message, meta = connector.helper.connector_logger.warning.call_args.args
+    logged = connector.helper.connector_logger.warning.call_args
+    message, meta = logged.args[0], logged.kwargs["meta"]
     assert message == (
         "[DEPLOYMENT] Google SecOps did not take an indicator pushed again."
     )

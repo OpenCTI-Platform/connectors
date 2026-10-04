@@ -78,7 +78,7 @@ class ZscalerDeploymentAdapter(DeploymentVendorAdapter):
         except ZscalerApiError as err:
             self._connector.helper.connector_logger.warning(
                 "[DEPLOYMENT] Zscaler did not take an indicator pushed again.",
-                {"indicator_id": stix_indicator.get("id"), "error": str(err)},
+                meta={"indicator_id": stix_indicator.get("id"), "error": str(err)},
             )
             raise ZscalerDeploymentError(failure_reason(err)) from err
         return None

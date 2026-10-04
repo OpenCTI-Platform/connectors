@@ -190,7 +190,7 @@ def test_rejected_indicator_is_reported_failed(connector):
     assert reported == indicator
     assert error == "SentinelOne refused the IOC creation: invalid request"
     connector.assurance.report_pushed.assert_not_called()
-    _, meta = connector.helper.connector_logger.warning.call_args.args
+    meta = connector.helper.connector_logger.warning.call_args.kwargs["meta"]
     assert meta == {
         "indicator_id": indicator["id"],
         "error": 'SentinelOne request rejected: HTTP 400 - {"errors": [{"title": "Validation Error"}]}',
@@ -334,7 +334,7 @@ def test_delete_with_an_ioc_of_the_indicator_without_uuid_is_aborted(connector):
 
     assert calls_of(connector.client.session, "DELETE") == []
     connector.assurance.report_removed.assert_not_called()
-    _, meta = connector.helper.connector_logger.warning.call_args.args
+    meta = connector.helper.connector_logger.warning.call_args.kwargs["meta"]
     assert meta == {
         "error": "SentinelOne listed an IOC of the indicator without uuid, "
         "it cannot be deleted"
@@ -655,7 +655,8 @@ def test_adapter_push_raises_the_reason_and_logs_the_detail(connector):
     assert str(raised.value) == (
         "SentinelOne refused the IOC creation: authentication failed"
     )
-    message, meta = connector.helper.connector_logger.warning.call_args.args
+    logged = connector.helper.connector_logger.warning.call_args
+    message, meta = logged.args[0], logged.kwargs["meta"]
     assert message == (
         "[DEPLOYMENT] SentinelOne did not take an indicator pushed again."
     )

@@ -132,7 +132,7 @@ class SentinelOneIntelConnector:
         except SentinelOneApiError as err:
             self.helper.connector_logger.warning(
                 "[CREATE] Failed to create Indicator in SentinelOne",
-                {"indicator_id": data.get("id"), "error": str(err)},
+                meta={"indicator_id": data.get("id"), "error": str(err)},
             )
             if self.assurance is not None:
                 self.assurance.report_push_failed(data, failure_reason(err))
@@ -155,7 +155,7 @@ class SentinelOneIntelConnector:
         except SentinelOneApiError as err:
             self.helper.connector_logger.warning(
                 "[DELETE] Failed to delete Indicator from SentinelOne",
-                {"error": str(err)},
+                meta={"error": str(err)},
             )
             return
         if not deleted:

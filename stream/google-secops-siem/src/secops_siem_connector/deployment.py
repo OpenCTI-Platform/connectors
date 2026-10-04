@@ -129,7 +129,7 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
         except SecOpsApiError as err:
             self._connector.helper.connector_logger.warning(
                 "[DEPLOYMENT] Google SecOps did not take an indicator pushed again.",
-                {"indicator_id": stix_indicator.get("id"), "error": str(err)},
+                meta={"indicator_id": stix_indicator.get("id"), "error": str(err)},
             )
             raise SecOpsDeploymentError(failure_reason(err)) from err
 

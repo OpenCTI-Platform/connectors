@@ -768,7 +768,7 @@ def test_a_failed_forget_is_logged_and_the_deployment_still_removed(
     assert reported()["withdrawn"]["status"] == "removed"
     reporter.logger.warning.assert_any_call(
         "[DEPLOYMENT] Cannot forget a withdrawn indicator.",
-        {"indicator_id": "withdrawn", "error": "snapshot locked"},
+        meta={"indicator_id": "withdrawn", "error": "snapshot locked"},
     )
 
 

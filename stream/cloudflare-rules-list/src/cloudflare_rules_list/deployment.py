@@ -171,7 +171,7 @@ class CloudflareDeploymentAdapter(DeploymentVendorAdapter):
         except CloudflareAPIError as err:
             self._connector.logger.warning(
                 "[DEPLOYMENT] Cloudflare did not take an indicator pushed again.",
-                {"indicator_id": stix_indicator.get("id"), "error": str(err)},
+                meta={"indicator_id": stix_indicator.get("id"), "error": str(err)},
             )
             raise CloudflareDeploymentError(failure_reason(err)) from err
         return None

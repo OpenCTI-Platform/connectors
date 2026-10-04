@@ -738,7 +738,8 @@ def test_adapter_push_raises_the_reason_and_logs_the_detail(connector):
     assert str(raised.value) == (
         "Zscaler refused the blacklist update: permission denied"
     )
-    message, meta = connector.helper.connector_logger.warning.call_args.args
+    logged = connector.helper.connector_logger.warning.call_args
+    message, meta = logged.args[0], logged.kwargs["meta"]
     assert message == "[DEPLOYMENT] Zscaler did not take an indicator pushed again."
     assert meta == {
         "indicator_id": indicator["id"],

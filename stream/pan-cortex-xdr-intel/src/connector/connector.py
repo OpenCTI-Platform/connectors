@@ -411,13 +411,13 @@ class Connector:
             self.helper.connector_logger.error(
                 "Cannot check the other indicators of the deleted IOC(s), "
                 "skipping the deletion",
-                {"indicator_id": octi_indicator.id, "error": str(err)},
+                meta={"indicator_id": octi_indicator.id, "error": str(err)},
             )
             return False
         if kept:
             self.helper.connector_logger.info(
                 "IOC(s) kept in Cortex XDR for other OpenCTI indicators",
-                {"indicator_id": octi_indicator.id, "kept": len(kept)},
+                meta={"indicator_id": octi_indicator.id, "kept": len(kept)},
             )
         deleted = [value for value in values if value not in kept]
         if not deleted:
@@ -425,7 +425,7 @@ class Connector:
 
         self.helper.connector_logger.debug(
             "Deleting IOC(s) from Cortex XDR",
-            {"indicator_id": octi_indicator.id, "xdr_iocs": len(deleted)},
+            meta={"indicator_id": octi_indicator.id, "xdr_iocs": len(deleted)},
         )
 
         # Delete all the IOCs corresponding to the filters on Cortex XDR
@@ -441,7 +441,7 @@ class Connector:
 
         self.helper.connector_logger.info(
             "Successfully deleted IOC(s) from Cortex XDR",
-            {"indicator_id": octi_indicator.id, "xdr_iocs": len(deleted)},
+            meta={"indicator_id": octi_indicator.id, "xdr_iocs": len(deleted)},
         )
         return True
 

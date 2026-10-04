@@ -772,7 +772,7 @@ class DeploymentReconciler:
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot forget a withdrawn indicator.",
-                {"indicator_id": deployment.indicator_id, "error": str(err)},
+                meta={"indicator_id": deployment.indicator_id, "error": str(err)},
             )
 
     def _confirm_present(

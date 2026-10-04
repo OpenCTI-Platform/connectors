@@ -351,7 +351,7 @@ def test_delete_without_the_other_indicators_is_skipped(connector):
 
     connector.client.delete_iocs.assert_not_called()
     connector.assurance.report_removed.assert_not_called()
-    meta = connector.helper.connector_logger.error.call_args.args[1]
+    meta = connector.helper.connector_logger.error.call_args.kwargs["meta"]
     assert meta["error"] == (
         "Cannot read the OpenCTI indicators sharing its values: OpenCTI down"
     )
@@ -673,7 +673,8 @@ def test_adapter_push_raises_the_reason_and_logs_the_detail(error, reason):
         CortexXdrDeploymentAdapter(connector).push_indicator(make_indicator())
 
     assert str(raised.value) == reason
-    message, meta = connector.helper.connector_logger.warning.call_args.args
+    logged = connector.helper.connector_logger.warning.call_args
+    message, meta = logged.args[0], logged.kwargs["meta"]
     assert message == "[DEPLOYMENT] Cortex XDR did not take an indicator pushed again."
     assert meta == {
         "indicator_id": make_indicator()["id"],

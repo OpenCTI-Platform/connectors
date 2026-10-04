@@ -156,7 +156,7 @@ class SecOpsSIEMConnector:
         except SecOpsApiError as err:
             self.helper.connector_logger.error(
                 "[API] Error while ingesting indicator",
-                {"indicator_id": indicator.get("id"), "error": str(err)},
+                meta={"indicator_id": indicator.get("id"), "error": str(err)},
             )
             if self.assurance is not None:
                 self.assurance.report_push_failed(indicator, failure_reason(err))

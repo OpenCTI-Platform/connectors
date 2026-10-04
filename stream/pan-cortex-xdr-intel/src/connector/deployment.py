@@ -297,7 +297,7 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         except (CortexXdrApiError, OSError) as err:
             self._connector.helper.connector_logger.warning(
                 "[DEPLOYMENT] Cortex XDR did not take an indicator pushed again.",
-                {
+                meta={
                     "indicator_id": stix_indicator.get("id"),
                     "error": describe_error(err),
                 },

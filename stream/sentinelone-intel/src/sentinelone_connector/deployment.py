@@ -120,7 +120,7 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
         except SentinelOneApiError as err:
             self._connector.helper.connector_logger.warning(
                 "[DEPLOYMENT] SentinelOne did not take an indicator pushed again.",
-                {"indicator_id": stix_indicator.get("id"), "error": str(err)},
+                meta={"indicator_id": stix_indicator.get("id"), "error": str(err)},
             )
             raise SentinelOneDeploymentError(failure_reason(err)) from err
 
