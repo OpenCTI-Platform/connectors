@@ -595,7 +595,91 @@ def test_adapter_resumes_after_the_read_budget(connector, monkeypatch):
 
     assert isinstance(collected, HitCollection)
     assert collected.complete_until == middle
+    assert collected.resume is None
     assert [hit.indicator_id for hit in collected.hits] == [INDICATOR_ID]
+
+
+def test_adapter_credits_hits_on_the_ingested_values_only(connector):
+    since = NOW - timedelta(hours=1)
+    recent = NOW - timedelta(minutes=5)
+    connector.api_client.list_ioc_matches.return_value = (
+        [
+            ioc_match(recent, domain="evil.example"),
+            ioc_match(recent, hashSha256=SHA256),
+        ],
+        False,
+    )
+    deployment = make_deployment(
+        pattern=(
+            f"[file:hashes.'SHA-256' = '{SHA256}' OR process:name = 'evil.example']"
+        )
+    )
+
+    hits = list(
+        SecOpsDeploymentAdapter(connector, clock=lambda: NOW).collect_hits(
+            [deployment], since
+        )
+    )
+
+    assert len(hits) == 1
+    assert hits[0].indicator_id == deployment.indicator_id
+
+
+def test_adapter_hands_the_unread_windows_to_the_next_run(connector, monkeypatch):
+    """A budget spent before the window starting at `since` is read is resumed."""
+    monkeypatch.setattr("secops_siem_connector.deployment.MAX_HIT_WINDOW_READS", 1)
+    since = NOW - timedelta(hours=1)
+    middle = NOW - timedelta(minutes=30)
+    later = NOW + timedelta(minutes=10)
+    match = ioc_match(
+        middle + timedelta(minutes=1), destinationIpAddress="198.51.100.7"
+    )
+    replies = {
+        (since, NOW): ([], True),
+        (since, middle): ([], False),
+        (middle, NOW): ([match], False),
+        (NOW, later): ([], False),
+    }
+    connector.api_client.list_ioc_matches.side_effect = (
+        lambda start, end, limit: replies[(start, end)]
+    )
+
+    first = SecOpsDeploymentAdapter(connector, clock=lambda: NOW).collect_hits(
+        [make_deployment()], since
+    )
+    monkeypatch.setattr("secops_siem_connector.deployment.MAX_HIT_WINDOW_READS", 8)
+    second = SecOpsDeploymentAdapter(connector, clock=lambda: later).collect_hits(
+        [make_deployment()], since, resume=first.resume
+    )
+
+    assert (first.hits, first.complete_until) == ([], since)
+    assert first.resume == (
+        NOW.isoformat(),
+        (
+            (middle.isoformat(), NOW.isoformat()),
+            (since.isoformat(), middle.isoformat()),
+        ),
+    )
+    assert [hit.indicator_id for hit in second] == [INDICATOR_ID]
+    windows = [
+        call.args[:2] for call in connector.api_client.list_ioc_matches.call_args_list
+    ]
+    assert windows == [(since, NOW), (since, middle), (middle, NOW), (NOW, later)]
+
+
+@pytest.mark.parametrize("resume", ["unexpected", ("not a date", ()), (None, [])])
+def test_adapter_reads_from_the_start_on_a_malformed_continuation(connector, resume):
+    since = NOW - timedelta(hours=1)
+    connector.api_client.list_ioc_matches.return_value = ([], False)
+
+    hits = SecOpsDeploymentAdapter(connector, clock=lambda: NOW).collect_hits(
+        [make_deployment()], since, resume=resume
+    )
+
+    assert list(hits) == []
+    connector.api_client.list_ioc_matches.assert_called_once_with(
+        since, NOW, MAX_HIT_MATCHES
+    )
 
 
 def test_adapter_keeps_the_shortest_window_as_read(connector):

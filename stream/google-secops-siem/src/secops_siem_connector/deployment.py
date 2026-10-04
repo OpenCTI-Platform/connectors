@@ -24,9 +24,14 @@ from connectors_sdk import (
     IndicatorDeployment,
     VendorHit,
 )
-from connectors_sdk.connectors.stream.deployment import normalize_value, parse_datetime
+from connectors_sdk.connectors.stream.deployment import (
+    extract_pattern_values,
+    normalize_value,
+    parse_datetime,
+)
 from secops_siem_connector.connector import failure_reason
 from secops_siem_services import SecOpsApiError
+from secops_siem_services.utils import ENTITY_TYPE_MAPPER, HASH_TYPES_MAPPER
 
 if TYPE_CHECKING:
     from secops_siem_connector.connector import SecOpsSIEMConnector
@@ -53,6 +58,27 @@ ARTIFACT_VALUE_FIELDS = (
     "hashSha256",
 )
 """Fields of an IoC match artifact compared with the values of the deployed indicators."""
+
+
+def pushed_values(pattern: str | None) -> frozenset[str]:
+    """Return the normalized values of a pattern the connector ingests as UDM entities.
+
+    :param pattern: A STIX pattern.
+    :return: Its domain names, host names, IP addresses, URLs and MD5, SHA-1 or
+        SHA-256 file hashes, the observables the converter maps.
+    """
+    return frozenset(
+        normalized
+        for pattern_value in extract_pattern_values(pattern)
+        if (
+            (pattern_value.hash_algorithm or "").lower() in HASH_TYPES_MAPPER
+            or (
+                pattern_value.object_type in ENTITY_TYPE_MAPPER
+                and pattern_value.object_path == "value"
+            )
+        )
+        and (normalized := normalize_value(pattern_value.value))
+    )
 
 
 def _match_values(match: Mapping[str, Any]) -> set[str]:
@@ -108,23 +134,30 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
             raise SecOpsDeploymentError(failure_reason(err)) from err
 
     def collect_hits(
-        self, deployments: Sequence[IndicatorDeployment], since: datetime
+        self,
+        deployments: Sequence[IndicatorDeployment],
+        since: datetime,
+        *,
+        resume: Any = None,
     ) -> Iterable[VendorHit] | HitCollection:
         """Read the IoC matches whose artifact is the value of a deployed indicator.
 
         A match counts one hit per matching indicator, at the time Google SecOps last saw
         the artifact in the environment (hits already reported are filtered by the SDK).
+        When the request budget runs out before the window starting at `since` is
+        read, the unread windows are returned as `resume` and the next run reads them.
 
+        :param resume: The `resume` of the previous collection, if any.
         :raises SecOpsApiError: When the IoC matches cannot be listed, or a match has
             no last seen time (the window is read again).
         """
         by_value: dict[str, list[IndicatorDeployment]] = {}
         for deployment in deployments:
-            for value in deployment.values:
+            for value in pushed_values(deployment.pattern):
                 by_value.setdefault(value, []).append(deployment)
         if not by_value:
             return []
-        matches, complete_until = self._read_matches(since)
+        matches, complete_until, unread = self._read_matches(since, resume)
         hits: list[VendorHit] = []
         for match in matches:
             timestamp = parse_datetime(match.get("lastSeenTimestamp"))
@@ -145,12 +178,17 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
                 for indicator_id in sorted(matched)
             )
         if complete_until is not None:
-            return HitCollection(hits=hits, complete_until=complete_until)
+            return HitCollection(
+                hits=hits,
+                complete_until=complete_until,
+                # Nothing is complete yet: the next run reads the windows left unread.
+                resume=unread if complete_until <= since else None,
+            )
         return hits
 
     def _read_matches(
-        self, since: datetime
-    ) -> tuple[list[dict[str, Any]], datetime | None]:
+        self, since: datetime, resume: Any = None
+    ) -> tuple[list[dict[str, Any]], datetime | None, Any]:
         """Read the IoC matches since a date, by time windows.
 
         The IoC matches API returns the most recent matches first and only tells that
@@ -159,16 +197,22 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
         `MIN_HIT_WINDOW` still truncated is kept as read (its count is a lower bound).
         A match returned by several windows is kept once.
 
-        :return: The matches, and `None` when every window was read, otherwise the
-            start of the first window left unread after `MAX_HIT_WINDOW_READS` reads.
+        :param resume: The continuation of the previous read: the end of the time it
+            covered and the windows it left unread, read first (with a window for
+            the time elapsed since).
+        :return: The matches; `None` when every window was read, otherwise the start
+            of the first window left unread after `MAX_HIT_WINDOW_READS` reads; and
+            the continuation of that unread part (`None` when every window was read).
         """
         matches: dict[tuple[Any, ...], dict[str, Any]] = {}
-        windows = [(since, self._clock())]
+        now = self._clock()
+        windows = _resumed_windows(resume, now) or [(since, now)]
         reads = 0
         while windows:
             start, end = windows.pop()
             if reads >= MAX_HIT_WINDOW_READS:
-                return list(matches.values()), start
+                windows.append((start, end))
+                return list(matches.values()), start, _continuation(now, windows)
             window_matches, more_available = (
                 self._connector.api_client.list_ioc_matches(start, end, MAX_HIT_MATCHES)
             )
@@ -185,7 +229,42 @@ class SecOpsDeploymentAdapter(DeploymentPushAdapter):
                 continue
             middle = start + (end - start) / 2
             windows.extend([(middle, end), (start, middle)])
-        return list(matches.values()), None
+        return list(matches.values()), None, None
+
+
+def _continuation(
+    covered_until: datetime, windows: Sequence[tuple[datetime, datetime]]
+) -> tuple[str, tuple[tuple[str, str], ...]]:
+    """Encode the unread windows of a hit read (oldest last) for the next run."""
+    return covered_until.isoformat(), tuple(
+        (start.isoformat(), end.isoformat()) for start, end in windows
+    )
+
+
+def _resumed_windows(resume: Any, now: datetime) -> list[tuple[datetime, datetime]]:
+    """Decode a continuation into the windows to read, oldest last.
+
+    The time elapsed since the covered end is read last; a malformed continuation
+    reads nothing from it (the read starts again from its start date).
+    """
+    try:
+        covered, pending = resume
+        covered_until = parse_datetime(covered)
+        windows = [
+            (parse_datetime(start), parse_datetime(end)) for start, end in pending
+        ]
+    except (TypeError, ValueError, AttributeError):
+        return []
+    if covered_until is None or not windows:
+        return []
+    decoded: list[tuple[datetime, datetime]] = []
+    for start, end in windows:
+        if start is None or end is None:
+            return []
+        decoded.append((start, end))
+    if covered_until < now:
+        decoded.insert(0, (covered_until, now))
+    return decoded
 
 
 def build_deployment_assurance(connector: "SecOpsSIEMConnector") -> DeploymentAssurance:
