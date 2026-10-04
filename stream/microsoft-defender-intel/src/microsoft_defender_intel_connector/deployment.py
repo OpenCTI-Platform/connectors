@@ -152,7 +152,7 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
 
         :raises DefenderDeploymentError: On any API error (never a partial listing).
         """
-        now = datetime.now(UTC)
+        now = self._clock()
         with _readable_errors():
             for indicator in self._api.iter_application_indicators(APPLICATION_NAME):
                 defender_id = indicator.get("id")

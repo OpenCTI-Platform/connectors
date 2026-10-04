@@ -769,6 +769,22 @@ def test_adapter_lists_the_indicators_of_the_connector():
     connector.api.iter_application_indicators.assert_called_once_with(APPLICATION_NAME)
 
 
+def test_adapter_read_back_expiry_uses_the_injected_clock():
+    connector = build_connector()
+    connector.api.iter_application_indicators = MagicMock(
+        return_value=iter(
+            [{"id": 1, "expirationTime": "2026-10-03T12:00:00Z"}],
+        )
+    )
+    before = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+
+    (listed,) = MicrosoftDefenderDeploymentAdapter(
+        connector, clock=lambda: before
+    ).list_vendor_indicators()
+
+    assert listed.active is True
+
+
 def test_adapter_read_back_rejects_an_indicator_without_id():
     """A skipped indicator would make its deployment look absent."""
     connector = build_connector()
