@@ -55,6 +55,24 @@ def _result_object(payload: dict) -> dict:
     return result
 
 
+def _bulk_operation(payload: dict) -> dict:
+    """Return the ``result`` of an accepted bulk change, which names its operation.
+
+    Raises:
+        CloudflareAPIError: When the result has no non-empty ``operation_id``: list
+            item changes are asynchronous, so a change is only confirmed once its
+            operation completes, never on the acknowledgement alone.
+    """
+    result = _result_object(payload)
+    operation_id = result.get("operation_id")
+    if not isinstance(operation_id, str) or not operation_id:
+        raise CloudflareAPIError(
+            "Unexpected Cloudflare response: the bulk operation has no 'operation_id'",
+            status_code=200,
+        )
+    return result
+
+
 class CloudflareRulesListClient:
     """Client for the Cloudflare Rules Lists API."""
 
@@ -247,14 +265,17 @@ class CloudflareRulesListClient:
         """Delete items of a list by item id.
 
         Returns:
-            Operation result, including an ``operation_id`` for the async bulk job.
+            Operation result, including the ``operation_id`` of the async bulk job.
+
+        Raises:
+            CloudflareAPIError: When the response names no bulk operation.
         """
         response = self._make_request(
             "DELETE",
             f"/rules/lists/{list_id}/items",
             data={"items": [{"id": item_id} for item_id in item_ids]},
         )
-        return _result_object(response)
+        return _bulk_operation(response)
 
     def replace_list_items(self, list_id: str, items: list[dict]) -> dict:
         """Replace ALL items in a list with the provided items (snapshot).
@@ -265,12 +286,15 @@ class CloudflareRulesListClient:
                 ``[{"ip": "192.0.2.1"}, {"ip": "10.0.0.0/8"}]``.
 
         Returns:
-            Operation result, including an ``operation_id`` for the async bulk job.
+            Operation result, including the ``operation_id`` of the async bulk job.
+
+        Raises:
+            CloudflareAPIError: When the response names no bulk operation.
         """
         response = self._make_request(
             "PUT", f"/rules/lists/{list_id}/items", data=items, timeout=300
         )
-        return _result_object(response)
+        return _bulk_operation(response)
 
     def get_bulk_operation(self, operation_id: str) -> dict:
         """Get the status of a bulk operation."""

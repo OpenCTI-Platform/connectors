@@ -122,6 +122,33 @@ def test_a_missing_or_malformed_result_is_rejected(client, call, body):
     assert exc.value.status_code == 200
 
 
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda c: c.replace_list_items("list-1", [{"ip": "192.0.2.1"}]),
+        lambda c: c.delete_list_items("list-1", ["item-1"]),
+    ],
+)
+@pytest.mark.parametrize(
+    "result",
+    [{}, {"operation_id": ""}, {"operation_id": None}, {"operation_id": 42}],
+)
+def test_a_bulk_change_without_its_operation_is_rejected(client, call, result):
+    # A bulk change is asynchronous: it is never confirmed on the acknowledgement alone
+    client._session.request.return_value = _response({"result": result})
+    with pytest.raises(CloudflareAPIError) as exc:
+        call(client)
+    assert "the bulk operation has no 'operation_id'" in str(exc.value)
+    assert exc.value.status_code == 200
+
+
+def test_a_bulk_change_returns_its_operation(client):
+    client._session.request.return_value = _response(
+        {"result": {"operation_id": "op-1"}}
+    )
+    assert client.delete_list_items("list-1", ["item-1"]) == {"operation_id": "op-1"}
+
+
 def test_make_request_uses_custom_timeout(client):
     client._session.request.return_value = _response({"result": {}})
     client._make_request("PUT", "/x", data=[], timeout=300)

@@ -312,21 +312,18 @@ class Connector:
 
             try:
                 result = self.client.replace_list_items(self.list_id, items)
-                operation_id = result.get("operation_id")
-                if operation_id:
-                    self.logger.info(
-                        "Bulk operation started", meta={"operation_id": operation_id}
-                    )
-                    final_status = self.client.wait_for_operation(operation_id)
-                    self.logger.info(
-                        "Snapshot uploaded",
-                        meta={
-                            "count": len(items),
-                            "status": final_status.get("status"),
-                        },
-                    )
-                else:
-                    self.logger.info("Snapshot uploaded", meta={"count": len(items)})
+                operation_id = result["operation_id"]
+                self.logger.info(
+                    "Bulk operation started", meta={"operation_id": operation_id}
+                )
+                final_status = self.client.wait_for_operation(operation_id)
+                self.logger.info(
+                    "Snapshot uploaded",
+                    meta={
+                        "count": len(items),
+                        "status": final_status.get("status"),
+                    },
+                )
             except CloudflareAPIError as exc:
                 self._report(
                     self._changed(indicators),
@@ -486,9 +483,7 @@ class Connector:
             stale = uploads is not None and uploads != self._uploads
             if not shared and not stale:
                 result = self.client.delete_list_items(self.list_id, [item_id])
-                operation_id = result.get("operation_id")
-                if operation_id:
-                    self.client.wait_for_operation(operation_id)
+                self.client.wait_for_operation(result["operation_id"])
             for key in keys:
                 del self._indicator_cache[key]
                 self._indicator_keys.discard(key)

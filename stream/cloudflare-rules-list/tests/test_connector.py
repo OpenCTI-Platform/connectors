@@ -216,11 +216,16 @@ def test_sync_to_cloudflare_with_operation(connector):
     connector.client.wait_for_operation.assert_called_once_with("op-1")
 
 
-def test_sync_to_cloudflare_without_operation_id(connector):
+def test_sync_to_cloudflare_without_operation_id_is_an_error(connector):
+    # The client refuses an acknowledgement that names no bulk operation
     connector._indicator_cache = {"ind-1": "1.1.1.1"}
-    connector.client.replace_list_items.return_value = {}
+    connector.client.replace_list_items.side_effect = CloudflareAPIError(
+        "Unexpected Cloudflare response: the bulk operation has no 'operation_id'",
+        status_code=200,
+    )
     connector._sync_to_cloudflare()
     connector.client.wait_for_operation.assert_not_called()
+    connector.logger.error.assert_called_once()
 
 
 def test_sync_to_cloudflare_handles_api_error(connector):
@@ -252,7 +257,7 @@ def test_full_sync_loads_indicators_and_observables(connector):
     connector.helper.api.stix_cyber_observable.list.return_value = [
         {"id": "obs-1", "entity_type": "IPv4-Addr", "observable_value": "8.8.8.8"},
     ]
-    connector.client.replace_list_items.return_value = {}
+    connector.client.replace_list_items.return_value = {"operation_id": "op-1"}
 
     connector._full_sync()
 
@@ -263,7 +268,7 @@ def test_full_sync_loads_indicators_and_observables(connector):
 def test_full_sync_fails_on_observable_error(connector):
     connector.helper.api.indicator.list.return_value = []
     connector.helper.api.stix_cyber_observable.list.side_effect = RuntimeError("boom")
-    connector.client.replace_list_items.return_value = {}
+    connector.client.replace_list_items.return_value = {"operation_id": "op-1"}
 
     with pytest.raises(RuntimeError, match="boom"):
         connector._full_sync()

@@ -78,8 +78,8 @@ def build_connector(helper=None, client=None, assurance=None, settings=None):
     connector.sync_interval = 0
     # The stream events of the tests arrive after a successful initial full sync.
     connector._full_sync_done = True
-    connector.client.replace_list_items.return_value = {}
-    connector.client.delete_list_items.return_value = {}
+    connector.client.replace_list_items.return_value = {"operation_id": "op-put"}
+    connector.client.delete_list_items.return_value = {"operation_id": "op-delete"}
     connector.assurance = assurance
     return connector
 
@@ -692,6 +692,8 @@ def test_withdraw_item_deletes_the_item_and_drops_the_indicator(connector):
         make_message("create", make_indicator(stix_id=OTHER_STIX_ID, ip="203.0.113.9"))
     )
     connector.client.delete_list_items.return_value = {"operation_id": "op-1"}
+    # The two snapshot uploads above waited for their own operations
+    connector.client.wait_for_operation.reset_mock()
 
     connector.withdraw_item("item-1", "198.51.100.7", {STIX_ID, INDICATOR_ID})
 

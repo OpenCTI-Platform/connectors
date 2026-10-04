@@ -114,7 +114,9 @@ fetched from its repository.
    drop them on delete, and on an update that revokes them, expires them or
    leaves them without an IPv4 value.
 4. **Replace** the entire Cloudflare list with the current snapshot, then poll
-   the resulting bulk operation to completion. This push is triggered by
+   the resulting bulk operation to completion (a list change is only confirmed
+   once its operation completes: a response without an `operation_id` is
+   treated as a failure, for replacements and deletions alike). This push is triggered by
    live-stream events and throttled to **at most once per
    `CLOUDFLARE_SYNC_INTERVAL`** — an idle stream produces no uploads even after
    the interval elapses.
