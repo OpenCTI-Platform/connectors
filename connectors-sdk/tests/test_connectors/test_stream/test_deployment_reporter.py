@@ -16,6 +16,7 @@ from connectors_sdk.connectors.stream.deployment.models import (
     DeploymentStatus,
 )
 from connectors_sdk.connectors.stream.deployment.reporter import (
+    EXIT_FLUSH_TIMEOUT,
     MAX_BATCH_SIZE,
     MAX_ERROR_MESSAGE_LENGTH,
     MAX_UNSENT_AGE,
@@ -99,7 +100,7 @@ def test_start_detects_support_and_resolves_the_platform(
         }
     ]
     assert reporter.security_platform_id == ids.platform
-    assert no_atexit == [reporter.close]
+    assert no_atexit == [reporter._close_at_exit]
 
 
 def test_detection_and_resolution_calls_never_hold_the_state_lock(
@@ -173,7 +174,7 @@ def test_start_registers_the_exit_flush_when_opencti_is_unreachable(
     reporter = make_reporter(graphql_helper)
 
     assert reporter.start() is False
-    assert no_atexit == [reporter.close]
+    assert no_atexit == [reporter._close_at_exit]
 
 
 def test_feature_detection_failure_is_retried_later(
@@ -1377,6 +1378,52 @@ def test_timer_flush_is_not_armed_again_once_closed(
     assert reporter._flush_timer is None
     reporter.close()
     assert len(router.calls_of("IndicatorReportDeployments(")) == 1
+
+
+def test_close_with_a_timeout_flushes_when_the_sends_are_free(
+    graphql_helper, make_reporter, router
+):
+    reporter = make_reporter(graphql_helper)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="active"))
+
+    reporter.close(timeout=5)
+
+    assert len(router.calls_of("IndicatorReportDeployments(")) == 1
+    assert reporter._send_lock.acquire(blocking=False)
+    reporter._send_lock.release()
+
+
+def test_close_never_waits_longer_than_its_timeout_for_held_sends(
+    graphql_helper, make_reporter, router
+):
+    """A reconciliation still holding the sends keeps the queue and sends it when
+    it ends (the send lock is not reentrant: an unbounded wait here never ends)."""
+    reporter = make_reporter(graphql_helper)
+
+    with reporter.holding_queued_reports():
+        reporter.enqueue(DeploymentReport(indicator_id="a", status="active"))
+        started = time.monotonic()
+        reporter.close(timeout=0.05)
+
+        assert time.monotonic() - started < 5
+        assert router.calls_of("IndicatorReportDeployments(") == []
+        assert any(
+            "held by a running reconciliation" in call.args[0]
+            for call in graphql_helper.connector_logger.warning.call_args_list
+        )
+
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert batch["reports"][0]["indicatorId"] == "a"
+
+
+def test_exit_flush_is_bounded(graphql_helper, make_reporter, monkeypatch):
+    reporter = make_reporter(graphql_helper)
+    close = MagicMock()
+    monkeypatch.setattr(reporter, "close", close)
+
+    reporter._close_at_exit()
+
+    close.assert_called_once_with(timeout=EXIT_FLUSH_TIMEOUT)
 
 
 def test_close_flushes_and_stops_queueing(graphql_helper, make_reporter, router):

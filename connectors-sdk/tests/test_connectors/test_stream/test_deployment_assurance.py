@@ -53,6 +53,22 @@ def test_from_options_with_adapter(graphql_helper, options, no_atexit):
     assert not assurance.reconciler._thread.is_alive()
 
 
+def test_stop_bounds_the_reporter_close_by_the_remaining_timeout():
+    """A reconciliation still running at the timeout never makes the close wait."""
+    reporter = MagicMock()
+    assurance = DeploymentAssurance(reporter)
+    assurance.reconciler = MagicMock()
+
+    assurance.stop(timeout=5)
+
+    assurance.reconciler.stop.assert_called_once_with(5)
+    assert 0 < reporter.close.call_args.kwargs["timeout"] <= 5
+
+    assurance.stop()
+
+    assert reporter.close.call_args.kwargs == {"timeout": None}
+
+
 def test_start_does_not_schedule_the_reconciliation_when_disabled(
     graphql_helper, options, no_atexit
 ):

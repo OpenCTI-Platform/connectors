@@ -1,5 +1,6 @@
 """Dissemination assurance facade for stream connectors."""
 
+import time
 from collections.abc import Mapping
 from datetime import datetime
 from typing import Any
@@ -128,11 +129,15 @@ class DeploymentAssurance:
         """Stop the reconciliation and flush the queued reports.
 
         Args:
-            timeout: Seconds to wait for a running reconciliation to finish.
+            timeout: Seconds to wait for a running reconciliation to finish, the
+                reports it holds included (``None`` waits until it ends).
         """
+        deadline = None if timeout is None else time.monotonic() + timeout
         if self.reconciler is not None:
             self.reconciler.stop(timeout)
-        self.reporter.close()
+        self.reporter.close(
+            timeout=None if deadline is None else deadline - time.monotonic()
+        )
 
     def flush(self) -> DeploymentBatchResult:
         """Send the queued reports now.

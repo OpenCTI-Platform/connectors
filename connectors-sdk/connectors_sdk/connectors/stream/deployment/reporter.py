@@ -60,6 +60,9 @@ MAX_ERROR_MESSAGE_LENGTH = 2000
 MAX_QUEUED_REPORTS = 10_000
 """Maximum number of queued reports (write-back not available yet, sends held): the oldest are dropped beyond."""
 
+EXIT_FLUSH_TIMEOUT = 30.0
+"""Seconds the exit flush waits for the sends held by a running reconciliation."""
+
 MAX_UNSENT_AGE = 24 * 3600.0
 """Seconds during which a report that never reached OpenCTI is sent again."""
 
@@ -405,7 +408,7 @@ class DeploymentReporter:
         # still be flushed at exit when the platform was unreachable at startup.
         with self._lock:
             if not self._exit_handler_registered:
-                atexit.register(self.close)
+                atexit.register(self._close_at_exit)
                 self._exit_handler_registered = True
         platform_id = self._ready(REPORT_DEPLOYMENT_MUTATION)
         if platform_id is None:
@@ -976,10 +979,34 @@ class DeploymentReporter:
                 self._flush_timer = timer
                 timer.start()
 
-    def close(self) -> None:
-        """Flush the queued reports and stop accepting new ones."""
+    def close(self, timeout: float | None = None) -> None:
+        """Flush the queued reports and stop accepting new ones.
+
+        Args:
+            timeout: Seconds to wait for the sends held by a running reconciliation
+                (``None`` waits until they are released). When they are still held,
+                the queued reports are left to the reconciliation, which sends them
+                when it releases the sends.
+        """
         self._closed = True
-        self.flush()
+        if timeout is None:
+            self.flush()
+            return
+        if not self._send_lock.acquire(timeout=max(timeout, 0.0)):
+            self._logger.warning(
+                f"{_LOG_PREFIX} Deployment reports held by a running reconciliation, "
+                "left for it to send.",
+                {"timeout_seconds": timeout},
+            )
+            return
+        try:
+            self._flush_queued()
+        finally:
+            self._send_lock.release()
+
+    def _close_at_exit(self) -> None:
+        """Close at interpreter exit, waiting ``EXIT_FLUSH_TIMEOUT`` seconds at most."""
+        self.close(timeout=EXIT_FLUSH_TIMEOUT)
 
     def report_pushed(
         self,
