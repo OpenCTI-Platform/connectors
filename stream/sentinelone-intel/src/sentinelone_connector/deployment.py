@@ -5,7 +5,8 @@ the SentinelOne Threat Intelligence IOCs:
 
 - read-back: the IOCs of the scope of the connector (account, site or group,
   `threat-intelligence/iocs`, paginated with `cursor`), matched with the deployments
-  by their external id when it is the STIX id of the indicator, else by value;
+  by their external id when it is the STIX id of the indicator, else by value; the
+  expired IOCs SentinelOne retains are listed inactive;
 - removal: deletion of the IOCs whose external id is the STIX id of the indicator
   (IOCs created by other sources are left in place);
 - re-push: the stream create path.
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
 
 
 class SentinelOneDeploymentError(Exception):
-    """A removal refused by the reconciliation, with a readable message."""
+    """A read-back or removal refused by the reconciliation, with a readable message."""
 
 
 class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
@@ -46,21 +47,26 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
         self._connector = connector
 
     def list_vendor_indicators(self) -> Iterator[VendorIndicator]:
-        """Read back the IOCs of the scope of the connector that are still valid.
+        """Read back the IOCs of the scope of the connector.
 
-        IOCs whose `validUntil` is in the past are not live.
+        IOCs whose `validUntil` is in the past are retained by SentinelOne but no
+        longer enforced: they are listed inactive, so that a withdrawal removes them
+        and they never confirm a deployment.
 
         :raises SentinelOneApiError: On any API error (never a partial listing).
+        :raises SentinelOneDeploymentError: On an IOC without `uuid` or value, which
+            would otherwise read as absent.
         """
         now = datetime.now(UTC)
         for ioc in self._connector.client.iter_iocs():
             uuid = ioc.get("uuid")
             value = ioc.get("value")
             if uuid is None or not isinstance(value, str) or not value:
-                continue
+                raise SentinelOneDeploymentError(
+                    "SentinelOne listed an IOC without uuid or value, "
+                    "the read-back is incomplete"
+                )
             valid_until = parse_datetime(ioc.get("validUntil"))
-            if valid_until is not None and valid_until <= now:
-                continue
             external_id = ioc.get("externalId")
             opencti_id = (
                 external_id
@@ -73,6 +79,7 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
                 external_id=str(uuid),
                 value=value,
                 raw={"uuid": str(uuid), "externalId": external_id},
+                active=valid_until is None or valid_until > now,
             )
 
     def remove_vendor_indicator(

@@ -263,11 +263,15 @@ class SentinelOneClient:
             raise SentinelOneApiError(
                 "Unexpected IOC listing response: 'data' is not a list"
             )
+        if not all(isinstance(item, dict) for item in data):
+            raise SentinelOneApiError(
+                "Unexpected IOC listing response: an IOC is not an object"
+            )
         pagination = response.get("pagination") or {}
         next_cursor = (
             pagination.get("nextCursor") if isinstance(pagination, dict) else None
         )
-        return [item for item in data if isinstance(item, dict)], next_cursor or None
+        return data, next_cursor or None
 
     def _request(
         self,

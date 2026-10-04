@@ -390,7 +390,7 @@ def test_disabled_write_back_is_a_no_op():
 def test_iter_iocs_pages_with_the_cursor(connector):
     connector.client.session.request.side_effect = [
         mock_response({"data": [{"uuid": "1"}], "pagination": {"nextCursor": "c1"}}),
-        mock_response({"data": [{"uuid": "2"}, "junk"], "pagination": {}}),
+        mock_response({"data": [{"uuid": "2"}], "pagination": {}}),
     ]
 
     assert [ioc["uuid"] for ioc in connector.client.iter_iocs()] == ["1", "2"]
@@ -446,6 +446,7 @@ def test_iter_iocs_stops_at_the_page_limit(connector):
     [
         (mock_response({"errors": []}), "'data' is not a list"),
         (mock_response(["unexpected"]), "'data' is not a list"),
+        (mock_response({"data": [{"uuid": "1"}, "x"]}), "an IOC is not an object"),
         (mock_response(ValueError("no json"), text="<html>"), "not JSON"),
         (mock_response(status_code=403, text="Forbidden"), "HTTP 403 - Forbidden"),
     ],
@@ -494,7 +495,7 @@ def test_describe_response_without_body():
 # Adapter
 
 
-def test_adapter_lists_the_valid_iocs(connector):
+def test_adapter_lists_the_iocs_and_the_expired_ones_inactive(connector):
     future = (datetime.now(UTC) + timedelta(days=30)).isoformat()
     past = (datetime.now(UTC) - timedelta(days=1)).isoformat()
     connector.client.session.request.return_value = mock_response(
@@ -508,8 +509,6 @@ def test_adapter_lists_the_valid_iocs(connector):
                     "validUntil": future,
                 },
                 {"uuid": "3", "value": "old.example", "validUntil": past},
-                {"uuid": "4", "value": ""},
-                {"value": "no-uuid.example"},
             ]
         }
     )
@@ -519,8 +518,22 @@ def test_adapter_lists_the_valid_iocs(connector):
     assert indicators == [
         VendorIndicator(indicator_id=STIX_ID, external_id="1", value="198.51.100.7"),
         VendorIndicator(indicator_id=None, external_id="2", value="evil.example"),
+        VendorIndicator(
+            indicator_id=None, external_id="3", value="old.example", active=False
+        ),
     ]
     assert indicators[1].raw == {"uuid": "2", "externalId": "feed-42"}
+
+
+@pytest.mark.parametrize(
+    "ioc",
+    [{"uuid": "4", "value": ""}, {"value": "no-uuid.example"}, {"uuid": "5"}],
+)
+def test_adapter_rejects_an_ioc_without_uuid_or_value(connector, ioc):
+    connector.client.session.request.return_value = mock_response({"data": [ioc]})
+
+    with pytest.raises(SentinelOneDeploymentError, match="without uuid or value"):
+        list(SentinelOneDeploymentAdapter(connector).list_vendor_indicators())
 
 
 def test_adapter_removes_only_the_iocs_of_the_indicator(connector):
