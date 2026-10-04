@@ -233,13 +233,16 @@ does not exist), and hits are counted with a sighting of the indicator on that e
   10,000 results or more share a single time, the hits of that instant are a lower bound and the next run starts just
   after it). A result
   without `_time` fails the hit read (logged), which is retried over the same time range on the next run.
-  Example, with a lookup definition `opencti_lookup` on the KV Store collection:
+  `count` is the number of matches at that `_time`: a result must not aggregate matches of several times (such as
+  `stats count min(_time) BY opencti_id`), because successive reads overlap and a result at or before the last hit
+  already reported is skipped as a whole. Example, with a lookup definition `opencti_lookup` on the KV Store
+  collection:
 
   ```spl
   search index=network
   | lookup opencti_lookup values AS dest_ip OUTPUTNEW _key AS opencti_id
   | where isnotnull(opencti_id)
-  | stats count min(_time) AS _time BY opencti_id
+  | stats count BY _time opencti_id
   ```
 
   Without `SPLUNK_HITS_SAVED_SEARCH`, deployment statuses are reported and no hit is collected.

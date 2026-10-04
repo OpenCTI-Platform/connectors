@@ -61,7 +61,12 @@ def _text(value: Any) -> str | None:
 
 
 def _count(value: Any) -> int:
-    """Return the hit count of a result row (1 when absent or invalid)."""
+    """Return the hit count of a result row (1 when absent or invalid).
+
+    The count stands for the matches at the `_time` of the row: successive reads
+    overlap and a row at or before the last hit reported is skipped as a whole, so
+    a row counting matches of several times would lose the newer ones.
+    """
     try:
         count = int(float(_first(value)))
     except (TypeError, ValueError, OverflowError):

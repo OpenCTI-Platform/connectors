@@ -66,7 +66,8 @@ class SplunkConfig(BaseConfigModel):
             "the matches of the KV Store indicators in your events. It is run over the "
             "time range of each hit collection; every result carries 'opencti_id' (the "
             "KV Store '_key') or 'value' (the matched observable value), '_time' and "
-            "optionally 'count'. Leave empty to not report hits."
+            "optionally 'count' (the matches at that '_time', never of several times). "
+            "Leave empty to not report hits."
         ),
         default=None,
     )
