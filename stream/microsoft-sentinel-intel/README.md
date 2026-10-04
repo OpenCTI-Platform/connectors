@@ -236,6 +236,8 @@ it does not exist), and detection hits are counted with a sighting of the indica
   twice. When the 200 incidents are reached, the listing stops at its page limit or the entities of an incident cannot
   be read, the next run continues the listing at that incident instead of skipping the remaining ones; the hits read
   so far are reported once the listing is complete, so an incident modified later but active earlier is never missed.
+  An incident without an id or any activity, creation or modification time fails the read: the next run reads the
+  same incidents again.
 - **Permissions**: the **Microsoft Sentinel Contributor** role already required by the connector covers the read-back,
   the deletion and the incidents read (Microsoft Sentinel Reader is enough for the read-only parts).
 - **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
