@@ -157,6 +157,19 @@ class TestReadBack:
             assert search.call_count == 1
             assert close.call_count == 1
 
+    @pytest.mark.parametrize("malformed", [{"_id": "x"}, {"_source": None}, "hit"])
+    def test_a_hit_without_its_document_raises_instead_of_being_skipped(
+        self, handler, malformed
+    ):
+        page = [document(stix_indicator("indicator--a")), malformed]
+        with rm_module.Mocker() as m:
+            m.post(PIT_URL, json={"id": "pit-1"})
+            m.post(SEARCH_URL, json={"hits": {"hits": page}})
+            close = m.delete(CLOSE_PIT_URL, json={})
+            with pytest.raises(ElasticApiHandlerError, match="carries no document"):
+                list(handler.iter_connector_documents())
+            assert close.call_count == 1
+
     def test_a_refused_point_in_time_raises(self, handler):
         with rm_module.Mocker() as m:
             m.post(PIT_URL, status_code=403, text="forbidden")
@@ -187,7 +200,6 @@ class TestAdapter:
                 "_source"
             ],
             document(stix_indicator("ipv4-addr--x", type_="ipv4-addr"))["_source"],
-            {"opencti_doc_id": "no-stix"},
             document(stix_indicator("indicator--future"), "2999-01-01T00:00:00Z")[
                 "_source"
             ],
@@ -200,6 +212,16 @@ class TestAdapter:
         ]
         assert listed[0].external_id == f"doc-{INDICATOR_ID}"
         assert listed[0].raw == {"stix": live}
+
+    def test_a_document_without_stix_object_raises(self, connector):
+        """A skipped document would make its deployment look absent."""
+        connector.api = MagicMock()
+        connector.api.iter_connector_documents.return_value = [
+            document(stix_indicator())["_source"],
+            {"opencti_doc_id": "no-stix"},
+        ]
+        with pytest.raises(ElasticDeploymentError, match="no STIX object"):
+            list(ElasticDeploymentAdapter(connector).list_vendor_indicators())
 
     def test_lists_expired_documents_by_document_id_only(self, connector):
         expired = stix_indicator("indicator--expired")

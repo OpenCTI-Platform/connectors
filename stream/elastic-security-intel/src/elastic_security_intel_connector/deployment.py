@@ -81,7 +81,12 @@ class ElasticDeploymentAdapter(DeploymentVendorAdapter):
         try:
             for document in self._connector.api.iter_connector_documents():
                 stix = document.get("stix")
-                if not isinstance(stix, dict) or stix.get("type") != "indicator":
+                if not isinstance(stix, dict):
+                    # Never skipped: its deployment would look absent.
+                    raise ElasticDeploymentError(
+                        "A document of the connector carries no STIX object"
+                    )
+                if stix.get("type") != "indicator":
                     continue
                 valid_until = parse_datetime(
                     ((document.get("threat") or {}).get("indicator") or {}).get(

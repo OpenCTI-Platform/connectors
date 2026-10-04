@@ -175,7 +175,14 @@ class ElasticApiHandler:
                         )
                     pit_id = result.get("pit_id", pit_id)
                     for hit in hits:
-                        yield hit.get("_source") or {}
+                        source = hit.get("_source") if isinstance(hit, dict) else None
+                        if not isinstance(source, dict):
+                            # Never skipped: its deployment would look absent.
+                            raise ElasticApiHandlerError(
+                                "Failed to read the indicators back: a hit carries no document",
+                                {"response": response.text[:500]},
+                            )
+                        yield source
                     if len(hits) < READ_BACK_PAGE_SIZE:
                         return
                     last = hits[-1]
