@@ -101,6 +101,17 @@ def _is_not_found(error: DefenderApiHandlerError) -> bool:
     return getattr(response, "status_code", None) == 404
 
 
+def _floor_second(value: datetime) -> datetime:
+    """Return a date without its fraction of a second."""
+    return value.replace(microsecond=0)
+
+
+def _ceil_second(value: datetime) -> datetime:
+    """Return a date rounded up to the next whole second."""
+    floored = _floor_second(value)
+    return floored if floored == value else floored + timedelta(seconds=1)
+
+
 def _evidence_values(alert: dict[str, Any]) -> set[str]:
     """Return the normalized observable values of the evidence of an alert.
 
@@ -313,14 +324,17 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         requests run out before the first window is read, the end of that window is
         returned and the next read halves it further. A `MIN_HIT_WINDOW` window
         still capped cannot be split: at `since`, its alerts are a lower bound and
-        the next read starts after it; later in the read, the read stops at its start.
+        the next read starts at its end; later in the read, the read stops at its
+        start. The alerts filter has a one-second precision, so the windows end
+        and are split on whole seconds: no alert falls between a window read and
+        the date returned after it.
 
         :param first_end: End of the first window to read (see `collect_hits`).
         :return: The alerts; `None` when every window was read, otherwise the date
             until which the alerts are complete; and, when that date is `since`, the
             end of the first window still to read, if any.
         """
-        now = self._clock()
+        now = _ceil_second(self._clock())
         windows = [(since, now)]
         if first_end is not None and since < first_end < now:
             windows = [(first_end, now), (since, first_end)]
@@ -335,11 +349,11 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
             if len(window_alerts) < MAX_HIT_ALERTS:
                 alerts.extend(window_alerts)
                 continue
-            if end - start <= MIN_HIT_WINDOW:
+            middle = _floor_second(start + (end - start) / 2)
+            if end - start <= MIN_HIT_WINDOW or middle <= start:
                 if start <= since:
-                    return alerts + window_alerts, since, None
+                    return alerts + window_alerts, end, None
                 return alerts, start, None
-            middle = start + (end - start) / 2
             windows.extend([(middle, end), (start, middle)])
         return alerts, None, None
 

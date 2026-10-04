@@ -1076,7 +1076,7 @@ def test_adapter_reports_a_capped_minimal_window_at_the_start_as_a_lower_bound(
     monkeypatch,
 ):
     """A smallest window still capped cannot be split: its alerts are a lower bound
-    and the reconciler moves past it, never re-reading it by offset."""
+    and the next read starts at its end, never re-reading it by offset."""
     monkeypatch.setattr(
         "microsoft_defender_intel_connector.deployment.MAX_HIT_ALERTS", 2
     )
@@ -1091,9 +1091,53 @@ def test_adapter_reports_a_capped_minimal_window_at_the_start_as_a_lower_bound(
     collection = adapter.collect_hits([make_deployment()], HIT_SINCE)
 
     assert isinstance(collection, HitCollection)
-    assert (collection.complete_until, collection.resume) == (HIT_SINCE, None)
+    assert (collection.complete_until, collection.resume) == (HIT_UNTIL, None)
     assert len(collection.hits) == 2
     connector.api.list_alerts.assert_called_once_with(HIT_SINCE, 2, until=HIT_UNTIL)
+
+
+def test_adapter_hit_windows_are_split_and_resumed_on_whole_seconds(monkeypatch):
+    """The alerts filter has a one-second precision: a window bound or a returned
+    date with a fraction of a second would leave alerts between the read and it."""
+    monkeypatch.setattr(
+        "microsoft_defender_intel_connector.deployment.MAX_HIT_ALERTS", 2
+    )
+    monkeypatch.setattr(
+        "microsoft_defender_intel_connector.deployment.MAX_HIT_WINDOW_READS", 2
+    )
+    since = datetime(2026, 10, 3, 11, 0, 0, 300000, tzinfo=UTC)
+    connector = build_connector()
+    connector.api.list_alerts = MagicMock(
+        return_value=[
+            {
+                "alertCreationTime": "2026-10-03T11:00:00.500Z",
+                "evidence": [{"ipAddress": "198.51.100.7"}],
+            }
+        ]
+        * 2
+    )
+    clock = datetime(2026, 10, 3, 11, 0, 9, 700000, tzinfo=UTC)
+    adapter = MicrosoftDefenderDeploymentAdapter(connector, clock=lambda: clock)
+
+    collection = adapter.collect_hits([make_deployment()], since)
+
+    bounds = [call.kwargs["until"] for call in connector.api.list_alerts.call_args_list]
+    assert bounds == [
+        datetime(2026, 10, 3, 11, 0, 10, tzinfo=UTC),
+        datetime(2026, 10, 3, 11, 0, 5, tzinfo=UTC),
+    ]
+    assert collection.complete_until == since
+    assert collection.resume == datetime(2026, 10, 3, 11, 0, 2, tzinfo=UTC)
+
+    connector.api.list_alerts.reset_mock()
+    capped_second = adapter.collect_hits(
+        [make_deployment()], since, resume=collection.resume
+    )
+
+    # [since, 11:00:02) splits to [since, 11:00:01), the smallest window: the next
+    # read starts at its whole-second end, not at `since` plus a step.
+    assert capped_second.complete_until == datetime(2026, 10, 3, 11, 0, 1, tzinfo=UTC)
+    assert capped_second.resume is None
 
 
 def test_adapter_ignores_a_resume_outside_the_read_period(monkeypatch):

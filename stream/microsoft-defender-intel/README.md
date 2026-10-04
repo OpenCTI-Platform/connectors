@@ -97,7 +97,8 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
   is one of its evidence file hashes, IP addresses or URLs (domain indicators match the URL host); hits already
   reported are never counted twice. The alerts API has no ordering, so reads are never continued by offset: a time
   window reaching 10,000 alerts is read again by halves, down to one second (8 requests per run at most), and the next
-  run resumes at the first window left unread. A single second holding 10,000 alerts or more counts as a lower bound.
+  run resumes at the first window left unread. Windows are split on whole seconds, the precision of the alerts filter.
+  A single second holding 10,000 alerts or more counts as a lower bound.
   An alert without a creation time or without a list of evidence objects fails the read: the next run reads the same
   window again.
 - **Permissions**: the application needs `Ti.ReadWrite.All` (already required) and `Alert.Read.All` (WindowsDefenderATP
