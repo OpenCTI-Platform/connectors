@@ -115,7 +115,7 @@ does not exist), and detection hits are counted with a sighting of the indicator
 | Indicator upserted in Cortex XDR            | `deployed`, with the Cortex XDR `rule_id` of its first IOC as external id                                 |
 | Indicator rejected by Cortex XDR            | `failed`, with the API error, the HTTP status and the Cortex XDR response                                 |
 | Indicator without any supported observable  | Nothing: the indicator is never pushed                                                                    |
-| Delete event processed                      | `removed` (also when the IOC was already absent from Cortex XDR); a failed deletion is not reported      |
+| Delete event processed                      | `removed` (also when the IOC was already absent from Cortex XDR); the IOCs of values another valid OpenCTI indicator (neither revoked nor expired) holds are kept; a failed deletion, or a deletion skipped because the other indicators cannot be read, is not reported |
 | Reconciliation, indicator present           | `active` when Cortex XDR holds an IOC for every value of the indicator                                    |
 | Reconciliation, indicator partly present    | The indicator is upserted again, which restores its missing IOCs, and reported `deployed` (`failed` if Cortex XDR rejects it); a `failed` indicator waits for an analyst retry |
 | Reconciliation, indicator absent            | `removed` (deleted or expired in Cortex XDR)                                                              |

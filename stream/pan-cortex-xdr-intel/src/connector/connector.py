@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
 from connector.deployment import describe_error, rule_ids_of
@@ -11,6 +13,11 @@ from connectors_sdk import (
     ApiRateLimitError,
     ApiServerError,
     ApiUnauthorizedError,
+)
+from connectors_sdk.connectors.stream.deployment import (
+    extract_pattern_values,
+    normalize_value,
+    parse_datetime,
 )
 from cortex_xdr_client import CortexXdrApiError
 from pydantic import ValidationError
@@ -31,6 +38,10 @@ _SUPPORTED_OBSERVABLE_TYPES = {
     "stixfile",
     "url",
 }
+
+
+class SharedValueLookupError(Exception):
+    """The OpenCTI indicators sharing the values of a deleted indicator cannot be read."""
 
 
 class StreamMessage(Protocol):
@@ -309,12 +320,67 @@ class Connector:
         if self.assurance is not None:
             self.assurance.report_removed(data)
 
+    def _values_kept_for_other_indicators(
+        self, values: Sequence[str], indicator_id: str | None
+    ) -> set[str]:
+        """Return the IOC values another valid OpenCTI indicator still holds.
+
+        Cortex XDR holds one IOC per value: deleting the IOC of a value another
+        indicator shares would take that indicator offline as well. Revoked
+        indicators and indicators whose `valid_until` is past do not keep a value.
+
+        Raises:
+            SharedValueLookupError: When OpenCTI cannot be queried.
+        """
+        wanted = {
+            normalized: value
+            for value in values
+            if (normalized := normalize_value(value)) is not None
+        }
+        try:
+            indicators = self.helper.api.indicator.list(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "pattern",
+                            "values": [f"'{value}'" for value in values],
+                            "operator": "contains",
+                            "mode": "or",
+                        },
+                        {"key": "revoked", "values": ["false"]},
+                    ],
+                    "filterGroups": [],
+                },
+                getAll=True,
+            )
+        except Exception as err:
+            raise SharedValueLookupError(
+                f"Cannot read the OpenCTI indicators sharing its values: {err}"
+            ) from err
+        now = datetime.now(UTC)
+        kept: set[str] = set()
+        for indicator in indicators or []:
+            if indicator_id is not None and indicator.get("id") == indicator_id:
+                continue
+            valid_until = parse_datetime(indicator.get("valid_until"))
+            if valid_until is not None and valid_until <= now:
+                continue
+            for pattern_value in extract_pattern_values(indicator.get("pattern")):
+                normalized = normalize_value(pattern_value.value)
+                if normalized in wanted:
+                    kept.add(wanted[normalized])
+        return kept
+
     def _handle_delete(self, octi_indicator: OctiIndicator) -> bool:
         """Delete `octi_indicator`'s supported observables from Cortex XDR.
 
+        The IOCs of values another valid OpenCTI indicator holds are kept.
+
         Returns:
-            `True` when the deletion was sent, `False` when no Cortex XDR IOC could
-            be extracted (nothing was sent).
+            `True` when the IOCs are deleted or kept for other indicators, `False`
+            when no Cortex XDR IOC could be extracted or the other indicators
+            cannot be read (nothing was sent).
         """
         # Extract Cortex XDR IOCs from the indicator's observables
         xdr_iocs = self._extract_xdr_iocs(octi_indicator)
@@ -329,9 +395,28 @@ class Connector:
             )
             return False
 
+        values = list(dict.fromkeys(ioc.indicator for ioc in xdr_iocs))
+        try:
+            kept = self._values_kept_for_other_indicators(values, octi_indicator.id)
+        except SharedValueLookupError as err:
+            self.helper.connector_logger.error(
+                "Cannot check the other indicators of the deleted IOC(s), "
+                "skipping the deletion",
+                {"indicator_id": octi_indicator.id, "error": str(err)},
+            )
+            return False
+        if kept:
+            self.helper.connector_logger.info(
+                "IOC(s) kept in Cortex XDR for other OpenCTI indicators",
+                {"indicator_id": octi_indicator.id, "kept": len(kept)},
+            )
+        deleted = [value for value in values if value not in kept]
+        if not deleted:
+            return True
+
         self.helper.connector_logger.debug(
             "Deleting IOC(s) from Cortex XDR",
-            {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
+            {"indicator_id": octi_indicator.id, "xdr_iocs": len(deleted)},
         )
 
         # Delete all the IOCs corresponding to the filters on Cortex XDR
@@ -340,14 +425,14 @@ class Connector:
                 {
                     "field": "indicator",
                     "operator": "IN",
-                    "value": [ioc.indicator for ioc in xdr_iocs],
+                    "value": deleted,
                 }
             ]
         )
 
         self.helper.connector_logger.info(
             "Successfully deleted IOC(s) from Cortex XDR",
-            {"indicator_id": octi_indicator.id, "xdr_iocs": len(xdr_iocs)},
+            {"indicator_id": octi_indicator.id, "xdr_iocs": len(deleted)},
         )
         return True
 

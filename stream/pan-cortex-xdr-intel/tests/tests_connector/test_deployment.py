@@ -254,6 +254,76 @@ def test_failed_delete_is_not_reported(connector):
     connector.assurance.report_push_failed.assert_not_called()
 
 
+def file_indicator():
+    indicator = make_indicator()
+    indicator["pattern"] = (
+        f"[file:hashes.'SHA-256' = '{SHA256}' OR file:hashes.MD5 = '{MD5}']"
+    )
+    indicator["extensions"][OPENCTI_EXTENSION_ID]["observable_values"] = [
+        {"type": "StixFile", "hashes": {"SHA-256": SHA256, "MD5": MD5}}
+    ]
+    return indicator
+
+
+def test_delete_keeps_the_iocs_another_valid_indicator_holds(connector):
+    connector.helper.api.indicator.list.return_value = [
+        {"id": INDICATOR_ID, "pattern": f"[file:hashes.MD5 = '{MD5}']"},
+        {"id": OTHER_ID, "pattern": f"[file:hashes.MD5 = '{MD5.upper()}']"},
+        {
+            "id": "expired-id",
+            "pattern": f"[file:hashes.'SHA-256' = '{SHA256}']",
+            "valid_until": "2020-01-01T00:00:00.000Z",
+        },
+    ]
+    indicator = file_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    connector.client.delete_iocs.assert_called_once_with(
+        [{"field": "indicator", "operator": "IN", "value": [SHA256]}]
+    )
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+    filters = connector.helper.api.indicator.list.call_args.kwargs["filters"]
+    assert filters["filters"] == [
+        {
+            "key": "pattern",
+            "values": [f"'{SHA256}'", f"'{MD5}'"],
+            "operator": "contains",
+            "mode": "or",
+        },
+        {"key": "revoked", "values": ["false"]},
+    ]
+
+
+def test_delete_of_values_all_kept_sends_nothing_and_is_reported(connector):
+    connector.helper.api.indicator.list.return_value = [
+        {
+            "id": OTHER_ID,
+            "pattern": "[ipv4-addr:value = '198.51.100.7']",
+            "valid_until": "2999-01-01T00:00:00.000Z",
+        }
+    ]
+    indicator = make_indicator()
+
+    connector._process_message(make_message("delete", indicator))
+
+    connector.client.delete_iocs.assert_not_called()
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
+def test_delete_without_the_other_indicators_is_skipped(connector):
+    connector.helper.api.indicator.list.side_effect = RuntimeError("OpenCTI down")
+
+    connector._process_message(make_message("delete", make_indicator()))
+
+    connector.client.delete_iocs.assert_not_called()
+    connector.assurance.report_removed.assert_not_called()
+    meta = connector.helper.connector_logger.error.call_args.args[1]
+    assert meta["error"] == (
+        "Cannot read the OpenCTI indicators sharing its values: OpenCTI down"
+    )
+
+
 def test_connector_works_without_write_back():
     connector = build_connector()
 
