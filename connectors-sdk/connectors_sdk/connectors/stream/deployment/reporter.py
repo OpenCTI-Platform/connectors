@@ -945,6 +945,9 @@ class DeploymentReporter:
     ) -> None:
         """Put reports back in the queue, behind nothing newer for the same indicator.
 
+        Once the reporter is closed, no flush is armed: the final flush was the
+        last attempt.
+
         Args:
             reports: The reports that could not be sent yet, oldest first.
             write_back_unavailable: ``True`` while the write-back itself is not
@@ -970,7 +973,7 @@ class DeploymentReporter:
             self._buffer = merged
             if write_back_unavailable:
                 self._waiting_for_write_back = True
-            if self._flush_timer is None and self._buffer:
+            if self._flush_timer is None and self._buffer and not self._closed:
                 timer = threading.Timer(
                     self._flush_interval if delay is None else delay,
                     self._flush_on_timer,

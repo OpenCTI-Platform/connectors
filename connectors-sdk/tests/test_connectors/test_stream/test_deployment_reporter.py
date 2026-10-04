@@ -1416,6 +1416,21 @@ def test_close_never_waits_longer_than_its_timeout_for_held_sends(
     assert batch["reports"][0]["indicatorId"] == "a"
 
 
+def test_close_arms_no_retry_after_an_undelivered_final_flush(
+    graphql_helper, make_reporter, router
+):
+    """The final flush is the last attempt: no timer keeps retrying after close."""
+    router.handlers["IndicatorReportDeployments("] = ConnectionError("unreachable")
+    reporter = make_reporter(graphql_helper)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="active"))
+
+    reporter.close()
+
+    assert len(router.calls_of("IndicatorReportDeployments(")) == 1
+    assert list(reporter._buffer) == ["a"]
+    assert reporter._flush_timer is None
+
+
 def test_exit_flush_is_bounded(graphql_helper, make_reporter, monkeypatch):
     reporter = make_reporter(graphql_helper)
     close = MagicMock()
