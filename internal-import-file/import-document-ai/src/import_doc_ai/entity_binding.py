@@ -351,8 +351,8 @@ class BindingSummary:
 class ResolutionCache:
     """A bounded, thread-safe LRU cache of resolutions that expire.
 
-    A miss (``None``) is cached like a match: the platform answered that no
-    entity matches the name.
+    ``None`` records a miss: the platform answered that no entity matches the
+    name. The binder stores misses only.
     """
 
     def __init__(
@@ -552,8 +552,9 @@ class ExistingEntityBinder:
     """Bind the named entities of extracted bundles to existing OpenCTI entities.
 
     One binder serves every document the connector imports: it remembers
-    whether the platform exposes ``curationResolve`` and caches the
-    resolutions across documents, per user and draft, for a few minutes.
+    whether the platform exposes ``curationResolve`` and caches the names it
+    resolved to nothing across documents, per user and draft, for a few
+    minutes. A match is looked up again for every document.
     """
 
     def __init__(
@@ -575,8 +576,8 @@ class ExistingEntityBinder:
                 may look up.
             lookups_per_request (int): The most names a single request looks
                 up, between 1 and ``LOOKUPS_PER_REQUEST``.
-            cache (ResolutionCache | None): The cross-document cache
-                (a new one by default).
+            cache (ResolutionCache | None): The cross-document cache of
+                the names that resolve to nothing (a new one by default).
         """
         if not 1 <= lookups_per_request <= LOOKUPS_PER_REQUEST:
             raise ValueError(
@@ -696,11 +697,9 @@ class ExistingEntityBinder:
         to_look_up: list[tuple[tuple, _Candidate]] = []
         for key, candidate in pending.items():
             cache_key = (*scope, *key)
-            cached, resolution = self._cache.get(cache_key)
+            cached, _ = self._cache.get(cache_key)
             if cached:
                 summary.cache_hits += 1
-                if resolution is not None:
-                    resolutions[key] = resolution
             elif not self._platform_supported:
                 summary.unresolved_names += 1
             elif len(to_look_up) >= self._max_lookups_per_document:
@@ -761,8 +760,13 @@ class ExistingEntityBinder:
                         },
                     )
                     continue
-                self._cache.put(cache_key, result.resolution)
-                if result.resolution is not None:
+                # A match is never reused for another document: the applicant
+                # may lose sight of the entity meanwhile (markings, sharing,
+                # draft), and only a lookup with their current permissions
+                # holds. A miss grants nothing, so it is cached.
+                if result.resolution is None:
+                    self._cache.put(cache_key, None)
+                else:
                     resolutions[candidate.key] = result.resolution
         if after_failures:
             self._helper.connector_logger.warning(

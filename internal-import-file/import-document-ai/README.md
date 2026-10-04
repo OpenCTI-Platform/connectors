@@ -189,7 +189,7 @@ Nothing is bound when OpenCTI matches nothing, or matches an entity of another t
 The lookups:
 
 - Run with the permissions of the user who triggered the import, and in the draft the import targets, so that a document is never bound to an entity this user cannot see there.
-- Are sent once per distinct name and type of a document. The answers, matches and misses alike, are cached across documents for 10 minutes, per user and draft, 1,024 entries at most.
+- Are sent once per distinct name and type of a document. The names that resolve to nothing are cached across documents for 10 minutes, per user and draft, 1,024 entries at most. A match is never reused for another document: it is looked up again with the current permissions of the user, who may have lost sight of the entity meanwhile.
 - Are batched: one request resolves up to 20 names (one aliased `curationResolve` field per name), so a document costs at most 25 requests.
 - Are bounded to 500 per document. Beyond, the threat entities (intrusion sets, threat actors, campaigns, malware, tools) are looked up first and the others imported as extracted, with a warning.
 - Stop for the rest of a document after 3 consecutive failed requests, the remaining entities being imported as extracted, with a warning.

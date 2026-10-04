@@ -973,7 +973,7 @@ def test_bind_looks_each_name_up_once_per_document():
     assert [binding.alias_added for binding in summary.bindings] == [True, False]
 
 
-def test_bind_serves_the_next_documents_from_the_cache():
+def test_bind_serves_the_misses_of_the_next_documents_from_the_cache():
     cl0p_id = pycti.Malware.generate_id("Cl0p")
     platform = FakePlatform(
         {
@@ -987,17 +987,40 @@ def test_bind_serves_the_next_documents_from_the_cache():
     first_bundle, first_summary = binder.bind(bundle)
     second_bundle, second_summary = binder.bind(bundle)
 
-    # Matches and misses alike are served from the cache
-    assert len(platform.calls) == 2
+    # The miss is served from the cache; the match is looked up again, with
+    # the permissions the applicant has now
+    assert platform.calls.count(("Malware", "Clop")) == 2
+    assert platform.calls.count(("Intrusion-Set", "TA505")) == 1
     assert (first_summary.lookups, first_summary.cache_hits) == (2, 0)
-    assert (second_summary.lookups, second_summary.cache_hits) == (0, 2)
+    assert (second_summary.lookups, second_summary.cache_hits) == (1, 1)
     assert as_json(second_bundle) == as_json(first_bundle)
     assert len(second_summary.bindings) == 1
 
     # But another user may see other entities: the cache is per user
     helper.applicant_id = "a8b6dbb4-b8d6-5bd8-9d0c-2b7e2fe17e6c"
     binder.bind(bundle)
-    assert len(platform.calls) == 4
+    assert len(platform.calls) == 5
+
+
+def test_bind_never_reuses_a_match_the_applicant_lost_sight_of():
+    # Given a document bound to Cl0p, which the applicant then loses sight of
+    # (a marking, an organization sharing or the draft changed)
+    cl0p_id = pycti.Malware.generate_id("Cl0p")
+    platform = FakePlatform(
+        {("Malware", "Clop"): resolution("Malware", "Cl0p", cl0p_id)}
+    )
+    binder, _ = build_binder(platform)
+    bundle = bundle_of(malware("Clop"))
+    _, first_summary = binder.bind(bundle)
+    platform.answers[("Malware", "clop")] = None
+
+    # When the next document names it
+    second_bundle, second_summary = binder.bind(bundle)
+
+    # Then it is imported as extracted, never bound to the entity
+    assert len(first_summary.bindings) == 1
+    assert second_summary.bindings == []
+    assert second_bundle is bundle
 
 
 def test_cached_resolutions_expire():
@@ -1276,10 +1299,11 @@ def test_bind_imports_a_name_whose_answer_is_invalid_as_extracted(answer: object
     assert warning_context["error"]
     helper.connector_logger.info.assert_not_called()
 
-    # And a failure is not cached: the next document looks the name up again
+    # And neither a failure nor a match is cached: the next document looks
+    # both names up again
     binder.bind(bundle_of(clop, ta505))
     assert platform.calls.count(("Malware", "Clop")) == 2
-    assert platform.calls.count(("Intrusion-Set", "TA505")) == 1
+    assert platform.calls.count(("Intrusion-Set", "TA505")) == 2
 
 
 def test_bind_stops_looking_up_after_consecutive_failed_requests():
