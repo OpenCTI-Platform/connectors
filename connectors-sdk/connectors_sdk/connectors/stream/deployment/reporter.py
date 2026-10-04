@@ -815,19 +815,20 @@ class DeploymentReporter:
     def holding_queued_reports(self) -> Iterator[None]:
         """Hold the queued (stream) reports while a snapshot based batch is built and sent.
 
-        The reports queued before are sent first and the ones queued while held are
-        sent right after, so an outcome newer than the snapshot is always applied last.
+        The reports queued before are sent first, under the same hold, and the ones
+        queued while held are sent right after (also when the block raises), so an
+        outcome newer than the snapshot is always applied last.
 
         Yields:
             Nothing; the queued reports are held until the block ends.
         """
-        self.flush()
         self._send_lock.acquire()
         try:
+            self._flush_queued()
             yield
         finally:
             self._send_lock.release()
-        self.flush()
+            self.flush()
 
     def flush(self, *, wait: bool = True) -> DeploymentBatchResult:
         """Send the queued reports now.

@@ -1340,6 +1340,44 @@ def test_timer_flush_errors_never_raise(graphql_helper, make_reporter, monkeypat
     reporter._send_lock.release()
 
 
+def test_reports_queued_before_a_hold_are_sent_under_it(
+    graphql_helper, make_reporter, router, monkeypatch
+):
+    """No timer can send a newer outcome between the queue drained before the hold
+    and the snapshot taken under it."""
+    reporter = make_reporter(graphql_helper)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="deployed"))
+    held_while_sending = []
+    flush_queued = reporter._flush_queued
+
+    def recording_flush_queued():
+        held_while_sending.append(reporter._send_lock.locked())
+        return flush_queued()
+
+    monkeypatch.setattr(reporter, "_flush_queued", recording_flush_queued)
+
+    with reporter.holding_queued_reports():
+        assert len(router.calls_of("IndicatorReportDeployments(")) == 1
+
+    assert held_while_sending[0] is True
+
+
+def test_reports_held_by_a_failing_block_are_still_sent(
+    graphql_helper, make_reporter, router
+):
+    reporter = make_reporter(graphql_helper)
+
+    with pytest.raises(RuntimeError, match="boom"):
+        with reporter.holding_queued_reports():
+            reporter.enqueue(DeploymentReport(indicator_id="a", status="removed"))
+            raise RuntimeError("boom")
+
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert batch["reports"][0]["indicatorId"] == "a"
+    assert reporter._send_lock.acquire(blocking=False)
+    reporter._send_lock.release()
+
+
 def test_timer_flush_never_waits_for_held_sends(graphql_helper, make_reporter, router):
     """While a reconciliation holds the sends, the timer arms itself again instead
     of waiting (the send lock is not reentrant: waiting here would never end)."""
