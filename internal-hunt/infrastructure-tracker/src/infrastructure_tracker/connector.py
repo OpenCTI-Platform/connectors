@@ -90,11 +90,11 @@ def scout_window(window: HuntTimeWindow, today: date) -> tuple[date, date] | Non
 
 
 def within_window(result: SourceResult, window: HuntTimeWindow) -> SourceResult:
-    """Keep the hosts of a current-view source last scanned within the run window.
+    """Keep the hosts a source last scanned within the run window.
 
     Censys and Silent Push search their current view of the internet, without
-    time bounds: a host whose last scan falls outside the window is dropped,
-    and a host without scan time is kept. The records read still count against
+    time bounds, and urlscan.io searches whole days: a host whose last scan
+    falls outside the window is dropped, and a host without scan time is kept. The records read still count against
     the run budget. Once a host is dropped, the source total, which also counts
     hosts outside the window, is no longer a hit count: only the hosts kept
     count, and the truncation of the source is kept apart.
@@ -312,9 +312,12 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
         if client is None:
             raise HuntExecutionError(f"The '{source}' source is not configured.")
         if source == "urlscan":
+            # The query is bounded by whole days: the scans outside the run window are dropped from its answer
             start = window.start.astimezone(timezone.utc).date()
             end = window.end.astimezone(timezone.utc).date()
-            return client.search(query, start, end, limit, deadline)
+            return within_window(
+                client.search(query, start, end, limit, deadline), window
+            )
         if source == "cymru_scout":
             dates = scout_window(window, _today())
             if dates is None:

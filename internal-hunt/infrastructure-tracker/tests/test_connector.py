@@ -436,6 +436,36 @@ def test_execute_merges_the_sources_and_skips_failures(
     assert result.total_hits == 1 and result.truncated is False
 
 
+def test_execute_keeps_the_urlscan_scans_of_a_sub_day_window(
+    connector_factory, requests_mock
+):
+    # Given a six-hour window and urlscan answering for its whole day
+    requests_mock.get(
+        URLSCAN_URL,
+        json={
+            "results": [
+                {"page": {"ip": "8.8.8.8"}, "task": {"time": "2026-10-03T08:30:00Z"}},
+                {"page": {"ip": "9.9.9.9"}, "task": {"time": "2026-10-03T19:00:00Z"}},
+            ],
+            "total": 2,
+        },
+    )
+    connector = connector_factory(ALL_SOURCES)
+    window = HuntTimeWindow(
+        start=datetime(2026, 10, 3, 6, tzinfo=timezone.utc),
+        end=datetime(2026, 10, 3, 12, tzinfo=timezone.utc),
+    )
+
+    # When the plan runs
+    result = connector.execute(plan_query({"urlscan": ["q"]}), window, HuntLimits())
+
+    # Then only the scan within the window is a hit
+    assert [event.fields["ip"] for event in result.events] == ["8.8.8.8"]
+    assert result.total_hits == 1
+    # requests-mock lower-cases the parsed query string
+    assert "date:[2026-10-03 to 2026-10-03]" in requests_mock.last_request.qs["q"][0]
+
+
 @patch(f"{TRACKER}._today", return_value=date(2027, 6, 1))
 def test_execute_skips_scout_for_old_windows(_, connector_factory, requests_mock):
     connector = connector_factory(ALL_SOURCES)

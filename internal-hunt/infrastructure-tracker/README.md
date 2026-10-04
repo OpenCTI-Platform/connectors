@@ -167,8 +167,9 @@ configured source supports its fingerprints.
 
 1. The sources are queried one after the other, within the run timeout. Censys and Silent Push search their current
    view of the internet, and only the hosts they last scanned within the run window are kept (a host without a scan
-   time is kept); urlscan.io searches the scans of the run window; Team Cymru Scout searches the most recent 30 days of
-   the run window within its 90 days of history (a window older than that is skipped).
+   time is kept); urlscan.io searches the days of the run window, and only the scans within the window are kept; Team
+   Cymru Scout searches the most recent 30 days of the run window within its 90 days of history (a window older than
+   that is skipped).
 2. A failing source is logged and skipped; the run fails only when every query fails. A source timeout fails the run.
 3. The queries share the run `max_results`: each query reads at most an equal share of what is left of it, so the run
    never reads more than `max_results` records in total, whatever the number of queries. Hosts are merged by IP
