@@ -1078,11 +1078,30 @@ class DeploymentReporter:
         return report is not None and self.enqueue(report)
 
     def _flush_on_timer(self) -> None:
-        """Flush queued reports from the timer thread (never raises)."""
+        """Flush queued reports from the timer thread (never raises).
+
+        The timer never waits for the send lock: while a reconciliation (or another
+        flush) holds it, the flush is armed again after the flush interval, one
+        timer at a time, and ``holding_queued_reports`` sends the queue once the
+        reconciliation releases it.
+        """
         with self._buffer_lock:
             self._flush_timer = None
         try:
-            self.flush()
+            if not self._send_lock.acquire(blocking=False):
+                with self._buffer_lock:
+                    if self._flush_timer is None and self._buffer and not self._closed:
+                        timer = threading.Timer(
+                            self._flush_interval, self._flush_on_timer
+                        )
+                        timer.daemon = True
+                        self._flush_timer = timer
+                        timer.start()
+                return
+            try:
+                self._flush_queued()
+            finally:
+                self._send_lock.release()
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot flush the deployment reports.",

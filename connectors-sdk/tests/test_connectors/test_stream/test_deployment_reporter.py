@@ -1299,15 +1299,12 @@ def test_a_pending_immediate_flush_is_scheduled_once(
 
     monkeypatch.setattr(threading, "Timer", recording_timer)
     reporter = make_reporter(graphql_helper)
-    reporter._send_lock.acquire()
-    try:
+    with reporter.holding_queued_reports():
         for index in range(MAX_BATCH_SIZE + 10):
             reporter.enqueue(
                 DeploymentReport(indicator_id=f"i-{index}", status="active")
             )
         assert reporter._flush_soon is True
-    finally:
-        reporter._send_lock.release()
 
     _wait_until(lambda: _sent_reports(router) == MAX_BATCH_SIZE + 10)
     assert intervals.count(0.0) == 1
@@ -1333,9 +1330,53 @@ def test_queue_flushes_on_a_timer(graphql_helper, make_reporter, router):
 def test_timer_flush_errors_never_raise(graphql_helper, make_reporter, monkeypatch):
     """Errors of a timer flush are logged."""
     reporter = make_reporter(graphql_helper)
-    monkeypatch.setattr(reporter, "flush", MagicMock(side_effect=RuntimeError("boom")))
+    monkeypatch.setattr(
+        reporter, "_flush_queued", MagicMock(side_effect=RuntimeError("boom"))
+    )
     reporter._flush_on_timer()
     graphql_helper.connector_logger.warning.assert_called_once()
+    assert reporter._send_lock.acquire(blocking=False)
+    reporter._send_lock.release()
+
+
+def test_timer_flush_never_waits_for_held_sends(graphql_helper, make_reporter, router):
+    """While a reconciliation holds the sends, the timer arms itself again instead
+    of waiting (the send lock is not reentrant: waiting here would never end)."""
+    reporter = make_reporter(graphql_helper)
+
+    with reporter.holding_queued_reports():
+        reporter._flush_on_timer()
+        assert reporter._flush_timer is None  # nothing queued, nothing armed
+
+        reporter.enqueue(DeploymentReport(indicator_id="a", status="active"))
+        queued_timer = reporter._flush_timer
+        reporter._flush_on_timer()
+
+        assert reporter._flush_timer is not None
+        assert reporter._flush_timer is not queued_timer
+        assert router.calls_of("IndicatorReportDeployments(") == []
+        queued_timer.cancel()
+
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert batch["reports"][0]["indicatorId"] == "a"
+    assert reporter._flush_timer is None
+
+
+def test_timer_flush_is_not_armed_again_once_closed(
+    graphql_helper, make_reporter, router
+):
+    """Closing flushes the queue itself: a timer firing meanwhile does not re-arm."""
+    reporter = make_reporter(graphql_helper)
+    reporter.enqueue(DeploymentReport(indicator_id="a", status="active"))
+    reporter._flush_timer.cancel()
+
+    with reporter._send_lock:
+        reporter._closed = True
+        reporter._flush_on_timer()
+
+    assert reporter._flush_timer is None
+    reporter.close()
+    assert len(router.calls_of("IndicatorReportDeployments(")) == 1
 
 
 def test_close_flushes_and_stops_queueing(graphql_helper, make_reporter, router):
