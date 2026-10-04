@@ -5,7 +5,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Protocol
 
-from connector.deployment import describe_error, rule_ids_of
+from connector.deployment import describe_error, failure_reason, rule_ids_of
 from connector.models import CortexXdrIoc, OctiIndicator
 from connectors_sdk import (
     ApiForbiddenError,
@@ -313,7 +313,7 @@ class Connector:
     def _report_failed(self, data: dict[str, Any], error: BaseException) -> None:
         """Report an indicator rejected by Cortex XDR (no-op without write-back)."""
         if self.assurance is not None:
-            self.assurance.report_push_failed(data, describe_error(error))
+            self.assurance.report_push_failed(data, failure_reason(error))
 
     def _report_removed(self, data: dict[str, Any]) -> None:
         """Report an indicator deleted from Cortex XDR (no-op without write-back)."""
@@ -543,7 +543,7 @@ class Connector:
                     {
                         "event": event,
                         "entity_data": entity_data,
-                        "error": err,
+                        "error": describe_error(err),
                     },
                 )
                 raise  # let `pycti` kill the connector process
@@ -555,7 +555,7 @@ class Connector:
                     {
                         "event": event,
                         "entity_data": entity_data,
-                        "error": err,
+                        "error": describe_error(err),
                     },
                 )
                 return  # skip the event and continue

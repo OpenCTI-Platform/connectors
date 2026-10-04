@@ -195,11 +195,13 @@ def test_rejected_indicator_is_reported_failed_and_the_stream_continues(connecto
 
     reported, message = connector.assurance.report_push_failed.call_args.args
     assert reported == indicator
-    assert message == (
+    assert message == "Cortex XDR refused the IOC upsert: invalid request"
+    connector.assurance.report_pushed.assert_not_called()
+    logged = connector.helper.connector_logger.error.call_args.args[1]["error"]
+    assert logged == (
         'Error while fetching Cortex XDR API: Bad request (HTTP 400) - {"err_msg": '
         '"invalid IOC"}'
     )
-    connector.assurance.report_pushed.assert_not_called()
 
 
 def test_fatal_api_error_is_reported_failed_before_stopping(connector):
@@ -211,7 +213,17 @@ def test_fatal_api_error_is_reported_failed_before_stopping(connector):
         connector._process_message(make_message("create", make_indicator()))
 
     message = connector.assurance.report_push_failed.call_args.args[1]
-    assert message.endswith("Server error (HTTP 503)")
+    assert message == "Cortex XDR refused the IOC upsert: server error"
+
+
+def test_unreachable_cortex_xdr_is_reported_failed(connector):
+    connector.client.insert_iocs.side_effect = ConnectionError("connection reset")
+
+    with pytest.raises(ConnectionError):
+        connector._process_message(make_message("create", make_indicator()))
+
+    message = connector.assurance.report_push_failed.call_args.args[1]
+    assert message == "Cortex XDR could not be reached for the IOC upsert"
 
 
 def test_unexpected_error_is_reported_failed_before_stopping(connector):
@@ -591,9 +603,38 @@ def test_adapter_push():
     with pytest.raises(ValueError, match="No observable"):
         adapter.push_indicator(indicator)
 
-    connector.client.insert_iocs.side_effect = api_error(ValueError("invalid"))
-    with pytest.raises(CortexXdrDeploymentError, match="invalid"):
-        adapter.push_indicator(make_indicator())
+
+@pytest.mark.parametrize(
+    "error, reason",
+    [
+        (
+            api_error(ApiClientError("Forbidden", status_code=403)),
+            "Cortex XDR refused the IOC upsert: permission denied",
+        ),
+        (
+            api_error(ValueError("invalid")),
+            "Cortex XDR returned an unexpected response to the IOC upsert",
+        ),
+        (
+            ConnectionError("reset"),
+            "Cortex XDR could not be reached for the IOC upsert",
+        ),
+    ],
+)
+def test_adapter_push_raises_the_reason_and_logs_the_detail(error, reason):
+    connector = build_connector()
+    connector.client.insert_iocs.side_effect = error
+
+    with pytest.raises(CortexXdrDeploymentError) as raised:
+        CortexXdrDeploymentAdapter(connector).push_indicator(make_indicator())
+
+    assert str(raised.value) == reason
+    message, meta = connector.helper.connector_logger.warning.call_args.args
+    assert message == "[DEPLOYMENT] Cortex XDR did not take an indicator pushed again."
+    assert meta == {
+        "indicator_id": make_indicator()["id"],
+        "error": describe_error(error),
+    }
 
 
 def test_adapter_collects_hits_from_ioc_alerts():
@@ -872,7 +913,9 @@ def test_stream_outcomes_are_reported_in_one_batch(e2e_connector, router):
     }
     assert failed["indicatorId"] == OTHER_ID
     assert failed["status"] == "failed"
-    assert failed["metadata"]["error_message"].endswith("Bad request (HTTP 400)")
+    assert failed["metadata"]["error_message"] == (
+        "Cortex XDR refused the IOC upsert: invalid request"
+    )
 
 
 def test_reconciliation_and_hits_are_reported(e2e_connector, router):

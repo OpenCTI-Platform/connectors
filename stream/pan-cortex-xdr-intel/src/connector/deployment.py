@@ -33,6 +33,7 @@ from connectors_sdk import (
     VendorIndicator,
 )
 from connectors_sdk.connectors.stream.deployment import (
+    deployment_failure_reason,
     extract_pattern_values,
     normalize_value,
 )
@@ -50,7 +51,13 @@ PUSHED_OBSERVABLE_TYPES = frozenset({"domain-name", "ipv4-addr", "email-addr", "
 """STIX observable types whose `value` the connector pushes as an IOC (besides hashes)."""
 
 MAX_ERROR_DETAIL_LENGTH = 500
-"""Maximum length of the Cortex XDR response appended to a deployment error."""
+"""Maximum length of the Cortex XDR response appended to a logged error."""
+
+PLATFORM_NAME = "Cortex XDR"
+"""Name of the security platform in the deployment failure reasons."""
+
+PUSH_ACTION = "IOC upsert"
+"""What Cortex XDR is asked to do when an indicator is pushed."""
 
 EVENT_VALUE_FIELDS = (
     "action_remote_ip",
@@ -76,7 +83,7 @@ EVENT_VALUE_FIELDS = (
 
 
 def describe_error(error: BaseException) -> str:
-    """Describe a Cortex XDR error for logs and the deployment error message.
+    """Describe a Cortex XDR error in full, for the connector logs.
 
     :param error: The error raised by the client or the connector.
     :return: The message, followed by the HTTP status and the Cortex XDR response body.
@@ -94,6 +101,25 @@ def describe_error(error: BaseException) -> str:
     elif cause is not None:
         message = f"{message}: {cause}"
     return message
+
+
+def failure_reason(error: BaseException) -> str:
+    """Return the reason OpenCTI shows for an indicator Cortex XDR did not take.
+
+    :param error: The error raised by the client or the connector.
+    :return: One short sentence naming Cortex XDR and the cause; the Cortex XDR
+        response is left to the logs (`describe_error`).
+    """
+    cause = error.__cause__
+    if isinstance(cause, ApiClientError):
+        return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, cause.status_code)
+    if isinstance(error, CortexXdrApiError):
+        # Raised by the client on a successful response it cannot read.
+        return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, 200)
+    if isinstance(error, OSError):
+        # Transport errors of `requests` (connection, timeout) are OSErrors.
+        return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION)
+    return str(error) or type(error).__name__
 
 
 def rule_ids_of(response: Any, xdr_iocs: Sequence[CortexXdrIoc]) -> list[str]:
@@ -253,11 +279,22 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         """Push an indicator again, with the stream upsert path.
 
         :return: The `rule_id` of the first Cortex XDR IOC, if known.
-        :raises CortexXdrDeploymentError: When Cortex XDR rejects the indicator.
+        :raises CortexXdrDeploymentError: When Cortex XDR rejects the indicator or
+            cannot be reached, with the reason OpenCTI shows (the Cortex XDR
+            response is logged).
         :raises ValueError: When no observable of the indicator can be pushed.
         """
-        with _readable_errors():
+        try:
             return self._connector.push_indicator(stix_indicator)
+        except (CortexXdrApiError, OSError) as err:
+            self._connector.helper.connector_logger.warning(
+                "[DEPLOYMENT] Cortex XDR did not take an indicator pushed again.",
+                {
+                    "indicator_id": stix_indicator.get("id"),
+                    "error": describe_error(err),
+                },
+            )
+            raise CortexXdrDeploymentError(failure_reason(err)) from err
 
     def collect_hits(
         self, deployments: Sequence[IndicatorDeployment], since: datetime
