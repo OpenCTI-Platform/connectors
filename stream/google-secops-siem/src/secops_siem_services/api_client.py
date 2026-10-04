@@ -324,4 +324,10 @@ class SecOpsEntitiesClient:
             raise SecOpsApiError(
                 "Unexpected IoC matches response: a match is not an object"
             )
-        return matches, bool(payload.get("moreDataAvailable"))
+        # Absent when every match is returned; a string such as "false" is malformed, not true.
+        more_data_available = payload.get("moreDataAvailable", False)
+        if not isinstance(more_data_available, bool):
+            raise SecOpsApiError(
+                "Unexpected IoC matches response: 'moreDataAvailable' is not a boolean"
+            )
+        return matches, more_data_available

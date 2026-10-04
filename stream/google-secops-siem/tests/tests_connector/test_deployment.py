@@ -410,6 +410,14 @@ def test_list_ioc_matches_without_match(secops_client):
         (mock_response({"matches": "oops"}), "'matches' is not a list"),
         (mock_response(["unexpected"]), "'matches' is not a list"),
         (mock_response({"matches": [{"id": "1"}, "x"]}), "a match is not an object"),
+        (
+            mock_response({"matches": [], "moreDataAvailable": "false"}),
+            "'moreDataAvailable' is not a boolean",
+        ),
+        (
+            mock_response({"matches": [], "moreDataAvailable": None}),
+            "'moreDataAvailable' is not a boolean",
+        ),
     ],
 )
 def test_list_ioc_matches_errors(secops_client, response, message):
