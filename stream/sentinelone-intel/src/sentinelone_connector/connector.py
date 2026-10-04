@@ -2,6 +2,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
+from connectors_sdk.connectors.stream.deployment import deployment_failure_reason
 from pycti import OpenCTIConnectorHelper
 from sentinelone_connector.settings import ConnectorSettings
 from sentinelone_services import SentinelOneApiError, SentinelOneClient
@@ -10,6 +11,22 @@ if TYPE_CHECKING:
     from connectors_sdk import DeploymentAssurance
 
 STIX_INDICATOR_PREFIX = "indicator--"
+
+PLATFORM_NAME = "SentinelOne"
+"""Name of the security platform in the deployment failure reasons."""
+
+PUSH_ACTION = "IOC creation"
+"""What SentinelOne is asked to do when an indicator is pushed."""
+
+
+def failure_reason(error: SentinelOneApiError) -> str:
+    """Return the reason OpenCTI shows for an indicator SentinelOne did not take.
+
+    :param error: The error raised by the client.
+    :return: One short sentence naming SentinelOne and the cause; the SentinelOne
+        response is left to the logs.
+    """
+    return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, error.status_code)
 
 
 class SentinelOneIntelConnector:
@@ -107,10 +124,10 @@ class SentinelOneIntelConnector:
         except SentinelOneApiError as err:
             self.helper.connector_logger.warning(
                 "[CREATE] Failed to create Indicator in SentinelOne",
-                {"error": str(err)},
+                {"indicator_id": data.get("id"), "error": str(err)},
             )
             if self.assurance is not None:
-                self.assurance.report_push_failed(data, err)
+                self.assurance.report_push_failed(data, failure_reason(err))
             return
         if uuids is None:
             return

@@ -202,7 +202,7 @@ exist).
 | When                                      | Reported to OpenCTI                                                                                           |
 |-------------------------------------------|---------------------------------------------------------------------------------------------------------------|
 | Indicator created in SentinelOne          | `deployed`, with the `uuid` of the first IOC returned by SentinelOne as external id (when returned)           |
-| Indicator rejected by SentinelOne         | `failed`, with the API error, the HTTP status and the SentinelOne response                                    |
+| Indicator rejected by SentinelOne         | `failed`, with a short reason such as "SentinelOne refused the IOC creation: permission denied" (the SentinelOne response is written to the connector log) |
 | Indicator with an unsupported pattern     | Nothing: the indicator is never pushed                                                                        |
 | Delete event, IOCs of the indicator found | `removed` once they are deleted (nothing is reported when no IOC carries the STIX id of the indicator)        |
 | Reconciliation, indicator present         | `active`                                                                                                      |

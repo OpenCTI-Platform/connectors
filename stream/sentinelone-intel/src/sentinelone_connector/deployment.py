@@ -26,7 +26,8 @@ from connectors_sdk import (
     VendorIndicator,
 )
 from connectors_sdk.connectors.stream.deployment import normalize_value, parse_datetime
-from sentinelone_connector.connector import STIX_INDICATOR_PREFIX
+from sentinelone_connector.connector import STIX_INDICATOR_PREFIX, failure_reason
+from sentinelone_services import SentinelOneApiError
 
 if TYPE_CHECKING:
     from sentinelone_connector.connector import SentinelOneIntelConnector
@@ -104,10 +105,19 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
         """Push an indicator again, with the stream create path.
 
         :return: The `uuid` of the first IOC created, if returned by SentinelOne.
-        :raises SentinelOneApiError: When SentinelOne rejects the indicator.
+        :raises SentinelOneDeploymentError: When SentinelOne rejects the indicator or
+            cannot be reached, with the reason OpenCTI shows (the SentinelOne
+            response is logged).
         :raises ValueError: When the pattern of the indicator is not supported.
         """
-        return self._connector.push_indicator(stix_indicator)
+        try:
+            return self._connector.push_indicator(stix_indicator)
+        except SentinelOneApiError as err:
+            self._connector.helper.connector_logger.warning(
+                "[DEPLOYMENT] SentinelOne did not take an indicator pushed again.",
+                {"indicator_id": stix_indicator.get("id"), "error": str(err)},
+            )
+            raise SentinelOneDeploymentError(failure_reason(err)) from err
 
 
 def build_deployment_assurance(

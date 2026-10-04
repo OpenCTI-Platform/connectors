@@ -65,7 +65,16 @@ SUPPORTED_STIX_PATTERNS = [
 
 
 class SentinelOneApiError(Exception):
-    """Error raised when SentinelOne rejects a request or cannot be reached."""
+    """Error raised when SentinelOne rejects a request or cannot be reached.
+
+    Attributes:
+        status_code: The HTTP status of the SentinelOne response, None when
+            SentinelOne could not be reached.
+    """
+
+    def __init__(self, message: str, status_code: int | None = None) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def describe_response(response: requests.Response) -> str:
@@ -261,11 +270,13 @@ class SentinelOneClient:
         data = response.get("data") if isinstance(response, dict) else None
         if not isinstance(data, list):
             raise SentinelOneApiError(
-                "Unexpected IOC listing response: 'data' is not a list"
+                "Unexpected IOC listing response: 'data' is not a list",
+                status_code=200,
             )
         if not all(isinstance(item, dict) for item in data):
             raise SentinelOneApiError(
-                "Unexpected IOC listing response: an IOC is not an object"
+                "Unexpected IOC listing response: an IOC is not an object",
+                status_code=200,
             )
         pagination = response.get("pagination") or {}
         next_cursor = (
@@ -322,7 +333,8 @@ class SentinelOneClient:
                         "[API] Rate limited - exhausted all retry attempts"
                     )
                 raise SentinelOneApiError(
-                    f"SentinelOne request rejected: {describe_response(response)}"
+                    f"SentinelOne request rejected: {describe_response(response)}",
+                    status_code=response.status_code,
                 )
             if not response.content:
                 return {}
@@ -330,7 +342,8 @@ class SentinelOneClient:
                 return response.json()
             except ValueError as e:
                 raise SentinelOneApiError(
-                    "Unexpected SentinelOne response: the body is not JSON"
+                    "Unexpected SentinelOne response: the body is not JSON",
+                    status_code=response.status_code,
                 ) from e
 
     @staticmethod

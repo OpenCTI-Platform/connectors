@@ -180,10 +180,41 @@ def test_rejected_indicator_is_reported_failed(connector):
 
     (reported, error), _ = connector.assurance.report_push_failed.call_args
     assert reported == indicator
-    assert str(error) == (
-        'SentinelOne request rejected: HTTP 400 - {"errors": [{"title": "Validation Error"}]}'
-    )
+    assert error == "SentinelOne refused the IOC creation: invalid request"
     connector.assurance.report_pushed.assert_not_called()
+    _, meta = connector.helper.connector_logger.warning.call_args.args
+    assert meta == {
+        "indicator_id": indicator["id"],
+        "error": 'SentinelOne request rejected: HTTP 400 - {"errors": [{"title": "Validation Error"}]}',
+    }
+
+
+@pytest.mark.parametrize(
+    "outcome, reason",
+    [
+        (
+            requests.ConnectionError("down"),
+            "SentinelOne could not be reached for the IOC creation",
+        ),
+        (
+            mock_response(ValueError("no json"), text="<html>"),
+            "SentinelOne returned an unexpected response to the IOC creation",
+        ),
+        (
+            mock_response(status_code=403, text="Forbidden"),
+            "SentinelOne refused the IOC creation: permission denied",
+        ),
+    ],
+)
+def test_failed_push_reasons_name_sentinelone_and_the_cause(connector, outcome, reason):
+    if isinstance(outcome, Exception):
+        connector.client.session.request.side_effect = outcome
+    else:
+        connector.client.session.request.return_value = outcome
+
+    connector.process_message(make_message("create", make_indicator()))
+
+    assert connector.assurance.report_push_failed.call_args.args[1] == reason
 
 
 def test_unsupported_pattern_is_not_pushed_nor_reported(connector):
@@ -569,6 +600,28 @@ def test_adapter_push(connector):
     )
 
 
+def test_adapter_push_raises_the_reason_and_logs_the_detail(connector):
+    connector.client.session.request.return_value = mock_response(
+        status_code=401, text="bad token"
+    )
+    indicator = make_indicator()
+
+    with pytest.raises(SentinelOneDeploymentError) as raised:
+        SentinelOneDeploymentAdapter(connector).push_indicator(indicator)
+
+    assert str(raised.value) == (
+        "SentinelOne refused the IOC creation: authentication failed"
+    )
+    message, meta = connector.helper.connector_logger.warning.call_args.args
+    assert message == (
+        "[DEPLOYMENT] SentinelOne did not take an indicator pushed again."
+    )
+    assert meta == {
+        "indicator_id": indicator["id"],
+        "error": "SentinelOne request rejected: HTTP 401 - bad token",
+    }
+
+
 # End to end: stream processing and reconciliation through GraphQL
 
 
@@ -694,7 +747,9 @@ def test_stream_outcomes_are_reported_in_one_batch(e2e_connector, router):
     }
     assert failed["indicatorId"] == OTHER_ID
     assert failed["status"] == "failed"
-    assert failed["metadata"]["error_message"].endswith("HTTP 400 - Validation Error")
+    assert failed["metadata"]["error_message"] == (
+        "SentinelOne refused the IOC creation: invalid request"
+    )
 
 
 def test_reconciliation_confirms_removes_and_withdraws(e2e_connector, router):
