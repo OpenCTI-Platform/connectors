@@ -207,7 +207,7 @@ class DeploymentVendorAdapter(DeploymentPushAdapter):
         indicator only partly on the vendor is pushed again instead of being
         confirmed ``active``. By default, any vendor item confirms the deployment,
         unless the adapter declares ``expected_values``: a vendor item must then
-        hold each of them.
+        hold each of them, and a deployment without any is never complete.
 
         Args:
             deployment: The deployment.
@@ -217,9 +217,10 @@ class DeploymentVendorAdapter(DeploymentPushAdapter):
             ``False`` when an observable of the indicator has no vendor item.
         """
         expected = self.expected_values(deployment)
-        if not expected:
+        if expected is None:
             return True
-        return expected <= {
+        # No value to push: the vendor items matched by id are left from an earlier pattern.
+        return bool(expected) and expected <= {
             value
             for vendor_indicator in vendor_matches
             if (value := normalize_value(vendor_indicator.value))

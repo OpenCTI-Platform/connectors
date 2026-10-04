@@ -832,6 +832,35 @@ def test_a_missing_expected_value_pushes_the_deployment_again(
     assert reported()["a"]["status"] == "deployed"
 
 
+def test_a_pattern_without_pushed_value_is_never_confirmed_by_a_left_over_item(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """An indicator changed to a pattern the connector pushes nothing of keeps, on the
+    vendor, the item of its previous pattern: that item does not confirm it."""
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            status="active",
+            pattern="[process:name = '0day.exe']",
+            external_id="1",
+        )
+    )
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--a",
+        "pattern": "[process:name = '0day.exe']",
+    }
+    adapter = PushedValuesAdapter(
+        vendor=[VendorIndicator(value="198.51.100.7", external_id="1")],
+        push_error=ValueError("nothing to push"),
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert (summary.incomplete, summary.confirmed_active) == (1, 0)
+    assert reported()["a"]["status"] == "failed"
+
+
 def test_withdrawal_removes_every_expected_value_but_the_shared_ones(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):
