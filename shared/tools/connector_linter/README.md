@@ -201,6 +201,7 @@ Validates Python source code patterns. Uses AST analysis for structural checks.
 | VC322 | ERROR | Enrichment | `former-bundle-read` | Must read `data['stix_objects']` for playbook compatibility |
 | VC323 | ERROR | Stream | `helper-listen-stream` | Must use `self.helper.listen_stream()` |
 | VC324 | WARNING | Common | `relationship-start-stop-time` | Relationship should not set both `start_time` and `stop_time` (overloads Redis with time-bucketed duplicates) |
+| VC327 | ERROR | Internal Hunt | `hunt-connector-base` | Must subclass connectors-sdk `InternalHuntConnector` or call `self.helper.listen_hunt()` |
 
 ### VC4xx — Docker
 

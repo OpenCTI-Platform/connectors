@@ -47,6 +47,34 @@ The SDK includes custom exceptions to handle errors gracefully. Use these except
 
 See [docs/HOW-TO-Handle-errors-in-connectors.md](docs/HOW-TO-Handle-errors-in-connectors.md) for more details.
 
+### Building an internal hunt connector
+
+Connectors of type `INTERNAL_HUNT` execute the hunts dispatched by OpenCTI on a telemetry platform. Subclass
+`InternalHuntConnector`, declare the query languages, the pySigma backend and the query execution; the base class
+handles the rest (platform registration, native query override, preview mode, run timeout and `max_results`,
+benign suppression, STIX sightings and observed-data, hashed and truncated evidence, run report).
+
+```python
+from connectors_sdk import BaseConnectorSettings, BaseInternalHuntConnectorConfig, InternalHuntConnector
+from connectors_sdk.connectors.internal_hunt import HuntResult, build_pipeline
+from sigma.backends.splunk import SplunkBackend
+from sigma.pipelines.splunk import splunk_windows_pipeline
+
+
+class MyHuntConnector(InternalHuntConnector):
+    languages = ("spl",)
+
+    def sigma_backend(self, pipeline):
+        return SplunkBackend(build_pipeline(pipeline or "splunk_windows", {"splunk_windows": splunk_windows_pipeline}))
+
+    def execute(self, native_query, time_window, limits, deadline=None) -> HuntResult:
+        ...  # run native_query.query over time_window, at most limits.max_results events, every call bounded by deadline
+```
+
+pySigma is an optional dependency: install the `hunt` extra (`connectors-sdk[hunt]`), or add `pysigma` and the backend
+package to the connector requirements. See the [internal hunt TDR](TDRs/2026-10-03-Internal_hunt_connector_base_class.md)
+and the `templates/internal-hunt` template.
+
 ### Documentation
 
 You can generate full Read the Docs-style documentation using Sphinx. This will provide comprehensive information about the SDK's features, usage, and API.  

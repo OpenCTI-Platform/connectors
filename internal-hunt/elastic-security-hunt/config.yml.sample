@@ -1,0 +1,26 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  # name: 'Elastic Security Hunt' # optional (default: 'Elastic Security Hunt')
+  # scope: 'elastic-security' # optional, hunt platform slug (default: 'elastic-security')
+  # log_level: 'error' # optional (default: 'error')
+  # security_platform_name: 'Elastic Security' # optional (default: 'Elastic Security')
+  # security_platform_type: 'SIEM' # optional (default: 'SIEM')
+  # max_concurrent_runs: 2 # optional (default: none)
+  # observable_types: 'IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr' # optional (default: IOC types)
+  # max_observables: 100 # optional (default: 100)
+
+elastic_security_hunt:
+  url: 'ChangeMe' # URL of the Elasticsearch cluster, e.g. 'https://elastic.example.com:9200'
+  api_key: 'ChangeMe' # encoded API key (or username and password)
+  # username: '' # optional, used when no API key is set
+  # password: '' # optional, used when no API key is set
+  # verify_ssl: true # optional (default: true)
+  # ca_cert: '' # optional, path to a CA certificate bundle
+  # indices: 'logs-*,winlogbeat-*,filebeat-*,auditbeat-*,endgame-*' # optional, index patterns searched
+  # query_language: 'esql' # optional, language of the translated Sigma rules: 'esql', 'eql' or 'lucene'
+  # sigma_pipeline: 'ecs_windows' # optional, pySigma pipeline(s) chained with '+', or 'none'
+  # timestamp_field: '@timestamp' # optional, field holding the event time

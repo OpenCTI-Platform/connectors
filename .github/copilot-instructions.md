@@ -6,7 +6,7 @@ This is the **OpenCTI connectors** monorepo, containing 200+ Python-based connec
 
 **Key Statistics:**
 - **Language:** Python 3.11-3.12 (Alpine-based Docker images)
-- **Connector Types:** 128 external-import, 53 internal-enrichment, 28 stream, 6 internal-export-file, 6 internal-import-file
+- **Connector Types:** 128 external-import, 53 internal-enrichment, 28 stream, 7 internal-hunt, 6 internal-export-file, 6 internal-import-file
 - **Build System:** GitHub Actions (reusable workflows with dynamically generated build matrices)
 - **Testing:** pytest with isolated virtual environments per connector
 
@@ -89,6 +89,7 @@ connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#s
 ├── external-import/         # 128 connectors for importing external threat intel
 ├── internal-enrichment/     # 53 connectors for enriching existing data
 ├── internal-export-file/    # 6 connectors for exporting data files
+├── internal-hunt/           # hunt connectors executing OpenCTI hunts (INTERNAL_HUNT)
 ├── internal-import-file/    # 6 connectors for importing data files
 ├── stream/                  # 28 connectors for streaming data
 ├── shared/                  # Shared utilities
@@ -133,7 +134,7 @@ cd templates
 sh create_connector_dir.sh -t <TYPE> -n <NAME>
 ```
 
-**Types:** `external-import`, `internal-enrichment`, `stream`, `internal-import-file`, `internal-export-file`
+**Types:** `external-import`, `internal-enrichment`, `stream`, `internal-import-file`, `internal-export-file`, `internal-hunt`
 
 **After creating:** Replace `Template`/`template` references, update `__metadata__/connector_manifest.json`, configure `.env.sample`, implement logic in `src/connector/connector.py`.
 

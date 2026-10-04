@@ -31,6 +31,13 @@ class ConnectorSettings(BaseExternalImportConnectorConfig):
     my_api_key: str
 """
 
+_SDK_HUNT_INHERITS_DEFAULT = """\
+from connectors_sdk import BaseInternalHuntConnectorConfig
+
+class ConnectorSettings(BaseInternalHuntConnectorConfig):
+    my_api_key: str
+"""
+
 _NO_LOG_LEVEL = """\
 class ConnectorSettings:
     pass
@@ -70,6 +77,14 @@ class TestVC306LogLevelDefault:
     def test_passes_sdk_inherits_default(self, connector_src):
         """SDK base configs already default to 'error' — should pass."""
         path = connector_src(("src/main.py", _SDK_INHERITS_DEFAULT))
+        results = run_checks(path, select=["VC306"])
+        assert all(r.severity == Severity.INFO for r in results)
+
+    def test_passes_sdk_hunt_config_inherits_default(self, connector_src):
+        """The internal hunt SDK base config also defaults to 'error'."""
+        path = connector_src(
+            ("src/main.py", _SDK_HUNT_INHERITS_DEFAULT), connector_type="INTERNAL_HUNT"
+        )
         results = run_checks(path, select=["VC306"])
         assert all(r.severity == Severity.INFO for r in results)
 

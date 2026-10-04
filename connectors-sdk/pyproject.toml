@@ -13,6 +13,7 @@ dependencies = [
     "pycti==7.261002.0",
     "pydantic>=2.8.2,<3", # ISO pycti https://github.com/OpenCTI-Platform/client-python/blob/master/requirements.txt#L8
     "pydantic_settings>= 2.9.1,<3", # Actual minimal version used in the connectors
+    "regex>=2024.11.6", # Time-bounded matching of the hunt benign patterns; already required by pycti (datefinder)
     "requests>=2.31.0,<3",
 ]
 
@@ -20,6 +21,9 @@ dependencies = [
 dev = [
     "black==26.5.1",  # Aligned with ci-requirements
     "isort==7.0.0",  # Aligned with ci-requirements
+]
+hunt = [
+    "pysigma>=1.5.1,<2",  # Sigma translation of the internal hunt connectors (InternalHuntConnector)
 ]
 test = [
     "freezegun>=1.5.5,<2",
@@ -29,6 +33,7 @@ test = [
     "pydocstyle>=6.3.0,<7",
     "mypy>=1.15.0,<2",
     "ruff>=0.14.0,<1",
+    "pysigma>=1.5.1,<2",  # Same as the hunt extra, to test and type check the internal hunt package
 ]
 doc = [
     "sphinx>=7.0",
@@ -141,8 +146,8 @@ exclude = [
 plugins = ['pydantic.mypy']
 
 [[tool.mypy.overrides]]
-module = ["pycti.*", "stix2.*", "requests.*", "limits.*"]
-ignore_missing_imports = true  # pycti, stix2, requests, and limits do not provide stubs
+module = ["pycti.*", "stix2.*", "requests.*", "limits.*", "regex.*"]
+ignore_missing_imports = true  # pycti, stix2, requests, limits and regex do not provide stubs
 
 [tool.sphinx]
 project = "Connectors SDK"

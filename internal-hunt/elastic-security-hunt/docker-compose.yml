@@ -1,0 +1,30 @@
+version: '3'
+services:
+  connector-elastic-security-hunt:
+    image: opencti/connector-elastic-security-hunt:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type INTERNAL_HUNT
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Elastic Security Hunt # optional (default: 'Elastic Security Hunt')
+      # - CONNECTOR_SCOPE=elastic-security # optional, hunt platform slug (default: 'elastic-security')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_SECURITY_PLATFORM_NAME=Elastic Security # optional, Security Platform the hunts run against (default: 'Elastic Security')
+      # - CONNECTOR_SECURITY_PLATFORM_TYPE=SIEM # optional, 'SIEM', 'EDR', 'XDR', 'SOAR', 'NDR' or 'ISPM' (default: 'SIEM')
+      # - CONNECTOR_MAX_CONCURRENT_RUNS=2 # optional, connector-side limit of concurrent hunt runs (default: none)
+      # - CONNECTOR_OBSERVABLE_TYPES=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Email-Addr # optional (default: IOC types)
+      # - CONNECTOR_MAX_OBSERVABLES=100 # optional, observables created per hunt run (default: 100)
+      # Elasticsearch cluster of Elastic Security
+      - ELASTIC_SECURITY_HUNT_URL=ChangeMe # e.g. https://elastic.example.com:9200
+      - ELASTIC_SECURITY_HUNT_API_KEY=ChangeMe # encoded API key (or username and password)
+      # - ELASTIC_SECURITY_HUNT_USERNAME= # optional, used when no API key is set
+      # - ELASTIC_SECURITY_HUNT_PASSWORD= # optional, used when no API key is set
+      # - ELASTIC_SECURITY_HUNT_VERIFY_SSL=true # optional (default: true)
+      # - ELASTIC_SECURITY_HUNT_CA_CERT= # optional, path to a CA certificate bundle
+      # - ELASTIC_SECURITY_HUNT_INDICES=logs-*,winlogbeat-*,filebeat-*,auditbeat-*,endgame-* # optional, index patterns searched
+      # - ELASTIC_SECURITY_HUNT_QUERY_LANGUAGE=esql # optional, language of the translated Sigma rules: 'esql', 'eql' or 'lucene'
+      # - ELASTIC_SECURITY_HUNT_SIGMA_PIPELINE=ecs_windows # optional, pySigma pipeline(s) chained with '+', or 'none'
+      # - ELASTIC_SECURITY_HUNT_TIMESTAMP_FIELD=@timestamp # optional (default: '@timestamp')
+    restart: always
