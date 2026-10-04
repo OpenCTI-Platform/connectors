@@ -6,7 +6,7 @@ This is the **OpenCTI connectors** monorepo, containing 200+ Python-based connec
 
 **Key Statistics:**
 - **Language:** Python 3.11-3.12 (Alpine-based Docker images)
-- **Connector Types:** 128 external-import, 53 internal-enrichment, 28 stream, 6 internal-export-file, 6 internal-import-file
+- **Connector Types:** 128 external-import, 53 internal-enrichment, 28 stream, 7 internal-hunt, 6 internal-export-file, 6 internal-import-file
 - **Build System:** GitHub Actions (reusable workflows with dynamically generated build matrices)
 - **Testing:** pytest with isolated virtual environments per connector
 
