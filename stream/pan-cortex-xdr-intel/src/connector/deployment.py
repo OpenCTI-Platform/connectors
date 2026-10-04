@@ -143,8 +143,12 @@ def failure_reason(error: BaseException) -> str:
     if isinstance(error, CortexXdrRejectedIocsError):
         # IOCs refused in a success reply are worded like a validation error (422).
         return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, 422)
-    if isinstance(error, CortexXdrApiError):
-        # Raised by the client on a successful response it cannot read.
+    if isinstance(error, CortexXdrApiError) or (
+        isinstance(error, OSError) and isinstance(error, ValueError)
+    ):
+        # Raised on a successful response that cannot be read. The JSON decode error
+        # of `requests` is both a ValueError and an OSError: it is told apart before
+        # the transport errors.
         return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, 200)
     if isinstance(error, OSError):
         # Transport errors of `requests` (connection, timeout) are OSErrors.
@@ -353,7 +357,8 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
 
         Each alert counts one hit per matching indicator, at its creation time
         (`local_insert_ts`, the detection time when Cortex XDR gives none), so the
-        query window, the continuation and the hit dates share one axis. Alerts are
+        query window, the continuation and the hit dates share one axis; only a
+        creation time moves the continuation, the axis the query reads. Alerts are
         read by creation time, oldest first: when `MAX_HIT_ALERTS` alerts were read,
         the collection is complete until the creation time of the newest alert read
         and the next run resumes there. When every alert read shares the start
@@ -377,15 +382,16 @@ class CortexXdrDeploymentAdapter(DeploymentVendorAdapter):
         hits: list[VendorHit] = []
         newest_created = since
         for alert in alerts:
-            timestamp = _timestamp(alert.get("local_insert_ts")) or _timestamp(
-                alert.get("detection_timestamp")
-            )
+            created = _timestamp(alert.get("local_insert_ts"))
+            timestamp = created or _timestamp(alert.get("detection_timestamp"))
             if timestamp is None:
                 raise CortexXdrDeploymentError(
                     "Cortex XDR listed an IOC alert without creation time, "
                     "the hit read is incomplete"
                 )
-            newest_created = max(newest_created, timestamp)
+            if created is not None:
+                # A detection time would move the continuation past alerts created earlier.
+                newest_created = max(newest_created, created)
             if timestamp < since:
                 continue
             matched = {

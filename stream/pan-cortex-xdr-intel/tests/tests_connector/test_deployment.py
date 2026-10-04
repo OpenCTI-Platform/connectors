@@ -737,6 +737,11 @@ def test_adapter_push():
             ConnectionError("reset"),
             "Cortex XDR could not be reached for the IOC upsert",
         ),
+        (
+            # Both a ValueError and an OSError: a malformed success, not a transport error
+            requests.exceptions.JSONDecodeError("Expecting value", "<html>", 0),
+            "Cortex XDR returned an unexpected response to the IOC upsert",
+        ),
     ],
 )
 def test_adapter_push_raises_the_reason_and_logs_the_detail(error, reason):
@@ -898,7 +903,11 @@ def test_adapter_counts_alerts_created_in_the_window_but_detected_before():
     ]
 
 
-def test_adapter_capped_read_without_creation_time_uses_the_detection(monkeypatch):
+def test_adapter_capped_read_without_creation_time_counts_the_detection_only(
+    monkeypatch,
+):
+    """A detection time dates the hit but never moves the continuation, which stays
+    on the creation time axis of the query."""
     monkeypatch.setattr("connector.deployment.MAX_HIT_ALERTS", 2)
     connector = build_connector()
     since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
@@ -912,8 +921,31 @@ def test_adapter_capped_read_without_creation_time_uses_the_detection(monkeypatc
         [make_deployment()], since
     )
 
-    assert collected.complete_until == datetime(2026, 10, 3, 11, 7, tzinfo=UTC)
+    assert (collected.complete_until, collected.resume) == (since, 2)
     assert [hit.indicator_id for hit in collected.hits] == [INDICATOR_ID]
+
+
+def test_adapter_capped_read_never_moves_past_unread_alerts_on_a_detection_time(
+    monkeypatch,
+):
+    monkeypatch.setattr("connector.deployment.MAX_HIT_ALERTS", 2)
+    connector = build_connector()
+    since = datetime(2026, 10, 3, 11, 0, tzinfo=UTC)
+
+    def at(minute):
+        return int(datetime(2026, 10, 3, 11, minute, tzinfo=UTC).timestamp() * 1000)
+
+    connector.client.get_ioc_alerts.return_value = [
+        {"local_insert_ts": at(5), "action_remote_ip": "198.51.100.7"},
+        {"detection_timestamp": at(30), "action_remote_ip": "198.51.100.7"},
+    ]
+
+    collected = CortexXdrDeploymentAdapter(connector).collect_hits(
+        [make_deployment()], since
+    )
+
+    assert collected.complete_until == datetime(2026, 10, 3, 11, 5, tzinfo=UTC)
+    assert [hit.timestamp.minute for hit in collected.hits] == [5, 30]
 
 
 def test_adapter_credits_hits_on_the_pushed_values_only():
