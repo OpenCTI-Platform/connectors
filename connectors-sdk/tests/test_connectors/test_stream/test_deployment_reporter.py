@@ -908,6 +908,45 @@ def test_report_indicator_hits_with_the_pycti_helper(pycti_helper, make_reporter
     )
 
 
+def test_report_indicator_hits_carries_the_report_id_on_both_paths(
+    graphql_helper, pycti_helper, make_reporter, router, ids
+):
+    """The stable report id reaches OpenCTI through the pycti helper and GraphQL."""
+    assert make_reporter(pycti_helper).report_indicator_hits(
+        ids.indicator, 2, last_hit="2026-10-03T10:00:00Z", report_id="batch-1"
+    )
+    pycti_helper.report_indicator_hits.assert_called_once_with(
+        indicator_id=ids.indicator,
+        platform_id=ids.platform,
+        count=2,
+        last_hit="2026-10-03T10:00:00.000Z",
+        first_hit=None,
+        report_id="batch-1",
+    )
+
+    assert make_reporter(graphql_helper).report_indicator_hits(
+        ids.indicator, 2, last_hit="2026-10-03T10:00:00Z", report_id="batch-2"
+    )
+    (call,) = router.calls_of("IndicatorReportHits(")
+    assert call["reportId"] == "batch-2"
+
+
+@pytest.mark.parametrize("report_id", ["", "x" * 257])
+def test_report_indicator_hits_refuses_a_report_id_opencti_refuses(
+    graphql_helper, make_reporter, router, ids, report_id
+):
+    """An empty or too long report id is refused locally, never sent again."""
+    reporter = make_reporter(graphql_helper)
+
+    assert (
+        reporter.report_indicator_hits_outcome(
+            ids.indicator, 1, last_hit=LAST_HIT, report_id=report_id
+        )
+        == REPORT_REJECTED
+    )
+    assert router.calls_of("IndicatorReportHits(") == []
+
+
 @pytest.mark.parametrize(("indicator_id", "count"), [("", 1), ("indicator-id", 0)])
 def test_report_indicator_hits_ignores_empty_reports(
     graphql_helper, make_reporter, router, indicator_id, count

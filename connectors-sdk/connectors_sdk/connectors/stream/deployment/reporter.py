@@ -57,6 +57,9 @@ LISTING_PAGE_SIZE = 500
 MAX_ERROR_MESSAGE_LENGTH = 2000
 """Maximum length of a vendor error message stored on a deployment."""
 
+HIT_REPORT_ID_MAX_LENGTH = 256
+"""Maximum length of the report id of a hits report accepted by OpenCTI."""
+
 MAX_QUEUED_REPORTS = 10_000
 """Maximum number of queued reports (write-back not available yet, sends held): the oldest are dropped beyond."""
 
@@ -585,6 +588,7 @@ class DeploymentReporter:
         *,
         last_hit: datetime | str,
         first_hit: datetime | str | None = None,
+        report_id: str | None = None,
     ) -> bool:
         """Report new hits of an indicator on the security platform.
 
@@ -597,13 +601,21 @@ class DeploymentReporter:
             last_hit: Vendor time of the most recent hit (required): the replay
                 watermark of the report, so a report sent again is not counted twice.
             first_hit: Time of the first hit (defaults to ``last_hit``).
+            report_id: Stable id of the report, the same each time it is sent again
+                (at most ``HIT_REPORT_ID_MAX_LENGTH`` characters): OpenCTI then counts
+                two distinct reports ending at the same instant, and still never a
+                report sent twice.
 
         Returns:
             ``True`` when OpenCTI accepted the report.
         """
         return (
             self.report_indicator_hits_outcome(
-                indicator_id, count, last_hit=last_hit, first_hit=first_hit
+                indicator_id,
+                count,
+                last_hit=last_hit,
+                first_hit=first_hit,
+                report_id=report_id,
             )
             == REPORT_SENT
         )
@@ -615,6 +627,7 @@ class DeploymentReporter:
         *,
         last_hit: datetime | str,
         first_hit: datetime | str | None = None,
+        report_id: str | None = None,
     ) -> str:
         """Report new hits of an indicator and tell what became of the report.
 
@@ -624,6 +637,8 @@ class DeploymentReporter:
             last_hit: Vendor time of the most recent hit (required): the replay
                 watermark of the report, so a report sent again is not counted twice.
             first_hit: Time of the first hit (defaults to ``last_hit``).
+            report_id: Stable id of the report, the same each time it is sent again
+                (see ``report_indicator_hits``).
 
         Returns:
             ``REPORT_SENT`` when OpenCTI accepted it, ``REPORT_REJECTED`` when it was
@@ -632,33 +647,25 @@ class DeploymentReporter:
             limited and can be sent again. The pycti helper does not tell a rejection
             from a failed call: a report it does not accept is ``REPORT_UNSENT``.
         """
-        if not self.hits_enabled:
-            return REPORT_REJECTED
-        if not indicator_id or count < 1:
-            self._logger.debug(
-                f"{_LOG_PREFIX} Ignoring an empty hit report.",
-                meta={"indicator_id": indicator_id, "count": count},
-            )
-            return REPORT_REJECTED
-        if not last_hit:
-            self._logger.warning(
-                f"{_LOG_PREFIX} Ignoring a hit report without the time of its last hit "
-                "(OpenCTI refuses it: a retry could not be told from new hits).",
-                meta={"indicator_id": indicator_id, "count": count},
-            )
+        if not self.hits_enabled or not self._is_valid_hit_report(
+            indicator_id, count, last_hit, report_id
+        ):
             return REPORT_REJECTED
         platform_id = self._ready(REPORT_HITS_MUTATION)
         if platform_id is None:
             return REPORT_UNSENT if self._awaiting_write_back() else REPORT_REJECTED
         try:
             if hasattr(self._helper, "report_indicator_hits"):
-                result = self._helper.report_indicator_hits(
-                    indicator_id=indicator_id,
-                    platform_id=platform_id,
-                    count=count,
-                    last_hit=format_datetime(last_hit),
-                    first_hit=format_datetime(first_hit),
-                )
+                helper_arguments: dict[str, Any] = {
+                    "indicator_id": indicator_id,
+                    "platform_id": platform_id,
+                    "count": count,
+                    "last_hit": format_datetime(last_hit),
+                    "first_hit": format_datetime(first_hit),
+                }
+                if report_id is not None:
+                    helper_arguments["report_id"] = report_id
+                result = self._helper.report_indicator_hits(**helper_arguments)
                 return REPORT_SENT if result is not None else REPORT_UNSENT
             variables: dict[str, Any] = {
                 "indicatorId": indicator_id,
@@ -668,6 +675,8 @@ class DeploymentReporter:
             }
             if first_hit is not None:
                 variables["firstHit"] = format_datetime(first_hit)
+            if report_id is not None:
+                variables["reportId"] = report_id
             _mutation_result(
                 self._execute(_graphql.REPORT_HITS_MUTATION, variables),
                 "indicatorReportHits",
@@ -679,6 +688,47 @@ class DeploymentReporter:
                 meta={"indicator_id": indicator_id, "count": count, "error": str(err)},
             )
             return REPORT_REJECTED if is_rejection_error(err) else REPORT_UNSENT
+
+    def _is_valid_hit_report(
+        self,
+        indicator_id: str,
+        count: int,
+        last_hit: datetime | str,
+        report_id: str | None,
+    ) -> bool:
+        """Tell whether OpenCTI can accept a hit report, logging why it cannot.
+
+        Args:
+            indicator_id: The indicator of the report.
+            count: The number of new hits.
+            last_hit: The time of the most recent hit.
+            report_id: The report id, when the report has one.
+
+        Returns:
+            ``False`` for an empty report, a report without the time of its last hit
+            or with a report id OpenCTI refuses (empty or too long).
+        """
+        meta = {"indicator_id": indicator_id, "count": count}
+        if not indicator_id or count < 1:
+            self._logger.debug(
+                f"{_LOG_PREFIX} Ignoring an empty hit report.", meta=meta
+            )
+            return False
+        if not last_hit:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Ignoring a hit report without the time of its last hit "
+                "(OpenCTI refuses it: a retry could not be told from new hits).",
+                meta=meta,
+            )
+            return False
+        if report_id is not None and not 0 < len(report_id) <= HIT_REPORT_ID_MAX_LENGTH:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Ignoring a hit report whose report id is empty or longer "
+                f"than {HIT_REPORT_ID_MAX_LENGTH} characters (OpenCTI refuses it).",
+                meta=meta,
+            )
+            return False
+        return True
 
     def list_indicator_deployments(
         self, statuses: Iterable[DeploymentStatus | str] | None = None

@@ -27,9 +27,10 @@ withdrawal and backfill need the read-back of a ``DeploymentVendorAdapter``.
 """
 
 import threading
+import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -160,12 +161,15 @@ class _PendingHits:
 
     ``failing_since`` is ``None`` until the report is sent: only a report never
     sent can take newer hits, one that was sent may have been recorded.
+    ``report_id`` is the same at every send of the report, so OpenCTI tells a report
+    sent again from a distinct one ending at the same instant.
     """
 
     count: int
     first_hit: datetime
     last_hit: datetime
     failing_since: datetime | None
+    report_id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
 
 _LOG_PREFIX = "[DEPLOYMENT]"
@@ -1470,8 +1474,9 @@ class DeploymentReconciler:
         """Send the hit reports of a run after the ones not delivered by earlier runs.
 
         A report that was not delivered (outage, timeout, rate limit) may still have
-        been recorded: OpenCTI only ignores a report whose last hit is not newer than
-        the one it recorded. Such a report is sent again unchanged, for at most
+        been recorded: OpenCTI ignores a report ending before the last hit it recorded,
+        or ending at it with a report id it already counted. Such a report is sent
+        again unchanged, with the same report id, for at most
         ``MAX_PENDING_HITS_AGE``, and the newer hits of an indicator wait behind it in
         one report never sent, so the hit window moves on without losing or counting
         twice a detection it already read. A report OpenCTI rejects (deleted or
@@ -1506,6 +1511,7 @@ class DeploymentReconciler:
                     report.count,
                     last_hit=report.last_hit,
                     first_hit=report.first_hit,
+                    report_id=report.report_id,
                 )
                 if outcome == REPORT_UNSENT:
                     failing_since = report.failing_since or now
