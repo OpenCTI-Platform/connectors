@@ -69,6 +69,7 @@ mutation IndicatorReportHits(
   $count: Int!
   $lastHit: DateTime
   $firstHit: DateTime
+  $reportId: String
 ) {
   indicatorReportHits(
     indicatorId: $indicatorId
@@ -76,6 +77,7 @@ mutation IndicatorReportHits(
     count: $count
     lastHit: $lastHit
     firstHit: $firstHit
+    reportId: $reportId
   ) {
     id
   }

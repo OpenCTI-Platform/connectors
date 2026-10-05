@@ -1382,7 +1382,7 @@ def test_undelivered_hit_reports_are_sent_with_the_next_run(
     }
     adapter.hits = [VendorHit(timestamp=NOW - timedelta(minutes=1), indicator_id="a")]
     assert reconciler.run_once().hits_reported == 1
-    replayed, newer = router.calls_of("IndicatorReportHits(")[-2:]
+    undelivered, replayed, newer = router.calls_of("IndicatorReportHits(")[-3:]
     assert (replayed["count"], replayed["firstHit"], replayed["lastHit"]) == (
         1,
         "2026-10-03T11:55:00.000Z",
@@ -1393,6 +1393,10 @@ def test_undelivered_hit_reports_are_sent_with_the_next_run(
         "2026-10-03T11:59:00.000Z",
         "2026-10-03T11:59:00.000Z",
     )
+    # The report sent again keeps its id, so OpenCTI never counts it twice; the
+    # newer hits are a distinct report
+    assert replayed["reportId"] == undelivered["reportId"]
+    assert newer["reportId"] not in (None, replayed["reportId"])
     assert reconciler._pending_hits == {}
 
 
