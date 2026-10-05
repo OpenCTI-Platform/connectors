@@ -11,8 +11,12 @@ the models are exercised here, no I/O.
 """
 
 from datetime import datetime, timedelta, timezone
+from unittest.mock import MagicMock, patch
 
+from wiz_cloud.models import WizIssue
+from wiz_cloud.processors import WizIssuesProcessor
 from wiz_cloud.processors.issues_processor import _utc
+from wiz_cloud.settings import WizCloudConfig
 
 
 class TestCursorFormatting:
@@ -36,6 +40,12 @@ class TestWizIssueModel:
         assert signin_issue.rule_name == "Wiz Sign-in from Unusual Country"
         assert signin_issue.entity_snapshot.external_id == "mlipebtwsndhxdmnzdwrxzmio"
         assert signin_issue.threat_detection_details.actors[0].type == "SERVICE_ACCOUNT"
+
+    def test_rule_name_is_none_without_a_named_rule(self, signin_issue_data):
+        signin_issue_data["sourceRules"] = [{"name": None}, {}]
+        issue = WizIssue.model_validate(signin_issue_data)
+
+        assert issue.rule_name is None
 
     def test_empty_description_and_null_actors(self, empty_description_issue):
         assert empty_description_issue.description == ""
@@ -127,3 +137,101 @@ class TestTransformLogging:
             "OrganizationAuthor",
             "TLPMarking",
         ]
+
+
+class TestPostInit:
+    def test_builds_client_author_and_marking_from_settings(self):
+        processor = WizIssuesProcessor()
+        processor.settings = MagicMock(
+            wiz_cloud=WizCloudConfig(
+                api_url="https://api.example.com/graphql",
+                client_id="id",
+                client_secret="secret",
+            )
+        )
+
+        with patch("wiz_cloud.processors.issues_processor.WizApiClient") as client:
+            processor.post_init()
+
+        kwargs = client.call_args.kwargs
+        assert kwargs["base_url"] == "https://api.example.com/graphql"
+        assert kwargs["auth_url"] == "https://auth.app.wiz.io/oauth/token"
+        assert kwargs["client_id"] == "id"
+        assert kwargs["client_secret"] == "secret"
+        assert processor._author.name == "Wiz"
+        assert processor._marking is not None
+
+
+class TestCollect:
+    @staticmethod
+    def _prepare(processor, **config):
+        processor._config = WizCloudConfig(
+            api_url="https://api.example.com/graphql",
+            client_id="id",
+            client_secret="secret",
+            **config,
+        )
+        processor._client = MagicMock()
+        processor._client.paginate.return_value = iter([[{"id": "a"}]])
+        return processor
+
+    def test_uses_the_since_window_on_first_run(self, processor):
+        self._prepare(processor, since=timedelta(days=1))
+        before = datetime.now(tz=timezone.utc) - timedelta(days=1)
+
+        pages = list(processor.collect())
+
+        after_filter = processor._client.paginate.call_args.args[1]["filterBy"][
+            "createdAt"
+        ]["after"]
+        assert pages == [[{"id": "a"}]]
+        assert datetime.fromisoformat(after_filter) >= before.replace(microsecond=0)
+        assert processor.work_name.startswith("Wiz Cloud issues import since ")
+
+    def test_uses_the_stored_cursor_when_present(self, processor):
+        self._prepare(processor)
+        processor.state.issues_last_created_at = datetime(
+            2026, 8, 24, 15, 7, 37, 534962, tzinfo=timezone.utc
+        )
+
+        list(processor.collect())
+
+        _, variables = processor._client.paginate.call_args.args[:2]
+        assert variables["filterBy"]["createdAt"] == {
+            "after": "2026-08-24T15:07:37.534962Z"
+        }
+
+    def test_filters_and_orders_oldest_first(self, processor):
+        self._prepare(
+            processor, page_size=10, issue_severity="LOW", issue_status="OPEN"
+        )
+
+        list(processor.collect())
+
+        call = processor._client.paginate.call_args
+        variables = call.args[1]
+        assert call.kwargs["connection_key"] == "issues"
+        assert variables["first"] == 10
+        assert variables["after"] is None
+        assert variables["orderBy"] == {"field": "CREATED_AT", "direction": "ASC"}
+        assert variables["filterBy"]["type"] == ["THREAT_DETECTION"]
+        assert variables["filterBy"]["severity"] == ["LOW"]
+        assert variables["filterBy"]["status"] == ["OPEN"]
+
+
+class TestTransformCursor:
+    def test_advances_cursor_to_the_newest_converted_issue(
+        self, processor, signin_issue, empty_description_issue_data, signin_issue_data
+    ):
+        list(
+            processor.transform(
+                iter([[empty_description_issue_data, signin_issue_data]])
+            )
+        )
+
+        assert processor.state.issues_last_created_at == signin_issue.created_at
+
+    def test_keeps_cursor_when_nothing_converts(self, processor):
+        list(processor.transform(iter([[{"id": "broken"}]])))
+
+        assert processor.state.issues_last_created_at is None
