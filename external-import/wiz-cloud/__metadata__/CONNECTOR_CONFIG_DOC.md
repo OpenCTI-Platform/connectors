@@ -19,6 +19,10 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | WIZ_CLOUD_AUTH_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://auth.app.wiz.io/oauth/token"` | OAuth2 token endpoint (different host than api_url) |
 | WIZ_CLOUD_ISSUE_SEVERITY | `array` |  | string | `["CRITICAL", "HIGH"]` | Issue severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,INFORMATIONAL'. |
 | WIZ_CLOUD_ISSUE_STATUS | `array` |  | string | `["OPEN", "IN_PROGRESS"]` | Issue statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'. |
+| WIZ_CLOUD_IMPORT_VULNERABILITIES | `boolean` |  | boolean | `false` | Whether to import vulnerability findings for the cloud assets referenced by the imported issues. |
+| WIZ_CLOUD_VULNERABILITY_SEVERITY | `array` |  | string | `["CRITICAL", "HIGH"]` | Vulnerability severities to import (comma-separated). E.g. 'CRITICAL,HIGH,MEDIUM,LOW,NONE'. |
+| WIZ_CLOUD_VULNERABILITY_STATUS | `array` |  | string | `["OPEN", "IN_PROGRESS"]` | Vulnerability statuses to import (comma-separated). E.g. 'OPEN,IN_PROGRESS,RESOLVED,REJECTED'. |
+| WIZ_CLOUD_VULNERABILITY_HAS_EXPLOIT | `boolean` |  | boolean | `false` | Import only vulnerabilities with a known exploit. Severity alone barely reduces the volume, so this is the effective filter when an asset carries hundreds of findings. |
 | WIZ_CLOUD_SINCE | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P30D"` | Relative import start on first run (ISO 8601 duration) |
 | WIZ_CLOUD_PAGE_SIZE | `integer` |  | `1 <= x <= 100` | `50` |  |
 | WIZ_CLOUD_MARKING | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber+strict"` | TLP Level Enum.<br /><br />See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/identifier.js#L76 |
