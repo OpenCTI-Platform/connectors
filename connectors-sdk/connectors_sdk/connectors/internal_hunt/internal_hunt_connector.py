@@ -881,6 +881,17 @@ class InternalHuntConnector(ABC):
             )
             for key, observation in found.items():
                 observations.setdefault(key, IocObservation()).merge(observation)
+            if result.truncated:
+                # The rows or events left unread may hold any value of the batch
+                # that is absent from the part read: none of them is a verified negative
+                reason = (
+                    f"The {self.platform} lookup of the {batch.observable_type} values "
+                    "returned partial results and this value was not in the part read: "
+                    "run the hunt again with fewer values or a shorter time window."
+                )
+                unsearched.update(
+                    {ioc.key: reason for ioc in batch.iocs if ioc.key not in found}
+                )
         ioc_results = build_ioc_results(request.hunt.iocs, observations, unsearched)
         objects = self._bundle_objects(build_indicator_objects(request, ioc_results))
         if request.security_platform is None and any(

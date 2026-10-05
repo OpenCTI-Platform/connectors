@@ -308,6 +308,33 @@ def test_reports_one_result_per_value_and_sights_the_seen_ones(
     assert set(kwargs["result_ids"]) == {item["id"] for item in bundle_objects}
 
 
+def test_a_truncated_lookup_never_reports_a_value_absent_from_the_part_read_as_not_seen(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # The platform returned part of the matches only: 198.51.100.8 may be among the others
+    result = HuntResult(
+        events=[
+            event(
+                "2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7", host="WKS-01"
+            ),
+        ],
+        truncated=True,
+    )
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    connector.process_message(indicator_event())
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["seen"] is True
+    for key in ("k-other-ip", "k-domain"):
+        assert by_key[key]["searched"] is False, key
+        assert "returned partial results" in by_key[key]["reason"]
+    assert kwargs["truncated"] is True
+
+
 def test_ignores_aggregated_rows_without_hits():
     batch = IocBatch("Domain-Name", None, (ioc("a", "Domain-Name", "evil.com"),))
     rows = [
