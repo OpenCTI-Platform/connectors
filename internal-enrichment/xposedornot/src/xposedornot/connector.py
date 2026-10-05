@@ -131,10 +131,12 @@ class MarkingResolutionError(Exception):
     """A marking on the enriched entity cannot be represented in the bundle."""
 
 
-TLP_MARKING_IDS = frozenset(
-    PyctiMarkingDefinition.generate_id("TLP", f"TLP:{level.upper()}")
+TLP_DEFINITION_LEVELS = {
+    PyctiMarkingDefinition.generate_id("TLP", f"TLP:{level.upper()}"): level
     for level in TLP_RANK
-)
+}
+
+TLP_MARKING_IDS = frozenset(TLP_DEFINITION_LEVELS)
 
 
 def marking_sequence(value: Any, field: str) -> list[Any]:
@@ -826,6 +828,65 @@ def is_owned_label(label: str) -> bool:
     return label.casefold() in XposedOrNotConnector.OWNED_LABEL_KEYS
 
 
+def tlp_definition_for(identifier: str) -> dict[str, Any] | None:
+    """The definition a TLP identifier names, or None for any other id.
+
+    The six TLP identifiers are fixed and public, so a bare reference to one
+    is not an unknown marking: it says exactly which level it carries, and the
+    definition can be rebuilt from it alone. The rebuilt body is checked
+    against the identifier it came from, so a level whose spelling generates a
+    different id is reported as unrebuildable rather than published under an
+    id that contradicts it.
+    """
+    level = TLP_DEFINITION_LEVELS.get(identifier)
+    if level is None:
+        return None
+    built = plain_json(TLPMarking(level=level).to_stix2_object())
+    if built is None or built.get("id") != identifier:
+        return None
+    return built
+
+
+def restored_marking_definitions(
+    objects: list[Any],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Definitions for references the bundle does not carry, and what is left.
+
+    `cleanup_inconsistent_bundle` drops a reference whose definition is absent
+    from the bundle, so an object that arrived carrying a marking would be
+    published without it. Only the entity being enriched is resolved against
+    the platform's own markings; every other object in the bundle arrives with
+    references alone, and a neighbour losing its restriction is no more
+    acceptable than the enriched entity losing one.
+
+    A reference nothing in the bundle defines and nothing can derive is
+    returned for the caller to report. Inventing a body for it would publish a
+    restriction this connector made up, which is the one answer worse than
+    saying so.
+    """
+    present = {
+        canonical_marking_id(obj.get("id"))
+        for obj in objects
+        if hasattr(obj, "get") and obj.get("type") == "marking-definition"
+    }
+    restored: dict[str, dict[str, Any]] = {}
+    unresolved: list[str] = []
+    for obj in objects:
+        if not hasattr(obj, "get"):
+            continue
+        for ref in listed(obj.get("object_marking_refs")):
+            identifier = canonical_marking_id(ref)
+            if identifier is None or identifier in present or identifier in restored:
+                continue
+            definition = tlp_definition_for(identifier)
+            if definition is None:
+                if identifier not in unresolved:
+                    unresolved.append(identifier)
+                continue
+            restored[identifier] = definition
+    return list(restored.values()), unresolved
+
+
 def unique_by_id(objects: list[Any]) -> list[Any]:
     """Drop repeated STIX ids, keeping the first occurrence.
 
@@ -872,7 +933,24 @@ class XposedOrNotConnector:
     def _send_bundle(
         self, stix_objects: list[dict[str, Any]], update: bool = False
     ) -> None:
-        bundle = self.helper.stix2_create_bundle(list(stix_objects))
+        """Send the bundle, carrying the definitions its own references need.
+
+        Every path funnels through here, so the marking references of every
+        object in the bundle are completed in one place rather than per path:
+        the enriched entity's own markings were resolved against the platform,
+        but an unrelated object in the same bundle only ever had its
+        references, and cleanup drops the ones it cannot resolve.
+        """
+        objects = list(stix_objects)
+        restored, unresolved = restored_marking_definitions(objects)
+        if unresolved:
+            self.helper.connector_logger.warning(
+                "The bundle references marking definitions it does not carry and"
+                " this connector cannot rebuild; the platform's cleanup pass"
+                " will drop those references",
+                meta={"markings": unresolved},
+            )
+        bundle = self.helper.stix2_create_bundle(objects + restored)
         self.helper.send_stix2_bundle(
             bundle, update=update, cleanup_inconsistent_bundle=True
         )

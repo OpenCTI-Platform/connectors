@@ -886,6 +886,58 @@ def test_a_bundled_impostor_claiming_a_marking_id_refuses_the_enrichment():
     helper.send_stix2_bundle.assert_called_once()
 
 
+def test_markings_of_objects_the_connector_did_not_enrich_are_preserved():
+    """Only the enriched entity's markings were resolved against the platform.
+
+    Every other object in the bundle arrives with references alone, so a
+    neighbour whose marking definition the bundle omits had that reference
+    dropped by the cleanup pass and was published with weaker access control
+    than it arrived with. A TLP identifier names its definition, so it is
+    rebuilt; anything else is reported instead of invented.
+    """
+    green = "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+    statement = "marking-definition--11111111-2222-4333-8444-555555555555"
+
+    def neighbour(ref):
+        return {
+            "type": "ipv4-addr",
+            "spec_version": "2.1",
+            "id": "ipv4-addr--99999999-9999-4999-8999-999999999999",
+            "value": "198.51.100.7",
+            "object_marking_refs": [ref],
+        }
+
+    for ref, rebuildable in ((green, True), (statement, False)):
+        for out_of_scope in (False, True):
+            connector, helper = _make_connector()
+            connector.client.lookup = MagicMock(return_value=BREACHED)
+            data = _enrichment_data()
+            data.pop("event_type", None)
+            if out_of_scope:
+                data["entity_id"] = "ipv4-addr--22222222-2222-4222-8222-222222222222"
+            data["stix_objects"].append(neighbour(ref))
+            connector._process_callback(data)
+            sent = helper.stix2_create_bundle.call_args.args[0]
+            definitions = {
+                obj.get("id") for obj in sent if obj.get("type") == "marking-definition"
+            }
+            assert (ref in definitions) is rebuildable, (ref, out_of_scope)
+            warned = [
+                call.args[0] for call in helper.connector_logger.warning.call_args_list
+            ]
+            said_so = any("cannot rebuild" in text for text in warned)
+            assert said_so is not rebuildable, (ref, out_of_scope, warned)
+
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    connector._process_message(_enrichment_data())
+    sent = helper.stix2_create_bundle.call_args.args[0]
+    referenced = {ref for obj in sent for ref in listed(obj.get("object_marking_refs"))}
+    for obj in sent:
+        if obj.get("type") == "marking-definition":
+            assert obj["id"] in referenced, "added a definition nothing references"
+
+
 def test_the_note_carries_one_tlp_marking_plus_the_non_tlp_ones():
     """A configured level stricter than the source left two TLPs on the Note."""
     StubConnectorSettings._max_tlp = "TLP:RED"
