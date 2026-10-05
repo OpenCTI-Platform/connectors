@@ -68,6 +68,24 @@ def mapping(value: Any) -> dict[str, Any]:
     return value if hasattr(value, "get") else {}
 
 
+def canonical_scope_type(data: dict[str, Any]) -> str | None:
+    """The entity type the platform's own STIX id says this entity is.
+
+    `enrichment_entity.entity_type` is a convenience mirror of that identity,
+    not the identity itself, and a payload bug can make the two disagree: an
+    `Email-Addr` claim on a non-email entity would send that entity's value
+    to the API, and the reverse would silently skip a real one. `entity_id`
+    is the canonical id the platform attaches to every enrichment event and
+    always names the same object as `stix_entity["id"]`, so its prefix is
+    read first; a payload that omits it falls back to the mirrored field
+    rather than refuse outright.
+    """
+    stix_id = data.get("entity_id")
+    if isinstance(stix_id, str) and "--" in stix_id:
+        return stix_id.split("--", 1)[0].lower()
+    return None
+
+
 def canonical_markings(obj: dict[str, Any]) -> dict[str, Any]:
     """A bundle entry with its marking identifiers in the canonical spelling.
 
@@ -944,7 +962,13 @@ class XposedOrNotConnector:
     def _process_message(self, data: dict[str, Any]) -> str:
         observable = mapping(data.get("enrichment_entity"))
         entity_type = observable.get("entity_type")
-        if entity_type not in self.scopes:
+        scope_type = canonical_scope_type(data)
+        in_scope = (
+            scope_type in {str(scope).lower() for scope in self.scopes}
+            if scope_type is not None
+            else entity_type in self.scopes
+        )
+        if not in_scope:
             return self._forward_unchanged(data, f"Unsupported type: {entity_type}")
 
         stix_objects = self._bundle_objects(data)

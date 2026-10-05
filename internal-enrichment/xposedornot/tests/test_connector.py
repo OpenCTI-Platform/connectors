@@ -210,6 +210,47 @@ def test_connector_uses_the_configured_scope():
     assert connector.scopes == ["Email-Addr"]
 
 
+def test_entity_id_is_authoritative_over_a_mismatched_entity_type():
+    """`enrichment_entity.entity_type` is a mirror of the id, not the identity.
+
+    When the two disagree, the canonical STIX id in `entity_id` must decide
+    scope: a non-email entity mislabelled Email-Addr must not have its value
+    sent to the API, and a real email mislabelled something else must not be
+    skipped.
+    """
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(side_effect=AssertionError("called"))
+    data = _enrichment_data(playbook=True)
+    data["entity_id"] = "ipv4-addr--11111111-1111-4111-8111-111111111111"
+    data["enrichment_entity"]["entity_type"] = "Email-Addr"
+    message = connector._process_message(data)
+    assert message == "Unsupported type: Email-Addr"
+    helper.send_stix2_bundle.assert_called_once()
+
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data()
+    data["entity_id"] = OBSERVABLE_ID
+    data["enrichment_entity"]["entity_type"] = "IPv4-Addr"
+    message = connector._process_message(data)
+    assert "No known breach" not in message and "Unsupported" not in message
+    enriched = next(
+        o
+        for o in helper.stix2_create_bundle.call_args[0][0]
+        if o.get("id") == OBSERVABLE_ID
+    )
+    assert enriched["x_opencti_score"] == 100
+
+
+def test_entity_type_decides_scope_when_entity_id_is_absent():
+    """Without a canonical id to trust, the mirrored field is the only signal."""
+    connector, helper = _make_connector()
+    data = _enrichment_data()
+    data["enrichment_entity"]["entity_type"] = "IPv4-Addr"
+    message = connector._process_message(data)
+    assert message == "Unsupported type: IPv4-Addr"
+
+
 def test_max_note_breaches_reaches_the_converter_and_rejects_negatives():
     connector, _ = _make_connector()
     assert connector.converter.max_table_rows == 50
