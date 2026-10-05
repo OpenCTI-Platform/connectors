@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/intel471-hunt_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Intel 471 Hunter",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Report",
+        "Indicator",
+        "Note",
+        "Intrusion-Set",
+        "Threat-Actor",
+        "Threat-Actor-Group",
+        "Threat-Actor-Individual",
+        "Campaign",
+        "Attack-Pattern",
+        "Vulnerability",
+        "Malware",
+        "Tool",
+        "Sector",
+        "Country",
+        "Region"
+      ],
+      "description": "Entity types the connector can be triggered on, plus every type it emits (Report, Indicator, Note) \u2014 OpenCTI drops unlisted types.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "HUNTER_API_BASE_URL": {
+      "default": "https://api.hunter.cyborgsecurity.io/",
+      "description": "Base URL of the Intel 471 Hunter API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "HUNTER_API_KEY": {
+      "description": "Intel 471 Hunter API key, sent as `Authorization: API-Key <key>`. Obtained separately from Verity471/Titan credentials.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "HUNTER_UI_BASE_URL": {
+      "default": "https://hunter.cyborgsecurity.io/",
+      "description": "Base URL of the Hunter UI, used to build external references back to each hunt. Leave empty to omit those links.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "HUNTER_INDEXES": {
+      "default": "cyborg_usecases",
+      "description": "Hunter index to query.",
+      "type": "string"
+    },
+    "HUNTER_REQUEST_TIMEOUT_SECONDS": {
+      "default": 30,
+      "description": "HTTP timeout, in seconds, for calls to the Hunter API.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "HUNTER_MAX_RESULTS_PER_QUERY": {
+      "default": 100,
+      "description": "Maximum number of hunt packages retrieved per query.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "HUNTER_CACHE_PATH": {
+      "default": "/opt/opencti-connector-intel471-hunt/cache/cache.json",
+      "description": "Path of the local `(hunt_uuid, last_updated)` cache. Keep this on a dedicated directory: mounting a volume over the connector's working directory shadows its code.",
+      "type": "string"
+    },
+    "HUNTER_CACHE_TTL_HOURS": {
+      "default": 24,
+      "description": "Lifetime, in hours, of a cache entry.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "HUNTER_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "The maximal TLP of the entity being enriched.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "HUNTER_API_KEY"
+  ],
+  "additionalProperties": true
+}

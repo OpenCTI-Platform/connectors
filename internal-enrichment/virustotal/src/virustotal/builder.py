@@ -2,6 +2,7 @@
 
 import datetime
 import json
+import re
 
 import plyara
 import plyara.utils
@@ -354,6 +355,66 @@ class VirusTotalBuilder:
             allow_custom=True,
         )
         self.bundle += [ipv4_stix, relationship]
+
+    def build_resolved_domains(
+        self, resolutions: list[dict], keywords: re.Pattern | None
+    ) -> list:
+        """
+        Build the Domain-Names resolving to the IP and their dated relationships.
+
+        The objects are returned, not added to the bundle, so the caller can
+        send them page by page. Created domains carry no score.
+
+        Parameters
+        ----------
+        resolutions : list[dict]
+            VirusTotal resolution objects (`attributes.host_name`, `attributes.date`).
+        keywords : re.Pattern | None
+            Pattern a host name must match to be kept, None to keep all.
+
+        Returns
+        -------
+        list
+            Domain-Name and `resolves-to` relationship objects of the kept resolutions.
+        """
+        objects = []
+        for resolution in resolutions:
+            attributes = resolution.get("attributes") or {}
+            host_name = attributes.get("host_name")
+            if not host_name or (keywords and not keywords.search(host_name)):
+                continue
+            domain_stix = stix2.DomainName(
+                value=host_name,
+                custom_properties={"created_by_ref": self.author.id},
+            )
+            last_seen = attributes.get("date")
+            relationship_properties = {}
+            if last_seen is not None:
+                last_seen_date = datetime.datetime.fromtimestamp(
+                    last_seen, tz=datetime.timezone.utc
+                )
+                relationship_properties = {
+                    "start_time": last_seen_date,
+                    "description": "VirusTotal resolution, last seen "
+                    f"{last_seen_date.strftime('%Y-%m-%dT%H:%M:%SZ')}",
+                }
+            # No time in the ID: re-enriching updates the relationship
+            # instead of duplicating it when the last seen date moves.
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "resolves-to",
+                    domain_stix.id,
+                    self.stix_entity["id"],
+                ),
+                relationship_type="resolves-to",
+                created_by_ref=self.author,
+                source_ref=domain_stix.id,
+                target_ref=self.stix_entity["id"],
+                allow_custom=True,
+                **relationship_properties,
+            )
+            objects += [domain_stix, relationship]
+        return objects
 
     def create_location_located_at(self):
         """Create a Location and link it to the observable."""

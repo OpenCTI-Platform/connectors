@@ -11,6 +11,11 @@ on:
   pull_request:
     paths:
       - '**/connector_manifest.json'
+  merge_group:
+    branches:
+      - master
+      - lts/**
+    types: [checks_requested]
   workflow_dispatch:
 
 concurrency:

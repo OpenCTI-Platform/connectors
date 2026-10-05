@@ -1,6 +1,7 @@
 """VirusTotal connector unit tests."""
 
 import unittest
+from datetime import timedelta
 from unittest.mock import MagicMock, PropertyMock
 
 import stix2
@@ -54,6 +55,12 @@ def _make_connector() -> VirusTotalConnector:
         config.virustotal.file_upload_unseen_artifacts
     )
     connector.ip_add_relationships = config.virustotal.ip_add_relationships
+    connector.ip_add_resolutions = False
+    connector.ip_resolutions_since = timedelta(days=90)
+    connector.ip_resolutions_max_entries = None
+    connector.ip_resolutions_max_pages = 25
+    connector.ip_resolutions_keywords_regex = None
+    connector.api_requests_per_minute = 4
     connector.domain_add_relationships = config.virustotal.domain_add_relationships
     connector.url_upload_unseen = config.virustotal.url_upload_unseen
     connector.include_attributes_in_note = config.virustotal.include_attributes_in_note

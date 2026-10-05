@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+#   id: '6f1b7d7d-4655-42e6-bef1-ad6f176d25a0'
+#   name: 'Palo Alto Cortex XDR Intel'
+#   scope: 'pan-cortex-xdr-intel'
+#   live_stream_listen_delete: true
+#   live_stream_no_dependencies: true
+#   log_level: 'error'
+
+pan_cortex_xdr_intel:
+  api_base_url: 'ChangeMe' # Cortex XDR API base URL (tenant FQDN), e.g. 'https://api-<fqdn>'
+  api_key_id: 'ChangeMe'
+  api_key: 'ChangeMe'
