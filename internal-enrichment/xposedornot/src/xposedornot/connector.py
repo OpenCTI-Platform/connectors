@@ -758,6 +758,26 @@ def is_own_reference(reference: Any) -> bool:
     return source == OWN_REFERENCE_SOURCE.casefold()
 
 
+def owned_score_claim(references: list[Any], score: Any) -> str:
+    """The token among this connector's own references that claims `score`.
+
+    An observable can carry more than one XposedOrNot reference: they arrive
+    under two keys, and an analyst or an older bundle can leave a second one
+    behind. Reading only the first made ownership depend on their order, so a
+    stale `60` sitting ahead of the current `100` read as ownership lost and
+    the connector's own score then survived every later run with no token to
+    retract it by.
+    """
+    current = str(score)
+    for reference in references:
+        if not is_own_reference(reference):
+            continue
+        token = str(reference.get("external_id") or "").strip()
+        if token and token == current:
+            return token
+    return ""
+
+
 def score_provenance_token(
     score: int | None, owned_token: str, published_score: Any
 ) -> str:
@@ -1074,13 +1094,8 @@ class XposedOrNotConnector:
             + listed(enriched_entity.get("x_opencti_external_references"))
             if hasattr(ref, "get")
         ]
-        own_reference = next(
-            (ref for ref in existing_refs if is_own_reference(ref)), None
-        )
-        owned_score_token = (
-            str(own_reference.get("external_id") or "").strip()
-            if own_reference is not None
-            else ""
+        owned_score_token = owned_score_claim(
+            existing_refs, enriched_entity.get("x_opencti_score")
         )
         raw_score = result.get("risk_score")
         score = usable_score(raw_score)
@@ -1092,9 +1107,7 @@ class XposedOrNotConnector:
                 " leaving the observable's existing score untouched",
                 meta={"type": type(raw_score).__name__},
             )
-        elif owned_score_token and owned_score_token == str(
-            enriched_entity.get("x_opencti_score")
-        ):
+        elif owned_score_token:
             enriched_entity["x_opencti_score"] = None
         owned_labels = named_labels(enriched_entity.get("x_opencti_labels"))
         existing_labels = owned_labels + [

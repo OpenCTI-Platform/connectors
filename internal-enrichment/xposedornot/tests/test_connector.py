@@ -2338,6 +2338,50 @@ def test_a_score_this_connector_did_not_set_is_not_claimed_as_ours():
         assert "external_id" not in ours[0], ours[0]
 
 
+def test_ownership_is_read_from_every_one_of_our_references():
+    """Reading only the first own reference made ownership order-dependent.
+
+    An observable can carry more than one XposedOrNot reference — they arrive
+    under two keys, and an analyst or an older bundle can leave a second one
+    behind. With a stale `60` ahead of the current `100`, the connector read
+    ownership as lost: it kept its own score and published no token, so no
+    later run could ever retract it.
+    """
+    scoreless = {**BREACHED, "risk_label": None, "risk_score": None}
+
+    def ours(token):
+        return {
+            "source_name": "XposedOrNot",
+            "url": "https://xposedornot.com",
+            "external_id": token,
+        }
+
+    def enriched_with(refs, split):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(return_value=scoreless)
+        data = _enrichment_data()
+        data["stix_entity"]["x_opencti_score"] = 100
+        if split:
+            data["stix_entity"]["external_references"] = refs[:1]
+            data["stix_entity"]["x_opencti_external_references"] = refs[1:]
+        else:
+            data["stix_entity"]["x_opencti_external_references"] = refs
+        connector._process_message(data)
+        return next(
+            o
+            for o in helper.stix2_create_bundle.call_args[0][0]
+            if o.get("id") == OBSERVABLE_ID
+        )
+
+    for refs in ([ours("60"), ours("100")], [ours("100"), ours("60")]):
+        for split in (False, True):
+            observable = enriched_with(refs, split)
+            assert observable["x_opencti_score"] is None, (refs, split)
+
+    foreign = enriched_with([ours("60"), ours("70")], False)
+    assert foreign["x_opencti_score"] == 100
+
+
 def test_a_second_run_on_our_own_output_still_leaves_a_foreign_score():
     """The leak only surfaced on the run after the one that caused it."""
     scoreless = {**BREACHED, "risk_label": None, "risk_score": None}
