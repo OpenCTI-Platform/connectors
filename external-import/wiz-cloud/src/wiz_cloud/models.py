@@ -22,7 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class _WizModel(BaseModel):
     """Base for every Wiz payload model."""
 
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
+    model_config = ConfigDict(extra="allow", validate_by_alias=True)
 
 
 class WizEntitySnapshot(_WizModel):
