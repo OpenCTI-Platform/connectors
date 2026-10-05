@@ -9,6 +9,7 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntTimeoutError,
     HuntTimeWindow,
     NativeQuery,
+    RunDeadline,
 )
 
 SIGMA_RULE = """
@@ -177,5 +178,43 @@ def test_process_message_reports_failed_runs(connector, helper, requests_mock):
         connector.process_message(EVENT)
     args, kwargs = helper.report_hunt_run.call_args
     assert args == ("run-1", "failed")
-    assert "Unauthorized" in kwargs["error"]
+    # The error names what the account lacks, in plain words
+    assert "Access denied" in kwargs["error"]
+    assert "TEMPLATE_API_KEY" in kwargs["error"]
     helper.send_stix2_bundle.assert_not_called()
+
+
+def test_connector_declares_its_permissions_and_setup_documentation(connector):
+    # Given/When the connector registers its platform
+    permissions = dict(connector.required_permissions)
+
+    # Then OpenCTI receives what the account needs and where it is documented
+    assert "search:read" in permissions
+    assert connector.documentation_url.startswith("https://docs.opencti.io/")
+
+
+def test_connection_checks_pass_with_a_searchable_account(connector, requests_mock):
+    # Given a platform answering the test search
+    requests_mock.post(
+        "https://siem.example.com/api/search", json={"total": 0, "events": []}
+    )
+
+    # When the connection is tested
+    checks = connector.connection_checks(RunDeadline(30))
+
+    # Then every check passes
+    assert checks
+    assert all(check.ok for check in checks)
+
+
+def test_connection_checks_name_the_missing_permission(connector, requests_mock):
+    # Given an API key lacking the search permission
+    requests_mock.post("https://siem.example.com/api/search", status_code=403)
+
+    # When the connection is tested
+    checks = connector.connection_checks(RunDeadline(30))
+
+    # Then the failed check names the permission to grant
+    failed = [check for check in checks if not check.ok]
+    assert failed
+    assert "search:read" in failed[0].message

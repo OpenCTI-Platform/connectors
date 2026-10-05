@@ -20,6 +20,13 @@ TODO:
     - [ ] Map the events returned by your platform in `execute()`: the event time
         (parsed with `parse_timestamp`) and the event fields (flattened with
         `flatten_fields`).
+    - [ ] Declare the permissions the account needs on your platform in
+        `REQUIRED_PERMISSIONS`, its setup documentation in `DOCUMENTATION_URL`
+        and, in `ACCESS_DENIED_HINTS`, what a refused account lacks: OpenCTI
+        shows them on the page of the connector and on an "Access denied" run.
+    - [ ] Return the cheapest search of your platform in `connection_test_query()`
+        (or check each permission in `connection_checks()`): it backs
+        "Test connection" in OpenCTI.
 """
 
 from connector.settings import ConnectorSettings
@@ -44,12 +51,32 @@ SIGMA_PIPELINES = {
 }
 """pySigma pipelines selectable with `TEMPLATE_SIGMA_PIPELINE` or a hunt native query."""
 
+DOCUMENTATION_URL = (
+    "https://docs.opencti.io/latest/usage/hunt-connectors/#before-you-start"
+)
+
+REQUIRED_PERMISSIONS = (
+    (
+        "search:read",
+        "Run the searches of the hunts on the indices of TEMPLATE_INDICES and read their results.",
+    ),
+)
+"""Permissions of the API key, shown on the page of the connector in OpenCTI."""
+
+ACCESS_DENIED_HINTS = {
+    401: "the platform refused the API key: check TEMPLATE_API_KEY, valid and not expired",
+    403: "the API key needs the search:read permission on the indices of TEMPLATE_INDICES",
+}
+"""What a refused account lacks, by HTTP status."""
+
 
 class TemplateConnector(InternalHuntConnector):
     """Hunt connector executing hunts on the platform search API."""
 
     languages = ("opensearch-lucene",)
     evidence_excluded_fields = frozenset({"_raw"})
+    required_permissions = REQUIRED_PERMISSIONS
+    documentation_url = DOCUMENTATION_URL
 
     def __init__(self, settings: ConnectorSettings) -> None:
         """Initialize the connector (the helper is created by `start()`).
@@ -68,6 +95,11 @@ class TemplateConnector(InternalHuntConnector):
             api_key=self.template_config.api_key.get_secret_value(),
             verify_ssl=self.template_config.verify_ssl,
         )
+        self.client.access_denied_hints = dict(ACCESS_DENIED_HINTS)
+
+    def connection_test_query(self) -> NativeQuery:
+        """Return the test search of "Test connection": any event of the indices."""
+        return NativeQuery(language="opensearch-lucene", query="*")
 
     def sigma_backend(self, pipeline: str | None) -> TextQueryTestBackend:
         """Create the pySigma backend of the platform.
