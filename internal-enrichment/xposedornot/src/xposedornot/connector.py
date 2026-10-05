@@ -445,6 +445,13 @@ def resolve_source_markings(
     and the gate cannot afford to depend on which half of the message a
     marking happened to arrive in.
 
+    A bundled object that is not a marking definition but claims a referenced
+    marking id raises as well. The bundle is then carrying two objects under
+    one id, and the deduplication that keeps the first occurrence kept the
+    impostor, leaving the published references pointing at an object that is
+    not a marking at all; `cleanup_inconsistent_bundle` would then strip the
+    restriction from the analyst's own observable.
+
     A reference that is not a usable id raises rather than being skipped, and
     so does a field that is not a list of them at all. The entity is asserting
     a marking either way, and quietly discarding what this connector cannot
@@ -490,6 +497,19 @@ def resolve_source_markings(
             )
         identifiers.append(identifier)
     refs = list(dict.fromkeys(supplied + identifiers))
+    impostors = {
+        canonical_marking_id(obj.get("id"))
+        for obj in bundled
+        if hasattr(obj, "get") and obj.get("type") != "marking-definition"
+    }
+    for ref in refs:
+        if ref in impostors:
+            raise MarkingResolutionError(
+                f"Marking {ref} of the enriched observable is also the id of a"
+                " bundled object that is not a marking definition; refusing to"
+                " enrich rather than publish a restriction whose reference"
+                " resolves to the wrong object."
+            )
     present = {
         canonical_marking_id(obj.get("id"))
         for obj in bundled

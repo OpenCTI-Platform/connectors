@@ -840,6 +840,52 @@ def test_a_live_stix2_object_nested_in_a_bundle_entry_is_handled_before_lookup()
     assert "cannot be resolved" in message
 
 
+def test_a_bundled_impostor_claiming_a_marking_id_refuses_the_enrichment():
+    """Two objects under one id published the restriction onto the wrong one.
+
+    A malformed bundle can carry a non-marking object whose id is a marking
+    the observable references. The gate still read the real definition, but
+    the deduplication that keeps the first occurrence kept the impostor, so
+    the published references pointed at an object that is not a marking and
+    `cleanup_inconsistent_bundle` would strip the restriction from the
+    analyst's own observable.
+    """
+    amber = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+    for impostor in (
+        {"type": "email-addr", "id": amber, "value": "impostor@example.test"},
+        {"type": "note", "id": amber, "abstract": "a", "content": "b"},
+    ):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(
+            side_effect=AssertionError("API was called")
+        )
+        data = _enrichment_data(tlp=None)
+        data["stix_entity"]["object_marking_refs"] = [amber]
+        data["stix_objects"].append(impostor)
+        message = connector._process_message(data)
+        connector.client.lookup.assert_not_called()
+        assert "is not a marking definition" in message, message
+        helper.send_stix2_bundle.assert_not_called()
+
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data(tlp=None)
+    data["stix_entity"]["object_marking_refs"] = [amber]
+    data["stix_objects"].append(
+        {
+            "type": "marking-definition",
+            "spec_version": "2.1",
+            "id": amber,
+            "definition_type": "tlp",
+            "name": "TLP:AMBER",
+            "definition": TLPMarking(level="amber").to_stix2_object()["definition"],
+        }
+    )
+    message = connector._process_message(data)
+    assert message.startswith("Found 1 breach"), message
+    helper.send_stix2_bundle.assert_called_once()
+
+
 def test_the_note_carries_one_tlp_marking_plus_the_non_tlp_ones():
     """A configured level stricter than the source left two TLPs on the Note."""
     StubConnectorSettings._max_tlp = "TLP:RED"

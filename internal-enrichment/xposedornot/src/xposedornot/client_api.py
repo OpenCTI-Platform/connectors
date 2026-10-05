@@ -57,21 +57,31 @@ def retry_after_seconds(value, default: int = DEFAULT_RETRY_AFTER) -> int:
 MAX_DECODE_PASSES = 20
 
 
-def fully_decoded(text: str) -> str:
-    """Percent and HTML entity encoding peeled off until the text stops changing.
+def decoded_layers(text: str) -> tuple[str, bool]:
+    """Percent and HTML entity encoding peeled off, and whether that finished.
 
     A single `unquote` only removes one layer, so a value encoded twice still
     reads as encoded afterwards, and an HTML error page can spell the same
     address with character references instead. Each pass either shortens the text or leaves
     it alone, so this settles on its own; the cap only bounds the work done on
     something a third party sent, and sits far above any real encoding depth.
+
+    Whether the cap was reached has to travel with the text. A payload encoded
+    deeper than the cap stopped short of its plaintext, so the redaction check
+    read an encoded string, found no secret in it, and returned a body a
+    reader could still decode back to the address.
     """
     for _ in range(MAX_DECODE_PASSES):
         decoded = html.unescape(unquote(text))
         if decoded == text:
-            break
+            return text, True
         text = decoded
-    return text
+    return text, False
+
+
+def fully_decoded(text: str) -> str:
+    """The text with as many layers of encoding removed as the cap allows."""
+    return decoded_layers(text)[0]
 
 
 def redact(text: str, *secrets: str | None) -> str:
@@ -84,9 +94,12 @@ def redact(text: str, *secrets: str | None) -> str:
 
     Targeted replacement still only covers the spellings it knows, and any
     character may be percent-encoded, so the whole payload is dropped if the
-    secret is still legible once the text is decoded. Losing a diagnostic
-    string is the cheaper mistake: what is being protected here is an address
-    belonging to a person who did not choose to appear in these logs.
+    secret is still legible once the text is decoded, and also when the
+    decoding never settled: text still encoded at the cap has not been shown
+    to be clean, and a payload nobody can vouch for is not logged. Losing a
+    diagnostic string is the cheaper mistake: what is being protected here is
+    an address belonging to a person who did not choose to appear in these
+    logs.
 
     Decoding repeats until it settles. One pass turns `%2573ecret` into
     `%73ecret` rather than into the secret, so a value encoded twice would
@@ -126,8 +139,12 @@ def redact(text: str, *secrets: str | None) -> str:
         cursor = end
     pieces.append(text[cursor:])
     redacted = "".join(pieces)
-    decoded = fully_decoded(redacted).casefold()
-    if any(secret and secret.casefold() in decoded for secret in secrets):
+    if not forms:
+        return redacted
+    decoded, settled = decoded_layers(redacted)
+    if not settled:
+        return "<redacted>"
+    if any(secret and secret.casefold() in decoded.casefold() for secret in secrets):
         return "<redacted>"
     return redacted
 

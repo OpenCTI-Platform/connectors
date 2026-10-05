@@ -483,6 +483,36 @@ def test_fully_decoded_settles_and_is_bounded():
     assert fully_decoded(deep) == "secret"
 
 
+def test_a_payload_encoded_past_the_cap_is_dropped_whole():
+    """Decoding that never settled proves nothing about the text.
+
+    The check stopped after `MAX_DECODE_PASSES` and read whatever it had
+    reached. A body that encoded the address one layer deeper than the cap
+    was therefore searched in an encoded form, matched nothing, and was
+    logged as clean while still decoding back to the address.
+    """
+    from urllib.parse import quote, unquote
+
+    from src.xposedornot.client_api import MAX_DECODE_PASSES, decoded_layers, redact
+
+    email = "user@example.test"
+    deep = email
+    for _ in range(MAX_DECODE_PASSES + 5):
+        deep = quote(deep, safe="")
+    assert decoded_layers(deep)[1] is False
+    assert redact('{"error":"bad address %s"}' % deep, email, "KEY") == "<redacted>"
+
+    shallow = quote(quote(email, safe=""), safe="")
+    assert decoded_layers(shallow)[1] is True
+
+    readable = redact(
+        '{"error":"bad address %s"}' % quote(email, safe=""), email, "KEY"
+    )
+    assert readable == '{"error":"bad address <redacted>"}'
+
+    assert unquote(redact(deep)) != "<redacted>"
+
+
 def test_a_record_without_an_identifier_is_not_a_breach():
     """A nameless record was counted as an exposure that never happened.
 
