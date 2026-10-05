@@ -278,6 +278,7 @@ class ConfigLoaderVirusTotal(ConfigBaseSettings):
     )
     gti_relationship_limit: int = Field(
         default=10,
+        gt=0,
         description="Maximum number of related objects to pull per GTI relationship, per observable.",
     )
 
