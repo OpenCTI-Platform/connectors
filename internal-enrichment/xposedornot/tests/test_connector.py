@@ -873,7 +873,7 @@ def test_references_sharing_a_source_but_not_an_external_id_are_all_kept():
     ids = [
         ref.get("external_id") for ref in observable["x_opencti_external_references"]
     ]
-    assert ids == ["CVE-2024-0001", "CVE-2024-0002", "T1566", None]
+    assert ids == ["CVE-2024-0001", "CVE-2024-0002", "T1566", "100"]
 
 
 def test_a_message_that_is_not_a_mapping_still_gets_an_answer():
@@ -1548,7 +1548,13 @@ def test_an_unusable_score_preserves_the_existing_one():
         data = _enrichment_data()
         data["stix_entity"]["x_opencti_score"] = 60
         data["stix_entity"]["x_opencti_external_references"] = (
-            [{"source_name": "XposedOrNot", "url": "https://xposedornot.com"}]
+            [
+                {
+                    "source_name": "XposedOrNot",
+                    "url": "https://xposedornot.com",
+                    "external_id": "60",
+                }
+            ]
             if enriched_before
             else []
         )
@@ -2100,7 +2106,11 @@ def test_switching_to_plus_retracts_the_stale_community_score():
     data = _enrichment_data()
     data["stix_entity"]["x_opencti_score"] = 100
     data["stix_entity"]["external_references"] = [
-        {"source_name": "XposedOrNot", "url": "https://xposedornot.com"}
+        {
+            "source_name": "XposedOrNot",
+            "url": "https://xposedornot.com",
+            "external_id": "100",
+        }
     ]
     connector._process_message(data)
     enriched = next(
@@ -2130,6 +2140,37 @@ def test_a_score_we_never_set_is_left_alone():
     assert enriched["x_opencti_score"] == 42
 
 
+def test_a_score_changed_since_our_last_run_is_not_retracted():
+    """Our own reference proves we enriched before, not that we own the score now.
+
+    An earlier run set the score to 60 and recorded that in the reference's
+    `external_id`. Since then an analyst (or another connector) raised it to
+    85. A later Plus/scoreless response must not clear 85 just because our
+    old reference is still attached: nothing proves we still own the current
+    value, so only a token match licenses retraction.
+    """
+    connector, helper = _make_connector(api_key="SECRET")
+    connector.client.lookup = MagicMock(
+        return_value={**BREACHED, "risk_label": None, "risk_score": None}
+    )
+    data = _enrichment_data()
+    data["stix_entity"]["x_opencti_score"] = 85
+    data["stix_entity"]["external_references"] = [
+        {
+            "source_name": "XposedOrNot",
+            "url": "https://xposedornot.com",
+            "external_id": "60",
+        }
+    ]
+    connector._process_message(data)
+    enriched = next(
+        o
+        for o in helper.stix2_create_bundle.call_args[0][0]
+        if o.get("id") == OBSERVABLE_ID
+    )
+    assert enriched["x_opencti_score"] == 85
+
+
 def test_community_score_still_overwrites_a_previous_one():
     connector, helper = _make_connector()
     connector.client.lookup = MagicMock(return_value=BREACHED)
@@ -2142,6 +2183,31 @@ def test_community_score_still_overwrites_a_previous_one():
         if o.get("id") == OBSERVABLE_ID
     )
     assert enriched["x_opencti_score"] == 100
+
+
+def test_our_reference_records_the_score_it_published():
+    """The provenance token on our own reference must match what we published.
+
+    A later run compares this token against the current score to decide
+    whether retraction is licensed, so it has to track the published value
+    exactly rather than go stale.
+    """
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(return_value=BREACHED)
+    data = _enrichment_data()
+    connector._process_message(data)
+    enriched = next(
+        o
+        for o in helper.stix2_create_bundle.call_args[0][0]
+        if o.get("id") == OBSERVABLE_ID
+    )
+    ours = [
+        ref
+        for ref in enriched["x_opencti_external_references"]
+        if is_own_reference(ref)
+    ]
+    assert len(ours) == 1
+    assert ours[0]["external_id"] == str(enriched["x_opencti_score"]) == "100"
 
 
 RED_ID = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"

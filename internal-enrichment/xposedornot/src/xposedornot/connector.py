@@ -709,8 +709,10 @@ def is_own_reference(reference: Any) -> bool:
 
     Matched without regard to case or padding. A stale entry spelled
     `xposedornot` was not recognised, so it survived and a second one was
-    appended beside it, and the same comparison decides whether the
-    observable was enriched before, which drives score retraction.
+    appended beside it. Finding this reference does not by itself prove we
+    still own the observable's current score: its `external_id` carries the
+    score we last published, and only a match against that token licenses
+    retraction.
     """
     if not hasattr(reference, "get"):
         return False
@@ -1007,7 +1009,14 @@ class XposedOrNotConnector:
             + listed(enriched_entity.get("x_opencti_external_references"))
             if hasattr(ref, "get")
         ]
-        enriched_before = any(is_own_reference(ref) for ref in existing_refs)
+        own_reference = next(
+            (ref for ref in existing_refs if is_own_reference(ref)), None
+        )
+        owned_score_token = (
+            str(own_reference.get("external_id") or "").strip()
+            if own_reference is not None
+            else ""
+        )
         raw_score = result.get("risk_score")
         score = usable_score(raw_score)
         if score is not None:
@@ -1018,7 +1027,9 @@ class XposedOrNotConnector:
                 " leaving the observable's existing score untouched",
                 meta={"type": type(raw_score).__name__},
             )
-        elif enriched_before and enriched_entity.get("x_opencti_score") is not None:
+        elif owned_score_token and owned_score_token == str(
+            enriched_entity.get("x_opencti_score")
+        ):
             enriched_entity["x_opencti_score"] = None
         owned_labels = named_labels(enriched_entity.get("x_opencti_labels"))
         existing_labels = owned_labels + [
@@ -1051,13 +1062,15 @@ class XposedOrNotConnector:
                     continue
                 seen.add(key)
             external_references.append(ref)
-        external_references.append(
-            {
-                "source_name": "XposedOrNot",
-                "url": "https://xposedornot.com",
-                "description": "XposedOrNot breach exposure check",
-            }
-        )
+        published_score = enriched_entity.get("x_opencti_score")
+        own_reference_out = {
+            "source_name": "XposedOrNot",
+            "url": "https://xposedornot.com",
+            "description": "XposedOrNot breach exposure check",
+        }
+        if published_score is not None:
+            own_reference_out["external_id"] = str(published_score)
+        external_references.append(own_reference_out)
         enriched_entity["x_opencti_external_references"] = external_references
         enriched_entity.pop("external_references", None)
         enriched_objects = [
