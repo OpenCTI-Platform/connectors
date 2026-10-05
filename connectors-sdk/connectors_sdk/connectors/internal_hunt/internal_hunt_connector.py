@@ -775,12 +775,12 @@ class InternalHuntConnector(ABC):
     def _complete_execution(
         self, request: HuntRequest, native_query: NativeQuery, started: float
     ) -> str:
-        """Execute the query, report the completed run, then send its knowledge.
+        """Execute the query, send its knowledge, then report the completed run.
 
-        The run is reported completed before its bundle is sent: a run that
-        could not be reported ends failed with no knowledge sent, and a bundle
-        that cannot be sent after the report ends the work in error without
-        turning the completed run into a failed one.
+        The bundle is sent before the run is reported completed: a bundle that
+        cannot be sent fails the run, which OpenCTI retries, and a run reported
+        completed always has its knowledge sent. The identifiers of the
+        knowledge derive from the hunt run, so a retry upserts the same objects.
         """
         deadline = RunDeadline(request.limits.timeout_seconds)
         raw_result = self._execute_within_limits(request, native_query, deadline)
@@ -788,6 +788,7 @@ class InternalHuntConnector(ABC):
         objects = self._bundle_objects(self.to_stix(request, result))
         result_ids = list(objects)
         hits_count = result.hits_count
+        self._send_objects(objects)
         self.report(
             request.hunt_run.id,
             HuntRunReport(
@@ -817,15 +818,6 @@ class InternalHuntConnector(ABC):
                 cost_ms=self._elapsed_ms(started),
             ),
         )
-        try:
-            self._send_objects(objects)
-        except Exception as err:
-            self.logger.error(
-                "[HUNT] Hunt run completed but its knowledge could not be sent",
-                {"hunt_run_id": request.hunt_run.id, "error": _error_message(err)},
-            )
-            _mark_reported(err)
-            raise
         self.logger.info(
             "[HUNT] Hunt run completed",
             {
@@ -857,11 +849,12 @@ class InternalHuntConnector(ABC):
         ]
 
     def _complete_indicator_run(self, request: HuntRequest, started: float) -> str:
-        """Look up the values of an indicator hunt, report one result per value, then send the sightings.
+        """Look up the values of an indicator hunt, send the sightings, then report one result per value.
 
         A preview reports the lookups without running them. A type the platform
         cannot look up is reported not searched, so that OpenCTI never concludes
-        benign about it.
+        benign about it. As for telemetry runs, the sightings are sent before
+        the completed report.
         """
         if not self.supports_indicators:
             raise HuntTranslationError(
@@ -882,6 +875,7 @@ class InternalHuntConnector(ABC):
                 ),
             )
             return f"Hunt run {request.hunt_run.id} preview completed ({len(queries)} lookup(s))."
+        self._require_ioc_results_report()
         deadline = RunDeadline(request.limits.timeout_seconds)
         observations: dict[str, IocObservation] = {}
         unsearched: dict[str, str] = {}
@@ -923,6 +917,7 @@ class InternalHuntConnector(ABC):
                 {"hunt_run_id": request.hunt_run.id},
             )
         hits_count = sum(result.hits_count for result in ioc_results)
+        self._send_objects(objects)
         self.report(
             request.hunt_run.id,
             HuntRunReport(
@@ -943,15 +938,6 @@ class InternalHuntConnector(ABC):
                 ioc_results=ioc_results,
             ),
         )
-        try:
-            self._send_objects(objects)
-        except Exception as err:
-            self.logger.error(
-                "[HUNT] Hunt run completed but its knowledge could not be sent",
-                {"hunt_run_id": request.hunt_run.id, "error": _error_message(err)},
-            )
-            _mark_reported(err)
-            raise
         seen = sum(1 for result in ioc_results if result.seen)
         self.logger.info(
             "[HUNT] Indicator hunt run completed",
@@ -1066,11 +1052,7 @@ class InternalHuntConnector(ABC):
         """
         extra: dict[str, Any] = {}
         if report.ioc_results is not None:
-            if not _accepts_keyword(self.helper.report_hunt_run, "ioc_results"):
-                raise HuntUnsupportedPyctiError(
-                    "The installed pycti cannot report the results of indicator hunts: "
-                    "install the pycti release matching the OpenCTI platform."
-                )
+            self._require_ioc_results_report()
             extra["ioc_results"] = [
                 result.model_dump(mode="json") for result in report.ioc_results
             ]
@@ -1108,6 +1090,18 @@ class InternalHuntConnector(ABC):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _require_ioc_results_report(self) -> None:
+        """Fail when pycti cannot report the result of each value of an indicator hunt.
+
+        Raises:
+            HuntUnsupportedPyctiError: If ``report_hunt_run`` takes no ``ioc_results``.
+        """
+        if not _accepts_keyword(self.helper.report_hunt_run, "ioc_results"):
+            raise HuntUnsupportedPyctiError(
+                "The installed pycti cannot report the results of indicator hunts: "
+                "install the pycti release matching the OpenCTI platform."
+            )
 
     def _report_failure(
         self,

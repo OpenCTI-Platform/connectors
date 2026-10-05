@@ -459,7 +459,7 @@ def test_sends_no_sighting_without_a_security_platform(
     hunt_helper.send_stix2_bundle.assert_not_called()
 
 
-def test_keeps_the_completed_report_when_the_sightings_cannot_be_sent(
+def test_fails_the_run_for_a_retry_when_the_sightings_cannot_be_sent(
     hunt_settings, hunt_helper, indicator_event
 ):
     result = HuntResult(
@@ -474,9 +474,10 @@ def test_keeps_the_completed_report_when_the_sightings_cannot_be_sent(
     connector._logger = MagicMock()
     with pytest.raises(RuntimeError) as raised:
         connector.process_message(indicator_event())
-    # The run stays completed: the error is marked reported, the work ends in error
+    # The run is never reported completed without its sightings: it fails, to be retried
     assert hunt_helper.report_hunt_run.call_count == 1
-    assert hunt_helper.report_hunt_run.call_args.args[1] == "completed"
+    assert hunt_helper.report_hunt_run.call_args.args[1] == "failed"
+    assert hunt_helper.report_hunt_run.call_args.kwargs["retryable"] is True
     assert raised.value.hunt_run_reported is True
 
 
@@ -501,8 +502,9 @@ def test_fails_the_run_with_a_pycti_that_cannot_report_values(
         reports.append((status, error))
 
     hunt_helper.report_hunt_run = report_hunt_run
+    seen = event("2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7")
     connector = DummyIndicatorConnector(
-        hunt_settings, result=HuntResult(events=[], truncated=False)
+        hunt_settings, result=HuntResult(events=[seen], truncated=False)
     )
     connector._helper = hunt_helper
     from unittest.mock import MagicMock
@@ -514,3 +516,6 @@ def test_fails_the_run_with_a_pycti_that_cannot_report_values(
         reports[-1][0] == "failed"
         and "cannot report the results of indicator hunts" in reports[-1][1]
     )
+    # Nothing is looked up nor sighted for a run that could not be reported
+    assert connector.executed == []
+    hunt_helper.send_stix2_bundle.assert_not_called()

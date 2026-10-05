@@ -93,7 +93,11 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
 5. **Suppression**: events matching a benign pattern (case-insensitive substring, or `/regex/`) are removed. Regular
    expressions run on the `regex` engine within what is left of `timeout_seconds`: a pattern that backtracks past it
    ends the run as a `timeout` instead of blocking its report.
-6. **Report**: `completed` with hits, distinct entities, evidence, translated query, language, cost and the ids of the
+6. **Knowledge**: the bundle is sent with the run work id before the run is reported completed. A bundle that cannot be
+   sent fails the run (retryable), so a run reported completed always has its knowledge sent. A run whose completed
+   report is refused after its bundle was sent is reported `failed`, and its retry upserts the same objects: their
+   identifiers derive from the hunt run. Indicator runs check that pycti reports per-value results before any lookup.
+7. **Report**: `completed` with hits, distinct entities, evidence, translated query, language, cost and the ids of the
    objects `to_stix()` maps, or `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the
    work in error). A reported error carries `hunt_run_reported = True`, so the `listen_hunt` wrapper of pycti does not
    report the run a second time. A failed run also says whether running it again can succeed (`retryable`):
@@ -102,9 +106,6 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
    that does not compile), an invalid message (`HuntRequestError`) and an unsupported pycti. Timeouts, platform and
    network failures and refused credentials stay retryable. A pycti without the `retryable` keyword gets the error only,
    which keeps its class name as a prefix.
-7. **Knowledge**: the bundle is sent with the run work id once the run is reported completed. A run that could not be
-   reported is reported `failed` and sends no knowledge; a bundle that cannot be sent after the report ends the work in
-   error and leaves the run completed, never failed with knowledge.
 
 ## Implementing a hunt connector
 

@@ -868,7 +868,7 @@ def test_reported_flag_tolerates_errors_without_attributes(
     assert statuses == ["failed"]
 
 
-def test_completed_report_comes_before_the_knowledge(
+def test_knowledge_is_sent_before_the_completed_report(
     connector_factory, hunt_event, hunt_helper
 ):
     # Given a run with results
@@ -877,41 +877,64 @@ def test_completed_report_comes_before_the_knowledge(
     # When the run is processed
     connector.process_message(hunt_event())
 
-    # Then the run is reported completed, with the ids of its knowledge, before the bundle is sent
+    # Then the bundle is sent, then the run is reported completed with the ids of its knowledge
     names = [call[0] for call in hunt_helper.mock_calls]
-    assert names.index("report_hunt_run") < names.index("send_stix2_bundle")
+    assert names.index("send_stix2_bundle") < names.index("report_hunt_run")
     _, kwargs = _report_kwargs(hunt_helper)
     sent = hunt_helper.stix2_create_bundle.call_args.args[0]
     assert kwargs["result_ids"] == [obj["id"] for obj in sent]
 
 
-def test_unreported_run_sends_no_knowledge(connector_factory, hunt_event, hunt_helper):
-    # Given a platform refusing the completed report
-    connector = connector_factory(_results({"DestinationIp": "8.8.8.8"}))
-    hunt_helper.report_hunt_run.side_effect = [RuntimeError("report rejected"), None]
-
-    # When/Then the run is reported failed and no knowledge is sent
-    with pytest.raises(RuntimeError, match="report rejected"):
-        connector.process_message(hunt_event())
-    hunt_helper.send_stix2_bundle.assert_not_called()
-    statuses = [call.args[1] for call in hunt_helper.report_hunt_run.call_args_list]
-    assert statuses == ["completed", "failed"]
-
-
-def test_knowledge_failure_keeps_the_completed_run(
+def test_knowledge_that_cannot_be_sent_fails_the_run_for_a_retry(
     connector_factory, hunt_event, hunt_helper
 ):
-    # Given a bundle that cannot be sent once the run is reported completed
+    # Given a bundle that cannot be enqueued
     connector = connector_factory(_results({"DestinationIp": "8.8.8.8"}))
     hunt_helper.send_stix2_bundle.side_effect = RuntimeError("queue unavailable")
 
-    # When/Then the work ends in error and the run is never reported failed
+    # When/Then the run is never reported completed: it fails, to be retried
     with pytest.raises(RuntimeError, match="queue unavailable") as raised:
         connector.process_message(hunt_event())
-    statuses = [call.args[1] for call in hunt_helper.report_hunt_run.call_args_list]
-    assert statuses == ["completed"]
+    calls = hunt_helper.report_hunt_run.call_args_list
+    assert [call.args[1] for call in calls] == ["failed"]
+    assert calls[0].kwargs["retryable"] is True
     assert raised.value.hunt_run_reported is True
-    connector.logger.error.assert_called()
+
+
+def test_failure_a_hook_already_reported_is_not_reported_again(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given an execute hook that reported its failure itself
+    error = HuntExecutionError("reported by the hook")
+    error.hunt_run_reported = True
+    connector = connector_factory(error)
+
+    # When/Then the error is raised again without a second report
+    with pytest.raises(HuntExecutionError, match="reported by the hook"):
+        connector.process_message(hunt_event())
+    hunt_helper.report_hunt_run.assert_not_called()
+
+
+def test_retry_of_an_unreported_run_upserts_the_same_knowledge(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given a platform refusing the completed report of a first attempt
+    connector = connector_factory(_results({"DestinationIp": "8.8.8.8"}))
+    hunt_helper.report_hunt_run.side_effect = [RuntimeError("report rejected"), None]
+    with pytest.raises(RuntimeError, match="report rejected"):
+        connector.process_message(hunt_event())
+    statuses = [call.args[1] for call in hunt_helper.report_hunt_run.call_args_list]
+    assert statuses == ["completed", "failed"]
+    first = [obj["id"] for obj in hunt_helper.stix2_create_bundle.call_args.args[0]]
+
+    # When the run is retried
+    hunt_helper.report_hunt_run.side_effect = None
+    connector.process_message(hunt_event(hunt_run={"id": "run-1", "attempt": 2}))
+
+    # Then the retry sends the same objects, which OpenCTI upserts
+    retried = [obj["id"] for obj in hunt_helper.stix2_create_bundle.call_args.args[0]]
+    assert retried == first
+    assert _report_kwargs(hunt_helper)[0] == ("run-1", "completed")
 
 
 # ----------------------------------------------------------------------
