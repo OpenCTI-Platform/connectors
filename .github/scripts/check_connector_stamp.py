@@ -5,18 +5,46 @@ The shared image build (step "Write connector version stamp" of
 .github/actions/build-connector-image) writes ``.connector_version.json``
 (version and catalog slug) at the connector root and in its code directory
 (``src/``, or the top-level package of a packaged connector). At registration,
-pycti (``pycti/connector/opencti_connector_build.py``) looks for that file in
-the directory of the entry point, of ``sys.path[0]`` and of the working
-directory, each with up to four parent directories. The platform then shows
-the connector with the logo and the title of its catalog entry.
+pycti (``pycti/connector/opencti_connector_build.py``) looks for a file of that
+exact name in the directory of the ``__main__`` file, of ``sys.path[0]`` and in
+the working directory, each with up to four parent directories. The platform
+then shows the connector with the logo and the title of its catalog entry.
 
 For every image the pipeline builds (the connector ``Dockerfile``, its
 ``Dockerfile_fips``, and the shared ``Dockerfile_ubi9`` for the connectors of
 ``.github/ubi9-connectors.json`` with their ``.build.env``) and for the
-connector templates, this script reads the stages, WORKDIR, ENV / ARG,
-COPY / ADD, ``rm`` in RUN and CMD / ENTRYPOINT, the ``.dockerignore``, the
-entry-point shell script and the packaging, and tells whether a stamp lands in
-a directory pycti reads.
+connector templates, the script builds a model of the files of the final image
+and of the command that starts it, then tells whether a stamp is where pycti
+looks. The model covers exactly this:
+
+* Build context: the files of the connector directory minus the
+  ``.dockerignore`` rules (or a Dockerfile-specific ``<Dockerfile>.dockerignore``;
+  last match wins, ``!`` exceptions), plus the stamps the build step writes.
+* Instructions: FROM (stages), ARG / ENV, WORKDIR, COPY / ADD (``--from``,
+  ``--parents``, ``--exclude``, wildcards, file and directory destinations; an
+  ADD of a URL or of an archive brings no connector file), RUN, SHELL,
+  CMD / ENTRYPOINT (exec and shell forms).
+* RUN commands and entry scripts, read as POSIX shell: ``cd``, ``rm``,
+  ``unlink`` and ``mv`` (literal and wildcard operands, a wildcard never
+  matching a leading dot), ``find ... -delete`` / ``-exec rm``, ``sh -c``,
+  shell scripts of the image that are run or sourced, ``pip install <path>``.
+  Commands joined by ``&&`` are followed as if each succeeds. Any other
+  command is taken to leave the files and the working directory unchanged.
+* Packaged connectors: the installed package carries the stamp only when the
+  stamp reached the package directory before ``pip install`` and the
+  setuptools package data of that package (``pyproject.toml`` or
+  ``setup.cfg``, exclusions included) selects it.
+* Start command: the python interpreter with its script, its ``-m`` module
+  (looked up in the working directory, ``PYTHONPATH`` and the installed
+  packages) or ``-c``, started directly or by a shell script of the image.
+
+Anything outside the model is reported as "not supported" with the construct
+that stopped the analysis, never assumed to be fine: heredocs, variables the
+build does not define, a directory change or the start of python inside a
+conditional or a loop of the entry script, an entry point that is not a file
+of the model, deletions whose operands are unknown, packaging the script does
+not read (``setup.py`` package data, ``MANIFEST.in`` exclusions, build backends
+other than setuptools).
 
 Usage:
     python3 .github/scripts/check_connector_stamp.py
@@ -26,12 +54,15 @@ Usage:
 """
 
 import argparse
+import configparser
 import fnmatch
 import json
+import os
 import posixpath
 import re
 import shlex
 import sys
+import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -45,41 +76,133 @@ CONNECTOR_TYPES = (
 )
 UBI9_DOCKERFILE = "Dockerfile_ubi9"
 UBI9_CONNECTORS = ".github/ubi9-connectors.json"
+# Files of a connector the result depends on, besides the Dockerfiles: the
+# workflow runs the check whenever one of them changes.
+WATCHED_FILES = (
+    ".dockerignore",
+    "*.dockerignore",
+    "*.sh",
+    ".build.env",
+    "pyproject.toml",
+    "setup.cfg",
+    "setup.py",
+    "MANIFEST.in",
+    "__main__.py",
+)
 # pycti reads the anchor directory and its first four parents.
 STAMP_PARENT_DEPTH = 4
-# Abstract location of an installed package: the real path depends on the
+# Abstract location of the installed packages: the real path depends on the
 # Python version of the base image, and pycti only needs the package directory.
 SITE_PACKAGES = "/<site-packages>"
-PYTHON_EXECUTABLE = re.compile(r"^(.*/)?python(3(\.\d+)?)?$")
-SHELL_EXECUTABLE = re.compile(r"^(.*/)?(ba|da)?sh$")
-VARIABLE = re.compile(
-    r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?::?-([^}]*))?\}|\$([A-Za-z_][A-Za-z0-9_]*)"
+# Official images set no WORKDIR: a stage built on them starts in "/".
+ROOT_WORKDIR_IMAGE = re.compile(
+    r"^(docker\.io/(library/)?)?(python|alpine|debian|ubuntu)([:@]|$)"
+    r"|^registry\.access\.redhat\.com/ubi\d+/"
 )
+# Directories of every base image: a file copied to one of them without a
+# trailing slash lands inside it.
+BASE_DIRECTORIES = frozenset(
+    {
+        "/",
+        "/bin",
+        "/etc",
+        "/home",
+        "/opt",
+        "/root",
+        "/srv",
+        "/tmp",
+        "/usr",
+        "/usr/bin",
+        "/usr/local",
+        "/usr/local/bin",
+        "/usr/local/lib",
+        "/usr/local/sbin",
+        "/usr/sbin",
+        "/var",
+    }
+)
+DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+DEFAULT_SHELL = ["/bin/sh", "-c"]
+PYTHON = re.compile(r"^python(3(\.\d+)?)?$")
+PIP = re.compile(r"^pip(3(\.\d+)?)?$")
+SHELLS = frozenset({"sh", "bash", "dash", "ash"})
+VARIABLE = re.compile(
+    r"\$\{([A-Za-z_][A-Za-z0-9_]*)(?:(:?[-+])([^}]*))?\}|\$([A-Za-z_][A-Za-z0-9_]*)"
+)
+ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+GLOB_CHARS = re.compile(r"[*?\[]")
+HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]")
+TARBALL = re.compile(r"\.(tar|tar\.gz|tgz|tar\.bz2|tbz2|tar\.xz|txz)$")
+COMMAND_PREFIXES = frozenset({"exec", "command", "nohup", "time", "builtin"})
+REDIRECTIONS = frozenset({">", ">>", "<", ">&", "<&", "&>", "&>>", ">|", "<>"})
+# Longest first: shlex returns a run of punctuation such as ");" as one token.
+OPERATORS = (
+    "&>>",
+    "&&",
+    "||",
+    ";;",
+    ">>",
+    "<<",
+    ">&",
+    "<&",
+    "&>",
+    ">|",
+    "<>",
+    ";",
+    "&",
+    "|",
+    "(",
+    ")",
+    "<",
+    ">",
+)
+SEPARATORS = frozenset({";", "&&", "||", "|", "&", ";;", "\n"})
+PIP_OPTIONS_WITH_VALUE = frozenset(
+    {
+        "-r",
+        "--requirement",
+        "-c",
+        "--constraint",
+        "-e",
+        "--editable",
+        "-i",
+        "--index-url",
+        "--extra-index-url",
+        "-f",
+        "--find-links",
+        "--trusted-host",
+        "--platform",
+        "--python-version",
+        "--implementation",
+        "--abi",
+        "--src",
+        "--upgrade-strategy",
+        "--progress-bar",
+        "--log",
+        "--proxy",
+        "--retries",
+        "--timeout",
+        "--exists-action",
+        "--cert",
+        "--client-cert",
+        "--cache-dir",
+        "-C",
+        "--config-settings",
+        "--global-option",
+        "--no-binary",
+        "--only-binary",
+        "--report",
+    }
+)
+# Options that install somewhere else than the interpreter's site-packages.
+PIP_RELOCATING_OPTIONS = frozenset(
+    {"-t", "--target", "--prefix", "--root", "--user", "--home"}
+)
+PYTHON_OPTIONS_WITH_VALUE = frozenset({"-W", "-X", "--check-hash-based-pycs"})
 
 
-@dataclass
-class Stage:
-    """Image facts that matter for the stamp, per build stage."""
-
-    workdir: str = "/"
-    stamps: set = field(default_factory=set)
-    # Image path -> context path of the shell scripts an entry point may run.
-    scripts: dict = field(default_factory=dict)
-    entrypoint: list = None
-    cmd: list = None
-    installs_package: bool = False
-    variables: dict = field(default_factory=dict)
-
-    def child(self):
-        return Stage(
-            workdir=self.workdir,
-            stamps=set(self.stamps),
-            scripts=dict(self.scripts),
-            entrypoint=self.entrypoint,
-            cmd=self.cmd,
-            installs_package=self.installs_package,
-            variables=dict(self.variables),
-        )
+class Unsupported(Exception):
+    """A construct outside the model: the image is reported, never assumed covered."""
 
 
 @dataclass
@@ -102,10 +225,28 @@ def ancestors(directory, depth=STAMP_PARENT_DEPTH):
     return found
 
 
-def image_path(path, workdir):
+def self_and_parents(path):
+    """``path`` and every directory above it, up to "/"."""
+    found = [path]
+    while path != "/":
+        path = posixpath.dirname(path)
+        found.append(path)
+    return found
+
+
+def image_path(path, cwd, what="path"):
+    """Absolute image path of ``path``, relative to ``cwd``."""
+    if "$" in path or "`" in path:
+        raise Unsupported(
+            f"{what} '{path}' uses a variable or a command the build does not define"
+        )
     if path.startswith("/"):
         return posixpath.normpath(path)
-    return posixpath.normpath(posixpath.join(workdir, path))
+    if cwd is None:
+        raise Unsupported(
+            f"{what} '{path}' is relative to an unknown working directory"
+        )
+    return posixpath.normpath(posixpath.join(cwd, path))
 
 
 def stamp_code_dir(connector_dir):
@@ -115,6 +256,12 @@ def stamp_code_dir(connector_dir):
         for main in connector_dir.glob("*/__main__.py")
         if main.parent.name != "src"
     )
+    if len(packages) > 1:
+        names = ", ".join(package.name for package in packages)
+        raise Unsupported(
+            f"several top-level packages with a __main__.py ({names}): "
+            "the build step stamps only the first one it finds"
+        )
     if packages:
         return packages[0].relative_to(connector_dir).as_posix()
     if (connector_dir / "src").is_dir():
@@ -132,7 +279,7 @@ def written_stamps(connector_dir):
 
 
 def glob_regex(pattern):
-    """Translate a .dockerignore glob into a regular expression."""
+    """Translate a Docker path pattern (.dockerignore, COPY) into a regular expression."""
     out = []
     i = 0
     while i < len(pattern):
@@ -149,9 +296,15 @@ def glob_regex(pattern):
             out.append("[^/]*")
         elif char == "?":
             out.append("[^/]")
-        elif char == "[" and pattern.find("]", i) != -1:
-            end = pattern.find("]", i)
-            out.append(pattern[i : end + 1])
+        elif char == "\\" and i + 1 < len(pattern):
+            out.append(re.escape(pattern[i + 1]))
+            i += 1
+        elif char == "[" and pattern.find("]", i + 1) != -1:
+            end = pattern.find("]", i + 1)
+            body = pattern[i + 1 : end]
+            if body.startswith(("!", "^")):
+                body = "^" + body[1:]
+            out.append("[" + body.replace("\\", "\\\\") + "]")
             i = end
         else:
             out.append(re.escape(char))
@@ -159,8 +312,7 @@ def glob_regex(pattern):
     return re.compile("^" + "".join(out) + "$")
 
 
-def dockerignore_rules(connector_dir):
-    path = connector_dir / ".dockerignore"
+def dockerignore_rules(path):
     if not path.is_file():
         return []
     rules = []
@@ -174,6 +326,12 @@ def dockerignore_rules(connector_dir):
         )
         rules.append((negated, pattern, glob_regex(pattern)))
     return rules
+
+
+def ignore_file(connector_dir, dockerfile):
+    """The ignore file BuildKit applies: ``<Dockerfile>.dockerignore`` first."""
+    specific = dockerfile.parent / f"{dockerfile.name}.dockerignore"
+    return specific if specific.is_file() else connector_dir / ".dockerignore"
 
 
 def ignored_by(path, rules):
@@ -192,24 +350,32 @@ def ignored_by(path, rules):
 
 
 def expand(value, variables):
-    """Substitute the ENV / ARG values known at this point of the build."""
+    """Substitute the known variables; unknown ones are left as written."""
 
     def substitute(match):
-        name = match.group(1) or match.group(3)
-        default = match.group(2)
-        if name in variables:
-            return variables[name]
-        return default if default is not None else match.group(0)
+        name = match.group(1) or match.group(4)
+        operator, word = match.group(2), match.group(3)
+        known = name in variables
+        current = variables.get(name)
+        if operator in (":-", "-"):
+            if known and (current or operator == "-"):
+                return current
+            return expand(word, variables)
+        if operator in (":+", "+"):
+            if not known:
+                return match.group(0)
+            return expand(word, variables) if (current or operator == "+") else ""
+        return current if known else match.group(0)
 
     return VARIABLE.sub(substitute, value)
 
 
 def assignments(arguments):
-    """Key / value pairs of an ENV or ARG instruction."""
+    """Key / value pairs of an ENV or ARG instruction (value None: no default)."""
     try:
         tokens = shlex.split(arguments)
-    except ValueError:
-        tokens = arguments.split()
+    except ValueError as error:
+        raise Unsupported(f"ENV / ARG not understood: {arguments}") from error
     if len(tokens) >= 2 and "=" not in tokens[0]:
         # Legacy form: ENV KEY value
         return {tokens[0]: " ".join(tokens[1:])}
@@ -224,8 +390,10 @@ def logical_lines(text):
     """Dockerfile instructions with their continuation lines joined."""
     lines = []
     current = ""
-    for raw in text.splitlines():
+    for number, raw in enumerate(text.splitlines()):
         stripped = raw.strip()
+        if number == 0 and re.match(r"#\s*escape\s*=", stripped):
+            raise Unsupported("the escape parser directive")
         if not stripped or stripped.startswith("#"):
             continue
         if stripped.endswith("\\"):
@@ -239,101 +407,34 @@ def logical_lines(text):
 
 
 def parse_command(value):
-    """Exec form (JSON array) or shell form of CMD / ENTRYPOINT."""
+    """(argv, shell form) of a CMD / ENTRYPOINT / RUN / SHELL value."""
     value = value.strip()
     if value.startswith("["):
         try:
             parsed = json.loads(value)
-            if isinstance(parsed, list):
-                return [str(item) for item in parsed]
         except ValueError:
-            pass
-    return ["/bin/sh", "-c", value]
+            parsed = None
+        if isinstance(parsed, list):
+            return [str(item) for item in parsed], False
+    return value, True
 
 
 def split_copy_args(arguments):
-    """Flags, sources and destination of a COPY / ADD instruction."""
+    """Flags (name -> list of values), sources and destination of a COPY / ADD."""
     flags = {}
     rest = arguments.strip()
     while rest.startswith("--"):
         token, _, rest = rest.partition(" ")
         name, _, value = token[2:].partition("=")
-        flags[name] = value if value else True
+        flags.setdefault(name, []).append(value if value else True)
         rest = rest.strip()
     try:
         items = json.loads(rest) if rest.startswith("[") else shlex.split(rest)
-    except ValueError:
-        items = rest.split()
+    except ValueError as error:
+        raise Unsupported(f"COPY / ADD not understood: {arguments}") from error
     if len(items) < 2:
         return flags, [], None
-    return flags, items[:-1], items[-1]
-
-
-def copy_stamps(sources, dest, flags, available, workdir):
-    """Image paths of the stamps a COPY puts in the image.
-
-    ``available`` holds the stamps the source can provide: context-relative
-    paths for a COPY from the build context, absolute paths for a COPY from a
-    previous stage.
-    """
-    from_stage = "from" in flags
-    keep_parents = bool(flags.get("parents")) and not from_stage
-    dest_path = image_path(dest, workdir)
-    dest_is_dir = dest.endswith("/") or dest in (".", "./") or len(sources) > 1
-    copied = set()
-    for source in sources:
-        if from_stage:
-            normalized = image_path(source, "/")
-        elif source in (".", "./"):
-            normalized = "."
-        else:
-            normalized = posixpath.normpath(source.lstrip("/"))
-        for stamp in available:
-            if normalized in (".", "/"):
-                copied.add(posixpath.join(dest_path, stamp.lstrip("/")))
-            elif stamp.startswith(normalized.rstrip("/") + "/"):
-                relative = (
-                    stamp if keep_parents else stamp[len(normalized.rstrip("/")) + 1 :]
-                )
-                copied.add(posixpath.join(dest_path, relative))
-            elif stamp == normalized or fnmatch.fnmatchcase(stamp, normalized):
-                if keep_parents:
-                    copied.add(posixpath.join(dest_path, stamp))
-                elif dest_is_dir:
-                    copied.add(posixpath.join(dest_path, posixpath.basename(stamp)))
-                else:
-                    copied.add(dest_path)
-    return copied
-
-
-def removed_paths(command, workdir):
-    """Absolute paths a RUN command deletes with ``rm``."""
-    removed = []
-    cwd = workdir
-    for segment in re.split(r"&&|;|\|\|", command):
-        try:
-            tokens = shlex.split(segment)
-        except ValueError:
-            tokens = segment.split()
-        if not tokens:
-            continue
-        if tokens[0] == "cd" and len(tokens) > 1:
-            cwd = image_path(tokens[1], cwd)
-        elif tokens[0] == "rm":
-            removed.extend(
-                image_path(t, cwd) for t in tokens[1:] if not t.startswith("-")
-            )
-    return removed
-
-
-def package_ships_stamp(connector_dir):
-    """A packaged connector carries the stamp into site-packages when its
-    package data declares it."""
-    for name in ("pyproject.toml", "setup.cfg", "setup.py", "MANIFEST.in"):
-        path = connector_dir / name
-        if path.is_file() and STAMP in path.read_text(encoding="utf-8"):
-            return True
-    return False
+    return flags, [str(item) for item in items[:-1]], str(items[-1])
 
 
 def build_env(connector_dir):
@@ -347,176 +448,1271 @@ def build_env(connector_dir):
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")
-        values[key.strip()] = value.strip().strip('"')
+        value = value.strip()
+        if value.startswith('"'):
+            value = value[1:]
+        if value.endswith('"'):
+            value = value[:-1]
+        values[key.strip()] = value
     return values
 
 
-def analyse_dockerfile(connector_dir, dockerfile, build_args):
-    """Final stage of the image built from ``dockerfile`` with the connector
-    directory as build context."""
-    named = {}
-    stage = Stage()
-    rules = dockerignore_rules(connector_dir)
-    context_stamps = [
-        s for s in written_stamps(connector_dir) if not ignored_by(s, rules)
-    ]
-    for line in logical_lines(dockerfile.read_text(encoding="utf-8")):
-        instruction, _, arguments = line.partition(" ")
-        instruction = instruction.upper()
-        if instruction == "FROM":
-            tokens = arguments.split()
-            image = next((t for t in tokens if not t.startswith("--")), "")
-            stage = named[image].child() if image in named else Stage()
-            if len(tokens) >= 3 and tokens[-2].upper() == "AS":
-                named[tokens[-1]] = stage
-        elif instruction in ("ENV", "ARG"):
-            for key, value in assignments(arguments).items():
-                if instruction == "ARG" and key in build_args:
-                    value = build_args[key]
-                if value is not None:
-                    stage.variables[key] = expand(value, stage.variables)
-        elif instruction == "WORKDIR":
-            stage.workdir = image_path(
-                expand(arguments.strip(), stage.variables), stage.workdir
-            )
-        elif instruction in ("COPY", "ADD"):
-            flags, sources, dest = split_copy_args(expand(arguments, stage.variables))
-            if dest is None:
-                continue
-            source_stage = flags.get("from")
-            if source_stage and source_stage not in named:
-                continue
-            available = named[source_stage].stamps if source_stage else context_stamps
-            stage.stamps |= copy_stamps(sources, dest, flags, available, stage.workdir)
-            if not source_stage:
-                for source in (s for s in sources if s.endswith(".sh")):
-                    target = image_path(dest, stage.workdir)
-                    if dest.endswith("/") or len(sources) > 1:
-                        target = posixpath.join(target, posixpath.basename(source))
-                    stage.scripts[target] = source
-        elif instruction == "RUN":
-            command = expand(arguments, stage.variables)
-            for path in removed_paths(command, stage.workdir):
-                prefix = path.rstrip("/") + "/"
-                stage.stamps = {
-                    s for s in stage.stamps if s != path and not s.startswith(prefix)
-                }
-            if re.search(r"pip[0-9.]*\s+install[^&;|]*\s(\.|/\S+)(\s|$)", command):
-                stage.installs_package = True
-        elif instruction == "ENTRYPOINT":
-            stage.entrypoint = parse_command(arguments)
-            stage.cmd = None
-        elif instruction == "CMD":
-            stage.cmd = parse_command(arguments)
-    code_dir = stamp_code_dir(connector_dir)
-    packaged = code_dir if code_dir and code_dir != "src" else None
-    if packaged and stage.installs_package and package_ships_stamp(connector_dir):
-        stage.stamps.add(
-            posixpath.join(SITE_PACKAGES, posixpath.basename(packaged), STAMP)
+class BuildContext:
+    """The files a build of the connector directory can copy."""
+
+    def __init__(self, connector_dir, rules):
+        self.root = connector_dir
+        self.rules = rules
+        self.files = {}
+        for directory, subdirs, names in os.walk(connector_dir):
+            subdirs[:] = sorted(d for d in subdirs if d != ".git")
+            for name in sorted(names):
+                rel = (Path(directory) / name).relative_to(connector_dir).as_posix()
+                if not ignored_by(rel, rules):
+                    self.files[rel] = ("context", rel)
+        self.stamps = written_stamps(connector_dir)
+        for rel in self.stamps:
+            if not ignored_by(rel, rules):
+                self.files[rel] = ("stamp", rel)
+        self.dirs = {"."}
+        for rel in self.files:
+            parts = rel.split("/")[:-1]
+            for n in range(len(parts)):
+                self.dirs.add("/".join(parts[: n + 1]))
+
+    def read(self, origin):
+        if origin is None or origin[0] != "context":
+            return None
+        return (self.root / origin[1]).read_text(encoding="utf-8", errors="replace")
+
+    def ignored_stamps(self):
+        return [
+            f"{stamp} (pattern '{rule}')"
+            for stamp in self.stamps
+            if (rule := ignored_by(stamp, self.rules))
+        ]
+
+
+@dataclass
+class Stage:
+    """Files and settings of a build stage."""
+
+    workdir: str = "/"
+    files: dict = field(default_factory=dict)
+    dirs: set = field(default_factory=lambda: set(BASE_DIRECTORIES))
+    variables: dict = field(default_factory=dict)
+    env: dict = field(default_factory=dict)
+    shell: list = field(default_factory=lambda: list(DEFAULT_SHELL))
+    entrypoint: tuple = None
+    cmd: tuple = None
+
+    def child(self):
+        # ENV values are part of the image; ARG values end with their stage.
+        return Stage(
+            workdir=self.workdir,
+            files=dict(self.files),
+            dirs=set(self.dirs),
+            variables=dict(self.env),
+            env=dict(self.env),
+            shell=list(self.shell),
+            entrypoint=self.entrypoint,
+            cmd=self.cmd,
         )
-    return stage, posixpath.basename(packaged) if packaged else None
+
+    def add_file(self, path, origin):
+        self.files[path] = origin
+        for parent in self_and_parents(posixpath.dirname(path)):
+            self.dirs.add(parent)
+
+    def is_dir(self, path):
+        prefix = path.rstrip("/") + "/"
+        return path in self.dirs or any(f.startswith(prefix) for f in self.files)
 
 
-def python_anchors(tokens, cwd, package):
-    """(entry directory, sys.path[0]) of a python invocation, or None."""
-    args = tokens[1:]
-    for i, arg in enumerate(args):
-        if arg == "-m" and i + 1 < len(args):
-            module = args[i + 1].split(".")
-            if package and module[0] == package:
-                return posixpath.join(SITE_PACKAGES, *module), cwd
-            return image_path("/".join(module), cwd), cwd
-        if arg.startswith("-"):
-            continue
-        script_dir = posixpath.dirname(image_path(arg, cwd))
-        return script_dir, script_dir
-    return None
+def shell_glob_match(pattern, path):
+    """Shell pathname expansion of ``pattern`` matches ``path`` (both absolute)."""
+    pattern_parts = pattern.strip("/").split("/")
+    path_parts = path.strip("/").split("/")
+    if pattern == "/" or path == "/":
+        return pattern == path
+    if len(pattern_parts) != len(path_parts):
+        return False
+    for wanted, name in zip(pattern_parts, path_parts):
+        if GLOB_CHARS.search(wanted):
+            if name.startswith(".") and not wanted.startswith("."):
+                return False
+            if not fnmatch.fnmatchcase(name, wanted):
+                return False
+        elif wanted != name:
+            return False
+    return True
 
 
-def shell_anchors(script, cwd, package, variables):
-    """Follow ``cd`` and find the python invocation of a shell entry point."""
-    for raw in script.splitlines():
-        line = expand(raw.strip(), variables)
-        if not line or line.startswith("#"):
-            continue
-        for segment in re.split(r"&&|;", line):
-            try:
-                tokens = shlex.split(segment)
-            except ValueError:
-                continue
-            while tokens and tokens[0] in ("exec", "nohup", "env"):
-                tokens = tokens[1:]
-            if not tokens:
-                continue
-            if tokens[0] == "cd" and len(tokens) > 1:
-                cwd = image_path(tokens[1], cwd)
-            elif PYTHON_EXECUTABLE.match(tokens[0]):
-                anchors = python_anchors(tokens, cwd, package)
-                if anchors:
-                    return anchors, cwd
-    return None, cwd
+def remove_files(files, target):
+    """Delete ``target`` (absolute, wildcards allowed) and everything below it."""
+    if GLOB_CHARS.search(target):
 
+        def matches(candidate):
+            return shell_glob_match(target, candidate)
 
-def entry_anchors(connector_dir, stage, package):
-    """Directories pycti reads, or None when the entry point is not understood."""
-    command = [
-        expand(part, stage.variables)
-        for part in (stage.entrypoint or []) + (stage.cmd or [])
-    ]
-    cwd = stage.workdir
-    if not command:
-        return None
-    executable = command[0]
-    if SHELL_EXECUTABLE.match(executable) and "-c" in command[1:]:
-        index = command.index("-c")
-        anchors, cwd = shell_anchors(
-            " ".join(command[index + 1 :]), cwd, package, stage.variables
-        )
-    elif PYTHON_EXECUTABLE.match(executable):
-        anchors = python_anchors(command, cwd, package)
     else:
-        if SHELL_EXECUTABLE.match(executable) and len(command) > 1:
-            # `sh /entrypoint.sh`: the shell runs a script file
-            executable = command[1]
-        script_path = image_path(executable, cwd)
-        context_script = stage.scripts.get(script_path)
-        if context_script and (connector_dir / context_script).is_file():
-            text = (connector_dir / context_script).read_text(encoding="utf-8")
-            anchors, cwd = shell_anchors(text, cwd, package, stage.variables)
-        else:
-            # A console script installed by pip: its own directory is not a
-            # connector directory, the working directory is.
-            anchors = (posixpath.dirname(script_path), posixpath.dirname(script_path))
-    if not anchors:
+
+        def matches(candidate):
+            return candidate == target
+
+    for path in list(files):
+        if any(matches(candidate) for candidate in self_and_parents(path)):
+            del files[path]
+
+
+class PackagingConfig:
+    """What setuptools installs from a source directory."""
+
+    def __init__(self, texts):
+        self.package_data = {}
+        self.exclude_package_data = {}
+        self.package_roots = ["."]
+        self.packages = None
+        self.include = []
+        self.exclude = []
+        self.unsupported = None
+        pyproject = texts.get("pyproject.toml")
+        if pyproject is not None:
+            self._read_pyproject(pyproject)
+        setup_cfg = texts.get("setup.cfg")
+        if setup_cfg is not None:
+            self._read_setup_cfg(setup_cfg)
+        setup_py = texts.get("setup.py")
+        if setup_py is not None and re.search(
+            r"package_data|data_files|" + re.escape(STAMP), setup_py
+        ):
+            self.unsupported = self.unsupported or "package data declared in setup.py"
+        manifest = texts.get("MANIFEST.in")
+        if manifest is not None and re.search(
+            r"^\s*(exclude|recursive-exclude|global-exclude|prune)\b", manifest, re.M
+        ):
+            self.unsupported = self.unsupported or "exclusions of MANIFEST.in"
+
+    def _read_pyproject(self, text):
+        try:
+            data = tomllib.loads(text)
+        except tomllib.TOMLDecodeError as error:
+            raise Unsupported(f"pyproject.toml not readable: {error}") from error
+        backend = data.get("build-system", {}).get("build-backend", "setuptools")
+        if not backend.startswith("setuptools"):
+            self.unsupported = f"package data of the build backend {backend}"
+        tool = data.get("tool", {}).get("setuptools", {})
+        for key in ("package-data", "package_data"):
+            for package, patterns in tool.get(key, {}).items():
+                self.package_data.setdefault(package, []).extend(patterns)
+        for key in ("exclude-package-data", "exclude_package_data"):
+            for package, patterns in tool.get(key, {}).items():
+                self.exclude_package_data.setdefault(package, []).extend(patterns)
+        packages = tool.get("packages")
+        if isinstance(packages, list):
+            self.packages = list(packages)
+        elif isinstance(packages, dict) and "find" in packages:
+            find = packages["find"]
+            self.package_roots = [
+                posixpath.normpath(root) for root in find.get("where", ["."])
+            ]
+            self.include = list(find.get("include", []))
+            self.exclude = list(find.get("exclude", []))
+        if tool.get("package-dir") or tool.get("package_dir"):
+            self.unsupported = self.unsupported or "package-dir of setuptools"
+
+    def _read_setup_cfg(self, text):
+        parser = configparser.ConfigParser(interpolation=None)
+        # Package names are case-sensitive.
+        parser.optionxform = str
+        try:
+            parser.read_string(text)
+        except configparser.Error as error:
+            raise Unsupported(f"setup.cfg not readable: {error}") from error
+
+        def values(raw):
+            return [v.strip() for v in re.split(r"[,\n]", raw) if v.strip()]
+
+        if parser.has_section("options.package_data"):
+            for package, raw in parser.items("options.package_data"):
+                self.package_data.setdefault(package, []).extend(values(raw))
+        if parser.has_section("options.exclude_package_data"):
+            for package, raw in parser.items("options.exclude_package_data"):
+                self.exclude_package_data.setdefault(package, []).extend(values(raw))
+        if parser.has_option("options", "packages"):
+            raw = parser.get("options", "packages").strip()
+            if raw.startswith("find:"):
+                if parser.has_option("options.packages.find", "where"):
+                    self.package_roots = [
+                        posixpath.normpath(root)
+                        for root in values(parser.get("options.packages.find", "where"))
+                    ]
+                for option, target in (
+                    ("include", self.include),
+                    ("exclude", self.exclude),
+                ):
+                    if parser.has_option("options.packages.find", option):
+                        target.extend(
+                            values(parser.get("options.packages.find", option))
+                        )
+            elif raw:
+                self.packages = values(raw)
+        if parser.has_option("options", "package_dir"):
+            self.unsupported = self.unsupported or "package_dir of setuptools"
+
+    def installs(self, package):
+        if self.packages is not None:
+            return package in self.packages
+        if self.include and not any(
+            fnmatch.fnmatchcase(package, p) for p in self.include
+        ):
+            return False
+        return not any(fnmatch.fnmatchcase(package, p) for p in self.exclude)
+
+    def ships(self, package, filename):
+        """The package data of ``package`` selects ``filename`` (at the package root)."""
+        if self.unsupported:
+            raise Unsupported(self.unsupported)
+
+        def selected(declarations):
+            patterns = [
+                *declarations.get(package, []),
+                *declarations.get("*", []),
+                *declarations.get("", []),
+            ]
+            return any(package_data_matches(p, filename) for p in patterns)
+
+        return selected(self.package_data) and not selected(self.exclude_package_data)
+
+
+def package_data_matches(pattern, filename):
+    """setuptools glob of a package data pattern, for a file at the package root."""
+    pattern = pattern.strip()
+    while pattern.startswith("**/"):
+        pattern = pattern[3:]
+    if "/" in pattern:
+        return False
+    # glob never lets a wildcard match the leading dot of a hidden file.
+    if filename.startswith(".") and not pattern.startswith("."):
+        return False
+    return fnmatch.fnmatchcase(filename, pattern)
+
+
+def interpreter_of(text):
+    """Program named by the interpreter line of a script, or an empty string."""
+    if not text or not text.startswith("#!"):
+        return ""
+    interpreter = text.splitlines()[0][2:].split()
+    if interpreter and posixpath.basename(interpreter[0]) == "env":
+        interpreter = [a for a in interpreter[1:] if not a.startswith("-")]
+    return posixpath.basename(interpreter[0]) if interpreter else ""
+
+
+def shell_script(args, cwd, files, model):
+    """What a shell started with ``args`` runs: its ``-c`` string or a script
+    file of the image model; None when it reads its standard input."""
+    i = 0
+    while i < len(args) and args[i].startswith(("-", "+")):
+        option = args[i]
+        if not option.startswith("--") and "c" in option[1:]:
+            if i + 1 >= len(args):
+                raise Unsupported("'sh -c' without a command")
+            return args[i + 1]
+        i += 2 if option in ("-o", "+o") else 1
+    if i >= len(args):
         return None
-    entry, sys_path = anchors
-    return {entry, sys_path, cwd}
+    path = image_path(args[i], cwd, "shell script")
+    text = model.context.read(files.get(path))
+    if text is None:
+        raise Unsupported(f"shell script {path} is not a file of the image model")
+    return text
+
+
+class Shell:
+    """POSIX shell commands of a RUN instruction or of an entry script.
+
+    ``start`` is False for a RUN (its effects are applied to the stage) and True
+    for the start of the container: every python process the script starts is
+    collected with the files of the image at that moment, until ``exec`` hands
+    the container over or the script exits.
+    """
+
+    def __init__(self, model, stage, files, cwd, variables, start, nesting=0):
+        self.model = model
+        self.stage = stage
+        self.files = files
+        self.cwd = cwd
+        self.variables = variables
+        self.start = start
+        self.nesting = nesting
+        self.stack = []
+        self.processes = []
+        self.ended = False
+
+    def run(self, script):
+        if self.nesting > 8:
+            raise Unsupported("shell scripts nested too deeply")
+        for line in self._lines(script):
+            if HEREDOC.search(line):
+                raise Unsupported("a here-document in a shell script")
+            tokens = self._tokens(expand(line, self.variables))
+            self._statements(tokens + ["\n"])
+            if self.ended:
+                break
+        return self.processes
+
+    def _nested(self, files, cwd, variables, start, conditional):
+        """A shell run from this one; in a start script it adds its processes here."""
+        nested = Shell(
+            self.model,
+            self.stage,
+            files,
+            cwd,
+            variables,
+            start,
+            self.nesting + 1,
+        )
+        nested.stack = list(self.stack) + (["("] if conditional else [])
+        nested.processes = self.processes
+        return nested
+
+    def _launch(self, words, env, conditional):
+        if conditional:
+            raise Unsupported(
+                "the connector started inside a conditional or a loop of the entry script"
+            )
+        self.processes.extend(
+            self.model.launch(words, self.cwd, env, self.files, self.nesting + 1)
+        )
+
+    @staticmethod
+    def _lines(script):
+        lines = []
+        current = ""
+        for raw in script.splitlines():
+            if raw.endswith("\\"):
+                current += raw[:-1]
+                continue
+            lines.append(current + raw)
+            current = ""
+        if current:
+            lines.append(current)
+        return lines
+
+    @staticmethod
+    def _tokens(line):
+        lexer = shlex.shlex(line, posix=True, punctuation_chars=True)
+        lexer.whitespace_split = True
+        try:
+            tokens = list(lexer)
+        except ValueError as error:
+            raise Unsupported(
+                f"shell line not understood: {line.strip()[:80]}"
+            ) from error
+        split = []
+        for token in tokens:
+            if token and all(char in "();<>|&" for char in token):
+                while token:
+                    operator = next(o for o in OPERATORS if token.startswith(o))
+                    split.append(operator)
+                    token = token[len(operator) :]
+            else:
+                split.append(token)
+        return split
+
+    def _in_case(self):
+        return bool(self.stack) and self.stack[-1] == "case"
+
+    def _statements(self, tokens):
+        words = []
+        before = None
+        skip = False
+        skip_name = False
+        for token in tokens:
+            if token in SEPARATORS:
+                if words and not skip:
+                    self._command(words, before, token)
+                words, skip = [], False
+                before = token if token != "\n" else None
+                if self.ended:
+                    return
+                continue
+            if skip:
+                continue
+            if skip_name:
+                skip_name = False
+                continue
+            if token in ("(", ")") and not self._in_case():
+                if words:
+                    self._command(words, before, token)
+                    words = []
+                if token == "(":
+                    self.stack.append("(")
+                elif self.stack:
+                    self.stack.pop()
+                continue
+            if token in ("(", ")"):
+                continue
+            if not words:
+                if token in ("if", "while", "until", "{"):
+                    self.stack.append(token)
+                    continue
+                if token in ("for", "select", "case"):
+                    self.stack.append("case" if token == "case" else token)
+                    skip = True
+                    continue
+                if token in ("fi", "done", "esac", "}"):
+                    if self.stack:
+                        self.stack.pop()
+                    continue
+                if token in ("then", "do", "else", "elif", "!", "in"):
+                    continue
+                if token == "function":
+                    skip_name = True
+                    continue
+            words.append(token)
+        if words and not skip:
+            self._command(words, before, None)
+
+    @staticmethod
+    def _strip_redirections(words):
+        kept = []
+        i = 0
+        while i < len(words):
+            word = words[i]
+            following = words[i + 1] if i + 1 < len(words) else None
+            if word in REDIRECTIONS:
+                i += 2
+                continue
+            if word.isdigit() and following in REDIRECTIONS:
+                i += 1
+                continue
+            if word == "<<":
+                raise Unsupported("a here-document in a shell script")
+            kept.append(word)
+            i += 1
+        return kept
+
+    def _command(self, words, before, after):
+        words = self._strip_redirections(words)
+        assigned = {}
+        while words and ASSIGNMENT.match(words[0]):
+            key, _, value = words[0].partition("=")
+            assigned[key] = value
+            words = words[1:]
+        if not words:
+            self.variables.update(assigned)
+            return
+        handed_over = False
+        while words:
+            name = posixpath.basename(words[0])
+            if name in COMMAND_PREFIXES:
+                handed_over = handed_over or name == "exec"
+                words = words[1:]
+            elif name == "env":
+                words = words[1:]
+                while words and (
+                    ASSIGNMENT.match(words[0]) or words[0].startswith("-")
+                ):
+                    if words[0] in ("-C", "--chdir"):
+                        raise Unsupported("env --chdir")
+                    if ASSIGNMENT.match(words[0]):
+                        key, _, value = words[0].partition("=")
+                        assigned[key] = value
+                    words = words[2:] if words[0] in ("-u", "--unset") else words[1:]
+            elif name == "sudo":
+                words = words[1:]
+                while words and words[0].startswith("-"):
+                    words = words[1:]
+            else:
+                break
+        if not words:
+            return
+        conditional = bool(self.stack) or before == "||"
+        in_pipeline = before == "|" or after == "|"
+        name = posixpath.basename(words[0])
+        args = words[1:]
+        env = {**self.variables, **assigned}
+        if self.start and handed_over:
+            # exec: the command replaces the script.
+            self._launch(words, env, conditional)
+            self.ended = True
+            return
+        if name == "export":
+            for arg in args:
+                key, sep, value = arg.partition("=")
+                if sep:
+                    self.variables[key] = value
+            return
+        if name == "unset":
+            for arg in args:
+                self.variables.pop(arg, None)
+            return
+        if name == "cd":
+            self._cd(args, conditional, in_pipeline)
+        elif name in ("pushd", "popd"):
+            self._unknown_directory(f"'{name}'")
+        elif name in (".", "source", "eval"):
+            if self.start:
+                raise Unsupported(f"'{name}' in the entry script")
+            self._source(name, args)
+        elif name in ("rm", "unlink"):
+            self._delete(self._operands(args))
+        elif name == "mv":
+            self._move(args)
+        elif name == "find":
+            self._find(args)
+        elif name == "xargs":
+            if any(posixpath.basename(a) in ("rm", "unlink", "mv") for a in args):
+                raise Unsupported("files deleted through xargs")
+        elif name in SHELLS:
+            self._nested_shell(args, conditional, env)
+        elif PIP.match(name):
+            self._pip(args, conditional)
+        elif PYTHON.match(name) and args[:2] == ["-m", "pip"]:
+            self._pip(args[2:], conditional)
+        elif PYTHON.match(name):
+            if self.start:
+                self._launch(words, env, conditional)
+        elif name in ("exit", "return"):
+            if not conditional and before != "&&":
+                self.ended = True
+        else:
+            self._executed_script(words, env, conditional)
+
+    def _executed_script(self, words, env, conditional):
+        """A script of the image run as a command: a shell script runs (its
+        deletions count, and in a start script its python processes), a python
+        script is a python process of the start script."""
+        path = self.model.find_executable(words[0], self.cwd, env, self.files)
+        text = self.model.context.read(self.files.get(path)) if path else None
+        program = interpreter_of(text)
+        if program in SHELLS:
+            nested = self._nested(
+                self.files, self.cwd, dict(env), self.start, conditional
+            )
+            nested.run(text)
+        elif PYTHON.match(program) and self.start:
+            self._launch([program, path, *words[1:]], env, conditional)
+
+    def _source(self, name, args):
+        """``. file`` runs the file in this shell: its ``cd`` and deletions count."""
+        if name == "eval" or not args:
+            self.cwd = None
+            return
+        path = image_path(args[0], self.cwd, "sourced file")
+        text = self.model.context.read(self.files.get(path))
+        if text is None:
+            # A file the model does not know (a virtualenv activation script)
+            # may change the working directory.
+            self.cwd = None
+            return
+        nested = Shell(
+            self.model,
+            self.stage,
+            self.files,
+            self.cwd,
+            self.variables,
+            start=False,
+            nesting=self.nesting + 1,
+        )
+        nested.stack = list(self.stack)
+        nested.run(text)
+        self.cwd = nested.cwd
+
+    def _unknown_directory(self, why):
+        if self.start:
+            raise Unsupported(f"working directory changed by {why} in the entry script")
+        self.cwd = None
+
+    def _cd(self, args, conditional, in_pipeline):
+        if in_pipeline:
+            return
+        targets = [a for a in args if a not in ("-L", "-P", "--")]
+        if len(targets) != 1 or targets[0] == "-":
+            self._unknown_directory("'cd' without a directory")
+            return
+        if conditional:
+            self._unknown_directory("a conditional 'cd'")
+            return
+        self.cwd = image_path(self._tilde(targets[0]), self.cwd, "'cd' target")
+
+    def _tilde(self, value):
+        if value == "~" or value.startswith("~/"):
+            return self.variables.get("HOME", "/root") + value[1:]
+        return value
+
+    def _operands(self, args):
+        operands = []
+        options = True
+        for arg in args:
+            if options and arg == "--":
+                options = False
+            elif options and arg.startswith("-") and arg != "-":
+                continue
+            else:
+                operands.append(arg)
+        return operands
+
+    def _delete(self, operands):
+        for operand in operands:
+            target = image_path(self._tilde(operand), self.cwd, "deleted path")
+            remove_files(self.files, target)
+
+    def _move(self, args):
+        target_dir = None
+        rest = []
+        i = 0
+        while i < len(args):
+            if args[i] in ("-t", "--target-directory"):
+                target_dir = args[i + 1] if i + 1 < len(args) else None
+                i += 2
+                continue
+            rest.append(args[i])
+            i += 1
+        operands = self._operands(rest)
+        sources = operands if target_dir else operands[:-1]
+        # The moved files leave their place; where they land is not modelled.
+        self._delete(sources)
+
+    def _find(self, args):
+        roots = []
+        while args and not args[0].startswith("-") and args[0] not in ("(", "!", ")"):
+            roots.append(args[0])
+            args = args[1:]
+        roots = roots or ["."]
+        deletes = "-delete" in args
+        for index, arg in enumerate(args):
+            if arg in ("-exec", "-execdir", "-ok", "-okdir") and index + 1 < len(args):
+                program = posixpath.basename(args[index + 1])
+                if program in ("rm", "unlink", "mv"):
+                    deletes = True
+                elif program in SHELLS or program == "xargs":
+                    raise Unsupported("files deleted by a shell started from find")
+        if not deletes:
+            return
+        kind, name = None, None
+        understood = True
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg in ("-type", "-name", "-mindepth", "-maxdepth") and i + 1 < len(
+                args
+            ):
+                if arg == "-type":
+                    kind = args[i + 1]
+                elif arg == "-name":
+                    name = args[i + 1]
+                i += 2
+                continue
+            if arg == "-delete":
+                i += 1
+                continue
+            if arg in ("-exec", "-execdir", "-ok", "-okdir"):
+                while i < len(args) and args[i] not in (";", "+"):
+                    i += 1
+                i += 1
+                continue
+            understood = False
+            break
+        for root in roots:
+            base = image_path(self._tilde(root), self.cwd, "find root")
+            if GLOB_CHARS.search(base):
+                raise Unsupported(f"find root '{root}' with a wildcard")
+            prefix = base.rstrip("/") + "/"
+            for path in list(self.files):
+                if not (path == base or path.startswith(prefix)):
+                    continue
+                if not understood or name is None:
+                    del self.files[path]
+                    continue
+                # find -name follows fnmatch: a wildcard matches a leading dot.
+                file_hit = kind in (None, "f") and fnmatch.fnmatchcase(
+                    posixpath.basename(path), name
+                )
+                dirs = [
+                    d
+                    for d in self_and_parents(posixpath.dirname(path))
+                    if d == base or d.startswith(prefix)
+                ]
+                dir_hit = kind in (None, "d") and any(
+                    fnmatch.fnmatchcase(posixpath.basename(d), name) for d in dirs
+                )
+                if file_hit or dir_hit:
+                    del self.files[path]
+
+    def _nested_shell(self, args, conditional, env):
+        script = shell_script(args, self.cwd, self.files, self.model)
+        if script is not None:
+            self._nested(self.files, self.cwd, dict(env), self.start, conditional).run(
+                script
+            )
+
+    def _pip(self, args, conditional):
+        if self.start or not args or args[0] != "install":
+            return
+        args = args[1:]
+        relocated = False
+        editable = False
+        targets = []
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            option = arg.split("=", 1)[0]
+            if option in ("-e", "--editable"):
+                editable = True
+            if option in PIP_RELOCATING_OPTIONS:
+                relocated = True
+                i += 1 if "=" in arg or option in ("--user",) else 2
+                continue
+            if option in PIP_OPTIONS_WITH_VALUE:
+                i += 1 if "=" in arg else 2
+                continue
+            if arg.startswith("-"):
+                i += 1
+                continue
+            targets.append(arg)
+            i += 1
+        if editable or conditional:
+            return
+        for target in targets:
+            path = re.sub(r"\[[^\]]*\]$", "", target)
+            if path.startswith("file://"):
+                path = path[len("file://") :]
+            if "://" in path or not (path.startswith((".", "/")) or "/" in path):
+                continue
+            if relocated:
+                raise Unsupported(
+                    "pip install into another directory than site-packages"
+                )
+            self.model.install_package(
+                self.files, image_path(path, self.cwd, "pip install path")
+            )
+
+
+class ImageModel:
+    """Files of the final image built from ``dockerfile`` and its start command."""
+
+    def __init__(self, connector_dir, dockerfile, build_args):
+        self.connector_dir = connector_dir
+        self.context = BuildContext(
+            connector_dir, dockerignore_rules(ignore_file(connector_dir, dockerfile))
+        )
+        self.build_args = build_args
+        self.global_args = {}
+        self.stages = []
+        self.named = {}
+        stage = None
+        for line in logical_lines(dockerfile.read_text(encoding="utf-8")):
+            instruction, _, arguments = line.partition(" ")
+            instruction = instruction.upper()
+            arguments = arguments.strip()
+            if instruction in ("RUN", "COPY", "ADD") and HEREDOC.search(arguments):
+                raise Unsupported(f"a here-document in {instruction}")
+            if instruction == "FROM":
+                stage = self._from(arguments)
+            elif instruction == "ARG" and stage is None:
+                for key, value in assignments(arguments).items():
+                    self.global_args[key] = build_args.get(key, value)
+            elif stage is None:
+                continue
+            elif instruction == "ARG":
+                self._arg(stage, arguments)
+            elif instruction == "ENV":
+                for key, value in assignments(arguments).items():
+                    if value is not None:
+                        value = expand(value, stage.variables)
+                        stage.variables[key] = value
+                        stage.env[key] = value
+            elif instruction == "WORKDIR":
+                stage.workdir = image_path(
+                    expand(arguments, stage.variables), stage.workdir, "WORKDIR"
+                )
+                for parent in self_and_parents(stage.workdir):
+                    stage.dirs.add(parent)
+            elif instruction in ("COPY", "ADD"):
+                self._copy(stage, instruction, expand(arguments, stage.variables))
+            elif instruction == "RUN":
+                self._run(stage, arguments)
+            elif instruction == "SHELL":
+                shell, shell_form = parse_command(arguments)
+                if shell_form or not shell:
+                    raise Unsupported("SHELL not in the JSON form")
+                stage.shell = shell
+            elif instruction == "ENTRYPOINT":
+                stage.entrypoint = parse_command(arguments)
+                stage.cmd = None
+            elif instruction == "CMD":
+                stage.cmd = parse_command(arguments)
+        if stage is None:
+            raise Unsupported("no FROM instruction")
+        self.final = stage
+
+    def _from(self, arguments):
+        tokens = [t for t in arguments.split() if not t.startswith("--")]
+        if not tokens:
+            raise Unsupported("FROM without an image")
+        image = expand(tokens[0], self.global_args)
+        source = self.named.get(image.lower())
+        if source is not None:
+            stage = source.child()
+        else:
+            stage = Stage()
+            if not ROOT_WORKDIR_IMAGE.match(image):
+                # The working directory of another base image is not known.
+                stage.workdir = None
+        self.stages.append(stage)
+        self.named[str(len(self.stages) - 1)] = stage
+        if len(tokens) >= 3 and tokens[-2].upper() == "AS":
+            self.named[tokens[-1].lower()] = stage
+        return stage
+
+    def _arg(self, stage, arguments):
+        for key, value in assignments(arguments).items():
+            if key in self.build_args:
+                value = self.build_args[key]
+            elif value is None:
+                value = self.global_args.get(key)
+            else:
+                value = expand(value, stage.variables)
+            if value is not None:
+                stage.variables[key] = value
+
+    def _copy(self, stage, instruction, arguments):
+        flags, sources, dest = split_copy_args(arguments)
+        if dest is None:
+            return
+        from_values = flags.get("from", [])
+        excludes = [
+            glob_regex(p) for p in flags.get("exclude", []) if isinstance(p, str)
+        ]
+        keep_parents = bool(flags.get("parents"))
+        if from_values:
+            source_stage = self.named.get(str(from_values[-1]).lower())
+            if source_stage is None:
+                # An external image: none of the connector's files come from it.
+                return
+            entries = self._stage_entries(source_stage, sources)
+        else:
+            entries = self._context_entries(instruction, sources)
+        dest_path = image_path(dest, stage.workdir, "COPY destination")
+        many = len(sources) > 1 or any(GLOB_CHARS.search(s) for s in sources)
+        dest_is_dir = dest.endswith("/") or dest in (".", "./") or many
+
+        def excluded(relative, name):
+            # Matched against the path in the source and in the context: never less than Docker excludes.
+            return any(rx.match(name) or rx.match(relative) for rx in excludes)
+
+        for kind, source, members in entries:
+            if kind == "dir" or keep_parents:
+                for relative, member_origin, member_name in members:
+                    if excluded(relative, member_name):
+                        continue
+                    if keep_parents:
+                        target = posixpath.join(dest_path, member_name)
+                    else:
+                        target = (
+                            posixpath.join(dest_path, relative)
+                            if relative
+                            else dest_path
+                        )
+                    stage.add_file(posixpath.normpath(target), member_origin)
+                stage.dirs.add(dest_path)
+                continue
+            relative, member_origin, member_name = members[0]
+            if excluded(relative, member_name):
+                continue
+            if dest_is_dir or stage.is_dir(dest_path):
+                target = posixpath.join(dest_path, posixpath.basename(member_name))
+            else:
+                target = dest_path
+            stage.add_file(target, member_origin)
+
+    def _context_entries(self, instruction, sources):
+        """(kind, source, [(relative path, origin, context path)]) per copied source."""
+        entries = []
+        for source in sources:
+            if instruction == "ADD" and ("://" in source or source.startswith("git@")):
+                continue
+            normalized = (
+                posixpath.normpath(source.lstrip("/"))
+                if source not in (".", "./", "/")
+                else "."
+            )
+            if GLOB_CHARS.search(normalized):
+                regex = glob_regex(normalized)
+                matches = sorted(
+                    rel
+                    for rel in (*self.context.files, *self.context.dirs)
+                    if regex.match(rel)
+                )
+            else:
+                matches = (
+                    [normalized]
+                    if (
+                        normalized in self.context.files
+                        or normalized in self.context.dirs
+                    )
+                    else []
+                )
+            for match in matches:
+                if instruction == "ADD" and TARBALL.search(match):
+                    # A local archive is extracted: its content is not modelled.
+                    continue
+                if match in self.context.dirs and match not in self.context.files:
+                    prefix = "" if match == "." else match + "/"
+                    members = [
+                        (rel[len(prefix) :], origin, rel)
+                        for rel, origin in self.context.files.items()
+                        if rel.startswith(prefix)
+                    ]
+                    entries.append(("dir", match, members))
+                else:
+                    entries.append(
+                        (
+                            "file",
+                            match,
+                            [
+                                (
+                                    posixpath.basename(match),
+                                    self.context.files[match],
+                                    match,
+                                )
+                            ],
+                        )
+                    )
+        return entries
+
+    @staticmethod
+    def _stage_entries(source_stage, sources):
+        entries = []
+        for source in sources:
+            path = image_path(source, source_stage.workdir, "COPY --from source")
+            if GLOB_CHARS.search(path):
+                matched = sorted(
+                    {
+                        candidate
+                        for f in source_stage.files
+                        for candidate in self_and_parents(f)
+                        if shell_glob_match(path, candidate)
+                    }
+                )
+            else:
+                matched = [path]
+            for match in matched:
+                if match in source_stage.files:
+                    entries.append(
+                        (
+                            "file",
+                            match,
+                            [
+                                (
+                                    posixpath.basename(match),
+                                    source_stage.files[match],
+                                    match.lstrip("/"),
+                                )
+                            ],
+                        )
+                    )
+                    continue
+                prefix = "/" if match == "/" else match + "/"
+                members = [
+                    (f[len(prefix) :], origin, f.lstrip("/"))
+                    for f, origin in source_stage.files.items()
+                    if f.startswith(prefix)
+                ]
+                if members:
+                    entries.append(("dir", match, members))
+        return entries
+
+    def _run(self, stage, arguments):
+        while arguments.startswith("--"):
+            _, _, arguments = arguments.partition(" ")
+            arguments = arguments.strip()
+        command, shell_form = parse_command(arguments)
+        shell = Shell(
+            self, stage, stage.files, stage.workdir, dict(stage.variables), start=False
+        )
+        if shell_form:
+            if posixpath.basename(stage.shell[0]) not in SHELLS:
+                raise Unsupported(f"RUN through the shell {stage.shell[0]}")
+            shell.run(command)
+        elif command:
+            shell._statements([*command, "\n"])
+
+    def install_package(self, files, install_dir):
+        """``pip install <install_dir>``: the packages it puts in site-packages."""
+        texts = {}
+        for name in ("pyproject.toml", "setup.cfg", "setup.py", "MANIFEST.in"):
+            origin = files.get(posixpath.join(install_dir, name))
+            if origin is not None:
+                texts[name] = self.context.read(origin) or ""
+        if not texts:
+            return
+        config = None
+        for root in ["."] + [r for r in self._roots(texts) if r != "."]:
+            base = posixpath.normpath(posixpath.join(install_dir, root))
+            names = sorted(
+                {
+                    f[len(base) + 1 :].split("/")[0]
+                    for f in files
+                    if f.startswith(base + "/")
+                    and f.count("/") == base.count("/") + 2
+                    and posixpath.basename(f) in ("__init__.py", "__main__.py")
+                }
+            )
+            for package in names:
+                config = config or PackagingConfig(texts)
+                if root not in config.package_roots or not config.installs(package):
+                    continue
+                package_dir = f"{base}/{package}"
+                for path, origin in list(files.items()):
+                    if path.startswith(package_dir + "/") and path.endswith(".py"):
+                        files[SITE_PACKAGES + "/" + path[len(base) + 1 :]] = origin
+                stamp = f"{package_dir}/{STAMP}"
+                origin = files.get(stamp)
+                if (
+                    origin is not None
+                    and origin[0] == "stamp"
+                    and config.ships(package, STAMP)
+                ):
+                    files[f"{SITE_PACKAGES}/{package}/{STAMP}"] = origin
+
+    @staticmethod
+    def _roots(texts):
+        try:
+            return PackagingConfig(texts).package_roots
+        except Unsupported:
+            return ["."]
+
+    def start(self):
+        """Python processes of the start command: (directories pycti reads,
+        files of the image when the process starts) for each."""
+        stage = self.final
+        argv = self._start_argv(stage)
+        env = {"PATH": DEFAULT_PATH, **stage.env}
+        return self.launch(argv, stage.workdir, env, dict(stage.files))
+
+    @staticmethod
+    def _start_argv(stage):
+        def resolved(command):
+            value, shell_form = command
+            return [*stage.shell, value] if shell_form else list(value)
+
+        if stage.entrypoint is not None:
+            if stage.entrypoint[1]:
+                # A shell-form ENTRYPOINT ignores CMD.
+                return resolved(stage.entrypoint)
+            argv = resolved(stage.entrypoint)
+            if stage.cmd is not None:
+                argv += resolved(stage.cmd)
+        elif stage.cmd is not None:
+            argv = resolved(stage.cmd)
+        else:
+            raise Unsupported("no CMD or ENTRYPOINT")
+        if not argv:
+            raise Unsupported("empty CMD / ENTRYPOINT")
+        return argv
+
+    def launch(self, argv, cwd, env, files, nesting=0):
+        """Python processes ``argv`` starts, as in ``start``."""
+        if nesting > 8:
+            raise Unsupported("entry scripts nested too deeply")
+        words = list(argv)
+        while words and posixpath.basename(words[0]) in (*COMMAND_PREFIXES, "env"):
+            name = posixpath.basename(words[0])
+            words = words[1:]
+            while (
+                name == "env"
+                and words
+                and (ASSIGNMENT.match(words[0]) or words[0].startswith("-"))
+            ):
+                if ASSIGNMENT.match(words[0]):
+                    key, _, value = words[0].partition("=")
+                    env = {**env, key: value}
+                words = words[1:]
+        if not words:
+            raise Unsupported("empty start command")
+        if "$" in words[0] or "`" in words[0]:
+            raise Unsupported(
+                f"start command '{words[0]}' uses a variable or a command the build does not define"
+            )
+        name = posixpath.basename(words[0])
+        if PYTHON.match(name):
+            return [(self.python_start(words, cwd, env, files), dict(files))]
+        if name in SHELLS:
+            script = shell_script(words[1:], cwd, files, self)
+            if script is None:
+                raise Unsupported("a shell started without a script")
+            return self._script(files, cwd, env, nesting, script)
+        path = self._executable(words[0], cwd, env, files)
+        text = self._read(files, path)
+        if not text.startswith("#!"):
+            raise Unsupported(f"entry point {path} has no interpreter line")
+        program = interpreter_of(text)
+        if PYTHON.match(program):
+            argv = [program, path, *words[1:]]
+            return [(self.python_start(argv, cwd, env, files), dict(files))]
+        if program in SHELLS:
+            return self._script(files, cwd, env, nesting, text)
+        raise Unsupported(
+            f"entry point {path} runs {program or 'an unknown interpreter'}"
+        )
+
+    def _script(self, files, cwd, env, nesting, text):
+        shell = Shell(self, self.final, files, cwd, dict(env), True, nesting)
+        processes = shell.run(text)
+        if not processes:
+            raise Unsupported("the entry script never starts python")
+        return processes
+
+    def _read(self, files, path):
+        text = self.context.read(files.get(path))
+        if text is None:
+            raise Unsupported(f"entry point {path} is not a file of the image model")
+        return text
+
+    @staticmethod
+    def find_executable(command, cwd, env, files):
+        """Image path of a command: a path, or a file of the model on PATH."""
+        if "/" in command:
+            if "$" in command or (cwd is None and not command.startswith("/")):
+                return None
+            return image_path(command, cwd)
+        for directory in env.get("PATH", DEFAULT_PATH).split(":"):
+            candidate = posixpath.join(directory, command)
+            if directory.startswith("/") and candidate in files:
+                return candidate
+        return None
+
+    def _executable(self, command, cwd, env, files):
+        if "/" in command:
+            return image_path(command, cwd, "entry point")
+        path = self.find_executable(command, cwd, env, files)
+        if path is None:
+            raise Unsupported(
+                f"entry point '{command}' is not a file of the image model"
+            )
+        return path
+
+    def python_start(self, words, cwd, env, files):
+        """Directories pycti reads for a python command line: the directory of
+        the __main__ file and the working directory (sys.path[0] is one of them)."""
+        args = words[1:]
+        isolated = False
+        ignore_env = False
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg == "-":
+                return self._readable(None, cwd)
+            if arg.startswith("--"):
+                option = arg.split("=", 1)[0]
+                i += 2 if option in PYTHON_OPTIONS_WITH_VALUE and "=" not in arg else 1
+                continue
+            if arg.startswith("-") and len(arg) > 1:
+                cluster = arg[1:]
+                for position, letter in enumerate(cluster):
+                    if letter in "IP":
+                        isolated = True
+                    if letter == "E":
+                        ignore_env = True
+                    if letter in "cm":
+                        rest = cluster[position + 1 :]
+                        value = rest or (args[i + 1] if i + 1 < len(args) else None)
+                        if value is None:
+                            raise Unsupported(f"python -{letter} without a value")
+                        if letter == "c":
+                            return self._readable(None, cwd)
+                        main_dir = self._module_dir(
+                            value, cwd, env, files, isolated, ignore_env
+                        )
+                        return self._readable(main_dir, cwd)
+                    if letter in "WX":
+                        if not cluster[position + 1 :]:
+                            i += 1
+                        break
+                i += 1
+                continue
+            script = image_path(arg, cwd, "python script")
+            return self._readable(posixpath.dirname(script), cwd)
+        raise Unsupported("python started without a script or a module")
+
+    @staticmethod
+    def _readable(main_dir, cwd):
+        anchors = [d for d in (main_dir, cwd) if d is not None]
+        if not anchors:
+            raise Unsupported("python started in an unknown working directory")
+        return sorted(set(anchors))
+
+    @staticmethod
+    def _module_dir(module, cwd, env, files, isolated, ignore_env):
+        parts = module.split(".")
+        if not all(part.isidentifier() for part in parts):
+            raise Unsupported(f"python -m {module}")
+        bases = []
+        if not isolated:
+            if cwd is None:
+                raise Unsupported(f"python -m {module} in an unknown working directory")
+            bases.append(cwd)
+            if not ignore_env:
+                bases += [
+                    p for p in env.get("PYTHONPATH", "").split(":") if p.startswith("/")
+                ]
+        bases.append(SITE_PACKAGES)
+        for base in bases:
+            path = posixpath.join(base, *parts)
+            if f"{path}/__main__.py" in files:
+                return path
+            if f"{path}.py" in files:
+                return posixpath.dirname(path)
+        raise Unsupported(f"module {module} is not a file of the image model")
 
 
 def check_image(image, connector_dir, dockerfile, build_args=None):
-    stage, package = analyse_dockerfile(connector_dir, dockerfile, build_args or {})
-    anchors = entry_anchors(connector_dir, stage, package)
-    if anchors is None:
-        return Result(image, False, "entry point not understood (CMD / ENTRYPOINT)")
+    try:
+        model = ImageModel(connector_dir, dockerfile, build_args or {})
+        processes = model.start()
+    except Unsupported as error:
+        return Result(image, False, f"not supported: {error}")
+    # The start command may run several python processes: the connector is one
+    # of them, so each must find the stamp.
+    results = [coverage(image, model, anchors, files) for anchors, files in processes]
+    missing = [result for result in results if not result.covered]
+    if not missing:
+        return results[0]
+    if len(results) > 1:
+        number = results.index(missing[0]) + 1
+        missing[0].reason = (
+            f"python process {number} of {len(results)}: {missing[0].reason}"
+        )
+    return missing[0]
+
+
+def coverage(image, model, anchors, files):
+    """Whether a python process reading ``anchors`` finds a stamp in ``files``."""
     readable = {directory for anchor in anchors for directory in ancestors(anchor)}
-    found = sorted(s for s in stage.stamps if posixpath.dirname(s) in readable)
+    stamps = sorted(
+        path
+        for path, origin in files.items()
+        if origin[0] == "stamp" and posixpath.basename(path) == STAMP
+    )
+    found = [stamp for stamp in stamps if posixpath.dirname(stamp) in readable]
     if found:
         return Result(image, True, f"stamp at {found[0]}")
-    rules = dockerignore_rules(connector_dir)
-    ignored = [
-        f"{stamp} (pattern '{rule}')"
-        for stamp in written_stamps(connector_dir)
-        if (rule := ignored_by(stamp, rules))
-    ]
+    if stamps:
+        return Result(
+            image, False, f"stamp at {stamps[0]}, pycti reads {sorted(anchors)}"
+        )
+    renamed = sorted(path for path, origin in files.items() if origin[0] == "stamp")
+    if renamed:
+        return Result(
+            image, False, f"stamp copied as {renamed[0]}: pycti only reads {STAMP}"
+        )
+    ignored = model.context.ignored_stamps()
     if ignored:
         return Result(image, False, "excluded by .dockerignore: " + ", ".join(ignored))
-    if not stage.stamps:
-        return Result(image, False, "no COPY carries a stamp into the final image")
-    return Result(
-        image,
-        False,
-        f"stamp at {sorted(stage.stamps)[0]}, pycti reads {sorted(anchors)}",
-    )
+    return Result(image, False, "no COPY carries a stamp into the final image")
 
 
 def check_connector(connector_dir, root, ubi9):
