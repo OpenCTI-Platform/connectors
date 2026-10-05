@@ -893,7 +893,8 @@ def test_markings_of_objects_the_connector_did_not_enrich_are_preserved():
     neighbour whose marking definition the bundle omits had that reference
     dropped by the cleanup pass and was published with weaker access control
     than it arrived with. A TLP identifier names its definition, so it is
-    rebuilt; anything else is reported instead of invented.
+    rebuilt. A reference nothing can derive refuses the whole bundle: logging
+    it and publishing anyway only moved the loss somewhere nobody reads.
     """
     green = "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
     statement = "marking-definition--11111111-2222-4333-8444-555555555555"
@@ -916,17 +917,17 @@ def test_markings_of_objects_the_connector_did_not_enrich_are_preserved():
             if out_of_scope:
                 data["entity_id"] = "ipv4-addr--22222222-2222-4222-8222-222222222222"
             data["stix_objects"].append(neighbour(ref))
-            connector._process_callback(data)
+            message = connector._process_callback(data)
+            case = (ref, out_of_scope)
+            if not rebuildable:
+                assert "refusing to publish" in message, case
+                helper.send_stix2_bundle.assert_not_called()
+                continue
             sent = helper.stix2_create_bundle.call_args.args[0]
             definitions = {
                 obj.get("id") for obj in sent if obj.get("type") == "marking-definition"
             }
-            assert (ref in definitions) is rebuildable, (ref, out_of_scope)
-            warned = [
-                call.args[0] for call in helper.connector_logger.warning.call_args_list
-            ]
-            said_so = any("cannot rebuild" in text for text in warned)
-            assert said_so is not rebuildable, (ref, out_of_scope, warned)
+            assert ref in definitions, case
 
     connector, helper = _make_connector()
     connector.client.lookup = MagicMock(return_value=BREACHED)

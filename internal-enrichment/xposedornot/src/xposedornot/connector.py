@@ -940,15 +940,23 @@ class XposedOrNotConnector:
         the enriched entity's own markings were resolved against the platform,
         but an unrelated object in the same bundle only ever had its
         references, and cleanup drops the ones it cannot resolve.
+
+        A reference that cannot be completed raises. Sending anyway published
+        a companion object stripped of a restriction it arrived with, which is
+        the same loss the enriched entity's own unresolvable markings refuse
+        over; logging it and sending regardless only moved that loss somewhere
+        nobody reads. The caller turns this into the refusal every marking the
+        connector cannot establish already gets.
         """
         objects = list(stix_objects)
         restored, unresolved = restored_marking_definitions(objects)
         if unresolved:
-            self.helper.connector_logger.warning(
-                "The bundle references marking definitions it does not carry and"
-                " this connector cannot rebuild; the platform's cleanup pass"
-                " will drop those references",
-                meta={"markings": unresolved},
+            raise MarkingResolutionError(
+                "The outgoing bundle references marking definitions"
+                f" ({', '.join(unresolved)}) that it does not carry and this"
+                " connector cannot derive; refusing to publish rather than let"
+                " the cleanup pass strip them from objects that arrived with"
+                " them."
             )
         bundle = self.helper.stix2_create_bundle(objects + restored)
         self.helper.send_stix2_bundle(
@@ -1004,16 +1012,19 @@ class XposedOrNotConnector:
                 for ref in listed(obj.get("object_marking_refs"))
             }
             if forwarded:
-                self._send_bundle(
-                    unique_by_id(
-                        forwarded
-                        + [
-                            definition
-                            for definition in missing_markings
-                            if definition["id"] in referenced
-                        ]
+                try:
+                    self._send_bundle(
+                        unique_by_id(
+                            forwarded
+                            + [
+                                definition
+                                for definition in missing_markings
+                                if definition["id"] in referenced
+                            ]
+                        )
                     )
-                )
+                except MarkingResolutionError as error:
+                    return self._refuse_unresolved_marking(error, data)
         return message
 
     def _bundle_objects(self, data: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1269,7 +1280,10 @@ class XposedOrNotConnector:
         enriched_objects += missing_markings
         enriched_objects = unique_by_id(enriched_objects)
 
-        self._send_bundle(enriched_objects, update=True)
+        try:
+            self._send_bundle(enriched_objects, update=True)
+        except MarkingResolutionError as error:
+            return self._refuse_unresolved_marking(error, data)
 
         first_year, latest_year = self.converter.years(breaches)
         span = (
