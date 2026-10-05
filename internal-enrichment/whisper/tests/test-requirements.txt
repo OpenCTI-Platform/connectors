@@ -8,4 +8,4 @@
 
 -r ../src/requirements.txt
 pytest==9.1.1
-responses==0.25.7
+responses==0.26.3
