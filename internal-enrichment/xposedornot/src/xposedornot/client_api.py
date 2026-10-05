@@ -91,17 +91,45 @@ def redact(text: str, *secrets: str | None) -> str:
     Decoding repeats until it settles. One pass turns `%2573ecret` into
     `%73ecret` rather than into the secret, so a value encoded twice would
     have read as already clean and survived into the log.
+
+    Every form is located in the original text and the spans are blanked
+    together, because replacing one secret at a time let an earlier
+    replacement destroy a later match: an API key that contained the address
+    kept its prefix and suffix once the address inside it was blanked, and
+    two secrets that merely overlapped left the tail of the second. Matching
+    the untouched text makes the result independent of the order the caller
+    passes them in.
     """
     if not text:
         return text
-    for secret in secrets:
-        if not secret:
-            continue
-        for form in dict.fromkeys((quote(secret, safe=""), secret)):
-            text = re.sub(re.escape(form), "<redacted>", text, flags=re.IGNORECASE)
-        if secret.casefold() in fully_decoded(text).casefold():
-            return "<redacted>"
-    return text
+    forms = dict.fromkeys(
+        form
+        for secret in secrets
+        if secret
+        for form in (quote(secret, safe=""), secret)
+    )
+    spans = sorted(
+        match.span()
+        for form in forms
+        for match in re.finditer(re.escape(form), text, flags=re.IGNORECASE)
+    )
+    merged: list[list[int]] = []
+    for start, end in spans:
+        if merged and start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    pieces, cursor = [], 0
+    for start, end in merged:
+        pieces.append(text[cursor:start])
+        pieces.append("<redacted>")
+        cursor = end
+    pieces.append(text[cursor:])
+    redacted = "".join(pieces)
+    decoded = fully_decoded(redacted).casefold()
+    if any(secret and secret.casefold() in decoded for secret in secrets):
+        return "<redacted>"
+    return redacted
 
 
 def _to_int(value):

@@ -350,6 +350,30 @@ def test_redaction_handles_several_secrets_and_blank_ones():
     assert redact("", "KEY") == ""
 
 
+def test_one_secret_inside_another_is_not_partly_exposed():
+    """Replacing secrets one at a time let an earlier pass break a later match.
+
+    An API key that contains the enriched address kept its prefix and suffix
+    once the address inside it had been blanked, so the key reached the log
+    in all but the middle; two secrets that merely overlapped left the tail
+    of the second. The result must not depend on the order the caller passes
+    them in.
+    """
+    from src.xposedornot.client_api import redact
+
+    email = "user@example.test"
+    key = "xon_live_%s_9f3c2a7b41" % email
+    text = "auth failed for key %s calling %s" % (key, email)
+    for secrets in ((email, key), (key, email)):
+        cleaned = redact(text, *secrets)
+        assert cleaned == "auth failed for key <redacted> calling <redacted>", secrets
+        for fragment in ("xon_live_", "9f3c2a7b41", email):
+            assert fragment not in cleaned, (fragment, secrets)
+
+    assert redact("abcdefghi", "abcdef", "defghi") == "<redacted>"
+    assert redact("abcdefghi", "defghi", "abcdef") == "<redacted>"
+
+
 def test_error_body_is_logged_redacted():
     client, helper = _client()
     body = '{"error": "lookup failed for test@example.com"}'
