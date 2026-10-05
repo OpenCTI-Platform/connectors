@@ -19,6 +19,7 @@ from sentinelone_connector import SentinelOneIntelConnector
 from sentinelone_connector.deployment import (
     SentinelOneDeploymentAdapter,
     SentinelOneDeploymentError,
+    SentinelOnePushAdapter,
     build_deployment_assurance,
 )
 from sentinelone_connector.settings import ConnectorSettings
@@ -464,20 +465,68 @@ def test_iter_iocs_pages_with_the_cursor(connector):
     }
 
 
-def test_iter_iocs_scope_with_group_and_site():
+def test_iter_iocs_refuses_a_scope_naming_a_group():
+    """The IOCs listing has no group parameter: a group scope is never listed."""
     connector = build_connector(
         settings=make_settings(
             sentinelone_intel={"account_id": None, "group_id": "5", "site_id": "6"}
         )
     )
-    connector.client.session.request.return_value = mock_response({"data": []})
 
-    assert list(connector.client.iter_iocs()) == []
-    assert connector.client.session.request.call_args.kwargs["params"] == {
-        "groupIds": "5",
-        "siteIds": "6",
+    assert connector.client.lists_scope is False
+    with pytest.raises(SentinelOneApiError, match="IOCs of a group cannot be listed"):
+        list(connector.client.iter_iocs())
+    connector.client.session.request.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("scope", "params"),
+    [
+        ({"account_id": None, "group_id": "5", "site_id": "6"}, {"siteIds": "6"}),
+        ({"account_id": None, "group_id": "5"}, {}),
+    ],
+)
+def test_iocs_of_an_indicator_are_looked_up_in_the_parent_scope_of_a_group(
+    scope, params
+):
+    """The lookup uses the parameters the listing accepts; the deletion filter keeps
+    the group."""
+    connector = build_connector(settings=make_settings(sentinelone_intel=scope))
+    connector.client.session.request.side_effect = [
+        mock_response({"data": [{"uuid": "ioc-1", "externalId": STIX_ID}]}),
+        mock_response({}),
+    ]
+
+    assert connector.delete_indicator(make_indicator()) is True
+
+    lookup, deletion = connector.client.session.request.call_args_list
+    assert lookup.kwargs["params"] == {
+        **params,
+        "externalId": STIX_ID,
         "limit": "1000",
     }
+    assert deletion.kwargs["json"]["filter"]["uuids"] == ["ioc-1"]
+    assert deletion.kwargs["json"]["filter"]["groupIds"] == [5]
+
+
+def test_build_deployment_assurance_pushes_again_without_read_back_for_a_group():
+    connector = build_connector(
+        settings=make_settings(sentinelone_intel={"account_id": None, "group_id": "5"})
+    )
+
+    assurance = build_deployment_assurance(connector)
+
+    assert isinstance(assurance.reconciler, DeploymentReconciler)
+    assert isinstance(assurance.reconciler._adapter, SentinelOnePushAdapter)
+    assert not isinstance(assurance.reconciler._adapter, SentinelOneDeploymentAdapter)
+
+
+def test_push_adapter_pushes_with_the_create_path(connector):
+    connector.client.session.request.return_value = mock_response(
+        {"data": [{"uuid": "ioc-1"}]}
+    )
+
+    assert SentinelOnePushAdapter(connector).push_indicator(make_indicator()) == "ioc-1"
 
 
 def test_iter_iocs_detects_an_ignored_pagination(connector):

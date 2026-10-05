@@ -211,14 +211,21 @@ exist).
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from SentinelOne and reported `removed`    |
 | Reconciliation, unknown indicator         | IOCs whose external id is the STIX id of an indicator with no deployment yet are reported `active` (backfill) |
 
-- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs of the connector's scope (account,
-  site and/or group) are read back with the Threat Intelligence IOCs API (1,000 per page, `cursor` pagination); IOCs
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs of the connector's scope (account
+  and/or site) are read back with the Threat Intelligence IOCs API (1,000 per page, `cursor` pagination); IOCs
   whose `validUntil` is in the past are not live: they never confirm a deployment, and the ones of a withdrawn or
   expired indicator are deleted. Deployments are matched by the IOC external id when it is the STIX id of the
   indicator, by IOC `uuid`, then by value. A read-back error, a cursor repeated by the API, malformed pagination
   metadata or a malformed IOC (without a non-empty `uuid` or value, or with a `validUntil` that is not an ISO 8601
   date) skips the run: indicators are never reported `removed` from a
   partial listing.
+- **Scope with a group**: the Threat Intelligence IOCs API lists IOCs by account or site only, so the IOCs of a group
+  cannot be read back apart from those of the other groups of its site or account. When `SENTINELONE_INTEL_GROUP_ID`
+  is set, the deployments come from the pushes and deletions of the stream (`deployed`, `failed`, `removed`), and the
+  reconciliation only pushes the `pending` ones again (analyst retry): presence, absence, withdrawal and backfill need
+  a scope without group. A delete event looks the IOCs of the indicator up by external id in the site or account of
+  the group (the whole API token scope for a group alone) and deletes them with the group in the deletion filter. The
+  connector logs this mode when it starts.
 - **Withdrawal safety**: only the IOCs whose external id is the STIX id of the indicator are deleted; an IOC of the same
   value created by another source is left in place (the removal is not reported and OpenCTI flags the deployment
   `expired` once the indicator expires).

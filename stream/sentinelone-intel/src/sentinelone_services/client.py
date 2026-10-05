@@ -168,11 +168,25 @@ class SentinelOneClient:
             scope["siteIds"] = [site_id]
         return scope
 
+    @property
+    def lists_scope(self) -> bool:
+        """
+        Whether the IOCs of the scope can be listed. The Threat Intelligence IOCs listing
+        is scoped by account and site only (no group parameter): the IOCs of a group
+        cannot be told from those of the other groups of its site or account.
+        """
+        return self.config.group_id is None
+
     def _scope_params(self) -> dict[str, str]:
-        """Return the scope of the connector as query parameters (comma-separated ids)."""
+        """
+        Return the scope of the connector as the query parameters the IOCs listing
+        accepts (account and site ids, comma-separated). A group is left to the
+        deletion filter, which accepts it.
+        """
         return {
             key: ",".join(str(value) for value in values)
             for key, values in self.scope_filter().items()
+            if key in ("accountIds", "siteIds")
         }
 
     def _generate_indicator_payload(self, indicator: dict) -> dict:
@@ -211,15 +225,22 @@ class SentinelOneClient:
 
         :raises SentinelOneApiError: On any API error, an unexpected payload, a cursor
             repeating the previous one or when `max_pages` is reached: a partial listing
-            is never returned silently.
+            is never returned silently; or when the scope names a group (`lists_scope`).
         """
+        if not self.lists_scope:
+            raise SentinelOneApiError(
+                "The SentinelOne IOCs of a group cannot be listed: the Threat "
+                "Intelligence IOCs API lists IOCs by account or site only"
+            )
         yield from self._iter_pages(self._scope_params(), max_pages)
 
     def find_iocs_by_external_id(
         self, external_id: str, max_pages: int = MAX_PAGES
     ) -> list[dict[str, Any]]:
         """
-        List every IOC of the scope of the connector carrying an external id.
+        List every IOC of the scope of the connector carrying an external id. With a
+        group in the scope, the IOCs of its site or account (or of the whole API token
+        for a group alone) are listed: `delete_iocs` keeps the deletion to the group.
 
         :param external_id: The external id (the STIX id of the pushed indicator).
         :raises SentinelOneApiError: On any API error, an unexpected payload, a cursor

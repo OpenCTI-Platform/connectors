@@ -3,13 +3,16 @@
 The `SentinelOneDeploymentAdapter` gives the connectors SDK reconciliation access to
 the SentinelOne Threat Intelligence IOCs:
 
-- read-back: the IOCs of the scope of the connector (account, site or group,
+- read-back: the IOCs of the scope of the connector (account or site,
   `threat-intelligence/iocs`, paginated with `cursor`), matched with the deployments
   by their external id when it is the STIX id of the indicator, else by value; the
   expired IOCs SentinelOne retains are listed inactive;
 - removal: deletion of the IOCs whose external id is the STIX id of the indicator
   (IOCs created by other sources are left in place);
 - re-push: the stream create path.
+
+A scope naming a group cannot be listed (the listing is scoped by account and site
+only): the `SentinelOnePushAdapter` then only pushes the pending deployments again.
 
 SentinelOne exposes no match count of the Threat Intelligence IOCs, so no hit is
 reported.
@@ -21,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 from connectors_sdk import (
     DeploymentAssurance,
+    DeploymentPushAdapter,
     DeploymentVendorAdapter,
     IndicatorDeployment,
     VendorIndicator,
@@ -125,22 +129,50 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
         self._connector.client.delete_iocs([str(uuid)])
 
     def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
-        """Push an indicator again, with the stream create path.
+        """Push an indicator again, with the stream create path (see `_push_again`)."""
+        return _push_again(self._connector, stix_indicator)
 
-        :return: The `uuid` of the first IOC created, if returned by SentinelOne.
-        :raises SentinelOneDeploymentError: When SentinelOne rejects the indicator or
-            cannot be reached, with the reason OpenCTI shows (the SentinelOne
-            response is logged).
-        :raises ValueError: When the pattern of the indicator is not supported.
+
+class SentinelOnePushAdapter(DeploymentPushAdapter):
+    """Re-push of the pending deployments, for a scope naming a group.
+
+    The Threat Intelligence IOCs listing is scoped by account and site only, so the
+    IOCs of a group cannot be read back apart from those of the other groups of its
+    site or account: the deployments come from the pushes and deletions of the
+    stream, and the reconciliation pushes the `pending` ones again.
+    """
+
+    def __init__(self, connector: "SentinelOneIntelConnector") -> None:
+        """Initialize the adapter.
+
+        :param connector: The connector, whose create path is used.
         """
-        try:
-            return self._connector.push_indicator(stix_indicator)
-        except SentinelOneApiError as err:
-            self._connector.helper.connector_logger.warning(
-                "[DEPLOYMENT] SentinelOne did not take an indicator pushed again.",
-                meta={"indicator_id": stix_indicator.get("id"), "error": str(err)},
-            )
-            raise SentinelOneDeploymentError(failure_reason(err)) from err
+        self._connector = connector
+
+    def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
+        """Push an indicator again, with the stream create path (see `_push_again`)."""
+        return _push_again(self._connector, stix_indicator)
+
+
+def _push_again(
+    connector: "SentinelOneIntelConnector", stix_indicator: dict[str, Any]
+) -> str | None:
+    """Push an indicator again, with the stream create path.
+
+    :return: The `uuid` of the first IOC created, if returned by SentinelOne.
+    :raises SentinelOneDeploymentError: When SentinelOne rejects the indicator or
+        cannot be reached, with the reason OpenCTI shows (the SentinelOne response
+        is logged).
+    :raises ValueError: When the pattern of the indicator is not supported.
+    """
+    try:
+        return connector.push_indicator(stix_indicator)
+    except SentinelOneApiError as err:
+        connector.helper.connector_logger.warning(
+            "[DEPLOYMENT] SentinelOne did not take an indicator pushed again.",
+            meta={"indicator_id": stix_indicator.get("id"), "error": str(err)},
+        )
+        raise SentinelOneDeploymentError(failure_reason(err)) from err
 
 
 def build_deployment_assurance(
@@ -148,11 +180,25 @@ def build_deployment_assurance(
 ) -> DeploymentAssurance:
     """Build the deployment write-back of the connector, reconciliation included.
 
+    With a group in the scope, the reconciliation pushes the pending deployments
+    again without reading the IOCs back (see `SentinelOnePushAdapter`).
+
     :param connector: The connector (settings `deployment` and `security_platform`).
     :return: The deployment write-back, a no-op when `DEPLOYMENT_REPORTING_ENABLED` is false.
     """
+    adapter: DeploymentPushAdapter
+    if connector.client.lists_scope:
+        adapter = SentinelOneDeploymentAdapter(connector)
+    else:
+        connector.helper.connector_logger.info(
+            "[DEPLOYMENT] The scope names a SentinelOne group, whose IOCs the Threat "
+            "Intelligence IOCs API cannot list: deployments are reported from the "
+            "pushes and deletions of the stream, without read-back.",
+            meta={"group_id": connector.client.config.group_id},
+        )
+        adapter = SentinelOnePushAdapter(connector)
     return DeploymentAssurance.from_settings(
         connector.helper,
         connector.config,
-        adapter=SentinelOneDeploymentAdapter(connector),
+        adapter=adapter,
     )
