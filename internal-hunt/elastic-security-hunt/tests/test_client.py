@@ -243,10 +243,11 @@ def test_eql_reads_events_and_sequences(requests_mock):
     assert body["timestamp_field"] == "@timestamp"
     assert request.qs["ignore_unavailable"] == ["true"]
     assert result.rows == [{"process": {"name": "a"}}, {"b": 1}, {}]
+    assert result.sequences == [None, "eql-sequence-k-1", "eql-sequence-k-1"]
     assert (result.total, result.partial) == (3, False)
 
 
-def test_eql_counts_sequence_events_and_flags_the_ones_cut(requests_mock):
+def test_eql_counts_sequences_and_flags_the_events_cut(requests_mock):
     # Given two sequences of three events each, more events than the cap
     sequence = {"events": [{"_source": {"step": step}} for step in range(3)]}
     requests_mock.post(
@@ -262,9 +263,10 @@ def test_eql_counts_sequence_events_and_flags_the_ones_cut(requests_mock):
     # When the query runs with a cap of four events
     result = _client().eql(["logs-*"], "q", START, END, 4, RunDeadline(30), "k")
 
-    # Then every fetched event counts and the cut ones make the result partial
+    # Then a sequence is one hit, its events name it, and the cut ones make the result partial
     assert len(result.rows) == 4
-    assert (result.total, result.partial) == (6, True)
+    assert result.sequences == ["eql-sequence-k-1"] * 3 + ["eql-sequence-k-2"]
+    assert (result.total, result.partial) == (2, True)
 
 
 def test_eql_flags_lower_bound_totals(requests_mock):

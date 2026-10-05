@@ -163,6 +163,35 @@ def test_execute_eql_over_the_indices(connector_factory, requests_mock):
     assert result.truncated is False
 
 
+def test_execute_eql_counts_a_sequence_as_one_hit(connector_factory, requests_mock):
+    # Given two sequences of three events each, all returned
+    sequence = {
+        "events": [
+            {"_source": {"@timestamp": "2026-10-03T11:00:00Z", "step": step}}
+            for step in range(3)
+        ]
+    }
+    requests_mock.post(
+        EQL_URL,
+        json={
+            "hits": {
+                "total": {"value": 2, "relation": "eq"},
+                "sequences": [sequence, sequence],
+            }
+        },
+    )
+
+    # When the native EQL query runs
+    result = connector_factory().execute(
+        NativeQuery(language="eql", query="sequence [a] [b] [c]"), WINDOW, HuntLimits()
+    )
+
+    # Then the six events are two hits, complete
+    assert len(result.events) == 6
+    assert len({event.detection for event in result.events}) == 2
+    assert (result.hits_count, result.truncated) == (2, False)
+
+
 def test_execute_lucene_flags_truncation(connector_factory, requests_mock):
     # Given more Lucene matches than the cap
     requests_mock.post(SEARCH_URL, json=hits_answer([{"a": 1}], total=40))

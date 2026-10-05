@@ -37,21 +37,31 @@ class SearchResult:
 
     Attributes:
         rows: Matching documents (``_source``) or ES|QL rows.
-        total: Total number of matches.
+        total: Total number of matches: documents, rows, or EQL sequences.
         partial: True when Elasticsearch flagged the results as partial.
+        sequences: For each row, the EQL sequence it belongs to (``None``
+            outside a sequence): the events of one sequence are one hit.
     """
 
-    def __init__(self, rows: list[dict[str, Any]], total: int, partial: bool) -> None:
+    def __init__(
+        self,
+        rows: list[dict[str, Any]],
+        total: int,
+        partial: bool,
+        sequences: list[str | None] | None = None,
+    ) -> None:
         """Initialize the result.
 
         Args:
             rows: Matching documents or rows.
             total: Total number of matches.
             partial: Whether the results are partial.
+            sequences: EQL sequence of each row, ``None`` outside a sequence.
         """
         self.rows = rows
         self.total = total
         self.partial = partial
+        self.sequences = sequences or [None] * len(rows)
 
 
 class ElasticsearchClient(HuntApiClient):
@@ -244,21 +254,25 @@ class ElasticsearchClient(HuntApiClient):
         )
         hits = answer.get("hits") or {}
         events = list(hits.get("events") or [])
+        labels: list[str | None] = [None] * len(events)
         sequences = hits.get("sequences") or []
-        for sequence in sequences:
-            events.extend(sequence.get("events") or [])
+        # hits.total counts sequences: the events of one sequence are one hit,
+        # identified by the query and the position of the sequence in the answer
+        for index, sequence in enumerate(sequences):
+            sequence_events = sequence.get("events") or []
+            events.extend(sequence_events)
+            labels.extend(
+                [f"eql-sequence-{job_key}-{index + 1}"] * len(sequence_events)
+            )
         rows = [_source(event) for event in events]
         total, relation = _total(hits, len(sequences) or len(rows))
-        if sequences:
-            # hits.total counts sequences while the result reports their events: every fetched event is a hit
-            total = max(total, len(rows))
         # Sequences can hold more events than the cap: the events cut here make the result partial
         partial = (
             bool(answer.get("is_partial"))
             or relation == "gte"
             or len(rows) > max_results
         )
-        return SearchResult(rows[:max_results], total, partial)
+        return SearchResult(rows[:max_results], total, partial, labels[:max_results])
 
     # ------------------------------------------------------------------
     # Lucene

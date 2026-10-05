@@ -215,18 +215,23 @@ class ElasticSecurityHuntConnector(InternalHuntConnector):
             )
         timestamp_field = self.elastic_config.timestamp_field
         events = []
-        for row in result.rows:
+        for row, sequence in zip(result.rows, result.sequences):
             fields = flatten_fields(row)
             events.append(
                 HuntEvent(
                     timestamp=parse_timestamp(fields.get(timestamp_field)),
                     fields=fields,
+                    detection=sequence,
                 )
             )
+        # The hits returned: events, the events of one EQL sequence counting once
+        returned = len({e.detection for e in events if e.detection}) + sum(
+            1 for e in events if not e.detection
+        )
         return HuntResult(
             events=events,
             total_hits=result.total,
-            truncated=result.partial or result.total > len(events),
+            truncated=result.partial or result.total > returned,
         )
 
     def on_timeout(self, native_query: NativeQuery) -> None:
