@@ -133,7 +133,7 @@ No relationships are built. Apart from the enriched observable, the bundle carri
 
 ### Marking Propagation
 
-The Note carries a TLP marking at the stricter of `XPOSEDORNOT_TLP_LEVEL` and the source observable's own TLP level, and in addition every marking the observable itself carries (its TLP, PAP, statement and custom markings), so it is never readable by anyone who cannot read the source. The enriched observable keeps all of its own markings, and every marking definition referenced in the bundle travels with it.
+The Note carries exactly one TLP marking, at the stricter of `XPOSEDORNOT_TLP_LEVEL` and the source observable's own TLP level, and in addition every non-TLP marking the observable carries (PAP, statement and custom markings), so it is never readable by anyone who cannot read the source. The source's own TLP is deliberately not repeated beside the stricter one: two TLP markings on one object invite the weaker of them to be read as the object's level. The enriched observable keeps all of its own markings, its TLP included, and every marking definition referenced in the bundle travels with it.
 
 The TLP gate fails closed in both directions. A marking above `XPOSEDORNOT_MAX_TLP` skips the enrichment, and so does a TLP marking whose value the connector cannot read: treating an unreadable marking as "unmarked" would let an observable through on a field nobody could parse. A marking reference that can be resolved from neither the bundle nor the observable fails the enrichment rather than publishing derived data with a weaker restriction.
 

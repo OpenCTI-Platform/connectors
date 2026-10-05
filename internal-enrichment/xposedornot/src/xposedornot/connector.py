@@ -738,6 +738,27 @@ def is_own_reference(reference: Any) -> bool:
     return source == OWN_REFERENCE_SOURCE.casefold()
 
 
+def score_provenance_token(
+    score: int | None, owned_token: str, published_score: Any
+) -> str:
+    """The `external_id` recording the score this connector currently owns.
+
+    Only a score published by this run is ours outright. A value already on
+    the observable stays ours while the previous token still matches it, so a
+    score this connector set and nobody has touched remains retractable.
+    Anything else must not be claimed. Stamping an analyst's edit, or
+    another connector's score left in place because this response carried
+    none or an unusable one, made the next scoreless run retract a value
+    this connector never set: the retraction the provenance token exists to
+    prevent. Ownership once lost is not reclaimed.
+    """
+    if score is not None:
+        return str(score)
+    if owned_token and owned_token == str(published_score):
+        return owned_token
+    return ""
+
+
 def named_labels(value: Any) -> list[str]:
     """The labels in a field, stripped, keeping only entries that name something.
 
@@ -1086,14 +1107,16 @@ class XposedOrNotConnector:
                     continue
                 seen.add(key)
             external_references.append(ref)
-        published_score = enriched_entity.get("x_opencti_score")
         own_reference_out = {
             "source_name": "XposedOrNot",
             "url": "https://xposedornot.com",
             "description": "XposedOrNot breach exposure check",
         }
-        if published_score is not None:
-            own_reference_out["external_id"] = str(published_score)
+        score_token = score_provenance_token(
+            score, owned_score_token, enriched_entity.get("x_opencti_score")
+        )
+        if score_token:
+            own_reference_out["external_id"] = score_token
         external_references.append(own_reference_out)
         enriched_entity["x_opencti_external_references"] = external_references
         enriched_entity.pop("external_references", None)

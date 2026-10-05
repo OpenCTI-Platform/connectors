@@ -2251,6 +2251,119 @@ def test_our_reference_records_the_score_it_published():
     assert ours[0]["external_id"] == str(enriched["x_opencti_score"]) == "100"
 
 
+def test_a_score_this_connector_did_not_set_is_not_claimed_as_ours():
+    """Leaving a foreign score alone is not the same as owning it.
+
+    Round 57 stopped the retraction itself, but the reference this run
+    published then recorded whatever score happened to be on the observable.
+    One run later the token matched that value and licensed exactly the
+    retraction it exists to prevent — on an analyst's edit, or on another
+    connector's score left in place because the response carried none or an
+    unusable one.
+    """
+    for response, existing in (
+        ({**BREACHED, "risk_label": None, "risk_score": None}, 85),
+        ({**BREACHED, "risk_score": "not-a-number"}, 42),
+    ):
+        connector, helper = _make_connector()
+        connector.client.lookup = MagicMock(return_value=response)
+        data = _enrichment_data()
+        data["stix_entity"]["x_opencti_score"] = existing
+        data["stix_entity"]["external_references"] = [
+            {
+                "source_name": "XposedOrNot",
+                "url": "https://xposedornot.com",
+                "external_id": "60",
+            }
+        ]
+        connector._process_message(data)
+        enriched = next(
+            o
+            for o in helper.stix2_create_bundle.call_args[0][0]
+            if o.get("id") == OBSERVABLE_ID
+        )
+        ours = [
+            ref
+            for ref in enriched["x_opencti_external_references"]
+            if is_own_reference(ref)
+        ]
+        assert enriched["x_opencti_score"] == existing, response
+        assert len(ours) == 1, ours
+        assert "external_id" not in ours[0], ours[0]
+
+
+def test_a_second_run_on_our_own_output_still_leaves_a_foreign_score():
+    """The leak only surfaced on the run after the one that caused it."""
+    scoreless = {**BREACHED, "risk_label": None, "risk_score": None}
+    first_connector, first_helper = _make_connector()
+    first_connector.client.lookup = MagicMock(return_value=scoreless)
+    data = _enrichment_data()
+    data["stix_entity"]["x_opencti_score"] = 85
+    data["stix_entity"]["external_references"] = [
+        {
+            "source_name": "XposedOrNot",
+            "url": "https://xposedornot.com",
+            "external_id": "60",
+        }
+    ]
+    first_connector._process_message(data)
+    first = next(
+        o
+        for o in first_helper.stix2_create_bundle.call_args[0][0]
+        if o.get("id") == OBSERVABLE_ID
+    )
+
+    second_connector, second_helper = _make_connector()
+    second_connector.client.lookup = MagicMock(return_value=scoreless)
+    again = _enrichment_data()
+    again["stix_entity"]["x_opencti_score"] = first["x_opencti_score"]
+    again["stix_entity"]["x_opencti_external_references"] = first[
+        "x_opencti_external_references"
+    ]
+    second_connector._process_message(again)
+    second = next(
+        o
+        for o in second_helper.stix2_create_bundle.call_args[0][0]
+        if o.get("id") == OBSERVABLE_ID
+    )
+    assert second["x_opencti_score"] == 85
+
+
+def test_our_own_score_stays_retractable_through_an_unusable_response():
+    """A response we cannot read must not cost us the ownership we hold.
+
+    The score on the observable is still the one we published, so the token
+    has to carry forward; dropping it would leave our own stale score
+    unretractable on every run after.
+    """
+    connector, helper = _make_connector()
+    connector.client.lookup = MagicMock(
+        return_value={**BREACHED, "risk_score": "not-a-number"}
+    )
+    data = _enrichment_data()
+    data["stix_entity"]["x_opencti_score"] = 60
+    data["stix_entity"]["external_references"] = [
+        {
+            "source_name": "XposedOrNot",
+            "url": "https://xposedornot.com",
+            "external_id": "60",
+        }
+    ]
+    connector._process_message(data)
+    enriched = next(
+        o
+        for o in helper.stix2_create_bundle.call_args[0][0]
+        if o.get("id") == OBSERVABLE_ID
+    )
+    ours = [
+        ref
+        for ref in enriched["x_opencti_external_references"]
+        if is_own_reference(ref)
+    ]
+    assert enriched["x_opencti_score"] == 60
+    assert ours[0]["external_id"] == "60"
+
+
 RED_ID = "marking-definition--5e57c739-391a-4eb3-b6be-7d15ca92d5ed"
 AMBER_ID = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
 CUSTOM_ID = "marking-definition--aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
