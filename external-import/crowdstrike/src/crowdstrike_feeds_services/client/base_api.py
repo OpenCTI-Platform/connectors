@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from falconpy import Intel as CrowdstrikeIntel
 
-from crowdstrike_feeds_services.utils.errors import CrowdstrikeAPIError
+from crowdstrike_feeds_services.utils.errors import CrowdStrikeAPIError
 
 if TYPE_CHECKING:
     from crowdstrike_feeds_connector import ConnectorSettings
@@ -14,13 +14,16 @@ class BaseCrowdstrikeClient:
     Working with FalconPy library
     """
 
-    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper", is_secondary: bool = False):
         """
         Initialize API with necessary configurations
         :param helper: Helper OpenCTI
+        :param is_secondary: if True this is a secondary client (e.g. for related indicators) it should not throw when API errors are encountered
         """
         self.config = config
         self.helper = helper
+        self.is_secondary = is_secondary
+        
         self.cs_intel = CrowdstrikeIntel(
             client_id=self.config.crowdstrike.client_id.get_secret_value(),
             client_secret=self.config.crowdstrike.client_secret.get_secret_value(),
@@ -77,4 +80,8 @@ class BaseCrowdstrikeClient:
                 {"error_message": error_message, "status_code": status_code},
             )
 
-        raise CrowdstrikeAPIError(message=error_message, status_code=status_code)
+        """
+        Raise an exception only if this is a primary client (e.g. for indicators or malware)
+        """
+        if not self.is_secondary:
+            raise CrowdStrikeAPIError(message=error_message, status_code=status_code)
