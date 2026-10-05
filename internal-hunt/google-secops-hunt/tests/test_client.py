@@ -10,7 +10,7 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntTimeoutError,
     RunDeadline,
 )
-from google.auth.exceptions import RefreshError
+from google.auth.exceptions import RefreshError, TransportError
 from google_secops_hunt.client import (
     MAX_RESULTS,
     SecOpsClient,
@@ -143,6 +143,38 @@ def test_authentication_failures_are_reported(requests_mock):
     # When/Then the search fails before calling SecOps
     with pytest.raises(
         HuntExecutionError, match="authentication failed.*invalid_grant"
+    ):
+        make_client(credentials).udm_search("x", START, END, 10, RunDeadline(30))
+    assert requests_mock.call_count == 0
+
+
+def test_a_token_refresh_outliving_the_deadline_is_a_timeout(requests_mock):
+    # Given a token refresh using up the run budget, reported by google-auth
+    # as an authentication error
+    now = [0.0]
+    deadline = RunDeadline(10, clock=lambda: now[0])
+
+    class StalledCredentials(FakeCredentials):
+        def refresh(self, request):
+            self.requests.append(request)
+            now[0] = 11.0
+            raise TransportError("HTTPSConnectionPool: Read timed out.")
+
+    credentials = StalledCredentials()
+
+    # When/Then the run is reported as timed out, not failed, before calling SecOps
+    with pytest.raises(
+        HuntTimeoutError, match="Google authentication did not complete"
+    ):
+        make_client(credentials).udm_search("x", START, END, 10, deadline)
+    assert requests_mock.call_count == 0
+
+
+def test_a_transport_error_within_the_deadline_is_a_failure(requests_mock):
+    # Given/When/Then a refresh failing while time is left is an auth failure
+    credentials = FakeCredentials(error=TransportError("connection refused"))
+    with pytest.raises(
+        HuntExecutionError, match="authentication failed.*connection refused"
     ):
         make_client(credentials).udm_search("x", START, END, 10, RunDeadline(30))
     assert requests_mock.call_count == 0

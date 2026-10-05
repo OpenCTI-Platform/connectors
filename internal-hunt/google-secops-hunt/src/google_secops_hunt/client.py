@@ -9,6 +9,7 @@ import requests
 from connectors_sdk.connectors.internal_hunt import (
     HuntApiClient,
     HuntExecutionError,
+    HuntTimeoutError,
     RunDeadline,
     api_error_message,
 )
@@ -115,7 +116,12 @@ class SecOpsClient(HuntApiClient):
         self._token_lock = threading.Lock()
 
     def _authenticate(self, deadline: RunDeadline) -> None:
-        """Refresh the access token of the service account when it is not valid."""
+        """Refresh the access token of the service account when it is not valid.
+
+        Raises:
+            HuntExecutionError: If Google refuses the credentials.
+            HuntTimeoutError: If no token is obtained before the run deadline.
+        """
         with self._token_lock:
             if self._credentials.valid:
                 return
@@ -127,6 +133,11 @@ class SecOpsClient(HuntApiClient):
             try:
                 self._credentials.refresh(request)
             except GoogleAuthError as err:
+                # google-auth reports a refresh cut by the deadline as an auth error
+                if deadline.expired():
+                    raise HuntTimeoutError(
+                        "The Google authentication did not complete within the run timeout."
+                    ) from err
                 raise HuntExecutionError(
                     f"The Google authentication failed: {api_error_message(str(err))}"
                 ) from err
