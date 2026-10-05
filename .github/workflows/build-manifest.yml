@@ -24,9 +24,10 @@ on:
   workflow_call:
   workflow_dispatch:
 
-concurrency:
-  group: build-manifest-global-${{ github.ref_name }}
-  cancel-in-progress: true
+# No concurrency group: groups order by job arrival, not commit order, so an
+# older run could cancel a newer one and then skip its own commit as stale,
+# leaving no manifest. The freshness check before the commit makes sure only
+# the newest commit's run writes.
 
 permissions:
   contents: read
@@ -157,30 +158,6 @@ jobs:
           set -euo pipefail
           bash ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh
 
-      # The matrix above takes long enough that the branch may have moved
-      # (new pushes landed) since this run started. Committing our generated
-      # manifest/schemas on top of a tip we never actually built from would
-      # silently mix stale and fresh content, so skip the commit entirely in
-      # that case rather than force it through.
-      - name: Check branch is still at the expected commit
-        id: freshness
-        if: steps.target.outputs.branch != ''
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          BRANCH: ${{ steps.target.outputs.branch }}
-          EXPECTED_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          current_sha=$(gh api "repos/${REPO}/git/refs/heads/${BRANCH}" --jq '.object.sha')
-          if [ "$current_sha" != "$EXPECTED_SHA" ]; then
-            echo "::warning::Branch '${BRANCH}' moved from ${EXPECTED_SHA} to ${current_sha} while this workflow was running. Skipping manifest commit to avoid committing on top of newer changes."
-            echo "still_head=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "still_head=true" >> "$GITHUB_OUTPUT"
-          fi
-
       # GITHUB_TOKEN cannot push to the default branch: the `filigran`
       # enterprise ruleset requires a pull request there, and `github-actions`
       # is not an eligible bypass actor at enterprise level (only GitHub Apps
@@ -196,6 +173,30 @@ jobs:
         with:
           app-id: ${{ vars.RELEASE_COMMIT_GITHUB_APP_ID }}
           private-key: ${{ secrets.RELEASE_COMMIT_GITHUB_APP_PRIVATE_KEY }}
+
+      # The matrix takes long enough that the branch may have moved. Committing
+      # on top of a tip we didn't build from would mix stale and fresh content,
+      # so skip when a newer non-manifest commit exists: its own run regenerates
+      # everything. Manifest bot commits are ignored so overlapping runs don't
+      # discard each other. Runs right before the commit to keep the
+      # check-to-commit window small.
+      - name: Check branch has no newer commits
+        id: freshness
+        if: steps.target.outputs.branch != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ steps.target.outputs.branch }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$(bash .github/scripts/branch_has_newer_commits.sh)" = "true" ]; then
+            echo "::warning::Branch '${BRANCH}' has newer commits than ${EXPECTED_SHA}. Skipping manifest commit: the run for the newer commit regenerates it."
+            echo "still_head=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "still_head=true" >> "$GITHUB_OUTPUT"
+          fi
 
       # Commits via GitHub's GraphQL API instead of raw `git commit`, so the
       # commit is GPG-signed by GitHub (required by this repo's branch
