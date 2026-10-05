@@ -48,9 +48,7 @@ jobs:
                 || [ -f "$connector/pyproject.toml" ] \
                 || [ -f "$connector/src/pyproject.toml" ] \
                 || continue
-              # Here-string, not a pipe: `grep -q` exiting early would SIGPIPE
-              # `echo` under pipefail and drop a changed connector.
-              grep -q "^${connector}/" <<< "$pr_files" && conns+=("$connector")
+              echo "$pr_files" | grep -q "^${connector}/" && conns+=("$connector")
             done
           done
 

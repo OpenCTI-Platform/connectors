@@ -17,42 +17,8 @@ permissions:
   contents: read
 
 jobs:
-  detect-changes:
-    name: Detect relevant changes
-    runs-on: ubuntu-latest
-    outputs:
-      relevant: ${{ steps.filter.outputs.relevant }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      # Native git diff (no third-party action): on pull_request, only build the
-      # test matrix when a path that can affect connector tests changed.
-      # build_test_matrix.py treats any change outside the connector directories
-      # as "run everything", so docs-only or CI-only PRs must be cut off here.
-      # Any other event (merge_group, workflow_call) always runs the full check.
-      - name: Check if relevant paths changed
-        id: filter
-        run: |
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          # Capture the full diff first: piping into `grep -q` can SIGPIPE git
-          # under `bash -eo pipefail` and wrongly yield relevant=false.
-          changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
-          if grep -qE '^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-import-file|stream|shared|templates)/|^run_test\.sh$' <<< "$changed_files"; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-          fi
-
   detect-test-files:
     name: Detect test files
-    needs: detect-changes
-    if: needs.detect-changes.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -62,7 +28,25 @@ jobs:
         with:
           fetch-depth: 0  # needed for git merge-base in build_test_matrix.py
 
+      # build_test_matrix.py runs every connector for any change outside the
+      # connector directories, so on pull_request a PR touching only docs or CI
+      # is cut off here and no matrix is built. Other events always build it.
+      - name: Check if relevant paths changed
+        id: filter
+        if: github.event_name == 'pull_request'
+        run: |
+          # HEAD is the PR test merge commit, so HEAD^1 is the base branch.
+          # Captured first so a git failure fails the step instead of being
+          # hidden by a pipe.
+          changed_files=$(git diff --name-only --no-renames HEAD^1 HEAD)
+          if grep -qE '^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-import-file|stream|shared|templates)/|^run_test\.sh$' <<< "$changed_files"; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Resolve RELEASE_REF
+        if: steps.filter.outputs.relevant != 'false'
         run: |
           if [ "${{ github.event_name }}" = "merge_group" ]; then
             PR_BASE_REF="${{ github.event.merge_group.base_ref }}"
@@ -90,6 +74,7 @@ jobs:
 
       - id: set-matrix
         name: Build test matrix from test-requirements.txt files
+        if: steps.filter.outputs.relevant != 'false'
         run: python .github/scripts/build_test_matrix.py
 
   test:
@@ -165,55 +150,35 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           report_type: test_results
 
-  # Single, stable job name to set as a required status check. The `test`
-  # job above runs as a dynamic matrix, so individual matrix entries can't be
-  # marked required (their names change with the matrix content) and the
-  # whole job is skipped when has_tests == 'false'. This job always runs
-  # (if: always()) so it reports a status even when `test` is skipped,
-  # and gives a single go/no-go based on the actual matrix outcome.
+  # Single, stable job name to set as a required status check. Matrix entries
+  # can't be required (their names change with the matrix content) and `test`
+  # is skipped when there is nothing to run, so this job always runs and gives
+  # one go/no-go.
   tests-summary:
     name: Tests Summary
     needs:
-      - detect-changes
       - detect-test-files
       - test
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Check matrix result
+        env:
+          DETECT_RESULT: ${{ needs.detect-test-files.result }}
+          HAS_TESTS: ${{ needs.detect-test-files.outputs.has_tests }}
+          TEST_RESULT: ${{ needs.test.result }}
         run: |
-          result="${{ needs.test.result }}"
-          changes_result="${{ needs.detect-changes.result }}"
-          detect_result="${{ needs.detect-test-files.result }}"
-          has_tests="${{ needs.detect-test-files.outputs.has_tests }}"
-
-          # A failed or cancelled detection job leaves has_tests empty; that
-          # must not be mistaken for a clean "no tests" outcome.
-          if [ "$changes_result" != "success" ]; then
-            echo "::error::Change detection did not succeed (result: $changes_result)."
+          # A failed detection leaves has_tests empty: not a clean "no tests".
+          if [ "$DETECT_RESULT" != "success" ]; then
+            echo "::error::Test detection did not succeed (result: $DETECT_RESULT)."
             exit 1
           fi
-          # `skipped` is legitimate only when detect-changes found nothing relevant.
-          if [ "$detect_result" != "success" ] && [ "$detect_result" != "skipped" ]; then
-            echo "::error::Test detection did not succeed (result: $detect_result)."
-            exit 1
-          fi
-
-          if [ "$has_tests" != "true" ]; then
+          if [ "$HAS_TESTS" != "true" ]; then
             echo "No relevant test files changed, nothing to run."
             exit 0
           fi
-
-          case "$result" in
-            success)
-              echo "All connector tests passed."
-              ;;
-            skipped)
-              echo "::error::Test matrix was skipped unexpectedly while tests were expected to run."
-              exit 1
-              ;;
-            *)
-              echo "::error::One or more connector tests failed (result: $result)."
-              exit 1
-              ;;
-          esac
+          if [ "$TEST_RESULT" != "success" ]; then
+            echo "::error::Connector tests did not succeed (result: $TEST_RESULT)."
+            exit 1
+          fi
+          echo "All connector tests passed."

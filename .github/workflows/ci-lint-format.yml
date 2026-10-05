@@ -21,57 +21,39 @@ permissions:
   contents: read
 
 jobs:
+  # On pull_request, sets relevant=false when no connector code changed, so the
+  # jobs below are skipped (a skipped job still satisfies a required check).
+  # Any other event leaves the output empty and runs everything.
   detect-changes:
     name: Detect relevant changes
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     outputs:
       relevant: ${{ steps.filter.outputs.relevant }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
-      # Native git diff (no third-party action): on pull_request, only run the
-      # heavy jobs below when relevant connector code changed. Any other event
-      # (merge_group, workflow_call) always runs the full checks.
       - name: Check if relevant paths changed
         id: filter
         run: |
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          # Capture the full diff first: piping into `grep -q` can SIGPIPE git
-          # under `bash -eo pipefail` and wrongly yield relevant=false.
-          changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
+          # HEAD is the PR test merge commit, so HEAD^1 is the base branch.
+          # Captured first so a git failure fails the step instead of being
+          # hidden by a pipe.
+          changed_files=$(git diff --name-only --no-renames HEAD^1 HEAD)
           if grep -qE '^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-import-file|stream)/' <<< "$changed_files"; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # Skipped jobs are reported as successful, so a failed detect-changes would
-  # silently skip every job below. This gate always runs and fails in that case.
-  detect-changes-gate:
-    name: Change detection gate
-    needs: detect-changes
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Fail if change detection did not succeed
-        env:
-          DETECT_RESULT: ${{ needs.detect-changes.result }}
-        run: |
-          if [ "$DETECT_RESULT" != "success" ]; then
-            echo "::error::Change detection did not succeed (result: $DETECT_RESULT)."
-            exit 1
-          fi
-
+  # The jobs below fail open: they run unless detect-changes positively found
+  # nothing relevant, so a failed or skipped detection never skips a check.
   ensure_formatting:
     name: Ensure Formatting
     needs: detect-changes
-    if: needs.detect-changes.outputs.relevant == 'true'
+    if: ${{ !cancelled() && needs.detect-changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -99,7 +81,7 @@ jobs:
   base_linter:
     name: Base Linter (flake8)
     needs: detect-changes
-    if: needs.detect-changes.outputs.relevant == 'true'
+    if: ${{ !cancelled() && needs.detect-changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -123,7 +105,7 @@ jobs:
   linter:
     name: STIX ID Linter
     needs: detect-changes
-    if: needs.detect-changes.outputs.relevant == 'true'
+    if: ${{ !cancelled() && needs.detect-changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

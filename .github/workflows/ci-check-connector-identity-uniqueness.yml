@@ -6,6 +6,10 @@ on:
       - master
       - 'release/*'
       - 'lts/*'
+    paths:
+      - '**/connector_manifest.json'
+  # No paths filter on pull_request: the check is cheap and must always report
+  # so it can be a required status check.
   pull_request:
   merge_group:
     branches:
@@ -22,58 +26,8 @@ permissions:
   contents: read
 
 jobs:
-  detect-changes:
-    name: Detect manifest changes
-    runs-on: ubuntu-latest
-    outputs:
-      relevant: ${{ steps.filter.outputs.relevant }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-
-      # Native git diff (no third-party action): on pull_request, only run the
-      # check when a connector_manifest.json actually changed. Any other event
-      # (push, merge_group, workflow_dispatch) always runs the full check.
-      - name: Check if a connector_manifest.json changed
-        id: filter
-        run: |
-          if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          # Capture the full diff first: piping into `grep -q` can SIGPIPE git
-          # under `bash -eo pipefail` and wrongly yield relevant=false.
-          changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
-          if grep -q 'connector_manifest\.json$' <<< "$changed_files"; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  # Skipped jobs are reported as successful, so a failed detect-changes would
-  # silently skip the check below. This gate always runs and fails in that case.
-  detect-changes-gate:
-    name: Change detection gate
-    needs: detect-changes
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Fail if change detection did not succeed
-        env:
-          DETECT_RESULT: ${{ needs.detect-changes.result }}
-        run: |
-          if [ "$DETECT_RESULT" != "success" ]; then
-            echo "::error::Change detection did not succeed (result: $DETECT_RESULT)."
-            exit 1
-          fi
-
   check-connector-identity:
     name: Check connector identity uniqueness
-    needs: detect-changes
-    if: needs.detect-changes.outputs.relevant == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
