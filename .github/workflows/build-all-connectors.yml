@@ -22,14 +22,17 @@ on:
 #   - with cancel-in-progress: false GitHub keeps only the latest pending run;
 #   - a shared group on lint/tests lets run B cancel run A's tests, which
 #     skips A's builds through `needs`.
-# Instead, overlapping runs proceed independently and dedupe only where it
-# is safe:
-#   - image builds are scoped per connector directory in
-#     build-connector-type.yml, so unrelated connectors always build in full,
-#     while repeated pushes touching the same connector cancel the older
-#     build in favour of the newer code;
-#   - build-manifest.yml keeps a per-ref group, since the manifest is
-#     regenerated from the full tree and a newer run supersedes an older one.
+# Instead, overlapping runs proceed independently and ordering is enforced
+# where shared state is written, not by concurrency groups:
+#   - image builds and the merge job have no group: groups order by job arrival
+#     (how long lint/tests took), not commit order, and drop all but one
+#     waiting job, so an older run could replace the newer commit's job and
+#     publish stale code with nothing going red;
+#   - the merge job (merge_connector_manifest.sh) is the only place a moving
+#     tag is written. It never moves a tag to an ancestor of the commit it was
+#     built from, and re-checks the tag after pushing;
+#   - build-manifest.yml has no group either: it commits only when no newer
+#     non-manifest commit exists, since the newest run regenerates everything.
 
 permissions:
   contents: read
