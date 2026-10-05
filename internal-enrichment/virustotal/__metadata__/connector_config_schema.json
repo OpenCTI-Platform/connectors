@@ -257,6 +257,7 @@
     "VIRUSTOTAL_GTI_RELATIONSHIP_LIMIT": {
       "default": 10,
       "description": "Maximum number of related objects to pull per GTI relationship, per observable.",
+      "exclusiveMinimum": 0,
       "type": "integer"
     }
   },
