@@ -1,11 +1,12 @@
 """Connector settings."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
@@ -16,6 +17,10 @@ class ConnectorConfig(BaseExternalImportConnectorConfig):
     """Generic connector configuration, with Wiz Cloud defaults."""
 
     name: str = Field(default="Wiz Cloud")
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="64ec2492-f48a-4a52-9dfd-867ef917399e",
+    )
     scope: ListFromString = Field(default=["wiz-cloud"])
     duration_period: timedelta = Field(default=timedelta(hours=6))
 
@@ -53,8 +58,8 @@ class WizCloudConfig(BaseConfigModel):
     )
 
     # pydantic parses ISO 8601 durations, so WIZ_CLOUD_SINCE=P30D works.
-    since: timedelta = Field(
-        default=timedelta(days=30),
+    since: DatetimeFromIsoString = Field(
+        default_factory=lambda: datetime.now(timezone.utc) - timedelta(days=30),
         description="Relative import start on first run (ISO 8601 duration)",
     )
 

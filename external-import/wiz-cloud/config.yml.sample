@@ -3,7 +3,7 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
+  # id: '64ec2492-f48a-4a52-9dfd-867ef917399e'
   name: 'Wiz Cloud'
   scope: 'wiz-cloud'
   duration_period: 'PT6H'   # poll every 6 hours

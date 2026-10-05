@@ -77,9 +77,7 @@ class WizIssuesProcessor(BaseDataProcessor):
         Yields:
             Lists of raw issue dicts, one per API page.
         """
-        since = self.state.issues_last_created_at or (
-            datetime.now(tz=timezone.utc) - self._config.since
-        )
+        since = self.state.issues_last_created_at or self._config.since
         self.work_name = f"Wiz Cloud issues import since {since:%Y-%m-%d %H:%M}"
         self.logger.info(
             "[WIZ-CLOUD] Collecting issues",
