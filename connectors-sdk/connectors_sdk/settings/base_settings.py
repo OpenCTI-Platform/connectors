@@ -429,6 +429,7 @@ class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
     Attributes:
         type (str): The type of the connector, set to "INTERNAL_ENRICHMENT" for internal enrichment connectors.
         auto (bool): Whether the connector should run automatically when an entity is created or updated.
+        max_tlp (Literal): The highest TLP of the entities the connector is allowed to enrich.
     """
 
     type: Literal["INTERNAL_ENRICHMENT"] = "INTERNAL_ENRICHMENT"
@@ -436,6 +437,33 @@ class BaseInternalEnrichmentConnectorConfig(_BaseConnectorConfig):
         default=False,
         description="Whether the connector should run automatically when an entity is created or updated.",
     )
+    max_tlp: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
+        default="TLP:AMBER",
+        description=(
+            "The highest TLP of the entities the connector is allowed to enrich. "
+            "Entities marked with a higher TLP are skipped and never sent to the external source."
+        ),
+    )
+
+    @field_validator("max_tlp", mode="before")
+    @classmethod
+    def _normalize_max_tlp(cls, value: Any) -> Any:
+        """Accept a TLP level with or without the `TLP:` prefix, in any case.
+
+        For example, `amber+strict` and `TLP:Amber+Strict` both become `TLP:AMBER+STRICT`,
+        the form expected by `OpenCTIConnectorHelper.check_max_tlp`.
+        """
+        if isinstance(value, str):
+            level = value.strip().upper()
+            return level if level.startswith("TLP:") else f"TLP:{level}"
+        return value
 
 
 class BaseStreamConnectorConfig(_BaseConnectorConfig):

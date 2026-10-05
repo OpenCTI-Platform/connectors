@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from connectors_sdk.connectors._stix_conversion import to_stix2_objects
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
 from pycti import OpenCTIConnectorHelper
 
@@ -140,10 +141,7 @@ class _Work:
     @staticmethod
     def _to_stix(objects: list[Any]) -> list[Any]:
         """Convert objects to stix2, calling ``to_stix2_object()`` when available."""
-        return [
-            obj.to_stix2_object() if hasattr(obj, "to_stix2_object") else obj
-            for obj in objects
-        ]
+        return to_stix2_objects(objects)
 
 
 class WorkManager:
