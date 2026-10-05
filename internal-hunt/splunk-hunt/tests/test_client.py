@@ -77,6 +77,35 @@ def test_search_runs_a_job_and_reads_paginated_results(requests_mock, monkeypatc
     assert client._active_jobs == {}
 
 
+def test_search_pages_by_the_rows_read_malformed_ones_included(
+    requests_mock, monkeypatch
+):
+    # Given a first page holding only malformed rows, then a page of results
+    monkeypatch.setattr("splunk_hunt.client.RESULTS_PAGE_SIZE", 2)
+    requests_mock.post(f"{NAMESPACE}/search/v2/jobs", json={"sid": "sid-1"})
+    requests_mock.get(JOB, json=_status(isDone=True, resultCount=3))
+    requests_mock.get(
+        f"{NAMESPACE}/search/v2/jobs/sid-1/results",
+        [
+            {"json": {"results": ["not-a-row", None]}},
+            {"json": {"results": [{"host": "a"}]}},
+        ],
+    )
+    requests_mock.delete(JOB, json={})
+
+    # When the search runs
+    _, rows = _client().search("search x", START, END, 10, RunDeadline(30), "k")
+
+    # Then the malformed rows are skipped and the next page starts after them
+    offsets = [
+        request.qs["offset"]
+        for request in requests_mock.request_history
+        if request.path.endswith("/results")
+    ]
+    assert offsets == [["0"], ["2"]]
+    assert rows == [{"host": "a"}]
+
+
 def test_search_caps_results_and_stops_on_empty_page(requests_mock):
     # Given more results than allowed, and an empty results page
     requests_mock.post(f"{NAMESPACE}/search/v2/jobs", json={"sid": "sid-1"})

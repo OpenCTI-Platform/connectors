@@ -214,10 +214,15 @@ class SplunkClient(HuntApiClient):
     def _fetch_results(
         self, sid: str, count: int, deadline: RunDeadline
     ) -> list[dict[str, Any]]:
-        """Read the results of a done job page by page."""
+        """Read the results of a done job page by page.
+
+        The offset counts the rows read from Splunk, malformed ones included, so
+        a page holding rows that are not objects is skipped, never read again.
+        """
         results: list[dict[str, Any]] = []
-        while len(results) < count:
-            page_size = min(RESULTS_PAGE_SIZE, count - len(results))
+        read = 0
+        while read < count:
+            page_size = min(RESULTS_PAGE_SIZE, count - read)
             response = self.hunt_request(
                 "GET",
                 f"{self._namespace}/search/v2/jobs/{quote(sid, safe='')}/results",
@@ -226,12 +231,13 @@ class SplunkClient(HuntApiClient):
                 params={
                     "output_mode": "json",
                     "count": page_size,
-                    "offset": len(results),
+                    "offset": read,
                 },
             )
             page = response.get("results") if isinstance(response, dict) else None
             if not page:
                 break
+            read += len(page)
             results.extend(row for row in page if isinstance(row, dict))
             if len(page) < page_size:
                 break
