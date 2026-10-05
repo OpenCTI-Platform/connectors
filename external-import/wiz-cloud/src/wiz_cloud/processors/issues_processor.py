@@ -287,7 +287,9 @@ class WizIssuesProcessor(BaseDataProcessor):
         system = System(
             name=snapshot.name,
             description=" | ".join(description_parts) or None,
-            labels=[f"{key}={value}" for key, value in snapshot.tags.items()],
+            # Do not add labels to System entities as tags are too numerous
+            # and create noise
+            # labels=[f"{key}={value}" for key, value in snapshot.tags.items()],
             external_references=references,
             author=self._author,
             markings=[self._marking],
