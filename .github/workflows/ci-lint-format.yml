@@ -1,6 +1,9 @@
 name: Lint & Format
 
 on:
+  # No paths filter and no change detection: these checks lint the whole repo
+  # (including .github/scripts, shared/ and the tool configs) in about two
+  # minutes, so they always run and can be required status checks.
   pull_request:
   merge_group:
     branches:
@@ -21,39 +24,8 @@ permissions:
   contents: read
 
 jobs:
-  # On pull_request, sets relevant=false when no connector code changed, so the
-  # jobs below are skipped (a skipped job still satisfies a required check).
-  # Any other event leaves the output empty and runs everything.
-  detect-changes:
-    name: Detect relevant changes
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    outputs:
-      relevant: ${{ steps.filter.outputs.relevant }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 2
-
-      - name: Check if relevant paths changed
-        id: filter
-        run: |
-          # HEAD is the PR test merge commit, so HEAD^1 is the base branch.
-          # Captured first so a git failure fails the step instead of being
-          # hidden by a pipe.
-          changed_files=$(git diff --name-only --no-renames HEAD^1 HEAD)
-          if grep -qE '^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-import-file|stream)/' <<< "$changed_files"; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  # The jobs below fail open: they run unless detect-changes positively found
-  # nothing relevant, so a failed or skipped detection never skips a check.
   ensure_formatting:
     name: Ensure Formatting
-    needs: detect-changes
-    if: ${{ !cancelled() && needs.detect-changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -80,8 +52,6 @@ jobs:
 
   base_linter:
     name: Base Linter (flake8)
-    needs: detect-changes
-    if: ${{ !cancelled() && needs.detect-changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -104,8 +74,6 @@ jobs:
 
   linter:
     name: STIX ID Linter
-    needs: detect-changes
-    if: ${{ !cancelled() && needs.detect-changes.outputs.relevant != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

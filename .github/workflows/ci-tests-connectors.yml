@@ -29,17 +29,20 @@ jobs:
           fetch-depth: 0  # needed for git merge-base in build_test_matrix.py
 
       # build_test_matrix.py runs every connector for any change outside the
-      # connector directories, so on pull_request a PR touching only docs or CI
-      # is cut off here and no matrix is built. Other events always build it.
+      # connector directories, so on pull_request a PR touching only docs or
+      # unrelated CI is cut off here and no matrix is built. Changes to the test
+      # infrastructure itself still run it. Other events always build it.
       - name: Check if relevant paths changed
         id: filter
         if: github.event_name == 'pull_request'
         run: |
+          relevant='^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-import-file|stream|shared|templates)/'
+          relevant+='|^(run_test\.sh|\.github/workflows/ci-tests-connectors\.yml|\.github/scripts/(build_test_matrix|_matrix_common)\.py)$'
           # HEAD is the PR test merge commit, so HEAD^1 is the base branch.
           # Captured first so a git failure fails the step instead of being
-          # hidden by a pipe.
-          changed_files=$(git diff --name-only --no-renames HEAD^1 HEAD)
-          if grep -qE '^(connectors-sdk|external-import|internal-enrichment|internal-export-file|internal-import-file|stream|shared|templates)/|^run_test\.sh$' <<< "$changed_files"; then
+          # hidden by a pipe. quotePath=false keeps non-ASCII paths unquoted.
+          changed_files=$(git -c core.quotePath=false diff --name-only --no-renames HEAD^1 HEAD)
+          if grep -qE "$relevant" <<< "$changed_files"; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
