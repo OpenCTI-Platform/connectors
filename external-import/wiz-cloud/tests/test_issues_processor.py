@@ -176,7 +176,7 @@ class TestCollect:
         return processor
 
     def test_uses_the_since_window_on_first_run(self, processor):
-        self._prepare(processor, since=timedelta(days=1))
+        self._prepare(processor, since="P1D")
         before = datetime.now(tz=timezone.utc) - timedelta(days=1)
 
         pages = list(processor.collect())

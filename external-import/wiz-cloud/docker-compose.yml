@@ -4,7 +4,7 @@ services:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_WIZ_CLOUD_ID}
+      # - CONNECTOR_ID=64ec2492-f48a-4a52-9dfd-867ef917399e
       - CONNECTOR_NAME=Wiz Cloud
       - CONNECTOR_SCOPE=wiz-cloud
       - CONNECTOR_DURATION_PERIOD=PT6H
