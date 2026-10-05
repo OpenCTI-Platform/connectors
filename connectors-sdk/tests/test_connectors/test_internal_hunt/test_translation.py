@@ -71,6 +71,13 @@ def test_build_pipeline_rejects_unknown_names():
         build_pipeline("dummy+missing", TEST_PIPELINES)
 
 
+@pytest.mark.parametrize("name", ["+", ",,", " + , "])
+def test_build_pipeline_rejects_separators_only(name):
+    # Given/When/Then a malformed value is refused, never read as no pipeline
+    with pytest.raises(HuntTranslationError, match="Invalid pySigma pipeline"):
+        build_pipeline(name, TEST_PIPELINES)
+
+
 def test_convert_sigma_returns_queries_and_detection_fields():
     # Given a parsed rule and a backend
     collection = parse_sigma_rule(SIGMA_RULE)

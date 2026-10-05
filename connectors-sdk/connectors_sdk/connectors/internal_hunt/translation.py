@@ -90,6 +90,12 @@ def build_pipeline(
                 f"Unknown pySigma pipeline '{part_name}' (supported: {supported})."
             )
         pipeline = factory() if pipeline is None else pipeline + factory()
+    if pipeline is None:
+        # Separators only ("+", ",,"): a malformed value, never read as no pipeline
+        supported = ", ".join(sorted([*registry, NO_PIPELINE]))
+        raise HuntTranslationError(
+            f"Invalid pySigma pipeline '{name}': name a pipeline (supported: {supported})."
+        )
     return pipeline
 
 
