@@ -9,22 +9,22 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | CONNECTOR_LIVE_STREAM_ID | `string` | ✅ | string |  | The ID of the live stream to connect to. |
-| ZSCALER_USERNAME | `string` | ✅ | string |  | Zscaler account username used for authentication. |
-| ZSCALER_PASSWORD | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Zscaler account password used for authentication. |
-| ZSCALER_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Zscaler API key used to obfuscate the authenticated session. |
-| CONNECTOR_NAME | `string` |  | string | `"Zscaler"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string | `["domain-name"]` | The scope of the connector. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | The minimum level of logs to display. |
+| CLOUDFLARE_ACCOUNT_ID | `string` | ✅ | string |  | Cloudflare account ID that owns the Rules List. |
+| CLOUDFLARE_API_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Cloudflare API token with the 'Account > Account Filter Lists > Edit' permission. |
+| CLOUDFLARE_LIST_ID | `string` | ✅ | string |  | ID of the existing Cloudflare Rules List (IP kind) to sync into. |
+| CONNECTOR_NAME | `string` |  | string | `"Cloudflare Rules List"` | The name of the connector as shown in OpenCTI. |
+| CONNECTOR_SCOPE | `array` |  | string | `["cloudflare"]` | Connector scope (comma-separated). |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` |  |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Whether to listen for delete events on the live stream. |
 | CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES | `boolean` |  | boolean | `true` | Whether to ignore dependencies when processing events from the live stream. |
 | CONNECTOR_LIVE_STREAM_START_TIMESTAMP | `integer` |  | integer | `null` | Stream position to start from, as epoch milliseconds (13 digits). Only applied on the connector's first run (no existing state). |
 | CONNECTOR_LIVE_STREAM_RECOVER | `boolean` |  | boolean | `true` | Whether to replay historical events from the database on first start (recover/backfill). Enabled by default: on its first run the connector replays all existing data (up to 'live_stream_recover_iso_date' if set) before switching to live events. Set to false to only process new events from now on. Only applied on the connector's first run (no existing state). |
 | CONNECTOR_LIVE_STREAM_RECOVER_ISO_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | ISO 8601 date up to which historical events are replayed when recover is enabled. Leave empty to replay all existing data. Ignored when recover is disabled. Only applied on the connector's first run (no existing state). |
-| ZSCALER_BLACKLIST_NAME | `string` |  | string | `"BLACK_LIST_DYNDNS"` | Name of the Zscaler URL category used as blacklist. |
-| ZSCALER_SSL_VERIFY | `boolean` |  | boolean | `false` | Whether to verify SSL certificates when connecting to OpenCTI. |
+| CLOUDFLARE_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.cloudflare.com/client/v4"` | Base URL of the Cloudflare API. Override only for testing against a mock server or a Cloudflare-compatible gateway. |
+| CLOUDFLARE_SYNC_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | Minimum interval between snapshot uploads to Cloudflare. Accepts ISO-8601 duration like 'PT30M', 'PT1H', 'PT1H30M', etc. |
 | DEPLOYMENT_REPORTING_ENABLED | `boolean` |  | boolean | `true` | Report to OpenCTI the deployment status of every indicator pushed to the security platform (deployed, failed, removed), stored on the 'deployed-on' relationship between the indicator and the Security Platform entity. Ignored (no-op) on OpenCTI platforms that do not support the deployment write-back. |
 | DEPLOYMENT_RECONCILIATION_INTERVAL | `integer` |  | `0 <= x ` | `60` | Interval in minutes between two reconciliations of the deployment statuses with the indicators read back from the security platform. 0 disables the reconciliation. |
-| SECURITY_PLATFORM_NAME | `string` |  | Length: `string >= 2` | `"Zscaler Internet Access"` | Name of the Security Platform entity representing Zscaler Internet Access in OpenCTI (created if it does not exist). |
-| SECURITY_PLATFORM_TYPE | `string` |  | string | `null` | Type of the Security Platform entity (open vocabulary security_platform_type_ov). None by default: the vocabulary has no secure web gateway type. |
+| SECURITY_PLATFORM_NAME | `string` |  | Length: `string >= 2` | `"Cloudflare"` | Name of the Security Platform entity representing Cloudflare in OpenCTI (created if it does not exist). |
+| SECURITY_PLATFORM_TYPE | `string` |  | string | `null` | Type of the Security Platform entity (open vocabulary security_platform_type_ov). None by default: the vocabulary has no web application firewall type. |
 | SECURITY_PLATFORM_ID | `string` |  | string | `null` | Id of an existing Security Platform entity in OpenCTI. When set, it is used instead of resolving the entity by name. |

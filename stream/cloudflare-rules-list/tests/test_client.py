@@ -2,7 +2,11 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-from cloudflare_rules_list.client import CloudflareAPIError, CloudflareRulesListClient
+from cloudflare_rules_list.client import (
+    CloudflareAPIError,
+    CloudflareOperationError,
+    CloudflareRulesListClient,
+)
 
 
 @pytest.fixture
@@ -77,6 +81,74 @@ def test_make_request_raises_on_non_json_success(client):
     assert "Invalid JSON" in str(exc.value)
 
 
+@pytest.mark.parametrize(
+    "body, message",
+    [
+        (["unexpected"], "the body is not a JSON object"),
+        (
+            {"success": False, "errors": [{"code": 10000, "message": "denied"}]},
+            "API request failed: [{'code': 10000, 'message': 'denied'}]",
+        ),
+    ],
+)
+def test_make_request_rejects_an_unexpected_success_body(client, body, message):
+    resp = _response(body)
+    resp.status_code = 200
+    client._session.request.return_value = resp
+    with pytest.raises(CloudflareAPIError) as exc:
+        client._make_request("PUT", "/x", data=[])
+    assert message in str(exc.value)
+    assert exc.value.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda c: c.replace_list_items("list-1", [{"ip": "192.0.2.1"}]),
+        lambda c: c.delete_list_items("list-1", ["item-1"]),
+        lambda c: c.get_bulk_operation("op-1"),
+        lambda c: c.get_list("list-1"),
+    ],
+)
+@pytest.mark.parametrize(
+    "body",
+    [{"result": ["op-1"]}, {"success": True}, {"success": True, "result": None}],
+)
+def test_a_missing_or_malformed_result_is_rejected(client, call, body):
+    client._session.request.return_value = _response(body)
+    with pytest.raises(CloudflareAPIError) as exc:
+        call(client)
+    assert "'result' is missing or not an object" in str(exc.value)
+    assert exc.value.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda c: c.replace_list_items("list-1", [{"ip": "192.0.2.1"}]),
+        lambda c: c.delete_list_items("list-1", ["item-1"]),
+    ],
+)
+@pytest.mark.parametrize(
+    "result",
+    [{}, {"operation_id": ""}, {"operation_id": None}, {"operation_id": 42}],
+)
+def test_a_bulk_change_without_its_operation_is_rejected(client, call, result):
+    # A bulk change is asynchronous: it is never confirmed on the acknowledgement alone
+    client._session.request.return_value = _response({"result": result})
+    with pytest.raises(CloudflareAPIError) as exc:
+        call(client)
+    assert "the bulk operation has no 'operation_id'" in str(exc.value)
+    assert exc.value.status_code == 200
+
+
+def test_a_bulk_change_returns_its_operation(client):
+    client._session.request.return_value = _response(
+        {"result": {"operation_id": "op-1"}}
+    )
+    assert client.delete_list_items("list-1", ["item-1"]) == {"operation_id": "op-1"}
+
+
 def test_make_request_uses_custom_timeout(client):
     client._session.request.return_value = _response({"result": {}})
     client._make_request("PUT", "/x", data=[], timeout=300)
@@ -85,13 +157,14 @@ def test_make_request_uses_custom_timeout(client):
 
 def test_make_request_raises_with_structured_errors(client):
     err = requests.exceptions.HTTPError("400")
-    err.response = MagicMock()
+    err.response = MagicMock(status_code=400)
     err.response.json.return_value = {"errors": [{"code": 10001, "message": "bad"}]}
     client._session.request.return_value = _response(raise_exc=err)
 
     with pytest.raises(CloudflareAPIError) as exc:
         client._make_request("GET", "/x")
     assert "10001" in str(exc.value)
+    assert exc.value.status_code == 400
 
 
 def test_make_request_raises_with_text_body(client):
@@ -112,6 +185,7 @@ def test_make_request_raises_without_response(client):
     with pytest.raises(CloudflareAPIError) as exc:
         client._make_request("GET", "/x")
     assert "no network" in str(exc.value)
+    assert exc.value.status_code is None
 
 
 def test_list_lists(client):
@@ -168,9 +242,10 @@ def test_wait_for_operation_failed(client, monkeypatch):
     client._session.request.return_value = _response(
         {"result": {"status": "failed", "error": "boom"}}
     )
-    with pytest.raises(CloudflareAPIError) as exc:
+    with pytest.raises(CloudflareOperationError) as exc:
         client.wait_for_operation("op")
     assert "boom" in str(exc.value)
+    assert exc.value.timed_out is False
 
 
 def test_wait_for_operation_times_out(client, monkeypatch):
@@ -181,9 +256,10 @@ def test_wait_for_operation_times_out(client, monkeypatch):
     monkeypatch.setattr("cloudflare_rules_list.client.time.sleep", lambda _: None)
     client._session.request.return_value = _response({"result": {"status": "pending"}})
 
-    with pytest.raises(CloudflareAPIError) as exc:
+    with pytest.raises(CloudflareOperationError) as exc:
         client.wait_for_operation("op", timeout=10)
     assert "timed out" in str(exc.value)
+    assert exc.value.timed_out is True
 
 
 def test_wait_for_operation_polls_until_complete(client, monkeypatch):

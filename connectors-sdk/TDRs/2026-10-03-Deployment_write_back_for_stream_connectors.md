@@ -34,6 +34,7 @@ OpenCTI platforms (no-op).
 | `DeploymentAssuranceOptions` | Resolved options, built from SDK settings (`from_settings`) or, for connectors still loading their configuration by hand, from `config.yml` and the environment (`from_legacy_config`). |
 | `DeploymentReporter` | Feature detection, security platform resolution, single, batch and hit reports, listing of the deployments of the platform, coalescing queue for the stream path. |
 | `DeploymentReconciler` + `DeploymentVendorAdapter` | Reconciliation runner (periodic daemon thread) and the vendor operations a connector implements: list, remove, push, and optionally collect hits. |
+| `DeploymentPushAdapter` | Base of `DeploymentVendorAdapter` for vendors whose API cannot list the pushed indicators (push, optional hits): the reconciliation then only pushes `pending` deployments again and reports hits. |
 | `DeploymentAssurance` | Facade wiring the reporter and the reconciliation for a connector. |
 
 ### Key design decisions
@@ -54,6 +55,10 @@ OpenCTI platforms (no-op).
 | The hit checkpoint (the start of the next read, never after the first hit of a report not delivered yet) is kept in the connector state under `deployment_hits_since`; the first read after a start resumes there, at most 7 days back, and keeps the lookback overlap after a short stop | A connector stopped longer than the lookback window loses no detection of the last 7 days, which bounds the first vendor query after a long stop. A state set to `None` is never replaced (pycti reads it as a reset from the platform and starts the stream over); state errors fall back to the lookback window and never stop the hit reports. |
 | Absence decisions skip deployments whose `last_sync_at` is at or after the start of the run | The stream may push an indicator while the vendor is being read back; it is judged on the next run (`deferred` counter). |
 | Every vendor item matched by the OpenCTI id or the vendor id of a deployment is withdrawn before `removed` is reported | A vendor can hold several items for one indicator (one per observable, or duplicates); a single failed removal reports nothing and the next run retries. Value matching keeps a single item since a value can be shared by unrelated indicators. |
+| A deployment to withdraw that the vendor no longer holds is reported `removed` and handed to `forget_indicator` (no-op by default) | `remove_vendor_indicator` is not called without a vendor item; an adapter uploading a local snapshot as a whole would otherwise restore the indicator with its next upload. |
+| A vendor item also matched by a deployment staying on the vendor is never withdrawn; the withdrawn deployment is reported `removed` | A value can be shared by several indicators of a value-only vendor: revoking one of them must not take the item of a live one offline. An item shared by two withdrawals is removed once. |
+| Adapters of vendors keeping one item per value without the OpenCTI id declare `expected_values`: every item holding one of them is matched, and the default `is_complete` needs all of them (the indicator is pushed again otherwise, `incomplete` counter) | The vendor id of one item (the first IOC of a file indicator) would otherwise confirm an indicator whose other items were deleted on the vendor, and a withdrawal would leave those items behind. |
+| Value matching of a vendor adapter declaring `expected_values` only uses those values (empty when the connector pushes none of the pattern values), for the vendor items and for the hits without id | A pattern can mix values the connector pushes with values it cannot push (a process name next to an IPv4 address): matching every pattern value would credit, and on withdrawal delete, a vendor item another source created for a value the connector never pushed. |
 | A capped detection read returns a `HitCollection` with `complete_until`; only the hits before it are reported and the next run resumes there | Under sustained volume a capped read would otherwise advance the window and lose the detections beyond the cap. Adapters read the oldest detections first (sorted reads, or halved time windows when the vendor API has no ordering). |
 | Vendor indicators carrying an OpenCTI id but no deployment are reported `active` | Backfills the indicators pushed before the write-back existed. |
 | Hits are counted only when newer than the `last_hit_at` of the deployment | Overlapping time windows (and restarts) never double count; the platform ignores replays as well. |
@@ -99,7 +104,8 @@ assurance.report_removed(stix_indicator)
 - Background threads (flush timer, reconciliation) run inside the connector process; they are daemon threads and the
   queue is flushed at exit.
 - Queued reports can be lost if the process is killed abruptly; the next reconciliation restores the state.
-- Value matching (for vendors that do not keep the OpenCTI id) can match an indicator sharing the same observable value.
+- Value matching (for vendors that do not keep the OpenCTI id) can match an indicator sharing the same observable value;
+  such an item stays on the vendor while one of the indicators sharing it is live.
 
 <br>
 

@@ -14,6 +14,7 @@
     - [Data flow](#data-flow)
       - [Score to severity mapping](#score-to-severity-mapping)
     - [Supported observable types](#supported-observable-types)
+    - [Dissemination assurance (deployment write-back)](#dissemination-assurance-deployment-write-back)
   - [Installation](#installation)
     - [Requirements](#requirements)
     - [Getting the Cortex XDR API base URL](#getting-the-cortex-xdr-api-base-url)
@@ -103,6 +104,76 @@ values and rejects IPv6 ones. A
 a `StixFile` with only a `name` and no hash passes the type filter but still yields no IOC (see
 [Unsupported observable handling](#unsupported-observable-handling)).
 
+### Dissemination assurance (deployment write-back)
+
+The connector reports to OpenCTI whether each indicator is actually live in Cortex XDR. The status is stored on the
+`deployed-on` relationship between the indicator and the `Palo Alto Cortex XDR` Security Platform entity (created if it
+does not exist), and detection hits are counted with a sighting of the indicator on that entity.
+
+| When                                        | Reported to OpenCTI                                                                                       |
+|---------------------------------------------|-----------------------------------------------------------------------------------------------------------|
+| Indicator upserted in Cortex XDR            | `deployed`, with the Cortex XDR `rule_id` of its first IOC as external id                                 |
+| Indicator rejected by Cortex XDR            | `failed`, with a short reason such as "Cortex XDR refused the IOC upsert: permission denied" (the Cortex XDR response is written to the connector log); a success reply listing `errors` for any IOC of the indicator is a rejection too ("Cortex XDR refused the IOC upsert: invalid request") |
+| Indicator without any supported observable  | Nothing: the indicator is never pushed                                                                    |
+| Delete event processed                      | `removed` (also when the IOC was already absent from Cortex XDR); the IOCs of values another valid OpenCTI indicator (neither revoked nor expired) pushes too are kept; a failed deletion, or a deletion skipped because the other indicators cannot be read, is not reported |
+| Reconciliation, indicator present           | `active` when Cortex XDR holds an IOC for every value of the indicator                                    |
+| Reconciliation, indicator partly present    | The indicator is upserted again, which restores its missing IOCs, and reported `deployed` (`failed` if Cortex XDR rejects it); a `failed` indicator waits for an analyst retry |
+| Reconciliation, indicator absent            | `removed` (deleted or expired in Cortex XDR)                                                              |
+| Reconciliation, `pending` (analyst retry)   | The indicator is upserted again and reported `deployed` or `failed`                                       |
+| Reconciliation, withdrawal or expiry        | The IOCs of revoked, expired or withdrawn indicators are deleted from Cortex XDR, except the ones another live indicator shares, and the indicator is reported `removed` |
+| Hits                                        | IOC alerts (`alert_source` `XDR IOC`) whose events carry the value of a deployed indicator                |
+
+- **Reconciliation**: every `DEPLOYMENT_RECONCILIATION_INTERVAL` minutes, the IOCs of the tenant are read back with the
+  `indicators/get` API (100 per call, `search_from` / `search_to`); IOCs whose `expiration_date` is in the past are not
+  live (`-1` means the IOC never expires): they never confirm a deployment, and the ones of a withdrawn or expired
+  indicator are deleted. Cortex XDR does
+  not store the OpenCTI id, so deployments are matched by `rule_id` and by value: the IOCs of an indicator are the ones
+  holding the hashes, domain names, IPv4 addresses, email addresses and URLs of its pattern (the values the connector
+  pushes). A read-back error, a page repeated by the API or a malformed IOC (a row that is not an object, or an IOC
+  without value or whose `expiration_date` is not a number of milliseconds) skips the run: indicators are never
+  reported `removed` from a partial listing.
+- **Hits**: during each reconciliation, the IOC alerts created since the previous run are read with their events
+  (`alerts/get_alerts_multi_events`, oldest creation time first, at most 10,000 per run: a capped read is complete until
+  the creation time of the newest alert read and the next run resumes there; when more alerts share one creation time
+  than the limit, the next runs read that instant further from the alerts already read, so no alert is lost). An alert counts one
+  hit, dated at its creation time, for every deployed indicator one of whose pushed values is one of its IP addresses, host names, DNS
+  queries, email addresses or file hashes (domain indicators match the host of a URL value); an alert detected before
+  the previous run but created after it is counted; hits already reported are never counted twice. A malformed alert
+  (a row that is not an object, or an alert without creation or detection time) or an alert page repeated by the API
+  fails the hit read, and the next run reads the same window again.
+- **IOC validation requests**: OpenAEV runs the benign validation tests requested in OpenCTI and writes their results;
+  the requests only target indicators this connector reports `deployed` or `active`. The two analyst requests carried by
+  a deployment are handled by the reconciliation: a retry (`pending`) upserts the indicator again, a withdrawal deletes
+  it from Cortex XDR.
+- **Permissions**: the API key role needs **Threat Management -> Detections -> Rules** (**View/Edit**, already required)
+  and **Investigation -> Incidents and Alerts** (**View**) to report hits; without the latter, set
+  `HITS_REPORTING_ENABLED=false`.
+- **Graceful degradation**: on OpenCTI platforms without the deployment write-back API the feature is a no-op (logged
+  once). Write-back errors are logged as warnings and never block the dissemination.
+
+#### What you see in OpenCTI
+
+The [Deployments tabs](https://docs.opencti.io/latest/usage/dissemination-assurance/#viewing-deployments) of an
+indicator and of the `Palo Alto Cortex XDR` Security Platform show one row per deployment, with its status, the time
+of the last report and the hits counted from the IOC alerts.
+
+- A `failed` deployment shows the reason the connector reported, for example "Cortex XDR refused the IOC upsert:
+  permission denied" or "Cortex XDR could not be reached for the IOC upsert"; the HTTP status and the Cortex XDR
+  response are in the connector log.
+- **Deploy again** sets the deployment to `pending`: the next reconciliation upserts the indicator again and reports
+  `deployed` or `failed`.
+- **Remove from this platform** withdraws the indicator: the next reconciliation deletes its IOCs, except the ones
+  another live indicator shares, and reports it `removed`.
+
+| Environment variable                 | Default                | Description                                                           |
+|--------------------------------------|------------------------|-----------------------------------------------------------------------|
+| `DEPLOYMENT_REPORTING_ENABLED`       | `true`                 | Report the deployment status of the pushed indicators.                |
+| `DEPLOYMENT_RECONCILIATION_INTERVAL` | `60`                   | Minutes between two reconciliations, `0` disables the reconciliation. |
+| `HITS_REPORTING_ENABLED`             | `true`                 | Report the IOC alert hits of the deployed indicators.                 |
+| `SECURITY_PLATFORM_NAME`             | `Palo Alto Cortex XDR` | Name of the Security Platform entity in OpenCTI.                      |
+| `SECURITY_PLATFORM_TYPE`             | `XDR`                  | Type of the Security Platform entity (`security_platform_type_ov`).   |
+| `SECURITY_PLATFORM_ID`               |                        | Id of an existing Security Platform entity, used instead of the name. |
+
 ## Installation
 
 ### Requirements
@@ -110,8 +181,9 @@ a `StixFile` with only a `name` and no hash passes the type filter but still yie
 - OpenCTI Platform >= 7.260811.0
 - A Palo Alto Cortex XDR tenant with API access enabled
 - A Cortex XDR API Key (**Advanced** security level) and its associated Key ID
-- A role granting **Threat Management -> Detections -> Rules** with the **View/Edit** permission (the
-  only permission this connector needs; everything else can stay disabled)
+- A role granting **Threat Management -> Detections -> Rules** with the **View/Edit** permission, plus
+  **Investigation -> Incidents and Alerts** with the **View** permission to report hits (see
+  [Dissemination assurance](#dissemination-assurance-deployment-write-back)); everything else can stay disabled
 
 ### Getting the Cortex XDR API base URL
 
@@ -128,8 +200,9 @@ See [Get Your FQDN](https://cortex-docs.paloaltonetworks.com/xdr-5-api/get-your-
 1. In the Cortex XDR management console, go to **Settings** -> **Configurations** -> **API Keys** -> **New Key**.
 2. Select **Advanced** as the security level (**Standard** keys are not supported by this connector).
 3. Assign the key a role that grants **Threat Management -> Detections -> Rules** with the **View/Edit**
-   permission. This is the only permission the connector requires: it covers reading, inserting/updating
-   and deleting IOCs. All other permissions can stay disabled (least privilege).
+   permission: it covers reading, inserting/updating and deleting IOCs. Hit reporting also needs
+   **Investigation -> Incidents and Alerts** with the **View** permission (or set `HITS_REPORTING_ENABLED=false`).
+   All other permissions can stay disabled (least privilege).
 4. Copy the generated **API Key** (`api_key`) and its **Key ID** (`api_key_id`); the API Key is only shown once
    and cannot be retrieved again.
 5. Use these values, together with the base URL above, to sign every request: the Key ID is sent as the
@@ -192,4 +265,6 @@ this points to an unexpected data shape rather than the normal type-filtering be
 | Logs repeatedly show `No supported observable(s) found in indicator, skipping it` | The indicator's observables are all of an unsupported type (e.g. `Hostname`) | Expected behavior for unspported observable types; no action needed unless those indicators are expected to be pushed to Cortex XDR |
 | Logs repeatedly show `No Cortex XDR IOC could be extracted from any observable, skipping indicator` | The indicator only has `StixFile` observable(s) without any hash (e.g. only a `name`) | Expected behavior since only hashes are mapped for `StixFile`; no action needed unless those indicators are expected to be pushed to Cortex XDR |
 | `delete` events never reach Cortex XDR | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` is set to `false` | Set `CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true` (the default) |
+| Logs show `[DEPLOYMENT] Cannot read the detections from the vendor` | The API key role lacks **Investigation -> Incidents and Alerts** (**View**) | Grant the permission, or set `HITS_REPORTING_ENABLED=false` |
+| Logs show `[DEPLOYMENT] Cannot read the indicators back from the vendor, reconciliation skipped.` | The IOC read-back failed (permission, rate limit, server error); no status was changed | Check the error in the log; the next reconciliation retries |
 | Connector exits with `Failed to parse stream event's data payload as JSON` or `Failed to parse indicator and/or observables from stream event` | Unexpected OpenCTI/`pycti` stream payload shape (e.g. a breaking upstream change) | This should not happen; please report the issue with the connector's logs |

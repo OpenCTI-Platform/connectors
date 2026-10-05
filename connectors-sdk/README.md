@@ -94,7 +94,18 @@ class ConnectorSettings(BaseConnectorSettings):
 2. Implement a `DeploymentVendorAdapter` when the vendor API can read the pushed indicators back (`list_vendor_indicators`,
    `remove_vendor_indicator`, `push_indicator`, `collect_hits` when detections are available, and `is_complete` when the
    vendor holds one item per observable, so that an indicator only partly on the vendor is pushed again instead of being
-   confirmed `active`). When the listing cannot guarantee completeness (offset pages of a collection without a documented
+   confirmed `active`). A vendor keeping one item per observable value without the OpenCTI id overrides
+   `expected_values` instead: every item holding one of those values is matched (and removed on withdrawal), and the
+   indicator is pushed again while one of them is missing. Value matching, for the vendor items and the hits alike, then
+   only uses those values (an empty set when the connector pushes none of the pattern values), so an item holding a
+   pattern value the connector does not push is never withdrawn. An item another live deployment shares is never
+   withdrawn.
+   An adapter keeping a local snapshot of what it pushes (uploaded as a whole) overrides `forget_indicator`, called
+   for a deployment withdrawn while the vendor no longer holds it, so that the next upload does not restore it.
+   When the vendor API cannot read the indicators back, a `DeploymentPushAdapter` (`push_indicator`, optional
+   `collect_hits`) still gets the periodic re-push of `pending` deployments and the hit reporting; presence, absence
+   and withdrawal need the read-back.
+   When the listing cannot guarantee completeness (offset pages of a collection without a documented
    order), set `confirms_absence = True` and implement `confirm_absent`: an indicator missing from the listing is then
    only reported `removed` once a direct vendor lookup confirms it (at most `max_absence_checks` lookups per run, 100 by
    default; the next ones wait for the next run).
@@ -111,6 +122,14 @@ assurance.report_pushed(stix_indicator, external_id=vendor_id)
 assurance.report_push_failed(stix_indicator, error)
 assurance.report_removed(stix_indicator)
 ```
+
+OpenCTI shows the failure reason in the Deployments tabs: report one short sentence naming the platform and the cause,
+never a vendor response. `deployment_failure_reason(platform, action, status_code)` writes it with the wording every
+connector shares (`deployment_failure_reason("Google SecOps", "entity ingestion", 403)` gives
+`"Google SecOps refused the entity ingestion: permission denied"`; for a success status whose response cannot be read,
+`"... returned an unexpected response to the ..."`; without a status, `"... could not be reached for the ..."`); log the
+vendor response with the indicator id instead. The re-push of the reconciliation reports the message
+of the exception `push_indicator` raises, so adapters raise the same sentence.
 
 On OpenCTI platforms without the write-back API, the module logs once and becomes a no-op. See the
 [TDR](TDRs/2026-10-03-Deployment_write_back_for_stream_connectors.md) for the design and the reconciliation algorithm.

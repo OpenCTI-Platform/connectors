@@ -12,12 +12,18 @@ vendor content with the ``deployed-on`` relationships of the platform in OpenCTI
 4. Absent and ``deployed`` / ``active`` -> report ``removed``.
 5. ``pending`` (analyst retry) and absent -> push again, report the outcome.
 6. Withdrawal requested (relationship revoked), indicator revoked or expired, and
-   present -> remove from the vendor, report ``removed`` (absent -> ``removed``).
+   present -> remove from the vendor, report ``removed`` (absent -> ``removed``,
+   and ``DeploymentVendorAdapter.forget_indicator`` drops any local copy).
 7. Vendor indicators carrying an OpenCTI id with no deployment -> report
    ``active`` (backfill of indicators pushed before the write-back existed).
 
 All reports of a run are sent with ``indicatorReportDeployments`` (batch). When the
 adapter can read detections, hits observed since the previous run are reported.
+
+A vendor whose API cannot list the pushed indicators implements a
+``DeploymentPushAdapter`` instead: its reconciliation only pushes the ``pending``
+deployments again (step 5, analyst retry) and reports hits; presence, absence,
+withdrawal and backfill need the read-back of a ``DeploymentVendorAdapter``.
 """
 
 import threading
@@ -169,8 +175,59 @@ class _PendingHits:
 _LOG_PREFIX = "[DEPLOYMENT]"
 
 
-class DeploymentVendorAdapter(ABC):
-    """Vendor operations needed by the reconciliation of a stream connector."""
+class DeploymentPushAdapter(ABC):
+    """Vendor operations of a security platform whose API cannot list indicators.
+
+    The reconciliation pushes the ``pending`` deployments again and reports hits;
+    adapters able to read the pushed indicators back implement
+    ``DeploymentVendorAdapter``.
+    """
+
+    @abstractmethod
+    def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
+        """Push an indicator to the vendor again (analyst retry).
+
+        Args:
+            stix_indicator: The indicator, in the stream event shape (OpenCTI
+                extension included).
+
+        Returns:
+            The id of the indicator on the vendor side, if known.
+
+        Raises:
+            Exception: When the vendor rejected the push (reported ``failed``).
+        """
+
+    def collect_hits(
+        self,
+        deployments: Sequence[IndicatorDeployment],
+        since: datetime,
+        *,
+        resume: Any = None,
+    ) -> Iterable[VendorHit] | HitCollection:
+        """Read the detections of deployed indicators observed since a date.
+
+        Adapters able to read detections (alerts, incidents, matches) override it;
+        the default implementation reports no hit.
+
+        Args:
+            deployments: The live deployments (``deployed`` or ``active``).
+            since: Only return detections that happened after this date.
+            resume: The ``HitCollection.resume`` returned by the previous call, only
+                passed to adapters that return one.
+
+        Returns:
+            The hits, matched to deployments by indicator id, vendor id or value. A
+            capped read returns a ``HitCollection`` telling how far it is complete.
+            An adapter returning ``HitCollection.resume`` also accepts the keyword
+            argument ``resume``: it is called again with it to continue a read capped
+            at its very start.
+        """
+        return ()
+
+
+class DeploymentVendorAdapter(DeploymentPushAdapter):
+    """Vendor operations needed by the full reconciliation of a stream connector."""
 
     confirms_absence: bool = False
     """Whether ``confirm_absent`` looks indicators up on the vendor.
@@ -211,21 +268,6 @@ class DeploymentVendorAdapter(ABC):
             Exception: When the vendor refused the removal.
         """
 
-    @abstractmethod
-    def push_indicator(self, stix_indicator: dict[str, Any]) -> str | None:
-        """Push an indicator to the vendor again (analyst retry).
-
-        Args:
-            stix_indicator: The indicator, in the stream event shape (OpenCTI
-                extension included).
-
-        Returns:
-            The id of the indicator on the vendor side, if known.
-
-        Raises:
-            Exception: When the vendor rejected the push (reported ``failed``).
-        """
-
     def is_complete(
         self,
         deployment: IndicatorDeployment,
@@ -235,7 +277,9 @@ class DeploymentVendorAdapter(ABC):
 
         Adapters pushing one vendor item per observable override it, so that an
         indicator only partly on the vendor is pushed again instead of being
-        confirmed ``active``. By default, any vendor item confirms the deployment.
+        confirmed ``active``. By default, any vendor item confirms the deployment,
+        unless the adapter declares ``expected_values``: a vendor item must then
+        hold each of them, and a deployment without any is never complete.
 
         Args:
             deployment: The deployment.
@@ -244,7 +288,15 @@ class DeploymentVendorAdapter(ABC):
         Returns:
             ``False`` when an observable of the indicator has no vendor item.
         """
-        return True
+        expected = self.expected_values(deployment)
+        if expected is None:
+            return True
+        # No value to push: the vendor items matched by id are left from an earlier pattern.
+        return bool(expected) and expected <= {
+            value
+            for vendor_indicator in vendor_matches
+            if (value := normalize_value(vendor_indicator.value))
+        }
 
     def confirm_absent(self, deployment: IndicatorDeployment) -> bool:
         """Confirm with a direct vendor lookup that an indicator is not on the vendor.
@@ -265,32 +317,40 @@ class DeploymentVendorAdapter(ABC):
         """
         return True
 
-    def collect_hits(
-        self,
-        deployments: Sequence[IndicatorDeployment],
-        since: datetime,
-        *,
-        resume: Any = None,
-    ) -> Iterable[VendorHit] | HitCollection:
-        """Read the detections of deployed indicators observed since a date.
+    def forget_indicator(self, deployment: IndicatorDeployment) -> None:
+        """Drop the local copy of an indicator withdrawn while absent from the vendor.
 
-        Adapters able to read detections (alerts, incidents, matches) override it;
-        the default implementation reports no hit.
+        Called when the run reports a deployment ``removed`` because it must leave
+        the vendor (withdrawal, revocation or expiry) and the vendor no longer holds
+        it, so ``remove_vendor_indicator`` is not called. Adapters keeping what they
+        push in a local snapshot uploaded as a whole override it, so that the next
+        upload does not restore the indicator. By default, nothing is kept.
 
         Args:
-            deployments: The live deployments (``deployed`` or ``active``).
-            since: Only return detections that happened after this date.
-            resume: The ``HitCollection.resume`` returned by the previous call, only
-                passed to adapters that return one.
+            deployment: The withdrawn deployment.
+        """
+
+    def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str] | None:
+        """Return the values the connector pushes to the vendor for a deployment.
+
+        Vendors keeping one item per observable value without the OpenCTI id
+        override it with the normalized values they push for the indicator: the
+        deployment then matches every vendor item holding one of them, so that each
+        one is removed on withdrawal (except an item a deployment staying on the
+        vendor shares) and the indicator is pushed again while one of them is
+        missing. Value matching, for vendor items and for hits, then only uses
+        these values: a pattern value the connector does not push never matches a
+        vendor item, so a withdrawal never removes it. By default, value matching
+        uses every value of the pattern and keeps a single vendor item.
+
+        Args:
+            deployment: A deployment of the platform.
 
         Returns:
-            The hits, matched to deployments by indicator id, vendor id or value. A
-            capped read returns a ``HitCollection`` telling how far it is complete.
-            An adapter returning ``HitCollection.resume`` also accepts the keyword
-            argument ``resume``: it is called again with it to continue a read capped
-            at its very start.
+            The expected normalized values (empty when the connector pushes none of
+            the pattern values), or ``None`` when the adapter does not declare them.
         """
-        return ()
+        return None
 
 
 class _Index:
@@ -332,7 +392,11 @@ class _Index:
         return index
 
     @classmethod
-    def of_deployments(cls, deployments: Iterable[IndicatorDeployment]) -> "_Index":
+    def of_deployments(
+        cls,
+        deployments: Iterable[IndicatorDeployment],
+        values_of: Callable[[IndicatorDeployment], Iterable[str]],
+    ) -> "_Index":
         index = cls()
         for deployment in deployments:
             for identifier in deployment.identifiers:
@@ -342,7 +406,7 @@ class _Index:
                 normalize_value(deployment.external_id),
                 deployment,
             )
-            for value in deployment.values:
+            for value in values_of(deployment):
                 index._add(index.by_value, value, deployment)
         return index
 
@@ -365,10 +429,16 @@ class _Index:
         normalized_external_id = normalize_value(external_id)
         if normalized_external_id and normalized_external_id in self.by_external_id:
             return list(self.by_external_id[normalized_external_id])
-        for value in values:
+        for value in sorted(values):
             if value in self.by_value:
                 return self.by_value[value][:1]
         return []
+
+    def find_values(self, values: Iterable[str]) -> list[Any]:
+        """Return every object holding one of the values."""
+        return [
+            item for value in sorted(values) for item in self.by_value.get(value, ())
+        ]
 
 
 class DeploymentReconciler:
@@ -382,7 +452,7 @@ class DeploymentReconciler:
     def __init__(
         self,
         reporter: DeploymentReporter,
-        adapter: DeploymentVendorAdapter,
+        adapter: DeploymentPushAdapter,
         *,
         max_vendor_indicators: int = DEFAULT_MAX_VENDOR_INDICATORS,
         max_absence_checks: int = DEFAULT_MAX_ABSENCE_CHECKS,
@@ -394,7 +464,8 @@ class DeploymentReconciler:
 
         Args:
             reporter: The deployment reporter of the connector.
-            adapter: The vendor adapter.
+            adapter: The vendor adapter (``DeploymentVendorAdapter`` for the full
+                reconciliation, ``DeploymentPushAdapter`` for re-push and hits only).
             max_vendor_indicators: Read-back limit of a run. When reached, absence
                 based decisions (``removed``, re-push) are skipped for that run.
             max_absence_checks: ``confirm_absent`` lookups of a run, for adapters
@@ -533,17 +604,27 @@ class DeploymentReconciler:
                     skipped=True, reason="Queued stream reports not delivered"
                 )
             now = self._clock()
-            try:
-                vendor_indicators = self._read_vendor_indicators(summary)
-            except Exception as err:
-                self._logger.warning(
-                    f"{_LOG_PREFIX} Cannot read the indicators back from the vendor, "
-                    "reconciliation skipped.",
-                    meta={"error": str(err)},
-                )
-                return ReconciliationSummary(
-                    skipped=True, reason=f"Vendor read-back failed: {err}"
-                )
+            vendor_adapter = (
+                self._adapter
+                if isinstance(self._adapter, DeploymentVendorAdapter)
+                else None
+            )
+
+            vendor_indicators: list[VendorIndicator] = []
+            if vendor_adapter is not None:
+                try:
+                    vendor_indicators = self._read_vendor_indicators(
+                        vendor_adapter, summary
+                    )
+                except Exception as err:
+                    self._logger.warning(
+                        f"{_LOG_PREFIX} Cannot read the indicators back from the vendor, "
+                        "reconciliation skipped.",
+                        meta={"error": str(err)},
+                    )
+                    return ReconciliationSummary(
+                        skipped=True, reason=f"Vendor read-back failed: {err}"
+                    )
             try:
                 deployments = list(reporter.list_indicator_deployments(LISTED_STATUSES))
             except DeploymentListingError as err:
@@ -554,44 +635,12 @@ class DeploymentReconciler:
                 return ReconciliationSummary(skipped=True, reason=str(err))
             summary.deployments = len(deployments)
 
-            vendor_index = _Index.of_vendor_indicators(vendor_indicators)
-            deployment_matches = [
-                (
-                    deployment,
-                    [
-                        vendor
-                        for vendor in vendor_index.find_all(
-                            deployment.identifiers,
-                            deployment.external_id,
-                            deployment.values,
-                        )
-                        # A retained inactive object is only removed, never live.
-                        if vendor.active or self._must_remove(deployment, now)
-                    ],
+            if vendor_adapter is not None:
+                reports = self._compare(
+                    vendor_adapter, vendor_indicators, deployments, now, summary
                 )
-                for deployment in deployments
-            ]
-            # Vendors de-duplicating by value hold one item for several indicators:
-            # an item still used by a deployment that stays is never removed.
-            kept = {
-                id(vendor)
-                for deployment, vendor_matches in deployment_matches
-                if not self._must_remove(deployment, now)
-                for vendor in vendor_matches
-            }
-            removed: set[int] = set()
-            matched: set[int] = set()
-            reports: list[DeploymentReport] = []
-            for deployment, vendor_matches in deployment_matches:
-                matched.update(id(vendor) for vendor in vendor_matches)
-                report = self._reconcile_deployment(
-                    deployment, vendor_matches, now, summary, kept, removed
-                )
-                if report is not None:
-                    reports.append(report)
-            reports.extend(
-                self._discover(vendor_indicators, deployments, matched, now, summary)
-            )
+            else:
+                reports = self._repush_pending(deployments, now, summary)
 
             result = reporter.report_indicator_deployments(reports)
             summary.report_errors = len(result.errors)
@@ -615,19 +664,136 @@ class DeploymentReconciler:
             self._save_hits_checkpoint()
         return summary
 
+    def _compare(
+        self,
+        adapter: DeploymentVendorAdapter,
+        vendor_indicators: list[VendorIndicator],
+        deployments: list[IndicatorDeployment],
+        now: datetime,
+        summary: ReconciliationSummary,
+    ) -> list[DeploymentReport]:
+        """Compare the deployments with the indicators read back from the vendor.
+
+        Args:
+            adapter: The vendor adapter.
+            vendor_indicators: The vendor indicators.
+            deployments: The listed deployments.
+            now: The reference time.
+            summary: The run counters, updated.
+
+        Returns:
+            The reports to send.
+        """
+        vendor_index = _Index.of_vendor_indicators(vendor_indicators)
+        deployment_matches = [
+            (
+                deployment,
+                [
+                    vendor
+                    for vendor in self._vendor_matches(
+                        adapter, vendor_index, deployment
+                    )
+                    # A retained inactive object is only removed, never live.
+                    if vendor.active or self._must_remove(deployment, now)
+                ],
+            )
+            for deployment in deployments
+        ]
+        # Vendors de-duplicating by value hold one item for several indicators:
+        # an item still used by a deployment that stays is never removed.
+        kept = {
+            id(vendor)
+            for deployment, vendor_matches in deployment_matches
+            if not self._must_remove(deployment, now)
+            for vendor in vendor_matches
+        }
+        removed: set[int] = set()
+        matched: set[int] = set()
+        reports: list[DeploymentReport] = []
+        for deployment, vendor_matches in deployment_matches:
+            matched.update(id(vendor) for vendor in vendor_matches)
+            report = self._reconcile_deployment(
+                adapter, deployment, vendor_matches, now, summary, kept, removed
+            )
+            if report is not None:
+                reports.append(report)
+        reports.extend(
+            self._discover(vendor_indicators, deployments, matched, now, summary)
+        )
+        return reports
+
+    @staticmethod
+    def _vendor_matches(
+        adapter: DeploymentVendorAdapter,
+        vendor_index: _Index,
+        deployment: IndicatorDeployment,
+    ) -> list[VendorIndicator]:
+        """Return the vendor items of a deployment.
+
+        Args:
+            adapter: The vendor adapter.
+            vendor_index: The vendor indicators of the run.
+            deployment: The deployment.
+
+        Returns:
+            The items matched by OpenCTI id, vendor id or value, plus every item
+            holding one of the ``expected_values`` of the adapter.
+        """
+        expected = adapter.expected_values(deployment)
+        vendor_matches: list[VendorIndicator] = vendor_index.find_all(
+            deployment.identifiers,
+            deployment.external_id,
+            deployment.values if expected is None else expected,
+        )
+        if not expected:
+            return vendor_matches
+        return list(
+            {
+                id(vendor): vendor
+                for vendor in (*vendor_matches, *vendor_index.find_values(expected))
+            }.values()
+        )
+
+    def _repush_pending(
+        self,
+        deployments: list[IndicatorDeployment],
+        now: datetime,
+        summary: ReconciliationSummary,
+    ) -> list[DeploymentReport]:
+        """Push the ``pending`` deployments again (vendor without read-back).
+
+        Deployments whose withdrawal is requested, or whose indicator is revoked or
+        expired, are not pushed.
+
+        Args:
+            deployments: The listed deployments.
+            now: The reference time.
+            summary: The run counters, updated.
+
+        Returns:
+            A ``deployed`` or ``failed`` report per pending deployment.
+        """
+        return [
+            self._repush(deployment, now, summary)
+            for deployment in deployments
+            if deployment.status == DeploymentStatus.PENDING
+            and not deployment.requires_removal(now)
+        ]
+
     def _read_vendor_indicators(
-        self, summary: ReconciliationSummary
+        self, adapter: DeploymentVendorAdapter, summary: ReconciliationSummary
     ) -> list[VendorIndicator]:
         """Read the vendor indicators, up to the read-back limit.
 
         Args:
+            adapter: The vendor adapter.
             summary: The run counters, updated.
 
         Returns:
             The vendor indicators.
         """
         vendor_indicators: list[VendorIndicator] = []
-        for vendor_indicator in self._adapter.list_vendor_indicators():
+        for vendor_indicator in adapter.list_vendor_indicators():
             if len(vendor_indicators) >= self._max_vendor_indicators:
                 summary.vendor_listing_truncated = True
                 self._logger.warning(
@@ -658,6 +824,7 @@ class DeploymentReconciler:
 
     def _reconcile_deployment(
         self,
+        adapter: DeploymentVendorAdapter,
         deployment: IndicatorDeployment,
         vendor_matches: Sequence[VendorIndicator],
         now: datetime,
@@ -668,6 +835,7 @@ class DeploymentReconciler:
         """Decide the report of one deployment.
 
         Args:
+            adapter: The vendor adapter.
             deployment: The deployment.
             vendor_matches: The vendor indicators of the deployment (several when
                 the vendor holds one item per observable, or duplicates).
@@ -682,7 +850,7 @@ class DeploymentReconciler:
         must_remove = self._must_remove(deployment, now)
         if must_remove and vendor_matches:
             return self._withdraw(
-                deployment, vendor_matches, now, summary, kept, removed
+                adapter, deployment, vendor_matches, now, summary, kept, removed
             )
         if not vendor_matches:
             if summary.vendor_listing_truncated:
@@ -692,11 +860,12 @@ class DeploymentReconciler:
                 summary.deferred += 1
                 return None
             if (must_remove or deployment.is_live) and not self._absence_confirmed(
-                deployment, summary
+                adapter, deployment, summary
             ):
                 return None
         if must_remove:
             summary.marked_removed += 1
+            self._forget(adapter, deployment)
             return DeploymentReport(
                 indicator_id=deployment.indicator_id,
                 status=DeploymentStatus.REMOVED,
@@ -705,7 +874,9 @@ class DeploymentReconciler:
                 removed_at=now,
             )
         if vendor_matches:
-            return self._confirm_present(deployment, vendor_matches, now, summary)
+            return self._confirm_present(
+                adapter, deployment, vendor_matches, now, summary
+            )
         if deployment.is_live:
             summary.marked_removed += 1
             return DeploymentReport(
@@ -719,8 +890,28 @@ class DeploymentReconciler:
             return self._repush(deployment, now, summary)
         return None
 
+    def _forget(
+        self, adapter: DeploymentVendorAdapter, deployment: IndicatorDeployment
+    ) -> None:
+        """Let the adapter drop an indicator withdrawn while absent from the vendor.
+
+        Args:
+            adapter: The vendor adapter.
+            deployment: The withdrawn deployment, reported ``removed`` all the same.
+        """
+        try:
+            adapter.forget_indicator(deployment)
+        except Exception as err:
+            self._logger.warning(
+                f"{_LOG_PREFIX} Cannot forget a withdrawn indicator.",
+                meta={"indicator_id": deployment.indicator_id, "error": str(err)},
+            )
+
     def _absence_confirmed(
-        self, deployment: IndicatorDeployment, summary: ReconciliationSummary
+        self,
+        adapter: DeploymentVendorAdapter,
+        deployment: IndicatorDeployment,
+        summary: ReconciliationSummary,
     ) -> bool:
         """Tell whether a deployment missing from the listing is absent from the vendor.
 
@@ -728,6 +919,7 @@ class DeploymentReconciler:
         adapter looks the indicator up, within the lookup budget of the run.
 
         Args:
+            adapter: The vendor adapter.
             deployment: The deployment missing from the listing.
             summary: The run counters, updated.
 
@@ -735,14 +927,14 @@ class DeploymentReconciler:
             ``False`` when the vendor still holds the indicator, or when it could not
             be looked up this run: no absence decision is taken.
         """
-        if not self._adapter.confirms_absence:
+        if not adapter.confirms_absence:
             return True
         if self._absence_checks >= self._max_absence_checks:
             summary.absence_unconfirmed += 1
             return False
         self._absence_checks += 1
         try:
-            absent = self._adapter.confirm_absent(deployment)
+            absent = adapter.confirm_absent(deployment)
         except Exception as err:
             self._logger.warning(
                 f"{_LOG_PREFIX} Cannot confirm that an indicator left the vendor, "
@@ -762,6 +954,7 @@ class DeploymentReconciler:
 
     def _confirm_present(
         self,
+        adapter: DeploymentVendorAdapter,
         deployment: IndicatorDeployment,
         vendor_matches: Sequence[VendorIndicator],
         now: datetime,
@@ -770,6 +963,7 @@ class DeploymentReconciler:
         """Confirm a deployment found on the vendor, or push it again when partly there.
 
         Args:
+            adapter: The vendor adapter.
             deployment: The deployment, not to be withdrawn.
             vendor_matches: Its vendor items (at least one).
             now: The start of the run.
@@ -777,9 +971,14 @@ class DeploymentReconciler:
 
         Returns:
             An ``active`` report, the report of the new push, or ``None`` for a
-            ``failed`` deployment only partly on the vendor.
+            ``failed`` deployment only partly on the vendor, and for a deployment
+            only partly listed by a truncated read-back.
         """
-        if not self._adapter.is_complete(deployment, vendor_matches):
+        if not adapter.is_complete(deployment, vendor_matches):
+            if summary.vendor_listing_truncated:
+                # The other vendor items may sit beyond the read-back limit: they
+                # are unknown, so the deployment is neither confirmed nor pushed.
+                return None
             summary.incomplete += 1
             if deployment.status == DeploymentStatus.FAILED:
                 # Stays failed until an analyst requests a new push.
@@ -795,6 +994,7 @@ class DeploymentReconciler:
 
     def _withdraw(
         self,
+        adapter: DeploymentVendorAdapter,
         deployment: IndicatorDeployment,
         vendor_matches: Sequence[VendorIndicator],
         now: datetime,
@@ -810,6 +1010,7 @@ class DeploymentReconciler:
         again.
 
         Args:
+            adapter: The vendor adapter.
             deployment: The deployment to withdraw.
             vendor_matches: The vendor indicators of the deployment (at least one).
             now: The reference time.
@@ -820,7 +1021,9 @@ class DeploymentReconciler:
         Returns:
             A ``removed`` report once every item is removed, or ``None`` when one
             removal failed (the next run retries the items still listed; OpenCTI
-            flags the deployment ``expired`` if no removal is confirmed in time).
+            flags the deployment ``expired`` if no removal is confirmed in time), and
+            when a truncated read-back listed only part of the items (the removal is
+            reported once a complete listing holds none of them).
         """
         for vendor_indicator in vendor_matches:
             if id(vendor_indicator) in removed:
@@ -836,7 +1039,7 @@ class DeploymentReconciler:
                 )
                 continue
             try:
-                self._adapter.remove_vendor_indicator(vendor_indicator, deployment)
+                adapter.remove_vendor_indicator(vendor_indicator, deployment)
             except Exception as err:
                 summary.withdrawal_failed += 1
                 self._logger.warning(
@@ -849,6 +1052,11 @@ class DeploymentReconciler:
                 )
                 return None
             removed.add(id(vendor_indicator))
+        if summary.vendor_listing_truncated and not adapter.is_complete(
+            deployment, vendor_matches
+        ):
+            # The other items may sit beyond the read-back limit, still live.
+            return None
         summary.withdrawn += 1
         return DeploymentReport(
             indicator_id=deployment.indicator_id,
@@ -1117,7 +1325,7 @@ class DeploymentReconciler:
         if collected is None:
             return self._send_hit_reports({}, now)
         hits, next_since = collected
-        index = _Index.of_deployments(deployments)
+        index = _Index.of_deployments(deployments, self._matched_values)
         aggregated: dict[str, list[Any]] = {}
         for hit in hits:
             timestamp = parse_datetime(hit.timestamp)
@@ -1143,6 +1351,23 @@ class DeploymentReconciler:
                 entry[2] = max(entry[2], timestamp)
         self._hits_since = next_since
         return self._send_hit_reports(aggregated, now)
+
+    def _matched_values(self, deployment: IndicatorDeployment) -> frozenset[str]:
+        """Return the values a hit without OpenCTI id or vendor id is matched on.
+
+        Args:
+            deployment: A live deployment.
+
+        Returns:
+            The ``expected_values`` of a vendor adapter declaring them, every value
+            of the pattern otherwise.
+        """
+        adapter = self._adapter
+        if isinstance(adapter, DeploymentVendorAdapter):
+            expected = adapter.expected_values(deployment)
+            if expected is not None:
+                return expected
+        return deployment.values
 
     def _hits_checkpoint(self) -> datetime | None:
         """Return where a hit read loses no detection: the start of the next read,

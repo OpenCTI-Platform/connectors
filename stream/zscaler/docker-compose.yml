@@ -19,4 +19,10 @@ services:
       - ZSCALER_API_KEY=ChangeMe
       # - ZSCALER_BLACKLIST_NAME=BLACK_LIST_DYNDNS # optional (default: BLACK_LIST_DYNDNS)
       # - ZSCALER_SSL_VERIFY=false # optional (default: false)
+      # --- Dissemination assurance (deployment write-back to OpenCTI) ---
+      # - DEPLOYMENT_REPORTING_ENABLED=true # optional (default: true)
+      # - DEPLOYMENT_RECONCILIATION_INTERVAL=60 # optional (default: 60 minutes, 0 disables the reconciliation)
+      # - SECURITY_PLATFORM_NAME=Zscaler Internet Access # optional (default: 'Zscaler Internet Access')
+      # - SECURITY_PLATFORM_TYPE=ChangeMe # optional (default: none)
+      # - SECURITY_PLATFORM_ID=ChangeMe # optional (existing Security Platform entity id)
     restart: always

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://www.filigran.io/connectors/sentinelone-intel_config.schema.json",
+  "$id": "https://www.filigran.io/connectors/cloudflare-rules-list_config.schema.json",
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
@@ -17,15 +17,15 @@
       "writeOnly": true
     },
     "CONNECTOR_NAME": {
-      "default": "SentinelOne Intel",
-      "description": "The name of the connector.",
+      "default": "Cloudflare Rules List",
+      "description": "The name of the connector as shown in OpenCTI.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "sentinelone"
+        "cloudflare"
       ],
-      "description": "The scope of the connector, e.g. 'sentinelone'.",
+      "description": "Connector scope (comma-separated).",
       "items": {
         "type": "string"
       },
@@ -78,33 +78,33 @@
       "format": "date-time",
       "type": "string"
     },
-    "SENTINELONE_INTEL_API_URL": {
-      "description": "The base URL of your SentinelOne management console",
+    "CLOUDFLARE_ACCOUNT_ID": {
+      "description": "Cloudflare account ID that owns the Rules List.",
+      "type": "string"
+    },
+    "CLOUDFLARE_API_TOKEN": {
+      "description": "Cloudflare API token with the 'Account > Account Filter Lists > Edit' permission.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CLOUDFLARE_LIST_ID": {
+      "description": "ID of the existing Cloudflare Rules List (IP kind) to sync into.",
+      "type": "string"
+    },
+    "CLOUDFLARE_API_BASE_URL": {
+      "default": "https://api.cloudflare.com/client/v4",
+      "description": "Base URL of the Cloudflare API. Override only for testing against a mock server or a Cloudflare-compatible gateway.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
-    "SENTINELONE_INTEL_API_KEY": {
-      "description": "The API key for your SentinelOne management console",
-      "format": "password",
-      "type": "string",
-      "writeOnly": true
-    },
-    "SENTINELONE_INTEL_ACCOUNT_ID": {
-      "default": null,
-      "description": "The Account ID for your SentinelOne management console",
-      "type": "integer"
-    },
-    "SENTINELONE_INTEL_SITE_ID": {
-      "default": null,
-      "description": "The Site ID for your SentinelOne management console",
-      "type": "integer"
-    },
-    "SENTINELONE_INTEL_GROUP_ID": {
-      "default": null,
-      "description": "The Group ID for your SentinelOne management console",
-      "type": "integer"
+    "CLOUDFLARE_SYNC_INTERVAL": {
+      "default": "PT1H",
+      "description": "Minimum interval between snapshot uploads to Cloudflare. Accepts ISO-8601 duration like 'PT30M', 'PT1H', 'PT1H30M', etc.",
+      "format": "duration",
+      "type": "string"
     },
     "DEPLOYMENT_REPORTING_ENABLED": {
       "default": true,
@@ -118,14 +118,14 @@
       "type": "integer"
     },
     "SECURITY_PLATFORM_NAME": {
-      "default": "SentinelOne",
-      "description": "Name of the Security Platform entity representing SentinelOne in OpenCTI (created if it does not exist).",
+      "default": "Cloudflare",
+      "description": "Name of the Security Platform entity representing Cloudflare in OpenCTI (created if it does not exist).",
       "minLength": 2,
       "type": "string"
     },
     "SECURITY_PLATFORM_TYPE": {
-      "default": "EDR",
-      "description": "Type of the Security Platform entity (open vocabulary security_platform_type_ov).",
+      "default": null,
+      "description": "Type of the Security Platform entity (open vocabulary security_platform_type_ov). None by default: the vocabulary has no web application firewall type.",
       "type": "string"
     },
     "SECURITY_PLATFORM_ID": {
@@ -138,8 +138,9 @@
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
     "CONNECTOR_LIVE_STREAM_ID",
-    "SENTINELONE_INTEL_API_URL",
-    "SENTINELONE_INTEL_API_KEY"
+    "CLOUDFLARE_ACCOUNT_ID",
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_LIST_ID"
   ],
   "additionalProperties": true
 }

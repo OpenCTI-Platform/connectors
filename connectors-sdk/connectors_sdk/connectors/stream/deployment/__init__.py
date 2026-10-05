@@ -10,7 +10,9 @@ vendor, and report detection hits as sightings.
 - ``DeploymentReporter``: feature detection, security platform resolution, single,
   batch and hit reports, listing of the deployments of the platform.
 - ``DeploymentReconciler`` and ``DeploymentVendorAdapter``: reconciliation runner
-  and the vendor operations a connector implements for it.
+  and the vendor operations a connector implements for it
+  (``DeploymentPushAdapter`` when the vendor API cannot list the indicators: re-push
+  of ``pending`` deployments and hits only).
 - ``DeploymentConfig``, ``HitsConfig``, ``SecurityPlatformConfig``: settings
   namespaces (``DEPLOYMENT_*``, ``HITS_*``, ``SECURITY_PLATFORM_*`` variables).
 """
@@ -32,6 +34,7 @@ from connectors_sdk.connectors.stream.deployment.models import (
 )
 from connectors_sdk.connectors.stream.deployment.reconciler import (
     LISTED_STATUSES,
+    DeploymentPushAdapter,
     DeploymentReconciler,
     DeploymentVendorAdapter,
 )
@@ -50,6 +53,7 @@ from connectors_sdk.connectors.stream.deployment.settings import (
 from connectors_sdk.connectors.stream.deployment.utils import (
     OPENCTI_EXTENSION_ID,
     PatternValue,
+    deployment_failure_reason,
     extract_pattern_values,
     get_opencti_indicator_id,
     is_stix_indicator,
@@ -71,6 +75,7 @@ __all__ = [
     "DeploymentBatchResult",
     "DeploymentConfig",
     "DeploymentListingError",
+    "DeploymentPushAdapter",
     "DeploymentReconciler",
     "DeploymentReport",
     "DeploymentReportError",
@@ -85,6 +90,7 @@ __all__ = [
     "SecurityPlatformConfig",
     "VendorHit",
     "VendorIndicator",
+    "deployment_failure_reason",
     "extract_pattern_values",
     "get_opencti_indicator_id",
     "is_rate_limit_error",

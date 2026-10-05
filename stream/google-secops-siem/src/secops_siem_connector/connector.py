@@ -1,10 +1,31 @@
 import json
 import sys
 from json import JSONDecodeError
+from typing import TYPE_CHECKING, Any
 
+from connectors_sdk.connectors.stream.deployment import deployment_failure_reason
 from pycti import OpenCTIConnectorHelper
 from secops_siem_connector.settings import ConnectorSettings
-from secops_siem_services import CTIConverter, SecOpsEntitiesClient
+from secops_siem_services import CTIConverter, SecOpsApiError, SecOpsEntitiesClient
+
+if TYPE_CHECKING:
+    from connectors_sdk import DeploymentAssurance
+
+PLATFORM_NAME = "Google SecOps"
+"""Name of the security platform in the deployment failure reasons."""
+
+PUSH_ACTION = "entity ingestion"
+"""What Google SecOps is asked to do when an indicator is pushed."""
+
+
+def failure_reason(error: SecOpsApiError) -> str:
+    """Return the reason OpenCTI shows for an indicator Google SecOps did not take.
+
+    :param error: The error raised by the client.
+    :return: One short sentence naming Google SecOps and the cause; the Google SecOps
+        response is left to the logs.
+    """
+    return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, error.status_code)
 
 
 class SecOpsSIEMConnector:
@@ -12,12 +33,15 @@ class SecOpsSIEMConnector:
         self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
     ) -> None:
         """
-        Initialize the Connector with necessary configurations
+        Initialize the Connector with necessary configurations.
+
+        `assurance` is the deployment write-back (dissemination assurance), set by `main.py`.
         """
         self.config = config
         self.helper = helper
         self.converter = CTIConverter(helper)
         self.api_client = SecOpsEntitiesClient(helper, config.secops_siem)
+        self.assurance: "DeploymentAssurance | None" = None
 
     def check_stream_id(self) -> None:
         """
@@ -88,23 +112,57 @@ class SecOpsSIEMConnector:
             )
             raise JSONDecodeError("Data cannot be parsed to JSON", msg.data, 0)
 
-    def _upsert_ioc_rule(self, indicator: dict) -> None:
+    def _upsert_ioc_rule(self, indicator: dict) -> bool:
         """
         Convert each indicator's observable to a UDM entity and upsert it in Chronicle.
         :param indicator: Indicator to upsert
+        :return: True when the entities were ingested, False when no observable of the
+            indicator can be converted to a UDM entity (nothing was sent).
+        :raises SecOpsApiError: When Google SecOps rejects the entities.
         """
         udm_entities = self.converter.create_udm_entities_from_indicator(indicator)
-        if udm_entities:
-            entities_ingested = self.api_client.ingest(udm_entities)
+        if not udm_entities:
+            return False
+        self.api_client.ingest(udm_entities)
+        self.helper.connector_logger.info(
+            "[API] Entities have been successfully ingested",
+        )
+        return True
 
-            if entities_ingested:
-                self.helper.connector_logger.info(
-                    "[API] Entities have been successfully ingested",
-                )
-            else:
-                self.helper.connector_logger.error(
-                    "[API] Error while ingesting indicator"
-                )
+    def push_indicator(self, indicator: dict[str, Any]) -> str:
+        """
+        Ingest an OpenCTI indicator in Google SecOps again (reconciliation re-push).
+
+        :param indicator: The indicator, in the stream event shape.
+        :return: The STIX id of the indicator, the `product_entity_id` of its Google SecOps entities.
+        :raises ValueError: When no observable of the indicator can be converted to a UDM entity.
+        :raises SecOpsApiError: When Google SecOps rejects the entities.
+        """
+        if not self._upsert_ioc_rule(indicator):
+            raise ValueError(
+                "No observable of the indicator can be ingested in Google SecOps"
+            )
+        return str(indicator["id"])
+
+    def _ingest_and_report(self, indicator: dict[str, Any]) -> None:
+        """
+        Ingest an indicator of a create or update event and report the outcome to OpenCTI.
+
+        The deployment is reported `deployed` (external id: the STIX id stored as `product_entity_id`)
+        or `failed` with the Google SecOps error; nothing is reported when no observable can be converted.
+        """
+        try:
+            ingested = self._upsert_ioc_rule(indicator)
+        except SecOpsApiError as err:
+            self.helper.connector_logger.error(
+                "[API] Error while ingesting indicator",
+                meta={"indicator_id": indicator.get("id"), "error": str(err)},
+            )
+            if self.assurance is not None:
+                self.assurance.report_push_failed(indicator, failure_reason(err))
+            return
+        if ingested and self.assurance is not None:
+            self.assurance.report_pushed(indicator, external_id=str(indicator["id"]))
 
     def process_message(self, msg) -> None:
         """
@@ -159,12 +217,12 @@ class SecOpsSIEMConnector:
                 # Handle creation
                 if msg.event == "create":
                     self.handle_logger_info(data)
-                    self._upsert_ioc_rule(data)
+                    self._ingest_and_report(data)
 
                 # Handle update
                 elif msg.event == "update":
                     self.handle_logger_info(data, event_context)
-                    self._upsert_ioc_rule(data)
+                    self._ingest_and_report(data)
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
@@ -181,5 +239,8 @@ class SecOpsSIEMConnector:
         The method continuously monitors messages from the platform
         The connector have the capability to listen a live stream from the platform.
         The helper provide an easy way to listen to the events.
+        The deployment write-back (and its periodic run) starts first.
         """
+        if self.assurance is not None:
+            self.assurance.start()
         self.helper.listen_stream(message_callback=self.process_message)

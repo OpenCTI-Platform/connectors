@@ -20,6 +20,7 @@ from connectors_sdk.connectors.stream.deployment.models import (
 from connectors_sdk.connectors.stream.deployment.reconciler import (
     CAPPED_INSTANT_STEP,
     LISTED_STATUSES,
+    DeploymentPushAdapter,
     DeploymentReconciler,
     DeploymentVendorAdapter,
 )
@@ -711,6 +712,341 @@ def test_vendor_adapters_confirm_any_vendor_item_by_default():
     assert FakeAdapter().is_complete(None, [VendorIndicator(indicator_id="a")])
 
 
+def test_vendor_adapters_keep_no_local_copy_by_default():
+    assert FakeAdapter().forget_indicator(None) is None
+
+
+class ForgettingAdapter(FakeAdapter):
+    """Vendor whose adapter keeps a local snapshot of the pushed indicators."""
+
+    def __init__(self, error=None, **kwargs):
+        super().__init__(**kwargs)
+        self.error = error
+        self.forgotten = []
+
+    def forget_indicator(self, deployment):
+        if self.error:
+            raise self.error
+        self.forgotten.append(deployment.indicator_id)
+
+
+def test_deployments_withdrawn_while_absent_are_forgotten(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """Only a deployment leaving the vendor and absent from it is forgotten."""
+    list_nodes(
+        node_factory(indicator_id="withdrawn-absent", status="active", revoked=True),
+        node_factory(indicator_id="expired-absent", status="expired"),
+        node_factory(indicator_id="withdrawn-present", status="active", revoked=True),
+        node_factory(indicator_id="live-absent", status="active"),
+    )
+    adapter = ForgettingAdapter(
+        vendor=[VendorIndicator(indicator_id="withdrawn-present", external_id="v")]
+    )
+
+    make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert adapter.forgotten == ["withdrawn-absent", "expired-absent"]
+    reports = reported()
+    assert {key: reports[key]["status"] for key in reports} == {
+        "withdrawn-absent": "removed",
+        "expired-absent": "removed",
+        "withdrawn-present": "removed",
+        "live-absent": "removed",
+    }
+
+
+def test_a_failed_forget_is_logged_and_the_deployment_still_removed(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(node_factory(indicator_id="withdrawn", status="active", revoked=True))
+    adapter = ForgettingAdapter(error=RuntimeError("snapshot locked"))
+    reporter = make_reporter(graphql_helper)
+
+    make_reconciler(reporter, adapter).run_once()
+
+    assert reported()["withdrawn"]["status"] == "removed"
+    reporter.logger.warning.assert_any_call(
+        "[DEPLOYMENT] Cannot forget a withdrawn indicator.",
+        meta={"indicator_id": "withdrawn", "error": "snapshot locked"},
+    )
+
+
+class EveryValueAdapter(FakeAdapter):
+    """Vendor keeping one item per value, without the OpenCTI id."""
+
+    def expected_values(self, deployment):
+        return deployment.values
+
+
+FILE_PATTERN = "[file:hashes.MD5 = 'aa' OR file:hashes.'SHA-256' = 'bb']"
+
+
+def test_every_expected_value_confirms_the_deployment_active(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a", status="deployed", pattern=FILE_PATTERN, external_id="1"
+        )
+    )
+    adapter = EveryValueAdapter(
+        vendor=[
+            VendorIndicator(value="aa", external_id="1"),
+            VendorIndicator(value="bb", external_id="2"),
+        ]
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert summary.confirmed_active == 1
+    assert summary.incomplete == 0
+    assert reported()["a"]["status"] == "active"
+    assert reported()["a"]["externalId"] == "1"
+
+
+def test_a_missing_expected_value_pushes_the_deployment_again(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """The vendor id of one item does not confirm an indicator with several values."""
+    list_nodes(
+        node_factory(
+            indicator_id="a", status="active", pattern=FILE_PATTERN, external_id="1"
+        )
+    )
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--a",
+        "pattern": FILE_PATTERN,
+    }
+    adapter = EveryValueAdapter(vendor=[VendorIndicator(value="aa", external_id="1")])
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert (summary.incomplete, summary.repushed, summary.confirmed_active) == (
+        1,
+        1,
+        0,
+    )
+    assert len(adapter.pushed) == 1
+    assert reported()["a"]["status"] == "deployed"
+
+
+def test_a_pattern_without_pushed_value_is_never_confirmed_by_a_left_over_item(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """An indicator changed to a pattern the connector pushes nothing of keeps, on the
+    vendor, the item of its previous pattern: that item does not confirm it."""
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            status="active",
+            pattern="[process:name = '0day.exe']",
+            external_id="1",
+        )
+    )
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--a",
+        "pattern": "[process:name = '0day.exe']",
+    }
+    adapter = PushedValuesAdapter(
+        vendor=[VendorIndicator(value="198.51.100.7", external_id="1")],
+        push_error=ValueError("nothing to push"),
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert (summary.incomplete, summary.confirmed_active) == (1, 0)
+    assert reported()["a"]["status"] == "failed"
+
+
+def test_withdrawal_removes_every_expected_value_but_the_shared_ones(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            standard_id="indicator--a",
+            status="active",
+            revoked=True,
+            pattern=FILE_PATTERN,
+            external_id="1",
+        ),
+        node_factory(
+            indicator_id="b",
+            standard_id="indicator--b",
+            status="active",
+            pattern="[file:hashes.MD5 = 'aa']",
+        ),
+    )
+    adapter = EveryValueAdapter(
+        vendor=[
+            VendorIndicator(value="aa", external_id="1"),
+            VendorIndicator(value="bb", external_id="2"),
+        ]
+    )
+
+    make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert [vendor.external_id for vendor, _deployment in adapter.removed] == ["2"]
+    assert reported()["a"]["status"] == "removed"
+    assert reported()["b"]["status"] == "active"
+
+
+class PushedValuesAdapter(FakeAdapter):
+    """Vendor keeping one item per value, the connector pushing no file name."""
+
+    def expected_values(self, deployment):
+        return frozenset(
+            value for value in deployment.values if not value.endswith(".exe")
+        )
+
+
+MIXED_PATTERN = "[ipv4-addr:value = '198.51.100.7' OR process:name = '0day.exe']"
+
+
+def test_withdrawal_never_removes_an_item_of_a_value_the_connector_does_not_push(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            standard_id="indicator--a",
+            status="active",
+            revoked=True,
+            pattern=MIXED_PATTERN,
+        )
+    )
+    adapter = PushedValuesAdapter(
+        vendor=[
+            VendorIndicator(value="0day.exe", external_id="tenant"),
+            VendorIndicator(value="198.51.100.7", external_id="pushed"),
+        ]
+    )
+
+    make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert [vendor.external_id for vendor, _deployment in adapter.removed] == ["pushed"]
+    assert reported()["a"]["status"] == "removed"
+
+
+def test_no_expected_value_matches_no_vendor_item_by_value(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            standard_id="indicator--a",
+            status="active",
+            revoked=True,
+            pattern="[process:name = '0day.exe']",
+        )
+    )
+    adapter = PushedValuesAdapter(
+        vendor=[VendorIndicator(value="0day.exe", external_id="tenant")]
+    )
+
+    make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert adapter.removed == []
+    assert reported()["a"]["status"] == "removed"
+
+
+def test_a_hit_matched_by_value_only_credits_the_indicators_pushing_it(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            standard_id="indicator--a",
+            status="active",
+            pattern=MIXED_PATTERN,
+        ),
+        node_factory(
+            indicator_id="b",
+            standard_id="indicator--b",
+            status="active",
+            pattern="[ipv4-addr:value = '203.0.113.9' OR process:name = '0day.exe']",
+        ),
+    )
+    adapter = PushedValuesAdapter(
+        vendor=[
+            VendorIndicator(value="198.51.100.7", external_id="1"),
+            VendorIndicator(value="203.0.113.9", external_id="2"),
+        ],
+        hits=[VendorHit(timestamp=NOW - timedelta(minutes=5), value="0day.exe")]
+        + [VendorHit(timestamp=NOW - timedelta(minutes=4), value="203.0.113.9")],
+    )
+
+    assert (
+        make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+    ).hits_reported == 1
+    assert [
+        call["indicatorId"] for call in router.calls_of("IndicatorReportHits(")
+    ] == ["b"]
+
+
+def test_truncated_read_back_neither_confirms_nor_pushes_a_partly_listed_indicator(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """The vendor items beyond the read-back limit are unknown: neither missing,
+    nor present."""
+    list_nodes(
+        node_factory(
+            indicator_id="a", status="active", pattern=FILE_PATTERN, external_id="1"
+        )
+    )
+    adapter = EveryValueAdapter(
+        vendor=[
+            VendorIndicator(value="aa", external_id="1"),
+            VendorIndicator(value="bb", external_id="2"),
+        ]
+    )
+
+    summary = make_reconciler(
+        make_reporter(graphql_helper), adapter, max_vendor_indicators=1
+    ).run_once()
+
+    assert summary.vendor_listing_truncated
+    assert (summary.incomplete, summary.repushed, summary.confirmed_active) == (
+        0,
+        0,
+        0,
+    )
+    assert adapter.pushed == []
+    assert "a" not in reported()
+
+
+def test_truncated_read_back_withdraws_the_listed_items_without_reporting_the_removal(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """An item beyond the read-back limit may still be live: the removal waits for a
+    complete listing."""
+    list_nodes(
+        node_factory(
+            indicator_id="a",
+            status="active",
+            pattern=FILE_PATTERN,
+            external_id="1",
+            revoked=True,
+        )
+    )
+    listed = VendorIndicator(value="aa", external_id="1")
+    adapter = EveryValueAdapter(
+        vendor=[listed, VendorIndicator(value="bb", external_id="2")]
+    )
+
+    summary = make_reconciler(
+        make_reporter(graphql_helper), adapter, max_vendor_indicators=1
+    ).run_once()
+
+    assert summary.vendor_listing_truncated
+    assert [vendor_indicator for vendor_indicator, _ in adapter.removed] == [listed]
+    assert summary.withdrawn == 0
+    assert "a" not in reported()
+
+
 def test_truncated_read_back_skips_absence_decisions(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):
@@ -733,6 +1069,121 @@ def test_truncated_read_back_skips_absence_decisions(
     assert summary.vendor_indicators == 1
     assert set(reported()) == {"present"}
     assert adapter.pushed == []
+
+
+class PushOnlyAdapter(DeploymentPushAdapter):
+    """Vendor without read-back: re-push and hits only."""
+
+    def __init__(self, hits=(), push_error=None):
+        self.hits = list(hits)
+        self.push_error = push_error
+        self.pushed = []
+        self.hits_calls = []
+
+    def push_indicator(self, stix_indicator):
+        if self.push_error:
+            raise self.push_error
+        self.pushed.append(stix_indicator)
+        return "vendor-retry"
+
+    def collect_hits(self, deployments, since):
+        self.hits_calls.append((list(deployments), since))
+        return self.hits
+
+
+def test_push_only_reconciliation_repushes_pending_deployments_and_reports_hits(
+    graphql_helper, make_reporter, router, list_nodes, node_factory, reported
+):
+    """Without read-back, only pending deployments are pushed and hits are reported."""
+    list_nodes(
+        node_factory(
+            indicator_id="pending",
+            status="pending",
+            standard_id="indicator--p",
+            pattern="[domain-name:value = 'retry.example']",
+        ),
+        node_factory(
+            indicator_id="pending-withdrawn",
+            status="pending",
+            revoked=True,
+            standard_id="indicator--w",
+        ),
+        node_factory(
+            indicator_id="live",
+            status="deployed",
+            standard_id="indicator--l",
+            pattern="[ipv4-addr:value = '198.51.100.7']",
+        ),
+        node_factory(
+            indicator_id="failed", status="failed", standard_id="indicator--f"
+        ),
+        node_factory(
+            indicator_id="expired", status="expired", standard_id="indicator--e"
+        ),
+    )
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--p",
+        "pattern": "[domain-name:value = 'retry.example']",
+    }
+    adapter = PushOnlyAdapter(
+        hits=[
+            VendorHit(
+                timestamp=datetime(2026, 10, 3, 11, tzinfo=UTC), value="198.51.100.7"
+            )
+        ]
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert not summary.skipped
+    assert summary.vendor_indicators == 0
+    assert summary.deployments == 5
+    assert summary.repushed == 1
+    assert summary.confirmed_active == summary.marked_removed == summary.withdrawn == 0
+    assert summary.discovered == 0
+    assert summary.hits_reported == 1
+    assert len(adapter.pushed) == 1
+    reports = reported()
+    assert set(reports) == {"pending"}
+    assert reports["pending"]["status"] == "deployed"
+    assert reports["pending"]["externalId"] == "vendor-retry"
+    assert {d.indicator_id for d in adapter.hits_calls[0][0]} == {"live"}
+    hits = router.calls_of("IndicatorReportHits(")
+    assert [hit["indicatorId"] for hit in hits] == ["live"]
+
+
+def test_push_only_reconciliation_reports_failed_repushes(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """A refused re-push of a vendor without read-back is reported ``failed``."""
+    list_nodes(node_factory(indicator_id="pending", status="pending"))
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--p",
+        "pattern": "[url:value = 'http://retry.example']",
+    }
+    adapter = PushOnlyAdapter(push_error=ValueError("quota exceeded"))
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert summary.repush_failed == 1
+    report = reported()["pending"]
+    assert report["status"] == "failed"
+    assert report["metadata"]["error_message"] == "quota exceeded"
+
+
+def test_push_only_reconciliation_is_skipped_when_the_deployments_cannot_be_listed(
+    graphql_helper, make_reporter, router
+):
+    """An OpenCTI listing error skips the run of a vendor without read-back."""
+    router.handlers["IndicatorDeploymentsOfPlatform"] = ConnectionError("opencti down")
+    adapter = PushOnlyAdapter()
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+    assert summary.skipped
+    assert "opencti down" in summary.reason
+    assert adapter.pushed == []
+    assert adapter.hits_calls == []
 
 
 def test_reconciliation_without_any_report(

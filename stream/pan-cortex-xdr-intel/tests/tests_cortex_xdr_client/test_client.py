@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 from connectors_sdk import ApiClientError
-from cortex_xdr_client import CortexXdrApiError
+from cortex_xdr_client import CortexXdrApiError, CortexXdrRejectedIocsError
 from cortex_xdr_client.client import CortexXdrClient
 from pydantic import HttpUrl
 
@@ -136,6 +136,43 @@ class TestInsertIocs:
             ]
         }
         assert result == {"added_objects": [{"id": 123, "status": "Created"}]}
+
+    @pytest.mark.parametrize(
+        "json_data",
+        [
+            {
+                "added_objects": [{"id": 123, "status": "Created"}],
+                "errors": [{"index": 1, "status": "invalid IOC value"}],
+            },
+            {"reply": {"errors": [{"index": 0, "status": "invalid IOC value"}]}},
+            {"errors": "invalid request data"},
+        ],
+    )
+    def test_insert_iocs_raises_when_the_reply_lists_errors(self, client, json_data):
+        # Given: a success status whose reply lists IOCs Cortex XDR did not take
+        iocs = [
+            {"indicator": "1.2.3.4", "type": "IP"},
+            {"indicator": "not an ip", "type": "IP"},
+        ]
+        # When: calling insert_iocs
+        with patch.object(client._session, "request") as mock_request:
+            mock_request.return_value = _mock_response(json_data=json_data)
+            # Then: the upsert is a rejection, even with some IOCs inserted
+            with pytest.raises(CortexXdrRejectedIocsError) as raised:
+                client.insert_iocs(iocs)
+        assert str(raised.value) == "Cortex XDR rejected 1 of the 2 IOC(s) sent"
+        assert raised.value.errors
+        assert isinstance(raised.value, CortexXdrApiError)
+
+    def test_insert_iocs_accepts_an_empty_error_list(self, client):
+        # Given: a reply whose `errors` list is empty
+        json_data = {"added_objects": [{"id": 123, "status": "Created"}], "errors": []}
+        # When: calling insert_iocs
+        with patch.object(client._session, "request") as mock_request:
+            mock_request.return_value = _mock_response(json_data=json_data)
+            result = client.insert_iocs([{"indicator": "1.2.3.4", "type": "IP"}])
+        # Then: the reply is returned as is
+        assert result == json_data
 
     def test_insert_iocs_disables_default_expiration_when_expiration_date_set(
         self, client
