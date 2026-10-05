@@ -31,9 +31,6 @@ def test_get_alerts_requests_one_page(client, total_pages):
     def request_data(_url, params):
         assert params == {
             "last_activity_timestamp": "2026-08-03T00:00:00Z",
-            "last_activity_before": "2026-08-03T02:00:00Z",
-            "sort_type": "last_activity",
-            "sort_order": "asc",
             "page": 0,
             "page_size": 100,
         }
@@ -58,7 +55,26 @@ def test_get_alerts_requests_one_page(client, total_pages):
     assert alerts == ([{"id": "alert-0"}] if total_pages else [])
 
 
-def test_get_alerts_requests_only_the_given_page(client):
+def test_get_alerts_v1_omits_unsupported_window_sort_params(client):
+    client._request_data = MagicMock(return_value=_response())
+    client._request_data.retry = MagicMock()
+
+    client.get_alerts(
+        "2026-08-03T00:00:00Z",
+        "2026-08-03T02:00:00Z",
+        page=2,
+        page_size=50,
+    )
+
+    assert client._request_data.call_args.kwargs["params"] == {
+        "last_activity_timestamp": "2026-08-03T00:00:00Z",
+        "page": 2,
+        "page_size": 50,
+    }
+
+
+def test_get_alerts_v2_sends_window_and_sort_params():
+    client = ConnectorClient(helper=MagicMock(), config=_config(api_version="v2"))
     client._request_data = MagicMock(
         return_value=_response(
             {

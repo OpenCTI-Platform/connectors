@@ -120,11 +120,48 @@ def test_process_message_same_timestamp_pages_then_moves_cursor(doppel_connector
         for call in connector.converter.convert_alerts_to_stix.call_args_list
     ]
     assert sent_counts == [100, 100, 50]
-    assert stored == ["2026-08-03 10:15:00", WINDOW_END]
+    assert stored == [
+        "2026-08-03 10:15:00",
+        "2026-08-03 10:15:00",
+        "2026-08-03 10:15:00",
+        WINDOW_END,
+    ]
     helper.api.work.initiate_work.assert_called_once()
     helper.api.work.to_processed.assert_called_once_with(
         "work-1", "Doppel connector successfully run"
     )
+
+
+def test_process_message_same_timestamp_failure_keeps_page_checkpoint(
+    doppel_connector,
+):
+    connector, helper = doppel_connector
+    stored = _record_last_runs(helper)
+    timestamp = "2026-08-03T10:15:00.987654Z"
+    page = [
+        {"id": f"alert-{index}", "last_activity_timestamp": timestamp}
+        for index in range(100)
+    ]
+
+    def get_alerts(**kwargs):
+        if kwargs["page"] == 0:
+            assert kwargs["last_activity_timestamp"] == "2026-08-03T10:00:00"
+            return page, 3
+        raise RuntimeError("page 1 failed")
+
+    connector.client.get_alerts.side_effect = get_alerts
+
+    connector.process_message()
+
+    assert stored == ["2026-08-03 10:15:00"]
+    helper.send_stix2_bundle.assert_called_once()
+    assert connector.client.get_alerts.call_args_list[1].kwargs["page"] == 1
+    assert (
+        connector.client.get_alerts.call_args_list[1].kwargs["last_activity_timestamp"]
+        == "2026-08-03T10:00:00"
+    )
+    helper.api.work.to_processed.assert_called_once()
+    assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
 
 
 def test_process_message_short_page_stores_window_end(doppel_connector):

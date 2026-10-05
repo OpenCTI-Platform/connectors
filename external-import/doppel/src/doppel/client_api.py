@@ -172,10 +172,11 @@ class ConnectorClient:
         """
         Retrieve one page of alerts.
 
-        The lower bound is inclusive. ``sort_type`` is the external value
-        ``last_activity`` (not ``last_activity_timestamp``), with ascending
-        order so the connector can checkpoint the newest activity time on
-        the page.
+        V2 requests bound the window with ``last_activity_before`` and sort by
+        the external value ``last_activity`` (not ``last_activity_timestamp``)
+        ascending so the connector can checkpoint the newest activity time on
+        the page. V1 omits those parameters until the V1 OpenAPI / gateway
+        rollout accepts them; sending them today returns HTTP 400.
 
         :return: alerts and ``total_pages`` from that single response
         """
@@ -194,12 +195,17 @@ class ConnectorClient:
 
         params = {
             "last_activity_timestamp": last_activity_timestamp,
-            "last_activity_before": last_activity_before,
-            "sort_type": "last_activity",
-            "sort_order": "asc",
             "page": page,
             "page_size": page_size,
         }
+        if self.config.doppel.api_version == "v2":
+            params.update(
+                {
+                    "last_activity_before": last_activity_before,
+                    "sort_type": "last_activity",
+                    "sort_order": "asc",
+                }
+            )
 
         self.helper.connector_logger.info(
             "[DoppelConnector] Fetching alerts page",

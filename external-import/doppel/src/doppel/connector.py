@@ -110,11 +110,11 @@ class DoppelConnector:
         Connector main process to collect alerts.
 
         Each page is converted and sent before the next page is requested.
-        ``last_run`` advances to that page's newest activity time so a later
-        failure resumes from the last page that was stored. The lower bound
-        is inclusive, so a full page whose alerts all share that timestamp
-        keeps the cursor and requests the next page instead of repeating
-        the same page forever.
+        ``last_run`` advances after every successful send to that page's
+        newest activity time so a later failure resumes from the last page
+        that was stored. The lower bound is inclusive, so a full page whose
+        alerts all share that timestamp keeps the in-memory cursor and
+        requests the next page instead of repeating the same page forever.
         :return: None
         """
         self.helper.connector_logger.info("[DoppelConnector] Running scheduled fetch")
@@ -147,6 +147,9 @@ class DoppelConnector:
                 self._send_alert_page(alerts, work_id)
 
                 checkpoint = self._newest_activity_checkpoint(alerts)
+                # Persist after every successful send so a later page failure
+                # does not replay pages already delivered.
+                current_state = self._store_last_run(current_state, checkpoint)
                 page_is_full = len(alerts) >= page_size
                 if page_is_full and self._alerts_share_checkpoint(alerts, checkpoint):
                     self.helper.connector_logger.info(
@@ -154,10 +157,11 @@ class DoppelConnector:
                         "fetching the next page",
                         {"page": page, "last_activity_timestamp": checkpoint},
                     )
+                    # Keep the in-memory cursor unchanged so the inclusive lower
+                    # bound still pages through alerts that share this timestamp.
                     page += 1
                     continue
 
-                current_state = self._store_last_run(current_state, checkpoint)
                 cursor = checkpoint
                 page = 0
                 if not page_is_full:
