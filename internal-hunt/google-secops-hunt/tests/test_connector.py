@@ -14,6 +14,7 @@ from conftest import (
 from connectors_sdk.connectors.internal_hunt import (
     HuntExecutionError,
     HuntLimits,
+    HuntQueryRejectedError,
     HuntTimeoutError,
     HuntTimeWindow,
     HuntTranslationError,
@@ -356,7 +357,92 @@ def test_process_message_reports_failures(
     args, kwargs = helper.report_hunt_run.call_args
     assert args == ("run-1", "failed")
     assert "Permission denied" in kwargs["error"]
+    # A role granted just before the run can take minutes to apply
+    assert kwargs["retryable"] is True
     helper.send_stix2_bundle.assert_not_called()
+
+
+DNS_RULE = """
+title: DNS query to a suspicious domain
+logsource:
+  category: dns
+detection:
+  selection:
+    query|endswith: '.evil.example'
+  condition: selection
+"""
+
+
+@pytest.mark.parametrize(
+    "mode", [pytest.param("execute", id="run"), pytest.param("preview", id="preview")]
+)
+def test_untranslatable_sigma_rule_fails_without_retry(
+    connector_factory, helper, requests_mock, hunt_event, mode
+):
+    # Given a Sigma rule using a field the UDM pipeline cannot map
+    hunt_event["mode"] = mode
+    hunt_event["hunt"]["sigma_rule"] = DNS_RULE
+
+    # When/Then the run fails before any search, as a failure running it again cannot fix
+    with pytest.raises(HuntTranslationError, match="Invalid UDM field"):
+        connector_factory().process_message(hunt_event)
+    args, kwargs = helper.report_hunt_run.call_args
+    assert args == ("run-1", "failed")
+    assert kwargs["error"].startswith("HuntTranslationError: Sigma conversion failed")
+    assert kwargs["retryable"] is False
+    assert requests_mock.call_count == 0
+
+
+def test_udm_search_rejected_by_secops_fails_without_retry(
+    connector_factory, helper, requests_mock, hunt_event
+):
+    # Given a native UDM search SecOps refuses to parse
+    requests_mock.get(
+        UDM_SEARCH_URL,
+        status_code=400,
+        json={
+            "error": {
+                "code": 400,
+                "message": "parsing: invalid field 'principal.hostnme'",
+                "status": "INVALID_ARGUMENT",
+            }
+        },
+    )
+    hunt_event["hunt"]["native_query"] = {
+        "platform": "google-secops",
+        "language": "udm",
+        "query": 'principal.hostnme = "ws1"',
+    }
+
+    # When/Then the run fails with the SecOps reason, and is not retried
+    with pytest.raises(HuntQueryRejectedError):
+        connector_factory().process_message(hunt_event)
+    args, kwargs = helper.report_hunt_run.call_args
+    assert args == ("run-1", "failed")
+    assert "invalid field 'principal.hostnme'" in kwargs["error"]
+    assert kwargs["retryable"] is False
+
+
+def test_yara_l_rule_that_does_not_compile_fails_without_retry(
+    connector_factory, helper, requests_mock, hunt_event
+):
+    # Given a YARA-L rule SecOps cannot compile
+    requests_mock.post(
+        RUN_RULE_URL,
+        json=[{"ruleCompilationError": {"message": "undefined variable $x"}}],
+    )
+    hunt_event["hunt"]["native_query"] = {
+        "platform": "google-secops",
+        "language": "yara-l",
+        "query": "rule broken { condition: $x }",
+    }
+
+    # When/Then the run fails with the compilation error, and is not retried
+    with pytest.raises(HuntQueryRejectedError, match="does not compile"):
+        connector_factory().process_message(hunt_event)
+    kwargs = helper.report_hunt_run.call_args.kwargs
+    assert "undefined variable $x" in kwargs["error"]
+    assert kwargs["retryable"] is False
 
 
 def test_process_message_times_out(connector_factory, helper, hunt_event):

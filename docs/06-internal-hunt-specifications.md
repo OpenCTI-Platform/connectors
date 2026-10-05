@@ -96,7 +96,12 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
 6. **Report**: `completed` with hits, distinct entities, evidence, translated query, language, cost and the ids of the
    objects `to_stix()` maps, or `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the
    work in error). A reported error carries `hunt_run_reported = True`, so the `listen_hunt` wrapper of pycti does not
-   report the run a second time.
+   report the run a second time. A failed run also says whether running it again can succeed (`retryable`):
+   deterministic failures are `retryable: false` and OpenCTI does not retry them. These are translation failures
+   (`HuntTranslationError`), a query the platform rejects as invalid (`HuntQueryRejectedError`: HTTP 400 / 422, a rule
+   that does not compile), an invalid message (`HuntRequestError`) and an unsupported pycti. Timeouts, platform and
+   network failures and refused credentials stay retryable. A pycti without the `retryable` keyword gets the error only,
+   which keeps its class name as a prefix.
 7. **Knowledge**: the bundle is sent with the run work id once the run is reported completed. A run that could not be
    reported is reported `failed` and sends no knowledge; a bundle that cannot be sent after the report ends the work in
    error and leaves the run completed, never failed with knowledge.
@@ -139,7 +144,8 @@ Rules:
 - Build the platform client on `HuntApiClient` from the connectors-sdk: `hunt_request()` bounds every call with the run
   deadline (the `deadline` given to `execute()`; `RunDeadline.request_timeout()` never gives a request more than the
   time left and refuses to send one once it is spent), retries on 429/5xx and raises `HuntExecutionError` /
-  `HuntTimeoutError` carrying the platform error message; `cleanup_request()` cancels or deletes platform jobs without
+  `HuntTimeoutError` carrying the platform error message (`HuntQueryRejectedError` for a 400 / 422 answer: raise it too
+  when the platform reports an invalid query in a successful answer); `cleanup_request()` cancels or deletes platform jobs without
   masking the run outcome. Poll asynchronous jobs with `RunDeadline.check()` / `RunDeadline.sleep()` and cancel them in
   `on_timeout()`.
 - Fetch at most `limits.max_results` events in total for the run (shared by every query when a run issues several)

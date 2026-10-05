@@ -439,6 +439,13 @@ class HuntRunReport(BaseModel):
         default=None, ge=0, description="Execution time of the run in milliseconds."
     )
     error: str | None = Field(default=None, description="Error of a failed run.")
+    retryable: bool | None = Field(
+        default=None,
+        description=(
+            "Failed runs: False when the failure is deterministic (translation, "
+            "query rejected by the platform, invalid message), which OpenCTI does not retry."
+        ),
+    )
     ioc_results: list[HuntIocResult] | None = Field(
         default=None, description="Indicator hunts: the result of each value."
     )

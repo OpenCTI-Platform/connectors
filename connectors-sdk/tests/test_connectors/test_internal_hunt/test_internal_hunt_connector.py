@@ -10,8 +10,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 import stix2
 from connectors_sdk.connectors.internal_hunt import (
+    HuntAccessDeniedError,
     HuntEvent,
     HuntExecutionError,
+    HuntQueryRejectedError,
     HuntRequestError,
     HuntResult,
     HuntTimeoutError,
@@ -469,7 +471,106 @@ def test_execution_error_fails_the_run(connector_factory, hunt_event, hunt_helpe
     assert args == ("run-1", "failed")
     assert kwargs["error"] == "HuntExecutionError: platform down"
     assert kwargs["translated_query"].startswith("CommandLine")
+    assert kwargs["retryable"] is True
     connector.logger.error.assert_called()
+
+
+@pytest.mark.parametrize(
+    "error, retryable",
+    [
+        pytest.param(HuntQueryRejectedError("Invalid UDM field"), False, id="rejected"),
+        pytest.param(
+            HuntTranslationError("Invalid UDM field"), False, id="translation"
+        ),
+        pytest.param(HuntUnsupportedPyctiError("old pycti"), False, id="pycti"),
+        pytest.param(HuntExecutionError("platform down"), True, id="platform"),
+        pytest.param(HuntAccessDeniedError("role missing"), True, id="access_denied"),
+        pytest.param(RuntimeError("unexpected"), True, id="unexpected"),
+    ],
+)
+def test_failed_run_tells_whether_running_it_again_can_succeed(
+    connector_factory, hunt_event, hunt_helper, error, retryable
+):
+    # Given a run failing with a deterministic or a transient error
+    connector = connector_factory(error)
+
+    # When it is processed
+    with pytest.raises(type(error)):
+        connector.process_message(hunt_event())
+
+    # Then the failed run says whether OpenCTI should retry it
+    args, kwargs = _report_kwargs(hunt_helper)
+    assert args == ("run-1", "failed")
+    assert kwargs["retryable"] is retryable
+
+
+@pytest.mark.parametrize(
+    "mode", [pytest.param("execute", id="run"), pytest.param("preview", id="preview")]
+)
+def test_translation_failure_is_terminal_in_run_and_preview(
+    connector_factory, hunt_event, hunt_helper, mode
+):
+    # Given a Sigma rule the platform pipeline cannot translate
+    connector = connector_factory()
+    event = hunt_event(
+        mode=mode,
+        hunt={"sigma_rule": "title: t\nlogsource: {product: windows}\ndetection: {}"},
+    )
+
+    # When/Then the run fails before anything runs on the platform, and is not retried
+    with pytest.raises(HuntTranslationError):
+        connector.process_message(event)
+    args, kwargs = _report_kwargs(hunt_helper)
+    assert args == ("run-1", "failed")
+    assert kwargs["error"].startswith("HuntTranslationError: ")
+    assert kwargs["retryable"] is False
+    assert connector.executed == []
+
+
+def test_invalid_message_is_terminal(connector_factory, hunt_helper):
+    # Given/When a message OpenCTI cannot have meant as a run
+    with pytest.raises(HuntRequestError):
+        connector_factory().process_message({"hunt_run": {"id": "run-1"}})
+
+    # Then it is reported failed, never to be retried
+    assert _report_kwargs(hunt_helper)[1]["retryable"] is False
+
+
+def test_pycti_without_terminal_failures_gets_the_error_only(
+    connector_factory, hunt_event
+):
+    # Given a pycti whose report does not take the retryable flag
+    class _OlderHelper:
+        work_id = "work-1"
+
+        def __init__(self):
+            self.reports = []
+
+        def report_hunt_run(
+            self,
+            run_id,
+            status,
+            hits_count=None,
+            distinct_entities=None,
+            evidence_sample=None,
+            translated_query=None,
+            query_language=None,
+            cost_ms=None,
+            result_ids=None,
+            error=None,
+            truncated=None,
+        ):
+            self.reports.append((run_id, status, error))
+
+    connector = connector_factory(HuntQueryRejectedError("Invalid UDM field"))
+    connector._helper = _OlderHelper()
+
+    # When/Then the failure is reported with its error class, without the flag
+    with pytest.raises(HuntQueryRejectedError):
+        connector.process_message(hunt_event())
+    assert connector.helper.reports == [
+        ("run-1", "failed", "HuntQueryRejectedError: Invalid UDM field")
+    ]
 
 
 def test_invalid_execute_result_fails_the_run(connector_factory, hunt_event):

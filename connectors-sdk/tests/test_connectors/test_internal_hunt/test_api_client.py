@@ -10,10 +10,12 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntAccessDeniedError,
     HuntApiClient,
     HuntExecutionError,
+    HuntQueryRejectedError,
     HuntTimeoutError,
     RunDeadline,
     access_denied_message,
     api_error_message,
+    is_retryable,
 )
 
 
@@ -182,6 +184,31 @@ def test_hunt_request_maps_http_errors(client, response, expected):
         # When/Then a hunt execution error explains the failure
         with pytest.raises(HuntExecutionError, match=expected):
             client.hunt_request("GET", "/x", RunDeadline(30), "The search")
+
+
+@pytest.mark.parametrize(
+    "status_code, rejected",
+    [
+        pytest.param(400, True, id="bad_request"),
+        pytest.param(422, True, id="unprocessable"),
+        pytest.param(404, False, id="not_found"),
+        pytest.param(500, False, id="server_error"),
+    ],
+)
+def test_hunt_request_reports_a_rejected_query_as_not_retryable(
+    client, status_code, rejected
+):
+    # Given a platform answering the search with an HTTP error
+    response = _response(status_code, {"error": {"message": "Invalid UDM field"}})
+    with patch.object(client._session, "request", return_value=response):
+        # When the search is sent
+        with pytest.raises(HuntExecutionError) as raised:
+            client.hunt_request("GET", "/x", RunDeadline(30), "The search")
+
+    # Then only an invalid request is a rejected query, which running again cannot fix
+    assert isinstance(raised.value, HuntQueryRejectedError) is rejected
+    assert is_retryable(raised.value) is not rejected
+    assert "Invalid UDM field" in str(raised.value)
 
 
 @pytest.mark.parametrize(

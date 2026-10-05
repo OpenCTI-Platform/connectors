@@ -32,10 +32,12 @@ from connectors_sdk.connectors.internal_hunt.errors import (
     HuntAccessDeniedError,
     HuntError,
     HuntExecutionError,
+    HuntQueryRejectedError,
     HuntRequestError,
     HuntTimeoutError,
     HuntTranslationError,
     HuntUnsupportedPyctiError,
+    is_retryable,
 )
 from connectors_sdk.connectors.internal_hunt.indicators import (
     AGGREGATED_FIELDS,
@@ -172,8 +174,10 @@ __all__ = [
     "HuntAccessDeniedError",
     "HuntError",
     "HuntExecutionError",
+    "HuntQueryRejectedError",
     "HuntRequestError",
     "HuntTimeoutError",
     "HuntTranslationError",
     "HuntUnsupportedPyctiError",
+    "is_retryable",
 ]

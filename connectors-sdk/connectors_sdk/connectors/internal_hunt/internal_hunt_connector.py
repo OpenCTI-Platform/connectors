@@ -45,6 +45,7 @@ from connectors_sdk.connectors.internal_hunt.errors import (
     HuntTimeoutError,
     HuntTranslationError,
     HuntUnsupportedPyctiError,
+    is_retryable,
 )
 from connectors_sdk.connectors.internal_hunt.indicators import (
     HOST_FIELDS,
@@ -1052,6 +1053,11 @@ class InternalHuntConnector(ABC):
             extra["ioc_results"] = [
                 result.model_dump(mode="json") for result in report.ioc_results
             ]
+        # A pycti that cannot tell a terminal failure keeps the class prefix of the error
+        if report.retryable is not None and _accepts_keyword(
+            self.helper.report_hunt_run, "retryable"
+        ):
+            extra["retryable"] = report.retryable
         self.helper.report_hunt_run(
             run_id,
             report.status.value,
@@ -1102,6 +1108,7 @@ class InternalHuntConnector(ABC):
                     query_language=native_query.language if native_query else None,
                     cost_ms=self._elapsed_ms(started),
                     error=_error_message(error),
+                    retryable=is_retryable(error),
                 ),
             )
         except Exception as report_error:

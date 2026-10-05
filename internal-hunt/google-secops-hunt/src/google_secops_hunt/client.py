@@ -9,6 +9,7 @@ import requests
 from connectors_sdk.connectors.internal_hunt import (
     HuntApiClient,
     HuntExecutionError,
+    HuntQueryRejectedError,
     HuntTimeoutError,
     RunDeadline,
     api_error_message,
@@ -169,7 +170,8 @@ class SecOpsClient(HuntApiClient):
             The matching UDM events.
 
         Raises:
-            HuntExecutionError: If SecOps rejects the search.
+            HuntQueryRejectedError: If SecOps rejects the query as invalid.
+            HuntExecutionError: If the search fails on SecOps.
             HuntTimeoutError: If the search does not complete before the deadline.
         """
         self._authenticate(deadline)
@@ -217,7 +219,8 @@ class SecOpsClient(HuntApiClient):
             number of detections.
 
         Raises:
-            HuntExecutionError: If the rule does not compile or fails.
+            HuntQueryRejectedError: If the rule does not compile.
+            HuntExecutionError: If the rule fails.
             HuntTimeoutError: If the test does not complete before the deadline.
         """
         self._authenticate(deadline)
@@ -243,7 +246,7 @@ class SecOpsClient(HuntApiClient):
             if not isinstance(item, dict):
                 continue
             if item.get("ruleCompilationError"):
-                raise HuntExecutionError(
+                raise HuntQueryRejectedError(
                     "The YARA-L rule does not compile: "
                     f"{api_error_message(item['ruleCompilationError'])}"
                 )

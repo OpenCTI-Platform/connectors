@@ -18,6 +18,7 @@ from connectors_sdk.client.exceptions import ApiClientError
 from connectors_sdk.connectors.internal_hunt.errors import (
     HuntAccessDeniedError,
     HuntExecutionError,
+    HuntQueryRejectedError,
     HuntTimeoutError,
 )
 from connectors_sdk.connectors.internal_hunt.timing import RunDeadline
@@ -33,6 +34,9 @@ RETRY_METHODS = frozenset({"DELETE", "GET", "HEAD", "OPTIONS", "PUT", "TRACE"})
 
 ACCESS_DENIED_STATUSES = frozenset({401, 403})
 """HTTP statuses of a refused credential (401) or a missing permission (403)."""
+
+QUERY_REJECTED_STATUSES = frozenset({400, 422})
+"""HTTP statuses of a request the platform rejects as invalid: the same query fails again."""
 
 _ACCESS_DENIED_DEFAULTS = {
     401: "the platform refused the credentials of the connector: check that they are valid and not expired",
@@ -235,7 +239,12 @@ class HuntApiClient(BaseClientApi):
                     )
                 )
             suffix = f": {details}" if details else ""
-            return HuntExecutionError(f"{operation} failed ({error}){suffix}")
+            error_type = (
+                HuntQueryRejectedError
+                if error.status_code in QUERY_REJECTED_STATUSES
+                else HuntExecutionError
+            )
+            return error_type(f"{operation} failed ({error}){suffix}")
         return HuntExecutionError(
             f"{operation} failed: {type(error).__name__}: {error}"
         )
