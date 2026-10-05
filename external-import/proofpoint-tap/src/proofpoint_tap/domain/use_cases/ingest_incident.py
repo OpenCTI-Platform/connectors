@@ -2,8 +2,6 @@
 
 from typing import Optional
 
-from pydantic import ValidationError
-
 from proofpoint_tap.domain.models.octi.common import BaseEntity
 from proofpoint_tap.domain.models.octi.domain import Incident
 from proofpoint_tap.domain.models.octi.observables import EmailAddress, EmailMessage
@@ -13,6 +11,7 @@ from proofpoint_tap.domain.models.octi.relationships import (
 )
 from proofpoint_tap.domain.use_cases.common import BaseUseCase
 from proofpoint_tap.ports.event import ClickEventPort, EventPort, MessageEventPort
+from pydantic import ValidationError
 
 
 class IncidentProcessor(BaseUseCase):

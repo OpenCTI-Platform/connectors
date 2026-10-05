@@ -5,9 +5,6 @@ from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
 import pytest
-from pydantic import ValidationError
-from stix2.v21.base import _STIXBase21
-
 from proofpoint_tap.domain.models.octi.common import TLPMarking
 from proofpoint_tap.domain.models.octi.domain import Incident, OrganizationAuthor
 from proofpoint_tap.domain.models.octi.observables import EmailAddress, EmailMessage
@@ -17,6 +14,8 @@ from proofpoint_tap.domain.models.octi.relationships import (
 )
 from proofpoint_tap.domain.use_cases.ingest_incident import IncidentProcessor
 from proofpoint_tap.ports.event import ClickEventPort, EventThreatPort, MessageEventPort
+from pydantic import ValidationError
+from stix2.v21.base import _STIXBase21
 
 
 class DummyEventThreatAdapter(EventThreatPort):
