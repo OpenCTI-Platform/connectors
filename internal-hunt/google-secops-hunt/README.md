@@ -60,6 +60,7 @@ Table of Contents
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
   - [Query languages](#query-languages)
+  - [Indicator hunts](#indicator-hunts)
   - [Behavior](#behavior)
   - [Limits](#limits)
   - [Debugging](#debugging)
@@ -161,8 +162,8 @@ python3 main.py
 
 ## Usage
 
-At startup the connector registers the `google-secops` hunt platform in OpenCTI with the `udm` and `yara-l` languages
-and the Security Platform identity named by `CONNECTOR_SECURITY_PLATFORM_NAME`. Hunts then run on it from OpenCTI
+At startup the connector registers the `google-secops` hunt platform in OpenCTI with the `udm` and `yara-l` languages,
+the indicator lookups and the Security Platform identity named by `CONNECTOR_SECURITY_PLATFORM_NAME`. Hunts then run on it from OpenCTI
 (manually, on schedule, when the threat landscape changes or from playbooks), and their runs appear in the hunt detail
 page. A preview run only translates the hunt logic: the translated query is shown in OpenCTI and SecOps is never
 queried.
@@ -180,6 +181,28 @@ The connector executes `udm` and `yara-l`.
     bar;
   - `yara-l`: a complete YARA-L 2.0 rule (`rule name { meta: ... events: ... condition: ... }`), single-event or
     multi-event with a `match` section.
+
+## Indicator hunts
+
+The connector registers with indicator lookups. For an indicator hunt, it searches each value with a UDM search over
+the run window, whatever the query language configured for Sigma rules. Values are grouped by type, at most
+`limits.ioc_batch_size` per search.
+
+| Observable type | UDM fields searched |
+|---|---|
+| `IPv4-Addr`, `IPv6-Addr` | `ip` (every IP field of the event) |
+| `Domain-Name` | `domain` (DNS questions, target hosts, network domains), the domain and its subdomains |
+| `Hostname` | `hostname` (every host name field) |
+| `Email-Addr` | `email` (email addresses of users and messages) |
+| `Url` | `target.url`, `principal.url`, `src.url`, `network.http.referral_url`, the URL within the field |
+| `Mac-Addr` | `principal.mac`, `target.mac`, `src.mac`, `observer.mac`, `principal.asset.mac`, `target.asset.mac` |
+| `StixFile` (MD5, SHA-1, SHA-256) | the hash of the algorithm on the files of the event, its processes and their parents |
+
+Other types, such as SHA-512 or SSDEEP hashes, are held in no UDM field. Their values are reported as not searched,
+never as not seen. Each value gets its result: seen with its hits, its first and last events and its hosts, not seen,
+or not searched. Each seen value is sighted on the Google SecOps Security Platform, and each hit names the UDM field
+that holds the value. When SecOps holds more events than the run reads, a value missing from the part read is reported
+as not searched.
 
 ## Behavior
 

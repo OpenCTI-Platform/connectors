@@ -13,6 +13,7 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntRequest,
     HuntResult,
     HuntTimeWindow,
+    IocBatch,
     NativeQuery,
     RunDeadline,
     build_pipeline,
@@ -21,6 +22,7 @@ from connectors_sdk.connectors.internal_hunt import (
 )
 from google.oauth2 import service_account
 from google_secops_hunt.client import Credentials, SearchResult, SecOpsClient
+from google_secops_hunt.lookups import batch_lookup, build_udm_lookup
 from google_secops_hunt.settings import ConnectorSettings
 from sigma.backends.secops import SecOpsBackend
 from sigma.pipelines.secops import secops_udm_pipeline
@@ -124,7 +126,7 @@ ACCESS_DENIED_HINTS = {
 
 
 class GoogleSecopsHuntConnector(InternalHuntConnector):
-    """Hunt connector running Sigma, UDM search and YARA-L hunts on Google SecOps."""
+    """Hunt connector running Sigma, UDM search, YARA-L and indicator hunts on Google SecOps."""
 
     languages = ("udm", "yara-l")
     required_permissions = REQUIRED_PERMISSIONS
@@ -217,6 +219,21 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
         """
         query = super().translate(sigma_rule, pipeline)
         return query.model_copy(update={"language": self.secops_config.query_language})
+
+    def ioc_query(self, batch: IocBatch) -> NativeQuery | None:
+        """Look up a batch of indicator values with a UDM search, whatever the configured language.
+
+        Args:
+            batch: Values of one observable type (and hash algorithm).
+
+        Returns:
+            The UDM search of the events holding a value, or ``None`` for a type
+            UDM holds in no field (its values are reported not searched).
+        """
+        lookup = batch_lookup(batch)
+        if lookup is None:
+            return None
+        return NativeQuery(language="udm", query=build_udm_lookup(batch, lookup))
 
     def resolve_query(self, request: HuntRequest) -> NativeQuery:
         """Return the query of a run, naming the UDM fields a native query matches.

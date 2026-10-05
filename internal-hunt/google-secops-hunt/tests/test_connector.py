@@ -596,7 +596,7 @@ def test_start_registers_the_secops_platform_and_listens():
         # When the connector starts
         connector.start()
 
-    # Then the platform is registered with both languages
+    # Then the platform is registered with both languages and the indicator lookups
     helper = helper_cls.return_value
     helper.register_hunt_platform.assert_called_once_with(
         platform="google-secops",
@@ -605,7 +605,7 @@ def test_start_registers_the_secops_platform_and_listens():
         security_platform_type="SIEM",
         supports_preview=True,
         max_concurrent_runs=None,
-        supports_indicators=False,
+        supports_indicators=True,
         required_permissions=[
             {"name": name, "purpose": purpose}
             for name, purpose in GoogleSecopsHuntConnector.required_permissions
