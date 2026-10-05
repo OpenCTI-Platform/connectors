@@ -132,6 +132,18 @@ def test_within_window_keeps_the_hosts_scanned_during_the_run_window():
     assert within_window(SourceResult([before], 1), WINDOW).truncated is False
 
 
+def test_within_window_never_keeps_the_total_of_a_truncated_page():
+    inside = Host(
+        key="8.8.8.8", last_seen=datetime(2026, 10, 3, 8, tzinfo=timezone.utc)
+    )
+    # Every host read is in the window, but 48 matches were left unread
+    result = within_window(SourceResult([inside, Host(key="9.9.9.9")], 50), WINDOW)
+    assert result.total is None
+    assert [host.key for host in result.hosts] == ["8.8.8.8", "9.9.9.9"]
+    assert result.read == 2
+    assert result.truncated is True
+
+
 def test_infrastructure_name_carries_the_full_hunt_id():
     first = infrastructure_name("C2 servers", "3f2a9c1d-0000-4000-8000-000000000001")
     # Same name and same id prefix: still two infrastructures
@@ -550,7 +562,9 @@ def test_execute_flags_truncation(connector_factory, requests_mock):
         plan_query({"censys": ["q1", "q2"]}), WINDOW, HuntLimits(max_results=2)
     )
 
-    # Then each query reads one host and the source total is reported
+    # Then each query reads one host; the source total, which also counts the
+    # unread hosts that may lie outside the window, is not reported: the hits
+    # are the hosts read in the window, a lower bound flagged as truncated
     assert [
         request.json()["page_size"] for request in requests_mock.request_history
     ] == [
@@ -558,7 +572,7 @@ def test_execute_flags_truncation(connector_factory, requests_mock):
         1,
     ]
     assert result.truncated is True
-    assert result.total_hits == 500
+    assert result.total_hits == 1
     assert [event.fields["ip"] for event in result.events] == ["8.8.8.8"]
 
 

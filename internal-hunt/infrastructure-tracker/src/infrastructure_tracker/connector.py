@@ -97,9 +97,10 @@ def within_window(result: SourceResult, window: HuntTimeWindow) -> SourceResult:
     Censys and Silent Push search their current view of the internet, without
     time bounds, and urlscan.io searches whole days: a host whose last scan
     falls outside the window is dropped, and a host without scan time is kept. The records read still count against
-    the run budget. Once a host is dropped, the source total, which also counts
-    hosts outside the window, is no longer a hit count: only the hosts kept
-    count, and the truncation of the source is kept apart.
+    the run budget. The source total also counts hosts outside the window: it
+    stays the hit count only when every match was read and kept. Once a host is
+    dropped, or when matches were left unread (their scan time unknown), only
+    the hosts kept count, and the truncation of the source is kept apart.
 
     Args:
         result: Hosts found by one source query.
@@ -113,7 +114,7 @@ def within_window(result: SourceResult, window: HuntTimeWindow) -> SourceResult:
         for host in result.hosts
         if host.last_seen is None or window.start <= host.last_seen <= window.end
     ]
-    if len(hosts) == len(result.hosts):
+    if len(hosts) == len(result.hosts) and not result.truncated:
         return result
     return SourceResult(hosts, None, result.read, more=result.truncated)
 
