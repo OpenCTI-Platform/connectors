@@ -13,9 +13,13 @@ Architecture::
     │   └── sigma_backend()    → pySigma backend of the platform (abstract)
     ├── ioc_query()            → indicator hunts: the lookup of a batch of values (optional)
     ├── execute()              → query execution on the platform (abstract), time-boxed
-    ├── to_stix()              → sightings + observed-data (telemetry), overridable
-    └── report                 → hits, distinct entities, evidence per field and per hit, result ids,
-                                 and one result per value for indicator hunts
+    ├── to_stix()              → observables + observed-data (telemetry), overridable
+    └── report                 → hits, hit keys, distinct entities, evidence per field and per hit,
+                                 result ids, and one result per value for indicator hunts
+
+OpenCTI keeps the sightings of a hunt (one per technique or indicator and
+Security Platform, updated in place) and tells new hits from the ones it already
+knows with the hit keys of each run (``analysis.hit_key``).
 """
 
 from __future__ import annotations
@@ -38,6 +42,7 @@ from connectors_sdk.connectors.internal_hunt.analysis import (
     HitFields,
     build_evidence,
     build_hit_evidence,
+    build_hit_keys,
     count_distinct_entities,
     event_time_bounds,
     present_fields,
@@ -61,6 +66,7 @@ from connectors_sdk.connectors.internal_hunt.indicators import (
     build_ioc_evidence,
     build_ioc_results,
     match_events,
+    value_hit_keys,
     value_hits,
 )
 from connectors_sdk.connectors.internal_hunt.models import (
@@ -610,8 +616,9 @@ class InternalHuntConnector(ABC):
     def to_stix(self, request: HuntRequest, result: HuntResult) -> list[Any]:
         """Map the results of a run to STIX objects.
 
-        The default mapping produces the sightings and the observed-data of a
-        telemetry hunt. Override it for other kinds of hunts.
+        The default mapping produces the observables and the observed-data of a
+        telemetry hunt; OpenCTI keeps the sightings of the hunt itself. Override
+        it for other kinds of hunts.
 
         Args:
             request: The hunt run request.
@@ -632,11 +639,6 @@ class InternalHuntConnector(ABC):
             self.observable_fields,
             self.config.max_observables,
         )
-        if request.security_platform is None and result.hits_count > 0:
-            self.logger.warning(
-                "[HUNT] No Security Platform in the hunt run, sightings are skipped",
-                {"hunt_run_id": request.hunt_run.id},
-            )
         return list(
             build_telemetry_objects(
                 request, result.hits_count, first_seen, last_seen, observables
@@ -788,6 +790,10 @@ class InternalHuntConnector(ABC):
         objects = self._bundle_objects(self.to_stix(request, result))
         result_ids = list(objects)
         hits_count = result.hits_count
+        hits = [
+            (event, present_fields(event, native_query.fields))
+            for event in result.events
+        ]
         self._send_objects(objects)
         self.report(
             request.hunt_run.id,
@@ -806,14 +812,8 @@ class InternalHuntConnector(ABC):
                     (*native_query.fields, *self.entity_fields),
                     self.evidence_excluded_fields,
                 ),
-                hits_sample=build_hit_evidence(
-                    (
-                        (event, present_fields(event, native_query.fields))
-                        for event in result.events
-                    ),
-                    request.limits,
-                    self.hit_fields,
-                ),
+                hits_sample=build_hit_evidence(hits, request.limits, self.hit_fields),
+                hit_keys=build_hit_keys(hits, request.limits, self.hit_fields),
                 result_ids=result_ids,
                 cost_ms=self._elapsed_ms(started),
             ),
@@ -880,6 +880,10 @@ class InternalHuntConnector(ABC):
         observations: dict[str, IocObservation] = {}
         unsearched: dict[str, str] = {}
         hits: list[tuple[HuntEvent, list[str]]] = []
+        # Aggregated lookups return one count per value, never the events: their hits cannot be told apart
+        value_keys: dict[str, dict[str, None]] | None = (
+            None if self.ioc_aggregated else {}
+        )
         truncated = False
         for batch, query in lookups:
             if query is None:
@@ -889,11 +893,17 @@ class InternalHuntConnector(ABC):
             raw_result = self._execute_within_limits(request, query, deadline)
             result = suppress_benign(raw_result, request.hunt.benign_patterns, deadline)
             truncated = truncated or result.truncated
-            if self.ioc_aggregated:
+            if value_keys is None:
                 found = aggregated_observations(batch, result.events)
             else:
                 found = match_events(batch, result.events, self.ioc_host_fields)
-                hits.extend(value_hits(batch, result.events))
+                batch_hits = value_hits(batch, result.events)
+                hits.extend(batch_hits)
+                batch_keys = value_hit_keys(
+                    batch, batch_hits, request.limits, self.hit_fields
+                )
+                for key, keys in batch_keys.items():
+                    value_keys.setdefault(key, {}).update(dict.fromkeys(keys))
             for key, observation in found.items():
                 observations.setdefault(key, IocObservation()).merge(observation)
             if result.truncated:
@@ -907,15 +917,17 @@ class InternalHuntConnector(ABC):
                 unsearched.update(
                     {ioc.key: reason for ioc in batch.iocs if ioc.key not in found}
                 )
-        ioc_results = build_ioc_results(request.hunt.iocs, observations, unsearched)
+        ioc_results = build_ioc_results(
+            request.hunt.iocs,
+            observations,
+            unsearched,
+            (
+                None
+                if value_keys is None
+                else {key: list(keys) for key, keys in value_keys.items()}
+            ),
+        )
         objects = self._bundle_objects(build_indicator_objects(request, ioc_results))
-        if request.security_platform is None and any(
-            result.seen for result in ioc_results
-        ):
-            self.logger.warning(
-                "[HUNT] No Security Platform in the hunt run, sightings are skipped",
-                {"hunt_run_id": request.hunt_run.id},
-            )
         hits_count = sum(result.hits_count for result in ioc_results)
         self._send_objects(objects)
         self.report(
@@ -933,6 +945,11 @@ class InternalHuntConnector(ABC):
                     request.hunt.iocs, ioc_results, request.limits
                 ),
                 hits_sample=build_hit_evidence(hits, request.limits, self.hit_fields),
+                hit_keys=(
+                    None
+                    if value_keys is None
+                    else build_hit_keys(hits, request.limits, self.hit_fields)
+                ),
                 result_ids=list(objects),
                 cost_ms=self._elapsed_ms(started),
                 ioc_results=ioc_results,
@@ -1051,10 +1068,18 @@ class InternalHuntConnector(ABC):
             report: Outcome of the run.
         """
         extra: dict[str, Any] = {}
+        # A pycti that knows hit keys reports to an OpenCTI that keeps the known hits of a hunt;
+        # an older one keeps the previous report, every hit then counting as new
+        hit_keys_supported = _accepts_keyword(self.helper.report_hunt_run, "hit_keys")
+        if report.hit_keys is not None and hit_keys_supported:
+            extra["hit_keys"] = report.hit_keys
         if report.ioc_results is not None:
             self._require_ioc_results_report()
             extra["ioc_results"] = [
-                result.model_dump(mode="json") for result in report.ioc_results
+                result.model_dump(
+                    mode="json", exclude=None if hit_keys_supported else {"hit_keys"}
+                )
+                for result in report.ioc_results
             ]
         # A pycti that cannot tell a terminal failure keeps the class prefix of the error
         if report.retryable is not None and _accepts_keyword(

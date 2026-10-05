@@ -315,17 +315,15 @@ def test_process_message_reports_hits_and_sends_knowledge(
     for item in kwargs["evidence_sample"]:
         assert len(item["value_hash"]) == 64
     assert "2 hit(s)" in message
-    # And the sightings of the technique and the indicator, with the public IP only
+    # And the observed public IP only, without sighting: OpenCTI keeps one per
+    # technique or indicator and platform, from the hit keys of the runs
     sent = helper.stix2_create_bundle.call_args.args[0]
-    sightings = [obj for obj in sent if obj["type"] == "sighting"]
-    assert sorted(obj["sighting_of_ref"] for obj in sightings) == [
-        "attack-pattern--970a3432-3237-47ad-bcca-7d8cbb217736",
-        "indicator--a1b2c3d4-0000-4000-8000-000000000001",
-    ]
+    assert "sighting" not in {obj["type"] for obj in sent}
+    assert len(kwargs["hit_keys"]) == kwargs["hits_count"]
     assert all(
         obj["created_by_ref"] == "identity--7b82b010-b1c0-4dae-981f-7756374a17df"
         for obj in sent
-        if obj["type"] in ("sighting", "observed-data")
+        if obj["type"] == "observed-data"
     )
     assert [obj["value"] for obj in sent if obj["type"] == "ipv4-addr"] == ["8.8.8.8"]
 

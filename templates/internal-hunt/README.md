@@ -95,12 +95,13 @@ For every hunt run:
    the configured pySigma pipeline (a native query with an empty query only selects the pipeline).
 2. The query runs over the time window of the run, bounded by the run timeout and `max_results`.
 3. Events matching a benign pattern of the hunt are suppressed. When the platform returned only part of the results and some returned events were benign, the run reports the non-benign returned events as its hits: the platform total cannot be corrected from a sample.
-4. When there are hits, the connector sends a sighting of every technique and indicator of the hunt on the Security
-   Platform identity, and one observed-data per IOC observable found, with the number of
+4. When there are hits, the connector sends one observed-data per IOC observable found, with the number of
    result events holding it (only for the observable types the hunt expects). Objects inherit the markings and the author
-   of the hunt and have deterministic identifiers; those of the sightings and observed-data derive from the hunt run
+   of the hunt and have deterministic identifiers; those of the observed-data derive from the hunt run
    too, so a retry of a run updates its own objects and two runs never share one.
-5. The run is reported with the hit count, the distinct hosts/users/peers, the translated query and an evidence sample.
+5. The run is reported with the hit count, the key of every hit read, the distinct hosts/users/peers, the translated
+   query and an evidence sample. OpenCTI counts the hits it never saw for the hunt and the platform as new, and keeps
+   one sighting per technique and indicator of the hunt on the Security Platform, updated in place at each run.
 
 Evidence and privacy guarantees: raw events never leave the connector. Evidence values are SHA-256 hashed and their
 previews truncated to the run limit; host names, user names and command lines only appear there. Private IP addresses

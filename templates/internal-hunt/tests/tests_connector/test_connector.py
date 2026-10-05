@@ -150,10 +150,11 @@ def test_process_message_runs_the_hunt(connector, helper, requests_mock):
     # Then the knowledge is sent and the completed run is reported
     assert "1 hit(s)" in message
     sent = helper.stix2_create_bundle.call_args.args[0]
-    assert {obj["type"] for obj in sent} == {"ipv4-addr", "observed-data", "sighting"}
+    assert {obj["type"] for obj in sent} == {"ipv4-addr", "observed-data"}
     args, kwargs = helper.report_hunt_run.call_args
     assert args == ("run-1", "completed")
     assert kwargs["hits_count"] == 1
+    assert len(kwargs["hit_keys"]) == 1
 
 
 def test_process_message_preview_never_executes(connector, helper, requests_mock):

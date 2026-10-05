@@ -439,6 +439,13 @@ class HuntIocResult(BaseModel):
         default_factory=list, description="Hosts the value was seen on."
     )
     reason: str | None = Field(default=None, description="Why it was not searched.")
+    hit_keys: list[str] | None = Field(
+        default=None,
+        description=(
+            "Keys of the hits holding the value (see analysis.hit_key), None when "
+            "the lookup returns counts instead of events."
+        ),
+    )
 
 
 class HuntRunReport(BaseModel):
@@ -474,6 +481,14 @@ class HuntRunReport(BaseModel):
     hits_sample: list[HuntHitEvidence] | None = Field(
         default=None,
         description="Redacted evidence of single hits, the earliest first.",
+    )
+    hit_keys: list[str] | None = Field(
+        default=None,
+        description=(
+            "Distinct keys of every hit read, sampled or not (see analysis.hit_key): "
+            "OpenCTI counts the hits it has never seen for the hunt and the security "
+            "platform as new. None when the hits cannot be told apart (counts only)."
+        ),
     )
     result_ids: list[str] | None = Field(
         default=None, description="STIX ids of the objects sent to OpenCTI."

@@ -73,7 +73,12 @@ def test_udm_search_calls_the_regional_endpoint(requests_mock):
     assert request.headers["Authorization"] == "Bearer token-1"
     # And the UDM documents are returned, the result being truncated
     assert result.events == [
-        {"metadata": {"event_timestamp": "2026-10-03T10:00:00Z", "id": "abc"}},
+        {
+            "metadata": {
+                "event_timestamp": "2026-10-03T10:00:00Z",
+                "id": "abc-2026-10-03T10:00:00Z",
+            }
+        },
         {"plain": 1},
     ]
     assert (result.detections, result.truncated) == (None, True)

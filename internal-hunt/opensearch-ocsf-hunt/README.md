@@ -73,8 +73,8 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
    [OCSF pipeline](https://github.com/SigmaHQ/pySigma-pipeline-ocsf) (Sigma fields and log sources to OCSF classes and
    attributes) and the [OpenSearch backend](https://github.com/SigmaHQ/pySigma-backend-opensearch);
 2. runs it over the run time window, within the run timeout and result limit;
-3. sends the resulting knowledge to OpenCTI: a sighting of every technique and indicator of the hunt on the OpenSearch
-   Security Platform identity, and observed-data referencing the IOC observables found in the results;
+3. sends the resulting knowledge to OpenCTI: observed-data referencing the IOC observables found in the results, and the key of every hit (OpenCTI keeps one sighting of every technique and indicator of the hunt on the OpenSearch
+   Security Platform, updated at each run);
 4. reports the run (hit count, distinct hosts/users/peers, translated query, redacted evidence sample).
 
 Raw events never leave OpenSearch: OpenCTI only receives counts and evidence values that are SHA-256 hashed and
@@ -184,12 +184,13 @@ The connector executes `ppl` and `opensearch-lucene`.
    `| stats count() as opencti_hit_count` when there are results. Lucene searches return the most recent documents
    with the exact total (`track_total_hits`); a search that timed out or lost a shard is reported as truncated.
 3. Events matching a benign pattern of the hunt are suppressed.
-4. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
-   OpenSearch Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event) and one
+4. With hits, the connector sends one
    observed-data per public IP address, domain, URL, file hash or email address found, with the number of result events
    holding it, restricted to the observable types the hunt expects. Objects inherit the
-   markings and author of the hunt and have deterministic identifiers; those of the sightings and observed-data derive
-   from the hunt run too, so a retry of a run updates its own objects and two runs never share one.
+   markings and author of the hunt and have deterministic identifiers; those of the observed-data derive
+   from the hunt run too, so a retry of a run updates its own objects and two runs never share one. The run reports the key of every hit it read: OpenCTI counts the hits it never saw for the hunt and the platform
+   as new, and keeps one sighting per technique and indicator of the hunt on the Security Platform, updated in
+   place at each run (`count` = distinct hits, `first_seen` / `last_seen` = first and latest hit).
 5. The run is reported with the hit count, the distinct hosts, users and network peers (OCSF `device.hostname`,
    `actor.user.name`, `src_endpoint.ip`, `dst_endpoint.ip`...), the query executed and an evidence sample. The raw event
    (`raw_data`) and bookkeeping fields (`metadata.uid`, `metadata.version`, `_id`, `_index`...) are never sampled; host

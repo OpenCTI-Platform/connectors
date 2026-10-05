@@ -3,13 +3,15 @@
 """Tests of the hunt result post-processing helpers."""
 
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from connectors_sdk.connectors.internal_hunt import (
     BenignMatcher,
     HitFields,
     HuntEvent,
+    HuntHitEvidence,
+    HuntHitField,
     HuntLimits,
     HuntResult,
     HuntTimeoutError,
@@ -17,9 +19,11 @@ from connectors_sdk.connectors.internal_hunt import (
     RunDeadline,
     build_evidence,
     build_hit_evidence,
+    build_hit_keys,
     count_distinct_entities,
     event_time_bounds,
     flatten_fields,
+    hit_key,
     present_fields,
     sha256_hex,
     suppress_benign,
@@ -353,3 +357,98 @@ def test_event_time_bounds():
     # When/Then the bounds are the event times, or the window without times
     assert event_time_bounds(events, window) == (first, last)
     assert event_time_bounds([HuntEvent()], window) == (window.start, window.end)
+
+
+# The vectors OpenCTI asserts as well (opencti-graphql tests/01-unit/modules/hunt):
+# both sides must compute the same key for the same reported hit
+HIT_KEY_VECTORS = {
+    "detection": "3b02b63d8af62713440dd85ed25dd3f88e81e03c977896d7cfe34d2943c1fd56",
+    "event": "377ad8ff94d918dc181777c7885fe87b097ce4d00ce135abbdd484463d07fe0c",
+    "fields": "fad50c3a235a2707741dadfd8948e0eead646c7e2f5d997093a6cc306e79e418",
+    "empty": "d3cfa790c1b204d5670ff28bab8eb2e65a0ed4df3f129240fca7fd570560e132",
+}
+
+
+def test_hit_key_matches_the_vectors_shared_with_opencti():
+    # Given a hit grouped into a detection, a hit with an event id, a hit known by
+    # its fields only (non-UTC time with sub-seconds, accents, quotes, upper-case
+    # hash, fields out of order) and a hit with empty identifiers
+    fields_hit = HuntHitEvidence(
+        timestamp=datetime(
+            2026, 10, 5, 23, 59, 59, 750000, tzinfo=timezone(timedelta(hours=2))
+        ),
+        host="WKS-01",
+        user="j\u00e9r\u00f4me",
+        process="powershell.exe",
+        matched=[
+            HuntHitField(
+                field="process.command_line", value_hash="AB" * 32, value_preview="x"
+            ),
+            HuntHitField(
+                field="destination.ip", value_hash="cd" * 32, value_preview='"q"'
+            ),
+        ],
+    )
+
+    # When/Then each key is the shared vector
+    assert hit_key(HuntHitEvidence(detection="de_8f2c", event_id="e1")) == (
+        HIT_KEY_VECTORS["detection"]
+    )
+    assert hit_key(HuntHitEvidence(event_id='evt "42"')) == HIT_KEY_VECTORS["event"]
+    assert hit_key(fields_hit) == HIT_KEY_VECTORS["fields"]
+    assert hit_key(HuntHitEvidence(detection="", event_id="")) == (
+        HIT_KEY_VECTORS["empty"]
+    )
+
+
+def test_hit_key_ignores_what_does_not_identify_the_hit():
+    # Given the same event reported with other previews, sub-seconds or field order
+    base = HuntHitEvidence(
+        timestamp=datetime(2026, 10, 3, 2, 0, 0, tzinfo=timezone.utc),
+        host="ws1",
+        matched=[
+            HuntHitField(field="a", value_hash="11" * 32, value_preview="one"),
+            HuntHitField(field="b", value_hash="22" * 32, value_preview="two"),
+        ],
+    )
+    same = HuntHitEvidence(
+        timestamp=datetime(2026, 10, 3, 2, 0, 0, 900000, tzinfo=timezone.utc),
+        host="ws1",
+        matched=[
+            HuntHitField(field="b", value_hash="22" * 32, value_preview=None),
+            HuntHitField(field="a", value_hash="11" * 32, value_preview="o"),
+        ],
+    )
+    other_host = base.model_copy(update={"host": "ws2"})
+
+    # When/Then only identifying values change the key
+    assert hit_key(base) == hit_key(same)
+    assert hit_key(base) != hit_key(other_host)
+    # And a detection or an event id identifies a hit whatever its other values
+    assert hit_key(base.model_copy(update={"event_id": "e1"})) == hit_key(
+        other_host.model_copy(update={"event_id": "e1"})
+    )
+
+
+def test_build_hit_keys_counts_a_detection_once():
+    # Given two events of one detection, an event with an id and one without
+    limits = HuntLimits(evidence_max_value_length=16)
+    stamp = datetime(2026, 10, 3, 2, tzinfo=timezone.utc)
+    events = [
+        HuntEvent(timestamp=stamp, fields={"event.id": "a"}, detection="det-1"),
+        HuntEvent(timestamp=stamp, fields={"event.id": "b"}, detection="det-1"),
+        HuntEvent(timestamp=stamp, fields={"event.id": "c"}),
+        HuntEvent(timestamp=stamp, fields={"host": "ws1", "CommandLine": "x"}),
+    ]
+
+    # When the keys of the hits are built
+    keys = build_hit_keys(
+        [(event, present_fields(event, ["CommandLine"])) for event in events], limits
+    )
+
+    # Then the detection is one hit, and each key is the key of its sampled hit
+    sample = build_hit_evidence(
+        [(event, present_fields(event, ["CommandLine"])) for event in events], limits
+    )
+    assert len(keys) == 3
+    assert set(keys) == {hit_key(hit) for hit in sample}

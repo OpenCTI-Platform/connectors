@@ -13,6 +13,7 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntAccessDeniedError,
     HuntEvent,
     HuntExecutionError,
+    HuntHitEvidence,
     HuntQueryRejectedError,
     HuntRequestError,
     HuntResult,
@@ -23,6 +24,7 @@ from connectors_sdk.connectors.internal_hunt import (
     NativeQuery,
     RunDeadline,
     ensure_pycti_hunt_support,
+    hit_key,
     sha256_hex,
 )
 from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
@@ -351,10 +353,11 @@ def test_execution_sends_knowledge_and_reports_the_run(
     # When the run is processed
     message = connector.process_message(event)
 
-    # Then the sightings and observables are sent within the work
+    # Then the observables and their observed-data are sent within the work, and
+    # no sighting: OpenCTI keeps one per technique or indicator and platform
     bundle_objects = hunt_helper.stix2_create_bundle.call_args.args[0]
     types = sorted(obj["type"] for obj in bundle_objects)
-    assert types == ["ipv4-addr", "observed-data", "sighting", "sighting"]
+    assert types == ["ipv4-addr", "observed-data"]
     send_kwargs = hunt_helper.send_stix2_bundle.call_args.kwargs
     assert send_kwargs == {"work_id": "work-1", "cleanup_inconsistent_bundle": False}
 
@@ -371,6 +374,8 @@ def test_execution_sends_knowledge_and_reports_the_run(
     assert all(len(item["value_preview"]) <= 16 for item in evidence)
     assert kwargs["cost_ms"] >= 0
     assert "2 hit(s)" in message
+    # And every hit read after benign suppression has its key, once
+    assert len(kwargs["hit_keys"]) == 2 == len(set(kwargs["hit_keys"]))
 
     # And the execute hook received the window and the limits
     _, time_window, limits = connector.executed[0]
@@ -428,6 +433,11 @@ def test_execution_reports_each_hit_with_what_matched(
     }
     assert (second["event_id"], second["host"], second["user"]) == ("e2", "ws2", None)
     assert [item["field"] for item in second["matched"]] == ["CommandLine"]
+    # And the hit keys are the ones OpenCTI recomputes from the sampled hits
+    assert kwargs["hit_keys"] == [
+        hit_key(HuntHitEvidence(**first)),
+        hit_key(HuntHitEvidence(**second)),
+    ]
 
 
 def test_older_pycti_gets_the_evidence_aggregated_per_field_only(
@@ -508,7 +518,7 @@ def test_execution_reports_partial_results_as_truncated(
     assert kwargs["truncated"] is True
 
 
-def test_execution_without_security_platform_logs_a_warning(
+def test_execution_without_security_platform_sends_its_observables(
     connector_factory, hunt_event, hunt_helper
 ):
     # Given hits for a run without Security Platform
@@ -517,10 +527,54 @@ def test_execution_without_security_platform_logs_a_warning(
     # When the run is processed
     connector.process_message(hunt_event(security_platform=None))
 
-    # Then sightings are skipped with a warning
-    connector.logger.warning.assert_called_once()
+    # Then the observables are sent as for any run
     bundle_objects = hunt_helper.stix2_create_bundle.call_args.args[0]
-    assert "sighting" not in {obj["type"] for obj in bundle_objects}
+    assert sorted(obj["type"] for obj in bundle_objects) == [
+        "ipv4-addr",
+        "observed-data",
+    ]
+
+
+def test_older_pycti_gets_no_hit_keys(connector_factory, hunt_event):
+    # Given a pycti whose report takes single hits but no hit keys
+    class _HitsOnlyHelper:
+        work_id = "work-1"
+
+        def __init__(self):
+            self.reports = []
+
+        def report_hunt_run(
+            self,
+            run_id,
+            status,
+            hits_count=None,
+            distinct_entities=None,
+            evidence_sample=None,
+            translated_query=None,
+            query_language=None,
+            cost_ms=None,
+            result_ids=None,
+            error=None,
+            truncated=None,
+            hits_sample=None,
+        ):
+            self.reports.append((status, hits_count, hits_sample))
+
+        def stix2_create_bundle(self, objects):
+            return "{}"
+
+        def send_stix2_bundle(self, bundle, **kwargs):
+            return []
+
+    connector = connector_factory(_results({"CommandLine": "x -enc y"}))
+    connector._helper = _HitsOnlyHelper()
+
+    # When the run is processed
+    connector.process_message(hunt_event())
+
+    # Then the run is reported as before: OpenCTI counts every hit as new
+    ((status, hits_count, hits_sample),) = connector.helper.reports
+    assert (status, hits_count, len(hits_sample)) == ("completed", 1, 1)
 
 
 def test_observable_types_are_restricted_by_hunt_and_configuration(
@@ -537,9 +591,8 @@ def test_observable_types_are_restricted_by_hunt_and_configuration(
         hunt_event(hunt={"expected_observables": ["Domain-Name"]})
     )
 
-    # Then no observable is created
-    bundle_objects = hunt_helper.stix2_create_bundle.call_args.args[0]
-    assert {obj["type"] for obj in bundle_objects} == {"sighting"}
+    # Then no observable is created, and nothing is sent
+    hunt_helper.send_stix2_bundle.assert_not_called()
 
 
 def test_max_results_is_enforced(connector_factory, hunt_event, hunt_helper):

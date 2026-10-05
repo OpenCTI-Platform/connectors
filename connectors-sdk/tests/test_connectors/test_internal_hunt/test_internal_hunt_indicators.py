@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import pytest
 from connectors_sdk.connectors.internal_hunt import (
     HuntEvent,
+    HuntHitEvidence,
     HuntIoc,
     HuntResult,
     HuntTranslationError,
@@ -15,6 +16,7 @@ from connectors_sdk.connectors.internal_hunt import (
     NativeQuery,
     aggregated_observations,
     batch_iocs,
+    hit_key,
     match_events,
     value_pattern,
 )
@@ -229,7 +231,7 @@ def test_previews_the_lookups_without_running_them(
     assert kwargs["query_language"] == "test"
 
 
-def test_reports_one_result_per_value_and_sights_the_seen_ones(
+def test_reports_one_result_per_value_with_the_keys_of_its_hits(
     hunt_settings, hunt_helper, indicator_event
 ):
     result = HuntResult(
@@ -278,34 +280,24 @@ def test_reports_one_result_per_value_and_sights_the_seen_ones(
         "value_preview": "evil.example.com"[:16],
         "count": 2,
     }
-    # The indicator of the address is sighted; the pasted domain is created as an observable and sighted
+    # No sighting is sent, OpenCTI keeps one per hunt, source and platform; the
+    # pasted domain comes from no object and is created as an observable to be sighted
     bundle_objects = hunt_helper.stix2_create_bundle.call_args.args[0]
-    sightings = [item for item in bundle_objects if item["type"] == "sighting"]
-    assert {sighting["sighting_of_ref"] for sighting in sightings} >= {
-        INDICATOR_SOURCE["standard_id"]
-    }
-    domain = next(
-        item
-        for item in bundle_objects
-        if item["type"] == "domain-name" and item["value"] == "evil.example.com"
-    )
-    # An observable is sighted the way OpenCTI imports it: a placeholder SDO and the observable in the extension
-    observable_sighting = next(
-        sighting
-        for sighting in sightings
-        if sighting.get("x_opencti_sighting_of_ref") == domain["id"]
-    )
-    assert observable_sighting["sighting_of_ref"].startswith("indicator--")
-    assert (
-        observable_sighting["count"] == 2
-        and observable_sighting["x_opencti_hunt_run_id"] == "run-1"
-    )
-    assert all(
-        sighting["where_sighted_refs"]
-        == ["identity--5b1a4c88-5ac7-4c7f-9d8c-9a5f2e8d7c01"]
-        for sighting in sightings
-    )
+    assert [(item["type"], item["value"]) for item in bundle_objects] == [
+        ("domain-name", "evil.example.com")
+    ]
     assert set(kwargs["result_ids"]) == {item["id"] for item in bundle_objects}
+    # Each seen value names the keys of the hits holding it, the run every key once
+    assert len(by_key["k-ip"]["hit_keys"]) == 1
+    assert len(by_key["k-domain"]["hit_keys"]) == 2
+    assert by_key["k-other-ip"]["hit_keys"] is None
+    assert sorted(kwargs["hit_keys"]) == sorted(
+        by_key["k-ip"]["hit_keys"] + by_key["k-domain"]["hit_keys"]
+    )
+    # The key of a sampled hit is the one OpenCTI recomputes from the sample
+    assert sorted(hit_key(HuntHitEvidence(**hit)) for hit in kwargs["hits_sample"]) == (
+        sorted(kwargs["hit_keys"])
+    )
 
 
 def test_reports_each_hit_with_the_field_holding_the_value(
@@ -381,10 +373,13 @@ def test_aggregated_lookups_report_no_single_hit(
     # When the lookups run
     connector.process_message(indicator_event())
 
-    # Then the counts come from the rows, and no row is reported as a single hit
+    # Then the counts come from the rows, and no row is reported as a single hit:
+    # the hits cannot be told apart, OpenCTI counts them all as new
     kwargs = hunt_helper.report_hunt_run.call_args.kwargs
     assert kwargs["hits_count"] == 4
     assert kwargs["hits_sample"] == []
+    assert "hit_keys" not in kwargs
+    assert all(item["hit_keys"] is None for item in kwargs["ioc_results"])
 
 
 def test_a_truncated_lookup_never_reports_a_value_absent_from_the_part_read_as_not_seen(
@@ -440,11 +435,11 @@ def test_the_default_lookup_and_keyword_detection(connector_factory):
     assert _accepts_keyword(lambda value: None, "other") is False
 
 
-def test_sends_no_sighting_without_a_security_platform(
+def test_sends_nothing_without_a_security_platform(
     hunt_settings, hunt_helper, indicator_event
 ):
     result = HuntResult(
-        events=[event("2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7")],
+        events=[event("2026-10-03T10:00:00+00:00", query="evil.example.com")],
         truncated=False,
     )
     connector = DummyIndicatorConnector(hunt_settings, result=result)
@@ -455,15 +450,36 @@ def test_sends_no_sighting_without_a_security_platform(
     connector.process_message(indicator_event(security_platform=None))
     kwargs = hunt_helper.report_hunt_run.call_args.kwargs
     assert kwargs["hits_count"] == 1 and kwargs["result_ids"] == []
-    connector._logger.warning.assert_called_once()
     hunt_helper.send_stix2_bundle.assert_not_called()
 
 
-def test_fails_the_run_for_a_retry_when_the_sightings_cannot_be_sent(
+def test_sends_nothing_for_values_coming_from_objects(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given a hit on a value of an indicator only: OpenCTI already has the indicator
+    result = HuntResult(
+        events=[event("2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7")],
+        truncated=False,
+    )
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+    connector.process_message(indicator_event())
+
+    # Then the run reports the hit and its key, and sends no object
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    assert kwargs["hits_count"] == 1 and kwargs["result_ids"] == []
+    assert len(kwargs["hit_keys"]) == 1
+    hunt_helper.send_stix2_bundle.assert_not_called()
+
+
+def test_fails_the_run_for_a_retry_when_the_observables_cannot_be_sent(
     hunt_settings, hunt_helper, indicator_event
 ):
     result = HuntResult(
-        events=[event("2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7")],
+        events=[event("2026-10-03T10:00:00+00:00", query="evil.example.com")],
         truncated=False,
     )
     hunt_helper.send_stix2_bundle.side_effect = RuntimeError("broker down")
@@ -474,7 +490,7 @@ def test_fails_the_run_for_a_retry_when_the_sightings_cannot_be_sent(
     connector._logger = MagicMock()
     with pytest.raises(RuntimeError) as raised:
         connector.process_message(indicator_event())
-    # The run is never reported completed without its sightings: it fails, to be retried
+    # The run is never reported completed without its knowledge: it fails, to be retried
     assert hunt_helper.report_hunt_run.call_count == 1
     assert hunt_helper.report_hunt_run.call_args.args[1] == "failed"
     assert hunt_helper.report_hunt_run.call_args.kwargs["retryable"] is True

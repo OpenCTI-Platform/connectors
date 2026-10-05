@@ -3,8 +3,8 @@
 `TemplateConnector` is built on `InternalHuntConnector` (from `connectors-sdk`),
 which already implements the whole hunt run lifecycle: platform registration,
 native query override, preview mode, run timeout and `max_results`, benign
-suppression, STIX sightings and observed-data, hashed and truncated evidence,
-and the run report. A hunt connector only implements:
+suppression, observables and observed-data, hashed and truncated evidence, hit
+keys, and the run report. A hunt connector only implements:
 
     - `languages`: the query languages it executes;
     - `sigma_backend()`: the pySigma backend translating Sigma rules;

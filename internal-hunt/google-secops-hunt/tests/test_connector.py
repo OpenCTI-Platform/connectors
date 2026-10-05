@@ -254,17 +254,15 @@ def test_process_message_reports_hits_and_sends_knowledge(
     for item in kwargs["evidence_sample"]:
         assert len(item["value_hash"]) == 64
     assert "2 hit(s)" in message
-    # And the sightings of the technique and the indicator, with the public IP only
+    # And the observed public IP only, without sighting: OpenCTI keeps one per
+    # technique or indicator and platform, from the hit keys of the runs
     sent = helper.stix2_create_bundle.call_args.args[0]
-    sightings = [obj for obj in sent if obj["type"] == "sighting"]
-    assert sorted(obj["sighting_of_ref"] for obj in sightings) == [
-        "attack-pattern--970a3432-3237-47ad-bcca-7d8cbb217736",
-        "indicator--a1b2c3d4-0000-4000-8000-000000000001",
-    ]
+    assert "sighting" not in {obj["type"] for obj in sent}
+    assert len(kwargs["hit_keys"]) == kwargs["hits_count"]
     assert all(
         obj["created_by_ref"] == "identity--7b82b010-b1c0-4dae-981f-7756374a17df"
         for obj in sent
-        if obj["type"] in ("sighting", "observed-data")
+        if obj["type"] == "observed-data"
     )
     assert [obj["value"] for obj in sent if obj["type"] == "ipv4-addr"] == ["8.8.8.8"]
 
@@ -337,7 +335,7 @@ def test_udm_query_fields(query, fields):
     assert udm_query_fields(query) == fields
 
 
-def test_process_message_reports_each_hit_and_dates_the_sightings(
+def test_process_message_reports_each_hit_and_dates_the_observations(
     connector_factory, helper, requests_mock, hunt_event
 ):
     # Given a recorded UDM search answer, in the camelCase of the Chronicle API
@@ -374,15 +372,13 @@ def test_process_message_reports_each_hit_and_dates_the_sightings(
         "value_preview": command_line,
     }
     assert (second["host"], second["user"]) == ("ws2.corp.example", "bob")
-    # And the sightings are dated by the first and last hits, not the run window
-    sightings = [
-        obj
-        for obj in helper.stix2_create_bundle.call_args.args[0]
-        if obj["type"] == "sighting"
-    ]
-    assert {(obj["first_seen"], obj["last_seen"]) for obj in sightings} == {
-        ("2026-10-03T10:00:00Z", "2026-10-03T11:30:00Z")
-    }
+    # And the hits are dated, OpenCTI dates the sightings of the hunt by them, not
+    # by the run window; each hit has its key
+    assert (first["timestamp"], second["timestamp"]) == (
+        "2026-10-03T10:00:00Z",
+        "2026-10-03T11:30:00Z",
+    )
+    assert len(kwargs["hit_keys"]) == 2
 
 
 def test_process_message_native_udm_search_reports_the_matched_field(

@@ -75,8 +75,8 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
    [pySigma](https://github.com/SigmaHQ/pySigma) and the
    [SecOps backend](https://github.com/AttackIQ/pySigma-backend-secops);
 2. runs it through the Chronicle API over the run time window, within the run timeout and result limit;
-3. sends the resulting knowledge to OpenCTI: a sighting of every technique and indicator of the hunt on the Google
-   SecOps Security Platform identity, and observed-data referencing the IOC observables found in the results;
+3. sends the resulting knowledge to OpenCTI: observed-data referencing the IOC observables found in the results, and the key of every hit (OpenCTI keeps one sighting of every technique and indicator of the hunt on the Google
+   SecOps Security Platform, updated at each run);
 4. reports the run: hit count, distinct hosts/users/peers, translated query, and redacted evidence per field and per
    hit.
 
@@ -215,12 +215,13 @@ as not searched.
    when SecOps reports too many detections, the result is marked truncated. Compilation and runtime errors of the
    rule fail the run with the SecOps message.
 4. Events matching a benign pattern of the hunt are suppressed.
-5. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
-   Google SecOps Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event) and one
+5. With hits, the connector sends one
    observed-data per public IP address, domain, URL, file hash or email address found, with the number of result events
    holding it, restricted to the observable types the hunt expects. Objects inherit the
-   markings and author of the hunt and have deterministic identifiers; those of the sightings and observed-data derive
-   from the hunt run too, so a retry of a run updates its own objects and two runs never share one.
+   markings and author of the hunt and have deterministic identifiers; those of the observed-data derive
+   from the hunt run too, so a retry of a run updates its own objects and two runs never share one. The run reports the key of every hit it read: OpenCTI counts the hits it never saw for the hunt and the platform
+   as new, and keeps one sighting per technique and indicator of the hunt on the Security Platform, updated in
+   place at each run (`count` = distinct hits, `first_seen` / `last_seen` = first and latest hit).
 6. The run is reported with the hit count, the distinct hosts, users and network peers, the query executed and two
    evidence samples. Fields are named as in UDM search and YARA-L (`target.process.command_line`), although the
    Chronicle API answers in camelCase.

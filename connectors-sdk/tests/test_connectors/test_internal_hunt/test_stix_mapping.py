@@ -11,13 +11,13 @@ from connectors_sdk.connectors.internal_hunt import (
     hunt_author,
     hunt_markings,
 )
-from connectors_sdk.models import ObservedData, Sighting
+from connectors_sdk.models import ObservedData
 
 FIRST = datetime(2026, 10, 3, 1, tzinfo=timezone.utc)
 LAST = datetime(2026, 10, 3, 5, tzinfo=timezone.utc)
 
 
-def test_build_telemetry_objects_maps_sightings_and_observed_data(hunt_event):
+def test_build_telemetry_objects_maps_observables_and_observed_data(hunt_event):
     # Given a hunt run with one technique, one indicator and extracted observables
     request = HuntRequest.model_validate(hunt_event())
     observables = [
@@ -32,8 +32,9 @@ def test_build_telemetry_objects_maps_sightings_and_observed_data(hunt_event):
     for item in stix:
         by_type.setdefault(item["type"], []).append(item)
 
-    # Then observables, one observed-data per observable and one sighting per
-    # technique and indicator are produced
+    # Then observables and one observed-data per observable are produced, and no
+    # sighting: OpenCTI keeps one per technique or indicator and platform
+    assert set(by_type) == {"ipv4-addr", "domain-name", "observed-data"}
     assert len(by_type["ipv4-addr"]) == 1
     assert len(by_type["domain-name"]) == 1
     most_observed, least_observed = by_type["observed-data"]
@@ -45,22 +46,9 @@ def test_build_telemetry_objects_maps_sightings_and_observed_data(hunt_event):
         assert observed["x_opencti_hunt_run_id"] == request.hunt_run.id
         assert observed["first_observed"] == FIRST
         assert observed["last_observed"] == LAST
-    sightings = by_type["sighting"]
-    assert {s["sighting_of_ref"] for s in sightings} == {
-        request.hunt.techniques[0].standard_id,
-        request.hunt.indicators[0].standard_id,
-    }
-    for sighting in sightings:
-        assert sighting["where_sighted_refs"] == [request.security_platform.standard_id]
-        assert sighting["count"] == 7
-        assert sighting["first_seen"] == FIRST
-        assert sighting["last_seen"] == LAST
-        assert "run-1" in sighting["description"]
-        assert sighting["x_opencti_hunt_run_id"] == request.hunt_run.id
-        assert sighting["created_by_ref"] == request.hunt.created_by_ref
-        assert sighting["object_marking_refs"] == request.hunt.object_marking_refs
-    assert isinstance(objects[-1], Sighting)
-    assert any(isinstance(obj, ObservedData) for obj in objects)
+        assert observed["created_by_ref"] == request.hunt.created_by_ref
+        assert observed["object_marking_refs"] == request.hunt.object_marking_refs
+    assert isinstance(objects[-1], ObservedData)
 
 
 def test_a_retry_upserts_the_knowledge_of_its_run(hunt_event):
@@ -89,14 +77,13 @@ def test_a_retry_upserts_the_knowledge_of_its_run(hunt_event):
         ],
     )
 
-    # When/Then both attempts produce the same observed-data and sightings:
-    # the retry upserts them instead of adding new ones
+    # When/Then both attempts produce the same observed-data: the retry upserts
+    # them instead of adding new ones
     def ids(objects, stix_type):
         return {obj.id for obj in objects if obj.to_stix2_object()["type"] == stix_type}
 
     assert len(ids(first, "observed-data")) == 2
     assert ids(first, "observed-data") == ids(second, "observed-data")
-    assert ids(first, "sighting") == ids(second, "sighting")
 
 
 def test_build_telemetry_objects_is_deterministic_per_run(hunt_event):
@@ -132,7 +119,7 @@ def test_build_telemetry_objects_without_hits_or_platform(hunt_event):
         )
     )
 
-    # When/Then no knowledge is produced without hits, and no sighting without platform
+    # When/Then no knowledge is produced without hits
     assert build_telemetry_objects(request, 0, FIRST, LAST, []) == []
     objects = build_telemetry_objects(
         anonymous, 2, FIRST, LAST, [ObservableValue("IPv4-Addr", "8.8.8.8")]
@@ -143,10 +130,10 @@ def test_build_telemetry_objects_without_hits_or_platform(hunt_event):
     assert objects[1].markings is None
 
 
-def test_build_telemetry_objects_without_observables_only_sights(hunt_event):
+def test_build_telemetry_objects_without_observables_sends_nothing(hunt_event):
     # Given a run with hits but no observable
     request = HuntRequest.model_validate(hunt_event())
 
-    # When/Then only sightings are produced
-    objects = build_telemetry_objects(request, 3, FIRST, LAST, [])
-    assert [type(o).__name__ for o in objects] == ["Sighting", "Sighting"]
+    # When/Then nothing is sent: the run reports its hits, OpenCTI sights the
+    # techniques and indicators of the hunt itself
+    assert build_telemetry_objects(request, 3, FIRST, LAST, []) == []

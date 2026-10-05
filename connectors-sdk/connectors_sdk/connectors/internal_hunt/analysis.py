@@ -12,7 +12,7 @@ import json
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import regex
@@ -448,6 +448,87 @@ def build_hit_evidence(
         _hit_evidence(event, matched, limits.evidence_max_value_length, hit_fields)
         for event, matched in ordered[: limits.evidence_max_items]
     ]
+
+
+HIT_KEY_VERSION = "v1"
+"""Version of the hit key rule, the first item of the hashed array."""
+
+
+def hit_key(hit: HuntHitEvidence) -> str:
+    """Return the stable key of a hit, the one OpenCTI recomputes for the hits it samples.
+
+    The key is the SHA-256 hex digest of a compact JSON array computed over the
+    evidence of the hit as it is reported (values exactly as sent, an empty
+    string counting as absent):
+
+    - ``["v1", "detection", <detection>]`` when the platform groups the event
+      into a detection (the events of one detection are one hit);
+    - else ``["v1", "event", <event id>]``;
+    - else ``["v1", "fields", <timestamp to the second, UTC, "YYYY-MM-DDTHH:MM:SSZ"
+      or "">, <host or "">, <user or "">, <process or "">, [[<field>, <value
+      hash, lower case>], ...] sorted]``.
+
+    The security platform is not part of the key: OpenCTI keeps the known hits
+    of each hunt per security platform.
+
+    Args:
+        hit: Evidence of the hit, as built by ``build_hit_evidence``.
+
+    Returns:
+        The key, 64 hexadecimal characters.
+    """
+    parts: list[Any]
+    if hit.detection:
+        parts = [HIT_KEY_VERSION, "detection", hit.detection]
+    elif hit.event_id:
+        parts = [HIT_KEY_VERSION, "event", hit.event_id]
+    else:
+        timestamp = (
+            hit.timestamp.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if hit.timestamp
+            else ""
+        )
+        matched = sorted(
+            [field.field, field.value_hash.lower()] for field in hit.matched
+        )
+        parts = [
+            HIT_KEY_VERSION,
+            "fields",
+            timestamp,
+            hit.host or "",
+            hit.user or "",
+            hit.process or "",
+            matched,
+        ]
+    canonical = json.dumps(parts, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8", "surrogatepass")).hexdigest()
+
+
+def build_hit_keys(
+    hits: Iterable[tuple[HuntEvent, Sequence[str]]],
+    limits: HuntLimits,
+    hit_fields: HitFields = DEFAULT_HIT_FIELDS,
+) -> list[str]:
+    """Return the distinct keys of every hit read, sampled or not, in the order first met.
+
+    The evidence of each hit is built as for the sample (same value lengths), so
+    the key of a sampled hit is the one OpenCTI recomputes from the sample.
+
+    Args:
+        hits: Each result event with the fields the hunt matched in it.
+        limits: Run limits (preview length).
+        hit_fields: Fields read for the event id, host, user and process.
+
+    Returns:
+        The distinct hit keys (events of one detection share one key).
+    """
+    keys = (
+        hit_key(
+            _hit_evidence(event, matched, limits.evidence_max_value_length, hit_fields)
+        )
+        for event, matched in hits
+    )
+    return list(dict.fromkeys(keys))
 
 
 def _hit_evidence(

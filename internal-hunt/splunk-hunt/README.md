@@ -73,8 +73,8 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
    [pySigma](https://github.com/SigmaHQ/pySigma) and the
    [Splunk backend](https://github.com/SigmaHQ/pySigma-backend-splunk);
 2. runs it as a Splunk search job over the run time window, within the run timeout and result limit;
-3. sends the resulting knowledge to OpenCTI: a sighting of every technique and indicator of the hunt on the Splunk
-   Security Platform identity, and observed-data referencing the IOC observables found in the results;
+3. sends the resulting knowledge to OpenCTI: observed-data referencing the IOC observables found in the results, and the key of every hit (OpenCTI keeps one sighting of every technique and indicator of the hunt on the Splunk
+   Security Platform, updated at each run);
 4. reports the run (hit count, distinct hosts/users/peers, translated query, redacted evidence sample).
 
 Indicator hunts (a list of IP addresses, domains, URLs or hashes, no query language) are looked up value by value, see
@@ -189,11 +189,12 @@ The connector executes `spl`.
 2. The search job runs over the run window (`earliest_time` / `latest_time` in UTC), is polled every
    `SPLUNK_HUNT_POLL_INTERVAL` seconds until done, then its results are read page by page and the job is deleted.
 3. Events matching a benign pattern of the hunt are suppressed.
-4. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
-   Splunk Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event) and one observed-data
+4. With hits, the connector sends one observed-data
    per public IP address, domain, URL, file hash or email address found, with the number of result events holding it, restricted to the observable types the hunt expects. Objects inherit the markings and author
-   of the hunt and have deterministic identifiers; those of the sightings and observed-data derive from the hunt run
-   too, so a retry of a run updates its own objects and two runs never share one.
+   of the hunt and have deterministic identifiers; those of the observed-data derive from the hunt run
+   too, so a retry of a run updates its own objects and two runs never share one. The run reports the key of every hit it read: OpenCTI counts the hits it never saw for the hunt and the platform
+   as new, and keeps one sighting per technique and indicator of the hunt on the Security Platform, updated in
+   place at each run (`count` = distinct hits, `first_seen` / `last_seen` = first and latest hit).
 5. The run is reported with the hit count (the Splunk `resultCount`), the distinct hosts, users and network peers, the
    SPL executed and an evidence sample. `_raw` and Splunk bookkeeping fields (`_time`, `_cd`, `punct`, `date_*`...)
    are never sampled; host names, user names and command lines only appear hashed and truncated in the evidence.
@@ -213,8 +214,10 @@ text. The connector registers as supporting indicator lookups and, for each run:
    Each event is credited to every value its raw text holds as a whole token (`198.51.100.7` never matches
    `198.51.100.70`, `evil.com` matches `cdn.evil.com` but not `evil.com.au`), so the counts are exact;
 3. reports, for every value, whether it was seen, its hits, its first and last event and at most ten hosts;
-4. sends one sighting per seen value on the Splunk Security Platform, for each indicator or observable the value comes
-   from (a pasted value is created as an observable and sighted), with the hits as `count`.
+4. sends nothing else: OpenCTI keeps one sighting per hunt, indicator or observable the value comes from, and Security
+   Platform, updated in place at each run (a pasted value is created as an observable so that OpenCTI can sight it).
+   The lookups return counts, not single events, so OpenCTI cannot tell the hits of two runs apart and counts every
+   hit of a run as new; scheduled runs only search since the previous run, so the counts barely overlap.
 
 Preview the query in OpenCTI shows the searches of every batch without running them.
 

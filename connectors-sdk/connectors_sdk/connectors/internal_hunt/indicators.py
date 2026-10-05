@@ -24,7 +24,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from connectors_sdk.connectors.internal_hunt.analysis import (
+    DEFAULT_HIT_FIELDS,
     HOST_FIELDS,
+    HitFields,
+    build_hit_keys,
     sha256_hex,
     value_strings,
 )
@@ -45,43 +48,8 @@ from connectors_sdk.connectors.internal_hunt.stix_mapping import (
     hunt_markings,
 )
 from connectors_sdk.connectors.internal_hunt.timing import parse_timestamp
-from connectors_sdk.models import BaseIdentifiedEntity, Reference, Sighting
-from connectors_sdk.models._hunt_run import scope_to_hunt_run
+from connectors_sdk.models import BaseIdentifiedEntity
 from connectors_sdk.models.enums import HashAlgorithm
-from pycti import StixSightingRelationship as PyctiStixSightingRelationship
-from stix2.v21 import Sighting as Stix2Sighting
-
-OBSERVABLE_SIGHTING_PLACEHOLDER = "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
-"""STIX requires an SDO as ``sighting_of_ref``: the sighting of an observable carries
-this placeholder and the observable in ``x_opencti_sighting_of_ref``, which OpenCTI reads."""
-
-
-class ObservableSighting(Sighting):
-    """Sighting of an observable, in the form OpenCTI imports (``x_opencti_sighting_of_ref``)."""
-
-    def to_stix2_object(self) -> Stix2Sighting:
-        """Make the STIX sighting, its identifier derived from the observable and scoped to the hunt run."""
-        where_sighted_ids = [ref.id for ref in self.where_sighted]
-        standard_id = PyctiStixSightingRelationship.generate_id(
-            sighting_of_ref=self.sighting_of.id,
-            where_sighted_refs=where_sighted_ids,
-            first_seen=None if self.hunt_run_id else self.first_seen,
-            last_seen=None if self.hunt_run_id else self.last_seen,
-        )
-        return Stix2Sighting(
-            id=scope_to_hunt_run(standard_id, self.hunt_run_id),
-            sighting_of_ref=OBSERVABLE_SIGHTING_PLACEHOLDER,
-            x_opencti_sighting_of_ref=self.sighting_of.id,
-            where_sighted_refs=where_sighted_ids,
-            first_seen=self.first_seen,
-            last_seen=self.last_seen,
-            count=self.count,
-            description=self.description,
-            x_opencti_hunt_run_id=self.hunt_run_id,
-            **self._common_stix2_properties(),
-            allow_custom=True,
-        )
-
 
 HOSTS_MAX = 10
 """Hosts kept per value (OpenCTI keeps the same number)."""
@@ -277,6 +245,36 @@ def value_hits(
     return hits
 
 
+def value_hit_keys(
+    batch: IocBatch,
+    hits: Sequence[tuple[HuntEvent, Sequence[str]]],
+    limits: HuntLimits,
+    hit_fields: HitFields = DEFAULT_HIT_FIELDS,
+) -> dict[str, list[str]]:
+    """Return the keys of the hits holding each value of a batch, by value key.
+
+    Args:
+        batch: The values looked up.
+        hits: The events holding a value, with the fields holding one (``value_hits``).
+        limits: Run limits (preview length of the hit evidence the keys derive from).
+        hit_fields: Fields read for the event id, host, user and process.
+
+    Returns:
+        The distinct hit keys of every value found, by value key.
+    """
+    patterns = {ioc.key: value_pattern(ioc) for ioc in batch.iocs}
+    keys: dict[str, dict[str, None]] = {}
+    for event, fields in hits:
+        texts = [
+            text for name in fields for text in value_strings(event.fields.get(name))
+        ]
+        [key] = build_hit_keys([(event, fields)], limits, hit_fields)
+        for ioc_key, pattern in patterns.items():
+            if any(pattern.search(text) for text in texts):
+                keys.setdefault(ioc_key, {})[key] = None
+    return {ioc_key: list(found) for ioc_key, found in keys.items()}
+
+
 def aggregated_observations(
     batch: IocBatch, events: Sequence[HuntEvent]
 ) -> dict[str, IocObservation]:
@@ -316,6 +314,7 @@ def build_ioc_results(
     iocs: Sequence[HuntIoc],
     observations: Mapping[str, IocObservation],
     unsearched: Mapping[str, str],
+    hit_keys: Mapping[str, Sequence[str]] | None = None,
 ) -> list[HuntIocResult]:
     """Return the result of every value of a run, in the order of the hunt.
 
@@ -323,6 +322,8 @@ def build_ioc_results(
         iocs: Values of the hunt.
         observations: What was found, by value key.
         unsearched: Why a value was not searched, by value key.
+        hit_keys: Keys of the hits holding each value, by value key (``value_hit_keys``);
+            None when the lookups return counts instead of events.
 
     Returns:
         One result per value.
@@ -346,6 +347,9 @@ def build_ioc_results(
                 first_seen=observation.first_seen,
                 last_seen=observation.last_seen,
                 hosts=observation.hosts[:HOSTS_MAX],
+                hit_keys=(
+                    list(hit_keys.get(ioc.key, ())) if hit_keys is not None else None
+                ),
             )
         )
     return results
@@ -380,22 +384,21 @@ def _hash_algorithm(value: str | None) -> HashAlgorithm | None:
 def build_indicator_objects(
     request: HuntRequest, results: Sequence[HuntIocResult]
 ) -> list[BaseIdentifiedEntity]:
-    """Build the knowledge of an indicator hunt run: one sighting per seen value and source.
+    """Build the knowledge of an indicator hunt run: the observable of each seen value pasted in the hunt.
 
-    Each seen value is sighted on the Security Platform of the run for each
-    indicator or observable it comes from, counting its hits between its first
-    and last event; a pasted value is created as an observable and sighted.
-    Identifiers carry the hunt run, so that a retry upserts its own objects.
+    A value coming from indicators or observables already has them in OpenCTI;
+    a pasted value is created as an observable, so that OpenCTI can sight it.
+    OpenCTI keeps one sighting per hunt, indicator or observable, and Security
+    Platform, updated in place from the results and hit keys of each run.
 
     Args:
         request: The hunt run request.
         results: The result of every value.
 
     Returns:
-        The connectors-sdk models to send to OpenCTI (empty without a seen value or a platform).
+        The connectors-sdk models to send to OpenCTI (empty without a seen pasted value or a platform).
     """
-    platform = request.security_platform
-    if platform is None:
+    if request.security_platform is None:
         return []
     author = hunt_author(request)
     markings = hunt_markings(request)
@@ -403,13 +406,10 @@ def build_indicator_objects(
     objects: list[BaseIdentifiedEntity] = []
     for result in results:
         ioc = by_key.get(result.key)
-        if not result.seen or ioc is None:
+        if not result.seen or ioc is None or ioc.sources:
             continue
-        first_seen = result.first_seen or request.time_window.start
-        last_seen = result.last_seen or request.time_window.end
-        sighted_ids = [source.standard_id for source in ioc.sources]
-        if not sighted_ids:
-            observable = to_observable_model(
+        objects.append(
+            to_observable_model(
                 ObservableValue(
                     ioc.observable_type,
                     ioc.value,
@@ -419,28 +419,5 @@ def build_indicator_objects(
                 author,
                 markings,
             )
-            objects.append(observable)
-            sighted_ids = [observable.id]
-        description = (
-            f"Hunt '{request.hunt.name}' saw {ioc.value} {result.hits_count} time(s) on "
-            f"{platform.name} (hunt run {request.hunt_run.id})."
         )
-        for sighted_id in dict.fromkeys(sighted_ids):
-            # The values come from indicators and observables only
-            sighting_type = (
-                Sighting if sighted_id.startswith("indicator--") else ObservableSighting
-            )
-            objects.append(
-                sighting_type(
-                    sighting_of=Reference(id=sighted_id),
-                    where_sighted=[Reference(id=platform.standard_id)],
-                    first_seen=first_seen,
-                    last_seen=max(first_seen, last_seen),
-                    count=result.hits_count,
-                    description=description,
-                    hunt_run_id=request.hunt_run.id,
-                    author=author,
-                    markings=markings or None,
-                )
-            )
     return objects

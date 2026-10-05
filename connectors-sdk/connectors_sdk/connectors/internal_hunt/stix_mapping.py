@@ -1,18 +1,20 @@
 """STIX mapping of telemetry hunt results.
 
-For a run with hits, the bundle holds:
+For a run with hits, the bundle holds the IOC observables extracted from the
+results, restricted to the observable types the hunt expects, and one
+``observed-data`` per observable, with the number of result events holding it.
 
-- one ``sighting`` per technique and per indicator of the hunt, sighted on the
-  Security Platform identity, counting the hits between the first and the last
-  matching event;
-- the IOC observables extracted from the results, restricted to the observable
-  types the hunt expects, and one ``observed-data`` per observable, with the
-  number of result events holding it.
+No sighting is sent: OpenCTI keeps one sighting per hunt, sighted technique or
+indicator and Security Platform, and updates it in place when it finalizes a
+run, counting the distinct hits it knows from the ``hit_keys`` of the runs. A
+sighting per run would have its identifier derived from the event bounds of the
+run, so every run would create a new one and overlapping windows would count
+the same events again.
 
 Every object inherits the markings and the author of the hunt. Identifiers are
-deterministic: observables keep their standard identifiers, while sightings and
-observed-data carry the hunt run and have identifiers scoped to it, so a retry
-of a run upserts its own objects and two runs never share one.
+deterministic: observables keep their standard identifiers, while observed-data
+carry the hunt run and have identifiers scoped to it, so a retry of a run
+upserts its own objects and two runs never share one.
 """
 
 from __future__ import annotations
@@ -29,7 +31,6 @@ from connectors_sdk.models import (
     BaseIdentifiedEntity,
     ObservedData,
     Reference,
-    Sighting,
     TLPMarking,
 )
 
@@ -43,15 +44,6 @@ def hunt_author(request: HuntRequest) -> Reference | None:
 def hunt_markings(request: HuntRequest) -> list[TLPMarking | Reference]:
     """Return the markings of the hunt as references."""
     return [Reference(id=marking) for marking in request.hunt.object_marking_refs]
-
-
-def sighting_description(request: HuntRequest, hits_count: int) -> str:
-    """Describe a sighting produced by a hunt run."""
-    platform = request.security_platform.name if request.security_platform else "-"
-    return (
-        f"Hunt '{request.hunt.name}' matched {hits_count} event(s) on {platform} "
-        f"(hunt run {request.hunt_run.id})."
-    )
 
 
 def build_observed_data(
@@ -100,7 +92,10 @@ def build_telemetry_objects(
     last_seen: datetime,
     observables: Sequence[ObservableValue],
 ) -> list[BaseIdentifiedEntity]:
-    """Build the knowledge produced by a telemetry hunt run.
+    """Build the knowledge produced by a telemetry hunt run: its observables and their observed-data.
+
+    The sightings of the techniques and indicators of the hunt are kept by
+    OpenCTI, one per Security Platform, from the ``hit_keys`` of the runs.
 
     Args:
         request: The hunt run request.
@@ -116,14 +111,12 @@ def build_telemetry_objects(
         return []
     author = hunt_author(request)
     markings = hunt_markings(request)
-    objects: list[BaseIdentifiedEntity] = []
-
     observable_models: list[BaseIdentifiedEntity] = [
         to_observable_model(observable, author, markings) for observable in observables
     ]
-    objects.extend(observable_models)
-    objects.extend(
-        build_observed_data(
+    return [
+        *observable_models,
+        *build_observed_data(
             request,
             [
                 (model, observable.count)
@@ -133,26 +126,5 @@ def build_telemetry_objects(
             ],
             first_seen,
             last_seen,
-        )
-    )
-
-    if request.security_platform is not None:
-        platform_id = request.security_platform.standard_id
-        description = sighting_description(request, hits_count)
-        sighted_ids = [technique.standard_id for technique in request.hunt.techniques]
-        sighted_ids += [indicator.standard_id for indicator in request.hunt.indicators]
-        for sighted_id in dict.fromkeys(sighted_ids):
-            objects.append(
-                Sighting(
-                    sighting_of=Reference(id=sighted_id),
-                    where_sighted=[Reference(id=platform_id)],
-                    first_seen=first_seen,
-                    last_seen=last_seen,
-                    count=hits_count,
-                    description=description,
-                    hunt_run_id=request.hunt_run.id,
-                    author=author,
-                    markings=markings or None,
-                )
-            )
-    return objects
+        ),
+    ]

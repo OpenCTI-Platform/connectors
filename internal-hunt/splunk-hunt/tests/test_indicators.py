@@ -115,11 +115,11 @@ def test_runs_one_aggregated_lookup_per_type_and_reports_each_value(
     assert by_key["k-ip-2"]["seen"] is False
     assert kwargs["hits_count"] == 14
     assert kwargs["query_language"] == "spl"
-    # The address is sighted on the Security Platform for its indicator
-    sent = helper.stix2_create_bundle.call_args.args[0]
-    sighting = next(item for item in sent if item["type"] == "sighting")
-    assert sighting["sighting_of_ref"] == INDICATOR["standard_id"]
-    assert sighting["count"] == 14
+    # Nothing is sent: OpenCTI sights the indicator of the address on the Security
+    # Platform itself; aggregated counts carry no hit key, the hits count as new
+    helper.send_stix2_bundle.assert_not_called()
+    assert "hit_keys" not in kwargs
+    assert by_key["k-ip"]["hit_keys"] is None
     assert "1 of 3 value(s) seen" in message
 
 

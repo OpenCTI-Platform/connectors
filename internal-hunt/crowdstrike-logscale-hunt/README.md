@@ -71,9 +71,9 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
    with [pySigma](https://github.com/SigmaHQ/pySigma) and the
    [CrowdStrike backend](https://github.com/SigmaHQ/pySigma-backend-crowdstrike);
 2. runs it as a LogScale query job over the run time window, within the run timeout and result limit;
-3. sends the resulting knowledge to OpenCTI: a sighting of every technique and indicator of the hunt on the
-   CrowdStrike Falcon Security Platform identity, and observed-data referencing the IOC observables found in the
-   results;
+3. sends the resulting knowledge to OpenCTI: observed-data referencing the IOC observables found in the results, and
+   the key of every hit (OpenCTI keeps one sighting of every technique and indicator of the hunt on the CrowdStrike
+   Falcon Security Platform, updated at each run);
 4. reports the run (hit count, distinct hosts/users/peers, translated query, redacted evidence sample).
 
 Raw events never leave CrowdStrike: OpenCTI only receives counts and evidence values that are SHA-256 hashed and
@@ -180,13 +180,13 @@ Investigate).
 2. Query jobs are polled at the `pollAfter` pace LogScale returns (or every `CROWDSTRIKE_LOGSCALE_HUNT_POLL_INTERVAL`
    seconds) until done, then deleted; they are also deleted when the run times out. LogScale warnings are logged, and a run with warnings is reported as partial results (OpenCTI then reads its hit count as a lower bound and never concludes benign from zero hits).
 3. Events matching a benign pattern of the hunt are suppressed.
-4. With hits, the connector sends one sighting per technique and indicator of the hunt (`where_sighted_refs` = the
-   CrowdStrike Falcon Security Platform, `count` = hits, `first_seen` / `last_seen` = first and last event, read from
-   `@timestamp` or `timestamp`) and one observed-data per public IP address, domain,
+4. With hits, the connector sends one observed-data per public IP address, domain,
    URL, file hash or email address found, with the number of result events holding it, restricted to the observable types the
    hunt expects. Objects inherit the markings and author of the hunt and have deterministic identifiers; those of the
-   sightings and observed-data derive from the hunt run too, so a retry of a run updates its own objects and two runs
-   never share one.
+   observed-data derive from the hunt run too, so a retry of a run updates its own objects and two runs
+   never share one. The run reports the key of every hit it read: OpenCTI counts the hits it never saw for the hunt and the platform
+   as new, and keeps one sighting per technique and indicator of the hunt on the Security Platform, updated in
+   place at each run (`count` = distinct hits, `first_seen` / `last_seen` = first and latest hit).
 5. The run is reported with the hit count, the distinct hosts (`ComputerName`), users (`UserName`) and network peers,
    the query executed and an evidence sample. `@rawstring`, sensor and customer identifiers (`aid`, `cid`) and
    LogScale bookkeeping fields (`@id`, `#repo`, `@ingesttimestamp`...) are never sampled; host names, user names and

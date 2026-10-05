@@ -207,12 +207,13 @@ def test_process_message_reports_hits_and_sends_knowledge(
     # When the hunt run is processed
     message = connector_factory().process_message(hunt_event)
 
-    # Then the sighting and the observed IP are sent, and the run reported
+    # Then the observed IP is sent, and the run reported with the key of its hit
     sent = helper.stix2_create_bundle.call_args.args[0]
-    assert {obj["type"] for obj in sent} == {"ipv4-addr", "observed-data", "sighting"}
+    assert {obj["type"] for obj in sent} == {"ipv4-addr", "observed-data"}
     args, kwargs = helper.report_hunt_run.call_args
     assert args == ("run-1", "completed")
     assert kwargs["hits_count"] == 1
+    assert len(kwargs["hit_keys"]) == 1
     assert kwargs["query_language"] == "spl"
     assert kwargs["translated_query"].startswith("Image=")
     assert all(item["field"] != "_raw" for item in kwargs["evidence_sample"])
@@ -331,21 +332,16 @@ def test_process_message_redacts_evidence_and_maps_stix(
     assert evidence["CommandLine"]["count"] == 2
     assert "_raw" not in evidence
     assert kwargs["distinct_entities"] == 3
-    # And the bundle holds the sighting on the platform and the public IP only
+    # And the bundle holds the public IP only, without sighting: OpenCTI keeps one
+    # per technique and platform, from the hit keys of the runs
     sent = {obj["type"]: obj for obj in helper.stix2_create_bundle.call_args.args[0]}
-    sighting = sent["sighting"]
-    assert sighting["sighting_of_ref"] == (
-        "attack-pattern--970a3432-3237-47ad-bcca-7d8cbb217736"
-    )
-    assert sighting["where_sighted_refs"] == [
-        "identity--5b1a4c88-5ac7-4c7f-9d8c-9a5f2e8d7c01"
-    ]
-    assert sighting["count"] == 2
-    assert sighting["object_marking_refs"] == [
-        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
-    ]
+    assert set(sent) == {"ipv4-addr", "observed-data"}
+    assert len(kwargs["hit_keys"]) == 2
     assert sent["ipv4-addr"]["value"] == "8.8.8.8"
     assert sent["observed-data"]["number_observed"] == 2
+    assert sent["observed-data"]["object_marking_refs"] == [
+        "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+    ]
     assert sorted(kwargs["result_ids"]) == sorted(
         obj["id"] for obj in helper.stix2_create_bundle.call_args.args[0]
     )
