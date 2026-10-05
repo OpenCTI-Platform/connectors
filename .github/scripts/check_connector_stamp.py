@@ -20,20 +20,30 @@ looks. The model covers exactly this:
 * Build context: the files of the connector directory minus the
   ``.dockerignore`` rules (or a Dockerfile-specific ``<Dockerfile>.dockerignore``;
   last match wins, ``!`` exceptions), plus the stamps the build step writes.
-* Instructions: FROM (stages), ARG / ENV, WORKDIR, COPY / ADD (``--from``,
-  ``--parents``, ``--exclude``, wildcards, file and directory destinations; an
-  ADD of a URL or of an archive brings no connector file), RUN, SHELL,
-  CMD / ENTRYPOINT (exec and shell forms).
-* RUN commands and entry scripts, read as POSIX shell: ``cd``, ``rm``,
-  ``unlink`` and ``mv`` (literal and wildcard operands, a wildcard never
-  matching a leading dot), ``find ... -delete`` / ``-exec rm``, ``sh -c``,
-  shell scripts of the image that are run or sourced, ``pip install <path>``.
-  Commands joined by ``&&`` are followed as if each succeeds. Any other
-  command is taken to leave the files and the working directory unchanged.
+* Instructions: FROM (stages), ARG / ENV, WORKDIR, COPY / ADD (``--from``
+  read from the root of the stage, ``--parents``, ``--exclude``, ``--chmod``
+  that removes a read permission drops the stamp, wildcards, file and
+  directory destinations; an ADD of a URL or of an archive brings no connector
+  file), RUN, SHELL, VOLUME (a stamp below a volume does not count: a mount
+  hides it), CMD / ENTRYPOINT (exec and shell forms).
+* RUN commands and entry scripts, read as POSIX shell (quoted and escaped
+  punctuation stays an argument): ``cd``, ``rm``, ``unlink``, ``mv`` and
+  ``ln`` (literal and wildcard operands, a wildcard never matching a leading
+  dot), ``find`` (``-delete``, ``-exec`` and its operands; a grouped expression
+  deletes everything below its roots), ``sh -c``, shell scripts of the image
+  that are run or sourced, ``pip install <path>``. An output redirection takes
+  its target out of the model. Any other command takes out of the model every
+  file it names - in its arguments, in a code string, in the script of the
+  image it runs - and everything below a directory it names, unless it is a
+  command that cannot rewrite or delete a file (``ls``, ``cat``, ``mkdir``,
+  ``chown``, a ``chmod`` that keeps the file readable, ...). Commands joined
+  by ``&&`` are followed as if each succeeds; a command that names no file is
+  taken to change none.
 * Packaged connectors: the installed package carries the stamp only when the
-  stamp reached the package directory before ``pip install`` and the
-  setuptools package data of that package (``pyproject.toml`` or
-  ``setup.cfg``, exclusions included) selects it.
+  stamp reached the package directory before ``pip install``, setuptools
+  discovery installs the package (``packages``, ``packages.find`` with its
+  ``where`` / ``include`` / ``exclude`` / ``namespaces``) and its package data
+  (``pyproject.toml`` or ``setup.cfg``, exclusions included) selects it.
 * Start command: the python interpreter with its script, its ``-m`` module
   (looked up in the working directory, ``PYTHONPATH`` and the installed
   packages) or ``-c``, started directly or by a shell script of the image.
@@ -42,9 +52,10 @@ Anything outside the model is reported as "not supported" with the construct
 that stopped the analysis, never assumed to be fine: heredocs, variables the
 build does not define, a directory change or the start of python inside a
 conditional or a loop of the entry script, an entry point that is not a file
-of the model, deletions whose operands are unknown, packaging the script does
-not read (``setup.py`` package data, ``MANIFEST.in`` exclusions, build backends
-other than setuptools).
+of the model, a command acting on a path it cannot resolve, packaging the
+script does not read (``setup.py``, ``package-dir``, ``MANIFEST.in``
+exclusions, automatic discovery of a namespace package, build backends other
+than setuptools).
 
 Usage:
     python3 .github/scripts/check_connector_stamp.py
@@ -76,19 +87,9 @@ CONNECTOR_TYPES = (
 )
 UBI9_DOCKERFILE = "Dockerfile_ubi9"
 UBI9_CONNECTORS = ".github/ubi9-connectors.json"
-# Files of a connector the result depends on, besides the Dockerfiles: the
-# workflow runs the check whenever one of them changes.
-WATCHED_FILES = (
-    ".dockerignore",
-    "*.dockerignore",
-    "*.sh",
-    ".build.env",
-    "pyproject.toml",
-    "setup.cfg",
-    "setup.py",
-    "MANIFEST.in",
-    "__main__.py",
-)
+# Directories whose files the result depends on: the workflow runs the check
+# whenever one of their files changes.
+WATCHED_DIRECTORIES = (*CONNECTOR_TYPES, "templates")
 # pycti reads the anchor directory and its first four parents.
 STAMP_PARENT_DEPTH = 4
 # Abstract location of the installed packages: the real path depends on the
@@ -157,6 +158,65 @@ OPERATORS = (
     ">",
 )
 SEPARATORS = frozenset({";", "&&", "||", "|", "&", ";;", "\n"})
+OUTPUT_REDIRECTIONS = frozenset({">", ">>", ">|", "&>", "&>>"})
+# Quoted or escaped shell punctuation is an argument, not an operator: it is
+# carried through shlex as a private-use character and restored afterwards.
+PUNCTUATION = "();<>|&"
+PROTECT = {char: chr(0xE000 + n) for n, char in enumerate(PUNCTUATION)}
+RESTORE = str.maketrans({v: k for k, v in PROTECT.items()})
+# Commands that cannot delete, truncate, move or rewrite a file they name: they
+# read it, create something new, or change its owner. Any other command the
+# model does not interpret takes every file it names out of the model.
+HARMLESS_COMMANDS = frozenset(
+    {
+        ":",
+        "[",
+        "[[",
+        "addgroup",
+        "adduser",
+        "basename",
+        "cat",
+        "chgrp",
+        "chown",
+        "command",
+        "date",
+        "df",
+        "dirname",
+        "du",
+        "echo",
+        "false",
+        "file",
+        "grep",
+        "groupadd",
+        "head",
+        "id",
+        "ls",
+        "mkdir",
+        "printenv",
+        "printf",
+        "pwd",
+        "readlink",
+        "realpath",
+        "set",
+        "sleep",
+        "stat",
+        "tail",
+        "test",
+        "touch",
+        "true",
+        "type",
+        "umask",
+        "uname",
+        "useradd",
+        "wait",
+        "wc",
+        "which",
+        "whoami",
+    }
+)
+# Python modules run with -m that only add files.
+HARMLESS_PYTHON_MODULES = frozenset({"compileall", "venv", "ensurepip"})
+PATH_IN_TEXT = re.compile(r"(?:~|\.{1,2})?/[^\s'\"`(),;:|&<>]*")
 PIP_OPTIONS_WITH_VALUE = frozenset(
     {
         "-r",
@@ -505,6 +565,7 @@ class Stage:
     shell: list = field(default_factory=lambda: list(DEFAULT_SHELL))
     entrypoint: tuple = None
     cmd: tuple = None
+    volumes: list = field(default_factory=list)
 
     def child(self):
         # ENV values are part of the image; ARG values end with their stage.
@@ -517,6 +578,7 @@ class Stage:
             shell=list(self.shell),
             entrypoint=self.entrypoint,
             cmd=self.cmd,
+            volumes=list(self.volumes),
         )
 
     def add_file(self, path, origin):
@@ -575,6 +637,8 @@ class PackagingConfig:
         self.packages = None
         self.include = []
         self.exclude = []
+        # None: automatic discovery, whose namespace handling is not modelled.
+        self.namespaces = None
         self.unsupported = None
         pyproject = texts.get("pyproject.toml")
         if pyproject is not None:
@@ -582,11 +646,9 @@ class PackagingConfig:
         setup_cfg = texts.get("setup.cfg")
         if setup_cfg is not None:
             self._read_setup_cfg(setup_cfg)
-        setup_py = texts.get("setup.py")
-        if setup_py is not None and re.search(
-            r"package_data|data_files|" + re.escape(STAMP), setup_py
-        ):
-            self.unsupported = self.unsupported or "package data declared in setup.py"
+        if texts.get("setup.py") is not None:
+            # setup() can override discovery, package data and directories.
+            self.unsupported = self.unsupported or "packaging declared in setup.py"
         manifest = texts.get("MANIFEST.in")
         if manifest is not None and re.search(
             r"^\s*(exclude|recursive-exclude|global-exclude|prune)\b", manifest, re.M
@@ -618,6 +680,7 @@ class PackagingConfig:
             ]
             self.include = list(find.get("include", []))
             self.exclude = list(find.get("exclude", []))
+            self.namespaces = bool(find.get("namespaces", True))
         if tool.get("package-dir") or tool.get("package_dir"):
             self.unsupported = self.unsupported or "package-dir of setuptools"
 
@@ -641,7 +704,8 @@ class PackagingConfig:
                 self.exclude_package_data.setdefault(package, []).extend(values(raw))
         if parser.has_option("options", "packages"):
             raw = parser.get("options", "packages").strip()
-            if raw.startswith("find:"):
+            if raw.startswith(("find:", "find_namespace:")):
+                self.namespaces = raw.startswith("find_namespace:")
                 if parser.has_option("options.packages.find", "where"):
                     self.package_roots = [
                         posixpath.normpath(root)
@@ -660,9 +724,17 @@ class PackagingConfig:
         if parser.has_option("options", "package_dir"):
             self.unsupported = self.unsupported or "package_dir of setuptools"
 
-    def installs(self, package):
+    def installs(self, package, has_init):
         if self.packages is not None:
             return package in self.packages
+        if not has_init:
+            # A directory without __init__.py is only a namespace package.
+            if self.namespaces is None:
+                raise Unsupported(
+                    f"automatic discovery of {package}, a directory without __init__.py"
+                )
+            if not self.namespaces:
+                return False
         if self.include and not any(
             fnmatch.fnmatchcase(package, p) for p in self.include
         ):
@@ -696,6 +768,36 @@ def package_data_matches(pattern, filename):
     if filename.startswith(".") and not pattern.startswith("."):
         return False
     return fnmatch.fnmatchcase(filename, pattern)
+
+
+CHMOD_OPTIONS = frozenset(
+    {
+        "-R",
+        "-v",
+        "-c",
+        "-f",
+        "--recursive",
+        "--verbose",
+        "--changes",
+        "--silent",
+        "--quiet",
+        "--preserve-root",
+        "--no-preserve-root",
+    }
+)
+
+
+def harmless_mode(args):
+    """A chmod that only adds permissions, or sets a mode everyone can read."""
+    modes = [a for a in args if a not in CHMOD_OPTIONS]
+    if not modes:
+        return True
+    mode = modes[0]
+    if re.fullmatch(r"[0-7]{3,4}", mode):
+        return all(int(digit) & 4 for digit in mode[-3:])
+    return all(
+        re.fullmatch(r"[ugoa]*\+[rwxXst]+", clause) for clause in mode.split(",")
+    )
 
 
 def interpreter_of(text):
@@ -800,8 +902,39 @@ class Shell:
         return lines
 
     @staticmethod
+    def _protect(line):
+        """The line with quoted or escaped punctuation as private-use characters."""
+        out = []
+        quote = None
+        i = 0
+        while i < len(line):
+            char = line[i]
+            if quote:
+                if char == quote:
+                    quote = None
+                    out.append(char)
+                elif quote == '"' and char == "\\" and i + 1 < len(line):
+                    out.append(char + PROTECT.get(line[i + 1], line[i + 1]))
+                    i += 1
+                else:
+                    out.append(PROTECT.get(char, char))
+            elif char in ("'", '"'):
+                quote = char
+                out.append(char)
+            elif char == "\\" and i + 1 < len(line):
+                following = line[i + 1]
+                out.append(
+                    PROTECT[following] if following in PROTECT else char + following
+                )
+                i += 1
+            else:
+                out.append(char)
+            i += 1
+        return "".join(out)
+
+    @staticmethod
     def _tokens(line):
-        lexer = shlex.shlex(line, posix=True, punctuation_chars=True)
+        lexer = shlex.shlex(Shell._protect(line), posix=True, punctuation_chars=True)
         lexer.whitespace_split = True
         try:
             tokens = list(lexer)
@@ -824,15 +957,29 @@ class Shell:
         return bool(self.stack) and self.stack[-1] == "case"
 
     def _statements(self, tokens):
+        """Split shell tokens into simple commands. Operators are recognised on
+        the raw tokens; quoted or escaped punctuation reaches the commands as
+        arguments."""
         words = []
+        writes = []
         before = None
         skip = False
         skip_name = False
+        redirect = None
         for token in tokens:
+            if redirect is not None and token not in SEPARATORS:
+                target = token.translate(RESTORE)
+                if redirect in OUTPUT_REDIRECTIONS or (
+                    redirect == ">&" and not target.isdigit() and target != "-"
+                ):
+                    writes.append(target)
+                redirect = None
+                continue
+            redirect = None
             if token in SEPARATORS:
-                if words and not skip:
-                    self._command(words, before, token)
-                words, skip = [], False
+                if (words or writes) and not skip:
+                    self._command(words, writes, before, token)
+                words, writes, skip = [], [], False
                 before = token if token != "\n" else None
                 if self.ended:
                     return
@@ -842,10 +989,18 @@ class Shell:
             if skip_name:
                 skip_name = False
                 continue
+            if token == "<<":
+                raise Unsupported("a here-document in a shell script")
+            if token in REDIRECTIONS:
+                if words and words[-1].isdigit():
+                    # 2>file: the file descriptor is not an argument.
+                    words.pop()
+                redirect = token
+                continue
             if token in ("(", ")") and not self._in_case():
-                if words:
-                    self._command(words, before, token)
-                    words = []
+                if words or writes:
+                    self._command(words, writes, before, token)
+                    words, writes = [], []
                 if token == "(":
                     self.stack.append("(")
                 elif self.stack:
@@ -870,31 +1025,15 @@ class Shell:
                 if token == "function":
                     skip_name = True
                     continue
-            words.append(token)
-        if words and not skip:
-            self._command(words, before, None)
+            words.append(token.translate(RESTORE))
+        if (words or writes) and not skip:
+            self._command(words, writes, before, None)
 
-    @staticmethod
-    def _strip_redirections(words):
-        kept = []
-        i = 0
-        while i < len(words):
-            word = words[i]
-            following = words[i + 1] if i + 1 < len(words) else None
-            if word in REDIRECTIONS:
-                i += 2
-                continue
-            if word.isdigit() and following in REDIRECTIONS:
-                i += 1
-                continue
-            if word == "<<":
-                raise Unsupported("a here-document in a shell script")
-            kept.append(word)
-            i += 1
-        return kept
-
-    def _command(self, words, before, after):
-        words = self._strip_redirections(words)
+    def _command(self, words, writes, before, after):
+        for target in writes:
+            # Truncated or rewritten: the file no longer holds what the model knows.
+            path = image_path(self._tilde(target), self.cwd, "redirection target")
+            remove_files(self.files, path)
         assigned = {}
         while words and ASSIGNMENT.match(words[0]):
             key, _, value = words[0].partition("=")
@@ -960,6 +1099,8 @@ class Shell:
             self._delete(self._operands(args))
         elif name == "mv":
             self._move(args)
+        elif name == "ln":
+            self._link(args)
         elif name == "find":
             self._find(args)
         elif name == "xargs":
@@ -974,16 +1115,72 @@ class Shell:
         elif PYTHON.match(name):
             if self.start:
                 self._launch(words, env, conditional)
+            self._named_files(words, env)
         elif name in ("exit", "return"):
             if not conditional and before != "&&":
                 self.ended = True
-        else:
-            self._executed_script(words, env, conditional)
+        elif not self._executed_script(words, env, conditional):
+            self._named_files(words, env)
+
+    def _named_files(self, words, env):
+        """A command the model does not interpret may rewrite or delete any file
+        it names - in its arguments, in the code string or the script it runs:
+        each of them, and everything below a named directory, leaves the model."""
+        name = posixpath.basename(words[0])
+        args = words[1:]
+        if name in HARMLESS_COMMANDS or (name == "chmod" and harmless_mode(args)):
+            return
+        if PYTHON.match(name) and args[:1] == ["-m"] and args[1:2]:
+            if args[1] in HARMLESS_PYTHON_MODULES:
+                return
+        texts = list(args)
+        sources = [words[0]]
+        if PYTHON.match(name):
+            sources += [a for a in args if not a.startswith("-")][:1]
+        for source in sources:
+            path = self.model.find_executable(source, self.cwd, env, self.files)
+            if path is None and "/" not in source and self.cwd and PYTHON.match(name):
+                path = posixpath.join(self.cwd, source)
+            text = self.model.context.read(self.files.get(path)) if path else None
+            if text:
+                texts.append(text)
+        candidates = set()
+        for text in texts:
+            candidates.add(text)
+            candidates.update(part for part in text.split("=")[1:])
+            candidates.update(PATH_IN_TEXT.findall(text))
+        for candidate in candidates:
+            self._forget(candidate.strip())
+
+    def _forget(self, candidate):
+        if not candidate or candidate.startswith("-") or "\n" in candidate:
+            return
+        if "$" in candidate or "`" in candidate:
+            if "/" in candidate or STAMP in candidate:
+                raise Unsupported(
+                    f"a command acts on '{candidate}', which uses a variable or a command the build does not define"
+                )
+            return
+        if not candidate.startswith(("/", "~", "./", "../")) and "/" not in candidate:
+            # A bare word is a file only when the model has it in the working directory.
+            if self.cwd is None:
+                if STAMP in candidate:
+                    raise Unsupported(f"'{candidate}' in an unknown working directory")
+                return
+            path = posixpath.join(self.cwd, candidate)
+            if path not in self.files and not any(
+                f.startswith(path + "/") for f in self.files
+            ):
+                return
+        path = image_path(self._tilde(candidate), self.cwd, "named path")
+        if path != "/":
+            remove_files(self.files, path)
 
     def _executed_script(self, words, env, conditional):
-        """A script of the image run as a command: a shell script runs (its
-        deletions count, and in a start script its python processes), a python
-        script is a python process of the start script."""
+        """A shell script of the image run as a command: it runs here (its
+        deletions count, and in a start script its python processes). A python
+        script of the image is a python process of a start script. True when the
+        command was one of these."""
         path = self.model.find_executable(words[0], self.cwd, env, self.files)
         text = self.model.context.read(self.files.get(path)) if path else None
         program = interpreter_of(text)
@@ -992,8 +1189,13 @@ class Shell:
                 self.files, self.cwd, dict(env), self.start, conditional
             )
             nested.run(text)
-        elif PYTHON.match(program) and self.start:
-            self._launch([program, path, *words[1:]], env, conditional)
+            return True
+        if PYTHON.match(program):
+            if self.start:
+                self._launch([program, path, *words[1:]], env, conditional)
+            self._named_files([program, path, *words[1:]], env)
+            return True
+        return False
 
     def _source(self, name, args):
         """``. file`` runs the file in this shell: its ``cd`` and deletions count."""
@@ -1075,6 +1277,19 @@ class Shell:
         # The moved files leave their place; where they land is not modelled.
         self._delete(sources)
 
+    def _link(self, args):
+        """``ln``: the link replaces whatever the model had at its path."""
+        operands = self._operands(args)
+        if not operands:
+            return
+        link = image_path(self._tilde(operands[-1]), self.cwd, "link path")
+        targets = operands[:-1] or [operands[-1]]
+        remove_files(self.files, link)
+        for target in targets:
+            # A link created inside an existing directory takes the target's name.
+            name = posixpath.basename(target.rstrip("/"))
+            remove_files(self.files, posixpath.join(link, name))
+
     def _find(self, args):
         roots = []
         while args and not args[0].startswith("-") and args[0] not in ("(", "!", ")"):
@@ -1083,12 +1298,34 @@ class Shell:
         roots = roots or ["."]
         deletes = "-delete" in args
         for index, arg in enumerate(args):
-            if arg in ("-exec", "-execdir", "-ok", "-okdir") and index + 1 < len(args):
-                program = posixpath.basename(args[index + 1])
-                if program in ("rm", "unlink", "mv"):
-                    deletes = True
-                elif program in SHELLS or program == "xargs":
-                    raise Unsupported("files deleted by a shell started from find")
+            if arg.startswith(("-fprint", "-fls")) and index + 1 < len(args):
+                # find writes this file.
+                self._forget(args[index + 1])
+            if arg not in ("-exec", "-execdir", "-ok", "-okdir"):
+                continue
+            command = []
+            for word in args[index + 1 :]:
+                if word in (";", "+"):
+                    break
+                command.append(word)
+            if not command:
+                continue
+            program = posixpath.basename(command[0])
+            if program in SHELLS or program == "xargs":
+                raise Unsupported("a shell or xargs started from find")
+            explicit = [word for word in command[1:] if word != "{}"]
+            if program in ("rm", "unlink", "mv"):
+                # Operands other than the matched path are deleted as well.
+                deletes = True
+                self._delete(self._operands(explicit))
+            elif program in HARMLESS_COMMANDS or (
+                program == "chmod" and harmless_mode(explicit)
+            ):
+                continue
+            else:
+                # Another program may rewrite the matched files and any file it names.
+                deletes = True
+                self._named_files(command, self.variables)
         if not deletes:
             return
         kind, name = None, None
@@ -1096,9 +1333,14 @@ class Shell:
         i = 0
         while i < len(args):
             arg = args[i]
-            if arg in ("-type", "-name", "-mindepth", "-maxdepth") and i + 1 < len(
-                args
-            ):
+            if arg in (
+                "-type",
+                "-name",
+                "-mindepth",
+                "-maxdepth",
+                "-fprint",
+                "-fls",
+            ) and i + 1 < len(args):
                 if arg == "-type":
                     kind = args[i + 1]
                 elif arg == "-name":
@@ -1239,6 +1481,10 @@ class ImageModel:
                 if shell_form or not shell:
                     raise Unsupported("SHELL not in the JSON form")
                 stage.shell = shell
+            elif instruction == "VOLUME":
+                paths, shell_form = parse_command(expand(arguments, stage.variables))
+                for path in paths.split() if shell_form else paths:
+                    stage.volumes.append(image_path(path, stage.workdir, "VOLUME"))
             elif instruction == "ENTRYPOINT":
                 stage.entrypoint = parse_command(arguments)
                 stage.cmd = None
@@ -1258,6 +1504,9 @@ class ImageModel:
             stage = source.child()
         else:
             stage = Stage()
+            # Every base image sets PATH; ENV PATH=/x:$PATH extends it.
+            stage.variables["PATH"] = DEFAULT_PATH
+            stage.env["PATH"] = DEFAULT_PATH
             if not ROOT_WORKDIR_IMAGE.match(image):
                 # The working directory of another base image is not known.
                 stage.workdir = None
@@ -1299,14 +1548,20 @@ class ImageModel:
         many = len(sources) > 1 or any(GLOB_CHARS.search(s) for s in sources)
         dest_is_dir = dest.endswith("/") or dest in (".", "./") or many
 
-        def excluded(relative, name):
+        chmod = flags.get("chmod", [])
+        unreadable = bool(chmod) and not harmless_mode([str(chmod[-1])])
+
+        def excluded(relative, name, origin):
             # Matched against the path in the source and in the context: never less than Docker excludes.
+            if unreadable and origin[0] == "stamp":
+                # --chmod removes a read permission: a non-root user cannot read the stamp.
+                return True
             return any(rx.match(name) or rx.match(relative) for rx in excludes)
 
         for kind, source, members in entries:
             if kind == "dir" or keep_parents:
                 for relative, member_origin, member_name in members:
-                    if excluded(relative, member_name):
+                    if excluded(relative, member_name, member_origin):
                         continue
                     if keep_parents:
                         target = posixpath.join(dest_path, member_name)
@@ -1320,7 +1575,7 @@ class ImageModel:
                 stage.dirs.add(dest_path)
                 continue
             relative, member_origin, member_name = members[0]
-            if excluded(relative, member_name):
+            if excluded(relative, member_name, member_origin):
                 continue
             if dest_is_dir or stage.is_dir(dest_path):
                 target = posixpath.join(dest_path, posixpath.basename(member_name))
@@ -1387,7 +1642,8 @@ class ImageModel:
     def _stage_entries(source_stage, sources):
         entries = []
         for source in sources:
-            path = image_path(source, source_stage.workdir, "COPY --from source")
+            # Docker reads COPY --from sources from the root of the stage, not its WORKDIR.
+            path = image_path(source, "/", "COPY --from source")
             if GLOB_CHARS.search(path):
                 matched = sorted(
                     {
@@ -1463,9 +1719,12 @@ class ImageModel:
             )
             for package in names:
                 config = config or PackagingConfig(texts)
-                if root not in config.package_roots or not config.installs(package):
-                    continue
                 package_dir = f"{base}/{package}"
+                has_init = f"{package_dir}/__init__.py" in files
+                if root not in config.package_roots or not config.installs(
+                    package, has_init
+                ):
+                    continue
                 for path, origin in list(files.items()):
                     if path.startswith(package_dir + "/") and path.endswith(".py"):
                         files[SITE_PACKAGES + "/" + path[len(base) + 1 :]] = origin
@@ -1635,6 +1894,13 @@ class ImageModel:
                 i += 1
                 continue
             script = image_path(arg, cwd, "python script")
+            if script not in files:
+                # pycti resolves the script path: a file the model does not
+                # know (a symbolic link, a file of the base image) may live
+                # anywhere.
+                raise Unsupported(
+                    f"python script {script} is not a file of the image model"
+                )
             return self._readable(posixpath.dirname(script), cwd)
         raise Unsupported("python started without a script or a module")
 
@@ -1698,8 +1964,22 @@ def coverage(image, model, anchors, files):
         if origin[0] == "stamp" and posixpath.basename(path) == STAMP
     )
     found = [stamp for stamp in stamps if posixpath.dirname(stamp) in readable]
+
+    def volume_of(stamp):
+        return next(
+            (v for v in model.final.volumes if stamp.startswith(v.rstrip("/") + "/")),
+            None,
+        )
+
+    visible = [stamp for stamp in found if volume_of(stamp) is None]
+    if visible:
+        return Result(image, True, f"stamp at {visible[0]}")
     if found:
-        return Result(image, True, f"stamp at {found[0]}")
+        return Result(
+            image,
+            False,
+            f"stamp at {found[0]} is below VOLUME {volume_of(found[0])}: a mount at run time hides it",
+        )
     if stamps:
         return Result(
             image, False, f"stamp at {stamps[0]}, pycti reads {sorted(anchors)}"

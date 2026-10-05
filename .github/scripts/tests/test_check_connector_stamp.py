@@ -18,7 +18,7 @@ ALPINE_SRC = 'FROM python:3.12-alpine\nCOPY src /opt/sample\nWORKDIR /opt/sample
 
 def make_connector(root, files, path="external-import/sample"):
     connector = root / path
-    for name, content in files.items():
+    for name, content in {"src/main.py": "", **files}.items():
         target = connector / name
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
@@ -164,6 +164,7 @@ def test_script_carried_by_a_directory_copy_is_read(tmp_path):
         {
             "Dockerfile": dockerfile,
             "src/entrypoint.sh": "#!/bin/sh\ncd /opt/app/a/b/c/d/e\npython3 main.py\n",
+            "src/a/b/c/d/e/main.py": "",
         },
     )
     [image] = result(tmp_path, connector)
@@ -263,6 +264,34 @@ def test_stamp_restored_after_the_code_directory_is_removed(tmp_path):
         ("mv /opt/src /srv/src", False),
         ("unlink /opt/src/.connector_version.json", False),
         ("rm -rf /var/cache/apk/*", True),
+        # Copilot review of 23:37 UTC: quoted or escaped punctuation is an argument.
+        ("find /opt/src \\( -name '*.json' \\) -delete", False),
+        ("find /opt/src -name '*.json' -exec rm {} \\;", False),
+        ("find /opt/src -name '*.pyc' -exec rm {} \\; && echo 'done; ok'", True),
+        # Copilot review of 23:37 UTC: find -exec operands are deleted too.
+        (
+            "find /tmp -maxdepth 0 -exec rm -f /opt/src/.connector_version.json \\;",
+            False,
+        ),
+        ("find /opt/src -name '*.json' -exec sed -i s/a/b/ {} +", False),
+        ("find /opt/src -type f -exec chmod +r {} +", True),
+        # Copilot review of 23:37 UTC: truncation and rewriting by redirection.
+        (": > /opt/src/.connector_version.json", False),
+        ("echo '{}' >> /opt/src/.connector_version.json", False),
+        ("cd /opt/src && printf x > .connector_version.json", False),
+        ("echo ready > /tmp/ready && ls /opt/src >/dev/null 2>&1", True),
+        # Copilot review of 23:37 UTC: commands the model does not interpret.
+        ("cp /dev/null /opt/src/.connector_version.json", False),
+        ("truncate -s 0 /opt/src/.connector_version.json", False),
+        (
+            "python -c 'import os; os.unlink(\"/opt/src/.connector_version.json\")'",
+            False,
+        ),
+        ("rsync -a --delete /tmp/empty/ /opt/src/", False),
+        ("chmod 600 /opt/src/.connector_version.json", False),
+        ("chmod -R a+rX /opt/src && chown -R 1000 /opt/src", True),
+        ("cat /opt/src/.connector_version.json && ls -la /opt/src", True),
+        ("python -m compileall /opt/src", True),
     ],
 )
 def test_deletions_after_the_copy(tmp_path, command, covered):
@@ -326,6 +355,26 @@ def test_dockerfile_specific_ignore_file_wins(tmp_path):
     )
     assert not image.covered
     assert image.reason.startswith("excluded by .dockerignore")
+
+
+@pytest.mark.parametrize(
+    "instructions, covered",
+    [
+        ("COPY --chmod=0755 src /opt/sample", True),
+        ("COPY --chmod=0700 src /opt/sample", False),
+        ("COPY --chmod=go-r src /opt/sample", False),
+        ("COPY src /opt/sample\nVOLUME /opt/sample", False),
+        ('COPY src /opt/sample\nVOLUME ["/data"]', True),
+    ],
+)
+def test_permissions_and_volumes(tmp_path, instructions, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": f'FROM python:3.12-alpine\n{instructions}\nWORKDIR /opt/sample\nCMD ["python3", "main.py"]\n'
+        },
+    )
+    assert image.covered is covered, image.reason
 
 
 def test_copy_exclude_flag(tmp_path):
@@ -413,7 +462,7 @@ def test_stamp_too_far_above_the_entry_point(tmp_path):
         tmp_path,
         {
             "Dockerfile": (
-                "FROM python:3.12-alpine\nCOPY src /opt\nWORKDIR /opt/a/b/c/d/e\n"
+                "FROM python:3.12-alpine\nCOPY src /opt\nCOPY src/main.py /opt/a/b/c/d/e/\nWORKDIR /opt/a/b/c/d/e\n"
                 'CMD ["python3", "/opt/a/b/c/d/e/main.py"]\n'
             )
         },
@@ -427,7 +476,7 @@ def test_stamp_file_name_is_checked(tmp_path):
     image = single(
         tmp_path,
         {
-            "Dockerfile": 'FROM python:3.12-alpine\nCOPY .connector_version.json /opt/version.json\nCMD ["python3", "/opt/main.py"]\n'
+            "Dockerfile": 'FROM python:3.12-alpine\nCOPY .connector_version.json /opt/version.json\nCOPY src/main.py /opt/\nCMD ["python3", "/opt/main.py"]\n'
         },
     )
     assert not image.covered
@@ -444,11 +493,39 @@ PACKAGED_DOCKERFILE = (
 )
 
 
-def packaged(root, packaging, dockerfile=PACKAGED_DOCKERFILE, ignore=None):
+def packaged(root, packaging, dockerfile=PACKAGED_DOCKERFILE, ignore=None, init=True):
     files = {"Dockerfile": dockerfile, "sample_connector/__main__.py": "", **packaging}
+    if init:
+        files["sample_connector/__init__.py"] = ""
     if ignore is not None:
         files[".dockerignore"] = ignore
     return single(root, files)
+
+
+@pytest.mark.parametrize(
+    "find, covered, reason",
+    [
+        # Copilot review of 23:37 UTC: without __init__.py the directory is a
+        # namespace package, which only namespace discovery installs.
+        ('[tool.setuptools.packages.find]\nwhere = ["."]\n', True, None),
+        (
+            "[tool.setuptools.packages.find]\nnamespaces = false\n",
+            False,
+            "not supported: module sample_connector is not a file of the image model",
+        ),
+        (
+            "",
+            False,
+            "not supported: automatic discovery of sample_connector, a directory without __init__.py",
+        ),
+    ],
+)
+def test_namespace_package_discovery(tmp_path, find, covered, reason):
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(tmp_path, {"pyproject.toml": find + data}, init=False)
+    assert image.covered is covered, image.reason
+    if reason:
+        assert image.reason == reason
 
 
 def test_packaged_connector_ships_the_stamp_in_its_package(tmp_path):
@@ -531,7 +608,15 @@ def test_package_data_that_selects_the_stamp(tmp_path, packaging):
                 "pyproject.toml": "[project]\nname = 'sample'\n",
                 "setup.py": "from setuptools import setup\nsetup(package_data={'sample_connector': ['.connector_version.json']})\n",
             },
-            "package data declared in setup.py",
+            "packaging declared in setup.py",
+        ),
+        (
+            # Copilot review of 23:37 UTC: setup() can disable package discovery.
+            {
+                "pyproject.toml": '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n',
+                "setup.py": "from setuptools import setup\nsetup(packages=[])\n",
+            },
+            "packaging declared in setup.py",
         ),
         (
             {
@@ -654,6 +739,64 @@ def test_scripts_run_by_a_build_step(tmp_path, run, covered):
     assert image.covered is covered, image.reason
 
 
+def test_scripts_naming_the_stamp_are_taken_as_rewriting_it(tmp_path):
+    # The code of a helper script is read like a command line.
+    files = {
+        "Dockerfile": (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nRUN python3 /opt/src/clean.py\n"
+            'CMD ["python3", "/opt/src/main.py"]\n'
+        ),
+        "src/clean.py": 'import os\nos.remove("/opt/src/.connector_version.json")\n',
+    }
+    assert not single(tmp_path / "build", files).covered
+    files["Dockerfile"] = (
+        "FROM python:3.12-alpine\nCOPY src /opt/src\nCOPY entrypoint.sh /\n"
+        'ENTRYPOINT ["/entrypoint.sh"]\n'
+    )
+    files["entrypoint.sh"] = (
+        "#!/bin/sh\n: > /opt/src/.connector_version.json\nexec python3 /opt/src/main.py\n"
+    )
+    assert not single(tmp_path / "start", files).covered
+
+
+def test_python_script_rewritten_by_a_build_step_is_reported(tmp_path):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nCOPY src /opt/src\nRUN sed -i s/a/b/ /opt/src/main.py\n"
+                'CMD ["python3", "/opt/src/main.py"]\n'
+            )
+        },
+    )
+    assert image.reason == (
+        "not supported: python script /opt/src/main.py is not a file of the image model"
+    )
+
+
+@pytest.mark.parametrize(
+    "source, covered",
+    [
+        # Copilot review of 23:37 UTC: COPY --from reads from the root of the stage.
+        ("payload", False),
+        ("build/payload", True),
+        ("/build/payload", True),
+    ],
+)
+def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine AS builder\nWORKDIR /build\nCOPY src payload\n"
+                f"FROM python:3.12-alpine\nCOPY --from=builder {source} /opt/app\n"
+                'WORKDIR /opt/app\nCMD ["python3", "main.py"]\n'
+            )
+        },
+    )
+    assert image.covered is covered, image.reason
+
+
 def test_entry_script_handing_over_to_another_script(tmp_path):
     files = {
         "Dockerfile": 'FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY entrypoint.sh /\nENTRYPOINT ["/entrypoint.sh"]\n',
@@ -666,8 +809,12 @@ def test_entry_script_handing_over_to_another_script(tmp_path):
 def test_every_python_process_of_the_entry_script_needs_the_stamp(tmp_path):
     # Which python process is the connector is not known: each must read a stamp.
     files = {
-        "Dockerfile": 'FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY entrypoint.sh /\nENTRYPOINT ["/entrypoint.sh"]\n',
+        "Dockerfile": (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY src/warmup.py /usr/local/share/\n"
+            'COPY entrypoint.sh /\nENTRYPOINT ["/entrypoint.sh"]\n'
+        ),
         "entrypoint.sh": "#!/bin/sh\npython3 /usr/local/share/warmup.py\ncd /opt/sample\nexec python3 main.py\n",
+        "src/warmup.py": "",
     }
     image = single(tmp_path, files)
     assert not image.covered
@@ -714,6 +861,49 @@ def test_assignment_prefix_reaches_python(tmp_path):
     assert image.reason == "stamp at /opt/app/src/.connector_version.json"
 
 
+@pytest.mark.parametrize(
+    "run, command, reason",
+    [
+        # pycti resolves the script path: a link the model does not follow is reported.
+        (
+            "ln -s /opt/sample/main.py /main.py",
+            '["python3", "/main.py"]',
+            "not supported: python script /main.py is not a file of the image model",
+        ),
+        (
+            "ln -sf /dev/null /opt/sample/.connector_version.json",
+            '["python3", "/opt/sample/main.py"]',
+            "no COPY carries a stamp into the final image",
+        ),
+        (
+            "ln -s /usr/share/data /opt/sample",
+            '["python3", "/opt/sample/main.py"]',
+            "not supported: python script /opt/sample/main.py is not a file of the image model",
+        ),
+    ],
+)
+def test_symbolic_links(tmp_path, run, command, reason):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": f"FROM python:3.12-alpine\nCOPY src /opt/sample\nRUN {run}\nCMD {command}\n"
+        },
+    )
+    assert not image.covered
+    assert image.reason == reason
+
+
+def test_entry_point_found_on_an_extended_path(tmp_path):
+    files = {
+        "Dockerfile": (
+            "FROM python:3.12-alpine\nENV PATH=/opt/tools/bin:$PATH\nCOPY src /opt/sample\n"
+            'COPY start.sh /usr/local/bin/start-connector\nENTRYPOINT ["start-connector"]\n'
+        ),
+        "start.sh": "#!/bin/sh\ncd /opt/sample\nexec python3 main.py\n",
+    }
+    assert single(tmp_path, files).covered
+
+
 def test_shell_form_entrypoint_ignores_cmd(tmp_path):
     image = single(
         tmp_path,
@@ -725,19 +915,20 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
 
 
 def test_workflow_watches_every_file_the_check_reads():
-    # Copilot review of 21:40 UTC: a change to any of these files must run the check.
+    # Copilot reviews of 21:40 and 23:37 UTC: any file of a connector (an entry
+    # script has no fixed name) or of the shared build must run the check.
     text = WORKFLOW.read_text(encoding="utf-8")
     sections = re.split(r"^  (push|pull_request|merge_group):", text, flags=re.M)
     filters = {sections[i]: sections[i + 1] for i in range(1, len(sections) - 1, 2)}
     for event in ("push", "pull_request"):
         paths = set(re.findall(r"^\s+- '([^']+)'", filters[event], flags=re.M))
-        for name in check.WATCHED_FILES:
-            assert f"**/{name}" in paths, f"{event} does not watch {name}"
+        for directory in check.WATCHED_DIRECTORIES:
+            assert f"{directory}/**" in paths, f"{event} does not watch {directory}"
         for name in (
-            "**/Dockerfile",
-            "**/Dockerfile_fips",
             check.UBI9_DOCKERFILE,
             check.UBI9_CONNECTORS,
+            ".github/actions/build-connector-image/**",
+            ".github/scripts/check_connector_stamp.py",
         ):
             assert name in paths, f"{event} does not watch {name}"
 
