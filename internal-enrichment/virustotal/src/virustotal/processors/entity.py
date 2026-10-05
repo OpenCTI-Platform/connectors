@@ -116,10 +116,21 @@ class EntityProcessor(ABC):
                 relationship,
                 self.connector.gti_relationship_limit,
             )
-            if not response or "data" not in response:
+            if not response or "data" not in response or not response["data"]:
                 continue
-            for item in response["data"]:
-                getattr(builder, builder_method)(item)
+            try:
+                for item in response["data"]:
+                    getattr(builder, builder_method)(item)
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    "[VirusTotal] Error building bundle for entity", {
+                        "entity_identifier": identifier,
+                        "relationship": relationship,
+                        "relationship_limit": self.connector.gti_relationship_limit,
+                        "response": response,
+                        "flag_name": flag_name,
+                    }, exc_info=e
+                )
 
     def _make_builder(self, json_data: dict, **kwargs) -> VirusTotalBuilder:
         """Construct a :class:`VirusTotalBuilder` with connector-level settings."""
