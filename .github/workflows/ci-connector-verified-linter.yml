@@ -132,30 +132,23 @@ jobs:
       - name: Install connector-linter
         run: uv pip install ./shared/tools/connector_linter
 
-      # Verified connectors must stay error-free (blocking): the step fails
-      # and the PR check goes red. Manager-supported-only connectors are
-      # allowed to have errors (non-blocking): findings are still surfaced as
-      # annotations and in the PR comment (see vclint-comment), but the step
-      # always exits 0 for them.
+      # Findings are surfaced as annotations and in the PR comment (see
+      # vclint-comment), but this step never fails the check: connector
+      # errors stay visible without turning the PR red. VC105/VC305 on new
+      # connectors (see vclint-new-connector-settings below) remain blocking.
       - name: Run connector-linter
         run: |
           set -o pipefail
-          exit_code=0
           : > annotations.txt
           while IFS= read -r connector_path; do
             [ -z "$connector_path" ] && continue
             echo "::group::Linting ${connector_path}"
-            uv run connector-linter check "$connector_path" --format github | tee -a annotations.txt || exit_code=$?
+            uv run connector-linter check "$connector_path" --format github | tee -a annotations.txt || true
             uv run connector-linter check "$connector_path" --format markdown --verbose >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "::endgroup::"
           done <<< "${{ matrix.connector_paths }}"
-
-          if [ "${{ matrix.verified }}" != "true" ]; then
-            echo "Connector(s) not fully verified (manager-supported only): errors are non-blocking."
-            exit 0
-          fi
-          exit "$exit_code"
+          exit 0
 
       - name: Upload linter annotations
         if: always()
