@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 import pytest
 from connectors_sdk.connectors.internal_hunt import (
     BenignMatcher,
+    HitFields,
     HuntEvent,
     HuntLimits,
     HuntResult,
@@ -15,9 +16,11 @@ from connectors_sdk.connectors.internal_hunt import (
     HuntTimeWindow,
     RunDeadline,
     build_evidence,
+    build_hit_evidence,
     count_distinct_entities,
     event_time_bounds,
     flatten_fields,
+    present_fields,
     sha256_hex,
     suppress_benign,
     value_strings,
@@ -196,6 +199,122 @@ def test_build_evidence_hashes_truncates_and_spreads_over_fields():
     assert evidence[0].value_preview == "powershell"
     assert evidence[0].value_hash == sha256_hex("powershell -enc AAAA" * 3)
     assert all(e.field != "_raw" for e in evidence)
+
+
+def test_build_evidence_excludes_the_sub_fields_of_an_excluded_field():
+    # Given bookkeeping fields nested under an excluded parent
+    events = _events(
+        {
+            "metadata.base_labels.log_types": "WINDOWS_SYSMON",
+            "metadata.base_labels.allow_scoped_access": True,
+            "metadata.base_labels_extra": "kept",
+            "target.process.command_line": "powershell -enc AAAA",
+        }
+    )
+
+    # When the evidence is built without the parent field
+    evidence = build_evidence(events, HuntLimits(), (), ["metadata.BASE_LABELS"])
+
+    # Then its sub-fields are left out, never a field that only shares its prefix
+    assert [e.field for e in evidence] == [
+        "metadata.base_labels_extra",
+        "target.process.command_line",
+    ]
+
+
+def test_present_fields_reads_the_names_case_insensitively_in_order():
+    # Given an event and field names in another case, one missing, one repeated
+    event = HuntEvent(fields={"Host.Name": "ws1", "CommandLine": "x"})
+
+    # When/Then the event names are returned in the order of the names asked for
+    assert present_fields(
+        event, ["commandline", "missing", "host.name", "HOST.NAME"]
+    ) == [
+        "CommandLine",
+        "Host.Name",
+    ]
+
+
+def test_build_hit_evidence_describes_each_hit_on_its_own():
+    # Given two hits of a detection on CommandLine, the later one first, and one without time
+    early = datetime(2026, 10, 3, 1, tzinfo=timezone.utc)
+    late = datetime(2026, 10, 3, 5, tzinfo=timezone.utc)
+    command_line = "powershell -enc " + "A" * 40
+    hits = [
+        (
+            HuntEvent(
+                timestamp=late,
+                fields={
+                    "CommandLine": "cmd /c whoami",
+                    "Host.Name": "ws2",
+                    "user": ["bob", "carol"],
+                    "event.id": "e2",
+                },
+                detection="detection-1",
+            ),
+            ["CommandLine"],
+        ),
+        (HuntEvent(fields={"CommandLine": "x", "empty": None}), ["empty"]),
+        (
+            HuntEvent(
+                timestamp=early,
+                fields={
+                    "CommandLine": command_line,
+                    "host.name": "ws1",
+                    "user.name": "alice",
+                    "process.executable": "C:\\Windows\\powershell.exe",
+                    "event.id": "e1",
+                },
+            ),
+            ["CommandLine"],
+        ),
+    ]
+
+    # When the evidence of the hits is built
+    evidence = build_hit_evidence(
+        hits, HuntLimits(evidence_max_items=10, evidence_max_value_length=16)
+    )
+
+    # Then each hit tells what matched, where, by whom and when, the earliest first
+    first, second, third = evidence
+    assert (first.event_id, first.timestamp, first.host, first.user) == (
+        "e1",
+        early,
+        "ws1",
+        "alice",
+    )
+    assert first.process == "C:\\Windows\\power"
+    assert [(f.field, f.value_preview) for f in first.matched] == [
+        ("CommandLine", "powershell -enc ")
+    ]
+    assert first.matched[0].value_hash == sha256_hex(command_line)
+    assert (second.event_id, second.host, second.user) == ("e2", "ws2", "bob")
+    assert second.detection == "detection-1"
+    assert second.process is None
+    # And a hit without time comes last, a matched field without value is left out
+    assert third.timestamp is None
+    assert third.matched == []
+
+
+def test_build_hit_evidence_is_capped_by_the_evidence_limit():
+    # Given three hits
+    hits = [(HuntEvent(fields={"a": str(index)}), ["a"]) for index in range(3)]
+
+    # When/Then at most evidence_max_items hits are kept, none when disabled
+    assert len(build_hit_evidence(hits, HuntLimits(evidence_max_items=2))) == 2
+    assert build_hit_evidence(hits, HuntLimits(evidence_max_items=0)) == []
+
+
+def test_hit_fields_can_name_the_fields_of_a_platform():
+    # Given a platform naming its hosts and event ids its own way
+    fields = HitFields(event_id=("metadata.id",), host=("principal.hostname",))
+    event = HuntEvent(
+        fields={"metadata.id": "AAAA", "principal.hostname": "ws1", "host": "other"}
+    )
+
+    # When/Then the hit is described with the fields of the platform
+    (hit,) = build_hit_evidence([(event, [])], HuntLimits(), fields)
+    assert (hit.event_id, hit.host) == ("AAAA", "ws1")
 
 
 def test_build_evidence_stops_when_values_are_exhausted_or_disabled():

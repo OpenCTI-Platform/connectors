@@ -1,7 +1,8 @@
 """Post-processing of hunt results.
 
 Raw telemetry never leaves the connector: the run report only carries counts
-and an evidence sample whose values are SHA-256 hashed and truncated.
+and evidence samples (per field, and per hit) whose values are truncated, the
+matched values also SHA-256 hashed.
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ import hashlib
 import json
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -18,11 +20,36 @@ from connectors_sdk.connectors.internal_hunt.errors import HuntTimeoutError
 from connectors_sdk.connectors.internal_hunt.models import (
     HuntEvent,
     HuntEvidence,
+    HuntHitEvidence,
+    HuntHitField,
     HuntLimits,
     HuntResult,
     HuntTimeWindow,
 )
 from connectors_sdk.connectors.internal_hunt.timing import RunDeadline
+
+HOST_FIELDS: tuple[str, ...] = (
+    "host",
+    "hostname",
+    "host.name",
+    "host.hostname",
+    "agent.hostname",
+    "computer",
+    "computername",
+    "devicename",
+    "device.hostname",
+    "device.name",
+    "dvchostname",
+    "src_host",
+    "dest_host",
+    "srchostname",
+    "dsthostname",
+    "principal.hostname",
+    "target.hostname",
+    "src_endpoint.hostname",
+    "dst_endpoint.hostname",
+)
+"""Result fields naming the host of an event, compared case-insensitively."""
 
 DEFAULT_ENTITY_FIELDS: tuple[str, ...] = (
     # Hosts
@@ -76,6 +103,52 @@ DEFAULT_ENTITY_FIELDS: tuple[str, ...] = (
     "dst_endpoint.ip",
 )
 """Field names (case-insensitive) identifying hosts, users and network peers."""
+
+
+@dataclass(frozen=True)
+class HitFields:
+    """Result fields describing one hit, each by order of preference (case-insensitive).
+
+    Attributes:
+        event_id: Fields holding the id of the event on the platform.
+        host: Fields naming the host of the event.
+        user: Fields naming the user of the event.
+        process: Fields naming the process of the event.
+    """
+
+    event_id: tuple[str, ...] = ("event.id", "metadata.uid", "_id", "_cd")
+    host: tuple[str, ...] = HOST_FIELDS
+    user: tuple[str, ...] = (
+        "user.name",
+        "user",
+        "username",
+        "src_user",
+        "accountname",
+        "account",
+        "subjectusername",
+        "targetusername",
+        "userprincipalname",
+        "actorusername",
+        "actor.user.name",
+        "principal.user.userid",
+        "target.user.userid",
+    )
+    process: tuple[str, ...] = (
+        "process.executable",
+        "process.name",
+        "image",
+        "newprocessname",
+        "processname",
+        "process_name",
+        "initiatingprocessfilename",
+        "actor.process.file.path",
+        "process.file.path",
+        "process",
+    )
+
+
+DEFAULT_HIT_FIELDS = HitFields()
+"""Hit fields of the common field names."""
 
 
 def flatten_fields(data: Mapping[str, Any], prefix: str = "") -> dict[str, Any]:
@@ -259,8 +332,10 @@ def build_evidence(
     Args:
         events: Result events (after benign suppression).
         limits: Run limits (sample size and preview length).
-        priority_fields: Fields referenced by the detection logic.
-        excluded_fields: Fields never sampled (raw payloads, bookkeeping).
+        priority_fields: Fields sampled first, in order: the fields referenced
+            by the detection logic, then the entity fields.
+        excluded_fields: Fields never sampled (raw payloads, bookkeeping),
+            with their sub-fields.
 
     Returns:
         At most ``limits.evidence_max_items`` evidence items.
@@ -304,12 +379,110 @@ def _count_field_values(
     counters: dict[str, Counter[str]] = {}
     for event in events:
         for field, value in event.fields.items():
-            if field.lower() in excluded:
+            if _is_excluded(field, excluded):
                 continue
             texts = value_strings(value)
             if texts:
                 counters.setdefault(field, Counter()).update(texts)
     return counters
+
+
+def _is_excluded(field: str, excluded: set[str]) -> bool:
+    """Whether a dotted field or one of its parents is excluded (lower-case names)."""
+    parts = field.lower().split(".")
+    return any(
+        ".".join(parts[:depth]) in excluded for depth in range(1, len(parts) + 1)
+    )
+
+
+def present_fields(event: HuntEvent, names: Iterable[str]) -> list[str]:
+    """Return the fields of an event among some names, compared case-insensitively.
+
+    Args:
+        event: Result event.
+        names: Field names, by order of preference.
+
+    Returns:
+        The event field names, in the order of ``names``, without duplicates.
+    """
+    by_lower: dict[str, str] = {}
+    for field in event.fields:
+        by_lower.setdefault(field.lower(), field)
+    found: dict[str, None] = {}
+    for name in names:
+        present = by_lower.get(name.lower())
+        if present is not None:
+            found.setdefault(present, None)
+    return list(found)
+
+
+def build_hit_evidence(
+    hits: Iterable[tuple[HuntEvent, Sequence[str]]],
+    limits: HuntLimits,
+    hit_fields: HitFields = DEFAULT_HIT_FIELDS,
+) -> list[HuntHitEvidence]:
+    """Build the redacted evidence of single hits: what matched, where, by whom and when.
+
+    One item per event, the earliest first (events without time last). A
+    matched value is hashed whole and its preview truncated; the event id, host,
+    user and process are truncated to the same length.
+
+    Args:
+        hits: Each result event with the fields the hunt matched in it.
+        limits: Run limits (number of hits and preview length).
+        hit_fields: Fields read for the event id, host, user and process.
+
+    Returns:
+        At most ``limits.evidence_max_items`` hits.
+    """
+    if limits.evidence_max_items == 0:
+        return []
+    ordered = sorted(
+        hits,
+        key=lambda hit: (
+            hit[0].timestamp is None,
+            hit[0].timestamp.timestamp() if hit[0].timestamp else 0.0,
+        ),
+    )
+    return [
+        _hit_evidence(event, matched, limits.evidence_max_value_length, hit_fields)
+        for event, matched in ordered[: limits.evidence_max_items]
+    ]
+
+
+def _hit_evidence(
+    event: HuntEvent, matched: Sequence[str], length: int, hit_fields: HitFields
+) -> HuntHitEvidence:
+    """Build the evidence of one hit."""
+    fields = []
+    for name in matched:
+        texts = value_strings(event.fields.get(name))
+        if texts:
+            value = ", ".join(texts)
+            fields.append(
+                HuntHitField(
+                    field=name,
+                    value_hash=sha256_hex(value),
+                    value_preview=value[:length],
+                )
+            )
+
+    def _first(names: Sequence[str]) -> str | None:
+        for field in present_fields(event, names):
+            texts = value_strings(event.fields[field])
+            if texts:
+                return texts[0][:length]
+        return None
+
+    return HuntHitEvidence(
+        event_id=_first(hit_fields.event_id),
+        timestamp=event.timestamp,
+        detection=event.detection,
+        matched=fields,
+        host=_first(hit_fields.host),
+        user=_first(hit_fields.user),
+        process=_first(hit_fields.process),
+    )
 
 
 def count_distinct_entities(

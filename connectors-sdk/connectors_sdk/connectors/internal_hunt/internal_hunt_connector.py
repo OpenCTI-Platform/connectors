@@ -14,7 +14,7 @@ Architecture::
     ├── ioc_query()            → indicator hunts: the lookup of a batch of values (optional)
     ├── execute()              → query execution on the platform (abstract), time-boxed
     ├── to_stix()              → sightings + observed-data (telemetry), overridable
-    └── report                 → hits, distinct entities, hashed evidence, result ids,
+    └── report                 → hits, distinct entities, evidence per field and per hit, result ids,
                                  and one result per value for indicator hunts
 """
 
@@ -33,9 +33,14 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
 from connectors_sdk.connectors.internal_hunt.analysis import (
     DEFAULT_ENTITY_FIELDS,
+    DEFAULT_HIT_FIELDS,
+    HOST_FIELDS,
+    HitFields,
     build_evidence,
+    build_hit_evidence,
     count_distinct_entities,
     event_time_bounds,
+    present_fields,
     suppress_benign,
 )
 from connectors_sdk.connectors.internal_hunt.errors import (
@@ -48,7 +53,6 @@ from connectors_sdk.connectors.internal_hunt.errors import (
     is_retryable,
 )
 from connectors_sdk.connectors.internal_hunt.indicators import (
-    HOST_FIELDS,
     IocBatch,
     IocObservation,
     aggregated_observations,
@@ -57,9 +61,11 @@ from connectors_sdk.connectors.internal_hunt.indicators import (
     build_ioc_evidence,
     build_ioc_results,
     match_events,
+    value_hits,
 )
 from connectors_sdk.connectors.internal_hunt.models import (
     HuntConnectionCheck,
+    HuntEvent,
     HuntLimits,
     HuntRequest,
     HuntResult,
@@ -207,8 +213,12 @@ class InternalHuntConnector(ABC):
         sigma_output_format: pySigma backend output format (backend default when None).
         query_join: Operator joining several translated queries (e.g. ``" OR "``),
             or None to reject Sigma documents translating into several queries.
-        evidence_excluded_fields: Result fields never sampled as evidence.
-        entity_fields: Result fields identifying hosts, users and network peers.
+        evidence_excluded_fields: Result fields never sampled as evidence, with
+            their sub-fields.
+        entity_fields: Result fields identifying hosts, users and network peers,
+            sampled as evidence right after the fields of the detection.
+        hit_fields: Result fields naming the event id, host, user and process
+            in the evidence of each hit.
         observable_fields: Result field to observable type mapping that takes
             precedence over the field name heuristics.
         ioc_aggregated: True when ``ioc_query`` returns one aggregated row per
@@ -238,6 +248,7 @@ class InternalHuntConnector(ABC):
     query_join: ClassVar[str | None] = None
     evidence_excluded_fields: ClassVar[frozenset[str]] = frozenset()
     entity_fields: ClassVar[tuple[str, ...]] = DEFAULT_ENTITY_FIELDS
+    hit_fields: ClassVar[HitFields] = DEFAULT_HIT_FIELDS
     observable_fields: ClassVar[Mapping[str, str]] = MappingProxyType({})
     ioc_aggregated: ClassVar[bool] = False
     ioc_host_fields: ClassVar[tuple[str, ...]] = HOST_FIELDS
@@ -791,8 +802,16 @@ class InternalHuntConnector(ABC):
                 evidence_sample=build_evidence(
                     result.events,
                     request.limits,
-                    native_query.fields,
+                    (*native_query.fields, *self.entity_fields),
                     self.evidence_excluded_fields,
+                ),
+                hits_sample=build_hit_evidence(
+                    (
+                        (event, present_fields(event, native_query.fields))
+                        for event in result.events
+                    ),
+                    request.limits,
+                    self.hit_fields,
                 ),
                 result_ids=result_ids,
                 cost_ms=self._elapsed_ms(started),
@@ -866,6 +885,7 @@ class InternalHuntConnector(ABC):
         deadline = RunDeadline(request.limits.timeout_seconds)
         observations: dict[str, IocObservation] = {}
         unsearched: dict[str, str] = {}
+        hits: list[tuple[HuntEvent, list[str]]] = []
         truncated = False
         for batch, query in lookups:
             if query is None:
@@ -875,11 +895,11 @@ class InternalHuntConnector(ABC):
             raw_result = self._execute_within_limits(request, query, deadline)
             result = suppress_benign(raw_result, request.hunt.benign_patterns, deadline)
             truncated = truncated or result.truncated
-            found = (
-                aggregated_observations(batch, result.events)
-                if self.ioc_aggregated
-                else match_events(batch, result.events, self.ioc_host_fields)
-            )
+            if self.ioc_aggregated:
+                found = aggregated_observations(batch, result.events)
+            else:
+                found = match_events(batch, result.events, self.ioc_host_fields)
+                hits.extend(value_hits(batch, result.events))
             for key, observation in found.items():
                 observations.setdefault(key, IocObservation()).merge(observation)
             if result.truncated:
@@ -917,6 +937,7 @@ class InternalHuntConnector(ABC):
                 evidence_sample=build_ioc_evidence(
                     request.hunt.iocs, ioc_results, request.limits
                 ),
+                hits_sample=build_hit_evidence(hits, request.limits, self.hit_fields),
                 result_ids=list(objects),
                 cost_ms=self._elapsed_ms(started),
                 ioc_results=ioc_results,
@@ -1058,6 +1079,13 @@ class InternalHuntConnector(ABC):
             self.helper.report_hunt_run, "retryable"
         ):
             extra["retryable"] = report.retryable
+        # A pycti without single hits keeps the evidence aggregated per field
+        if report.hits_sample is not None and _accepts_keyword(
+            self.helper.report_hunt_run, "hits_sample"
+        ):
+            extra["hits_sample"] = [
+                hit.model_dump(mode="json") for hit in report.hits_sample
+            ]
         self.helper.report_hunt_run(
             run_id,
             report.status.value,

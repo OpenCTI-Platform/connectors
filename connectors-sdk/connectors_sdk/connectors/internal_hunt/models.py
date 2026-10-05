@@ -6,8 +6,8 @@ The models mirror the cross-repository hunt contract:
   queue of an ``INTERNAL_HUNT`` connector (one hunt run).
 - ``NativeQuery``, ``HuntEvent`` and ``HuntResult`` describe the translated query
   and the results a connector returns from its telemetry platform.
-- ``HuntEvidence`` and ``HuntRunReport`` describe what the connector reports back
-  to OpenCTI with ``report_hunt_run``.
+- ``HuntEvidence``, ``HuntHitEvidence`` and ``HuntRunReport`` describe what the
+  connector reports back to OpenCTI with ``report_hunt_run``.
 
 Request models ignore unknown fields so that a newer platform can extend the
 message without breaking older connectors.
@@ -378,6 +378,45 @@ class HuntEvidence(BaseModel):
     count: int = Field(ge=0, description="Occurrences of the value in the results.")
 
 
+class HuntHitField(BaseModel):
+    """A field of one hit matched by the hunt, with its redacted value."""
+
+    model_config = ConfigDict(frozen=True)
+
+    field: str = Field(description="Result field name.")
+    value_hash: str = Field(description="SHA-256 hex digest of the full raw value.")
+    value_preview: str | None = Field(
+        default=None, description="Value truncated to the evidence length limit."
+    )
+
+
+class HuntHitEvidence(BaseModel):
+    """Redacted evidence of one hit, readable on its own: what matched, where, by whom and when."""
+
+    model_config = ConfigDict(frozen=True)
+
+    event_id: str | None = Field(
+        default=None, description="Id of the event on the platform."
+    )
+    timestamp: AwareDatetime | None = Field(
+        default=None, description="Time of the event."
+    )
+    detection: str | None = Field(
+        default=None,
+        description="Detection grouping the event: the events of one detection are one hit.",
+    )
+    matched: list[HuntHitField] = Field(
+        default_factory=list,
+        description=(
+            "Fields of the detection logic present in the event; for indicator "
+            "hunts, the fields holding a looked-up value."
+        ),
+    )
+    host: str | None = Field(default=None, description="Host of the event.")
+    user: str | None = Field(default=None, description="User of the event.")
+    process: str | None = Field(default=None, description="Process of the event.")
+
+
 class HuntIocResult(BaseModel):
     """What the platform reported for one value of an indicator hunt run."""
 
@@ -430,7 +469,11 @@ class HuntRunReport(BaseModel):
         default=None, ge=0, description="Number of distinct entities hit."
     )
     evidence_sample: list[HuntEvidence] | None = Field(
-        default=None, description="Redacted evidence sample."
+        default=None, description="Redacted evidence sample, aggregated per field."
+    )
+    hits_sample: list[HuntHitEvidence] | None = Field(
+        default=None,
+        description="Redacted evidence of single hits, the earliest first.",
     )
     result_ids: list[str] | None = Field(
         default=None, description="STIX ids of the objects sent to OpenCTI."

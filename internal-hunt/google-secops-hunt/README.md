@@ -76,9 +76,11 @@ per platform. For every hunt run dispatched by OpenCTI (one hunt, one time windo
 2. runs it through the Chronicle API over the run time window, within the run timeout and result limit;
 3. sends the resulting knowledge to OpenCTI: a sighting of every technique and indicator of the hunt on the Google
    SecOps Security Platform identity, and observed-data referencing the IOC observables found in the results;
-4. reports the run (hit count, distinct hosts/users/peers, translated query, redacted evidence sample).
+4. reports the run: hit count, distinct hosts/users/peers, translated query, and redacted evidence per field and per
+   hit.
 
-Raw events never leave SecOps: OpenCTI only receives counts and evidence values that are SHA-256 hashed and truncated.
+Raw events never leave SecOps: OpenCTI only receives counts and truncated evidence values, the matched ones also
+SHA-256 hashed.
 
 ## Installation
 
@@ -196,10 +198,20 @@ The connector executes `udm` and `yara-l`.
    holding it, restricted to the observable types the hunt expects. Objects inherit the
    markings and author of the hunt and have deterministic identifiers; those of the sightings and observed-data derive
    from the hunt run too, so a retry of a run updates its own objects and two runs never share one.
-6. The run is reported with the hit count, the distinct hosts, users and network peers, the query executed and an
-   evidence sample. UDM bookkeeping fields (`metadata.id`, `metadata.product_log_id`, ingestion and collection times,
-   log types...) are never sampled; host names, user names and command lines only appear hashed and truncated in the
-   evidence.
+6. The run is reported with the hit count, the distinct hosts, users and network peers, the query executed and two
+   evidence samples. Fields are named as in UDM search and YARA-L (`target.process.command_line`), although the
+   Chronicle API answers in camelCase.
+   - **Per field**: the matched fields first, then hosts, users and addresses. UDM bookkeeping fields (`metadata.id`,
+     `metadata.product_log_id`, event, ingestion and collection times, base labels, enrichment state) are never
+     sampled.
+   - **Per hit**: each hit, the earliest first, with the UDM fields the search or rule matched and their values, the
+     host, user and process, the event time and the event ID (`metadata.id`).
+
+   Values are truncated, and matched values are also SHA-256 hashed. Host names, user names and command lines only
+   appear in the evidence.
+7. A failure that running the hunt again cannot fix is reported as not retryable, so OpenCTI does not retry it: a Sigma
+   rule the UDM pipeline cannot translate (an unmapped field or log source), a UDM search SecOps rejects (HTTP 400), or a
+   YARA-L rule that does not compile.
 
 No incident is created by the connector: OpenCTI drafts incidents itself when the hits exceed the escalation threshold
 of the hunt.
@@ -210,7 +222,7 @@ of the hunt.
 |---|---|
 | Results read per run | `limits.max_results` of the run (set by OpenCTI), at most 10,000 UDM events or YARA-L detections (the Chronicle API maximum). |
 | Run timeout | `limits.timeout_seconds` of the run: the token request (at most 30 seconds) and the search or rule test are bounded by the time left. |
-| Evidence | `limits.evidence_max_items` values, previews truncated to `limits.evidence_max_value_length`. |
+| Evidence | `limits.evidence_max_items` values per field and as many hits, previews truncated to `limits.evidence_max_value_length`. |
 | Observables | `CONNECTOR_MAX_OBSERVABLES` per run, IOC types by default, private IP addresses and internal domains never created. |
 | Chronicle API quotas | UDM searches and rule tests count against the quotas of the SecOps instance; set `CONNECTOR_MAX_CONCURRENT_RUNS` to stay within them. |
 

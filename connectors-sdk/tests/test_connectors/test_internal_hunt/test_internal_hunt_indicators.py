@@ -308,6 +308,85 @@ def test_reports_one_result_per_value_and_sights_the_seen_ones(
     assert set(kwargs["result_ids"]) == {item["id"] for item in bundle_objects}
 
 
+def test_reports_each_hit_with_the_field_holding_the_value(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given raw events holding an address, a subdomain of a domain, and none of the values
+    result = HuntResult(
+        events=[
+            event(
+                "2026-10-03T11:00:00+00:00", query="www.evil.example.com", host="WKS-02"
+            ),
+            event(
+                "2026-10-03T10:00:00+00:00",
+                DestinationIp="198.51.100.7",
+                host="WKS-01",
+                user="alice",
+            ),
+            event(
+                "2026-10-03T12:00:00+00:00", query="benign.example.org", host="WKS-03"
+            ),
+        ],
+    )
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+
+    # When the lookups run
+    connector.process_message(indicator_event())
+
+    # Then each hit names the field holding the value, its host and user, the earliest first
+    hits = hunt_helper.report_hunt_run.call_args.kwargs["hits_sample"]
+    assert [
+        (
+            hit["host"],
+            hit["user"],
+            [(m["field"], m["value_preview"]) for m in hit["matched"]],
+        )
+        for hit in hits
+    ] == [
+        ("WKS-01", "alice", [("DestinationIp", "198.51.100.7")]),
+        ("WKS-02", None, [("query", "www.evil.example")]),
+    ]
+
+
+def test_aggregated_lookups_report_no_single_hit(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # Given a platform aggregating the lookups, one row per value
+    class AggregatedConnector(DummyIndicatorConnector):
+        ioc_aggregated = True
+
+    result = HuntResult(
+        events=[
+            HuntEvent(
+                fields={
+                    "ioc": "k-ip",
+                    "hits": "4",
+                    "first_seen": "2026-10-03T10:00:00Z",
+                    "last_seen": "2026-10-03T12:00:00Z",
+                    "hosts": ["WKS-01"],
+                }
+            )
+        ]
+    )
+    connector = AggregatedConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    from unittest.mock import MagicMock
+
+    connector._logger = MagicMock()
+
+    # When the lookups run
+    connector.process_message(indicator_event())
+
+    # Then the counts come from the rows, and no row is reported as a single hit
+    kwargs = hunt_helper.report_hunt_run.call_args.kwargs
+    assert kwargs["hits_count"] == 4
+    assert kwargs["hits_sample"] == []
+
+
 def test_a_truncated_lookup_never_reports_a_value_absent_from_the_part_read_as_not_seen(
     hunt_settings, hunt_helper, indicator_event
 ):

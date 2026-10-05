@@ -1,13 +1,16 @@
 """Google SecOps hunt connector: executes OpenCTI hunts as UDM searches or YARA-L rules."""
 
-from collections.abc import Sequence
+import re
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
     DEFAULT_ENTITY_FIELDS,
+    HitFields,
     HuntEvent,
     HuntLimits,
+    HuntRequest,
     HuntResult,
     HuntTimeWindow,
     NativeQuery,
@@ -27,21 +30,74 @@ SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 SIGMA_PIPELINES = {"secops_udm": secops_udm_pipeline}
 """pySigma pipelines selectable in the configuration or by a hunt native query."""
 
-TIME_FIELDS: tuple[str, ...] = ("metadata.event_timestamp", "detectionTime")
+TIME_FIELDS: tuple[str, ...] = ("metadata.event_timestamp", "detection_time")
 """Fields holding the event time, by order of preference."""
 
 BOOKKEEPING_FIELDS = frozenset(
     {
-        "name",
         "metadata.id",
         "metadata.product_log_id",
+        "metadata.event_timestamp",
         "metadata.ingested_timestamp",
         "metadata.collected_timestamp",
-        "metadata.base_labels.log_types",
+        "metadata.base_labels",
         "metadata.enrichment_state",
+        "metadata.enrichment_labels",
+        "metadata.ingestion_labels",
     }
 )
-"""UDM bookkeeping fields, never sampled as evidence."""
+"""UDM bookkeeping fields (with their sub-fields), never sampled as evidence: the
+time and the id of an event are in the evidence of each hit."""
+
+VERBATIM_FIELDS = frozenset({"additional"})
+"""UDM fields whose keys are chosen by the log parser, kept as they are."""
+
+_CAMEL_BOUNDARY = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+
+UDM_ROOTS = (
+    "about",
+    "additional",
+    "extensions",
+    "intermediary",
+    "metadata",
+    "network",
+    "observer",
+    "principal",
+    "security_result",
+    "src",
+    "target",
+)
+"""Top-level fields of a UDM event."""
+
+_UDM_FIELD = re.compile(
+    rf"(?<![\w.])(?:\$\w+\.)?((?:{'|'.join(UDM_ROOTS)})(?:\.\w+)+)", re.IGNORECASE
+)
+
+HIT_FIELDS = HitFields(
+    event_id=("metadata.id",),
+    host=(
+        "principal.hostname",
+        "principal.asset.hostname",
+        "target.hostname",
+        "target.asset.hostname",
+        "src.hostname",
+        "observer.hostname",
+    ),
+    user=(
+        "principal.user.userid",
+        "principal.user.user_display_name",
+        "principal.user.email_addresses",
+        "target.user.userid",
+        "target.user.email_addresses",
+    ),
+    process=(
+        "target.process.file.full_path",
+        "principal.process.file.full_path",
+        "target.process.command_line",
+        "principal.process.command_line",
+    ),
+)
+"""UDM fields naming the event id, host, user and process of a hit."""
 
 
 DOCUMENTATION_URL = (
@@ -81,6 +137,7 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
         "principal.asset.hostname",
         "target.asset.hostname",
     )
+    hit_fields = HIT_FIELDS
 
     def __init__(self, settings: ConnectorSettings) -> None:
         """Initialize the connector (the helper is created by ``start()``).
@@ -161,6 +218,20 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
         query = super().translate(sigma_rule, pipeline)
         return query.model_copy(update={"language": self.secops_config.query_language})
 
+    def resolve_query(self, request: HuntRequest) -> NativeQuery:
+        """Return the query of a run, naming the UDM fields a native query matches.
+
+        Args:
+            request: The hunt run request.
+
+        Returns:
+            The query, with the UDM fields it references.
+        """
+        query = super().resolve_query(request)
+        if query.fields:
+            return query
+        return query.model_copy(update={"fields": udm_query_fields(query.query)})
+
     def combine_queries(self, queries: Sequence[str]) -> str:
         """Join several UDM searches with ``OR`` (YARA-L rules cannot be joined).
 
@@ -209,7 +280,7 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
         detections = result.event_detections or [None] * len(result.events)
         events = []
         for raw, detection in zip(result.events, detections, strict=True):
-            fields = flatten_fields(raw)
+            fields = flatten_fields(udm_names(raw))
             events.append(
                 HuntEvent(
                     timestamp=_event_time(fields), fields=fields, detection=detection
@@ -219,6 +290,48 @@ class GoogleSecopsHuntConnector(InternalHuntConnector):
         return HuntResult(
             events=events, total_hits=result.detections, truncated=result.truncated
         )
+
+
+def udm_names(value: Any) -> Any:
+    """Name the fields of a UDM event as UDM search, YARA-L and the Sigma pipeline do.
+
+    The Chronicle API answers in JSON camelCase (``target.process.commandLine``);
+    UDM field paths are snake_case (``target.process.command_line``). The keys
+    of ``additional`` are chosen by the log parser and kept as they are.
+
+    Args:
+        value: A UDM event, or a part of it.
+
+    Returns:
+        The same document with snake_case keys.
+    """
+    if isinstance(value, Mapping):
+        return {
+            _snake_case(str(key)): (item if key in VERBATIM_FIELDS else udm_names(item))
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [udm_names(item) for item in value]
+    return value
+
+
+def _snake_case(name: str) -> str:
+    """Turn a JSON camelCase key into its UDM snake_case name."""
+    return _CAMEL_BOUNDARY.sub("_", name).lower()
+
+
+def udm_query_fields(query: str) -> tuple[str, ...]:
+    """Return the UDM fields a UDM search or a YARA-L rule references.
+
+    Args:
+        query: UDM search or YARA-L rule.
+
+    Returns:
+        The field names (without event variable), in order of first appearance.
+    """
+    return tuple(
+        dict.fromkeys(match.group(1).lower() for match in _UDM_FIELD.finditer(query))
+    )
 
 
 def _event_time(fields: dict[str, Any]) -> Any:

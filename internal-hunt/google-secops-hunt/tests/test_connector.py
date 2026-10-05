@@ -1,6 +1,8 @@
 import hashlib
+import json
 import threading
 from datetime import datetime, timezone
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,8 +24,9 @@ from connectors_sdk.connectors.internal_hunt import (
 )
 from google_secops_hunt import GoogleSecopsHuntConnector
 from google_secops_hunt.client import SearchResult
-from google_secops_hunt.connector import SCOPES
+from google_secops_hunt.connector import SCOPES, udm_names, udm_query_fields
 
+FIXTURES = Path(__file__).parent / "fixtures"
 WINDOW = HuntTimeWindow(start="2026-10-03T00:00:00Z", end="2026-10-04T00:00:00Z")
 SDK_CONNECTOR = "connectors_sdk.connectors.internal_hunt.internal_hunt_connector"
 TWO_RULES = """
@@ -287,6 +290,120 @@ def test_process_message_evidence_is_hashed_and_truncated(
             "value_preview": command_line[:20],
             "count": 2,
         }
+    ]
+
+
+def _recorded(name: str) -> dict:
+    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def test_udm_names_follow_udm_search_and_keep_parser_keys():
+    # Given a UDM event as the Chronicle API answers it, in camelCase
+    event = {
+        "metadata": {"eventTimestamp": "t", "baseLabels": {"logTypes": ["X"]}},
+        "target": {"process": {"commandLine": "c", "file": {"fullPath": "p"}}},
+        "about": [{"ipAddress": "1"}],
+        "additional": {"CategoryName": "v"},
+    }
+
+    # When/Then the fields are named as in UDM search, the parser keys kept
+    assert udm_names(event) == {
+        "metadata": {"event_timestamp": "t", "base_labels": {"log_types": ["X"]}},
+        "target": {"process": {"command_line": "c", "file": {"full_path": "p"}}},
+        "about": [{"ip_address": "1"}],
+        "additional": {"CategoryName": "v"},
+    }
+
+
+@pytest.mark.parametrize(
+    "query, fields",
+    [
+        pytest.param(
+            'target.process.command_line = /-enc/ nocase AND principal.hostname = "ws1"'
+            ' AND target.process.command_line != ""',
+            ("target.process.command_line", "principal.hostname"),
+            id="udm",
+        ),
+        pytest.param(
+            'rule r { events: $e.metadata.event_type = "PROCESS_LAUNCH" and '
+            "re.regex($e.target.process.file.full_path, `powershell`) condition: $e }",
+            ("metadata.event_type", "target.process.file.full_path"),
+            id="yara_l",
+        ),
+    ],
+)
+def test_udm_query_fields(query, fields):
+    # Given/When/Then the UDM fields a native query references are found, in order
+    assert udm_query_fields(query) == fields
+
+
+def test_process_message_reports_each_hit_and_dates_the_sightings(
+    connector_factory, helper, requests_mock, hunt_event
+):
+    # Given a recorded UDM search answer, in the camelCase of the Chronicle API
+    requests_mock.get(UDM_SEARCH_URL, json=_recorded("udm_search_process_launch.json"))
+
+    # When the Sigma hunt runs
+    connector_factory().process_message(hunt_event)
+
+    # Then the per-field evidence starts with the matched fields, without bookkeeping
+    kwargs = helper.report_hunt_run.call_args.kwargs
+    fields = [item["field"] for item in kwargs["evidence_sample"]]
+    assert fields[:3] == [
+        "target.process.file.full_path",
+        "target.process.command_line",
+        "principal.hostname",
+    ]
+    assert not [
+        field
+        for field in fields
+        if field.startswith(("metadata.base_labels", "metadata.enrichment"))
+        or field in ("metadata.id", "metadata.event_timestamp")
+    ]
+    # And each hit tells what matched, on which host, by whom, which process, when
+    first, second = kwargs["hits_sample"]
+    command_line = "powershell.exe -nop -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQA"
+    assert first["event_id"] == "AAAAAJ8xY2QxAAAAAAAAAA=="
+    assert first["timestamp"] == "2026-10-03T10:00:00Z"
+    assert (first["host"], first["user"]) == ("ws1.corp.example", "alice")
+    assert first["process"].endswith("\\powershell.exe")
+    matched = {item["field"]: item for item in first["matched"]}
+    assert matched["target.process.command_line"] == {
+        "field": "target.process.command_line",
+        "value_hash": hashlib.sha256(command_line.encode()).hexdigest(),
+        "value_preview": command_line,
+    }
+    assert (second["host"], second["user"]) == ("ws2.corp.example", "bob")
+    # And the sightings are dated by the first and last hits, not the run window
+    sightings = [
+        obj
+        for obj in helper.stix2_create_bundle.call_args.args[0]
+        if obj["type"] == "sighting"
+    ]
+    assert {(obj["first_seen"], obj["last_seen"]) for obj in sightings} == {
+        ("2026-10-03T10:00:00Z", "2026-10-03T11:30:00Z")
+    }
+
+
+def test_process_message_native_udm_search_reports_the_matched_field(
+    connector_factory, helper, requests_mock, hunt_event
+):
+    # Given a native UDM search on the host name, and the recorded answer
+    requests_mock.get(UDM_SEARCH_URL, json=_recorded("udm_search_process_launch.json"))
+    hunt_event["hunt"]["native_query"] = {
+        "platform": "google-secops",
+        "language": "udm",
+        "query": "principal.hostname = /corp\\.example$/",
+    }
+
+    # When the run is processed
+    connector_factory().process_message(hunt_event)
+
+    # Then each hit names the field of the search
+    hits = helper.report_hunt_run.call_args.kwargs["hits_sample"]
+    assert [[item["field"] for item in hit["matched"]] for hit in hits] == [
+        ["principal.hostname"],
+        ["principal.hostname"],
     ]
 
 

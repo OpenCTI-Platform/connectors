@@ -23,6 +23,7 @@ from connectors_sdk.connectors.internal_hunt import (
     NativeQuery,
     RunDeadline,
     ensure_pycti_hunt_support,
+    sha256_hex,
 )
 from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
     ERROR_MESSAGE_MAX_LENGTH,
@@ -375,6 +376,102 @@ def test_execution_sends_knowledge_and_reports_the_run(
     _, time_window, limits = connector.executed[0]
     assert time_window.start == datetime(2026, 10, 3, tzinfo=timezone.utc)
     assert limits.max_results == 100
+
+
+def test_execution_reports_each_hit_with_what_matched(
+    connector_factory, hunt_event, hunt_helper
+):
+    # Given hits on the detection fields, with constant bookkeeping fields
+    result = _results(
+        {
+            "CommandLine": "powershell -enc AAAA",
+            "DestinationIp": "8.8.8.8",
+            "host": "ws1",
+            "user.name": "alice",
+            "process.executable": "powershell.exe",
+            "event.id": "e1",
+            "about": "constant",
+            "additional.Category": "constant",
+        },
+        {"CommandLine": "cmd /c whoami", "host": "ws2", "event.id": "e2"},
+    )
+    connector = connector_factory(result)
+
+    # When the run is processed
+    connector.process_message(hunt_event())
+
+    # Then the per-field evidence starts with the detection fields, then the entities
+    _, kwargs = _report_kwargs(hunt_helper)
+    fields = [item["field"] for item in kwargs["evidence_sample"]]
+    assert fields[:4] == ["CommandLine", "DestinationIp", "host", "user.name"]
+    # And every hit is readable on its own: what matched, where, by whom and when
+    first, second = kwargs["hits_sample"]
+    assert first == {
+        "event_id": "e1",
+        "timestamp": "2026-10-03T02:00:00Z",
+        "detection": None,
+        "matched": [
+            {
+                "field": "CommandLine",
+                "value_hash": sha256_hex("powershell -enc AAAA"),
+                "value_preview": "powershell -enc ",
+            },
+            {
+                "field": "DestinationIp",
+                "value_hash": sha256_hex("8.8.8.8"),
+                "value_preview": "8.8.8.8",
+            },
+        ],
+        "host": "ws1",
+        "user": "alice",
+        "process": "powershell.exe",
+    }
+    assert (second["event_id"], second["host"], second["user"]) == ("e2", "ws2", None)
+    assert [item["field"] for item in second["matched"]] == ["CommandLine"]
+
+
+def test_older_pycti_gets_the_evidence_aggregated_per_field_only(
+    connector_factory, hunt_event
+):
+    # Given a pycti whose report takes no single hits
+    class _OlderHelper:
+        work_id = "work-1"
+
+        def __init__(self):
+            self.reports = []
+
+        def report_hunt_run(
+            self,
+            run_id,
+            status,
+            hits_count=None,
+            distinct_entities=None,
+            evidence_sample=None,
+            translated_query=None,
+            query_language=None,
+            cost_ms=None,
+            result_ids=None,
+            error=None,
+            truncated=None,
+        ):
+            self.reports.append((status, hits_count, evidence_sample))
+
+        def stix2_create_bundle(self, objects):
+            return "{}"
+
+        def send_stix2_bundle(self, bundle, **kwargs):
+            return []
+
+    connector = connector_factory(_results({"CommandLine": "x -enc y"}))
+    connector._helper = _OlderHelper()
+
+    # When the run is processed
+    connector.process_message(hunt_event())
+
+    # Then the run is reported completed with the per-field evidence
+    ((status, hits_count, evidence),) = connector.helper.reports
+    assert (status, hits_count) == ("completed", 1)
+    assert evidence[0]["field"] == "CommandLine"
 
 
 def test_execution_without_hits_sends_nothing(

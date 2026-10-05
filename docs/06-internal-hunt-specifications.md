@@ -187,8 +187,13 @@ Connectors never create incidents: OpenCTI creates incident drafts above the esc
 ## Evidence and privacy
 
 - Raw events never leave the connector.
-- The evidence sample holds at most `evidence_max_items` values; each value is SHA-256 hashed and its preview truncated
-  to `evidence_max_value_length`. Fields referenced by the detection come first.
+- The evidence sample holds at most `evidence_max_items` values. Each value is SHA-256 hashed and its preview truncated
+  to `evidence_max_value_length`. Fields referenced by the detection come first, then the `entity_fields`. An
+  `evidence_excluded_fields` entry also excludes its sub-fields.
+- The evidence of single hits (`hits_sample`) holds at most `evidence_max_items` hits, the earliest first. Each hit has
+  the fields the detection matched in it (for indicator hunts, the fields holding a looked-up value), each value hashed
+  and its preview truncated. It also has the host, user and process named by `hit_fields`, the event time, the event
+  id and its detection. A pycti without the `hits_sample` keyword gets the evidence per field only.
 - Host names, user names and command lines only appear in the evidence sample, unless the configuration explicitly
   widens the observable types.
 - Private, loopback and reserved IP addresses, and internal domain suffixes (`.local`, `.corp`, `.internal`...), are

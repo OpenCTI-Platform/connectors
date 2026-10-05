@@ -10,7 +10,8 @@ A platform answers a lookup in one of two ways:
 
 - raw events, in which this module finds the values (whole tokens only: a
   domain matches its subdomains, never a longer domain; an address never
-  matches inside a longer one);
+  matches inside a longer one), and the fields holding them for the evidence of
+  each hit;
 - one aggregated row per value (``ioc``, ``hits``, ``first_seen``,
   ``last_seen``, ``hosts``), exact counts computed by the platform itself.
 """
@@ -22,7 +23,11 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from connectors_sdk.connectors.internal_hunt.analysis import sha256_hex, value_strings
+from connectors_sdk.connectors.internal_hunt.analysis import (
+    HOST_FIELDS,
+    sha256_hex,
+    value_strings,
+)
 from connectors_sdk.connectors.internal_hunt.models import (
     HuntEvent,
     HuntEvidence,
@@ -80,29 +85,6 @@ class ObservableSighting(Sighting):
 
 HOSTS_MAX = 10
 """Hosts kept per value (OpenCTI keeps the same number)."""
-
-HOST_FIELDS: tuple[str, ...] = (
-    "host",
-    "hostname",
-    "host.name",
-    "host.hostname",
-    "agent.hostname",
-    "computer",
-    "computername",
-    "devicename",
-    "device.hostname",
-    "device.name",
-    "dvchostname",
-    "src_host",
-    "dest_host",
-    "srchostname",
-    "dsthostname",
-    "principal.hostname",
-    "target.hostname",
-    "src_endpoint.hostname",
-    "dst_endpoint.hostname",
-)
-"""Result fields naming the host of an event, compared case-insensitively."""
 
 AGGREGATED_FIELDS = ("ioc", "hits", "first_seen", "last_seen", "hosts")
 """Fields of an aggregated lookup row, one row per value."""
@@ -264,6 +246,35 @@ def match_events(
                     event.timestamp, hosts
                 )
     return observations
+
+
+def value_hits(
+    batch: IocBatch, events: Sequence[HuntEvent]
+) -> list[tuple[HuntEvent, list[str]]]:
+    """Return the raw result events holding a value of a batch, with the fields holding it.
+
+    Args:
+        batch: The values looked up.
+        events: Events returned by the platform.
+
+    Returns:
+        Each event holding a value, with its fields holding one (in the order of the event).
+    """
+    patterns = [value_pattern(ioc) for ioc in batch.iocs]
+    hits: list[tuple[HuntEvent, list[str]]] = []
+    for event in events:
+        fields = [
+            name
+            for name, value in event.fields.items()
+            if any(
+                pattern.search(text)
+                for text in value_strings(value)
+                for pattern in patterns
+            )
+        ]
+        if fields:
+            hits.append((event, fields))
+    return hits
 
 
 def aggregated_observations(

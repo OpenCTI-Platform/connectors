@@ -6,7 +6,8 @@ This package provides the building blocks of the connectors of type ``INTERNAL_H
 - Protocol models: ``HuntRequest`` and its parts, ``NativeQuery``, ``HuntEvent``, ``HuntResult``,
   ``HuntEvidence``, ``HuntRunReport``
 - pySigma helpers: ``build_pipeline``, ``parse_sigma_rule``, ``convert_sigma``, ``detection_fields``
-- Result helpers: ``flatten_fields``, ``value_strings``, ``build_evidence``, ``count_distinct_entities``
+- Result helpers: ``flatten_fields``, ``value_strings``, ``build_evidence``, ``build_hit_evidence``,
+  ``count_distinct_entities``
 - Time helpers: ``RunDeadline`` (bound API calls and job polling), ``parse_timestamp``
 - HTTP: ``HuntApiClient`` (deadline-bounded calls raising hunt errors), ``api_error_message``
 - Errors: ``HuntError`` and its subclasses
@@ -14,11 +15,16 @@ This package provides the building blocks of the connectors of type ``INTERNAL_H
 
 from connectors_sdk.connectors.internal_hunt.analysis import (
     DEFAULT_ENTITY_FIELDS,
+    DEFAULT_HIT_FIELDS,
+    HOST_FIELDS,
     BenignMatcher,
+    HitFields,
     build_evidence,
+    build_hit_evidence,
     count_distinct_entities,
     event_time_bounds,
     flatten_fields,
+    present_fields,
     sha256_hex,
     suppress_benign,
     value_strings,
@@ -41,7 +47,6 @@ from connectors_sdk.connectors.internal_hunt.errors import (
 )
 from connectors_sdk.connectors.internal_hunt.indicators import (
     AGGREGATED_FIELDS,
-    HOST_FIELDS,
     IocBatch,
     IocObservation,
     aggregated_observations,
@@ -49,6 +54,7 @@ from connectors_sdk.connectors.internal_hunt.indicators import (
     build_indicator_objects,
     build_ioc_results,
     match_events,
+    value_hits,
     value_pattern,
 )
 from connectors_sdk.connectors.internal_hunt.internal_hunt_connector import (
@@ -60,6 +66,8 @@ from connectors_sdk.connectors.internal_hunt.models import (
     HuntDefinition,
     HuntEvent,
     HuntEvidence,
+    HuntHitEvidence,
+    HuntHitField,
     HuntIndicator,
     HuntIoc,
     HuntIocResult,
@@ -109,6 +117,8 @@ __all__ = [
     "HuntDefinition",
     "HuntEvent",
     "HuntEvidence",
+    "HuntHitEvidence",
+    "HuntHitField",
     "HuntIndicator",
     "HuntIoc",
     "HuntIocResult",
@@ -134,11 +144,15 @@ __all__ = [
     "parse_sigma_rule",
     # Result helpers
     "DEFAULT_ENTITY_FIELDS",
+    "DEFAULT_HIT_FIELDS",
     "BenignMatcher",
+    "HitFields",
     "build_evidence",
+    "build_hit_evidence",
     "count_distinct_entities",
     "event_time_bounds",
     "flatten_fields",
+    "present_fields",
     "sha256_hex",
     "suppress_benign",
     "value_strings",
@@ -152,6 +166,7 @@ __all__ = [
     "build_indicator_objects",
     "build_ioc_results",
     "match_events",
+    "value_hits",
     "value_pattern",
     # Time helpers
     "RunDeadline",
