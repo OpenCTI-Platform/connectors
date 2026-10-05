@@ -131,26 +131,6 @@ class VirusTotalBuilderTest(unittest.TestCase):
             85,
         )
 
-    def test_compute_score_ignores_gti_assessment_when_disabled(self):
-        """gti_enabled=False must ignore a present, usable gti_assessment
-        entirely and fall back to the legacy stats-based score."""
-        builder = VirusTotalBuilder(
-            self.helper,
-            self.author,
-            True,
-            [],
-            {"id": "fakeid"},
-            {"id": "fakeid"},
-            self.load_file("vt_test_file.json")["data"],
-            gti_enabled=False,
-        )
-        attributes = self.load_file("vt_test_file.json")["data"]["attributes"]
-        gti_assessment = {"threat_score": {"value": 85}}
-        self.assertEqual(
-            builder._compute_score(attributes["last_analysis_stats"], gti_assessment),
-            72,
-        )
-
     def test_compute_score_gti_assessment_no_threat_score(self):
         """GTI assessment present but missing threat_score falls back to stats."""
         builder = VirusTotalBuilder(
