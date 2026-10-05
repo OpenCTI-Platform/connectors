@@ -9,7 +9,12 @@ if TYPE_CHECKING:
 
 class IndicatorsAPI(BaseCrowdstrikeClient):
 
-    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper", is_secondary: bool):
+    def __init__(
+        self,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
+        is_secondary: bool,
+    ):
         super().__init__(config, helper, is_secondary)
 
     def get_combined_indicator_entities(

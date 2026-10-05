@@ -1,8 +1,7 @@
 from typing import TYPE_CHECKING
 
-from falconpy import Intel as CrowdstrikeIntel
-
 from crowdstrike_feeds_services.utils.errors import CrowdStrikeAPIError
+from falconpy import Intel as CrowdstrikeIntel
 
 if TYPE_CHECKING:
     from crowdstrike_feeds_connector import ConnectorSettings
@@ -14,7 +13,12 @@ class BaseCrowdstrikeClient:
     Working with FalconPy library
     """
 
-    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper", is_secondary: bool = False):
+    def __init__(
+        self,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
+        is_secondary: bool = False,
+    ):
         """
         Initialize API with necessary configurations
         :param helper: Helper OpenCTI
@@ -23,7 +27,7 @@ class BaseCrowdstrikeClient:
         self.config = config
         self.helper = helper
         self.is_secondary = is_secondary
-        
+
         self.cs_intel = CrowdstrikeIntel(
             client_id=self.config.crowdstrike.client_id.get_secret_value(),
             client_secret=self.config.crowdstrike.client_secret.get_secret_value(),

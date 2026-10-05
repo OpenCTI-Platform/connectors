@@ -75,7 +75,9 @@ class ReportImporter(BaseImporter):
         self.report_type = report_type
         self.guess_malware = guess_malware
         self.report_guess_relations = report_guess_relations
-        self.indicators_api_cs = IndicatorsAPI(config, helper, True) # Indicator API is secondary for the reports
+        self.indicators_api_cs = IndicatorsAPI(
+            config, helper, True
+        )  # Indicator API is secondary for the reports
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
         self.scopes = scopes
