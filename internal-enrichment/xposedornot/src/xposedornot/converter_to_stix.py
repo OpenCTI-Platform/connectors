@@ -28,7 +28,11 @@ class ObservableNote(Note):
     version marker, and freezing it lets a platform treat refreshed breach
     content as an unchanged version and drop it. `supersedes` carries the
     `modified` of the version being replaced, so the new one outranks it even
-    when that version claims a timestamp ahead of the clock."""
+    when that version claims a timestamp ahead of the clock. That value has
+    already round-tripped through a store that keeps dates to the
+    millisecond, so the tie-break advances by a millisecond: a smaller step
+    truncates back onto the superseded stamp and the version stops being
+    newer."""
 
     source_id: str = Field(
         description="STIX id of the observable this note describes.",
@@ -52,7 +56,7 @@ class ObservableNote(Note):
         modified = max(datetime.now(timezone.utc), anchor)
         superseded = as_utc(self.supersedes)
         if superseded is not None and modified <= superseded:
-            modified = superseded + timedelta(microseconds=1)
+            modified = superseded + timedelta(milliseconds=1)
         properties["modified"] = modified
         return NoteStix(allow_custom=True, **properties)
 

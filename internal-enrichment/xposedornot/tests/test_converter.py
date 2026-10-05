@@ -566,6 +566,38 @@ def test_a_naive_timestamp_does_not_break_the_note():
             assert note["modified"] >= note["created"], (created, supersedes)
 
 
+def test_a_superseded_note_is_outranked_at_millisecond_precision():
+    """`supersedes` is the `modified` the note came back with, so it has
+    already round-tripped through a store that keeps dates to the
+    millisecond. A sub-millisecond tie-break truncated onto the stamp it
+    replaced, and the refreshed content stopped being a newer version.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    from src.xposedornot.converter_to_stix import ConverterToStix
+
+    def floor_ms(value):
+        return value.replace(microsecond=value.microsecond // 1000 * 1000)
+
+    converter = ConverterToStix(author=ConverterToStix.make_author())
+    ahead = datetime.now(timezone.utc) + timedelta(days=1)
+    for stamp in (
+        ahead,
+        ahead.replace(microsecond=999999),
+        ahead.replace(microsecond=0),
+        ahead.replace(microsecond=1),
+    ):
+        note = converter.build_note(
+            "email-addr--11111111-1111-4111-8111-111111111111",
+            {"breaches": [{"name": "B"}]},
+            markings=[],
+            observed_at=None,
+            supersedes=stamp,
+        ).to_stix2_object()
+        assert note["modified"] > stamp, stamp
+        assert floor_ms(note["modified"]) > floor_ms(stamp), stamp
+
+
 def test_boolean_record_counts_are_neither_summed_nor_rendered():
     """`True` is an int to Python and would otherwise count as one record.
 
