@@ -322,6 +322,14 @@ def _ppl_error_details(cause: BaseException | None) -> str | None:
 
 
 def _source(hit: dict[str, Any]) -> dict[str, Any]:
-    """Return the source document of a search hit."""
+    """Return the source document of a search hit, with its document id.
+
+    The ``_id`` of the hit metadata is the stable id of the event: it keys the
+    hit across runs (it never reaches the aggregated evidence).
+    """
     source = hit.get("_source")
-    return dict(source) if isinstance(source, dict) else {}
+    row = dict(source) if isinstance(source, dict) else {}
+    document_id = hit.get("_id")
+    if isinstance(document_id, str) and document_id and "_id" not in row:
+        row["_id"] = document_id
+    return row

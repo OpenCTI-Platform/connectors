@@ -164,19 +164,24 @@ def test_execute_eql_over_the_indices(connector_factory, requests_mock):
 
 
 def test_execute_eql_counts_a_sequence_as_one_hit(connector_factory, requests_mock):
-    # Given two sequences of three events each, all returned
-    sequence = {
-        "events": [
-            {"_source": {"@timestamp": "2026-10-03T11:00:00Z", "step": step}}
-            for step in range(3)
-        ]
-    }
+    # Given two sequences of three events each, all returned with their document ids
+    def sequence(number):
+        return {
+            "events": [
+                {
+                    "_id": f"seq{number}-{step}",
+                    "_source": {"@timestamp": "2026-10-03T11:00:00Z", "step": step},
+                }
+                for step in range(3)
+            ]
+        }
+
     requests_mock.post(
         EQL_URL,
         json={
             "hits": {
                 "total": {"value": 2, "relation": "eq"},
-                "sequences": [sequence, sequence],
+                "sequences": [sequence(1), sequence(2)],
             }
         },
     )

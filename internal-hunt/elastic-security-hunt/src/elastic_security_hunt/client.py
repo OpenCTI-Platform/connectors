@@ -1,6 +1,8 @@
 """Elasticsearch client running hunt queries in ES|QL, EQL and Lucene."""
 
 import base64
+import hashlib
+import json
 import threading
 from collections.abc import Hashable
 from datetime import datetime, timezone
@@ -257,13 +259,11 @@ class ElasticsearchClient(HuntApiClient):
         labels: list[str | None] = [None] * len(events)
         sequences = hits.get("sequences") or []
         # hits.total counts sequences: the events of one sequence are one hit,
-        # identified by the query and the position of the sequence in the answer
-        for index, sequence in enumerate(sequences):
+        # identified by its events, so that every run finding it gives it the same key
+        for sequence in sequences:
             sequence_events = sequence.get("events") or []
             events.extend(sequence_events)
-            labels.extend(
-                [f"eql-sequence-{job_key}-{index + 1}"] * len(sequence_events)
-            )
+            labels.extend([_sequence_label(sequence_events)] * len(sequence_events))
         rows = [_source(event) for event in events]
         total, relation = _total(hits, len(sequences) or len(rows))
         # Sequences can hold more events than the cap: the events cut here make the result partial
@@ -438,9 +438,38 @@ def _usable_count(value: Any, page_size: int) -> bool:
 
 
 def _source(hit: dict[str, Any]) -> dict[str, Any]:
-    """Return the source document of a search hit or EQL event."""
+    """Return the source document of a search hit or EQL event, with its document id.
+
+    The ``_id`` of the hit metadata is the stable id of the event: it keys the
+    hit across runs (it never reaches the aggregated evidence).
+    """
     source = hit.get("_source")
-    return dict(source) if isinstance(source, dict) else {}
+    row = dict(source) if isinstance(source, dict) else {}
+    document_id = hit.get("_id")
+    if isinstance(document_id, str) and document_id and "_id" not in row:
+        row["_id"] = document_id
+    return row
+
+
+def _sequence_label(sequence_events: list[dict[str, Any]]) -> str:
+    """Return a stable label of an EQL sequence, the same at every run that finds it.
+
+    It derives from the index and document id of each event of the sequence, in
+    order, else from their source documents.
+    """
+    identities = [
+        f"{event.get('_index') or ''}/{event['_id']}"
+        for event in sequence_events
+        if isinstance(event.get("_id"), str) and event["_id"]
+    ]
+    material = identities or [
+        json.dumps(_source(event), sort_keys=True, default=str)
+        for event in sequence_events
+    ]
+    digest = hashlib.sha256(
+        json.dumps(material, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return f"eql-sequence-{digest[:32]}"
 
 
 def _total(hits: dict[str, Any], default: int) -> tuple[int, str]:

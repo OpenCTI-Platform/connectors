@@ -224,7 +224,12 @@ def test_eql_reads_events_and_sequences(requests_mock):
                 "total": {"value": 3, "relation": "eq"},
                 "events": [{"_source": {"process": {"name": "a"}}}],
                 "sequences": [
-                    {"events": [{"_source": {"b": 1}}, {"_index": "x"}]},
+                    {
+                        "events": [
+                            {"_source": {"b": 1}, "_id": "e1", "_index": "logs-a"},
+                            {"_index": "x", "_id": "e2"},
+                        ]
+                    },
                 ],
             },
         },
@@ -235,27 +240,46 @@ def test_eql_reads_events_and_sequences(requests_mock):
         ["logs-*"], "any where true", START, END, 5, RunDeadline(30), "k"
     )
 
-    # Then the request is restricted to the window and the events are read
+    # Then the request is restricted to the window and the events are read with
+    # their document ids
     request = requests_mock.last_request
     body = request.json()
     assert body["size"] == 5
     assert body["filter"] == TIME_RANGE
     assert body["timestamp_field"] == "@timestamp"
     assert request.qs["ignore_unavailable"] == ["true"]
-    assert result.rows == [{"process": {"name": "a"}}, {"b": 1}, {}]
-    assert result.sequences == [None, "eql-sequence-k-1", "eql-sequence-k-1"]
+    assert result.rows == [
+        {"process": {"name": "a"}},
+        {"b": 1, "_id": "e1"},
+        {"_id": "e2"},
+    ]
+    # And the events of the sequence share a label derived from their ids, the
+    # same at every run that finds the sequence
+    label = result.sequences[1]
+    assert result.sequences == [None, label, label]
+    assert label.startswith("eql-sequence-") and len(label) == len("eql-sequence-") + 32
+    again = _client().eql(
+        ["logs-*"], "any where true", START, END, 5, RunDeadline(30), "other"
+    )
+    assert again.sequences == result.sequences
     assert (result.total, result.partial) == (3, False)
 
 
 def test_eql_counts_sequences_and_flags_the_events_cut(requests_mock):
-    # Given two sequences of three events each, more events than the cap
-    sequence = {"events": [{"_source": {"step": step}} for step in range(3)]}
+    # Given two sequences of three events each, more events than the cap: one
+    # with document ids, one without
+    with_ids = {
+        "events": [
+            {"_source": {"step": step}, "_id": f"s1-{step}"} for step in range(3)
+        ]
+    }
+    without_ids = {"events": [{"_source": {"step": step}} for step in range(3)]}
     requests_mock.post(
         EQL_URL,
         json={
             "hits": {
                 "total": {"value": 2, "relation": "eq"},
-                "sequences": [sequence, sequence],
+                "sequences": [with_ids, without_ids],
             }
         },
     )
@@ -265,7 +289,10 @@ def test_eql_counts_sequences_and_flags_the_events_cut(requests_mock):
 
     # Then a sequence is one hit, its events name it, and the cut ones make the result partial
     assert len(result.rows) == 4
-    assert result.sequences == ["eql-sequence-k-1"] * 3 + ["eql-sequence-k-2"]
+    first, second = result.sequences[0], result.sequences[3]
+    assert result.sequences == [first] * 3 + [second]
+    assert first != second
+    assert all(label.startswith("eql-sequence-") for label in (first, second))
     assert (result.total, result.partial) == (2, True)
 
 

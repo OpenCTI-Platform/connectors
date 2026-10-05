@@ -236,6 +236,7 @@ def test_run_rule_collects_detection_events(requests_mock):
             {"progressPercent": 50},
             {
                 "detection": {
+                    "id": "de_7f3e0c1a",
                     "detectionTime": "2026-10-03T10:00:01Z",
                     "collectionElements": [
                         {"references": [{"event": event}, "noise", {"entity": {}}]}
@@ -263,7 +264,13 @@ def test_run_rule_collects_detection_events(requests_mock):
     }
     # And the events of the detections are returned, the result being truncated
     assert result.events == [event, {"detectionTime": "2026-10-03T11:00:00Z"}]
-    assert result.event_detections == ["detection-1", "detection-2"]
+    # Each detection is labelled by its id, else by a digest of its content: the
+    # same label at every run that finds it, whatever its position in the answer
+    first, second = result.event_detections
+    assert first == "de_7f3e0c1a"
+    assert second.startswith("detection-") and len(second) == len("detection-") + 32
+    again = make_client().run_rule("rule x {}", START, END, 0, RunDeadline(30))
+    assert again.event_detections == result.event_detections
     assert (result.detections, result.truncated) == (2, True)
 
 

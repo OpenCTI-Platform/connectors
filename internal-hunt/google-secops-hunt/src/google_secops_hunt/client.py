@@ -1,5 +1,7 @@
 """Chronicle API client of the Google SecOps hunt connector."""
 
+import hashlib
+import json
 import threading
 from datetime import datetime, timezone
 from typing import Any, Protocol
@@ -262,9 +264,24 @@ class SecOpsClient(HuntApiClient):
                 detection_events = _detection_events(detection)
                 events.extend(detection_events)
                 event_detections.extend(
-                    [f"detection-{detections}"] * len(detection_events)
+                    [_detection_label(detection)] * len(detection_events)
                 )
         return SearchResult(events, detections, truncated, event_detections)
+
+
+def _detection_label(detection: dict[str, Any]) -> str:
+    """Return a stable label of a YARA-L detection, the same at every run that finds it.
+
+    The id Google SecOps gives the detection, else a digest of its content: the
+    label keys the hit across runs, never its position in the answer.
+    """
+    detection_id = detection.get("id")
+    if isinstance(detection_id, str) and detection_id.strip():
+        return detection_id.strip()
+    canonical = json.dumps(
+        detection, sort_keys=True, separators=(",", ":"), default=str
+    )
+    return f"detection-{hashlib.sha256(canonical.encode('utf-8')).hexdigest()[:32]}"
 
 
 def _udm(event: dict[str, Any]) -> dict[str, Any]:

@@ -327,9 +327,22 @@ def test_lucene_without_total(requests_mock):
     # Given an answer without a total and a hit without source
     requests_mock.post(SEARCH_URL, json={"hits": {"hits": [{"_id": "1"}]}})
 
-    # When/Then the total is the number of documents
+    # When/Then the total is the number of documents, each row keeping the
+    # document id that keys its hit across runs
     result = _client().lucene(["ocsf-*"], "a:1", START, END, 5, RunDeadline(30))
-    assert (result.rows, result.total, result.partial) == ([{}], 1, False)
+    assert (result.rows, result.total, result.partial) == ([{"_id": "1"}], 1, False)
+
+
+def test_lucene_keeps_the_document_id_with_the_source(requests_mock):
+    # Given a hit with its source and its document id
+    requests_mock.post(
+        SEARCH_URL,
+        json={"hits": {"hits": [{"_id": "doc-7", "_source": {"a": 1}}]}},
+    )
+
+    # When/Then the row holds the source and the id
+    result = _client().lucene(["ocsf-*"], "a:1", START, END, 5, RunDeadline(30))
+    assert result.rows == [{"a": 1, "_id": "doc-7"}]
 
 
 def test_lucene_full_page_without_total_is_partial(requests_mock):
