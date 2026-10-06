@@ -2,25 +2,16 @@
 
 import traceback
 
-from connector import ConfigLoader, IsMaliciousConnector
+from connector import ConnectorSettings, IsMaliciousConnector
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:
-        # Load configuration from environment
-        config = ConfigLoader.from_env()
+        # Load configuration (environment variables, config.yml or .env)
+        config = ConnectorSettings()
 
         # Initialize OpenCTI helper
-        helper = OpenCTIConnectorHelper(
-            {
-                "id": config.connector.id,
-                "type": config.connector.type,
-                "name": config.connector.name,
-                "scope": config.connector.scope,
-                "log_level": config.connector.log_level,
-                "auto": config.connector.auto,
-            }
-        )
+        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
 
         # Create and run connector
         connector = IsMaliciousConnector(config, helper)

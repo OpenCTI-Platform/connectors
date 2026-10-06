@@ -1,31 +1,38 @@
 """Tests for isMalicious connector API client."""
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from connector import IsMaliciousConnector
+from connector import ConnectorSettings, IsMaliciousConnector
 from connector.ismalicious import USER_AGENT
-from connector.models import (
-    ConfigLoader,
-    ConnectorConfig,
-    IsMaliciousConfig,
-    OpenCTIConfig,
-)
-from pydantic import SecretStr
+
+
+def _make_settings(**ismalicious: Any) -> ConnectorSettings:
+    """Build connector settings from a config dict instead of the environment."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "opencti-token",
+                    },
+                    "connector": {},
+                    "ismalicious": {"api_key": "test-credential", **ismalicious},
+                }
+            )
+
+    return FakeConnectorSettings()
 
 
 def _make_connector(
-    api_key: str = "test-credential",
+    api_key: str = "test-credential", **ismalicious: Any
 ) -> tuple[IsMaliciousConnector, MagicMock]:
-    config = ConfigLoader(
-        opencti=OpenCTIConfig(
-            url="http://localhost:8080",
-            token=SecretStr("opencti-token"),
-        ),
-        connector=ConnectorConfig(id="ismalicious-enrichment"),
-        ismalicious=IsMaliciousConfig(api_key=SecretStr(api_key)),
-    )
+    config = _make_settings(api_key=api_key, **ismalicious)
     helper = MagicMock()
     helper.api.label.read_or_create_unchecked = MagicMock()
     return IsMaliciousConnector(config, helper), helper
@@ -60,16 +67,9 @@ def test_call_api_strips_trailing_slash_from_api_url(mock_get):
     mock_response.json.return_value = {"malicious": True}
     mock_get.return_value = mock_response
 
-    config = ConfigLoader(
-        opencti=OpenCTIConfig(
-            url="http://localhost:8080",
-            token=SecretStr("opencti-token"),
-        ),
-        connector=ConnectorConfig(id="ismalicious-enrichment"),
-        ismalicious=IsMaliciousConfig(
-            api_url="https://api.ismalicious.com/",
-            api_key=SecretStr("test-key"),
-        ),
+    config = _make_settings(
+        api_url="https://api.ismalicious.com/",
+        api_key="test-key",
     )
     helper = MagicMock()
     helper.api.label.read_or_create_unchecked = MagicMock()
@@ -305,8 +305,7 @@ def test_unknown_score_does_not_downgrade_existing_score(api_data, expected_verd
     "api_data", [{"malicious": False}, {"riskScore": {"score": 59}}]
 )
 def test_missing_or_below_threshold_score_does_not_enrich(api_data):
-    connector, helper = _make_connector()
-    connector.config.ismalicious.min_score_to_report = 60
+    connector, helper = _make_connector(min_score=60)
     with (
         patch.object(connector, "_call_api", return_value=api_data),
         patch("connector.ismalicious.OpenCTIConnectorHelper") as helper_cls,

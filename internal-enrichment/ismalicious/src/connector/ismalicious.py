@@ -17,7 +17,7 @@ from pycti import (
     StixSightingRelationship,
 )
 
-from .models import ConfigLoader
+from .settings import ConnectorSettings
 
 # Identifies the connector to the isMalicious API, which attributes usage by
 # User-Agent prefix (the requests default would read as a generic script).
@@ -69,7 +69,7 @@ def threat_sources(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 class IsMaliciousConnector:
     """OpenCTI connector for isMalicious threat intelligence."""
 
-    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
         self.api_url = config.ismalicious.api_url.rstrip("/")
@@ -277,7 +277,7 @@ class IsMaliciousConnector:
 
         # Calculate and set score
         score = self._calculate_score(api_data)
-        threshold = self.config.ismalicious.min_score_to_report
+        threshold = self.config.ismalicious.min_score
         if score is None and threshold > 0:
             return "Risk score unavailable; cannot evaluate minimum score, skipping"
         if score is not None:
