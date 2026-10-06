@@ -1079,9 +1079,11 @@ def test_adapter_hit_read_rejects_an_incident_without_activity_time(
     adapter_connector.client.list_incident_entities.assert_not_called()
 
 
-def test_adapter_hits_resume_at_an_incident_whose_entities_cannot_be_read(
+def test_adapter_hit_read_fails_at_an_incident_whose_entities_cannot_be_read(
     adapter, adapter_connector
 ) -> None:
+    """A continuation stopped at the same incident again would not progress, and the
+    reconciler would end the window without it: the read fails instead."""
     since = datetime.now(UTC) - timedelta(hours=1)
     first = since + timedelta(minutes=10)
     failing = since + timedelta(minutes=20)
@@ -1106,15 +1108,34 @@ def test_adapter_hits_resume_at_an_incident_whose_entities_cannot_be_read(
         ConnectorClientError("[API] Failed", {"error": "503"}),
     ]
 
-    collection = adapter.collect_hits([make_deployment()], since)
-
-    assert isinstance(collection, HitCollection)
-    assert collection.complete_until == since
-    assert collection.resume == IncidentCursor(
-        modified_since=first, handled={"incident-1": first}
-    )
-    assert [hit.timestamp for hit in collection.hits] == [first]
+    with pytest.raises(SentinelDeploymentError, match="Failed"):
+        adapter.collect_hits([make_deployment()], since)
     assert adapter_connector.client.list_incident_entities.call_count == 2
+
+
+def test_adapter_hit_read_counts_no_hit_for_an_incident_deleted_since_listed(
+    adapter, adapter_connector
+) -> None:
+    since = datetime.now(UTC) - timedelta(hours=1)
+    recent = (since + timedelta(minutes=30)).isoformat()
+    adapter_connector.client.iter_incidents.return_value = IncidentListing(
+        [
+            {"id": "incident-deleted", "properties": {"lastActivityTimeUtc": recent}},
+            {"id": "incident-1", "properties": {"lastActivityTimeUtc": recent}},
+        ]
+    )
+    deleted = ConnectorClientError("[API] Not found", {"error": "404"})
+    deleted.__cause__ = ResourceNotFoundError("Not found")
+    adapter_connector.client.list_incident_entities.side_effect = [
+        deleted,
+        [{"kind": "Ip", "properties": {"address": "198.51.100.7"}}],
+    ]
+
+    hits = list(adapter.collect_hits([make_deployment()], since))
+
+    assert [(hit.indicator_id, hit.timestamp.isoformat()) for hit in hits] == [
+        (INDICATOR_ID, recent)
+    ]
 
 
 def test_adapter_hits_resume_after_the_last_listed_page(
@@ -1510,6 +1531,47 @@ def test_reconciliation_and_hits_are_reported(
     (hits,) = router.calls_of("IndicatorReportHits(")
     assert hits["indicatorId"] == INDICATOR_ID
     assert hits["count"] == 1
+
+
+def test_an_incident_whose_entities_cannot_be_read_is_read_again(
+    mocker: MockerFixture, e2e_connector: Connector, router: GraphQLRouter
+) -> None:
+    """Failed entity reads keep the hit window, however many: the incident is never
+    skipped, and its hit is reported once its entities can be read."""
+    router.deployments = [deployment_node(INDICATOR_ID, INDICATOR_STIX_ID, "active")]
+    activity = (datetime.now(UTC) - timedelta(minutes=5)).isoformat()
+    incidents = response(
+        {
+            "value": [
+                {
+                    "id": f"{WORKSPACE_PATH}/incidents/incident-1",
+                    "properties": {"lastActivityTimeUtc": activity},
+                }
+            ]
+        }
+    )
+    entities = response(
+        {"entities": [{"kind": "Ip", "properties": {"address": "198.51.100.7"}}]}
+    )
+    unavailable = HttpResponseError(message="503 Service Unavailable")
+    mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        side_effect=[
+            *(response({"value": [ti_object()]}), incidents, unavailable) * 2,
+            response({"value": [ti_object()]}),
+            incidents,
+            entities,
+        ],
+    )
+    reconciler = e2e_connector.assurance.reconciler
+
+    for _ in range(2):
+        assert reconciler.run_once().hits_reported == 0
+    assert router.calls_of("IndicatorReportHits(") == []
+
+    assert reconciler.run_once().hits_reported == 1
+    (hits,) = router.calls_of("IndicatorReportHits(")
+    assert (hits["indicatorId"], hits["count"]) == (INDICATOR_ID, 1)
 
 
 def test_withdrawal_deletes_a_resource_sentinel_retains_revoked(

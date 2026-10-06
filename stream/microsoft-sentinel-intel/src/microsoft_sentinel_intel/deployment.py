@@ -245,8 +245,10 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         time.
 
         The read stops at the first incident beyond `MAX_HIT_INCIDENTS` inspected
-        incidents or whose entities cannot be read, and when the listing stops at
-        `INCIDENTS_MAX_PAGES` with pages left. The listing is ordered by
+        incidents, and when the listing stops at `INCIDENTS_MAX_PAGES` with pages
+        left. An incident whose entities cannot be read fails the read, so that the
+        reconciler keeps its checkpoint and reads the window again on the next run;
+        one deleted since it was listed counts no hit. The listing is ordered by
         modification time while hits carry the activity time: an incident left
         unread can have any activity time after `since`, so the collection is then
         complete only until `since`. The reconciler holds its hits, and the next
@@ -257,7 +259,8 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
         continued and its hits are a lower bound.
 
         :param resume: Where the previous read, stopped early, continues.
-        :raises SentinelDeploymentError: When the incidents cannot be listed.
+        :raises SentinelDeploymentError: When the incidents, or the entities of one of
+            them, cannot be read.
         """
         indicators_by_value: dict[str, set[str]] = {}
         for deployment in deployments:
@@ -315,16 +318,13 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
                     try:
                         entities = self._client.list_incident_entities(str(incident_id))
                     except ConnectorClientError as err:
-                        self._logger.warning(
-                            f"{_LOG_PREFIX} Cannot read the entities of an incident, "
-                            "the next run continues at it.",
-                            meta={
-                                "incident_id": incident_id,
-                                "error": describe_error(err),
-                            },
-                        )
-                        stopped = True
-                        break
+                        if not _is_not_found(err):
+                            # A continuation stopped at this incident again would not
+                            # progress, and the reconciler would end the window without
+                            # it: the read fails, and the next run reads the window again.
+                            raise
+                        # Deleted since it was listed: it has no entity left to count.
+                        entities = []
                     inspected += 1
                     matched = {
                         indicator_id
