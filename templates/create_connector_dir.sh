@@ -123,7 +123,7 @@ cp -r "$TEMPLATE_DIR/." "$NEW_CONNECTOR_DIR"
 # Update placeholders in the copied files
 echo "Customizing connector files..."
 
-PYTHON_NAME="$(echo "$NAME" | sed -E 's/-([a-z])/\U\1/g' | sed -E 's/^(.)/\U\1/')"
+PYTHON_NAME="$(echo "$NAME" | sed -E 's/-([a-z0-9])/\U\1/g' | sed -E 's/^(.)/\U\1/')"
 CAPITALIZED_NAME=$(echo "$NAME" |  sed 's/.*/\U&/' | sed -E 's/-/_/g')
 
 find "$NEW_CONNECTOR_DIR" -type f -exec sed -i \

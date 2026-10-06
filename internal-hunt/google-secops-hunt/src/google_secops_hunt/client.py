@@ -262,6 +262,11 @@ class SecOpsClient(HuntApiClient):
             if isinstance(detection, dict):
                 detections += 1
                 detection_events = _detection_events(detection)
+                # maxResults counts detections, and one detection can name many events
+                room = max(max(1, max_results) - len(events), 0)
+                if len(detection_events) > room:
+                    detection_events = detection_events[:room]
+                    truncated = True
                 events.extend(detection_events)
                 event_detections.extend(
                     [_detection_label(detection)] * len(detection_events)

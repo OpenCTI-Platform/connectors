@@ -6,6 +6,7 @@ import requests
 from conftest import OS_URL, PPL_URL, SEARCH_URL, count_answer, hits_answer, ppl_answer
 from connectors_sdk.connectors.internal_hunt import (
     HuntExecutionError,
+    HuntQueryRejectedError,
     HuntTimeoutError,
     RunDeadline,
 )
@@ -196,13 +197,15 @@ def test_ppl_reports_the_error_details(requests_mock):
         },
     )
 
-    # When/Then the reason and the details are reported
-    with pytest.raises(HuntExecutionError) as err:
+    # When/Then the reason and the details are reported, and the query stays
+    # rejected: a retry cannot succeed
+    with pytest.raises(HuntQueryRejectedError) as err:
         _client().ppl("source=x | where bad=1", START, END, 10, RunDeadline(30))
     assert str(err.value) == (
         "The PPL query failed (HTTP 400 on POST /_plugins/_ppl): Invalid Query"
         " - can't resolve Symbol(namespace=FIELD_NAME, name=bad)"
     )
+    assert err.value.retryable is False
 
 
 @pytest.mark.parametrize(

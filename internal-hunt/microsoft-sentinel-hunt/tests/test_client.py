@@ -8,6 +8,7 @@ from azure.core.pipeline.transport import RequestsTransport
 from conftest import API_URL, QUERY_URL, FakeCredential, table
 from connectors_sdk.connectors.internal_hunt import (
     HuntExecutionError,
+    HuntQueryRejectedError,
     HuntTimeoutError,
     RunDeadline,
 )
@@ -145,13 +146,15 @@ def test_query_reports_the_log_analytics_error(requests_mock):
         },
     )
 
-    # When/Then the Log Analytics messages, inner errors included, are reported
-    with pytest.raises(HuntExecutionError) as err:
+    # When/Then the Log Analytics messages, inner errors included, are reported,
+    # and the query stays rejected: a retry cannot succeed
+    with pytest.raises(HuntQueryRejectedError) as err:
         _client().query("T | whre x", START, END, RunDeadline(30))
     assert str(err.value) == (
         "The Log Analytics query failed (HTTP 400 on POST /v1/workspaces/ws-1/query): "
         "The request had some invalid properties - Query could not be parsed at 'whre'"
     )
+    assert err.value.retryable is False
 
 
 @pytest.mark.parametrize(

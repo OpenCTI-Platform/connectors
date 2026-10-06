@@ -45,8 +45,8 @@ flowchart LR
   Q --> C[InternalHuntConnector]
   C -->|native query or pySigma translation| P[(Platform API)]
   P -->|events| C
-  C -->|STIX bundle: sightings, observed-data| W[OpenCTI worker]
-  C -->|report_hunt_run| OCTI
+  C -->|STIX bundle: observables, observed-data| W[OpenCTI worker]
+  C -->|report_hunt_run: hits, hit keys, evidence| OCTI
 ```
 
 Hunt connectors are built on `InternalHuntConnector` from the connectors-sdk. The base class handles:
@@ -89,7 +89,8 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
 4. **Execution**: `execute()` runs in a worker thread bounded by `timeout_seconds`; it receives the `RunDeadline` the
    base class waits for, so its requests, polling, retries and authentication share one absolute deadline. On timeout
    `on_timeout()` cancels the platform job and the run fails. Results beyond `max_results` are dropped, the total hit
-   count is kept.
+   count is kept. The lookups of an indicator run share its `max_results`: the values of a lookup the run can no
+   longer afford are reported not searched.
 5. **Suppression**: events matching a benign pattern (case-insensitive substring, or `/regex/`) are removed. Regular
    expressions run on the `regex` engine within what is left of `timeout_seconds`: a pattern that backtracks past it
    ends the run as a `timeout` instead of blocking its report.
@@ -97,8 +98,8 @@ Platform credentials and options live in the connector namespace (`<CONNECTOR_NA
    sent fails the run (retryable), so a run reported completed always has its knowledge sent. A run whose completed
    report is refused after its bundle was sent is reported `failed`, and its retry upserts the same objects: their
    identifiers derive from the hunt run. Indicator runs check that pycti reports per-value results before any lookup.
-7. **Report**: `completed` with hits, distinct entities, evidence, translated query, language, cost and the ids of the
-   objects `to_stix()` maps, or `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the
+7. **Report**: `completed` with hits, the key of every hit read, distinct entities, evidence, translated query,
+   language, cost and the ids of the objects `to_stix()` maps, or `failed` / `timeout` with the error (the error is then raised so that OpenCTI marks the
    work in error). A reported error carries `hunt_run_reported = True`, so the `listen_hunt` wrapper of pycti does not
    report the run a second time. A failed run also says whether running it again can succeed (`retryable`):
    deterministic failures are `retryable: false` and OpenCTI does not retry them. These are translation failures
@@ -168,22 +169,28 @@ sh create_connector_dir.sh -t internal-hunt -n my-siem-hunt
 
 ## Knowledge produced
 
-For a telemetry run with hits:
+For a telemetry run with hits, the connector sends:
 
-- one **sighting** per technique and per indicator of the hunt: `sighting_of_ref` is the technique or indicator,
-  `where_sighted_refs` the Security Platform identity, `count` the hits, `first_seen`/`last_seen` the first and last
-  matching events, and the description names the hunt and the run;
 - one **observed-data** per IOC observable extracted from the results, `number_observed` being the number of result
-  events holding it (an observable is counted once per event), so that a retry of the run upserts the same objects, only for the observable types the hunt expects and the connector allows.
+  events holding it (an observable is counted once per event), so that a retry of the run upserts the same objects, only for the observable types the hunt expects and the connector allows;
+- in the run report, next to the hits count, the **key of every hit** it read (`hit_keys`, bounded by `max_results`;
+  indicator runs report the keys of each value in its result). The key is the SHA-256 digest of the identity of the hit
+  as reported in `hits_sample`: its detection, else its event id, else its time to the second, host, user, process and
+  matched field hashes (`analysis.hit_key`, with test vectors shared with OpenCTI). The values that identify a hit are
+  sent whole, so a key never depends on the preview length.
 
-Objects inherit the markings and the author of the hunt, and every sighting and observed-data carries its run in
+Connectors send no sighting. OpenCTI counts the hits a hunt never saw before on the Security Platform, and keeps one
+**sighting** per technique and per indicator of the hunt on the Security Platform: the first run with hits creates it,
+the next ones update it in place (count of the distinct known hits, first and latest hit).
+
+Objects inherit the markings and the author of the hunt, and every observed-data carries its run in
 `x_opencti_hunt_run_id`. Identifiers are deterministic: observables keep their standard pycti ids, while the ids of the
-sightings and observed-data derive from their standard pycti id and the hunt run (`hunt_run.id`, which does not change
-between the attempts of a run). A retry of a run therefore upserts its own objects, and a separate run, even over the
-same window, creates its own run-linked sightings and observed-data: never rely on cross-run upserts. On the platform,
-the OpenCTI deduplication may still merge sightings sharing their ends and close time bounds, or observed-data sharing
-their objects; the `result_ids` reported with every run keep the link between a run and its objects in all cases.
-Connectors never create incidents: OpenCTI creates incident drafts above the escalation threshold of the hunt.
+observed-data derive from their standard pycti id and the hunt run (`hunt_run.id`, which does not change between the
+attempts of a run). A retry of a run therefore upserts its own objects, and a separate run, even over the same window,
+creates its own run-linked observed-data: never rely on cross-run upserts. On the platform, the OpenCTI deduplication
+may still merge observed-data sharing their objects; the `result_ids` reported with every run keep the link between a
+run and its objects in all cases. Connectors never create incidents: OpenCTI creates incident drafts above the
+escalation threshold of the new hits of the hunt.
 
 ## Evidence and privacy
 

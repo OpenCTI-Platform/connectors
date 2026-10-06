@@ -250,7 +250,7 @@ def test_run_rule_collects_detection_events(requests_mock):
     )
 
     # When the rule runs
-    result = make_client().run_rule("rule x {}", START, END, 0, RunDeadline(30))
+    result = make_client().run_rule("rule x {}", START, END, 10, RunDeadline(30))
 
     # Then the rule, the window and the cap are sent
     assert requests_mock.last_request.json() == {
@@ -259,7 +259,7 @@ def test_run_rule_collects_detection_events(requests_mock):
             "startTime": "2026-10-03T00:00:00.000Z",
             "endTime": "2026-10-04T00:00:00.000Z",
         },
-        "maxResults": 1,
+        "maxResults": 10,
         "scope": "",
     }
     # And the events of the detections are returned, the result being truncated
@@ -269,8 +269,34 @@ def test_run_rule_collects_detection_events(requests_mock):
     first, second = result.event_detections
     assert first == "de_7f3e0c1a"
     assert second.startswith("detection-") and len(second) == len("detection-") + 32
-    again = make_client().run_rule("rule x {}", START, END, 0, RunDeadline(30))
+    again = make_client().run_rule("rule x {}", START, END, 10, RunDeadline(30))
     assert again.event_detections == result.event_detections
+    assert (result.detections, result.truncated) == (2, True)
+
+
+def test_run_rule_keeps_the_events_within_the_run_budget(requests_mock):
+    # Given two detections naming three events each, more than the four events of the run
+    def detection(name):
+        events = [
+            {"event": {"metadata": {"id": f"{name}-{step}"}}} for step in range(3)
+        ]
+        return {
+            "detection": {"id": name, "collectionElements": [{"references": events}]}
+        }
+
+    requests_mock.post(RUN_RULE_URL, json=[detection("de_1"), detection("de_2")])
+
+    # When the rule runs with a budget of four events
+    result = make_client().run_rule("rule x {}", START, END, 4, RunDeadline(30))
+
+    # Then the events beyond the budget are left out and the result is partial
+    assert [event["metadata"]["id"] for event in result.events] == [
+        "de_1-0",
+        "de_1-1",
+        "de_1-2",
+        "de_2-0",
+    ]
+    assert result.event_detections == ["de_1"] * 3 + ["de_2"]
     assert (result.detections, result.truncated) == (2, True)
 
 

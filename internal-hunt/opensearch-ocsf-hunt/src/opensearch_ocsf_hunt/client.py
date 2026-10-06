@@ -167,7 +167,8 @@ class OpenSearchClient(HuntApiClient):
             details = _ppl_error_details(err.__cause__)
             if details is None:
                 raise
-            raise HuntExecutionError(f"{err} - {details}") from err
+            # The class says whether a retry can succeed: a rejected query stays rejected
+            raise type(err)(f"{err} - {details}") from err
         if not isinstance(answer, dict):
             raise HuntExecutionError("OpenSearch returned an unexpected answer.")
         return answer

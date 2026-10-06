@@ -207,7 +207,8 @@ class LogAnalyticsClient(HuntApiClient):
             details = _error_chain(getattr(err.__cause__, "response_body", None))
             if not details:
                 raise
-            raise HuntExecutionError(
+            # The class says whether a retry can succeed: a rejected query stays rejected
+            raise type(err)(
                 f"The Log Analytics query failed ({err.__cause__}): {details}"
             ) from err.__cause__
         finally:

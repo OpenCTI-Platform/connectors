@@ -23,12 +23,14 @@ Every hunt connector repeats the same pipeline:
 3. honour the preview mode (translate only, never execute);
 4. execute the query within the run limits (`timeout_seconds`, `max_results`);
 5. suppress the benign events of the hunt;
-6. map the results to STIX (sightings of the techniques and indicators on the Security Platform identity,
-   one observed-data per IOC observable, with its number of observations), with deterministic ids scoped to the hunt
-   run for sightings and observed-data, markings and author inherited from the hunt;
+6. map the results to STIX (one observed-data per IOC observable, with its number of observations), with
+   deterministic ids scoped to the hunt run for observed-data, markings and author inherited from the hunt. The
+   sightings are not the connector's: OpenCTI keeps one sighting per technique and indicator of the hunt on the
+   Security Platform across runs, from the hit keys of the report;
 7. send the bundle within the run work;
-8. report the run: hits, distinct entities, redacted evidence (SHA-256 hashes and truncated previews), translated
-   query, cost and result ids, or the error of a failed run.
+8. report the run: hits, the stable key of every hit read (`hit_keys`, so that OpenCTI counts only the hits it never
+   saw), distinct entities, redacted evidence (SHA-256 hashes and truncated previews), translated query, cost and
+   result ids, or the error of a failed run.
 
 Only the platform translation backend and the query execution are platform specific. Without a base class, privacy
 guarantees (no raw telemetry in the platform, internal IP addresses and domains never turned into observables) and
@@ -69,7 +71,7 @@ class SplunkHuntConnector(InternalHuntConnector):
 | `execute(native_query, time_window, limits, deadline)` | Abstract: the query execution, every call bounded by the run `deadline` the base class waits for. |
 | `translate(sigma_rule, pipeline)` | pySigma conversion with `sigma_backend`, detection field names kept for evidence ranking. |
 | `combine_queries(queries)` | Single query, or joined with `query_join` when a Sigma document yields several. |
-| `to_stix(request, result)` | Telemetry mapping (sightings + observed-data); outside-in connectors override it. |
+| `to_stix(request, result)` | Telemetry mapping (observables + observed-data, no sighting: OpenCTI owns them); outside-in connectors override it. |
 | `on_timeout(native_query)` | No-op; cancels the platform job when overridden. |
 | `post_init()` | No-op; creates the platform client when overridden. |
 
@@ -107,8 +109,9 @@ CI and the image builds rewrite the `connectors-sdk @ git+...` requirement line 
   are written and tested once (100% coverage), so connectors only implement translation and execution.
 - **Privacy by default**: raw telemetry never leaves the connector; only hashed and truncated evidence, counts and IOC
   observables reach OpenCTI.
-- **Deterministic knowledge**: observables keep their standard ids; the ids of sightings and observed-data derive
-  from the hunt run too, so a retry of a run upserts its own objects and two runs never share one.
+- **Deterministic knowledge**: observables keep their standard ids; the ids of observed-data derive from the hunt
+  run too, so a retry of a run upserts its own objects and two runs never share one. Hits keep the same key from one
+  run to the next, so OpenCTI counts each hit once and updates one sighting across runs.
 - **Light SDK**: connectors that do not hunt do not install pySigma.
 
 <br>
