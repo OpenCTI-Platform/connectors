@@ -8,12 +8,13 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=ESET ETI Report Enrichment Connector
-      - CONNECTOR_SCOPE=report
-      - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_AUTO=true
+      # - CONNECTOR_NAME=ESET ETI Report Enrichment Connector
+      # - CONNECTOR_SCOPE=report
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_AUTO=false
       # ESET Threat Intelligence platform API key and secret - REQUIRED
       - ESET_API_KEY=ChangeMe
       - ESET_API_SECRET=ChangeMe
-      - ESET_API_HOST=https://eti.eset.com/
+      # - ESET_API_HOST=https://eti.eset.com/
+      # - ESET_MAX_TLP=TLP:AMBER
     restart: always
