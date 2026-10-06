@@ -182,6 +182,9 @@ class ZscalerConnector:
             "timestamp": timestamp,
         }
         headers = {"Content-Type": "application/json"}
+        # A rejected login must not leave the expired session cookie, which would pass
+        # for a new session.
+        self.session.cookies.set("JSESSIONID", None)
 
         try:
             response = self.request_zscaler(
@@ -245,7 +248,8 @@ class ZscalerConnector:
         :param action: What Zscaler is asked to do, named by the errors raised.
         :return: The successful (HTTP 200) response.
         :raises ZscalerApiError: When the request failed, with the HTTP status and the Zscaler
-            response, or the transport error.
+            response, or the transport error. Once the retries are spent, the status is the
+            one of the last response (429 only when Zscaler kept throttling).
         """
         max_retries = 3
         retry_delay = self.retry_delay
@@ -314,7 +318,7 @@ class ZscalerConnector:
         self.helper.connector_logger.error("Max retries reached. Request failed.")
         raise ZscalerApiError(
             "Max retries reached, the Zscaler request failed",
-            status_code=429,
+            status_code=response.status_code,
             action=action,
         )
 

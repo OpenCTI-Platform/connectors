@@ -15,8 +15,13 @@ from connectors_sdk import (
 )
 from connectors_sdk.connectors.stream.deployment import VendorIndicator
 from pycti import OpenCTIConnectorHelper
+from requests.cookies import RequestsCookieJar
 from stream_connector import ZscalerConnector
-from stream_connector.connector import ZscalerActivationPendingError, ZscalerApiError
+from stream_connector.connector import (
+    ZscalerActivationPendingError,
+    ZscalerApiError,
+    failure_reason,
+)
 from stream_connector.deployment import (
     ZscalerDeploymentAdapter,
     ZscalerDeploymentError,
@@ -606,9 +611,12 @@ def test_persistent_throttling_raises(connector):
     connector.session = MagicMock()
     connector.session.get.return_value = response(429, text="slow down")
 
-    with pytest.raises(ZscalerApiError, match="Max retries reached"):
+    with pytest.raises(ZscalerApiError, match="Max retries reached") as error:
         connector.request_zscaler(connector.session.get, CATEGORY_URL)
     assert connector.session.get.call_count == 3
+    assert failure_reason(error.value) == (
+        "Zscaler refused the blacklist update: rate limit reached"
+    )
 
 
 def test_failed_re_authentication_raises(connector, monkeypatch):
@@ -621,12 +629,56 @@ def test_failed_re_authentication_raises(connector, monkeypatch):
         connector.request_zscaler(connector.session.get, CATEGORY_URL)
 
 
+def test_sessions_rejected_on_every_retry_are_not_reported_as_throttled(
+    connector, monkeypatch
+):
+    def authenticate():
+        connector.session.cookies.set("JSESSIONID", "new-session")
+
+    monkeypatch.setattr(connector, "authenticate_with_zscaler", authenticate)
+    connector.session = MagicMock()
+    connector.session.cookies = RequestsCookieJar()
+    connector.session.get.return_value = response(401, text="SESSION_NOT_VALID")
+
+    with pytest.raises(ZscalerApiError, match="Max retries reached") as error:
+        connector.request_zscaler(connector.session.get, CATEGORY_URL)
+
+    assert connector.session.get.call_count == 3
+    assert error.value.status_code == 401
+    assert failure_reason(error.value) == (
+        "Zscaler refused the blacklist update: authentication failed"
+    )
+
+
+def test_rejected_login_does_not_pass_the_expired_session_for_a_new_one(
+    connector, monkeypatch
+):
+    monkeypatch.setattr(
+        "stream_connector.connector.obfuscate_api_key", lambda key, ts: "obfuscated"
+    )
+    connector.session = MagicMock()
+    connector.session.cookies = RequestsCookieJar()
+    connector.session.cookies.set("JSESSIONID", "expired-session")
+    connector.session.get.return_value = response(401, text="SESSION_NOT_VALID")
+    connector.session.post.return_value = response(401, text="INVALID_CREDENTIALS")
+
+    with pytest.raises(ZscalerApiError, match="Re-authentication") as error:
+        connector.request_zscaler(connector.session.get, CATEGORY_URL)
+
+    assert connector.session.get.call_count == 1
+    assert connector.session.post.call_count == 1
+    assert connector.session.cookies.get("JSESSIONID") is None
+    assert failure_reason(error.value) == (
+        "Zscaler refused the blacklist update: authentication failed"
+    )
+
+
 def test_rejected_credentials_do_not_recurse(connector, monkeypatch):
     monkeypatch.setattr(
         "stream_connector.connector.obfuscate_api_key", lambda key, ts: "obfuscated"
     )
     connector.session = MagicMock()
-    connector.session.cookies = {}
+    connector.session.cookies = RequestsCookieJar()
     connector.session.post.return_value = response(401, text="INVALID_CREDENTIALS")
 
     connector.authenticate_with_zscaler()
