@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 from connectors_sdk.connectors.internal_hunt import (
     HIT_IDENTITY_MAX_LENGTH,
+    HIT_MATCHED_FIELDS_MAX,
     BenignMatcher,
     HitFields,
     HuntEvent,
@@ -357,6 +358,34 @@ def test_long_identity_values_are_sent_as_their_digest():
     ]
     assert short == long == [hit_key(hit) for hit in evidence]
     assert len(set(short)) == 3
+
+
+def test_a_hit_reports_a_bounded_number_of_matched_fields():
+    # Given a hit on many fields of the hunt logic: one without value first, then
+    # one named beyond the identity limit
+    long_name = "f" * (HIT_IDENTITY_MAX_LENGTH + 1)
+    names = ["empty", long_name, *(f"field{index}" for index in range(15))]
+    event = HuntEvent(
+        fields={
+            "empty": None,
+            long_name: "x",
+            **{f"field{index}": str(index) for index in range(15)},
+        }
+    )
+
+    # When the evidence and the key of the hit are built
+    (hit,) = build_hit_evidence([(event, names)], HuntLimits())
+    keys = build_hit_keys([(event, names)], HuntLimits())
+
+    # Then the hit reports the first fields holding a value, as many as OpenCTI
+    # keeps, a long name as its digest, and its key is the one recomputed from
+    # the hit as it is sent
+    assert [field.field for field in hit.matched] == [
+        f"sha256:{sha256_hex(long_name)}",
+        *(f"field{index}" for index in range(HIT_MATCHED_FIELDS_MAX - 1)),
+    ]
+    sent = HuntHitEvidence.model_validate(hit.model_dump(mode="json"))
+    assert keys == [hit_key(sent)]
 
 
 def test_build_hit_evidence_is_capped_by_the_evidence_limit():

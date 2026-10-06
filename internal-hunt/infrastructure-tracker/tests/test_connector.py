@@ -565,6 +565,32 @@ def test_execute_flags_a_clipped_scout_window(
     assert result.truncated is truncated
 
 
+@patch(f"{TRACKER}._today", return_value=date(2026, 10, 4))
+def test_execute_keeps_the_scout_days_of_a_sub_day_window(
+    _, connector_factory, requests_mock
+):
+    # Given a six-hour window and Scout dating its observation by the day only
+    requests_mock.get(
+        SCOUT_URL,
+        json={"ips": [{"ip": "8.8.8.8", "summary": {"last_seen": "2026-10-03"}}]},
+    )
+    connector = connector_factory(ALL_SOURCES)
+    window = HuntTimeWindow(
+        start=datetime(2026, 10, 3, 6, tzinfo=timezone.utc),
+        end=datetime(2026, 10, 3, 12, tzinfo=timezone.utc),
+    )
+
+    # When the plan runs
+    result = connector.execute(
+        plan_query({"cymru_scout": [JARM]}), window, HuntLimits()
+    )
+
+    # Then the day of the window is searched and what Scout observed that day is kept
+    assert [event.fields["ip"] for event in result.events] == ["8.8.8.8"]
+    assert requests_mock.last_request.qs["start_date"] == ["2026-10-03"]
+    assert requests_mock.last_request.qs["end_date"] == ["2026-10-03"]
+
+
 def test_execute_flags_truncation(connector_factory, requests_mock):
     # Given more matches than the run reads
     requests_mock.post(

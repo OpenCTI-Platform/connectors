@@ -409,8 +409,9 @@ class HuntHitEvidence(BaseModel):
         default_factory=list,
         description=(
             "Fields of the detection logic present in the event; for indicator "
-            "hunts, the fields holding a looked-up value. Fields the connector "
-            "excludes from the evidence are never listed."
+            "hunts, the fields holding a looked-up value. At most ten, the first "
+            "ones holding a value; fields the connector excludes from the "
+            "evidence are never listed."
         ),
     )
     host: str | None = Field(default=None, description="Host of the event.")

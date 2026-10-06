@@ -438,12 +438,14 @@ def build_hit_evidence(
 ) -> list[HuntHitEvidence]:
     """Build the redacted evidence of single hits: what matched, where, by whom and when.
 
-    One item per event, the earliest first (events without time last). A
-    matched value is hashed whole and its preview truncated. The event id,
-    detection, host, user and process identify the hit (``hit_key``): each is sent
-    as it is up to ``HIT_IDENTITY_MAX_LENGTH`` characters, else as its SHA-256
-    digest, so the evidence stays bounded and the key of a hit never depends on
-    the preview length.
+    One item per event, the earliest first (events without time last). A hit
+    reports at most ``HIT_MATCHED_FIELDS_MAX`` matched fields, the first ones of
+    the hunt logic that hold a value; a matched value is hashed whole and its
+    preview truncated. The event id, detection, host, user, process and matched
+    field names identify the hit (``hit_key``): each is sent as it is up to
+    ``HIT_IDENTITY_MAX_LENGTH`` characters, else as its SHA-256 digest, so the
+    evidence of a hit stays bounded and its key never depends on the preview
+    length.
 
     Args:
         hits: Each result event with the fields the hunt matched in it.
@@ -471,8 +473,11 @@ def build_hit_evidence(
 HIT_KEY_VERSION = "v1"
 """Version of the hit key rule, the first item of the hashed array."""
 
+HIT_MATCHED_FIELDS_MAX = 10
+"""Most matched fields one hit reports, the number OpenCTI keeps for a hit."""
+
 HIT_IDENTITY_MAX_LENGTH = 256
-"""Longest identity value of a hit (event id, detection, host, user, process) sent as it is.
+"""Longest identity value of a hit (event id, detection, host, user, process, matched field name) sent as it is.
 
 A longer value is sent as ``sha256:<hex digest>``: bounded, never readable in
 clear, and still distinct from any other value. OpenCTI stores these values up
@@ -568,14 +573,16 @@ def _hit_evidence(
     event: HuntEvent, matched: Sequence[str], length: int, hit_fields: HitFields
 ) -> HuntHitEvidence:
     """Build the evidence of one hit."""
-    fields = []
+    fields: list[HuntHitField] = []
     for name in matched:
+        if len(fields) == HIT_MATCHED_FIELDS_MAX:
+            break
         texts = value_strings(event.fields.get(name))
         if texts:
             value = ", ".join(texts)
             fields.append(
                 HuntHitField(
-                    field=name,
+                    field=_identity(name),
                     value_hash=sha256_hex(value),
                     value_preview=value[:length],
                 )

@@ -426,6 +426,8 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
                 )
                 # Nothing of the window was searched: no host found proves nothing
                 return SourceResult([], more=True)
+            # Scout dates its observations by the day only (last_seen "YYYY-MM-DD"): the days searched are the finest
+            # bound, and filtering them with the times of the run would drop the hosts observed on its first day
             result = client.search(query, dates[0], dates[1], limit, deadline)
             # Days cut from the start of the window (older than the Scout history or beyond its search range) were
             # not searched; days after today hold no scan yet
