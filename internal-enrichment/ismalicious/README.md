@@ -19,7 +19,7 @@ Find below the detailed configuration options:
 | ------------------- | --------------------------- | --------- | -------------------------------------------------------------- |
 | OpenCTI URL         | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform                                |
 | OpenCTI Token       | `OPENCTI_TOKEN`             | Yes       | The token of the OpenCTI user                                  |
-| Connector ID        | `CONNECTOR_ID`              | No        | A unique `UUIDv4` for this connector (default: `ismalicious-enrichment`, set your own per deployment) |
+| Connector ID        | `CONNECTOR_ID`              | No        | A unique `UUIDv4` for this connector (default: a fixed `UUIDv4`, set your own per deployment) |
 | Connector Name      | `CONNECTOR_NAME`            | No        | Name shown in OpenCTI (default: `isMalicious`)                 |
 | Connector Scope     | `CONNECTOR_SCOPE`           | No        | Observable types (default: `IPv4-Addr,IPv6-Addr,Domain-Name`)  |
 | Log Level           | `CONNECTOR_LOG_LEVEL`       | No        | Log level: `debug`, `info`, `warn`, `error` (default: `info`)  |
