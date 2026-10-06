@@ -9,6 +9,12 @@ if TYPE_CHECKING:
 class FileProcessor(EntityProcessor):
     """Enriches StixFile, Artifact, and file-type Indicators."""
 
+    _GTI_ENDPOINT_TYPE = "files"
+
+    def _gti_identifier(self) -> str:
+        """Files are looked up by hash, not by the raw SCO value."""
+        return self._resolve_hash()
+
     def _fetch_data(self) -> dict | None:
         hash_value = self._resolve_hash()
         json_data = self.client.get_file_info(hash_value)
