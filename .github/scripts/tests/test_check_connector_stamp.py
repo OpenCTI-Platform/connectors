@@ -978,6 +978,15 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN bash -c 'rm -rf /opt/{src,other}'", False),
         ("RUN rm -rf /opt/{src,other}", False),
         ("RUN find /opt/src -name '*.pyc' -exec echo {} +", True),
+        # Copilot review of 03:01 UTC: a substitution inside a parameter
+        # expansion; the roots of find after its leading options.
+        (
+            'RUN echo "${UNSET:-$(rm -f /opt/src/.connector_version.json)}"',
+            False,
+        ),
+        ("WORKDIR /tmp\nRUN find -P /opt/src -name '*.json' -delete", False),
+        ("WORKDIR /tmp\nRUN find -L /opt/src -name '*.json' -delete", False),
+        ("WORKDIR /tmp\nRUN find -P /opt/src -name '*.pyc' -print", True),
         # Copilot review of 02:45 UTC: python -mNAME is python -m NAME; sudo
         # changes the environment and may change the directory.
         ("RUN python3 -mvenv --clear --without-pip /opt/src", False),
@@ -1349,6 +1358,37 @@ def test_base_images_of_the_final_stage(tmp_path, base, covered):
 
 
 @pytest.mark.parametrize(
+    "dockerfile, covered",
+    [
+        # The files of an image whose content is not known may hold a wrapper
+        # named after python.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            "COPY --from=ghcr.io/example/tools:1 /bin/python3 /usr/local/bin/\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            False,
+        ),
+        (
+            "FROM node:20 AS tools\nFROM python:3.12-alpine\nCOPY src /opt/src\n"
+            "COPY --from=tools /usr/local/bin/ /usr/local/bin/\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            False,
+        ),
+        # A reviewed image: the uv binaries.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+            "COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/\n"
+            'RUN uv venv /opt/venv\nCMD ["python3", "/opt/src/main.py"]\n',
+            True,
+        ),
+    ],
+)
+def test_copies_from_images_whose_content_is_not_known(tmp_path, dockerfile, covered):
+    image = single(tmp_path, {"Dockerfile": dockerfile})
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
     "dockerfile, extra",
     [
         # Copilot review of 01:21 UTC: a file on PATH under the name of python runs.
@@ -1387,6 +1427,26 @@ def test_base_images_of_the_final_stage(tmp_path, base, covered):
             {
                 "wrapper.sh": '#!/bin/sh\nrm -f /opt/sample/.connector_version.json\nexec /usr/local/bin/python3.12 "$@"\n'
             },
+        ),
+        # Copilot review of 03:01 UTC: the interpreter line of a script, with
+        # its path or through env.
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY wrapper.sh /opt/tools/python3\n"
+            'COPY run.py /opt/sample/run.py\nCMD ["/opt/sample/run.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER, "run.py": "#!/opt/tools/python3\n"},
+        ),
+        (
+            "FROM python:3.12-alpine\nENV PATH=/opt/tools:$PATH\nCOPY src /opt/sample\n"
+            "COPY wrapper.sh /opt/tools/python3\n"
+            'COPY run.py /opt/sample/run.py\nCMD ["/opt/sample/run.py"]\n',
+            {"wrapper.sh": ENV_WRAPPER, "run.py": "#!/usr/bin/env python3\n"},
+        ),
+        # Copilot review of 03:01 UTC: a clone brings files the model does not know.
+        (
+            "FROM python:3.12-alpine\nENV PATH=/opt/tools:$PATH\nCOPY src /opt/sample\n"
+            "RUN git clone --depth 1 https://example.com/tools.git /opt/tools\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {},
         ),
         # Copilot review of 02:45 UTC: the program of find -exec, by path or on PATH.
         (
