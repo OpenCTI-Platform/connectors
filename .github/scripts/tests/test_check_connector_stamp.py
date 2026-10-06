@@ -171,6 +171,26 @@ def test_entrypoint_script_run_directly_with_a_conditional_without_cd(tmp_path):
             "#!/bin/sh\ncd /opt/sample/missing && exec python3 ../main.py\n",
             "a directory change in an && list",
         ),
+        # An exec after && may not run: the script then goes on.
+        (
+            "#!/bin/sh\nfalse && exec python3 main.py\n"
+            "rm -f .connector_version.json\nexec python3 main.py\n",
+            "a python process starts after another one",
+        ),
+        # A pipeline part or a background job runs next to the commands that
+        # follow it, which may change its files while it starts.
+        (
+            "#!/bin/sh\npython3 main.py &\nrm -f .connector_version.json\nwait\n",
+            "the connector started in a pipeline or a background job",
+        ),
+        (
+            "#!/bin/sh\npython3 main.py | rm -f .connector_version.json\n",
+            "the connector started in a pipeline or a background job",
+        ),
+        (
+            "#!/bin/sh\nsh -c 'exec python3 main.py' &\nwait\n",
+            "the connector started in a pipeline or a background job",
+        ),
     ],
 )
 def test_entry_scripts_outside_the_model_are_reported(tmp_path, script, reason):
@@ -3089,6 +3109,23 @@ def test_sourced_file_without_a_slash(tmp_path, run, covered):
             False,
         ),
         ("mkdir /tmp/gone; cd /tmp/gone; rm -f .connector_version.json", True),
+        # Copilot review of 21:28 UTC: a mkdir after && may not run either; after
+        # the list its directory may be missing, within the list it exists.
+        (
+            "false && mkdir /tmp/gone; cd /tmp/gone; rm -f .connector_version.json",
+            False,
+        ),
+        (
+            "true && mkdir /tmp/gone && cd /tmp/gone && rm -f .connector_version.json",
+            True,
+        ),
+        # A pipeline part or a background job may not have created it.
+        ("mkdir /tmp/gone | true; cd /tmp/gone; rm -f .connector_version.json", False),
+        ("mkdir /tmp/gone & cd /tmp/gone; rm -f .connector_version.json", False),
+        # Without -p, mkdir fails when the parent directory is missing.
+        ("mkdir /tmp/a/b; cd /tmp/a/b; rm -f .connector_version.json", False),
+        ("mkdir -p /tmp/a/b; cd /tmp/a/b; rm -f .connector_version.json", True),
+        ("mkdir /tmp/a /tmp/a/b; cd /tmp/a/b; rm -f .connector_version.json", True),
     ],
 )
 def test_cd_into_a_directory_of_a_conditional_mkdir(tmp_path, run, covered):
@@ -3103,11 +3140,36 @@ def test_cd_into_a_directory_of_a_conditional_mkdir(tmp_path, run, covered):
 
 
 @pytest.mark.parametrize(
+    "run, covered",
+    [
+        # An exit after &&, in a pipeline part or in a background job may leave
+        # the script going on.
+        ("false && exit 0; rm -f .connector_version.json", False),
+        ("true | exit 0; rm -f .connector_version.json", False),
+        ("exit 0 & rm -f .connector_version.json", False),
+        ("exit 0; rm -f .connector_version.json", True),
+    ],
+)
+def test_exit_that_may_not_end_the_script(tmp_path, run, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\nWORKDIR /opt/src\n"
+        f'RUN {run}\nCMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
     "mkdir, covered",
     [
         # Where a copy lands depends on whether the directory exists.
         ("if false; then mkdir /opt/app; fi", False),
         ("mkdir /opt/app", True),
+        # The build fails unless the last list of the RUN succeeds: when that list
+        # is a plain && list, every command of it ran.
+        ("true && mkdir -p /opt/app", True),
+        ("false && mkdir /opt/app; true", False),
+        ("false && mkdir /opt/app || true", False),
     ],
 )
 def test_copy_into_a_directory_of_a_conditional_mkdir(tmp_path, mkdir, covered):

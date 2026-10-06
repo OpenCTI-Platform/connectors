@@ -1875,6 +1875,20 @@ class Shell:
         # What the commands of the current && / | list changed (see _end_chain).
         self.chain_variables = set()
         self.chain_directory = False
+        self.chain_dirs = set()
+        # The current list has a ||, a !, a pipeline or a background job: its
+        # status does not tell that every command of it ran and succeeded.
+        self.chain_partial = False
+        # Directories the commands after && of the last list created: they exist
+        # if that list ends the script of a RUN, whose build fails unless it
+        # succeeds, and may be missing once another command runs.
+        self.pending_dirs = set()
+        # The script of a RUN instruction (see pending_dirs).
+        self.build_step = False
+        # This shell, or the command it runs, is a pipeline part or a background
+        # job: it runs next to the other commands of the script.
+        self.alongside = False
+        self.command_alongside = False
 
     def run(self, script):
         if self.nesting > 8:
@@ -1894,7 +1908,16 @@ class Shell:
                 break
         if tokens:
             self._statements(tokens + ["\n"])
+        if not self.build_step:
+            self._uncertain(self.pending_dirs)
         return self.processes
+
+    def _uncertain(self, dirs):
+        """``dirs`` exist only if a command that may not have run created them."""
+        for directory in dirs:
+            self.stage.dirs.discard(directory)
+            self.stage.uncertain_dirs.add(directory)
+        self.pending_dirs -= set(dirs)
 
     def _expand(self, word, split=True):
         """Words of ``word`` once its variables are expanded with the current
@@ -1929,12 +1952,18 @@ class Shell:
         )
         nested.stack = list(self.stack) + (["("] if conditional else [])
         nested.processes = self.processes
+        nested.alongside = self.alongside or self.command_alongside
         return nested
 
     def _launch(self, words, env, conditional):
         if conditional:
             raise Unsupported(
                 "the connector started inside a conditional or a loop of the entry script"
+            )
+        if self.alongside or self.command_alongside:
+            # The commands next to it may change its files while it starts.
+            raise Unsupported(
+                "the connector started in a pipeline or a background job of the entry script"
             )
         if self.model.foreign_effects:
             raise Unsupported(
@@ -2160,6 +2189,8 @@ class Shell:
                     if self.stack:
                         self.stack.pop()
                     continue
+                if token == "!":
+                    self.chain_partial = True
                 if token in ("then", "do", "else", "elif", "!", "in"):
                     continue
                 if token == "function":
@@ -2172,15 +2203,23 @@ class Shell:
     def _end_chain(self):
         """End of an && / || / | list: what a command that may not have run (after
         &&) or ran in a subshell (a pipeline part, a background job) changed is no
-        longer known to the commands after the list."""
+        longer known to the commands after the list. A directory such a command
+        created may be missing (see pending_dirs): a later cd into it may fail, a
+        COPY into it is reported."""
         for key in self.chain_variables:
             self.variables[key] = UNKNOWN
         if self.chain_directory:
             self._unknown_directory(
                 "a directory change in an && list, a pipeline or a background job"
             )
+        if self.chain_partial:
+            self._uncertain(self.chain_dirs)
+        else:
+            self.pending_dirs |= self.chain_dirs
         self.chain_variables = set()
         self.chain_directory = False
+        self.chain_dirs = set()
+        self.chain_partial = False
 
     def exec_form(self, argv):
         """A command of the exec form: no shell reads it, so each word is an
@@ -2189,11 +2228,15 @@ class Shell:
         self._end_chain()
 
     def _command(self, words, writes, before, after, reads=()):
+        # A command runs after the last list, which may have failed.
+        self._uncertain(self.pending_dirs)
+        if before in ("||", "|") or after in ("||", "|", "&"):
+            self.chain_partial = True
         uncertain = before in ("&&", "|") or after in ("|", "&")
         if not uncertain:
             self._simple_command(words, writes, before, after, reads)
             return
-        variables, cwd = dict(self.variables), self.cwd
+        variables, cwd, dirs = dict(self.variables), self.cwd, set(self.stage.dirs)
         self._simple_command(words, writes, before, after, reads)
         self.chain_variables |= {
             key
@@ -2201,6 +2244,7 @@ class Shell:
             if variables.get(key) != self.variables.get(key)
         }
         self.chain_directory = self.chain_directory or self.cwd != cwd
+        self.chain_dirs |= self.stage.dirs - dirs
 
     def _set_options(self, args):
         """set -a / +a (and -o / +o allexport): assignments exported or not."""
@@ -2232,6 +2276,7 @@ class Shell:
 
     def _simple_command(self, words, writes, before, after, reads=()):
         conditional = bool(self.stack) or before == "||"
+        self.command_alongside = "|" in (before, after) or after == "&"
         self._substitute((*words, *writes, *reads), conditional)
         for target in writes:
             # Truncated or rewritten: the file no longer holds what the model knows.
@@ -2327,10 +2372,13 @@ class Shell:
             }.items()
             if key not in unset
         }
+        # A command after && may not run; a pipeline part or a background job runs
+        # in a subshell. An exec or an exit there may leave the script going on.
+        ends_script = before != "&&" and not in_pipeline and after != "&"
         if self.start and handed_over:
             # exec: the command replaces the script.
             self._launch(words, env, conditional)
-            self.ended = True
+            self.ended = ends_script
             return
         if shell_command and name == "export":
             for arg in args:
@@ -2402,7 +2450,7 @@ class Shell:
         elif PYTHON.match(name):
             self._python(words, env, conditional)
         elif shell_command and name in ("exit", "return"):
-            if not conditional and before != "&&":
+            if not conditional and ends_script:
                 self.ended = True
         elif not self._executed_script(words, env, conditional):
             self._other_command(words, literal_args, env, conditional)
@@ -2799,8 +2847,11 @@ class Shell:
         """The directories mkdir creates: a later COPY puts a file inside them; a
         mode that removes read or search permission hides what they will hold.
         ``uncertain``: the mkdir may not run, so a later ``cd`` into them may fail
-        and leave the shell where it was."""
+        and leave the shell where it was. Without ``-p`` it creates no parent and
+        fails when the parent is missing: its directory is certain only below a
+        directory of the model."""
         mode = None
+        parents = False
         operands = []
         i = 0
         while i < len(args):
@@ -2815,7 +2866,9 @@ class Shell:
                 operands += args[i + 1 :]
                 break
             elif re.fullmatch(r"-[pv]+", arg) or arg in ("--parents", "--verbose"):
-                pass
+                parents = (
+                    parents or arg == "--parents" or (arg[1] != "-" and "p" in arg)
+                )
             elif arg.startswith("-"):
                 raise Unsupported(f"mkdir {arg}")
             else:
@@ -2823,8 +2876,9 @@ class Shell:
             i += 1
         for operand in operands:
             path = self._path(operand, "mkdir operand")
-            for directory in self_and_parents(path):
-                if not uncertain:
+            sure = not uncertain and (parents or self._is_dir(posixpath.dirname(path)))
+            for directory in self_and_parents(path) if parents else [path]:
+                if sure:
                     self.stage.dirs.add(directory)
                 elif not self._is_dir(directory):
                     self.stage.uncertain_dirs.add(directory)
@@ -3926,6 +3980,7 @@ class ImageModel:
         shell = Shell(
             self, stage, stage.files, stage.workdir, dict(stage.variables), start=False
         )
+        shell.build_step = True
         if shell_form:
             if posixpath.basename(stage.shell[0]) not in SHELLS:
                 raise Unsupported(f"RUN through the shell {stage.shell[0]}")
