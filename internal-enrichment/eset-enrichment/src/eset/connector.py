@@ -6,9 +6,9 @@ from urllib.parse import urlparse
 
 import requests
 import stix2
-from pycti import MarkingDefinition, OpenCTIConnectorHelper, get_config_variable
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
 
-from .config_variables import ConfigConnector
+from .settings import ConnectorSettings
 
 ALLOWED_TLPS = {
     "tlp:clear",
@@ -49,24 +49,15 @@ class EsetConnector:
         """
         Initialize the Connector with necessary configurations
         """
-        config = ConfigConnector()
+        self.config = ConnectorSettings()
 
-        self.max_tlp = config.max_tlp
-        self.eset_api_key = get_config_variable(
-            "ESET_API_KEY", ["eset", "api_key"], config.load
-        )
-        self.eset_api_secret = get_config_variable(
-            "ESET_API_SECRET", ["eset", "api_secret"], config.load
-        )
-        self.host = get_config_variable(
-            "ESET_API_HOST",
-            ["eset", "api_host"],
-            config.load,
-            default="https://eti.eset.com/",
-        )
+        self.max_tlp = self.config.eset.max_tlp
+        self.eset_api_key = self.config.eset.api_key.get_secret_value()
+        self.eset_api_secret = self.config.eset.api_secret.get_secret_value()
+        self.host = str(self.config.eset.api_host)
         # playbook_compatible=True only if a bundle is sent !
         self.helper = OpenCTIConnectorHelper(
-            config=config.load, playbook_compatible=True
+            config=self.config.to_helper_config(), playbook_compatible=True
         )
 
     def entity_in_scope(self, data) -> bool:
