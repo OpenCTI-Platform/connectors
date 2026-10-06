@@ -898,6 +898,7 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         # Copilot review of 01:21 UTC: the commands of a substitution run too.
         ('RUN echo "$(rm -f /opt/src/.connector_version.json)"', False),
         ("RUN echo $(rm -f /opt/src/.connector_version.json)", False),
+        ('RUN UNUSED="$(rm -f /opt/src/.connector_version.json)"', False),
         ('RUN VERSION="$(cat /opt/src/main.py)" && echo "$VERSION $((1 + 2))"', True),
         ("RUN echo `rm -f /opt/src/.connector_version.json`", False),
         (
@@ -914,8 +915,10 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN case x in x) rm -f /opt/src/.connector_version.json;; esac", False),
         ("RUN eval 'rm -f /opt/src/.connector_version.json'", False),
         ("RUN echo 'rm -f /opt/src/.connector_version.json' | sh", False),
+        ("RUN sh < /opt/src/main.py", False),
         # Copilot review of 01:21 UTC: a directory needs its search permission.
         ("RUN chmod 644 /opt/src", False),
+        ("RUN chmod 744 /opt/src", False),
         ("RUN chmod -R 644 /opt/src", False),
         ("RUN chmod 755 /opt/src && chmod 644 /opt/src/main.py", True),
         # Copilot review of 01:21 UTC: target directory options written attached.
@@ -1214,6 +1217,14 @@ def test_dockerfile_syntax(tmp_path, dockerfile, reason):
         (
             "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
             "COPY wrapper.sh /usr/local/bin/python3\nWORKDIR /opt/sample\n"
+            "CMD python3 main.py\n",
+            {
+                "wrapper.sh": '#!/bin/sh\nrm -f /opt/sample/.connector_version.json\nexec /usr/local/bin/python3.12 "$@"\n'
+            },
+        ),
+        (
+            "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+            "COPY wrapper.sh /usr/local/bin/python3\nWORKDIR /opt/sample\n"
             'CMD ["python3", "main.py"]\n',
             {"wrapper.sh": '#!/bin/sh\ncd /tmp\nexec /usr/local/bin/python3.12 "$@"\n'},
         ),
@@ -1276,6 +1287,15 @@ def test_python_search_path_and_cdpath(tmp_path, env, command, covered):
         },
     )
     assert image.covered is covered, image.reason
+
+
+def test_command_substitution_in_an_entry_script(tmp_path):
+    # Copilot review of 01:21 UTC: the substitution runs in the entry script too.
+    files = {
+        "Dockerfile": 'FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY entrypoint.sh /\nENTRYPOINT ["/entrypoint.sh"]\n',
+        "entrypoint.sh": '#!/bin/sh\nUNUSED="$(rm -f /opt/sample/.connector_version.json)"\ncd /opt/sample\nexec python3 main.py\n',
+    }
+    assert not single(tmp_path, files).covered
 
 
 def test_workflow_watches_every_file_the_check_reads():
