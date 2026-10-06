@@ -17,7 +17,11 @@ from connectors_sdk import DeploymentAssurance
 from prometheus_client import Counter, Gauge, start_http_server
 from pycti import OpenCTIConnectorHelper
 from settings import ConnectorSettings
-from splunk_deployment import build_deployment_assurance, describe_error
+from splunk_deployment import (
+    build_deployment_assurance,
+    describe_error,
+    failure_reason,
+)
 from stix_shifter.stix_translation import stix_translation
 
 KV_STORE_PAGE_SIZE = 1000
@@ -459,7 +463,8 @@ class SplunkConnector:
             write()
         except Exception as err:
             if key is not None and self.assurance is not None:
-                self.assurance.report_push_failed(stix_object, describe_error(err))
+                self._log_write_error(key, err)
+                self.assurance.report_push_failed(stix_object, failure_reason(err))
             raise
         if key is not None and self.assurance is not None:
             self.assurance.report_pushed(stix_object, external_id=key)
@@ -488,9 +493,20 @@ class SplunkConnector:
                 "Indicators are excluded by the connector configuration (SPLUNK_IGNORE_TYPES)"
             )
         payload = self.enrich_payload(copy.deepcopy(stix_indicator))
-        self.kvstore.create(key, payload)
+        try:
+            self.kvstore.create(key, payload)
+        except Exception as err:
+            self._log_write_error(key, err)
+            raise
         self.helper.log_info(f"kvstore item with id {key} pushed again")
         return key
+
+    def _log_write_error(self, key: str, error: BaseException) -> None:
+        """Log a KV store write Splunk refused, with its response (OpenCTI only gets
+        a short reason)."""
+        self.helper.connector_logger.warning(
+            "KV store write rejected", {"key": key, "error": describe_error(error)}
+        )
 
     def flush_deployment_reports(self) -> None:
         """Send the queued deployment reports now (never raises)."""

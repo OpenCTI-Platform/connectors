@@ -2,8 +2,10 @@
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from datetime import UTC, datetime
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
+import requests
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentVendorAdapter,
@@ -12,7 +14,10 @@ from connectors_sdk import (
     VendorHit,
     VendorIndicator,
 )
-from connectors_sdk.connectors.stream.deployment import parse_datetime
+from connectors_sdk.connectors.stream.deployment import (
+    deployment_failure_reason,
+    parse_datetime,
+)
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
@@ -23,11 +28,21 @@ HITS_MAX_RESULTS = 10000
 """Maximum number of saved search results read per hit collection."""
 
 MAX_ERROR_DETAIL_LENGTH = 500
-"""Maximum length of the Splunk response appended to a deployment error."""
+"""Maximum length of the Splunk response appended to a logged error."""
+
+PLATFORM_NAME = "Splunk"
+"""Name of the security platform in the deployment failure reasons."""
+
+WRITE_ACTION = "KV Store write"
+"""What Splunk is asked to do when an indicator is pushed."""
+
+
+class SplunkDeploymentError(Exception):
+    """A KV store write Splunk refused, with the reason OpenCTI shows."""
 
 
 def describe_error(error: BaseException) -> str:
-    """Describe a Splunk API error for the deployment error message.
+    """Describe a Splunk API error for the logs.
 
     Args:
         error: The error raised by a KV store call.
@@ -42,6 +57,28 @@ def describe_error(error: BaseException) -> str:
     if isinstance(detail, str) and detail.strip():
         message = f"{message} - {detail.strip()[:MAX_ERROR_DETAIL_LENGTH]}"
     return message
+
+
+def failure_reason(error: BaseException) -> str:
+    """Return the reason OpenCTI shows for an indicator the KV store did not take.
+
+    Args:
+        error: The error raised by the KV store write.
+
+    Returns:
+        One short sentence naming Splunk and the cause; the Splunk response is left
+        to the logs (`describe_error`).
+    """
+    if isinstance(error, requests.HTTPError):
+        status_code = getattr(error.response, "status_code", None)
+        return deployment_failure_reason(
+            PLATFORM_NAME,
+            WRITE_ACTION,
+            status_code if isinstance(status_code, int) else HTTPStatus.OK,
+        )
+    if isinstance(error, requests.RequestException):
+        return deployment_failure_reason(PLATFORM_NAME, WRITE_ACTION)
+    return str(error) or type(error).__name__
 
 
 def _first(value: Any) -> Any:
@@ -182,8 +219,15 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
 
         Returns:
             The KV store key of the item.
+
+        Raises:
+            SplunkDeploymentError: When Splunk refuses the item or cannot be reached,
+                with the reason OpenCTI shows (the connector logs the response).
         """
-        return self._push_indicator(stix_indicator)
+        try:
+            return self._push_indicator(stix_indicator)
+        except requests.RequestException as err:
+            raise SplunkDeploymentError(failure_reason(err)) from err
 
     def collect_hits(
         self,

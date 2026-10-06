@@ -74,9 +74,16 @@ def test_rejected_push_reports_the_failure_and_raises(
         connector.process_message(make_message(event, indicator))
 
     assurance.report_push_failed.assert_called_once_with(
-        indicator, "400 Client Error: Bad Request - invalid document"
+        indicator, "Splunk refused the KV Store write: invalid request"
     )
     assurance.report_pushed.assert_not_called()
+    connector.helper.connector_logger.warning.assert_called_once_with(
+        "KV store write rejected",
+        {
+            "key": INDICATOR_ID,
+            "error": "400 Client Error: Bad Request - invalid document",
+        },
+    )
 
 
 def test_delete_reports_the_removed_indicator(connector, kvstore, assurance):
@@ -156,6 +163,25 @@ def test_push_indicator_uses_the_create_path(connector, kvstore):
     assert key == INDICATOR_ID
     assert payload["type"] == "indicator"
     assert OPENCTI_EXTENSION_ID in indicator["extensions"]
+
+
+def test_push_indicator_logs_the_splunk_response_of_a_rejected_write(
+    connector, kvstore
+):
+    response = requests.Response()
+    response.status_code = 413
+    response._content = b"Document too large"
+    kvstore.create.side_effect = requests.HTTPError(
+        "413 Client Error", response=response
+    )
+
+    with pytest.raises(requests.HTTPError):
+        connector.push_indicator(make_indicator())
+
+    connector.helper.connector_logger.warning.assert_called_once_with(
+        "KV store write rejected",
+        {"key": INDICATOR_ID, "error": "413 Client Error - Document too large"},
+    )
 
 
 def test_push_indicator_rejects_unusable_indicators(helper, kvstore, assurance):

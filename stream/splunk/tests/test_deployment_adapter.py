@@ -10,8 +10,10 @@ from connectors_sdk import (
     VendorIndicator,
 )
 from splunk_deployment import (
+    SplunkDeploymentError,
     SplunkKVStoreDeploymentAdapter,
     describe_error,
+    failure_reason,
     parse_splunk_time,
 )
 from splunk_test_support import INDICATOR_ID
@@ -129,6 +131,43 @@ def test_push_indicator_uses_the_stream_create_path(kvstore):
         INDICATOR_ID
     )
     push.assert_called_once_with(indicator)
+
+
+def test_rejected_push_raises_the_reason_without_the_splunk_response(kvstore):
+    response = requests.Response()
+    response.status_code = 400
+    response._content = b"Document too large"
+    error = requests.HTTPError("400 Client Error: Bad Request", response=response)
+    push = MagicMock(side_effect=error)
+
+    with pytest.raises(SplunkDeploymentError) as raised:
+        make_adapter(kvstore, push_indicator=push).push_indicator({"type": "indicator"})
+
+    assert str(raised.value) == "Splunk refused the KV Store write: invalid request"
+    assert raised.value.__cause__ is error
+
+
+@pytest.mark.parametrize(
+    ("error", "reason"),
+    [
+        (
+            requests.HTTPError("403 Client Error", response=MagicMock(status_code=403)),
+            "Splunk refused the KV Store write: permission denied",
+        ),
+        (
+            requests.HTTPError("no response"),
+            "Splunk returned an unexpected response to the KV Store write",
+        ),
+        (
+            requests.ConnectionError("connection refused"),
+            "Splunk could not be reached for the KV Store write",
+        ),
+        (ValueError("The indicator has no key"), "The indicator has no key"),
+        (ValueError(), "ValueError"),
+    ],
+)
+def test_failure_reason_names_the_cause_without_the_splunk_response(error, reason):
+    assert failure_reason(error) == reason
 
 
 def test_collect_hits_is_disabled_without_saved_search(kvstore):

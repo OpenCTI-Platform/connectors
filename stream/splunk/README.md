@@ -213,7 +213,7 @@ does not exist), and hits are counted with a sighting of the indicator on that e
 | When                                      | Reported to OpenCTI                                                                                      |
 |-------------------------------------------|----------------------------------------------------------------------------------------------------------|
 | KV Store write accepted (create, update)  | `deployed`, with the KV Store `_key` (the OpenCTI id of the indicator) as external id                    |
-| KV Store write rejected                   | `failed`, with the Splunk error and response body                                                        |
+| KV Store write rejected                   | `failed`, with a short reason such as "Splunk refused the KV Store write: invalid request" (the Splunk response is written to the connector log) |
 | Delete event processed                    | `removed` (also when the item was already absent)                                                        |
 | Reconciliation, item present              | `active`; an item still holding an earlier pattern (failed update) does not confirm it: the indicator is written again, a `failed` one stays `failed` |
 | Reconciliation, item absent               | `removed`                                                                                                |

@@ -105,8 +105,9 @@ def test_stream_outcomes_are_reported_in_one_batch(connector, router, requests_m
     }
     assert failed["indicatorId"] == REMOVED_ID
     assert failed["status"] == "failed"
-    assert failed["metadata"]["error_message"].startswith("400 Client Error")
-    assert failed["metadata"]["error_message"].endswith("Document too large")
+    assert failed["metadata"]["error_message"] == (
+        "Splunk refused the KV Store write: invalid request"
+    )
 
 
 def test_reconciliation_and_hits_are_reported(
