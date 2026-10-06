@@ -639,6 +639,12 @@ PIP_RELOCATING_OPTIONS = frozenset(
 )
 # Options whose value is a file pip writes.
 PIP_WRITE_OPTIONS = frozenset({"--report", "--log", "--log-file"})
+# The archive names pip takes as a local file, slash or not (its ARCHIVE_EXTENSIONS).
+PIP_ARCHIVE = re.compile(r"\.(whl|zip|tar(\.\w+)?|tgz|tbz|txz|tlz)$", re.IGNORECASE)
+# The setuptools backends whose discovery and package data the model reads.
+SETUPTOOLS_BACKENDS = frozenset(
+    {"setuptools.build_meta", "setuptools.build_meta:__legacy__"}
+)
 PYTHON_OPTIONS_WITH_VALUE = frozenset({"-W", "-X", "--check-hash-based-pycs"})
 
 
@@ -1170,8 +1176,8 @@ class PackagingConfig:
             data = tomllib.loads(text)
         except tomllib.TOMLDecodeError as error:
             raise Unsupported(f"pyproject.toml not readable: {error}") from error
-        backend = data.get("build-system", {}).get("build-backend", "setuptools")
-        if not backend.startswith("setuptools"):
+        backend = data.get("build-system", {}).get("build-backend")
+        if backend is not None and backend not in SETUPTOOLS_BACKENDS:
             self.unsupported = f"package data of the build backend {backend}"
         tool = data.get("tool", {}).get("setuptools", {})
         for key in ("package-data", "package_data"):
@@ -2682,6 +2688,9 @@ class Shell:
             return
         kind, name = None, None
         understood = True
+        # find evaluates left to right: a test after an action never narrows
+        # what the action did (-name a -delete -name b deletes every a).
+        acted = False
         i = 0
         while i < len(args):
             arg = args[i]
@@ -2693,16 +2702,18 @@ class Shell:
                 "-fprint",
                 "-fls",
             ) and i + 1 < len(args):
-                if arg == "-type":
+                if arg == "-type" and not acted:
                     kind = args[i + 1]
-                elif arg == "-name":
+                elif arg == "-name" and not acted:
                     name = args[i + 1]
                 i += 2
                 continue
             if arg == "-delete":
+                acted = True
                 i += 1
                 continue
             if arg in ("-exec", "-execdir", "-ok", "-okdir"):
+                acted = True
                 while i < len(args) and args[i] not in (";", "+"):
                     i += 1
                 i += 1
@@ -2831,7 +2842,7 @@ class Shell:
         for path in local:
             if self.stage.written(path):
                 raise Unsupported(f"pip install of {path}, which holds unknown content")
-            if path in self.files or re.search(r"\.(whl|zip|tar(\.\w+)?|tgz)$", path):
+            if path in self.files or PIP_ARCHIVE.search(path):
                 # A wheel or a source archive of the repository: its content is
                 # not read (a source archive runs its setup.py).
                 raise Unsupported(f"pip install of the local archive {path}")
@@ -2879,7 +2890,9 @@ class Shell:
         value = re.sub(r"\[[^\]]*\]$", "", value)
         if value.startswith("file://"):
             value = value[len("file://") :]
-        if "://" in value or not (value.startswith((".", "/")) or "/" in value):
+        if "://" in value or not (
+            value.startswith((".", "/")) or "/" in value or PIP_ARCHIVE.search(value)
+        ):
             return None
         return image_path(self._tilde(value), self.cwd, "pip install path")
 
@@ -3048,6 +3061,16 @@ class ImageModel:
         probe = replace(stage, files=files, replaced=set(stage.replaced))
         shell = Shell(self, probe, files, stage.workdir, variables, start=False)
         if shell_form:
+            # The shell form runs with the SHELL of the image, in its environment.
+            if posixpath.basename(stage.shell[0]) not in SHELLS:
+                raise Unsupported(f"HEALTHCHECK through the shell {stage.shell[0]}")
+            if self.shadow(
+                stage.shell[0], variables, stage.files, stage, stage.workdir
+            ):
+                raise Unsupported(
+                    f"HEALTHCHECK through the shell {stage.shell[0]}, a file the build wrote"
+                )
+            check_shell_environment(stage.shell[0], variables)
             shell.run(command)
         else:
             # No shell reads the exec form: its wildcard characters are literal.
@@ -3122,7 +3145,25 @@ class ImageModel:
         many = len(sources) > 1 or any(GLOB_CHARS.search(s) for s in sources)
         dest_is_dir = dest.endswith("/") or dest in (".", "./") or many
         into_dir = dest_is_dir or stage.is_dir(dest_path)
+
+        def linked(target):
+            """The link of the build ``target`` is, or lies below."""
+            for link in stage.links:
+                if target == link or target.startswith(link.rstrip("/") + "/"):
+                    return link
+            return None
+
+        def through_link(target, link_origin=False):
+            # Docker writes through the link: what it replaces lies at the
+            # target of the link, which the model does not follow.
+            link = linked(target)
+            if link is not None and not (target == link and link_origin):
+                raise Unsupported(
+                    f"{instruction} to {target} goes through the link {link} the build created"
+                )
+
         if opaque:
+            through_link(dest_path)
             # Content the model does not know (external image, URL, archive) may
             # replace the destination, or anything below a destination directory.
             remove_files(stage.files, dest_path)
@@ -3133,7 +3174,15 @@ class ImageModel:
             carried = self._carried_writes(source_stage, sources, dest_path, into_dir)
             if carried and keep_parents:
                 raise Unsupported("COPY --parents of files a build command wrote")
+            # The links of that stage land as links, whose target is not followed here.
+            carried_links = self._carried_writes(
+                source_stage, sources, dest_path, into_dir, set(source_stage.links)
+            )
+            for target in carried:
+                through_link(target, target in carried_links)
             stage.replaced.update(carried)
+            for landed in carried_links:
+                stage.links[landed] = None
         origin_image = (
             str(from_values[-1])
             if from_values and source_stage is None
@@ -3171,6 +3220,7 @@ class ImageModel:
             return any(rx.match(name) or rx.match(relative) for rx in excludes)
 
         def place(target, origin, in_directory=False):
+            through_link(target, origin[0] == "link")
             through_written = any(
                 stage.written(parent)
                 for parent in self_and_parents(posixpath.dirname(target))
@@ -3182,6 +3232,10 @@ class ImageModel:
                 # model does not know.
                 remove_files(stage.files, target)
                 stage.replaced.add(target)
+                if origin[0] == "link":
+                    # Where it points is not modelled: an operation through it is
+                    # reported (_through_link).
+                    stage.links[target] = None
             elif origin[0] == "stamp" and (
                 unreadable or (in_directory and unsearchable)
             ):
@@ -3278,11 +3332,13 @@ class ImageModel:
         return entries, opaque
 
     @staticmethod
-    def _carried_writes(source_stage, sources, dest_path, into_dir):
+    def _carried_writes(source_stage, sources, dest_path, into_dir, regions=None):
         """Where the regions of ``source_stage`` whose content the model does
         not know (what a build command wrote, a directory a clone or a COPY
-        filled) land when a COPY --from takes them: they stay unknown there."""
-        regions = {*source_stage.replaced, *source_stage.unknown_dirs}
+        filled), or the given ``regions``, land when a COPY --from takes them:
+        they stay unknown there."""
+        if regions is None:
+            regions = {*source_stage.replaced, *source_stage.unknown_dirs}
 
         def below(path, region):
             return path == region or path.startswith(region.rstrip("/") + "/")
@@ -3464,6 +3520,11 @@ class ImageModel:
             raise Unsupported(
                 f"{install_dir}: an in-tree build backend runs during pip install"
             )
+        backend = build_system.get("build-backend")
+        if backend is not None and backend not in SETUPTOOLS_BACKENDS:
+            # Its file selection and build hooks, which may run code of the
+            # repository, are not modelled.
+            raise Unsupported(f"{install_dir}: the build backend {backend}")
 
     def install_package(self, files, install_dir):
         """``pip install <install_dir>``: the packages it puts in site-packages."""
