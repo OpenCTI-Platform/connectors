@@ -81,7 +81,10 @@ class OpenCTIStream:
         # (used by workers for impersonation).
         # Always assign so that an event without `origin.user_id` (e.g. system-generated
         # event) does not inherit the previous event's applicant.
-        origin_user_id = (payload.get("origin") or {}).get("user_id")
+        origin = payload.get("origin") or {}
+        origin_user_id = (
+            origin.get("user_id") or self.config.stream.default_applicant_id
+        )
         self.helper.applicant_id = origin_user_id
 
         bundle = self.helper.stix2_create_bundle([stix_object])

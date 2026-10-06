@@ -1,12 +1,7 @@
 from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
-from pydantic import (
-    Field,
-    HttpUrl,
-    PlainSerializer,
-    field_validator,
-)
+from pydantic import Field, HttpUrl, PlainSerializer
 from src.models.configs import ConfigBaseSettings
 
 LogLevelToLower = Annotated[
@@ -39,7 +34,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: ListFromString
 
-    type: str = Field(
+    type: Literal["EXTERNAL_IMPORT"] = Field(
         default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )
@@ -47,7 +42,3 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default="error",
         description="Determines the verbosity of the logs.",
     )
-
-    @field_validator("type")
-    def force_value_for_type_to_be_external_import(cls, value):
-        return "EXTERNAL_IMPORT"

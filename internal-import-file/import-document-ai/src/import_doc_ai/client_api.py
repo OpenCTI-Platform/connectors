@@ -4,13 +4,12 @@ from io import BytesIO
 import requests
 import stix2
 import stix2.exceptions  # Exceptions are not exposed in public api root
-
-from .config_loader import ConfigConnector
-from .util import deduplicate_bundle_objects, filter_relationship_triplets
+from import_doc_ai.settings import ConnectorSettings
+from import_doc_ai.util import deduplicate_bundle_objects, filter_relationship_triplets
 
 
 class ImportDocumentAIClient:
-    def __init__(self, helper, config: ConfigConnector):
+    def __init__(self, helper, config: ConnectorSettings):
         """
         Initialize the client with necessary configurations
         """
@@ -27,8 +26,10 @@ class ImportDocumentAIClient:
 
         # Define headers in session for legacy direct mode
         headers = {}
-        if self.config.licence_key_base64:
-            headers["X-OpenCTI-Certificate"] = self.config.licence_key_base64
+        if self.config.import_document_ai.licence_key_base64:
+            headers["X-OpenCTI-Certificate"] = (
+                self.config.import_document_ai.licence_key_base64
+            )
         headers["X-OpenCTI-instance-id"] = self._opencti_instance_id
         self.session = requests.Session()
         self.session.headers.update(headers)
@@ -45,7 +46,7 @@ class ImportDocumentAIClient:
         :return: Response
         """
         try:
-            url = self.config.api_base_url + endpoint
+            url = self.config.import_document_ai.api_base_url + endpoint
             response = self.session.post(
                 url=url, files={"file": (file_name, file_data, file_mime)}
             )

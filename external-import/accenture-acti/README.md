@@ -14,9 +14,6 @@ The Accenture ACTI connector ingests threat intelligence reports and related ent
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -42,39 +39,10 @@ This connector leverages the Accenture ACTI STIX Report Feed to import threat in
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter         | config.yml      | Docker environment variable   | Default         | Mandatory | Description                                                                 |
-|-------------------|-----------------|-------------------------------|-----------------|-----------|-----------------------------------------------------------------------------|
-| Connector ID      | id              | `CONNECTOR_ID`                |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name    | name            | `CONNECTOR_NAME`              |                 | Yes       | Name of the connector.                                                      |
-| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | accenture       | Yes       | The scope or type of data the connector is importing.                       |
-| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT1H            | No        | Time interval between connector runs in ISO 8601 format.                    |
-
-### Connector extra parameters environment variables
-
-| Parameter                  | config.yml                           | Docker environment variable              | Default      | Mandatory | Description                                                                     |
-|----------------------------|--------------------------------------|------------------------------------------|--------------|-----------|---------------------------------------------------------------------------------|
-| Username                   | accenture_acti.username              | `ACCENTURE_ACTI_USERNAME`                |              | Yes       | Accenture ACTI platform username.                                               |
-| Password                   | accenture_acti.password              | `ACCENTURE_ACTI_PASSWORD`                |              | Yes       | Accenture ACTI platform password.                                               |
-| User Pool ID               | accenture_acti.user_pool_id          | `ACCENTURE_ACTI_USER_POOL_ID`            |              | Yes       | AWS Cognito User Pool ID for authentication.                                    |
-| Client ID                  | accenture_acti.client_id             | `ACCENTURE_ACTI_CLIENT_ID`               |              | Yes       | AWS Cognito Client ID for authentication.                                       |
-| S3 Bucket Name             | accenture_acti.s3_bucket_name        | `ACCENTURE_ACTI_S3_BUCKET_NAME`          |              | Yes       | AWS S3 bucket name for report images.                                           |
-| S3 Bucket Region           | accenture_acti.s3_bucket_region      | `ACCENTURE_ACTI_S3_BUCKET_REGION`        |              | Yes       | AWS S3 bucket region.                                                           |
-| S3 Bucket Access Key       | accenture_acti.s3_bucket_access_key  | `ACCENTURE_ACTI_S3_BUCKET_ACCESS_KEY`    |              | Yes       | AWS S3 access key.                                                              |
-| S3 Bucket Secret Key       | accenture_acti.s3_bucket_secret_key  | `ACCENTURE_ACTI_S3_BUCKET_SECRET_KEY`    |              | Yes       | AWS S3 secret key.                                                              |
-| TLP Level                  | accenture_acti.tlp_level             | `ACCENTURE_ACTI_CLIENT_TLP_LEVEL`        | amber+strict | No        | TLP marking for imported data (`clear`, `green`, `amber`, `amber+strict`, `red`). |
-| Relative Import Start Date | accenture_acti.relative_import_start_date | `ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE` | P30D     | No        | ISO 8601 duration for initial data import range (e.g., `P30D` for 30 days).     |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -107,7 +75,7 @@ Configure the connector in `docker-compose.yml`:
       - ACCENTURE_ACTI_S3_BUCKET_REGION=ChangeMe
       - ACCENTURE_ACTI_S3_BUCKET_ACCESS_KEY=ChangeMe
       - ACCENTURE_ACTI_S3_BUCKET_SECRET_KEY=ChangeMe
-      - ACCENTURE_ACTI_CLIENT_TLP_LEVEL=amber
+      - ACCENTURE_ACTI_TLP_LEVEL=amber
       - ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE=P30D
     restart: always
 ```

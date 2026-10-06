@@ -44,35 +44,10 @@ Key features:
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter                      | config.yml                | Docker environment variable             | Default          | Mandatory | Description                                                                    |
-|--------------------------------|---------------------------|-----------------------------------------|------------------|-----------|--------------------------------------------------------------------------------|
-| Connector ID                   | id                        | `CONNECTOR_ID`                          |                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
-| Connector Type                 | type                      | `CONNECTOR_TYPE`                        | STREAM           | Yes       | Should always be set to `STREAM` for this connector.                           |
-| Connector Name                 | name                      | `CONNECTOR_NAME`                        | Sumo Logic Intel | No        | Name of the connector.                                                         |
-| Connector Scope                | scope                     | `CONNECTOR_SCOPE`                       | sumologic        | No        | The scope of the connector.                                                    |
-| Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |                  | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
-| Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true             | Yes       | Listen to delete events.                                                       |
-| Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| true             | Yes       | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | error            | No        | Determines the verbosity of the logs.                                          |
-
-### Connector extra parameters environment variables
-
-| Parameter        | config.yml             | Docker environment variable      | Default | Mandatory | Description                                                |
-|------------------|------------------------|----------------------------------|---------|-----------|------------------------------------------------------------|
-| API Base URL     | sumologic.api_base_url | `SUMOLOGIC_INTEL_API_BASE_URL`   |         | Yes       | Sumo Logic API endpoint for your region.                   |
-| Access ID        | sumologic.access_id    | `SUMOLOGIC_INTEL_ACCESS_ID`      |         | Yes       | Sumo Logic API Access ID.                                  |
-| Access Key       | sumologic.access_key   | `SUMOLOGIC_INTEL_ACCESS_KEY`     |         | Yes       | Sumo Logic API Access Key.                                 |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 

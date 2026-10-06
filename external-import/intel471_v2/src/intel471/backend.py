@@ -4,7 +4,9 @@ from types import ModuleType
 from typing import Literal, Union
 
 import titan_client
+import titan_client.exceptions
 import verity471
+import verity471.exceptions
 from titan_client import titan_stix
 from urllib3 import make_headers
 from urllib3.util import parse_url
@@ -34,6 +36,7 @@ class ClientWrapper:
         type[titan_stix.STIXMapperSettings] | type[verity_stix.STIXMapperSettings]
     )
     empty_bundle_exception: type[Exception]
+    auth_exceptions: tuple[type[Exception], ...]
     streams: tuple[type[Intel471Stream], ...]
 
 
@@ -44,19 +47,27 @@ def get_client(
     proxy_url: Union[str, None] = None,
 ) -> ClientWrapper:
     config_kwargs = {"username": api_username, "password": api_key}
+    proxy_kwargs = {}
     if proxy_url:
         proxy_url_str = str(proxy_url)
-        config_kwargs["proxy"] = proxy_url_str
+        proxy_kwargs["proxy"] = proxy_url_str
         if proxy_auth := parse_url(proxy_url_str).auth:
-            config_kwargs["proxy_headers"] = make_headers(proxy_basic_auth=proxy_auth)
+            proxy_kwargs["proxy_headers"] = make_headers(proxy_basic_auth=proxy_auth)
 
     if backend_name == BackendName.TITAN:
+        titan_config = titan_client.Configuration(**config_kwargs)
+        titan_config.proxy = proxy_kwargs.get("proxy")
+        titan_config.proxy_headers = proxy_kwargs.get("proxy_headers")
         return ClientWrapper(
             backend_name,
             titan_client,
-            titan_client.Configuration(**config_kwargs),
+            titan_config,
             titan_stix.STIXMapperSettings,
             titan_stix.exceptions.EmptyBundle,
+            (
+                titan_client.exceptions.UnauthorizedException,
+                titan_client.exceptions.ForbiddenException,
+            ),
             (
                 titan_streams.Intel471IndicatorsStream,
                 titan_streams.Intel471YARAStream,
@@ -71,9 +82,13 @@ def get_client(
         return ClientWrapper(
             backend_name,
             verity471,
-            verity471.Configuration(**config_kwargs),
+            verity471.Configuration(**config_kwargs, **proxy_kwargs),
             verity_stix.STIXMapperSettings,
             EmptyBundle,
+            (
+                verity471.exceptions.UnauthorizedException,
+                verity471.exceptions.ForbiddenException,
+            ),
             (
                 verity471_streams.Verity471IndicatorsStream,
                 verity471_streams.Verity471CVEsStream,
@@ -83,6 +98,7 @@ def get_client(
                 verity471_streams.Verity471InfoReportsStream,
                 verity471_streams.Verity471MalwareReportsStream,
                 verity471_streams.Verity471SpotReportsStream,
+                verity471_streams.Verity471AlertsStream,
             ),
         )
     raise UnknownBackendError(f"Unknown backend: {backend_name}")

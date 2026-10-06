@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/accenture-acti_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Accenture ACTI",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "accenture"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "ACCENTURE_ACTI_USERNAME": {
+      "description": "The username of the Accenture ACTI account used to authenticate.",
+      "type": "string"
+    },
+    "ACCENTURE_ACTI_PASSWORD": {
+      "description": "The password of the Accenture ACTI account used to authenticate.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ACCENTURE_ACTI_USER_POOL_ID": {
+      "description": "The AWS Cognito user pool ID provided by Accenture ACTI.",
+      "type": "string"
+    },
+    "ACCENTURE_ACTI_CLIENT_ID": {
+      "description": "The AWS Cognito client ID provided by Accenture ACTI.",
+      "type": "string"
+    },
+    "ACCENTURE_ACTI_S3_BUCKET_NAME": {
+      "description": "The name of the Accenture ACTI S3 bucket to collect data from.",
+      "type": "string"
+    },
+    "ACCENTURE_ACTI_S3_BUCKET_REGION": {
+      "description": "The AWS region of the Accenture ACTI S3 bucket.",
+      "type": "string"
+    },
+    "ACCENTURE_ACTI_S3_BUCKET_ACCESS_KEY": {
+      "description": "The AWS access key used to read the Accenture ACTI S3 bucket.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ACCENTURE_ACTI_S3_BUCKET_SECRET_KEY": {
+      "description": "The AWS secret key used to read the Accenture ACTI S3 bucket.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ACCENTURE_ACTI_CLIENT_TLP_LEVEL": {
+      "default": null,
+      "deprecated": true,
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "description": "Use ACCENTURE_ACTI_TLP_LEVEL instead. (removal scheduled for 2027-06-30)"
+    },
+    "ACCENTURE_ACTI_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "The TLP marking applied to the imported data.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE": {
+      "default": "P30D",
+      "description": "The relative period of time to look back for the first import.",
+      "format": "duration",
+      "type": "string"
+    },
+    "ACCENTURE_ACTI_THREAT_ACTOR_AS_INTRUSION_SET": {
+      "default": true,
+      "description": "Whether to convert imported threat actors into intrusion sets.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ACCENTURE_ACTI_USERNAME",
+    "ACCENTURE_ACTI_PASSWORD",
+    "ACCENTURE_ACTI_USER_POOL_ID",
+    "ACCENTURE_ACTI_CLIENT_ID",
+    "ACCENTURE_ACTI_S3_BUCKET_NAME",
+    "ACCENTURE_ACTI_S3_BUCKET_REGION",
+    "ACCENTURE_ACTI_S3_BUCKET_ACCESS_KEY",
+    "ACCENTURE_ACTI_S3_BUCKET_SECRET_KEY"
+  ],
+  "additionalProperties": true
+}

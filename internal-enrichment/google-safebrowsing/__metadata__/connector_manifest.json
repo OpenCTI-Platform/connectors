@@ -2,11 +2,16 @@
   "title": "Google Safe Browsing",
   "slug": "google-safebrowsing",
   "description": "This connector enriches domain names and URLs with threat intelligence from Google Safe Browsing. Google Safe Browsing maintains a list of websites that might pose risks for malware, abusive extensions, phishing, malicious and intrusive ads, and social engineering attacks.",
-  "short_description": "This connector enriches domain names and URLs with threat intelligence from Google Safe Browsing. Google Safe Browsing maintains a list of websites that might pose risks for malware, abusive extensions, phishing, malicious and intrusive ads, and social engineering attacks.",
+  "short_description": "Enriches domain and URL observables in OpenCTI with Google Safe Browsing data, flagging sites associated with malware, phishing, and social engineering.",
   "logo": "internal-enrichment/google-safebrowsing/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  #name: 'IOC Extractor' # Optional (default: 'IOC Extractor')
+  #scope: 'Report' # Optional
+  #auto: false # Optional (default: false)
+  #log_level: 'error' # Optional (default: 'error')
+
+ioc_extractor:
+  #extract_hashes: true # Optional (default: true)
+  #extract_ipv4: true # Optional (default: true)
+  #extract_ipv6: true # Optional (default: true)
+  #extract_domains: true # Optional (default: true)
+  #extract_urls: true # Optional (default: true)
+  #skip_private_ips: true # Optional (default: true)

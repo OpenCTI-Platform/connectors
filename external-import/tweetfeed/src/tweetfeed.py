@@ -1,4 +1,3 @@
-import os
 import random
 import re
 import sys
@@ -7,11 +6,21 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Mapping, Optional
 
 import requests
-import stix2
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from connectors_sdk.models.enums import TLPLevel
+from pycti import MarkingDefinition, OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 __version__ = "0.0.1"
+
+# OpenCTI defines a static marking-definition id for each TLP level.
+TLP_MARKING_IDS = {
+    TLPLevel.CLEAR: MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+    TLPLevel.WHITE: MarkingDefinition.generate_id("TLP", "TLP:WHITE"),
+    TLPLevel.GREEN: MarkingDefinition.generate_id("TLP", "TLP:GREEN"),
+    TLPLevel.AMBER: MarkingDefinition.generate_id("TLP", "TLP:AMBER"),
+    TLPLevel.AMBER_STRICT: MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+    TLPLevel.RED: MarkingDefinition.generate_id("TLP", "TLP:RED"),
+}
 BANNER = f"""
 
 ▄▄▄█████▓ █     █░▓█████ ▓█████▄▄▄█████▓  █████▒▓█████ ▓█████ ▓█████▄ 
@@ -95,50 +104,16 @@ class TweetFeed:
     def __init__(self):
         print(BANNER)
         self.session = requests.session()
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-        self.tweetfeed_days_back_in_time = get_config_variable(
-            "TWEETFEED_DAYS_BACK_IN_TIME",
-            ["tweetfeed", "days_back_in_time"],
-            config,
-            True,
-            30,
-        )
-        self.tweetfeed_interval = get_config_variable(
-            "TWEETFEED_INTERVAL", ["tweetfeed", "interval"], config, True
-        )
-        self.create_indicators = get_config_variable(
-            "TWEETFEED_CREATE_INDICATORS",
-            ["tweetfeed", "create_indicators"],
-            config,
-            False,
-            True,
-        )
-        self.create_observables = get_config_variable(
-            "TWEETFEED_CREATE_OBSERVABLES",
-            ["tweetfeed", "create_observables"],
-            config,
-            False,
-            True,
-        )
-        self.update = get_config_variable(
-            "TWEETFEED_UPDATE",
-            ["tweetfeed", "update_existing_data"],
-            config,
-            False,
-            True,
-        )
-        self.org_name = get_config_variable(
-            "TWEETFEED_ORG_NAME", ["tweetfeed", "org_name"], config, False, False
-        )
-        self.org_desc = get_config_variable(
-            "TWEETFEED_ORG_NAME", ["tweetfeed", "org_description"], config, False, False
-        )
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self.tweetfeed_days_back_in_time = self.config.tweetfeed.days_back_in_time
+        self.tweetfeed_interval = self.config.tweetfeed.interval
+        self.create_indicators = self.config.tweetfeed.create_indicators
+        self.create_observables = self.config.tweetfeed.create_observables
+        self.update = self.config.tweetfeed.update_existing_data
+        self.org_name = self.config.tweetfeed.org_name
+        self.org_desc = self.config.tweetfeed.org_description
+        self.tlp_marking_id = TLP_MARKING_IDS[self.config.tweetfeed.tlp_level]
         external_reference_org = self.helper.api.external_reference.create(
             source_name="TWEETFEEED",
             url="https://tweetfeed.live/",
@@ -150,20 +125,7 @@ class TweetFeed:
             externalReferences=[external_reference_org["id"]],
             contact_information="'TWITTER: https://twitter.com/0xDanielLopez'",
         )
-        self.update_existing_data = get_config_variable(
-            "TWEETFEED_UPDATE_EXISTING_DATA",
-            ["tweetfeed", "update_existing_data"],
-            config,
-            False,
-            True,
-        )
-        self.score = get_config_variable(
-            "TWEETFEED_CONFIDENCE_LEVEL",
-            ["tweetfeed", "confidence_level"],
-            config,
-            True,
-            25,
-        )
+        self.score = self.config.tweetfeed.confidence_level
         self.data = {}
 
     def create_label(self, label_name):
@@ -326,7 +288,7 @@ class TweetFeed:
                 simple_observable_key=f"{type_observable}",
                 simple_observable_value=observable["value"],
                 simple_observable_description="TWEETFEED IOC " + observable["value"],
-                objectMarking=[stix2.TLP_GREEN["id"]],
+                objectMarking=[self.tlp_marking_id],
                 externalReferences=[external_reference["id"]],
                 createdBy=self.organization["id"],
                 update=self.update,
@@ -356,7 +318,7 @@ class TweetFeed:
                     pattern_type="stix",
                     pattern=f"[{type_ioc.lower()} = '" + ioc["value"] + "']",
                     x_opencti_main_observable_type=type_ioc.split(":")[0],
-                    objectMarking=[stix2.TLP_GREEN["id"]],
+                    objectMarking=[self.tlp_marking_id],
                     objectLabel=tags,
                     value=ioc["value"],
                     valid_from=self.data["Date"],
@@ -373,7 +335,7 @@ class TweetFeed:
                     pattern_type="stix",
                     pattern=f"[{type_ioc.lower()} = '" + ioc["value"] + "']",
                     x_opencti_main_observable_type=type_ioc.split(":")[0],
-                    objectMarking=[stix2.TLP_GREEN["id"]],
+                    objectMarking=[self.tlp_marking_id],
                     value=ioc["value"],
                     valid_from=self.data["Date"],
                     createdBy=self.organization["id"],

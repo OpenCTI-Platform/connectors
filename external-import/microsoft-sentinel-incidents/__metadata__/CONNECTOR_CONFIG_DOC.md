@@ -7,7 +7,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| OPENCTI_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API token to connect to OpenCTI. |
 | MICROSOFT_SENTINEL_INCIDENTS_TENANT_ID | `string` | ✅ | string |  | Your Azure App Tenant ID, see the screenshot to help you find this information. |
 | MICROSOFT_SENTINEL_INCIDENTS_CLIENT_ID | `string` | ✅ | string |  | Your Azure App Client ID, see the screenshot to help you find this information. |
 | MICROSOFT_SENTINEL_INCIDENTS_CLIENT_SECRET | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Your Azure App Client secret, See the screenshot to help you find this information. |

@@ -11,15 +11,15 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | RECORDED_FUTURE_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Recorded Future API token for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"Recorded Future"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["ipv4-addr", "ipv6-addr", "vulnerability", "domain", "url", "file-sha256", "file-md5", "file-sha1"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
-| CONNECTOR_DURATION_PERIOD | `string` |  | string | `"PT24H"` | ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours). |
-| CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
+| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P1D"` | The period of time to await between two runs of the connector (in ISO 8601 format, e.g., 'PT24H' for 24 hours). |
+| CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | RECORDED_FUTURE_INITIAL_LOOKBACK | `integer` |  | `0 < x ` | `240` | Initial lookback period in hours when first running the connector. |
 | RECORDED_FUTURE_TLP | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"amber+strict"` | Default Traffic Light Protocol (TLP) marking for imported data. |
 | RECORDED_FUTURE_INTERVAL | `integer` |  | `0 < x ` | `1` | Polling interval in hours for fetching Recorded Future data. |
 | RECORDED_FUTURE_PULL_ANALYST_NOTES | `boolean` |  | boolean | `true` | Whether to import Recorded Future analyst notes. |
 | RECORDED_FUTURE_LAST_PUBLISHED_NOTES | `integer` |  | `0 < x ` | `24` | Time window in hours for fetching recently published analyst notes. |
-| RECORDED_FUTURE_TOPIC | `array` |  | string | `["VTrvnW", "g1KBGI", "ZjnoP0", "aDKkpk", "TXSFt5", "UrMRnT", "TXSFt3"]` | Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGI (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead). |
+| RECORDED_FUTURE_TOPIC | `array` |  | string | `["VTrvnW", "g1KBGI", "ZjnoP0", "aDKkpk", "TXSFt5", "UrMRnT", "TXSFt3", "wJv-Gk"]` | Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGI (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead), wJv-Gk (Vulnerability Intelligence). |
 | RECORDED_FUTURE_INSIKT_ONLY | `boolean` |  | boolean | `true` | Whether to import only Insikt notes (Recorded Future's analyst reports). |
 | RECORDED_FUTURE_PULL_SIGNATURES | `boolean` |  | boolean | `false` | Whether to import detection signatures (Yara/Snort/Sigma rules) from analyst notes. |
 | RECORDED_FUTURE_PERSON_TO_TA | `boolean` |  | boolean | `false` | Whether to convert Person entities to Threat Actor entities. |

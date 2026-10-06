@@ -51,8 +51,10 @@ class ConverterToStix:
         This marking is used to classify the confidentiality level of the data.
         Return: stix2.MarkingDefinition
         """
+        tlp_level = self.config.cofense_threathq.tlp_level.value
         mapping = {
             "clear": stix2.TLP_WHITE,
+            "white": stix2.TLP_WHITE,
             "green": stix2.TLP_GREEN,
             "amber": stix2.TLP_AMBER,
             "amber+strict": stix2.MarkingDefinition(
@@ -65,7 +67,7 @@ class ConverterToStix:
             ),
             "red": stix2.TLP_RED,
         }
-        return mapping[self.config.cofense_threathq.tlp_level]
+        return mapping[tlp_level]
 
     @staticmethod
     def make_external_reference(

@@ -1,14 +1,17 @@
 {
   "title": "DISARM Framework",
   "slug": "disarm-framework",
-  "description": "DISARM is a framework designed for describing and understanding disinformation incidents.\n\nThis connector import DISARM framework into OpenCTI as Attack Pattern STIX SDO, allowing user to map FIMI and disinformation behaviors. \n\nEach Techniques of the DISARM framework is added as an Attack Pattern, mapped to its proper tactic and linked to its parent of child techniques. \n\nA link to the technique’s page on the DISARM Github repository let you pivot to the source of the framework.",
-  "short_description": "DISARM is a framework designed for describing and understanding disinformation incidents.\n\nThis connector import DISARM framework into OpenCTI.",
+  "description": "DISARM is a framework designed for describing and understanding disinformation incidents.\n\nThis connector import DISARM framework into OpenCTI as Attack Pattern STIX SDO, allowing user to map FIMI and disinformation behaviors. \n\nEach Techniques of the DISARM framework is added as an Attack Pattern, mapped to its proper tactic and linked to its parent of child techniques. \n\nA link to the technique\u2019s page on the DISARM Github repository let you pivot to the source of the framework.",
+  "short_description": "Imports the DISARM framework into OpenCTI as STIX Attack Pattern objects, enabling mapping of FIMI and disinformation behaviors to tactics and techniques.",
   "logo": "external-import/disarm-framework/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel",
-    "Foreign Influence and Disinformation (FIMI)",
-    "Adversary & Campaign Insights"
+    "FIMI & Disinformation"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

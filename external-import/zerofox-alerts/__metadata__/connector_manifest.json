@@ -1,0 +1,27 @@
+{
+  "title": "ZeroFox Alerts",
+  "slug": "zerofox-alerts",
+  "description": "Imports ZeroFox operational alerts (impersonation, phishing, malware, domain squatting) into OpenCTI as STIX Incidents. Each alert is mapped to an Incident with associated Identity (victim), Threat Actor (perpetrator), and Observables (URLs, Domain-Names). This connector is complementary to the existing ZeroFox CTI connector which consumes curated CTI feeds.",
+  "short_description": "Ingests ZeroFox operational alerts as STIX Incidents into OpenCTI, with associated victims, threat actors, and observables.",
+  "logo": "external-import/zerofox-alerts/__metadata__/logo.png",
+  "use_cases": [
+    "Brand, Digital Risk & Underground Exposure"
+  ],
+  "solution_categories": [
+    "Digital Risk Protection",
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": true,
+  "last_verified_date": "2026-07-08",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.0",
+  "subscription_link": "https://www.zerofox.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/zerofox-alerts",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-zerofox-alerts",
+  "container_type": "EXTERNAL_IMPORT"
+}

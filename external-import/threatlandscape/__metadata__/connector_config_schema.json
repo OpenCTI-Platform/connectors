@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/threatlandscape_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI platform.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token of the OpenCTI user representing the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Threat Landscape",
+      "description": "The name of the connector as displayed in OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "indicator",
+        "report",
+        "threat-actor",
+        "malware",
+        "campaign",
+        "intrusion-set",
+        "attack-pattern",
+        "vulnerability",
+        "identity",
+        "location"
+      ],
+      "description": "The STIX object types this connector imports. Adjust to match the selected feed (e.g. use 'indicator,identity' for the ioc feed).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "Minimum log level to display. Use debug for troubleshooting.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "ISO 8601 duration defining the interval between connector runs.",
+      "format": "duration",
+      "type": "string"
+    },
+    "THREATLANDSCAPE_API_BASE_URL": {
+      "default": "https://api.threatlandscape.io/rest/v1",
+      "description": "Base URL of the Threat Landscape REST API. Override only if using a custom deployment.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "THREATLANDSCAPE_API_KEY": {
+      "description": "API key for authenticating with the Threat Landscape API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "THREATLANDSCAPE_FEED": {
+      "description": "Feed to ingest. 'intelligence' ingests full STIX bundles from both OSINT and darknet sources. 'intelligence-osint' restricts to OSINT only. 'intelligence-darknet' restricts to darknet only. 'ioc' ingests lean actionable indicators from the IOC feed.",
+      "enum": [
+        "intelligence",
+        "intelligence-osint",
+        "intelligence-darknet",
+        "ioc"
+      ],
+      "type": "string"
+    },
+    "THREATLANDSCAPE_IMPORT_SINCE": {
+      "default": "P30D",
+      "description": "ISO 8601 duration for the initial lookback window on the first run only. Subsequent runs use a sequence cursor and ignore this value.",
+      "format": "duration",
+      "type": "string"
+    },
+    "THREATLANDSCAPE_PAGE_SIZE": {
+      "default": 100,
+      "description": "Number of records fetched per API request.",
+      "maximum": 1000,
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "THREATLANDSCAPE_API_KEY",
+    "THREATLANDSCAPE_FEED"
+  ],
+  "additionalProperties": true
+}

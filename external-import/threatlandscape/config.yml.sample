@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'Threat Landscape'
+  scope: 'indicator,report,threat-actor,malware,campaign,intrusion-set,attack-pattern,vulnerability,identity,location'
+  log_level: 'info'
+  duration_period: 'PT1H'
+
+threatlandscape:
+  api_base_url: 'https://api.threatlandscape.io/rest/v1'
+  api_key: 'ChangeMe'
+  import_since: 'P30D'      # Lookback window for the first run only (ISO 8601 duration)
+  feed: 'intelligence'       # intelligence | intelligence-osint | intelligence-darknet | ioc
+  page_size: 100

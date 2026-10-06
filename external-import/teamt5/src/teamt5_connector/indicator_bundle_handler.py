@@ -1,4 +1,4 @@
-from .base_handler import BaseHandler
+from teamt5_connector.base_handler import BaseHandler
 
 
 class IndicatorBundleHandler(BaseHandler):

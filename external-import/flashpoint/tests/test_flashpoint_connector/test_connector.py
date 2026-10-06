@@ -394,7 +394,31 @@ def test_import_alerts_media_source():
     helper.api.work.to_processed.assert_called_once()
 
 
-def test_import_alerts_data_exposure_source():
+def test_import_alerts_media_source_none_media_id():
+    helper = _build_helper()
+    connector = _build_connector(helper=helper)
+    connector.client.get_alerts.return_value = [
+        {
+            "id": "alert-2",
+            "source": "media",
+            "created_at": "2026-03-06T12:00:00Z",
+            "resource": {
+                "id": "media-1",
+                "site": {"title": "media_site"},
+                "site_actor": {"names": {"handle": ""}},
+            },
+        }
+    ]
+    connector.client.get_media_doc.return_value = {
+        "storage_uri": "https://storage.example.com/file",
+        "media_id": None,
+    }
+    connector.client.get_media.return_value = (b"content", "image/png")
+    connector.converter_to_stix.alert_to_incident = Mock(return_value=[])
+
+    connector._import_alerts(datetime(2026, 1, 1, tzinfo=timezone.utc))
+
+    helper.api.work.to_processed.assert_called_once()
     helper = _build_helper()
     connector = _build_connector(helper=helper)
     connector.client.get_alerts.return_value = [

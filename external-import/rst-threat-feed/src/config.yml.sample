@@ -9,7 +9,7 @@ connector:
   scope: "application/json" # MIME type or SCO
   log_level: "info"
 
-rst-threat-feed:
+rst_threat_feed:
   baseurl: "https://api.rstcloud.net/v1"
   apikey: "ChangeMe"
   ssl_verify: true

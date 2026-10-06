@@ -1,0 +1,29 @@
+version: '3'
+services:
+  connector-dark-web-informer:
+    image: opencti/connector-dark-web-informer:latest
+    environment:
+      # OpenCTI parameters - REQUIRED
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+
+      # Connector's definition parameters - REQUIRED
+      - CONNECTOR_ID=ChangeMe
+
+      # Connector's definition parameters - OPTIONAL
+      # - CONNECTOR_NAME=Dark Web Informer
+      # - CONNECTOR_SCOPE=dark-web-informer
+      # - CONNECTOR_LOG_LEVEL=error
+      # DWI regenerates STIX exports every 30 min; hourly or slower is recommended.
+      # - CONNECTOR_DURATION_PERIOD=PT6H
+
+      # Dark Web Informer parameters - REQUIRED
+      - DARK_WEB_INFORMER_API_KEY=ChangeMe
+
+      # Dark Web Informer parameters - OPTIONAL
+      # - DARK_WEB_INFORMER_BASE_URL=https://api.darkwebinformer.com
+      # - DARK_WEB_INFORMER_SOURCES=feed,ransomware,iocs
+      # - DARK_WEB_INFORMER_USE_PREVIEW_ENDPOINT=false
+      # - DARK_WEB_INFORMER_PREVIEW_LIMIT=5000
+      # - DARK_WEB_INFORMER_TLP_LEVEL=amber+strict
+    restart: always

@@ -2,18 +2,22 @@
   "title": "CrowdStrike Falcon Intelligence",
   "slug": "crowdstrike-falcon-intel",
   "description": "CrowdStrike Falcon Intelligence is an integral threat intelligence module within the Falcon platform, crafted to enhance the speed and effectiveness of threat detection, investigation, and response. It equips SOC teams to work more swiftly and intelligently, leveraging automation, enrichment, and high-fidelity data to optimize their cybersecurity operations. \n\nThe OpenCTI CrowdStrike connector facilitates the import of intelligence from the CrowdStrike Falcon platform. By utilizing the Intel APIs, this connector accesses CrowdStrike's comprehensive intelligence, including data on threat actors, indicators, reports, and YARA rules, thus enhancing the threat intelligence capabilities within OpenCTI.",
-  "short_description": "CrowdStrike Falcon Intelligence is an integral threat intelligence module within the Falcon platform, crafted to enhance the speed and effectiveness of threat detection, investigation, and response.",
+  "short_description": "Imports threat actors, indicators, reports, and YARA rules from the CrowdStrike Falcon Intelligence platform into OpenCTI via the Falcon Intel APIs.",
   "logo": "external-import/crowdstrike/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
     "Adversary & Campaign Insights"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 60,
   "support_version": ">= 6.5.1",
-  "subscription_link": "",
+  "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/crowdstrike",
   "manager_supported": true,
   "container_version": "rolling",

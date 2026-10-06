@@ -462,7 +462,10 @@ The connector's manifest must contain the info below (all fields are required):
   "description": "Template description of the connector",
   "short_description": "Template short description (summary) of the connector",
   "logo": "external-import/template/__metadata__/logo.png", # Path of the logo if it exists, otherwise `null`
-  "use_cases" : ["Open Source Threat Intel"],
+  "use_cases" : ["Adversary & Campaign Insights"], # Use cases handled by the connector
+  "solution_categories" : ["Threat Intelligence Feed"], # Categories the external solution belongs to
+  "license_type": "Free", # Type of license of the external solution
+  "contact": "support@example.com", # E-mail or Github profile of connector's main contributor / maintainer
   "verified": false, # DO NOT CHANGE - FOR INTERNAL USE ONLY
   "last_verified_date": null, # DO NOT CHANGE - FOR INTERNAL USE ONLY
   "playbook_supported": false, # Whether the connector is compatible with playbooks on OpenCTI (for connectors of type `INTERNAL_ENRICHMENT` only)
@@ -473,10 +476,55 @@ The connector's manifest must contain the info below (all fields are required):
   "manager_supported": false, # DO NOT CHANGE - FOR INTERNAL USE ONLY
   "container_version": "rolling",
   "container_image": "opencti/connector-template", # Docker image name
-  "container_type": "EXTERNAL_IMPORT" # Type of the connector (`EXTERNAL_IMPORT`, `INTERNAL_ENRICHMENT`, `INTERNAL_EXPORT_FILE`, `INTERNAL_IMPORT_FILE` or `STREAM`)
+  "container_type": "EXTERNAL_IMPORT" # Type of the connector
 }
 
 ```
+
+Accepted values:
+
+_For fields not listed below with specific allowed values, any value is accepted._
+
+- `use_cases` (choose 1 to 3 values):
+  - Adversary & Campaign Insights
+  - Vulnerability & Exploit Awareness
+  - Infrastructure & Attack Surface Visibility
+  - Detection & Response Enablement
+  - Fraud, Financial Crime & Cryptocurrency Monitoring
+  - Brand, Digital Risk & Underground Exposure
+  - Third-Party & Supply Chain Oversight
+  - Cloud, SaaS & Platform Security
+  - Geopolitical, Physical & Hybrid Risk Analysis
+  - Market Vertical & Mission-Specific Intelligence
+  - FIMI & Disinformation
+  - Other
+- `solution_categories` (choose 1 to 3 values):
+  - Threat Intelligence Feed
+  - Endpoint Detection & Response
+  - SIEM & Security Analytics
+  - Malware Analysis & Sandbox
+  - SOAR & Security Automation
+  - Vulnerability & Exposure Management
+  - Attack Surface Management
+  - Network Security
+  - Email Security
+  - AI Security
+  - Incident Response & Case Management
+  - Digital Risk Protection
+  - Governance, Risk & Compliance
+  - Cloud Security
+  - Enrichment & Reputation
+  - Import, Export & Sharing
+  - Other
+- `license_type`:
+  - Free
+  - Commercial
+- `container_type`:
+  - EXTERNAL_IMPORT
+  - INTERNAL_ENRICHMENT
+  - INTERNAL_EXPORT_FILE
+  - INTERNAL_IMPORT_FILE
+  - STREAM
 
 <br>
 

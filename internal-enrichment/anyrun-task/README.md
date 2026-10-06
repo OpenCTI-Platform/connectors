@@ -6,17 +6,17 @@
 
 ______________________________________________________________________
 
-# OpenCTI ANY.RUN Task Connector
+# OpenCTI ANY.RUN Sandbox Connector
 
 | Status           | Date | Comment |
 |------------------|------|---------|
 | Partner Verified | -    | -       |
 
-The ANY.RUN Task connector analyzes URL and StixFile observables in the ANY.RUN Interactive Online Malware Sandbox, enriching them with sandbox analysis results including threat scores, tags, and IOCs.
+The ANY.RUN Sandbox connector analyzes URL and StixFile observables in the ANY.RUN Interactive Online Malware Sandbox, enriching them with sandbox analysis results including threat scores, tags, and IOCs.
 
 ## Table of Contents
 
-- [OpenCTI ANY.RUN Task Connector](#opencti-anyrun-task-connector)
+- [OpenCTI ANY.RUN Sandbox Connector](#opencti-anyrun-sandbox-connector)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
@@ -251,7 +251,7 @@ The connector enriches URL and StixFile observables by submitting them to the AN
 
 **Observations → Observables**
 
-Select a URL or StixFile observable, then click the enrichment button and choose ANY.RUN Task.
+Select a URL or StixFile observable, then click the enrichment button and choose ANY.RUN Sandbox.
 
 ## Behavior
 

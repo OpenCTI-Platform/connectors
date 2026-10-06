@@ -5,9 +5,13 @@
   "short_description": "PGL Yoyo connector imports Peter Lowe's ad/tracking blocklists into OpenCTI as STIX 2.1 Indicators for IPv4 addresses and domain names.",
   "logo": null,
   "use_cases": [
-    "Open Source Threat Intel",
     "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

@@ -9,9 +9,10 @@ connector:
   scope: 'citalid'
   run_and_terminate: false
   log_level: 'info'
+  duration_period: 'P1D' # ISO 8601 duration (replaces deprecated citalid.interval)
 
 citalid:
   customer_sub_domain_url: 'https://ChangeMe.citalid.com'
   user: 'ChangeMe'
   password: 'ChangeMe'
-  interval: 24 # In hours
+  # interval: 24 # In hours (deprecated, use connector.duration_period instead)

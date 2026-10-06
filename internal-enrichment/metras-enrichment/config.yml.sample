@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'  # UUIDv4
+  name: 'Metras-Enrichment'
+  scope: 'IPv4-Addr,StixFile'
+  log_level: 'error'
+  auto: false
+
+metras:
+  api_base_url: 'https://api.metras.sa/api'
+  api_key: 'ChangeMe'
+  verify_ssl: true
+  max_tlp: 'amber+strict'

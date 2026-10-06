@@ -5,9 +5,13 @@
   "short_description": "Import Recorded Future Attack Surface Intelligence (ASI) exposure findings into OpenCTI as STIX 2.1 incidents, observables, vulnerabilities, and relationships.",
   "logo": "external-import/recorded-future-asi/__metadata__/logo.png",
   "use_cases": [
-    "Infrastructure & Attack Surface Visibility",
-    "Cloud, SaaS & Platform Security"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Attack Surface Management"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

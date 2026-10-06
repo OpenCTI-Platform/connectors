@@ -17,6 +17,7 @@ services:
       - MICROSOFT_SENTINEL_INTEL_TENANT_ID=ChangeMe # Azure Tenant ID
       - MICROSOFT_SENTINEL_INTEL_CLIENT_ID=ChangeMe # Azure App Client ID
       - MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET=ChangeMe # Azure App Client Secret
+#      - MICROSOFT_SENTINEL_INTEL_AUTH_TYPE=azure_credential # Use instead of the 3 vars above for managed identity, workload identity, or az login
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID=ChangeMe
       - MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME=ChangeMe # For deletion
       - MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID=ChangeMe # For deletion
@@ -30,4 +31,5 @@ services:
 #      - MICROSOFT_SENTINEL_INTEL_BATCH_SIZE=100
 #      - MICROSOFT_SENTINEL_INTEL_BATCH_TIMEOUT=30
 #      - MICROSOFT_SENTINEL_INTEL_EVENT_TYPES=create,update,delete
+#      - MICROSOFT_SENTINEL_INTEL_PUBLISH_IDENTITIES=false
     restart: always

@@ -2,7 +2,7 @@ import traceback
 
 from pycti import OpenCTIConnectorHelper
 from src.connector import ConnectorServicenow
-from src.connector.services.config_loader import ServiceNowConfig
+from src.connector.settings import ConnectorSettings
 
 if __name__ == "__main__":
     """
@@ -15,12 +15,9 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ServiceNowConfig()
-        config_instance = config.load
-        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
-        config_dict = config_instance.model_dump(exclude_none=True)
-        helper = OpenCTIConnectorHelper(config=config_dict)
-        connector = ConnectorServicenow(config_instance, helper)
+        config = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=config.to_helper_config())
+        connector = ConnectorServicenow(config, helper)
         connector.run()
     except Exception:
         traceback.print_exc()

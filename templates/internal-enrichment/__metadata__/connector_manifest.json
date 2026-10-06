@@ -4,7 +4,14 @@
   "description": "Template description of the connector",
   "short_description": "Template short description (summary) of the connector",
   "logo": null,
-  "use_cases" : ["Enrichment & Analysis"],
+  "use_cases": [
+    "Cloud, SaaS & Platform Security"
+  ],
+  "solution_categories": [
+    "Malware Analysis & Sandbox"
+  ],
+  "license_type": "Free",
+  "contact": "support@example.com",
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

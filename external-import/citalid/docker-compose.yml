@@ -10,8 +10,8 @@ services:
       - CONNECTOR_SCOPE=citalid
       - CONNECTOR_RUN_AND_TERMINATE=false
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=P1D # ISO 8601 duration (replaces deprecated CITALID_INTERVAL)
       - CITALID_CUSTOMER_SUB_DOMAIN_URL='https://ChangeMe.citalid.com'
       - CITALID_USER=ChangeMe
       - CITALID_PASSWORD=ChangeMe
-      - CITALID_INTERVAL=24 # In hours
     restart: always

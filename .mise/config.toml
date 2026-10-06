@@ -1,0 +1,18 @@
+[tools]
+poetry = "latest"
+pre-commit = "latest"
+ty = "latest"
+ruff = "latest"
+uv = "latest"
+gh = "latest"
+claude-code = "latest"
+git-cliff = "latest"
+
+[tasks.global_manifest]
+description = "Update the global manifest file for all connectors"
+depends = ["generate_config_schema"]
+run = [
+    'sh ./shared/tools/composer/generate_global_manifest/generate_global_manifest.sh'
+]
+
+

@@ -1,0 +1,472 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "jsonschema==4.26.0",
+#     "pillow==12.3.0",
+# ]
+# ///
+"""
+Generate a connector *manifest fragment* for XTM Hub delivery.
+
+The fragment follows `connector_manifest_schema.json` (bundled alongside this
+script) and is derived from a connector's existing
+`__metadata__/connector_manifest.json` and
+`__metadata__/connector_config_schema.json`, without modifying either file.
+
+The existing `connector_manifest.json` is kept as-is for backward compatibility
+during the release decoupling rollout; this fragment is the new, forward-looking
+format published as a release artifact (until the XTM Hub endpoint exists).
+
+Usage:
+    python generate_manifest_fragment.py \
+        --connector-dir external-import/mitre \
+        --version 7.260630.0 \
+        --sdk-ref 7.260630.0 \
+        --output /tmp/mitre_manifest_fragment.json
+
+Field mapping (existing manifest -> fragment):
+    slug              -> id, slug
+    logo (file path)  -> logo (base64 data URL)
+    pinned pycti version (requirements.txt / pyproject.toml, connectors-sdk
+        pin, or support_version as an ultimate fallback) -> min_version
+    <release version> -> version
+    container_image   -> image_name
+    container_type    -> image_type
+    playbook_supported, max_confidence_level -> additional_properties
+    connector_config_schema.json -> config_schema (embedded)
+    <any other manifest key> -> copied through as-is (see
+        MANIFEST_KEYS_HANDLED_EXPLICITLY), so new manifest fields (e.g.
+        solution_categories, license_type, contact) automatically appear in
+        the fragment without requiring a code change here.
+Constant fields:
+    platform = "OpenCTI", integration_type = "connector"
+"""
+
+import argparse
+import base64
+import io
+import json
+import os
+import re
+import subprocess
+import sys
+import traceback
+from pathlib import Path
+
+import jsonschema
+from PIL import Image
+
+CONNECTOR_METADATA_DIRECTORY = "__metadata__"
+CONNECTOR_MANIFEST_FILENAME = "connector_manifest.json"
+CONNECTOR_CONFIG_SCHEMA_FILENAME = "connector_config_schema.json"
+
+# Where a connector may declare its pycti pin, checked in order. Most
+# connectors use `src/requirements.txt`; some (uv/pyproject-based, or older
+# ones) pin it in a root `requirements.txt` or in `pyproject.toml` instead.
+CONNECTOR_REQUIREMENTS_CANDIDATES = (
+    Path("src") / "requirements.txt",
+    Path("requirements.txt"),
+    Path("pyproject.toml"),
+)
+
+# A handful of connectors only depend on connectors-sdk and don't pin pycti
+# directly; connectors-sdk's own pin is what actually gets installed then.
+CONNECTORS_SDK_PYPROJECT = (
+    Path(__file__).parents[4] / "connectors-sdk" / "pyproject.toml"
+)
+
+# Matches a pinned `pycti==X.Y.Z` requirement, whether as a plain
+# requirements.txt line or a quoted `pyproject.toml` dependencies-array entry
+# (e.g. `"pycti==X.Y.Z",`). Optional extras (`pycti[extra]==`) are handled.
+PYCTI_PIN_PATTERN = re.compile(
+    r"^\s*['\"]?pycti(?:\[[^\]]*\])?\s*==\s*['\"]?([^\s'\";,]+)['\"]?,?\s*$",
+    re.MULTILINE,
+)
+
+PLATFORM = "OpenCTI"
+INTEGRATION_TYPE = "connector"
+
+# Manifest keys that are explicitly transformed (renamed, reshaped, truncated,
+# or moved into a nested object) when building the fragment. Every other
+# manifest key is copied through as-is in `build_fragment`, so new manifest
+# fields automatically flow into the fragment without requiring a code change
+# here — only a schema update if strict validation of the new field is desired.
+MANIFEST_KEYS_HANDLED_EXPLICITLY = frozenset(
+    {
+        "title",
+        "slug",
+        "description",
+        "short_description",
+        "logo",
+        "verified",
+        "use_cases",
+        "solution_categories",
+        "license_type",
+        "contact",
+        "last_verified_date",
+        "subscription_link",
+        "source_code",
+        "manager_supported",
+        # Only used as a last-resort fallback for min_version (see
+        # parse_pycti_version), so it's excluded from passthrough rather than
+        # published as its own field.
+        "support_version",
+        "container_image",
+        "container_type",
+        "container_version",
+        "playbook_supported",
+        "max_confidence_level",
+    }
+)
+
+# Default logo used when a connector does not ship its own.
+DEFAULT_LOGO_PATH = (
+    Path(__file__).parent.parent
+    / "generate_global_manifest"
+    / "connector_default_logo.png"
+)
+
+MIME_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+}
+
+# Maximum logo dimensions (in pixels) embedded in the fragment. Oversized
+# logos bloat the base64 payload and can make the manifest fragment too
+# large to publish. Raster logos are downscaled (never upscaled, never
+# cropped) so the aspect ratio is always preserved. SVGs are vector-based
+# and left untouched.
+MAX_LOGO_DIMENSION = 200
+
+# Pillow format name for each supported raster extension, used to re-encode
+# the resized image back to its original format.
+PILLOW_FORMATS = {
+    ".png": "PNG",
+    ".jpg": "JPEG",
+    ".jpeg": "JPEG",
+    ".gif": "GIF",
+}
+
+
+def resize_logo_bytes(logo_data: bytes, suffix: str) -> bytes:
+    """Downscale a raster logo to fit within MAX_LOGO_DIMENSION x MAX_LOGO_DIMENSION.
+
+    Uses `Image.thumbnail`, which preserves the aspect ratio, never crops,
+    and never upscales an image already smaller than the target size.
+    SVGs (vector) are returned unchanged.
+    """
+    if suffix not in PILLOW_FORMATS:
+        return logo_data
+
+    with Image.open(io.BytesIO(logo_data)) as image:
+        if image.width <= MAX_LOGO_DIMENSION and image.height <= MAX_LOGO_DIMENSION:
+            return logo_data
+
+        image.thumbnail((MAX_LOGO_DIMENSION, MAX_LOGO_DIMENSION), Image.LANCZOS)
+
+        buffer = io.BytesIO()
+        save_kwargs = {}
+        if PILLOW_FORMATS[suffix] == "PNG" and image.mode not in ("RGBA", "RGB", "P"):
+            image = image.convert("RGBA")
+        if PILLOW_FORMATS[suffix] == "JPEG" and image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
+        image.save(buffer, format=PILLOW_FORMATS[suffix], **save_kwargs)
+        return buffer.getvalue()
+
+
+def find_logo_file(metadata_dir: Path) -> Path:
+    """Return the connector's logo path, or the default logo if none is found."""
+    if metadata_dir.is_dir():
+        for file in os.listdir(metadata_dir):
+            if file.startswith("logo."):
+                return metadata_dir / file
+    print(f"⚠️  No logo found in {metadata_dir}, using the default logo.")
+    return DEFAULT_LOGO_PATH
+
+
+def encode_logo_to_base64(logo_path: Path) -> str:
+    """Read a logo file, downscale it if needed, and encode it as a base64 data URL."""
+    suffix = logo_path.suffix.lower()
+    with open(logo_path, "rb") as logo_file:
+        logo_data = logo_file.read()
+    logo_data = resize_logo_bytes(logo_data, suffix)
+    mime_type = MIME_TYPES.get(suffix, "image/png")
+    encoded_logo = base64.b64encode(logo_data).decode("utf-8")
+    return f"data:{mime_type};base64,{encoded_logo}"
+
+
+def parse_support_version_fallback(support_version: str | None) -> str | None:
+    """Extract a bare version (e.g. "6.8.0") from a `support_version` constraint
+    (e.g. ">= 6.8.0"), used only as a last resort when no pycti pin is found.
+    """
+    if not support_version:
+        return None
+    match = re.search(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?", support_version)
+    return match.group() if match else None
+
+
+def read_connectors_sdk_pyproject(sdk_ref: str | None) -> str | None:
+    """Return the contents of connectors-sdk/pyproject.toml as pinned into the
+    built image.
+
+    A release can pin connectors-sdk to a git ref other than the one currently
+    checked out (release-connector.yml's `sdk_ref` input, applied by
+    build-connector-image's "Pin connectors-sdk for release" step), so the
+    pycti version actually shipped in the image can differ from the local,
+    checked-out connectors-sdk/pyproject.toml. When `sdk_ref` is given, fetch
+    that ref and read the file from it instead of from disk.
+    """
+    if not sdk_ref:
+        if CONNECTORS_SDK_PYPROJECT.is_file():
+            return CONNECTORS_SDK_PYPROJECT.read_text(encoding="utf-8")
+        return None
+
+    repo_root = CONNECTORS_SDK_PYPROJECT.parents[1]
+    try:
+        subprocess.run(
+            ["git", "fetch", "--quiet", "--depth", "1", "origin", sdk_ref],
+            cwd=repo_root,
+            check=True,
+        )
+        result = subprocess.run(
+            ["git", "show", "FETCH_HEAD:connectors-sdk/pyproject.toml"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return result.stdout
+    except (subprocess.CalledProcessError, OSError) as error:
+        print(
+            f"⚠️  Could not read connectors-sdk/pyproject.toml at sdk_ref "
+            f"{sdk_ref!r}: {error}"
+        )
+        return None
+
+
+def parse_pycti_version(
+    connector_dir: Path, support_version: str | None, sdk_ref: str | None = None
+) -> str:
+    """Return the exact pycti version this connector release was built against.
+
+    This is the minimum OpenCTI platform version we know the connector works
+    with, since it's the pycti version the release was actually built and
+    tested against.
+
+    Checked in order: each of CONNECTOR_REQUIREMENTS_CANDIDATES at the
+    connector root; then the connectors-sdk pin (read from `sdk_ref` when
+    given, otherwise the local checkout), for connectors that only depend on
+    connectors-sdk (no direct pycti pin of their own) — that's what actually
+    gets installed then. As an ultimate fallback, the manually maintained
+    `support_version` manifest field is used, since it's better than failing
+    the release outright even though it can drift out of sync.
+    """
+    checked_paths = []
+    for relative_path in CONNECTOR_REQUIREMENTS_CANDIDATES:
+        candidate = connector_dir / relative_path
+        checked_paths.append(candidate)
+        if candidate.is_file():
+            match = PYCTI_PIN_PATTERN.search(candidate.read_text(encoding="utf-8"))
+            if match:
+                return match.group(1)
+
+    sdk_pyproject_content = read_connectors_sdk_pyproject(sdk_ref)
+    if sdk_pyproject_content:
+        match = PYCTI_PIN_PATTERN.search(sdk_pyproject_content)
+        if match:
+            return match.group(1)
+    checked_paths.append(
+        f"connectors-sdk/pyproject.toml@{sdk_ref}"
+        if sdk_ref
+        else CONNECTORS_SDK_PYPROJECT
+    )
+
+    fallback = parse_support_version_fallback(support_version)
+    if fallback:
+        print(
+            "⚠️  No pinned 'pycti==<version>' requirement found — falling back "
+            f"to manifest 'support_version' ({support_version!r}) for min_version."
+        )
+        return fallback
+
+    raise ValueError(
+        "No pinned 'pycti==<version>' requirement found, and no usable "
+        f"'support_version' fallback in the manifest. Checked: "
+        f"{', '.join(str(path) for path in checked_paths)}"
+    )
+
+
+def normalize_slug(slug: str) -> str:
+    """Normalize a slug to the URL-friendly form required by the schema.
+
+    Directory names may contain underscores (e.g. "intel471_v2"); the fragment
+    id/slug must match `^[a-z0-9]+(?:-[a-z0-9]+)*$`, so underscores become hyphens.
+    """
+    return slug.lower().replace("_", "-")
+
+
+def load_json(path: Path) -> dict:
+    with open(path, "r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def build_fragment(
+    connector_dir: Path, version: str, sdk_ref: str | None = None
+) -> dict:
+    """Build the manifest fragment for a single connector.
+
+    `sdk_ref` is the git ref connectors-sdk was actually pinned to for this
+    release build (see `read_connectors_sdk_pyproject`); when omitted, the
+    locally checked-out connectors-sdk/pyproject.toml is used instead.
+    """
+    metadata_dir = connector_dir / CONNECTOR_METADATA_DIRECTORY
+    manifest_path = metadata_dir / CONNECTOR_MANIFEST_FILENAME
+    if not manifest_path.is_file():
+        raise FileNotFoundError(f"Manifest not found: {manifest_path}")
+
+    manifest = load_json(manifest_path)
+
+    slug = normalize_slug(manifest["slug"])
+    logo = encode_logo_to_base64(find_logo_file(metadata_dir))
+
+    config_schema_path = metadata_dir / CONNECTOR_CONFIG_SCHEMA_FILENAME
+    config_schema = (
+        load_json(config_schema_path) if config_schema_path.is_file() else {}
+    )
+
+    fragment = {
+        "id": f"{slug}-{version}",
+        "title": manifest["title"],
+        "slug": slug,
+        "description": manifest["description"],
+        "short_description": manifest["short_description"],
+        "logo": logo,
+        "use_cases": manifest["use_cases"],
+        "solution_categories": manifest["solution_categories"],
+        "license_type": manifest.get("license_type") or None,
+        "contact": manifest.get("contact") or "",
+        "verified": manifest.get("verified", False),
+        "last_verified_date": manifest.get("last_verified_date") or None,
+        "subscription_link": manifest.get("subscription_link") or None,
+        "source_code": manifest["source_code"],
+        "manager_supported": manifest["manager_supported"],
+        "min_version": parse_pycti_version(
+            connector_dir, manifest.get("support_version"), sdk_ref
+        ),
+        "version": version,
+        "image_name": manifest["container_image"],
+        "image_type": manifest["container_type"],
+        "platform": PLATFORM,
+        "integration_type": INTEGRATION_TYPE,
+        "additional_properties": {
+            "playbook_supported": manifest.get("playbook_supported", False),
+            "max_confidence_level": manifest.get("max_confidence_level", 50),
+        },
+        "config_schema": config_schema,
+    }
+
+    # Copy through any manifest key not explicitly handled above (e.g.
+    # any future addition) so the fragment stays in sync with the manifest
+    # without code changes.
+    for key, value in manifest.items():
+        if key not in MANIFEST_KEYS_HANDLED_EXPLICITLY and key not in fragment:
+            fragment[key] = value
+
+    return fragment
+
+
+def validate_fragment(fragment: dict, schema_path: Path) -> None:
+    """Validate the fragment against the manifest schema."""
+    schema = load_json(schema_path)
+    jsonschema.validate(
+        instance=fragment, schema=schema, format_checker=jsonschema.FormatChecker()
+    )
+    print("✅ Fragment validated against schema.")
+    warn_unchecked_keys(fragment, schema)
+
+
+def warn_unchecked_keys(fragment: dict, schema: dict) -> None:
+    """Warn loudly about fragment keys the schema does not declare.
+
+    Because `additionalProperties` is `true`, these keys are accepted as-is by
+    `jsonschema.validate` above without any type/enum/format check — they are
+    passed through from the manifest (see `MANIFEST_KEYS_HANDLED_EXPLICITLY`)
+    but are otherwise unvalidated.
+    """
+    known_properties = set(schema.get("properties", {}))
+    unchecked_keys = sorted(set(fragment) - known_properties)
+    if unchecked_keys:
+        print(
+            "⚠️⚠️⚠️  WARNING: the following fragment key(s) are NOT declared in "
+            f"the JSON schema and will NOT be validated (type, enum, format, ...): "
+            f"{', '.join(unchecked_keys)}. Add them to connector_manifest_schema.json "
+            "to enforce their format.  ⚠️⚠️⚠️"
+        )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Generate a connector manifest fragment for XTM Hub delivery."
+    )
+    parser.add_argument(
+        "--connector-dir",
+        required=True,
+        help="Path to the connector directory (e.g. external-import/mitre).",
+    )
+    parser.add_argument(
+        "--version",
+        required=True,
+        help="Release version to embed in the fragment (e.g. 7.260630.0).",
+    )
+    parser.add_argument(
+        "--output",
+        required=True,
+        help="Path where the generated fragment JSON will be written.",
+    )
+    parser.add_argument(
+        "--sdk-ref",
+        default=None,
+        help="Git ref connectors-sdk was pinned to for this release build "
+        "(e.g. the release-connector 'sdk_ref' input, or the release commit "
+        "SHA). Used to derive 'min_version' from that ref's "
+        "connectors-sdk/pyproject.toml instead of the local checkout. "
+        "Defaults to the local checkout when omitted.",
+    )
+    parser.add_argument(
+        "--schema",
+        default=None,
+        help="Path to connector_manifest_schema.json for optional validation. "
+        "Defaults to the schema bundled alongside this script.",
+    )
+    args = parser.parse_args()
+
+    connector_dir = Path(args.connector_dir)
+    fragment = build_fragment(connector_dir, args.version, args.sdk_ref)
+
+    schema_path = (
+        Path(args.schema)
+        if args.schema
+        else Path(__file__).parent / "connector_manifest_schema.json"
+    )
+    if schema_path.is_file():
+        validate_fragment(fragment, schema_path)
+    else:
+        print(f"ℹ️  Schema not found at {schema_path} — skipping validation.")
+
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as file:
+        file.write(json.dumps(fragment, indent=2))
+
+    print(f"✅ Manifest fragment written to {output_path}")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)

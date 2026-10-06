@@ -1,3 +1,3 @@
-from src.connector.models import ConfigLoader
+from src.connector.settings import ConnectorSettings
 
-__all__ = ["ConfigLoader"]
+__all__ = ["ConnectorSettings"]

@@ -5,7 +5,7 @@ opencti:
 connector:
   id: connector-poc--uid
   name: Test Connector
-  scope: test
-  log_level: error
+  scope: scope1,scope2
+  log_level: debug
   duration_period: PT5M
             

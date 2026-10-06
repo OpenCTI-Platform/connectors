@@ -13,9 +13,26 @@ on:
       - '[0-9]*.[0-9]*.[0-9]*'
       - '[0-9]*.[0-9]*.[0-9]*-lts*'
 
-concurrency:
-  group: build-connectors-${{ github.ref_name }}
-  cancel-in-progress: false
+# Concurrency is deliberately NOT set at the run level, nor on lint/tests
+# (ci-lint-format.yml, ci-tests-connectors.yml declare none). Each run's
+# build_alpine_matrix.py only diffs its own HEAD~1..HEAD, so a run that is
+# cancelled or discarded before its builds start silently loses its
+# connectors until they are touched again:
+#   - a top-level group with cancel-in-progress: true cancels the older run;
+#   - with cancel-in-progress: false GitHub keeps only the latest pending run;
+#   - a shared group on lint/tests lets run B cancel run A's tests, which
+#     skips A's builds through `needs`.
+# Instead, overlapping runs proceed independently and ordering is enforced
+# where shared state is written, not by concurrency groups:
+#   - image builds and the merge job have no group: groups order by job arrival
+#     (how long lint/tests took), not commit order, and drop all but one
+#     waiting job, so an older run could replace the newer commit's job and
+#     publish stale code with nothing going red;
+#   - the merge job (merge_connector_manifest.sh) is the only place a moving
+#     tag is written. It never moves a tag to an ancestor of the commit it was
+#     built from, and re-checks the tag after pushing;
+#   - build-manifest.yml has no group either: it commits only when no newer
+#     non-manifest commit exists, since the newest run regenerates everything.
 
 permissions:
   contents: read
@@ -53,6 +70,14 @@ jobs:
       contents: read
     secrets: inherit
 
+  build-manifest:
+    needs: [resolve-build-mode, lint, tests]
+    uses: ./.github/workflows/build-manifest.yml
+    permissions:
+      contents: write
+      actions: read
+    secrets: inherit
+
   build-alpine:
     needs: [resolve-build-mode, lint, tests]
     uses: ./.github/workflows/build-alpine.yml
@@ -61,8 +86,7 @@ jobs:
       packages: write
     with:
       build_mode: ${{ needs.resolve-build-mode.outputs.build_mode }}
-      # TODO: Set push to true once CircleCI is decommissioned for Alpine/FIPS builds
-      push: false
+      push: true
     secrets:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_UBI9 }}
       DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS_UBI9 }}

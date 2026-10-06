@@ -1,24 +1,23 @@
-version: '3'
 services:
   connector-teamt5:
     image: opencti/connector-teamt5:latest
     environment:
-      - OPENCTI_URL=ChangeMe
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=Team T5 External Import Connector
+      #- CONNECTOR_NAME=Team T5 External Import Connector
       - CONNECTOR_SCOPE=ChangeMe
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=P1D
-      - TEAMT5_API_BASE_URL=https://api.threatvision.org/
+      #- CONNECTOR_LOG_LEVEL=error
+      #- CONNECTOR_DURATION_PERIOD=P1D
+      #- TEAMT5_API_BASE_URL=https://api.threatvision.org/
       # Recommended: OAuth 2.0 Client Credentials
       - TEAMT5_CLIENT_ID=ChangeMe
       - TEAMT5_CLIENT_SECRET=ChangeMe
       # Deprecated: pre-obtained Bearer token (use client_id + client_secret instead)
-      # - TEAMT5_API_KEY=ChangeMe
-      - TEAMT5_TLP_LEVEL=clear
+      #- TEAMT5_API_KEY=ChangeMe
+      #- TEAMT5_TLP_LEVEL=clear
       # Optional. Unix timestamp of the earliest intel to pull on the first run.
       # Defaults to 0 (full TeamT5 catalogue) when unset.
-      - TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP=0
+      #- TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP=0
 
     restart: always

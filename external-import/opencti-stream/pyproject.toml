@@ -1,0 +1,11 @@
+[project]
+name = "opencti-stream"
+version = "0.1.0"
+description = "Forward events from an OpenCTI live stream to a queue, directory or S3 bucket as STIX 2.1 bundles."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.connector-linter]
+# Skip these checks (same as --ignore, merged with CLI --ignore)
+ignore = ["VC301", "VC302", "VC317"]

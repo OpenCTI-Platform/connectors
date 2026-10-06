@@ -10,6 +10,9 @@ from pydantic import (
     AfterValidator,
     BaseModel,
     ConfigDict,
+    EmailStr,
+    TypeAdapter,
+    ValidationError,
     ValidationInfo,
     model_validator,
 )
@@ -93,6 +96,42 @@ Recommended = Annotated[Optional[T], AfterValidator(_validate_recommended_field)
 #     my_model = MyModel(toto="an invalid string")
 # except ValidationError as e:
 #     print("Validation error in my_model:", e)
+
+
+_email_type_adapter: TypeAdapter[str] = TypeAdapter(EmailStr)
+
+
+def _validate_permissive_email(value: str, info: ValidationInfo) -> str:
+    """Raise a FieldWarning instead of failing when an email address is invalid.
+
+    Notes:
+        The Proofpoint TAP API derives these values from raw email headers, so they
+        are not guaranteed to be RFC-valid (empty strings, RFC 2047 encoded display
+        names, quoted local parts, etc.). Failing hard would drop the whole polling
+        window (silent data loss), so we keep the raw value and only warn.
+
+    """
+    try:
+        _email_type_adapter.validate_python(value)
+    except ValidationError:
+        warnings.warn(
+            FieldWarning(
+                type_="invalid_email",
+                loc=(str(info.field_name),),
+                msg=f"Value {value!r} is not a valid email address. Validation will pass.",
+                input_=value,
+            ),
+            stacklevel=2,
+        )
+    return value
+
+
+PermissiveEmailStr = Annotated[str, AfterValidator(_validate_permissive_email)]
+# A string type that only raises a warning (not an error) when it is not a valid email.
+# Usage:
+# class MyModel(BaseModel):
+#     email: PermissiveEmailStr = Field(...)
+#     emails: list[PermissiveEmailStr] = Field(...)
 
 
 class PermissiveLiteral(Generic[T]):

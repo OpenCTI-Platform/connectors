@@ -13,7 +13,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | MISP API key for authentication. |
 | CONNECTOR_NAME | `string` |  | string | `"MISP Intel"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["misp"]` | The scope or type of data the connector is processing. |
-| CONNECTOR_TYPE | `string` |  | string | `"STREAM"` | Should always be set to STREAM for this connector. |
+| CONNECTOR_TYPE | `const` |  | `STREAM` | `"STREAM"` | Should always be set to STREAM for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"info"` | Determines the verbosity of the logs. |
 | CONNECTOR_CONFIDENCE_LEVEL | `integer` |  | `0 <= x <= 100` | `80` | The default confidence level for created entities (0-100). |
 | CONNECTOR_LIVE_STREAM_LISTEN_DELETE | `boolean` |  | boolean | `true` | Listen to delete events in the stream. |

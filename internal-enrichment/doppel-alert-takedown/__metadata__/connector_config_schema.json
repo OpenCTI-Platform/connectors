@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/doppel-alert-takedown_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Doppel Alert and Takedown",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Url",
+        "Domain-Name"
+      ],
+      "description": "The OpenCTI entity types supported by the connector. Add Incident to request takedown for existing Doppel alerts.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated. Must be false when CONNECTOR_SCOPE includes Incident.",
+      "type": "boolean"
+    },
+    "CONNECTOR_AUTO_UPDATE": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is updated. Must be false when CONNECTOR_SCOPE includes Incident.",
+      "type": "boolean"
+    },
+    "DOPPEL_ALERT_TAKEDOWN_API_BASE_URL": {
+      "default": "https://api.doppel.com/",
+      "description": "Doppel API base URL. A trailing /v1 or /v2 is accepted and normalized to the selected api_version.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "DOPPEL_ALERT_TAKEDOWN_API_VERSION": {
+      "default": "v1",
+      "description": "Doppel API version. Choose exactly one authentication mode: V1 API keys or V2 OAuth client credentials.",
+      "enum": [
+        "v1",
+        "v2"
+      ],
+      "type": "string"
+    },
+    "DOPPEL_ALERT_TAKEDOWN_API_KEY": {
+      "default": null,
+      "description": "V1 API key sent as the x-api-key header. Required for V1 and must be unset for V2.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DOPPEL_ALERT_TAKEDOWN_USER_API_KEY": {
+      "default": null,
+      "description": "V1 user API key sent as the x-user-api-key header. Required for V1 and must be unset for V2.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DOPPEL_ALERT_TAKEDOWN_ORGANIZATION_CODE": {
+      "default": null,
+      "description": "Optional V1 organization workspace code sent as the x-organization-code header. Must be unset for V2.",
+      "type": "string"
+    },
+    "DOPPEL_ALERT_TAKEDOWN_CLIENT_ID": {
+      "default": null,
+      "description": "OAuth client ID required for V2 and must be unset for V1.",
+      "type": "string"
+    },
+    "DOPPEL_ALERT_TAKEDOWN_CLIENT_SECRET": {
+      "default": null,
+      "description": "OAuth client secret required for V2 and must be unset for V1.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "DOPPEL_ALERT_TAKEDOWN_TOKEN_URL": {
+      "default": null,
+      "description": "Optional V2 OAuth token endpoint. Defaults to /oauth/token on the API base URL and must be unset for V1.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "DOPPEL_ALERT_TAKEDOWN_TOKEN_AUDIENCE": {
+      "default": "doppel-external",
+      "description": "OAuth audience used only for the V2 client-credentials exchange.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "DOPPEL_ALERT_TAKEDOWN_TAGS": {
+      "default": [],
+      "description": "List of tags to attach to the alerts created in Doppel.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "DOPPEL_ALERT_TAKEDOWN_TAKEDOWN_COMMENT": {
+      "default": "Confirmed by OpenCTI \u2014 requesting takedown.",
+      "description": "Comment sent to Doppel when requesting a takedown.",
+      "type": "string"
+    },
+    "DOPPEL_ALERT_TAKEDOWN_MAX_TLP": {
+      "default": "TLP:RED",
+      "description": "Max TLP level of entities to enrich.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

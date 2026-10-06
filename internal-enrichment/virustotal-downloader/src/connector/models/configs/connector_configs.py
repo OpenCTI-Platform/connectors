@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
-from pydantic import Field, HttpUrl, PlainSerializer, field_validator
+from pydantic import Field, HttpUrl, PlainSerializer
 from src.connector.models.configs.base_settings import ConfigBaseSettings
 
 LogLevelToLower = Annotated[
@@ -38,7 +38,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     name: str
     scope: ListFromString
 
-    type: str = Field(
+    type: Literal["INTERNAL_ENRICHMENT"] = Field(
         default="INTERNAL_ENRICHMENT",
         description="Should always be set to INTERNAL_ENRICHMENT for this connector.",
     )
@@ -50,7 +50,3 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default="error",
         description="Determines the verbosity of the logs.",
     )
-
-    @field_validator("type")
-    def force_value_for_type_to_be_internal_enrichment(cls, value):
-        return "INTERNAL_ENRICHMENT"

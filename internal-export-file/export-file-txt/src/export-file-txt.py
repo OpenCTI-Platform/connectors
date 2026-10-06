@@ -1,22 +1,16 @@
 import json
-import os
 import sys
 import time
 
-import yaml
 from pycti import OpenCTIConnectorHelper
+from settings import ConnectorSettings
 
 
 class ExportFileTxt:
     def __init__(self):
         # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
+        self.config = ConnectorSettings()
+        self.helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
 
     def _process_message(self, data):
         file_name = data["file_name"]

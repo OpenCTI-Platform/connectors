@@ -1,4 +1,5 @@
 CVSS31_MAPPING = {
+    "x_opencti_cvss_vector_string": "vectorString",
     "x_opencti_base_score": "baseScore",
     "x_opencti_base_severity": "baseSeverity",
     "x_opencti_attack_vector": "attackVector",
@@ -35,4 +36,16 @@ CVSS40_MAPPING = {
     "x_opencti_cvss_v4_integrity_impact_s": "subIntegrityImpact",
     "x_opencti_cvss_v4_availability_impact_v": "vulnAvailabilityImpact",
     "x_opencti_cvss_v4_availability_impact_s": "subAvailabilityImpact",
+}
+
+SSVC_MAPPING = {
+    "x_opencti_ssvc_exploitation": "exploitation",
+    "x_opencti_ssvc_automatable": "automatable",
+    "x_opencti_ssvc_technical_impact": "technicalImpact",
+}
+
+# The NVD API still uses "poc" while the OpenCTI SsvcExploitation enum
+# expects "proof_of_concept". Other SSVC values are identical on both sides.
+SSVC_EXPLOITATION_VALUE_MAPPING = {
+    "poc": "proof_of_concept",
 }

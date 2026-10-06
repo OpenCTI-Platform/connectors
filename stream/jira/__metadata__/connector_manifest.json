@@ -5,8 +5,13 @@
   "short_description": "This connector allows to consume an OpenCTI Stream and open JIRA issues.",
   "logo": "stream/jira/__metadata__/logo.png",
   "use_cases": [
-    "Incident Response & Ticketing"
+    "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "Incident Response & Case Management"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
@@ -14,7 +19,7 @@
   "support_version": ">=6.2.2",
   "subscription_link": "https://www.atlassian.com/software/jira",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/jira",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-jira",
   "container_type": "STREAM"

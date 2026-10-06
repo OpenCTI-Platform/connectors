@@ -15,7 +15,13 @@ class ConverterToStix:
     def __init__(self, helper, config):
         self.helper = helper
         self.config = config
-        self.author = self.create_author()
+        if (
+            self.config.taxii2.author_name is None
+            or self.config.taxii2.author_name == ""
+        ):
+            self.author = None
+        else:
+            self.author = self.create_author()
         self.external_reference = self.create_external_reference()
 
     def create_external_reference(self) -> list:
@@ -37,12 +43,12 @@ class ConverterToStix:
         """
         return stix2.Identity(
             id=pycti.Identity.generate_id(
-                name=self.config.author_name, identity_class="organization"
+                name=self.config.taxii2.author_name, identity_class="organization"
             ),
-            name=self.config.author_name,
+            name=self.config.taxii2.author_name,
             identity_class="organization",
-            description=self.config.author_description,
-            x_opencti_reliability=self.config.author_reliability,
+            description=self.config.taxii2.author_description,
+            x_opencti_reliability=self.config.taxii2.author_reliability,
             allow_custom=True,
         )
 
@@ -73,6 +79,17 @@ class ConverterToStix:
         :param target_id: ID of target in string
         :return: Relationship STIX2 object
         """
+        if self.author is None:
+            return stix2.Relationship(
+                id=pycti.StixCoreRelationship.generate_id(
+                    relationship_type, source_id, target_id
+                ),
+                relationship_type=relationship_type,
+                source_ref=source_id,
+                target_ref=target_id,
+                external_references=self.external_reference,
+            )
+
         return stix2.Relationship(
             id=pycti.StixCoreRelationship.generate_id(
                 relationship_type, source_id, target_id

@@ -1,13 +1,17 @@
 {
   "title": "IronNet",
   "slug": "ironnet",
-  "description": "The OpenCTI IronNet connector can be used to import knowledge from the IronNet IronRadar threat intel feed.\nNote: Requires subscription to the IronRadar threat intel feed.",
-  "short_description": "The OpenCTI IronNet connector can be used to import knowledge from the IronNet IronRadar threat intel feed.\nNote: Requires subscription to the IronRadar threat intel feed.",
+  "description": "The IronNet connector imports threat intelligence from the IronNet IronRadar feed into OpenCTI. IronRadar is a collective defense threat intelligence feed that provides early warning of adversary infrastructure (C2 servers, malicious IPs) detected across IronNet's customer network. The connector ingests these indicators and creates STIX observables and indicators in OpenCTI. Requires an active IronRadar subscription.",
+  "short_description": "Imports IronNet IronRadar threat intelligence feed into OpenCTI, providing early warning indicators of adversary infrastructure and C2 servers.",
   "logo": "external-import/ironnet/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
-    "Adversary & Campaign Insights"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

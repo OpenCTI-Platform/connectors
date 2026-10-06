@@ -15,14 +15,14 @@ services:
 
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
-      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
-      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
-      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
-      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_RUN_AND_TERMINATE=false # Default false, true run connector once
+      # - CONNECTOR_SEND_TO_QUEUE=true # Default true
+      # - CONNECTOR_SEND_TO_DIRECTORY=false # Default false
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe # if CONNECTOR_SEND_TO_DIRECTORY is true, you must specify a path
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
       - ZVELO_CLIENT_ID=ChangeMe
       - ZVELO_CLIENT_SECRET=ChangeMe
-      - ZVELO_COLLECTIONS=phish,threat,malicious
+      # - ZVELO_COLLECTIONS=phish,threat,malicious # Default: phish,malicious,threat
     restart: always

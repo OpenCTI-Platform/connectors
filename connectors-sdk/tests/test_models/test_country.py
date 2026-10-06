@@ -38,6 +38,7 @@ def test_country_to_stix2_object_returns_valid_stix_object(
     country = Country(
         name="Test country",
         description="Test description",
+        aliases=["Test alias"],
         author=fake_valid_organization_author,
         markings=fake_valid_tlp_markings,
         external_references=fake_valid_external_references,

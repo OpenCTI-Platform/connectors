@@ -1,10 +1,12 @@
+from typing import Literal
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -31,13 +33,25 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `MicrosoftSentinelIntelConnector`.
     """
 
-    tenant_id: str = Field(
+    auth_type: Literal["app_registration", "azure_credential"] = Field(
+        default="app_registration",
+        description=(
+            "Authentication method used to call Azure APIs. 'app_registration' (default) "
+            "requires tenant_id, client_id and client_secret. 'azure_credential' uses "
+            "DefaultAzureCredential (managed identity, workload identity, or a local "
+            "`az login` session) and ignores tenant_id/client_id/client_secret."
+        ),
+    )
+    tenant_id: str | None = Field(
+        default=None,
         description="Your Azure App Tenant ID, see the screenshot to help you find this information.",
     )
-    client_id: str = Field(
+    client_id: str | None = Field(
+        default=None,
         description="Your Azure App Client ID, see the screenshot to help you find this information.",
     )
-    client_secret: SecretStr = Field(
+    client_secret: SecretStr | None = Field(
+        default=None,
         description="Your Azure App Client secret, See the screenshot to help you find this information.",
     )
     workspace_id: str = Field(
@@ -97,6 +111,41 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         description="Comma-separated list of event types to process (create, update, delete). Defaults to all three; a single instance handles every event type. Restrict this only if you want to split the workload across dedicated instances.",
         default=["create", "update", "delete"],
     )
+    publish_identities: bool = Field(
+        description="Also push STIX Identity objects (e.g. an indicator's author) received from the stream to Microsoft Sentinel, in addition to Indicators, so their display name resolves correctly instead of only showing the identifier.",
+        default=False,
+    )
+
+    @model_validator(mode="after")
+    def check_auth_fields_consistency(self) -> "MicrosoftSentinelIntelConfig":
+        if self.auth_type == "app_registration":
+            values = {
+                "tenant_id": self.tenant_id,
+                "client_id": self.client_id,
+                "client_secret": (
+                    self.client_secret.get_secret_value()
+                    if self.client_secret is not None
+                    else None
+                ),
+            }
+            blank_fields = [
+                name
+                for name, value in values.items()
+                if value is not None and not value.strip()
+            ]
+            if blank_fields:
+                raise ValueError(
+                    f"{', '.join(blank_fields)} must not be empty or whitespace-only."
+                )
+
+            missing_fields = [name for name, value in values.items() if value is None]
+            if missing_fields:
+                raise ValueError(
+                    f"auth_type is 'app_registration' but {', '.join(missing_fields)} "
+                    "is not set. Provide tenant_id, client_id and client_secret, or set "
+                    "auth_type to 'azure_credential' to use DefaultAzureCredential instead."
+                )
+        return self
 
 
 class ConnectorSettings(BaseConnectorSettings):

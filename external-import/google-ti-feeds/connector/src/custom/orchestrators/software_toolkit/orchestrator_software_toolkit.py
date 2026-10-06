@@ -78,10 +78,7 @@ class OrchestratorSoftwareToolkit(BaseOrchestrator):
             initial_state: Initial state for the orchestrator
 
         """
-        subentity_types = [
-            "malware_families",
-            "attack_techniques",
-        ]
+        subentity_types = list(self.config.software_toolkit_subentities)
         try:
             async for gti_software_toolkits in self.client_api.fetch_software_toolkits(
                 initial_state

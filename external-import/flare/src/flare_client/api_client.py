@@ -15,6 +15,7 @@ class FlareClient:  # pylint: disable=too-few-public-methods
         api_key: SecretStr,
         api_domain: str,
         tenant_id: int | None,
+        identifier_group_id: int | None = None,
     ) -> None:
         self.helper = helper
         self._api = FlareApiClient(
@@ -22,12 +23,18 @@ class FlareClient:  # pylint: disable=too-few-public-methods
             api_domain=api_domain,
             tenant_id=tenant_id,
         )
+        self._search_url = (
+            f"/firework/v4/events/identifier_groups/{identifier_group_id}/_search"
+            if identifier_group_id is not None
+            else "/firework/v4/events/tenant/_search"
+        )
 
     def get_events(
         self,
         from_date: datetime,
         event_types: list[str],
         event_actions: list[str] | None,
+        severities: list[str] | None = None,
     ) -> Iterator[dict[str, Any]]:
         last_from = None
         page_count = 0
@@ -36,11 +43,15 @@ class FlareClient:  # pylint: disable=too-few-public-methods
         if event_types:
             filters["type"] = event_types
 
+        # Must be a list: the API matches a single string as "that severity or higher".
+        if severities:
+            filters["severity"] = list(severities)
+
         filters["imported_after"] = from_date.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
         for response in self._api.scroll(
             method="POST",
-            url="/firework/v4/events/tenant/_search",
+            url=self._search_url,
             json={"from": last_from, "filters": filters if filters else None},
         ):
             time.sleep(0.25)
@@ -76,7 +87,12 @@ class FlareClient:  # pylint: disable=too-few-public-methods
 
                         event_json = event_response.json()
                         event_data = event_json.get("activity")
-                        event_data["tenant_metadata"] = item.get("tenant_metadata")
+                        # Severity and matched_at only exist on the search item,
+                        # not on the activity detail payload.
+                        event_data["metadata"] = item.get("metadata") or {}
+                        event_data["tenant_metadata"] = (
+                            item.get("tenant_metadata") or {}
+                        )
 
                         header = event_data.get("header", {})
                         is_remediated = header.get("remediated_at") is not None

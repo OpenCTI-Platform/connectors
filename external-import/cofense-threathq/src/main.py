@@ -1,7 +1,6 @@
 import traceback
 
-from connector import CofenseThreatHQ
-from connector.services.config_loader import CofenseThreatHQConfig
+from connector import CofenseThreatHQ, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -15,12 +14,10 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = CofenseThreatHQConfig()
-        config_instance = config.load
-        # Convert the config into a dictionary, automatically excluding any parameters set to `None`.
-        config_dict = config_instance.model_dump(exclude_none=True)
-        helper = OpenCTIConnectorHelper(config=config_dict)
-        connector = CofenseThreatHQ(config_instance, helper)
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = CofenseThreatHQ(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()

@@ -15,6 +15,10 @@ from .settings import ConnectorSettings
 APP_VERSION = "1.0.0"
 
 
+class NistApiError(Exception):
+    """Raised when the NIST API answers with anything other than a success."""
+
+
 class CPEConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
@@ -25,17 +29,20 @@ class CPEConnector:
         self.base_url = self.config.cpe.base_url
         self.api_key = self.config.cpe.api_key.get_secret_value()
 
-    def _get_request_params(self, api_url) -> dict:
+    def _get(self, api_url, context: str) -> dict:
         """
-        Collects the request parameters from the NIST API
+        Performs a GET request against the NIST API and returns the decoded payload.
 
         Args:
-            api_url (str): The URL to use to collect the request parameters
+            api_url (str): The URL to call
+            context (str): What is being retrieved, used in the error message
 
         Returns:
-            dict: The request parameters
+            dict: The decoded JSON payload
+
+        Raises:
+            NistApiError: If the API does not answer with a 200
         """
-        self.helper.log_info("Retrieving the API request parameters...")
         session = requests.Session()
         headers = {
             "apiKey": self.api_key,
@@ -47,23 +54,38 @@ class CPEConnector:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         session.mount("https://", adapter)
         response = session.get(str(api_url), headers=headers)
-        parameters = {}
-        if response.status_code == 200:
-            resultsPerPage = response.json().get("resultsPerPage")
-            startIndex = response.json().get("startIndex")
-            totalResults = response.json().get("totalResults")
-            parameters = dict(
-                resultsPerPage=resultsPerPage,
-                startIndex=startIndex,
-                totalResults=totalResults,
+        if response.status_code != 200:
+            # On client errors the NIST API answers with an empty body and puts the
+            # reason in a response header named "message" (e.g. "Invalid apiKey.").
+            # See https://nvd.nist.gov/developers/start-here
+            raise NistApiError(
+                f"Error retrieving {context} from the NIST API: "
+                f"{response.status_code} - {response.headers.get('message', 'no message header')}"
             )
-            self.helper.log_info("API request parameters retrieved!")
-            return parameters
-        else:
-            self.helper.log_error(
-                f"Error retrieving the API request parameters from the NIST API: {response.status_code}"
-            )
-            return parameters
+        return response.json()
+
+    def _get_request_params(self, api_url) -> dict:
+        """
+        Collects the request parameters from the NIST API
+
+        Args:
+            api_url (str): The URL to use to collect the request parameters
+
+        Returns:
+            dict: The request parameters
+
+        Raises:
+            NistApiError: If the API does not answer with a 200
+        """
+        self.helper.log_debug("Retrieving the API request parameters...")
+        payload = self._get(api_url, "the API request parameters")
+        parameters = dict(
+            resultsPerPage=payload.get("resultsPerPage"),
+            startIndex=payload.get("startIndex"),
+            totalResults=payload.get("totalResults"),
+        )
+        self.helper.log_debug("API request parameters retrieved!")
+        return parameters
 
     def _get_cpe_list(self, api_url) -> list:
         """
@@ -74,29 +96,14 @@ class CPEConnector:
 
         Returns:
             list: The CPE list
+
+        Raises:
+            NistApiError: If the API does not answer with a 200
         """
         self.helper.log_debug(api_url)
-        session = requests.Session()
-        headers = {
-            "apiKey": self.api_key,
-            "User-Agent": f"OpenCTI-cpe-connector/{APP_VERSION}",
-        }
-        retry_strategy = Retry(
-            total=4, backoff_factor=6, status_forcelist=[429, 500, 502, 503, 504]
-        )
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount("https://", adapter)
-        response = session.get(api_url, headers=headers)
-        if response.status_code == 200:
-            self.helper.log_info(
-                str(response.json().get("resultsPerPage")) + " CPEs retrieved!"
-            )
-            return response.json()
-        else:
-            self.helper.log_error(
-                f"Error retrieving the CPE list from the NIST API: {response.status_code}"
-            )
-            return []
+        payload = self._get(api_url, "the CPE list")
+        self.helper.log_info(str(payload.get("resultsPerPage")) + " CPEs retrieved!")
+        return payload
 
     def _get_date_iso(self, timestamp: int) -> str:
         """
@@ -287,6 +294,53 @@ class CPEConnector:
             self.helper.send_stix2_bundle(bundle, update=False, work_id=work_id)
             time.sleep(6)
 
+    def _execute_import(self, import_method, interval: float) -> None:
+        """
+        Runs an import, then reports the work and advances the state only on success.
+
+        On failure the work is reported in error and `last_run` is left untouched, so
+        the next run retries the same period instead of silently skipping it.
+
+        Args:
+            import_method (Callable[[str], None]): The import to run, taking a work ID
+            interval (float): The connector interval in seconds, used for logging
+        """
+        now = datetime.fromtimestamp(self.current_run, tz=timezone.utc)
+        friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+        try:
+            import_method(work_id)
+        except Exception as err:
+            message = f"{self.helper.connect_name} connector run failed: {err}"
+            self.helper.log_error(message, {"error": str(err)})
+            self.helper.api.work.to_processed(work_id, message, in_error=True)
+            return
+
+        message = (
+            f"{self.helper.connect_name} connector successfully run, storing last_run as "
+            + str(self.current_run)
+        )
+        self.helper.log_info(message)
+        self.helper.log_debug(
+            f"Grabbing current state and update it with last_run: {self.current_run}"
+        )
+        current_state = self.helper.get_state()
+        if current_state:
+            current_state["last_run"] = self.current_run
+        else:
+            current_state = {"last_run": self.current_run}
+        self.helper.set_state(current_state)
+        self.helper.api.work.to_processed(work_id, message)
+        self.helper.log_info(
+            "Last_run stored, next run in: "
+            + str(round(interval / 60 / 60, 2))
+            + " hours"
+        )
+
     def run(self) -> None:
         """
         Runs the CPE connector
@@ -322,72 +376,12 @@ class CPEConnector:
                     self.helper.log_info(
                         f"{self.helper.connect_name} will run and collect all the CPEs!"
                     )
-                    now = datetime.fromtimestamp(self.current_run, tz=timezone.utc)
-                    friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-                    try:
-                        self._import_all(work_id)
-                    except Exception as e:
-                        self.helper.log_debug(str(e))
-                    message = (
-                        f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                        + str(self.current_run)
-                    )
-                    self.helper.log_info(message)
-                    self.helper.log_debug(
-                        f"Grabbing current state and update it with last_run: {self.current_run}"
-                    )
-                    current_state = self.helper.get_state()
-                    if current_state:
-                        current_state["last_run"] = self.current_run
-                    else:
-                        current_state = {"last_run": self.current_run}
-                    self.helper.set_state(current_state)
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(
-                        "Last_run stored, next run in: "
-                        + str(round(interval / 60 / 60, 2))
-                        + " hours"
-                    )
+                    self._execute_import(self._import_all, interval)
                 elif self.current_run - last_run >= interval:
                     self.helper.log_info(
                         f"{self.helper.connect_name} will run and collect the CPEs based on a time difference!"
                     )
-                    now = datetime.fromtimestamp(self.current_run, tz=timezone.utc)
-                    friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                    work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
-                    )
-                    try:
-                        self._import_date(work_id)
-                    except Exception as e:
-                        self.helper.log_debug(str(e))
-                    message = (
-                        f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                        + str(self.current_run)
-                    )
-                    self.helper.log_info(message)
-                    self.helper.log_debug(
-                        f"Grabbing current state and update it with last_run: {self.current_run}"
-                    )
-                    current_state = self.helper.get_state()
-                    if current_state:
-                        current_state["last_run"] = self.current_run
-                    else:
-                        current_state = {"last_run": self.current_run}
-                    self.helper.set_state(current_state)
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(
-                        "Last_run stored, next run in: "
-                        + str(round(interval / 60 / 60, 2))
-                        + " hours"
-                    )
+                    self._execute_import(self._import_date, interval)
                 else:
                     new_interval = interval - (self.current_run - last_run)
                     self.helper.log_info(

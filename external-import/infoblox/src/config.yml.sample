@@ -2,18 +2,15 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
-
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
-  name: 'Infoblox'
-  scope: 'Infoblox'
-  log_level: 'info'
-
+  # name: 'Infoblox'
+  # scope: 'infoblox'
+  # log_level: 'error'
+  # duration_period: 'PT12H' # ISO 8601 duration (12 hours)
 
 infoblox:
   api_key: 'ChangeMe'
-  url: 'https://csp.infoblox.com/tide/api/data/threats'
-  interval: 12 # In hours
-  ioc_limit: '10000' # Limit of IOCs to import (for each IOC types)
-  marking_definition: 'TLP:AMBER+STRICT'
+  # url: 'https://csp.infoblox.com/tide/api/data/threats'
+  # ioc_limit: '10000' # Limit of IOCs to import (for each IOC types)
+  # marking_definition: 'TLP:AMBER+STRICT'

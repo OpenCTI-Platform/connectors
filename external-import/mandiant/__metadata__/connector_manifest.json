@@ -5,9 +5,14 @@
   "short_description": "Import threat actors, malware, campaigns, vulnerabilities, and indicators from Mandiant Advantage (now part of Google Cloud).",
   "logo": "external-import/mandiant/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel",
-    "Adversary & Campaign Insights"
+    "Adversary & Campaign Insights",
+    "Vulnerability & Exploit Awareness"
   ],
+  "solution_categories": [
+    "Threat Intelligence Feed"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-01-01",
   "playbook_supported": false,

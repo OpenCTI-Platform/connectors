@@ -67,8 +67,11 @@ class CVEConnector:
         CPE resolution starts immediately and runs concurrently
         with further CVE fetching (bounded by cpe_max_concurrency).
         """
-        # Reset rate limiter state to avoid stale asyncio.Lock across runs
-        self.converter._rate_limiter.reset()
+        # Drop the stale asyncio.Lock from the previous asyncio.run() while
+        # keeping the sliding-window request history, so the rate limiter stays
+        # continuous across consecutive runs (e.g. historical-backfill chunks)
+        # instead of allowing a fresh burst at every chunk boundary.
+        self.converter._rate_limiter.invalidate_lock()
         try:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Starting CVE+CPE streaming pipeline"
@@ -182,6 +185,25 @@ class CVEConnector:
         asyncio.run(self._async_ingest(cve_params))
 
     @staticmethod
+    def _format_exception(err: BaseException) -> str:
+        """Format an exception for logging.
+
+        `asyncio.TaskGroup` (used by the streaming ingestion pipeline) wraps
+        any failure — including ones with a clear, actionable message like
+        "[API] Error: Invalid apiKey." — into a `BaseExceptionGroup` whose
+        own `str()` is just the generic "unhandled errors in a TaskGroup
+        (N sub-exception(s))". Unwrap it (recursively, in case of nested
+        groups) so the real underlying reason ends up in the single log
+        line the connector emits for a failed run, instead of a second,
+        uninformative one.
+        """
+        if isinstance(err, BaseExceptionGroup):
+            return "; ".join(
+                CVEConnector._format_exception(sub) for sub in err.exceptions
+            )
+        return str(err)
+
+    @staticmethod
     def _update_cve_params(start_date: datetime, end_date: datetime) -> dict:
         """
         Update CVE params to handle date range
@@ -274,5 +296,6 @@ class CVEConnector:
             self.helper.connector_logger.info(msg)
             sys.exit(0)
         except Exception as e:
-            error_msg = f"[CONNECTOR] Error while processing data: {e}"
-            self.helper.connector_logger.error(error_msg, meta={"error": str(e)})
+            detail = self._format_exception(e)
+            error_msg = f"[CONNECTOR] Error while processing data: {detail}"
+            self.helper.connector_logger.error(error_msg, meta={"error": detail})

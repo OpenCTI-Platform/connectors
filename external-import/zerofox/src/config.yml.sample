@@ -1,14 +1,17 @@
 opencti:
-  url: 'http://localhost'
-  token: 'changeme'
+  url: 'ChangeMe'
+  token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
-  id: 'changme'
-  name: 'Zerofox'
-  scope: 'zerofox'
-  log_level: 'info'
+  id: 'ChangeMe'
+  # name: 'ZeroFox'
+  # scope: 'zerofox'
+  # log_level: 'error'
+  # duration_period: 'P1D'
+  # update_existing_data: false
 
 zerofox:
-  username: 'changeme'
-  password: 'changeme'
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  # collectors: ''
+  # first_run: 'P1D'

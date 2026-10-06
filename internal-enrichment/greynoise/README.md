@@ -9,10 +9,7 @@
 - [Introduction](#introduction)
 - [Installation](#installation)
   - [Requirements](#requirements)
-- [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [GreyNoise Configuration](#greynoise-configuration)
+- [Configuration variables](#configuration-variables)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -55,38 +52,12 @@ This internal enrichment connector queries the GreyNoise API for IPv4 addresses 
 
 ---
 
-## Configuration
+## Configuration variables
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
-
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `IPv4-Addr` |
-| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment of observables |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
-
-### GreyNoise Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `greynoise_key` | `GREYNOISE_KEY` | Yes | The GreyNoise API key |
-| `greynoise_max_tlp` | `GREYNOISE_MAX_TLP` | Yes | Maximum TLP level for data to be sent to GreyNoise |
-| `greynoise_name` | `GREYNOISE_NAME` | No | The GreyNoise organization name |
-| `greynoise_description` | `GREYNOISE_DESCRIPTION` | No | The GreyNoise organization description |
-| `greynoise_sighting_not_seen` | `GREYNOISE_SIGHTING_NOT_SEEN` | No | Create sighting with count=0 when IP not seen |
-| `greynoise_no_sightings` | `GREYNOISE_NO_SIGHTINGS` | No | Skip any sighting creations |
-| `greynoise_indicator_score_malicious` | `GREYNOISE_INDICATOR_SCORE_MALICIOUS` | No | Score for malicious classification (default: 75) |
-| `greynoise_indicator_score_suspicious` | `GREYNOISE_INDICATOR_SCORE_SUSPICIOUS` | No | Score for suspicious classification (default: 50) |
-| `greynoise_indicator_score_benign` | `GREYNOISE_INDICATOR_SCORE_BENIGN` | No | Score for benign classification (default: 20) |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ---
 

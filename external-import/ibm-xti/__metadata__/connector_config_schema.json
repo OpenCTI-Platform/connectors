@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "IBMXTIConnector",
@@ -20,7 +22,8 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [],
+      "description": "The scope of the connector",
       "items": {
         "type": "string"
       },
@@ -83,7 +86,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "IBM_XTI_TAXII_SERVER_URL",
     "IBM_XTI_TAXII_USER",
     "IBM_XTI_TAXII_PASS"

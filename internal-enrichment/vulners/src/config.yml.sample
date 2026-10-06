@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  name: 'Vulners' # optional (default: 'Vulners')
+  scope: 'Vulnerability' # optional (default: 'Vulnerability')
+  log_level: 'error' # optional (default: 'error')
+  auto: true # optional, enable/disable auto-enrichment of OpenCTI entities (default: false)
+
+vulners:
+  api_key: 'ChangeMe'
+  api_base_url: 'https://vulners.com' # optional (default: 'https://vulners.com')
+  max_tlp_level: 'TLP:AMBER' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')

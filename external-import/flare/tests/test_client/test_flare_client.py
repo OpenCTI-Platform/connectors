@@ -7,7 +7,9 @@ from flare_client.api_client import FlareClient
 from pydantic import SecretStr
 
 
-def _make_client() -> tuple[FlareClient, MagicMock, MagicMock]:
+def _make_client(
+    identifier_group_id: int | None = None,
+) -> tuple[FlareClient, MagicMock, MagicMock]:
     helper = MagicMock()
     mock_api = MagicMock()
     with patch("flare_client.api_client.FlareApiClient", return_value=mock_api):
@@ -16,13 +18,20 @@ def _make_client() -> tuple[FlareClient, MagicMock, MagicMock]:
             api_key=SecretStr("test-key"),
             api_domain="api.test.io",
             tenant_id=None,
+            identifier_group_id=identifier_group_id,
         )
     return client, helper, mock_api
 
 
 def _make_scroll_page(uids: list[str], next_cursor: str | None = None) -> MagicMock:
     response = MagicMock()
-    items = [{"metadata": {"uid": uid}, "tenant_metadata": {"tid": 1}} for uid in uids]
+    items = [
+        {
+            "metadata": {"uid": uid, "severity": "high", "matched_at": "2025-01-02"},
+            "tenant_metadata": {"tid": 1},
+        }
+        for uid in uids
+    ]
     response.json.return_value = {"items": items, "next": next_cursor}
     return response
 
@@ -69,6 +78,19 @@ class TestFlareClientGetEvents:
         assert len(events) == 1
         assert events[0]["uid"] == "uid-1"
         assert events[0]["tenant_metadata"] == {"tid": 1}
+
+    def test_yields_event_with_search_item_metadata(self) -> None:
+        client, _, mock_api = _make_client()
+        mock_api.scroll.return_value = [_make_scroll_page(["uid-1"])]
+        mock_api.get.return_value = _make_detail_response("uid-1")
+
+        events = list(
+            client.get_events(FROM_DATE, event_types=EVENT_TYPES, event_actions=None)
+        )
+
+        # Severity and matched_at exist only on the search item, not the activity detail.
+        assert events[0]["metadata"]["severity"] == "high"
+        assert events[0]["metadata"]["matched_at"] == "2025-01-02"
 
     def test_no_action_filter_yields_all(self) -> None:
         client, _, mock_api = _make_client()
@@ -145,6 +167,65 @@ class TestFlareClientGetEvents:
 
         assert len(events) == 1
         helper.connector_logger.info.assert_called()
+
+    def test_severities_sent_as_list_in_search_filters(self) -> None:
+        client, _, mock_api = _make_client()
+        mock_api.scroll.return_value = [_make_scroll_page([])]
+
+        list(
+            client.get_events(
+                FROM_DATE,
+                event_types=EVENT_TYPES,
+                event_actions=None,
+                severities=["high"],
+            )
+        )
+
+        filters = mock_api.scroll.call_args.kwargs["json"]["filters"]
+        # A bare string would make the API match "high or higher" instead of exactly "high".
+        assert filters["severity"] == ["high"]
+
+    def test_no_severity_filter_when_unset(self) -> None:
+        client, _, mock_api = _make_client()
+        mock_api.scroll.return_value = [_make_scroll_page([])]
+
+        list(
+            client.get_events(
+                FROM_DATE, event_types=EVENT_TYPES, event_actions=None, severities=[]
+            )
+        )
+
+        assert "severity" not in mock_api.scroll.call_args.kwargs["json"]["filters"]
+
+    def test_searches_tenant_feed_by_default(self) -> None:
+        client, _, mock_api = _make_client()
+        mock_api.scroll.return_value = [_make_scroll_page([])]
+
+        list(client.get_events(FROM_DATE, event_types=EVENT_TYPES, event_actions=None))
+
+        assert (
+            mock_api.scroll.call_args.kwargs["url"]
+            == "/firework/v4/events/tenant/_search"
+        )
+
+    def test_searches_identifier_group_feed_when_configured(self) -> None:
+        client, _, mock_api = _make_client(identifier_group_id=42)
+        mock_api.scroll.return_value = [_make_scroll_page([])]
+
+        list(
+            client.get_events(
+                FROM_DATE,
+                event_types=EVENT_TYPES,
+                event_actions=None,
+                severities=["high"],
+            )
+        )
+
+        kwargs = mock_api.scroll.call_args.kwargs
+        assert kwargs["url"] == "/firework/v4/events/identifier_groups/42/_search"
+        # Same payload as the tenant feed — only the endpoint changes.
+        assert kwargs["json"]["filters"]["severity"] == ["high"]
+        assert kwargs["json"]["filters"]["type"] == EVENT_TYPES
 
     def test_detail_fetch_retries_on_failure_then_succeeds(self) -> None:
         client, helper, mock_api = _make_client()

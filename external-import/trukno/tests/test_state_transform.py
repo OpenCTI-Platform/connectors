@@ -1,4 +1,5 @@
 import json
+from datetime import timedelta
 
 from conftest import FIXTURES
 from trukno_connector.opencti_compat import cleanup_bundle_for_opencti
@@ -11,9 +12,24 @@ from trukno_connector.transform import (
 
 def test_first_run_uses_bootstrap_window():
     state = ConnectorState.empty(
-        initial_lookback_days=7, now_iso="2026-04-21T12:00:00Z"
+        initial_lookback=timedelta(days=7), now_iso="2026-04-21T12:00:00Z"
     )
     assert state.last_seen_updated_at == "2026-04-14T12:00:00Z"
+
+
+def test_legacy_state_uses_import_checkpoint_as_initial_scan_start():
+    state = ConnectorState(last_seen_updated_at="2026-04-20T10:00:00Z")
+
+    assert state.scan_after() == "2026-04-20T10:00:00Z"
+
+
+def test_scan_start_has_one_day_overlap_from_last_successful_scan():
+    state = ConnectorState(
+        last_seen_updated_at="2026-04-01T10:00:00Z",
+        last_successful_scan_at="2026-04-20T10:00:00.500999Z",
+    )
+
+    assert state.scan_after() == "2026-04-19T10:00:00.500999Z"
 
 
 def test_next_checkpoint_advances_to_max_seen_timestamp():
@@ -23,6 +39,28 @@ def test_next_checkpoint_advances_to_max_seen_timestamp():
         seen_timestamps=["2026-04-20T11:00:00Z", "2026-04-20T12:00:00Z"],
     )
     assert updated.last_seen_updated_at == "2026-04-20T12:00:00Z"
+
+
+def test_next_checkpoint_preserves_fractional_seconds():
+    current = ConnectorState(last_seen_updated_at="2026-04-20T10:00:00Z")
+
+    updated = next_checkpoint(
+        current,
+        seen_timestamps=["2026-04-20T10:00:00.500Z"],
+    )
+
+    assert updated.last_seen_updated_at == "2026-04-20T10:00:00.500Z"
+
+
+def test_next_checkpoint_preserves_submillisecond_fractional_seconds():
+    current = ConnectorState(last_seen_updated_at="2026-04-20T10:00:00Z")
+
+    updated = next_checkpoint(
+        current,
+        seen_timestamps=["2026-04-20T10:00:00.500999Z"],
+    )
+
+    assert updated.last_seen_updated_at == "2026-04-20T10:00:00.500999Z"
 
 
 def test_transform_includes_linked_attack_patterns_and_malware():
@@ -37,8 +75,9 @@ def test_transform_includes_linked_attack_patterns_and_malware():
     assert {obj["type"] for obj in linked_objects} == {"attack-pattern", "malware"}
     assert set(report["object_refs"]) == {obj["id"] for obj in linked_objects}
     # The report is unique per breach, so it carries the breach publish date.
-    assert report["created"] == payload["publishedAt"]
-    assert report["published"] == payload["publishedAt"]
+    assert report["created"] == payload["date"]
+    assert report["published"] == payload["date"]
+    assert report["description"] == payload["description"]
     attack_pattern = next(
         obj for obj in linked_objects if obj["type"] == "attack-pattern"
     )
@@ -50,6 +89,22 @@ def test_transform_includes_linked_attack_patterns_and_malware():
     assert malware["created"] == REFERENCE_OBJECT_TIMESTAMP
     assert malware["modified"] == REFERENCE_OBJECT_TIMESTAMP
     assert malware["malware_types"] == ["unknown"]
+
+
+def test_shared_reference_timestamps_have_stix_millisecond_precision():
+    payload = json.loads(
+        (FIXTURES / "breach_with_entities.json").read_text(encoding="utf-8")
+    )
+
+    bundle = transform_breach_to_bundle(payload)
+    shared_objects = [
+        obj for obj in bundle["objects"] if obj["type"] in {"attack-pattern", "malware"}
+    ]
+
+    assert shared_objects
+    for obj in shared_objects:
+        assert obj["created"] == "1970-01-01T00:00:00.000Z"
+        assert obj["modified"] == "1970-01-01T00:00:00.000Z"
 
 
 def test_transform_omits_report_when_breach_has_no_linkable_entities():
@@ -81,8 +136,8 @@ def test_shared_reference_objects_are_stable_across_breaches():
     base = json.loads(
         (FIXTURES / "breach_with_entities.json").read_text(encoding="utf-8")
     )
-    first = dict(base, id="breach-a", publishedAt="2026-01-01T00:00:00Z")
-    second = dict(base, id="breach-b", publishedAt="2026-02-02T00:00:00Z")
+    first = dict(base, _id="breach-a", date="2026-01-01T00:00:00Z")
+    second = dict(base, _id="breach-b", date="2026-02-02T00:00:00Z")
 
     def _linked(bundle):
         return {

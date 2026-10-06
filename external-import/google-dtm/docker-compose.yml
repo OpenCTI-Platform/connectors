@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-google-dtm:
-    image: opencti/connector-google-dtm:6.9.10
+    image: opencti/connector-google-dtm:latest
     environment:
       # OpenCTI connection parameters
       - OPENCTI_URL=http://localhost

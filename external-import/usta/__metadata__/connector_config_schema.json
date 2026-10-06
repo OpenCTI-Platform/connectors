@@ -12,7 +12,9 @@
     },
     "OPENCTI_TOKEN": {
       "description": "The API token to connect to OpenCTI.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CONNECTOR_NAME": {
       "default": "USTA",
@@ -20,9 +22,21 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "indicator,observable,malware,identity,incident,user-account,report,threat-actor",
+      "default": [
+        "indicator",
+        "observable",
+        "malware",
+        "identity",
+        "incident",
+        "user-account",
+        "report",
+        "threat-actor"
+      ],
       "description": "The scope of the connector.",
-      "type": "string"
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
@@ -58,7 +72,8 @@
     "USTA_API_KEY": {
       "description": "USTA API bearer token for authentication.",
       "format": "password",
-      "type": "string"
+      "type": "string",
+      "writeOnly": true
     },
     "USTA_IMPORT_START_DATE": {
       "default": "P90D",

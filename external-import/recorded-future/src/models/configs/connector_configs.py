@@ -1,13 +1,9 @@
-from typing import Annotated, Literal, Optional
+from datetime import timedelta
+from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
-from pydantic import (
-    Field,
-    HttpUrl,
-    PlainSerializer,
-    field_validator,
-)
+from pydantic import Field, HttpUrl, PlainSerializer
 
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "warning", "error"],
@@ -38,12 +34,12 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     id: str
     name: str
     scope: ListFromString
-    duration_period: Optional[str] = Field(
-        default="PT24H",
-        description="ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
+    duration_period: timedelta = Field(
+        default=timedelta(hours=24),
+        description="The period of time to await between two runs of the connector (in ISO 8601 format, e.g., 'PT24H' for 24 hours).",
     )
 
-    type: str = Field(
+    type: Literal["EXTERNAL_IMPORT"] = Field(
         default="EXTERNAL_IMPORT",
         description="Should always be set to EXTERNAL_IMPORT for this connector.",
     )
@@ -51,7 +47,3 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         default="error",
         description="Determines the verbosity of the logs.",
     )
-
-    @field_validator("type")
-    def force_value_for_type_to_be_external_import(cls, value):
-        return "EXTERNAL_IMPORT"

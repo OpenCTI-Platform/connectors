@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from connectors_sdk import (
+    BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
@@ -75,9 +76,23 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
+class OpenCTIStreamSettings(BaseConfigModel):
+    """Settings for the OpenCTI Stream connector."""
+
+    default_applicant_id: str | None = Field(
+        description=(
+            "The default applicant ID to use when a stream event does not have an "
+            "`origin.user_id`. Defaults to `None`, which means the connector will "
+            "not set an applicant ID in that case."
+        ),
+        default=None,
+    )
+
+
 class ConnectorSettings(BaseConnectorSettings):
     """Top-level settings for the OpenCTI Stream connector."""
 
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
     )
+    stream: OpenCTIStreamSettings = Field(default_factory=OpenCTIStreamSettings)

@@ -165,3 +165,47 @@ def test_settings_should_raise_when_invalid_input(settings_dict, expected_loc):
     assert any(
         loc and loc[-1] == expected_field for loc in error_locs
     ), f"Expected validation error on field {expected_field!r}, got {error_locs}"
+
+
+def _build_settings(settings_dict: dict[str, Any]) -> ConnectorSettings:
+    """Instantiate `ConnectorSettings` from a fake config dict (no env/config.yml)."""
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    return FakeConnectorSettings()
+
+
+_BASE_SETTINGS_DICT = {
+    "opencti": {
+        "url": "http://localhost:8080",
+        "token": "test-token",
+    },
+    "connector": {
+        "id": "connector-id",
+        "scope": "opencti-stream",
+        "live_stream_id": "live",
+    },
+}
+
+
+def test_default_applicant_id_defaults_to_none():
+    """`stream.default_applicant_id` MUST default to `None` when omitted."""
+    settings = _build_settings(_BASE_SETTINGS_DICT)
+
+    assert isinstance(settings.stream, BaseConfigModel) is True
+    assert settings.stream.default_applicant_id is None
+
+
+def test_default_applicant_id_accepts_configured_value():
+    """`stream.default_applicant_id` MUST accept a configured string value."""
+    settings_dict = {
+        **_BASE_SETTINGS_DICT,
+        "stream": {"default_applicant_id": "default-user-uuid"},
+    }
+
+    settings = _build_settings(settings_dict)
+
+    assert settings.stream.default_applicant_id == "default-user-uuid"

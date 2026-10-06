@@ -2,7 +2,10 @@ import base64
 from unittest.mock import patch
 
 import pytest
-from intel471.backend import BackendName, get_client
+import titan_client
+import verity471
+from intel471.backend import BackendName, ClientWrapper, get_client
+from intel471.streams.verity471 import Verity471AlertsStream
 from pydantic import HttpUrl
 
 BACKENDS = [
@@ -33,10 +36,17 @@ def test_get_client_proxy_without_auth_is_set(proxy_url, backend_name, patch_tar
             proxy_url=proxy_url,
         )
 
-        call_kwargs = mock_client.Configuration.call_args.kwargs
-        assert isinstance(call_kwargs["proxy"], str)
-        assert call_kwargs["proxy"].startswith("http://proxy.example.com:3128")
-        assert "proxy_headers" not in call_kwargs
+        if backend_name == BackendName.VERITY471:
+            call_kwargs = mock_client.Configuration.call_args.kwargs
+            assert isinstance(call_kwargs["proxy"], str)
+            assert call_kwargs["proxy"].startswith("http://proxy.example.com:3128")
+            assert "proxy_headers" not in call_kwargs
+        else:
+            # Titan: proxy is set as attribute after construction
+            call_kwargs = mock_client.Configuration.call_args.kwargs
+            assert "proxy" not in call_kwargs
+            config_instance = mock_client.Configuration.return_value
+            assert config_instance.proxy.startswith("http://proxy.example.com:3128")
 
 
 @pytest.mark.parametrize("backend_name, patch_target", BACKENDS)
@@ -60,15 +70,25 @@ def test_get_client_proxy_auth_headers_are_set(proxy_url, backend_name, patch_ta
             proxy_url=proxy_url,
         )
 
-        call_kwargs = mock_client.Configuration.call_args.kwargs
-        assert isinstance(call_kwargs["proxy"], str)
-        assert call_kwargs["proxy"].startswith(
-            "http://user:pass@proxy.example.com:3128"
-        )
         expected_auth = base64.b64encode(b"user:pass").decode()
-        assert call_kwargs["proxy_headers"] == {
-            "proxy-authorization": f"Basic {expected_auth}"
-        }
+        expected_headers = {"proxy-authorization": f"Basic {expected_auth}"}
+
+        if backend_name == BackendName.VERITY471:
+            call_kwargs = mock_client.Configuration.call_args.kwargs
+            assert isinstance(call_kwargs["proxy"], str)
+            assert call_kwargs["proxy"].startswith(
+                "http://user:pass@proxy.example.com:3128"
+            )
+            assert call_kwargs["proxy_headers"] == expected_headers
+        else:
+            # Titan: proxy is set as attribute after construction
+            call_kwargs = mock_client.Configuration.call_args.kwargs
+            assert "proxy" not in call_kwargs
+            config_instance = mock_client.Configuration.return_value
+            assert config_instance.proxy.startswith(
+                "http://user:pass@proxy.example.com:3128"
+            )
+            assert config_instance.proxy_headers == expected_headers
 
 
 @pytest.mark.parametrize("backend_name, patch_target", BACKENDS)
@@ -86,3 +106,70 @@ def test_get_client_without_proxy(backend_name, patch_target):
         call_kwargs = mock_client.Configuration.call_args.kwargs
         assert "proxy" not in call_kwargs
         assert "proxy_headers" not in call_kwargs
+
+
+class TestRealClientInstantiation:
+    """
+    Tests using real client libraries (no mocks) to verify that Configuration
+    instantiation does not raise TypeError. Regression tests for #6912.
+    """
+
+    @pytest.mark.parametrize(
+        "proxy_url",
+        [
+            pytest.param(None, id="no-proxy"),
+            pytest.param("http://proxy.example.com:3128", id="simple-proxy"),
+            pytest.param("http://user:pass@proxy.example.com:3128", id="auth-proxy"),
+        ],
+    )
+    def test_titan_client_instantiation(self, proxy_url):
+        """Titan backend must not raise TypeError with proxy config (#6912)."""
+        client = get_client(
+            backend_name="titan",
+            api_username="test-user",
+            api_key="test-key",
+            proxy_url=proxy_url,
+        )
+        assert isinstance(client, ClientWrapper)
+        assert client.backend_name == "titan"
+        assert isinstance(client.config, titan_client.Configuration)
+        if proxy_url:
+            assert client.config.proxy == str(proxy_url)
+        else:
+            assert client.config.proxy is None
+
+    @pytest.mark.parametrize(
+        "proxy_url",
+        [
+            pytest.param(None, id="no-proxy"),
+            pytest.param("http://proxy.example.com:3128", id="simple-proxy"),
+            pytest.param("http://user:pass@proxy.example.com:3128", id="auth-proxy"),
+        ],
+    )
+    def test_verity471_client_instantiation(self, proxy_url):
+        """Verity471 backend must not raise TypeError with proxy config."""
+        client = get_client(
+            backend_name="verity471",
+            api_username="test-user",
+            api_key="test-key",
+            proxy_url=proxy_url,
+        )
+        assert isinstance(client, ClientWrapper)
+        assert client.backend_name == "verity471"
+        assert isinstance(client.config, verity471.Configuration)
+        if proxy_url:
+            assert client.config.proxy == str(proxy_url)
+        else:
+            assert client.config.proxy is None
+
+
+def test_alerts_stream_is_registered_for_verity471_only():
+    """
+    The alerts stream is Verity471-only (like YARA is Titan-only): it must appear in
+    the verity471 backend's stream tuple and not in the titan one.
+    """
+    verity = get_client(backend_name="verity471", api_username="u", api_key="k")
+    titan = get_client(backend_name="titan", api_username="u", api_key="k")
+
+    assert Verity471AlertsStream in verity.streams
+    assert Verity471AlertsStream not in titan.streams

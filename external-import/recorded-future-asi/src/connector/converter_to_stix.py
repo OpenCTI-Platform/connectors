@@ -69,7 +69,6 @@ class ExposureIncident(Incident):
             ),
             name=self.name,
             description=self.description,
-            labels=self.labels,
             allow_custom=True,
             source=self.source,
             severity=self.severity,

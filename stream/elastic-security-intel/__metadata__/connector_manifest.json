@@ -5,9 +5,13 @@
   "short_description": "This connector streams threat intelligence from OpenCTI to Elastic Security, creating and managing both threat indicators and SIEM detection rules.",
   "logo": "stream/elastic-security-intel/__metadata__/logo.png",
   "use_cases": [
-    "SIEM and Analytics",
     "Detection & Response Enablement"
   ],
+  "solution_categories": [
+    "SIEM & Security Analytics"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,

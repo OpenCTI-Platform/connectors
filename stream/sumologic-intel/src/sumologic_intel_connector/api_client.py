@@ -8,16 +8,20 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout
 from requests.models import Response
 from urllib3.util.retry import Retry
 
-from .config_loader import ConfigConnector
+from .settings import ConnectorSettings
 
 
 class SumologicClient:
 
-    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigConnector):
+    def __init__(self, helper: OpenCTIConnectorHelper, config: ConnectorSettings):
         self.helper = helper
         self.config = config
+        self.base_url = str(self.config.sumologic_intel.api_base_url).rstrip("/")
         self.session = requests.Session()
-        self.session.auth = (self.config.access_id, self.config.access_key)
+        self.session.auth = (
+            self.config.sumologic_intel.access_id,
+            self.config.sumologic_intel.access_key.get_secret_value(),
+        )
 
     def upload_stix_indicator(self, source_name: str, stix_indicator: dict):
         """
@@ -26,6 +30,11 @@ class SumologicClient:
         :param stix_indicator:
         :return:
         """
+        # Send OpenCTI's score in the confidence field so analysts can filter on it in Sumologic
+        score = self.helper.get_attribute_in_extension("score", stix_indicator)
+        if score is not None:
+            stix_indicator["confidence"] = score
+
         # STIX extensions not supported by sumologic
         del stix_indicator["extensions"]
 
@@ -35,7 +44,7 @@ class SumologicClient:
             f"Uploading STIX Indicator name: {stix_indicator.get('name')}"
         )
 
-        url = self.config.api_base_url + "/api/v1/threatIntel/datastore/indicators/stix"
+        url = self.base_url + "/api/v1/threatIntel/datastore/indicators/stix"
 
         try:
             response = self._send_request(
@@ -90,7 +99,7 @@ class SumologicClient:
             f"Deleting STIX Indicator name: {stix_indicator.get('name')}"
         )
 
-        url = self.config.api_base_url + "/api/v1/threatIntel/datastore/indicators"
+        url = self.base_url + "/api/v1/threatIntel/datastore/indicators"
 
         try:
             response = self._send_request(

@@ -37,11 +37,13 @@
       "type": "array"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT24H",
-      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT24H' for 24 hours).",
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector (in ISO 8601 format, e.g., 'PT24H' for 24 hours).",
+      "format": "duration",
       "type": "string"
     },
     "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
       "default": "EXTERNAL_IMPORT",
       "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
       "type": "string"
@@ -108,9 +110,10 @@
         "aDKkpk",
         "TXSFt5",
         "UrMRnT",
-        "TXSFt3"
+        "TXSFt3",
+        "wJv-Gk"
       ],
-      "description": "Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGI (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead).",
+      "description": "Comma-separated list of topic IDs to filter analyst notes. Examples: VTrvnW (Yara Rule), g1KBGI (Sigma Rule), ZjnoP0 (Snort Rule), aDKkpk (TTP Instance), TXSFt5 (Validated Intelligence Event), UrMRnT (Informational), TXSFt3 (Threat Lead), wJv-Gk (Vulnerability Intelligence).",
       "items": {
         "type": "string"
       },

@@ -1,0 +1,8 @@
+{
+  "name": "example-person",
+  "aliases": ["example-alias"],
+  "wanted": {"fbi": {"url": "https://example.invalid/wanted"}},
+  "contacts": {"telegram": "example-contact"},
+  "profile": ["https://example.invalid/profile"],
+  "relations": {"groups": ["example-operation"], "forums": [], "peers": []}
+}

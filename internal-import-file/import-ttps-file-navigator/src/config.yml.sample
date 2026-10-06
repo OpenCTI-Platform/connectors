@@ -3,11 +3,10 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_IMPORT_FILE'
   id: 'ChangeMe'
-  name: 'ImportTTPsFileNavigator'
-  validate_before_import: true # Validate any bundle before import
-  scope: 'application/json'
-  auto: false # Enable/disable auto-import of file
-  log_level: 'error'
+  # name: 'ImportTTPsFileNavigator'
+  # scope: 'application/json'
+  # validate_before_import: true # Validate any bundle before import
+  # auto: false # Enable/disable auto-import of file
+  # log_level: 'error'
 

@@ -10,7 +10,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
 | CONNECTOR_NAME | `string` |  | string | `"Hygiene"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["IPv4-Addr", "IPv6-Addr", "Artifact", "Domain-Name", "StixFile", "Indicator"]` | The scope defines the set of entity types that the enrichment connector is allowed to process. |
-| CONNECTOR_TYPE | `string` |  | string | `"INTERNAL_ENRICHMENT"` | Should always be set to INTERNAL_ENRICHMENT for this connector. |
+| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` | Should always be set to INTERNAL_ENRICHMENT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `true` | Enables or disables automatic enrichment of observables for OpenCTI. |
 | HYGIENE_WARNINGLISTS_SLOW_SEARCH | `boolean` |  | boolean | `false` | Enable slow search mode for the warning lists. If true, uses the most appropriate search method. Can be slower. Default: exact match. |

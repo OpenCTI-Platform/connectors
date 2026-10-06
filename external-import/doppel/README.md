@@ -34,7 +34,7 @@ STIX 2.1 Observable object, enriched with metadata such as severity, entity stat
 ### Requirements
 
 - OpenCTI Platform version >= 6.x
-- Doppel API access (URL + API Key + User API Key (optional) + Organization Code (optional))
+- Doppel API access using either V1 API keys or V2 OAuth client credentials
 
 ## Configuration variables
 
@@ -56,60 +56,77 @@ Below are the parameters you'll need to set for running the connector properly:
 | Parameter       | config.yml `connector` | Docker environment variable | Default | Mandatory | Description                                                                              |
 |-----------------|------------------------|-----------------------------|---------|-----------|------------------------------------------------------------------------------------------|
 | Connector ID    | `id`                   | `CONNECTOR_ID`              | /       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Name  | `name`                 | `CONNECTOR_NAME`            | /       | Yes       | Name of the connector.                                                                   |
+| Connector Name  | `name`                 | `CONNECTOR_NAME`            | Doppel Threat Intelligence | No | Name of the connector.                                                        |
 | Connector Scope | `scope`                | `CONNECTOR_SCOPE`           | doppel  | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | `log_level`            | `CONNECTOR_LOG_LEVEL`       | info    | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | `duration_period`      | `CONNECTOR_DURATION_PERIOD` | PT1H    | Yes       | The period of time between two connector runs (ISO 8601 duration format).                |
+| Log Level       | `log_level`            | `CONNECTOR_LOG_LEVEL`       | error   | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Duration Period | `duration_period`      | `CONNECTOR_DURATION_PERIOD` | PT1H    | No        | The period of time between two connector runs (ISO 8601 duration format).                |
 
 ### Connector extra parameters environment variables
 
 | Parameter               | config.yml                     | Docker environment variable      | Role |  Default | Mandatory | Description                           |
 |-------------------------|--------------------------------|----------------------------------|---------|---------|-----------|---------------------------------------|
-| API base URL            | doppel.api_base_url            | `DOPPEL_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.doppel.com/v1        | Yes       | Doppel API base URL                   |
-| API key                 | doppel.api_key                 | `DOPPEL_API_KEY`                 |    Authentication: Provides the primary security credentials for service access.      |         | Yes       | Doppel API key                        |
-| User API key                 | doppel.user_api_key       | `DOPPEL_USER_API_KEY`            |     Authorization: Used for user-specific identity.     |         | No        | Doppel User API key                   |
-| Organization Code       | doppel.organization_code       | `DOPPEL_ORGANIZATION_CODE`       |     Scope: Identifies the specific organizational workspace for multi-tenant keys.     |         | No        | Organization Code for Doppel API Keys |
+| API base URL            | doppel.api_base_url            | `DOPPEL_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.doppel.com        | No       | Doppel API base URL                   |
+| API version             | doppel.api_version             | `DOPPEL_API_VERSION`             | Authentication: Selects V1 API keys or V2 OAuth. | v1 | No | `v1` or `v2` |
+| API key                 | doppel.api_key                 | `DOPPEL_API_KEY`                 |    Authentication: Provides the primary V1 credential.      |         | V1 only       | Doppel V1 API key                        |
+| User API key            | doppel.user_api_key            | `DOPPEL_USER_API_KEY`            | Authorization: Provides optional V1 user identity. | | No | Doppel V1 user API key |
+| Organization Code       | doppel.organization_code       | `DOPPEL_ORGANIZATION_CODE`       | Scope: Selects a workspace for multi-tenant V1 keys. | | No | Doppel V1 organization code |
+| OAuth client ID         | doppel.client_id               | `DOPPEL_CLIENT_ID`               | Authentication: Identifies the V2 OAuth client. | | V2 only | Doppel V2 client ID |
+| OAuth client secret     | doppel.client_secret           | `DOPPEL_CLIENT_SECRET`           | Authentication: Authenticates the V2 OAuth client. | | V2 only | Doppel V2 client secret |
+| OAuth token URL         | doppel.token_url               | `DOPPEL_TOKEN_URL`               | Authentication: Overrides the V2 token endpoint. | API host + /oauth/token | No | Doppel OAuth token URL |
+| OAuth audience          | doppel.token_audience          | `DOPPEL_TOKEN_AUDIENCE`          | Authentication: Sets the V2 token audience. | doppel-external | No | Doppel OAuth audience |
 | Alerts endpoint         | doppel.alerts_endpoint         | `DOPPEL_ALERTS_ENDPOINT`         |     Routing: Specifies the API resource path for alert ingestion.     | /alerts | Yes       | API endpoint for fetching alerts      |
 | Historical polling days | doppel.historical_polling_days | `DOPPEL_HISTORICAL_POLLING_DAYS` |     Synchronization: Determines the time-window for initial data fetching.     | 30      | No        | Days of data to fetch on first run    |
 | Max retries             | doppel.max_retries             | `DOPPEL_MAX_RETRIES`             |     Resilience: Configures automated error recovery from transient failures.     | 3       | No        | Retry attempts on API errors          |
 | Retry delay (seconds)   | doppel.retry_delay             | `DOPPEL_RETRY_DELAY`             |     Rate Management: Controls the frequency of requests during error recovery.     | 30      | No        | Delay between retry attempts          |
 | TLP Level               | doppel.tlp_level               | `DOPPEL_TLP_LEVEL`               |     Data Governance: Assigns sensitivity markings for downstream sharing.     | clear   | No        | TLP marking for created STIX objects. |
 | Page size               | doppel.page_size               | `DOPPEL_PAGE_SIZE`               |    Performance: Optimizes request volume and memory usage per fetch.      | 100                       | No        | Number of alerts to fetch per request |
+| Enable Incidents        | doppel.enable_incidents        | `DOPPEL_ENABLE_INCIDENTS`        |    Feature Control: Creates an Incident for each processed Doppel alert. | false                     | No        | Enable Incident processing            |
 | Enable Grouping Case    | doppel.enable_grouping_case    | `DOPPEL_ENABLE_GROUPING_CASE`    |    Feature Control: Enables grouping case creation.     | false                     | No        | Enable grouping case processing      |
 | Enable RFT Case         | doppel.enable_rft_case         | `DOPPEL_ENABLE_RFT_CASE`         |    Feature Control: Enables RFT case creation.     | false                     | No        | Enable RFT case processing           |
+
+Configure exactly one authentication mode. V1 and V2 credential fields are
+mutually exclusive, and the connector rejects a configuration containing both.
+When changing versions, remove the inactive credential variables.
+
+For V2, create a client ID and client secret in Doppel Vision, set
+`DOPPEL_API_VERSION=v2`, and configure `DOPPEL_CLIENT_ID` and
+`DOPPEL_CLIENT_SECRET`. The connector exchanges those credentials at
+`/oauth/token`, caches the bearer token in memory, and refreshes it before expiry
+or once after a `401 Unauthorized` response. V1 remains the default for backward
+compatibility.
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==6.5.1`. If you don't, it will take the latest version, but sometimes the OpenCTI SDK fails to initialize.
+Use a connector image tag matching the OpenCTI platform version. If you build the
+image yourself, check out the matching connectors release before using the provided
+`Dockerfile`; its `pycti` dependency is already pinned to that release.
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-3. Register connector in the **main** OpenCTI `docker-compose.yml`:
+Register the connector in the **main** OpenCTI `docker-compose.yml`:
 
 ```yaml
   connector-doppel:
-    image: opencti/connector-doppel:latest
+    image: opencti/connector-doppel:<opencti-version>
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=changeme
       - CONNECTOR_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
       - CONNECTOR_NAME=Doppel Threat Intelligence
-      - CONNECTOR_SCOPE=Indicator
+      - CONNECTOR_SCOPE=doppel
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
       - DOPPEL_API_BASE_URL=https://api.doppel.com
-      - DOPPEL_API_KEY=changeme
-      - DOPPEL_USER_API_KEY=changeme
-      - DOPPEL_ORGANIZATION_CODE=changeme
-      - DOPPEL_ALERTS_ENDPOINT=/v1/alerts
+      - DOPPEL_API_VERSION=v2
+      - DOPPEL_CLIENT_ID=changeme
+      - DOPPEL_CLIENT_SECRET=changeme
+      - DOPPEL_ALERTS_ENDPOINT=/alerts
       - DOPPEL_HISTORICAL_POLLING_DAYS=30
       - DOPPEL_MAX_RETRIES=3
       - DOPPEL_RETRY_DELAY=30
+      - DOPPEL_PAGE_SIZE=100
       - DOPPEL_TLP_LEVEL=clear
+      - DOPPEL_ENABLE_INCIDENTS=false
       - DOPPEL_ENABLE_GROUPING_CASE=false
       - DOPPEL_ENABLE_RFT_CASE=false
     restart: always
@@ -153,9 +170,35 @@ Find the "Doppel" connector, and click on the refresh button to reset the connec
 ## Behavior
 
 - Fetches alerts from Doppel API paginated by `last_activity_timestamp`
-- Converts each alert into a STIX 2.1 Observable object
+- Identifies every outbound Doppel API request, including V2 token minting, with
+  `x-doppel-client: opencti/7.260901.0` and
+  `User-Agent: doppel-opencti/7.260901.0` for usage attribution.
+- Converts each alert into a STIX 2.1 Observable with a value-appropriate type:
+  - `domains` alerts become `Domain-Name` observables. URL schemes, paths,
+    queries, and fragments added by the Doppel API are removed from the domain
+    value.
+  - `telco` alerts become `Phone-Number` observables.
+  - Email-address entities become `Email-Addr` observables.
+  - Other supported alert products become `Url` observables, preserving their
+    full URL value.
+- When `DOPPEL_ENABLE_INCIDENTS=true`, creates one deterministic Incident per
+  processed alert in **Events → Incidents**, regardless of queue state. The
+  Incident includes Doppel severity, product-specific incident type, source,
+  first-seen timestamp, lifecycle and score-derived priority labels,
+  description, and external reference. It is related to all alert Observables;
+  actionable Indicators remain connected through their `based-on` Observable
+  relationships. Incident creation is independent from the optional Grouping
+  and RFT case features and does not create an Incident Response case.
 - Bundles and sends the STIX objects to OpenCTI
 - Includes platform, score, brand, audit logs, notes, etc. as `custom_properties`
+- Reprocessing an alert refreshes Doppel-owned mutable data on existing
+  Indicators (description, score, external reference) and RFT cases
+  (description, priority, severity, external reference),
+  plus Incident names, descriptions, severity, incident type, lifecycle labels,
+  and external references. Queue transitions are represented by labels and do
+  not revoke Indicators or RFT cases; obsolete
+  `revoked-false-positive` labels from earlier connector versions are removed.
+  External references added by users are preserved.
 - On first run, fetches up to `HISTORICAL_POLLING_DAYS`; subsequent runs are delta-based
 
 ## Debugging

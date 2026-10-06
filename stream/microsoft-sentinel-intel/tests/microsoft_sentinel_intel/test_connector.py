@@ -934,3 +934,145 @@ def test_prepare_stix_object_does_not_mutate_input(
     connector._prepare_stix_object(event_data_indicator)
     assert set(event_data_indicator.keys()) == original_keys
     assert "extensions" in event_data_indicator
+
+
+# --- STIX Identity handling (publish_identities config) ---
+
+
+@pytest.fixture(name="event_data_identity")
+def fixture_event_data_identity() -> dict:
+    return {
+        "id": "identity--uuid",
+        "spec_version": "2.1",
+        "type": "identity",
+        "extensions": {},
+        "created": "2025-06-06T09:37:59.399Z",
+        "modified": "2025-06-06T09:37:59.399Z",
+        "name": "Some Author",
+        "identity_class": "organization",
+    }
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
+def test_handle_event_identity_skipped_by_default(
+    mocker: MockerFixture, connector: Connector, event_data_identity: dict
+) -> None:
+    """When publish_identities is disabled (default), Identity objects are ignored."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request"
+    )
+    connector._handle_event(
+        Event(event="create", data=json.dumps({"data": event_data_identity}))
+    )
+    assert mocked_send_request.call_count == 0
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_publish_identities_config")
+def test_handle_event_identity_processed_when_enabled(
+    mocker: MockerFixture, connector: Connector, event_data_identity: dict
+) -> None:
+    """When publish_identities is enabled, Identity objects are uploaded."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    connector._handle_event(
+        Event(event="create", data=json.dumps({"data": event_data_identity}))
+    )
+
+    assert mocked_send_request.call_count == 1
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    assert len(body["stixobjects"]) == 1
+    assert body["stixobjects"][0]["type"] == "identity"
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_publish_identities_config")
+def test_handle_event_identity_delete_skipped_when_enabled(
+    mocker: MockerFixture, connector: Connector, event_data_identity: dict
+) -> None:
+    """Identity delete events are ignored to avoid indicator-only delete logic."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request"
+    )
+    connector._handle_event(
+        Event(event="delete", data=json.dumps({"data": event_data_identity}))
+    )
+    assert mocked_send_request.call_count == 0
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
+def test_process_batch_identity_skipped_by_default(
+    mocker: MockerFixture, batch_connector: Connector, event_data_identity: dict
+) -> None:
+    """In batch mode, Identity objects are skipped when publish_identities is disabled."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    batch_data = _make_batch_data(
+        [
+            Event(event="create", data=json.dumps({"data": event_data_identity})),
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+        ]
+    )
+    batch_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 1
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    assert len(body["stixobjects"]) == 1
+    assert body["stixobjects"][0]["type"] == "indicator"
+
+
+@pytest.mark.usefixtures(
+    "mock_microsoft_sentinel_intel_batch_publish_identities_config"
+)
+def test_process_batch_identity_processed_when_enabled(
+    mocker: MockerFixture, batch_connector: Connector, event_data_identity: dict
+) -> None:
+    """In batch mode, Identity objects are uploaded alongside Indicators when enabled."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    batch_data = _make_batch_data(
+        [
+            Event(event="create", data=json.dumps({"data": event_data_identity})),
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+        ]
+    )
+    batch_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 1
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    assert len(body["stixobjects"]) == 2
+    types = {obj["type"] for obj in body["stixobjects"]}
+    assert types == {"identity", "indicator"}
+
+
+@pytest.mark.usefixtures(
+    "mock_microsoft_sentinel_intel_batch_publish_identities_config"
+)
+def test_process_batch_identity_delete_skipped_when_enabled(
+    mocker: MockerFixture, batch_connector: Connector, event_data_identity: dict
+) -> None:
+    """Identity delete events are filtered out in batch mode."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    batch_data = _make_batch_data(
+        [
+            Event(event="delete", data=json.dumps({"data": event_data_identity})),
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+        ]
+    )
+    batch_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 1
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    assert len(body["stixobjects"]) == 1
+    assert body["stixobjects"][0]["type"] == "indicator"

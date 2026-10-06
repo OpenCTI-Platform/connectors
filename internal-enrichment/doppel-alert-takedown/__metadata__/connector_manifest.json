@@ -1,0 +1,26 @@
+{
+  "title": "Doppel Alert and Takedown",
+  "slug": "doppel-alert-takedown",
+  "description": "Create Doppel alerts and request takedowns from URL and Domain-Name observables, or explicitly request takedown for an existing Doppel alert from its imported OpenCTI Incident. The connector records the result as a Note without duplicating an Incident-backed alert.",
+  "short_description": "Create Doppel alerts or request takedown from Doppel Incidents.",
+  "logo": "internal-enrichment/doppel-alert-takedown/__metadata__/logo.png",
+  "use_cases": [
+    "Brand, Digital Risk & Underground Exposure"
+  ],
+  "solution_categories": [
+    "Digital Risk Protection"
+  ],
+  "license_type": "Commercial",
+  "contact": null,
+  "verified": true,
+  "last_verified_date": "2026-08-11",
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260715.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/doppel-alert-takedown",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-doppel-alert-takedown",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

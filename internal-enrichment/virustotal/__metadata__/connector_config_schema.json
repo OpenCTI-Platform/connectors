@@ -36,6 +36,7 @@
       "type": "array"
     },
     "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
       "default": "INTERNAL_ENRICHMENT",
       "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
       "type": "string"
@@ -131,6 +132,58 @@
       "description": "Whether or not to set detection for the indicator to true.",
       "type": "boolean"
     },
+    "VIRUSTOTAL_IP_ADD_RESOLUTIONS": {
+      "default": false,
+      "description": "Whether or not to import the domains resolving to the IP (VirusTotal resolutions) as Domain-Name observables linked with a dated `resolves-to` relationship. Off: no additional API call and no additional object.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_IP_RESOLUTIONS_SINCE": {
+      "default": "P90D",
+      "description": "Date floor for IP resolutions: stop paging at the first resolution last seen before it. ISO-8601 duration relative to each enrichment (`P90D`), absolute ISO-8601 date (`2025-10-01`) or `none` to disable the floor (the entry and page caps still apply).",
+      "examples": [
+        "P90D",
+        "2025-10-01",
+        "none"
+      ],
+      "type": "string"
+    },
+    "VIRUSTOTAL_IP_RESOLUTIONS_MAX_ENTRIES": {
+      "default": null,
+      "description": "Entry cap for IP resolutions: stop after this many resolutions fetched per enrichment, newest first, counted before the keyword filter. Sent to VirusTotal as the page size when below 40. Unset: no entry cap.",
+      "examples": [
+        3
+      ],
+      "minimum": 1,
+      "type": "integer"
+    },
+    "VIRUSTOTAL_IP_RESOLUTIONS_MAX_PAGES": {
+      "default": 25,
+      "description": "Safety cap for IP resolutions: maximum number of pages (40 entries, one API lookup each) fetched per enrichment, whatever the date floor says.",
+      "examples": [
+        25
+      ],
+      "minimum": 1,
+      "type": "integer"
+    },
+    "VIRUSTOTAL_IP_RESOLUTIONS_KEYWORDS_REGEX": {
+      "default": null,
+      "description": "Case-insensitive regular expression a resolved domain must match to be imported. Filters the created objects, not the API quota. Unset: import all resolved domains.",
+      "examples": [
+        "^news",
+        "press"
+      ],
+      "type": "string"
+    },
+    "VIRUSTOTAL_API_REQUESTS_PER_MINUTE": {
+      "default": 4,
+      "description": "Spacing between IP resolutions pages, in requests per minute. 4 fits a free API key; 0 disables the wait (premium keys). Applies only to IP resolutions paging.",
+      "examples": [
+        4,
+        0
+      ],
+      "minimum": 0,
+      "type": "integer"
+    },
     "VIRUSTOTAL_DOMAIN_ADD_RELATIONSHIPS": {
       "default": false,
       "description": "Whether or not to add IP resolution relationships.",
@@ -175,6 +228,37 @@
       "default": false,
       "description": "Whether or not to include the attributes info in Note.",
       "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_ENRICHMENT_ENABLED": {
+      "default": false,
+      "description": "Whether to use GTI assessment data (score/verdict) and enable GTI relationship enrichment. Requires a VirusTotal account with GTI access.",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_INCLUDE_MALWARE_FAMILIES": {
+      "default": false,
+      "description": "Whether or not to enrich with related GTI malware families (created as Malware entities).",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_INCLUDE_THREAT_ACTORS": {
+      "default": false,
+      "description": "Whether or not to enrich with related GTI threat actors (created as Intrusion-Set entities).",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_INCLUDE_CAMPAIGNS": {
+      "default": false,
+      "description": "Whether or not to enrich with related GTI campaigns (created as Campaign entities).",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_INCLUDE_REPORTS": {
+      "default": false,
+      "description": "Whether or not to enrich with related GTI reports (created as Report entities).",
+      "type": "boolean"
+    },
+    "VIRUSTOTAL_GTI_RELATIONSHIP_LIMIT": {
+      "default": 10,
+      "description": "Maximum number of related objects to pull per GTI relationship, per observable.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
     }
   },
   "required": [

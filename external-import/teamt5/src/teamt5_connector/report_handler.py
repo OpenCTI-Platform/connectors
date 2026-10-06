@@ -2,8 +2,7 @@ from datetime import datetime, timezone
 
 from pycti import Report as pyctiReport
 from stix2 import ExternalReference, Report
-
-from .base_handler import BaseHandler
+from teamt5_connector.base_handler import BaseHandler
 
 # Public ThreatVision report-detail page used as a human-readable
 # fallback when the listing response does not surface a ``pdf_url``. This

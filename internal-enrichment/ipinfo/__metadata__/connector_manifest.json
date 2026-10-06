@@ -5,8 +5,13 @@
   "short_description": "IPinfo.io provides detailed data on IP ownership, geolocation, and more, enhancing understanding of network traffic origins. Integration with OpenCTI enriches threat intelligence, improving threat analysis and incident response accuracy.",
   "logo": "internal-enrichment/ipinfo/__metadata__/logo.png",
   "use_cases": [
-    "Enrichment & Analysis"
+    "Infrastructure & Attack Surface Visibility"
   ],
+  "solution_categories": [
+    "Enrichment & Reputation"
+  ],
+  "license_type": "Free",
+  "contact": null,
   "verified": true,
   "last_verified_date": "2025-06-15",
   "playbook_supported": true,

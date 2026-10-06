@@ -9,7 +9,7 @@ from threatmatch.converter import Converter
 
 def main() -> None:
     config = ConnectorSettings()
-    helper = OpenCTIConnectorHelper(config.model_dump_pycti())
+    helper = OpenCTIConnectorHelper(config.to_helper_config())
     converter = Converter(
         helper=helper,
         author_name="Security Alliance",

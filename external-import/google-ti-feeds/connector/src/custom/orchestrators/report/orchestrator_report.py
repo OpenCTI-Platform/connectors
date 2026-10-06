@@ -76,18 +76,7 @@ class OrchestratorReport(BaseOrchestrator):
             initial_state: Initial state for the orchestrator
 
         """
-        subentity_types = [
-            "malware_families",
-            "threat_actors",
-            "attack_techniques",
-            "vulnerabilities",
-            "campaigns",
-            "domains",
-            "files",
-            "urls",
-            "ip_addresses",
-            "software_toolkits",
-        ]
+        subentity_types = list(self.config.report_subentities)
         try:
             async for gti_reports in self.client_api.fetch_reports(initial_state):
                 total_reports = len(gti_reports)

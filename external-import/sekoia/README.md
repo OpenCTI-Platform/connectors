@@ -54,6 +54,7 @@ connector-sekoia:
       - SEKOIA_CREATE_OBSERVABLES=true  # Create observables from indicators
       - SEKOIA_IMPORT_SOURCE_LIST=false # Create the list of sources observed by Sekoia as label
       - SEKOIA_IMPORT_IOC_RELATIONSHIPS=true # Optional, Import IOCs relationships and related objects - Default: true
+      - SEKOIA_SEND_CONFIDENCE=true # Optional, include Sekoia's native STIX confidence on bundle objects - Default: true
 ```
 
 2. Replace the following parameters:
