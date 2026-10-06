@@ -2096,9 +2096,9 @@ class Shell:
             check_shell_environment(name, env)
             self._nested_shell(args, conditional, env)
         elif PIP.match(name):
-            self._pip(args, conditional)
+            self._pip(args, conditional, env)
         elif name == "uv":
-            self._uv(args, conditional)
+            self._uv(args, conditional, env)
         elif PYTHON.match(name):
             self._python(words, env, conditional)
         elif name in ("exit", "return"):
@@ -2143,7 +2143,7 @@ class Shell:
                     f"python -m {module} may run {shadow}, a file the build wrote, instead of the module of the interpreter"
                 )
         if module == "pip":
-            self._pip(module_args, conditional)
+            self._pip(module_args, conditional, env)
             return
         if self.start:
             self._launch(words, env, conditional)
@@ -2204,9 +2204,9 @@ class Shell:
             if clear:
                 remove_files(self.files, path)
 
-    def _uv(self, args, conditional):
+    def _uv(self, args, conditional, env):
         if args[:1] == ["pip"]:
-            self._pip(args[1:], conditional)
+            self._pip(args[1:], conditional, env)
             return
         if args[:1] == ["venv"]:
             # uv venv replaces an existing environment directory.
@@ -2654,7 +2654,7 @@ class Shell:
             script
         )
 
-    def _pip(self, args, conditional):
+    def _pip(self, args, conditional, env):
         """pip: ``install <path>`` records the installed packages; an option that
         writes a file (--report, --log) or into a directory takes it out of the
         model; ``uninstall`` removes installed packages."""
@@ -2680,7 +2680,7 @@ class Shell:
         if command not in ("install", "uninstall"):
             # wheel and download build local projects; config set writes pip.conf.
             raise Unsupported(f"pip {command}: its effect on the files is not modelled")
-        self._check_pip_configuration()
+        self._check_pip_configuration(env)
         relocated = False
         editable = False
         targets = []
@@ -2743,11 +2743,12 @@ class Shell:
                 )
             self.model.install_package(self.files, path)
 
-    def _check_pip_configuration(self):
+    def _check_pip_configuration(self, env):
         """pip also reads options from the environment (PIP_*) and from pip.conf:
         only the reviewed variables are accepted, and no configuration file the
         build wrote."""
-        for key in self.variables:
+        # The environment of the command, prefix assignments and env included.
+        for key in sorted({*self.variables, *env}):
             if key.startswith("PIP_") and key not in PIP_REVIEWED_VARIABLES:
                 raise Unsupported(f"pip with {key} set")
         written = (*self.files, *self.stage.replaced)
@@ -2999,6 +3000,11 @@ class ImageModel:
             if source_stage is None:
                 # An external image: none of the connector's files come from it,
                 # but its files may replace ones of the model.
+                entries, opaque = [], True
+            elif not KNOWN_BASE_IMAGE.match(source_stage.base or ""):
+                # A stage built on an image whose content is not known: its
+                # commands are not the programs the model knows, so even the
+                # files the model placed there may have been rewritten.
                 entries, opaque = [], True
             else:
                 entries, opaque = self._stage_entries(source_stage, sources)
