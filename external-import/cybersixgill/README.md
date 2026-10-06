@@ -59,9 +59,9 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter        | config.yml | Docker environment variable | Default      | Mandatory | Description                                                              |
 |------------------|------------|-----------------------------|--------------|-----------|--------------------------------------------------------------------------|
-| Connector ID     | id         | `CONNECTOR_ID`              |              | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
-| Connector Scope  | scope      | `CONNECTOR_SCOPE`           | cybersixgill | Yes       | The scope or type of data the connector is importing.                    |
-| Log Level        | log_level  | `CONNECTOR_LOG_LEVEL`       | info         | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
+| Connector ID     | id         | `CONNECTOR_ID`              | (built-in)   | No        | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Scope  | scope      | `CONNECTOR_SCOPE`           | cybersixgill | No        | The scope or type of data the connector is importing.                    |
+| Log Level        | log_level  | `CONNECTOR_LOG_LEVEL`       | error        | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
 
 ### Connector extra parameters environment variables
 
