@@ -220,7 +220,7 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | Delete event processed                    | `removed` (also when the indicator was already absent from Sentinel)                                      |
 | Reconciliation, indicator present         | `active`, with the name of the Sentinel threat intelligence object as external id                         |
 | Reconciliation, indicator absent          | `removed` (deleted or purged in Sentinel)                                                                 |
-| Reconciliation, `pending` (analyst retry) | The indicator is uploaded again and reported `deployed` or `failed`                                       |
+| Reconciliation, `pending` (analyst retry) | The indicator is uploaded again and reported `deployed` or `failed`; an indicator still present is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from Sentinel and reported `removed`   |
 | Reconciliation, unknown indicator         | Indicators of the connector `source_system` with no deployment yet are reported `active` (backfill)       |
 | Hits                                      | Sentinel incidents whose IP, URL, domain or file hash entities match a deployed indicator                  |

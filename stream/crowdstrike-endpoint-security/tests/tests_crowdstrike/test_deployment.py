@@ -893,6 +893,21 @@ def test_adapter_hits_without_values_read_no_alert(adapter_client, deployment):
     adapter_client.iter_alerts.assert_not_called()
 
 
+def test_adapter_expects_the_pushed_value_only(adapter_client):
+    """Reconciliation matches the value CrowdStrike holds, as the hits do."""
+    adapter = make_adapter(adapter_client)
+    composite = replace(
+        make_deployment(),
+        pattern="[ipv4-addr:value = '198.51.100.7' OR ipv4-addr:value = '203.0.113.9']",
+    )
+    snort = replace(
+        make_deployment(), pattern="alert tcp any any -> any any", pattern_type="snort"
+    )
+
+    assert adapter.expected_values(composite) == frozenset({"198.51.100.7"})
+    assert adapter.expected_values(snort) == frozenset()
+
+
 # End to end: stream processing and reconciliation through GraphQL
 
 
@@ -1071,6 +1086,54 @@ def test_reconciliation_and_hits_are_reported(e2e_connector, router):
     (hits,) = router.calls_of("IndicatorReportHits(")
     assert hits["indicatorId"] == INDICATOR_ID
     assert hits["count"] == 2
+
+
+def composite_node(revoked=False):
+    """A deployment of a composite pattern: CrowdStrike only holds its first value."""
+    node = deployment_node(INDICATOR_ID, "active")
+    node["revoked"] = revoked
+    node["from"][
+        "pattern"
+    ] = "[ipv4-addr:value = '198.51.100.7' OR ipv4-addr:value = '203.0.113.9']"
+    return node
+
+
+def reconcile_with_another_value_listed(e2e_connector, router, node):
+    """Run a reconciliation whose read-back only holds an IOC of the second value."""
+    router.deployments = [node]
+    e2e_connector.client.cs.indicator_combined.return_value = api_response(
+        resources=[make_ioc(ioc_id="other-ioc", value="203.0.113.9")]
+    )
+    e2e_connector.client._alerts.get_alerts_combined.return_value = api_response(
+        resources=[]
+    )
+    summary = e2e_connector.assurance.reconciler.run_once()
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    return summary, [(r["indicatorId"], r["status"]) for r in batch["reports"]]
+
+
+def test_an_ioc_of_an_unpushed_value_does_not_confirm_a_composite(
+    e2e_connector, router
+):
+    summary, reports = reconcile_with_another_value_listed(
+        e2e_connector, router, composite_node()
+    )
+
+    assert summary.confirmed_active == 0
+    assert reports == [(INDICATOR_ID, "removed")]
+
+
+def test_an_ioc_of_an_unpushed_value_is_not_withdrawn_for_a_composite(
+    e2e_connector, router
+):
+    summary, reports = reconcile_with_another_value_listed(
+        e2e_connector, router, composite_node(revoked=True)
+    )
+
+    assert summary.withdrawn == 0
+    assert reports == [(INDICATOR_ID, "removed")]
+    e2e_connector.client.cs.indicator_update.assert_not_called()
+    e2e_connector.client.cs.indicator_delete.assert_not_called()
 
 
 def test_read_back_failure_skips_the_reconciliation(e2e_connector, router):

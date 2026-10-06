@@ -241,7 +241,7 @@ does not exist). Observables streamed directly (not as indicators) are pushed as
 | Delete event processed                    | `removed`                                                                               |
 | Reconciliation, indicator present         | `active`                                                                                |
 | Reconciliation, indicator absent          | `removed` (deleted from the index, or past its `valid_until`)                           |
-| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`                       |
+| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an indicator still present is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from Elastic and reported `removed` |
 | Reconciliation, unknown indicator         | Indicator documents of the connector with no deployment yet are reported `active` (backfill) |
 

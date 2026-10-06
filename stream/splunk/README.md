@@ -217,7 +217,7 @@ does not exist), and hits are counted with a sighting of the indicator on that e
 | Delete event processed                    | `removed` (also when the item was already absent)                                                        |
 | Reconciliation, item present              | `active`                                                                                                 |
 | Reconciliation, item absent               | `removed`                                                                                                |
-| Reconciliation, `pending` (analyst retry) | The indicator is written again with the stream path and reported `deployed` or `failed`                  |
+| Reconciliation, `pending` (analyst retry) | The indicator is written again with the stream path and reported `deployed` or `failed`; an indicator still present is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from the KV Store and reported `removed` |
 | Reconciliation, unknown item              | KV Store indicators with no deployment yet are reported `active` (backfill)                              |
 | Hits                                      | Results of the saved search `SPLUNK_HITS_SAVED_SEARCH`                                                   |

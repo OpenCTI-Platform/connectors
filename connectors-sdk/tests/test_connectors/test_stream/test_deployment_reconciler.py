@@ -673,6 +673,38 @@ def test_deployments_only_partly_on_the_vendor_are_pushed_again(
     assert reports["complete"]["status"] == "active"
 
 
+def test_pending_deployments_are_pushed_again_unless_the_vendor_holds_them_in_full(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """An analyst retry is satisfied by a vendor already holding the whole indicator
+    (a new push would duplicate it on create-only APIs); a partial one is pushed."""
+    list_nodes(
+        node_factory(indicator_id="pending-complete", status="pending"),
+        node_factory(indicator_id="pending-partial", status="pending"),
+    )
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--p",
+        "pattern": "[url:value = 'x']",
+    }
+    adapter = PartialAdapter(
+        incomplete={"pending-partial"},
+        vendor=[
+            VendorIndicator(indicator_id="pending-complete", external_id="v-1"),
+            VendorIndicator(indicator_id="pending-partial", external_id="v-2"),
+        ],
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert (summary.confirmed_active, summary.repushed) == (1, 1)
+    assert len(adapter.pushed) == 1
+    reports = reported()
+    assert reports["pending-complete"]["status"] == "active"
+    assert reports["pending-complete"]["externalId"] == "v-1"
+    assert reports["pending-partial"]["status"] == "deployed"
+
+
 def test_retained_inactive_vendor_objects_are_only_removed(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):

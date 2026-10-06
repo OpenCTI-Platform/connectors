@@ -119,7 +119,7 @@ does not exist), and detection hits are counted with a sighting of the indicator
 | Reconciliation, indicator present           | `active` when Cortex XDR holds an IOC for every value of the indicator                                    |
 | Reconciliation, indicator partly present    | The indicator is upserted again, which restores its missing IOCs, and reported `deployed` (`failed` if Cortex XDR rejects it); a `failed` indicator waits for an analyst retry |
 | Reconciliation, indicator absent            | `removed` (deleted or expired in Cortex XDR)                                                              |
-| Reconciliation, `pending` (analyst retry)   | The indicator is upserted again and reported `deployed` or `failed`                                       |
+| Reconciliation, `pending` (analyst retry)   | The indicator is upserted again and reported `deployed` or `failed`; an indicator whose IOCs are all still present is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry        | The IOCs of revoked, expired or withdrawn indicators are deleted from Cortex XDR, except the ones another live indicator shares, and the indicator is reported `removed` |
 | Hits                                        | IOC alerts (`alert_source` `XDR IOC`) whose events carry the value of a deployed indicator                |
 
@@ -161,7 +161,7 @@ of the last report and the hits counted from the IOC alerts.
   permission denied" or "Cortex XDR could not be reached for the IOC upsert"; the HTTP status and the Cortex XDR
   response are in the connector log.
 - **Deploy again** sets the deployment to `pending`: the next reconciliation upserts the indicator again and reports
-  `deployed` or `failed`.
+  `deployed` or `failed` (an indicator whose IOCs are all still present is confirmed `active` without a new upsert).
 - **Remove from this platform** withdraws the indicator: the next reconciliation deletes its IOCs, except the ones
   another live indicator shares, and reports it `removed`.
 

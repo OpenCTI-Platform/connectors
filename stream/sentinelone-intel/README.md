@@ -208,7 +208,7 @@ exist).
 | Delete event, no IOC of the indicator     | `removed`: the lookup completed and no IOC carries the STIX id of the indicator, so it is already absent (nothing is reported for an unsupported pattern, never pushed) |
 | Reconciliation, indicator present         | `active`                                                                                                      |
 | Reconciliation, indicator absent          | `removed` (deleted or expired in SentinelOne)                                                                 |
-| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`                                             |
+| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an indicator the read-back still finds in SentinelOne is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from SentinelOne and reported `removed`    |
 | Reconciliation, unknown indicator         | IOCs whose external id is the STIX id of an indicator with no deployment yet are reported `active` (backfill) |
 
@@ -250,7 +250,8 @@ last report (no hit count: SentinelOne exposes none for these IOCs).
   permission denied" or "SentinelOne could not be reached for the IOC creation"; the HTTP status and the SentinelOne
   response are in the connector log.
 - **Deploy again** sets the deployment to `pending`: the next reconciliation pushes the indicator again and reports
-  `deployed` or `failed`.
+  `deployed` or `failed` (an indicator the read-back still finds in SentinelOne is confirmed `active` without a new
+  push, which would duplicate its IOCs).
 - **Remove from this platform** withdraws the indicator: the next reconciliation deletes the IOCs created from it and
   reports it `removed`.
 

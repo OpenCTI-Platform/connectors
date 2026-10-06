@@ -224,6 +224,24 @@ class CrowdstrikeDeploymentAdapter(DeploymentVendorAdapter):
             return HitCollection(hits=hits, complete_until=newest)
         return hits
 
+    def expected_values(self, deployment: IndicatorDeployment) -> frozenset[str]:
+        """Return the IOC value the connector pushes for a deployment (see
+        ``_pushed_value``).
+
+        CrowdStrike IOCs carry no OpenCTI id: declaring the one pushed value keeps the
+        reconciliation from confirming or withdrawing a composite indicator through an
+        IOC of another value of its pattern, which this connector never pushed for it.
+
+        Args:
+            deployment: A deployment of the platform.
+
+        Returns:
+            The pushed value, or no value when the connector pushes nothing for the
+            pattern.
+        """
+        value = self._pushed_value(deployment)
+        return frozenset({value}) if value else frozenset()
+
     @staticmethod
     def _pushed_value(deployment: IndicatorDeployment) -> str | None:
         """Return the normalized IOC value the stream pushed for a deployment.

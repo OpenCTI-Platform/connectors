@@ -145,7 +145,7 @@ if it does not exist). `IPv4-Addr` observables are pushed as before and not repo
 | Reconciliation, indicator present         | `active`, with the Cloudflare list item id as external id                                             |
 | Reconciliation, previous IP still listed  | An item under the comment of the indicator but with another IP (the upload of a changed IP failed) does not confirm it: a `failed` indicator stays `failed`, a `deployed` or `active` one is uploaded again with its current IP |
 | Reconciliation, indicator absent          | `removed` (deleted from the list outside of OpenCTI); the next upload restores the item and reports the indicator `deployed` again |
-| Reconciliation, `pending` (analyst retry) | The indicator is added to the snapshot, uploaded and reported `deployed` or `failed`                  |
+| Reconciliation, `pending` (analyst retry) | The indicator is added to the snapshot, uploaded and reported `deployed` or `failed`; an indicator the list still holds with its current IP is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still listed are deleted from the list and reported `removed`; the ones already absent are reported `removed` and dropped from the snapshot, so no upload restores them |
 | Reconciliation, unknown indicator         | Items whose comment carries the STIX id of an indicator with no deployment are reported `active` (backfill) |
 
@@ -185,7 +185,8 @@ the last report (no hit count: the firewall events belong to the rules using the
   permission denied" or "Cloudflare did not complete the list update in time"; the HTTP status and the Cloudflare
   response are in the connector log.
 - **Deploy again** sets the deployment to `pending`: the next reconciliation adds the indicator to the snapshot,
-  uploads it and reports `deployed` or `failed`.
+  uploads it and reports `deployed` or `failed` (an indicator the list still holds with its current IP is confirmed
+  `active` without a new upload).
 - **Remove from this platform** withdraws the indicator: the next reconciliation deletes its list item, unless another
   object holds the same address, and reports it `removed`.
 

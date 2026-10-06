@@ -198,7 +198,7 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting                             |
 | Reconciliation, IOC present               | `active`                                                                                             |
 | Reconciliation, IOC absent                | `removed` (deleted or expired in CrowdStrike)                                                        |
-| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`                                    |
+| Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an IOC still present is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are withdrawn and reported `removed`          |
 | Hits                                      | Falcon alerts whose IOC value matches a deployed indicator                                            |
 
@@ -206,7 +206,9 @@ it does not exist), and detection hits are counted with a sighting of the indica
   (`created_by`) with the `OpenCTI IOC` source are read back with the IOC API (500 per page). Deleted IOCs are ignored.
   Expired IOCs, and IOCs withdrawn by the connector (tagged `TO_DELETE` with the `no_action` action), are not live: they
   never confirm a deployment, but a withdrawal or an expiry still deletes or deactivates them. Deployments are
-  matched by IOC id, then by IOC value. A withdrawal deletes the IOC when `CROWDSTRIKE_PERMANENT_DELETE=true`;
+  matched by IOC id, then by the IOC value the connector pushes (the first value of the pattern: an IOC holding
+  another value of a composite pattern never confirms nor withdraws it). A withdrawal deletes the IOC when
+  `CROWDSTRIKE_PERMANENT_DELETE=true`;
   otherwise the IOC is kept, tagged `TO_DELETE` and its action set to `no_action` so that it stops detecting. A
   read-back error skips the run: IOCs are never reported `removed` from a partial listing.
 - **Hits**: during each reconciliation, the Falcon alerts created since the previous run are read (at most 10,000 per
