@@ -296,6 +296,31 @@ def test_eql_counts_sequences_and_flags_the_events_cut(requests_mock):
     assert (result.total, result.partial) == (2, True)
 
 
+def test_eql_tells_apart_sequences_sharing_their_events_with_ids(requests_mock):
+    # Given two sequences with the same event that has a document id, and a
+    # different event without one
+    shared = {"_source": {"step": 0}, "_id": "m-0"}
+    first_sequence = {"events": [shared, {"_source": {"step": 1}}]}
+    second_sequence = {"events": [shared, {"_source": {"step": 2}}]}
+    requests_mock.post(
+        EQL_URL,
+        json={
+            "hits": {
+                "total": {"value": 2, "relation": "eq"},
+                "sequences": [first_sequence, second_sequence],
+            }
+        },
+    )
+
+    # When the query runs
+    result = _client().eql(["logs-*"], "q", START, END, 10, RunDeadline(30), "k")
+
+    # Then every event counts in the label: the two sequences are two hits
+    first, second = result.sequences[0], result.sequences[2]
+    assert result.sequences == [first, first, second, second]
+    assert first != second
+
+
 def test_eql_flags_lower_bound_totals(requests_mock):
     # Given an EQL total that is a lower bound
     requests_mock.post(

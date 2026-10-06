@@ -849,12 +849,14 @@ class InternalHuntConnector(ABC):
         ]
 
     def _complete_indicator_run(self, request: HuntRequest, started: float) -> str:
-        """Look up the values of an indicator hunt, send the sightings, then report one result per value.
+        """Look up the values of an indicator hunt, send the observables seen, then report one result per value.
 
         A preview reports the lookups without running them. A type the platform
         cannot look up is reported not searched, so that OpenCTI never concludes
-        benign about it. As for telemetry runs, the sightings are sent before
-        the completed report.
+        benign about it. The lookups share the ``max_results`` of the run: each
+        one fetches at most what the previous ones left, and the values of a
+        lookup the run can no longer afford are reported not searched. As for
+        telemetry runs, the knowledge is sent before the completed report.
         """
         if not self.supports_indicators:
             raise HuntTranslationError(
@@ -885,12 +887,24 @@ class InternalHuntConnector(ABC):
             None if self.ioc_aggregated else {}
         )
         truncated = False
+        remaining = request.limits.max_results
         for batch, query in lookups:
             if query is None:
                 reason = f"The {self.platform} hunt connector does not look up {batch.observable_type} values."
                 unsearched.update({ioc.key: reason for ioc in batch.iocs})
                 continue
-            raw_result = self._execute_within_limits(request, query, deadline)
+            if remaining <= 0:
+                reason = (
+                    f"The {self.platform} lookups of this run read the maximum number of results "
+                    "before this value: run the hunt again with fewer values or a higher maximum."
+                )
+                unsearched.update({ioc.key: reason for ioc in batch.iocs})
+                truncated = True
+                continue
+            raw_result = self._execute_within_limits(
+                request, query, deadline, max_results=remaining
+            )
+            remaining -= len(raw_result.events)
             result = suppress_benign(raw_result, request.hunt.benign_patterns, deadline)
             truncated = truncated or result.truncated
             if value_keys is None:
@@ -972,20 +986,37 @@ class InternalHuntConnector(ABC):
         )
 
     def _execute_within_limits(
-        self, request: HuntRequest, native_query: NativeQuery, deadline: RunDeadline
+        self,
+        request: HuntRequest,
+        native_query: NativeQuery,
+        deadline: RunDeadline,
+        max_results: int | None = None,
     ) -> HuntResult:
         """Run ``execute`` within the run deadline and cap the results to ``max_results``.
+
+        Args:
+            request: The hunt run request.
+            native_query: The query to run.
+            deadline: The deadline of the run.
+            max_results: The events this query may fetch, ``limits.max_results``
+                when omitted (an indicator run passes what its lookups left).
 
         Raises:
             HuntTimeoutError: If the execution exceeds ``limits.timeout_seconds``.
             HuntExecutionError: If ``execute`` does not return a ``HuntResult``.
         """
         outcome: dict[str, Any] = {}
+        limit = request.limits.max_results if max_results is None else max_results
+        limits = (
+            request.limits
+            if limit == request.limits.max_results
+            else request.limits.model_copy(update={"max_results": limit})
+        )
 
         def _run() -> None:
             try:
                 outcome["result"] = self.execute(
-                    native_query, request.time_window, request.limits, deadline
+                    native_query, request.time_window, limits, deadline
                 )
             except BaseException as err:
                 outcome["error"] = err
@@ -1016,10 +1047,9 @@ class InternalHuntConnector(ABC):
         result = outcome.get("result")
         if not isinstance(result, HuntResult):
             raise HuntExecutionError("execute() must return a HuntResult.")
-        max_results = request.limits.max_results
-        if len(result.events) > max_results:
+        if len(result.events) > limit:
             return HuntResult(
-                events=result.events[:max_results],
+                events=result.events[:limit],
                 total_hits=result.hits_count,
                 truncated=True,
             )

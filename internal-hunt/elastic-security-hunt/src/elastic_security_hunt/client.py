@@ -451,21 +451,21 @@ def _source(hit: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
+def _event_identity(event: dict[str, Any]) -> str:
+    """Return the index and document id of an EQL event, else its source document."""
+    document_id = event.get("_id")
+    if isinstance(document_id, str) and document_id:
+        return f"{event.get('_index') or ''}/{document_id}"
+    return json.dumps(_source(event), sort_keys=True, default=str)
+
+
 def _sequence_label(sequence_events: list[dict[str, Any]]) -> str:
     """Return a stable label of an EQL sequence, the same at every run that finds it.
 
-    It derives from the index and document id of each event of the sequence, in
-    order, else from their source documents.
+    It derives from every event of the sequence, in order: its index and document
+    id, or its source document when it has no id.
     """
-    identities = [
-        f"{event.get('_index') or ''}/{event['_id']}"
-        for event in sequence_events
-        if isinstance(event.get("_id"), str) and event["_id"]
-    ]
-    material = identities or [
-        json.dumps(_source(event), sort_keys=True, default=str)
-        for event in sequence_events
-    ]
+    material = [_event_identity(event) for event in sequence_events]
     digest = hashlib.sha256(
         json.dumps(material, separators=(",", ":")).encode("utf-8")
     ).hexdigest()

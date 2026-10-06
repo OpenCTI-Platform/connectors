@@ -409,6 +409,65 @@ def test_a_truncated_lookup_never_reports_a_value_absent_from_the_part_read_as_n
     assert kwargs["truncated"] is True
 
 
+def _indicator_connector(hunt_settings, hunt_helper, result):
+    from unittest.mock import MagicMock
+
+    connector = DummyIndicatorConnector(hunt_settings, result=result)
+    connector._helper = hunt_helper
+    connector._logger = MagicMock()
+    return connector
+
+
+def _two_events():
+    return HuntResult(
+        events=[
+            event(
+                "2026-10-03T10:00:00+00:00", DestinationIp="198.51.100.7", host="WKS-01"
+            ),
+            event(
+                "2026-10-03T11:00:00+00:00", DestinationIp="198.51.100.7", host="WKS-02"
+            ),
+        ],
+        truncated=False,
+    )
+
+
+def test_the_lookups_of_a_run_share_its_maximum_results(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # 3 events for the run: the IPv4 lookup reads 2, the domain lookup only 1
+    connector = _indicator_connector(hunt_settings, hunt_helper, _two_events())
+    message = indicator_event()
+    message["limits"]["max_results"] = 3
+    connector.process_message(message)
+    assert [limits.max_results for _, _, limits in connector.executed] == [3, 1]
+    kwargs = connector._helper.report_hunt_run.call_args.kwargs
+    assert kwargs["truncated"] is True
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["seen"] is True
+    assert by_key["k-domain"]["searched"] is False
+    assert "returned partial results" in by_key["k-domain"]["reason"]
+
+
+def test_a_lookup_the_run_can_no_longer_afford_is_not_searched(
+    hunt_settings, hunt_helper, indicator_event
+):
+    # The IPv4 lookup reads the 2 events of the run: the domain is never looked up
+    connector = _indicator_connector(hunt_settings, hunt_helper, _two_events())
+    message = indicator_event()
+    message["limits"]["max_results"] = 2
+    connector.process_message(message)
+    assert len(connector.executed) == 1
+    assert "198.51.100.7" in connector.executed[0][0].query
+    kwargs = connector._helper.report_hunt_run.call_args.kwargs
+    assert kwargs["truncated"] is True
+    by_key = {item["key"]: item for item in kwargs["ioc_results"]}
+    assert by_key["k-ip"]["seen"] is True
+    assert by_key["k-domain"]["searched"] is False
+    assert "read the maximum number of results" in by_key["k-domain"]["reason"]
+    assert by_key["k-mac"]["searched"] is False
+
+
 def test_ignores_aggregated_rows_without_hits():
     batch = IocBatch("Domain-Name", None, (ioc("a", "Domain-Name", "evil.com"),))
     rows = [
