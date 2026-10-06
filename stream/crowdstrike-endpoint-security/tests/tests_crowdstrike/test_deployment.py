@@ -287,6 +287,43 @@ def test_failed_delete_is_not_reported_removed(permanent_connector):
     )
 
 
+def test_permanent_delete_removes_every_ioc_of_the_value(permanent_connector):
+    duplicate_id = "9c3e7a1b5d2f4e6a8b0c1d2e3f4a5b6c"
+    permanent_connector.client.cs.indicator_search.return_value = api_response(
+        resources=[IOC_ID, duplicate_id]
+    )
+    permanent_connector.client.cs.indicator_delete.return_value = api_response(200)
+    indicator = make_indicator()
+
+    permanent_connector._process_message(make_message("delete", indicator))
+
+    assert permanent_connector.client.cs.indicator_delete.call_args_list == [
+        call(IOC_ID),
+        call(duplicate_id),
+    ]
+    permanent_connector.assurance.report_removed.assert_called_once_with(
+        indicator, external_id=IOC_ID
+    )
+
+
+def test_ioc_left_by_a_failed_delete_is_not_reported_removed(permanent_connector):
+    duplicate_id = "9c3e7a1b5d2f4e6a8b0c1d2e3f4a5b6c"
+    permanent_connector.client.cs.indicator_search.return_value = api_response(
+        resources=[IOC_ID, duplicate_id]
+    )
+    permanent_connector.client.cs.indicator_delete.side_effect = [
+        api_response(200),
+        api_response(403, errors=[{"message": "access denied"}]),
+    ]
+
+    permanent_connector._process_message(make_message("delete", make_indicator()))
+
+    permanent_connector.assurance.report_removed.assert_not_called()
+    permanent_connector.helper.connector_logger.warning.assert_called_once_with(
+        "[DELETE] IOC not deleted from Crowdstrike", meta={"error": "access denied"}
+    )
+
+
 def test_soft_delete_keeps_the_ioc_detecting_and_reports_nothing(connector):
     connector.client.cs.indicator_search.return_value = api_response(resources=[IOC_ID])
     connector.client.cs.indicator_update.return_value = api_response(200)

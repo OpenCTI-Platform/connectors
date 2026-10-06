@@ -194,7 +194,7 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | IOC created, updated or already present   | `deployed`, with the CrowdStrike IOC id as external id                                               |
 | IOC rejected by CrowdStrike               | `failed`, with the CrowdStrike error message                                                         |
 | Unsupported IOC type (URL, email...)      | Nothing: the indicator is not disseminated to CrowdStrike                                            |
-| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once the IOC is deleted (or already absent)                                        |
+| Delete event, `CROWDSTRIKE_PERMANENT_DELETE=true` | `removed` once every connector IOC of the value is deleted (or none is left)                 |
 | Delete event, `CROWDSTRIKE_PERMANENT_DELETE=false` | Nothing: the IOC is only tagged `TO_DELETE` and keeps detecting                             |
 | Reconciliation, IOC present               | `active`                                                                                             |
 | Reconciliation, IOC absent                | `removed` (deleted or expired in CrowdStrike)                                                        |

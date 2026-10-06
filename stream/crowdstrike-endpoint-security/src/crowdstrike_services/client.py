@@ -481,6 +481,8 @@ class CrowdstrikeClient:
     def delete_indicator(self, data: dict) -> IocOperationResult:
         """
         Delete IOC from OpenCTI to Crowdstrike
+        Every IOC of the value created by the connector is deleted: the IOC is
+        only gone once none of them is left
         :param data: Data of IOC in dict
         :return: Outcome of the operation (CrowdStrike IOC id on success)
         """
@@ -489,22 +491,22 @@ class CrowdstrikeClient:
 
         # If IOC exists and permanent_delete is True, delete the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) != 0:
-            ioc_id = ioc_cs[0]
-            response = self.cs.indicator_delete(ioc_id)
-            error_message = self._handle_api_error(response)
+            for ioc_id in ioc_cs:
+                response = self.cs.indicator_delete(ioc_id)
+                error_message = self._handle_api_error(response)
 
-            if response["status_code"] == 200:
-                self.helper.connector_logger.info(
-                    "[API] IOC successfully deleted in Crowdstrike",
-                    {"ioc_value": ioc_value},
-                )
-                return IocOperationResult(IocOperationStatus.DELETED, ioc_id=ioc_id)
-            return IocOperationResult(
-                IocOperationStatus.FAILED,
-                ioc_id=ioc_id,
-                error=error_message
-                or f"Unexpected status code {response['status_code']}",
+                if response["status_code"] != 200:
+                    return IocOperationResult(
+                        IocOperationStatus.FAILED,
+                        ioc_id=ioc_id,
+                        error=error_message
+                        or f"Unexpected status code {response['status_code']}",
+                    )
+            self.helper.connector_logger.info(
+                "[API] IOC successfully deleted in Crowdstrike",
+                {"ioc_value": ioc_value, "ioc_count": len(ioc_cs)},
             )
+            return IocOperationResult(IocOperationStatus.DELETED, ioc_id=ioc_cs[0])
 
         else:
             self.helper.connector_logger.info(
