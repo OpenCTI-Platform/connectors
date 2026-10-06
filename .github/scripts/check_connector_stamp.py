@@ -174,6 +174,8 @@ GLOB_CHARS = re.compile(r"[*?\[]")
 HEREDOC = re.compile(r"<<-?\s*['\"]?[A-Za-z_]")
 TARBALL = re.compile(r"\.(tar|tar\.gz|tgz|tar\.bz2|tbz2|tar\.xz|txz)$")
 COMMAND_PREFIXES = frozenset({"exec", "command", "nohup", "time", "builtin"})
+# Prefixes that are programs found on PATH, not shell builtins.
+EXTERNAL_PREFIXES = frozenset({"env", "nohup", "sudo"})
 REDIRECTIONS = frozenset({">", ">>", "<", ">&", "<&", "&>", "&>>", ">|", "<>"})
 # Longest first: shlex returns a run of punctuation such as ");" as one token.
 OPERATORS = (
@@ -801,11 +803,15 @@ class BuildContext:
         self.rules = rules
         self.files = {}
         for directory, subdirs, names in os.walk(connector_dir):
-            subdirs[:] = sorted(d for d in subdirs if d != ".git")
-            for name in sorted(names):
-                rel = (Path(directory) / name).relative_to(connector_dir).as_posix()
+            # A symbolic link is copied as a link: where it points is not modelled.
+            links = [d for d in subdirs if (Path(directory) / d).is_symlink()]
+            subdirs[:] = sorted(d for d in subdirs if d != ".git" and d not in links)
+            for name in sorted([*names, *links]):
+                path = Path(directory) / name
+                rel = path.relative_to(connector_dir).as_posix()
                 if not ignored_by(rel, rules):
-                    self.files[rel] = ("context", rel)
+                    kind = "link" if path.is_symlink() else "context"
+                    self.files[rel] = (kind, rel)
         self.stamps = written_stamps(connector_dir)
         for rel in self.stamps:
             if not ignored_by(rel, rules):
@@ -1386,6 +1392,10 @@ class Shell:
         self.files = files
         self.cwd = cwd
         self.variables = variables
+        # The environment of the shell is exported; a plain assignment is not,
+        # unless set -a is on.
+        self.exported = set(variables)
+        self.allexport = False
         self.start = start
         self.nesting = nesting
         self.stack = []
@@ -1421,6 +1431,8 @@ class Shell:
             return expand(self.references[int(match.group(2))], self.variables)
 
         value = VAR_MARKER.sub(substitute, word)
+        if split and unquoted and "IFS" in self.variables:
+            raise Unsupported("word splitting with IFS set")
         return value.split() if split and unquoted else [value]
 
     def _nested(self, files, cwd, variables, start, conditional):
@@ -1490,6 +1502,10 @@ class Shell:
                     raise Unsupported("an unterminated command substitution")
                 inner = line[i + 2 : end]
                 arithmetic = inner.startswith("(") and inner.endswith(")")
+                if arithmetic and ("$(" in inner or "`" in inner):
+                    raise Unsupported(
+                        "a command substitution in an arithmetic expansion"
+                    )
                 out.append(f"{VAR_SUBST}{len(self.substitutions)}{VAR_END}")
                 self.substitutions.append(None if arithmetic else inner)
                 i = end + 1
@@ -1569,7 +1585,6 @@ class Shell:
         writes = []
         before = None
         skip = False
-        skip_name = False
         redirect = None
         for token in tokens:
             if redirect is not None and token not in SEPARATORS:
@@ -1596,9 +1611,6 @@ class Shell:
                     skip = True
                 self._substitute([token], True)
                 continue
-            if skip_name:
-                skip_name = False
-                continue
             if token == "<<":
                 raise Unsupported("a here-document in a shell script")
             if token in REDIRECTIONS:
@@ -1608,6 +1620,10 @@ class Shell:
                 redirect = token
                 continue
             if token in ("(", ")") and not self._in_case():
+                if token == "(" and len(words) == 1 and not writes:
+                    # name() { ...; }: the body runs where the function is called,
+                    # with that working directory, under a name it may shadow.
+                    raise Unsupported("a shell function")
                 if words or writes:
                     self._command(words, writes, before, token)
                     words, writes = [], []
@@ -1636,11 +1652,18 @@ class Shell:
                 if token in ("then", "do", "else", "elif", "!", "in"):
                     continue
                 if token == "function":
-                    skip_name = True
-                    continue
+                    raise Unsupported("a shell function")
             words.append(token.translate(RESTORE))
         if (words or writes) and not skip:
             self._command(words, writes, before, None)
+
+    def _set_options(self, args):
+        """set -a / +a (and -o / +o allexport): assignments exported or not."""
+        for index, arg in enumerate(args):
+            if arg in ("-o", "+o") and args[index + 1 : index + 2] == ["allexport"]:
+                self.allexport = arg == "-o"
+            elif re.fullmatch(r"[-+][a-zA-Z]+", arg) and "a" in arg:
+                self.allexport = arg.startswith("-")
 
     def _substitute(self, words, conditional):
         """Run the command substitutions of ``words``: their commands run before
@@ -1650,13 +1673,17 @@ class Shell:
                 index = int(match.group(2))
                 if match.group(1) == VAR_SUBST and self.substitutions[index]:
                     script, self.substitutions[index] = self.substitutions[index], None
-                    self._nested(
+                    # A subshell: the same variables, exported or not.
+                    nested = self._nested(
                         self.files,
                         self.cwd,
                         dict(self.variables),
                         self.start,
                         conditional,
-                    ).run(script)
+                    )
+                    nested.exported = set(self.exported)
+                    nested.allexport = self.allexport
+                    nested.run(script)
 
     def _command(self, words, writes, before, after):
         conditional = bool(self.stack) or before == "||"
@@ -1678,16 +1705,33 @@ class Shell:
                     self.variables[key] = UNKNOWN
                 else:
                     self.variables[key] = assigned[key]
+                if self.allexport:
+                    self.exported.add(key)
             words = words[1:]
         if not words:
             return
         words = [part for word in words for part in self._expand(word)]
         if not words:
             return
+        if "GLOBIGNORE" in {**self.variables, **assigned} and any(
+            GLOB_CHARS.search(word) for word in words
+        ):
+            # bash: a wildcard then also matches a leading dot.
+            raise Unsupported("a wildcard with GLOBIGNORE set")
         handed_over = False
         unset = set()
         while words:
             name = posixpath.basename(words[0])
+            external = name in EXTERNAL_PREFIXES or "/" in words[0]
+            if external and self.model.shadow(
+                words[0],
+                {**self.variables, **assigned},
+                self.files,
+                self.stage,
+                self.cwd,
+            ):
+                # A wrapper the build wrote under this name runs instead.
+                break
             if name == "command" and words[1:2] and words[1] in ("-v", "-V"):
                 # command -v: a lookup, nothing runs.
                 return
@@ -1707,9 +1751,19 @@ class Shell:
         in_pipeline = before == "|" or after == "|"
         name = posixpath.basename(words[0])
         args = words[1:]
-        env = {
+        # The shell looks the command up with all its variables; the command
+        # receives the exported ones and its own assignments.
+        lookup = {
             key: value
             for key, value in {**self.variables, **assigned}.items()
+            if key not in unset
+        }
+        env = {
+            key: value
+            for key, value in {
+                **{k: v for k, v in self.variables.items() if k in self.exported},
+                **assigned,
+            }.items()
             if key not in unset
         }
         if self.start and handed_over:
@@ -1719,7 +1773,12 @@ class Shell:
             return
         if name == "export":
             for arg in args:
+                if arg.startswith("-"):
+                    if arg != "-p":
+                        raise Unsupported(f"'export {arg}'")
+                    continue
                 key, sep, value = arg.partition("=")
+                self.exported.add(key)
                 if not sep:
                     continue
                 if conditional:
@@ -1736,10 +1795,13 @@ class Shell:
                     self.variables[arg] = UNKNOWN
                 else:
                     self.variables.pop(arg, None)
+                    self.exported.discard(arg)
             return
+        if name == "set":
+            self._set_options(args)
         builtin = name in SHELL_BUILTINS and "/" not in words[0]
         if not builtin and self.model.shadow(
-            words[0], env, self.files, self.stage, self.cwd
+            words[0], lookup, self.files, self.stage, self.cwd
         ):
             # The file the build put on PATH under this name runs, not the
             # program the model knows by that name.
@@ -1749,7 +1811,7 @@ class Shell:
                 )
             return
         if name == "cd":
-            self._cd(args, conditional, in_pipeline, env)
+            self._cd(args, conditional, in_pipeline, lookup)
         elif name in ("pushd", "popd"):
             self._unknown_directory(f"'{name}'")
         elif name == "eval":
@@ -1780,10 +1842,41 @@ class Shell:
         elif not self._executed_script(words, env, conditional):
             self._other_command(words)
 
+    def _module_shadow(self, name, env):
+        """A file the build wrote that python -m ``name`` imports before the module
+        of the interpreter (the working directory and PYTHONPATH come first)."""
+        entries = [self.cwd, *env.get("PYTHONPATH", "").split(":")]
+        written = (*self.files, *self.stage.replaced)
+        if self.cwd is None and any(
+            posixpath.basename(p) in (name, f"{name}.py") for p in written
+        ):
+            return f"{name} in an unknown working directory"
+        for entry in entries:
+            if not entry or "$" in entry:
+                continue
+            if not entry.startswith("/"):
+                if self.cwd is None:
+                    continue
+                entry = posixpath.normpath(posixpath.join(self.cwd, entry))
+            # A module file or a regular package; a directory without
+            # __init__.py loses to the module of the interpreter.
+            module, package = f"{entry}/{name}.py", f"{entry}/{name}"
+            if module in self.files or f"{package}/__init__.py" in self.files:
+                return module if module in self.files else package
+            if module in self.stage.replaced or package in self.stage.replaced:
+                return module if module in self.stage.replaced else package
+        return None
+
     def _python(self, words, env, conditional):
         """python at build time or in a start script."""
         args = words[1:]
         module = python_module(args)
+        if module is not None and not self.start:
+            shadow = self._module_shadow(module.split(".")[0], env)
+            if shadow:
+                raise Unsupported(
+                    f"python -m {module} may run {shadow}, a file the build wrote, instead of the module of the interpreter"
+                )
         if module == "pip":
             index = args.index("pip") if "pip" in args else len(args)
             self._pip(args[index + 1 :], conditional)
@@ -1857,9 +1950,10 @@ class Shell:
         """A command the model only accepts when it knows its effect on the files."""
         name = posixpath.basename(words[0])
         args = words[1:]
-        if name == "printf" and "-v" in args[:-1]:
-            # printf -v NAME sets a variable.
-            self.variables[args[args.index("-v") + 1]] = UNKNOWN
+        if name == "printf" and args and args[0].startswith("-v"):
+            # printf -v NAME (or -vNAME) sets a variable.
+            variable = args[0][2:] or (args[1] if len(args) > 1 else "")
+            self.variables[variable] = UNKNOWN
             return
         if name in HARMLESS_COMMANDS or name in AUDITED_PROGRAMS:
             return
@@ -1909,7 +2003,10 @@ class Shell:
             raise Unsupported(
                 f"a command acts on '{candidate}', which uses a variable or a command the build does not define"
             )
-        if not candidate.startswith(("/", "~", "./", "../")) and "/" not in candidate:
+        bare = (
+            not candidate.startswith(("/", "~", "./", "../")) and "/" not in candidate
+        )
+        if bare and not GLOB_CHARS.search(candidate):
             # A bare word is a file only when the model has it in the working directory.
             if self.cwd is None:
                 if STAMP in candidate:
@@ -1922,7 +2019,12 @@ class Shell:
                 return
         path = image_path(self._tilde(candidate), self.cwd, "named path")
         if path != "/":
+            before = set(self.files)
             remove_files(self.files, path)
+            # Still there, with a content or mode the model does not know: an
+            # executable among them is no longer the file the model read.
+            self.stage.replaced.update(before - set(self.files))
+            self.stage.replaced.add(path)
 
     def _executed_script(self, words, env, conditional):
         """A shell script of the image run as a command: it runs here (its
@@ -1946,17 +2048,15 @@ class Shell:
         return False
 
     def _source(self, name, args):
-        """``. file`` runs the file in this shell: its ``cd`` and deletions count."""
-        if name == "eval" or not args:
-            self.cwd = None
-            return
+        """``. file`` runs the file in this shell: its ``cd``, variables and
+        deletions count."""
+        if not args:
+            raise Unsupported(f"'{name}' without a file")
         path = image_path(args[0], self.cwd, "sourced file")
         text = self.model.context.read(self.files.get(path))
         if text is None:
-            # A file the model does not know (a virtualenv activation script)
-            # may change the working directory.
-            self.cwd = None
-            return
+            # A file the model does not know may do anything to the files.
+            raise Unsupported(f"sourced file {path} is not a file of the image model")
         nested = Shell(
             self.model,
             self.stage,
@@ -1967,8 +2067,11 @@ class Shell:
             nesting=self.nesting + 1,
         )
         nested.stack = list(self.stack)
+        nested.exported = self.exported
+        nested.allexport = self.allexport
         nested.run(text)
         self.cwd = nested.cwd
+        self.allexport = nested.allexport
 
     def _unknown_directory(self, why):
         if self.start:
@@ -2397,7 +2500,14 @@ class ImageModel:
             return any(rx.match(name) or rx.match(relative) for rx in excludes)
 
         def place(target, origin, in_directory=False):
-            if origin[0] == "stamp" and (unreadable or (in_directory and unsearchable)):
+            if origin[0] == "link":
+                # A link of the context: the destination holds what the model
+                # does not know.
+                remove_files(stage.files, target)
+                stage.replaced.add(target)
+            elif origin[0] == "stamp" and (
+                unreadable or (in_directory and unsearchable)
+            ):
                 # --chmod removes a read permission: the copy replaces the
                 # destination with a stamp a non-root user cannot read.
                 stage.files.pop(target, None)
@@ -2550,6 +2660,11 @@ class ImageModel:
         if shell_form:
             if posixpath.basename(stage.shell[0]) not in SHELLS:
                 raise Unsupported(f"RUN through the shell {stage.shell[0]}")
+            lookup = {"PATH": DEFAULT_PATH, **stage.variables}
+            if self.shadow(stage.shell[0], lookup, stage.files, stage, stage.workdir):
+                raise Unsupported(
+                    f"RUN through the shell {stage.shell[0]}, a file the build wrote"
+                )
             shell.run(command)
         elif command:
             shell._statements([*command, "\n"])
@@ -2639,6 +2754,10 @@ class ImageModel:
         words = list(argv)
         while words and posixpath.basename(words[0]) in (*COMMAND_PREFIXES, "env"):
             name = posixpath.basename(words[0])
+            external = name in EXTERNAL_PREFIXES or "/" in words[0]
+            if external and self.shadow(words[0], env, files, self.final, cwd):
+                # A wrapper the build wrote under this name runs instead.
+                break
             words = words[1:]
             if name == "env":
                 words, assigned, unset = env_prefix(words, {}, set())
@@ -2777,7 +2896,14 @@ class ImageModel:
                         if not ignore_env and env.get("PYTHONSAFEPATH"):
                             safe_path = True
                         main_dir = self._module_dir(
-                            value, cwd, env, files, safe_path, ignore_env, no_site
+                            value,
+                            cwd,
+                            env,
+                            files,
+                            safe_path,
+                            ignore_env,
+                            no_site,
+                            self.final.replaced,
                         )
                         return self._readable(main_dir, cwd)
                     if letter in "WX":
@@ -2805,7 +2931,9 @@ class ImageModel:
         return sorted(set(anchors))
 
     @staticmethod
-    def _module_dir(module, cwd, env, files, safe_path, ignore_env, no_site=False):
+    def _module_dir(
+        module, cwd, env, files, safe_path, ignore_env, no_site=False, replaced=()
+    ):
         parts = module.split(".")
         if not all(part.isidentifier() for part in parts):
             raise Unsupported(f"python -m {module}")
@@ -2824,13 +2952,39 @@ class ImageModel:
             bases.append(entry)
         if not no_site:
             bases.append(SITE_PACKAGES)
-        for base in bases:
-            path = posixpath.join(base, *parts)
-            if f"{path}/__main__.py" in files:
-                return path
-            if f"{path}.py" in files:
-                return posixpath.dirname(path)
-        raise Unsupported(f"module {module} is not a file of the image model")
+        missing = Unsupported(f"module {module} is not a file of the image model")
+
+        def find(names, search):
+            # As the import system: in each entry a package with __init__.py or
+            # a module file wins at once; a directory without __init__.py is a
+            # namespace portion, used only when no entry has either.
+            name, rest = names[0], names[1:]
+            portions = []
+            for base in search:
+                path = posixpath.join(base, name)
+                if path in replaced or f"{path}.py" in replaced:
+                    raise Unsupported(
+                        f"python -m {module}: {path} holds what a build command wrote"
+                    )
+                if f"{path}/__init__.py" in files:
+                    portions = [path]
+                    break
+                if f"{path}.py" in files:
+                    if rest:
+                        raise missing
+                    return base
+                if any(f.startswith(path + "/") for f in files):
+                    portions.append(path)
+            if not portions:
+                raise missing
+            if rest:
+                return find(rest, portions)
+            for portion in portions:
+                if f"{portion}/__main__.py" in files:
+                    return portion
+            raise missing
+
+        return find(parts, bases)
 
 
 def check_image(image, connector_dir, dockerfile, build_args=None):
