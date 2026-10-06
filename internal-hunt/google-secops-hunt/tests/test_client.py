@@ -300,6 +300,28 @@ def test_run_rule_keeps_the_events_within_the_run_budget(requests_mock):
     assert (result.detections, result.truncated) == (2, True)
 
 
+def test_run_rule_keeps_one_event_of_every_detection(requests_mock):
+    # Given a detection naming four events, then another one, for a budget of four events
+    def detection(name, count):
+        events = [
+            {"event": {"metadata": {"id": f"{name}-{step}"}}} for step in range(count)
+        ]
+        return {
+            "detection": {"id": name, "collectionElements": [{"references": events}]}
+        }
+
+    requests_mock.post(RUN_RULE_URL, json=[detection("de_1", 4), detection("de_2", 1)])
+
+    # When the rule runs
+    result = make_client().run_rule("rule x {}", START, END, 4, RunDeadline(30))
+
+    # Then the second detection keeps its event, so both hits have their key, and
+    # the first one gives up the event the budget no longer holds
+    assert result.event_detections == ["de_1"] * 3 + ["de_2"]
+    assert [event["metadata"]["id"] for event in result.events][-1] == "de_2-0"
+    assert (result.detections, result.truncated) == (2, True)
+
+
 def test_run_rule_accepts_a_single_object(requests_mock):
     # Given an answer holding a single progress object
     requests_mock.post(RUN_RULE_URL, json={"progressPercent": 100})

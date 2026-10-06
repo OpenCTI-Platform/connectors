@@ -240,9 +240,7 @@ class SecOpsClient(HuntApiClient):
             },
         )
         items = answer if isinstance(answer, list) else [answer]
-        events: list[dict[str, Any]] = []
-        event_detections: list[str] = []
-        detections = 0
+        found: list[tuple[str, list[dict[str, Any]]]] = []
         truncated = False
         for item in items:
             if not isinstance(item, dict):
@@ -260,18 +258,22 @@ class SecOpsClient(HuntApiClient):
                 truncated = True
             detection = item.get("detection")
             if isinstance(detection, dict):
-                detections += 1
-                detection_events = _detection_events(detection)
-                # maxResults counts detections, and one detection can name many events
-                room = max(max(1, max_results) - len(events), 0)
-                if len(detection_events) > room:
-                    detection_events = detection_events[:room]
-                    truncated = True
-                events.extend(detection_events)
-                event_detections.extend(
-                    [_detection_label(detection)] * len(detection_events)
+                found.append(
+                    (_detection_label(detection), _detection_events(detection))
                 )
-        return SearchResult(events, detections, truncated, event_detections)
+        # maxResults counts detections, and one detection can name many events: each
+        # detection keeps one event, so that every hit has its key, and the budget
+        # left goes to the other events in order
+        extra = max(max(1, max_results) - len(found), 0)
+        events: list[dict[str, Any]] = []
+        event_detections: list[str] = []
+        for label, detection_events in found:
+            kept = detection_events[: 1 + extra]
+            extra -= len(kept) - 1
+            truncated = truncated or len(kept) < len(detection_events)
+            events.extend(kept)
+            event_detections.extend([label] * len(kept))
+        return SearchResult(events, len(found), truncated, event_detections)
 
 
 def _detection_label(detection: dict[str, Any]) -> str:
