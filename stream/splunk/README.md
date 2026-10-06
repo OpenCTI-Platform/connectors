@@ -228,7 +228,9 @@ does not exist), and hits are counted with a sighting of the indicator on that e
 - **Hits**: Splunk does not match the KV Store content against your events by itself. Hits are read from a saved search
   you define, visible in the `SPLUNK_OWNER` / `SPLUNK_APP` namespace, run as a oneshot job over the time range of each
   hit collection (since the previous run). Each result carries `opencti_id` (the KV Store `_key`) or `value` (the
-  matched observable value), `_time` and optionally `count`; at most 10,000 results are read per run, oldest first
+  matched observable value), `_time` and optionally `count`. A result with an `opencti_id` is a hit of that indicator
+  only (none when it is not deployed); a result with a `value` alone is a hit of every deployed indicator carrying
+  it. At most 10,000 results are read per run, oldest first
   (`| sort 0 _time` is appended), and when the limit is reached the next run resumes at the newest result read (when
   10,000 results or more share a single time, the hits of that instant are a lower bound and the next run starts just
   after it). A result

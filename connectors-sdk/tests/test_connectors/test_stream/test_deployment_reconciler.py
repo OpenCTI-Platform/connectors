@@ -2174,6 +2174,43 @@ def test_a_hit_matched_by_value_credits_every_indicator_carrying_it(
     ) == ["a", "b"]
 
 
+def test_a_hit_naming_another_object_is_not_credited_by_value(
+    graphql_helper, make_reporter, router, list_nodes, node_factory
+):
+    """A hit carrying an OpenCTI id or a vendor id no live deployment holds (a
+    withdrawn indicator, an observable item) is no hit of the indicators sharing
+    its value: the indicator matched by its own item counts its hit once."""
+    list_nodes(
+        node_factory(indicator_id="a", status="active", standard_id="indicator--a")
+    )
+    adapter = FakeAdapter(
+        vendor=[VendorIndicator(indicator_id="a")],
+        hits=[
+            VendorHit(
+                timestamp=NOW - timedelta(minutes=5),
+                indicator_id="withdrawn",
+                value="198.51.100.7",
+            ),
+            VendorHit(
+                timestamp=NOW - timedelta(minutes=4),
+                external_id="observable-item",
+                value="198.51.100.7",
+            ),
+            VendorHit(
+                timestamp=NOW - timedelta(minutes=4),
+                indicator_id="a",
+                value="198.51.100.7",
+            ),
+        ],
+    )
+    reconciler = make_reconciler(make_reporter(graphql_helper), adapter)
+
+    assert reconciler.run_once().hits_reported == 1
+    (call,) = router.calls_of("IndicatorReportHits(")
+    assert call["indicatorId"] == "a"
+    assert call["count"] == 1
+
+
 def test_a_deployment_removed_by_the_run_gets_no_hit_of_a_shared_value(
     graphql_helper, make_reporter, router, list_nodes, node_factory
 ):

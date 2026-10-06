@@ -231,8 +231,9 @@ class DeploymentPushAdapter(ABC):
                 passed to adapters that return one.
 
         Returns:
-            The hits, matched to deployments by indicator id, vendor id or value. A
-            capped read returns a ``HitCollection`` telling how far it is complete.
+            The hits, matched to deployments by indicator id, vendor id or value; a
+            hit carrying an id is only matched on it, never on its value. A capped
+            read returns a ``HitCollection`` telling how far it is complete.
             An adapter returning ``HitCollection.resume`` also accepts the keyword
             argument ``resume``: it is called again with it to continue a read capped
             at its very start.
@@ -1361,13 +1362,17 @@ class DeploymentReconciler:
             if timestamp is None or hit.count < 1:
                 continue
             identifier = normalize_value(hit.indicator_id)
-            value = normalize_value(hit.value)
-            matched = index.find_all(
-                [identifier] if identifier else [], hit.external_id, []
-            )
-            if not matched and value:
+            external_id = normalize_value(hit.external_id)
+            if identifier or external_id:
+                # A hit naming an indicator that is not live (withdrawn, or an item of
+                # another object) is not a hit of the indicators sharing its value.
+                matched = index.find_all(
+                    [identifier] if identifier else [], external_id, []
+                )
+            else:
                 # A matched value is a hit of every indicator carrying it.
-                matched = index.by_value.get(value, [])
+                value = normalize_value(hit.value)
+                matched = index.by_value.get(value, []) if value else []
             for deployment in matched:
                 watermark = self._hit_watermark(deployment)
                 if watermark is not None and timestamp <= watermark:
