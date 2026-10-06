@@ -79,7 +79,7 @@ This documentation covers three primary connector types:
 | **Internal Enrichment** | Enrich entities within OpenCTI with additional data      | IP/domain reputation, vulnerability enrichment, entity analysis |
 | **Stream**              | Listen to OpenCTI events and sync to external platforms  | SIEM integration, ticketing systems, real-time synchronization  |
 
-### What is a verified connector?
+### What Is a Verified Connector?
 
 Verified connectors are connectors that have been reviewed and validated by the Integrations Engineering and Product teams. 
 They meet all the requirements described in this document, are available for installation directly from the 
@@ -89,7 +89,7 @@ Verified connectors are also end-to-end tested by the Product team so, if your c
 to be tested, please let us know on [Slack](https://filigran-community.slack.com/archives/C06CC3T5Z37) and we will get 
 back to you privately to figure out the best way to move forward together.
 
->To be eligible for Verified status, a connector must comply with every guideline defined in this contributing guide.
+> To be eligible for Verified status, a connector must comply with every guideline defined in this contributing guide.
 
 ## Prerequisites
 
