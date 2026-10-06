@@ -32,16 +32,17 @@ def tar_archive(*names):
     return payload.getvalue()
 
 
-def make_connector(root, files, path="external-import/sample"):
+def make_connector(root, files, path="external-import/sample", src=True):
+    """A connector with ``files``, and a ``src/main.py`` unless ``src`` is false."""
     connector = root / path
-    for name, content in {"src/main.py": "", **files}.items():
+    connector.mkdir(parents=True, exist_ok=True)
+    for name, content in {**({"src/main.py": ""} if src else {}), **files}.items():
         target = connector / name
         target.parent.mkdir(parents=True, exist_ok=True)
         if isinstance(content, bytes):
             target.write_bytes(content)
         else:
             target.write_text(content, encoding="utf-8")
-    (connector / "src").mkdir(parents=True, exist_ok=True)
     return connector
 
 
@@ -49,8 +50,8 @@ def result(root, connector, ubi9=()):
     return check.check_connector(connector, root, set(ubi9))
 
 
-def single(root, files):
-    [image] = result(root, make_connector(root, files))
+def single(root, files, src=True):
+    [image] = result(root, make_connector(root, files, src=src))
     return image
 
 
@@ -653,12 +654,34 @@ PACKAGED_DOCKERFILE = (
 
 
 def packaged(root, packaging, dockerfile=PACKAGED_DOCKERFILE, ignore=None, init=True):
+    """A flat-layout packaged connector: its package at the top, no src/
+    directory (which would make setuptools' automatic discovery use src/)."""
     files = {"Dockerfile": dockerfile, "sample_connector/__main__.py": "", **packaging}
     if init:
         files["sample_connector/__init__.py"] = ""
     if ignore is not None:
         files[".dockerignore"] = ignore
-    return single(root, files)
+    return single(root, files, src=False)
+
+
+@pytest.mark.parametrize(
+    "find, reason",
+    [
+        # Copilot review of 08:47 UTC: automatic discovery takes the packages of
+        # src/ when it exists, and none of the top level.
+        ("", "not supported: module sample_connector is not a file of the image model"),
+        # A find option is not automatic discovery: its roots are read as given.
+        ('[tool.setuptools.packages.find]\nwhere = ["."]\n', None),
+    ],
+)
+def test_automatic_discovery_takes_the_src_layout(tmp_path, find, reason):
+    data = '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    image = packaged(tmp_path, {"pyproject.toml": find + data, "src/helper.py": ""})
+    if reason:
+        assert not image.covered
+        assert image.reason == reason
+    else:
+        assert image.covered, image.reason
 
 
 @pytest.mark.parametrize(
@@ -697,6 +720,22 @@ def test_installed_package_reads_no_stamp_above_site_packages(tmp_path):
         tmp_path, {"pyproject.toml": "[project]\nname = 'sample'\n"}, dockerfile
     )
     assert not image.covered, image.reason
+
+
+def test_a_stamp_above_the_physical_site_packages_is_reported(tmp_path):
+    # Copilot review of 09:00 UTC: pycti reaches /usr/local from a package in
+    # /usr/local/lib/python3.12/site-packages, but whether the interpreter
+    # installs there is not known to the image model.
+    dockerfile = PACKAGED_DOCKERFILE.replace(
+        "CMD", "COPY .connector_version.json /usr/local/\nWORKDIR /tmp\nCMD"
+    )
+    image = packaged(
+        tmp_path, {"pyproject.toml": "[project]\nname = 'sample'\n"}, dockerfile
+    )
+    assert not image.covered
+    assert image.reason.startswith(
+        "stamp at /usr/local/.connector_version.json: pycti reads it only from"
+    ), image.reason
 
 
 def test_module_also_in_the_user_site_packages(tmp_path):
@@ -1533,6 +1572,19 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             'COPY src /opt/src\nRUN true\nCMD ["python3", "/opt/src/main.py"]\n',
             "not supported: bash with BASH_ENV set",
         ),
+        # Copilot review of 09:00 UTC: bash turns on the options BASHOPTS and
+        # SHELLOPTS list (dotglob makes * match the stamp).
+        (
+            'FROM python:3.12-alpine\nENV BASHOPTS=dotglob\nSHELL ["/bin/bash", "-c"]\n'
+            "COPY src /opt/src\nRUN rm -rf /opt/src/*\nCOPY src/main.py /opt/src/\n"
+            'CMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: bash with BASHOPTS set",
+        ),
+        (
+            'FROM python:3.12-alpine\nENV SHELLOPTS=noglob\nSHELL ["/bin/bash", "-c"]\n'
+            'COPY src /opt/src\nRUN true\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: bash with SHELLOPTS set",
+        ),
         # Copilot review of 04:10 UTC: shell options that change what a command
         # does (bash dotglob makes * match the stamp).
         (
@@ -2318,6 +2370,31 @@ def test_command_substitution_in_an_entry_script(tmp_path):
         "entrypoint.sh": '#!/bin/sh\nUNUSED="$(rm -f /opt/sample/.connector_version.json)"\ncd /opt/sample\nexec python3 main.py\n',
     }
     assert not single(tmp_path, files).covered
+
+
+@pytest.mark.parametrize(
+    "line, reason",
+    [
+        ("#!/usr/bin/env python3", "stamp at /opt/sample/.connector_version.json"),
+        # Copilot review of 09:00 UTC: env -S runs python with arguments of its
+        # own, here inline code instead of the script.
+        (
+            "#!/usr/bin/env -S python3 -c 'import pycti'",
+            "not supported: interpreter line '#!/usr/bin/env -S python3 -c 'import pycti''",
+        ),
+        (
+            "#!/usr/bin/env PYTHONSAFEPATH=1 python3",
+            "not supported: interpreter line '#!/usr/bin/env PYTHONSAFEPATH=1 python3'",
+        ),
+    ],
+)
+def test_env_interpreter_line(tmp_path, line, reason):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/sample\n"
+        'COPY run.py /opt/sample/run.py\nWORKDIR /tmp\nCMD ["/opt/sample/run.py"]\n',
+        "run.py": line + "\n",
+    }
+    assert single(tmp_path, files).reason == reason
 
 
 def test_workflow_watches_every_file_the_check_reads():

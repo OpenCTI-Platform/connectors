@@ -1096,6 +1096,10 @@ NATIVE_SITE_PACKAGES = re.compile(
     r"^(?:/usr(?:/local)?|/opt/[^/]+|/[^/]*venv[^/]*)/lib(?:64)?/python3(?:\.\d+)?"
     r"/(?:site|dist)-packages(?=/|$)"
 )
+# The directories between such a site-packages and its prefix.
+NATIVE_SITE_PARENT = re.compile(
+    r"^(?:/usr(?:/local)?|/opt/[^/]+|/[^/]*venv[^/]*)(?:/lib(?:64)?(?:/python3(?:\.\d+)?)?)?$"
+)
 NATIVE_SITE_ROOTS = ("/usr/local/lib/python3", "/usr/lib/python3", "/usr/lib64/python3")
 
 
@@ -1248,6 +1252,12 @@ class PackagingConfig:
             self.packages = []
         if parser.has_option("options", "package_dir"):
             self.unsupported = self.unsupported or "package_dir of setuptools"
+
+    @property
+    def automatic(self):
+        """Whether setuptools discovers the packages itself: no packages, find
+        or modules option given."""
+        return self.packages is None and self.namespaces is None
 
     def installs(self, package, has_init):
         if self.packages is not None:
@@ -1594,9 +1604,13 @@ def check_shell_options(options):
 
 
 def check_shell_environment(program, env):
-    """bash runs the file of BASH_ENV before any script it is not interactive for."""
-    if posixpath.basename(program or "") == "bash" and env.get("BASH_ENV"):
-        raise Unsupported("bash with BASH_ENV set")
+    """bash runs the file of BASH_ENV before any script it is not interactive for,
+    and turns on the options BASHOPTS and SHELLOPTS list (dotglob, noglob...)."""
+    if posixpath.basename(program or "") != "bash":
+        return
+    for name in ("BASH_ENV", "BASHOPTS", "SHELLOPTS"):
+        if env.get(name):
+            raise Unsupported(f"bash with {name} set")
 
 
 def env_prefix(words, assigned, unset):
@@ -1646,13 +1660,12 @@ def interpreter_of(text, model=None, env=None, files=None, stage=None):
     if posixpath.basename(interpreter[0]) in SHELLS:
         check_shell_options(interpreter[1:])
     if posixpath.basename(interpreter[0]) == "env":
-        rest = [
-            a
-            for a in interpreter[1:]
-            if not a.startswith("-") and not ASSIGNMENT.match(a)
-        ]
-        if not rest:
-            return ""
+        # The kernel hands env the rest of the line as one argument: only a
+        # lone program name is read as such (env -S splits it, and then the
+        # program runs with arguments of its own).
+        rest = interpreter[1:]
+        if len(rest) != 1 or rest[0].startswith("-") or ASSIGNMENT.match(rest[0]):
+            raise Unsupported(f"interpreter line '{text.splitlines()[0]}'")
         programs.append(rest[0])
     if model is not None:
         for program in programs:
@@ -3594,7 +3607,18 @@ class ImageModel:
             return
         self.check_packaging(files, install_dir)
         config = None
-        for root in ["."] + [r for r in self._roots(texts) if r != "."]:
+        # Automatic discovery takes the packages of src/ when the project has
+        # that directory (the src layout), and none of the top level.
+        src_prefix = posixpath.join(install_dir, "src") + "/"
+        src_layout = self._automatic(texts) and any(
+            path.startswith(src_prefix) for path in files
+        )
+        roots = (
+            ["src"]
+            if src_layout
+            else ["."] + [r for r in self._roots(texts) if r != "."]
+        )
+        for root in roots:
             base = posixpath.normpath(posixpath.join(install_dir, root))
             names = sorted(
                 {
@@ -3609,9 +3633,9 @@ class ImageModel:
                 config = config or PackagingConfig(texts)
                 package_dir = f"{base}/{package}"
                 has_init = f"{package_dir}/__init__.py" in files
-                if root not in config.package_roots or not config.installs(
-                    package, has_init
-                ):
+                if (
+                    not src_layout and root not in config.package_roots
+                ) or not config.installs(package, has_init):
                     continue
                 for path, origin in list(files.items()):
                     if path.startswith(package_dir + "/") and path.endswith(".py"):
@@ -3631,6 +3655,13 @@ class ImageModel:
             return PackagingConfig(texts).package_roots
         except Unsupported:
             return ["."]
+
+    @staticmethod
+    def _automatic(texts):
+        try:
+            return PackagingConfig(texts).automatic
+        except Unsupported:
+            return False
 
     def start(self):
         """Python processes of the start command: (directories pycti reads,
@@ -3965,6 +3996,21 @@ def coverage(image, model, anchors, files):
             False,
             f"stamp at {found[0]} is below VOLUME {volume_of(found[0])}: a mount at run time hides it",
         )
+    if any(
+        anchor == SITE_PACKAGES or anchor.startswith(SITE_PACKAGES + "/")
+        for anchor in anchors
+    ):
+        # pycti also walks up from the physical site-packages, a path the model
+        # does not know (the prefix, a virtual environment, the python version).
+        above = [s for s in stamps if NATIVE_SITE_PARENT.match(posixpath.dirname(s))]
+        if above:
+            return Result(
+                image,
+                False,
+                f"stamp at {above[0]}: pycti reads it only from the site-packages"
+                " below it, a path the image model does not know; ship the stamp"
+                " in the package",
+            )
     if stamps:
         return Result(
             image, False, f"stamp at {stamps[0]}, pycti reads {sorted(anchors)}"
