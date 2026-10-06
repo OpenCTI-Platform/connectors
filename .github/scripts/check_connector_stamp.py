@@ -96,6 +96,11 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 STAMP = ".connector_version.json"
+# pycti reads, in each directory it walks, the manifest of a source checkout
+# before the stamp, and takes the first one that gives a usable version.
+MANIFEST = "__metadata__/connector_manifest.json"
+IDENTITY_FILES = (MANIFEST, STAMP)
+VERSION_SENTINELS = frozenset({"", "unknown", "none", "null", "undefined"})
 CONNECTOR_TYPES = (
     "external-import",
     "internal-enrichment",
@@ -3936,10 +3941,12 @@ class ImageModel:
 
     @staticmethod
     def _readable(main_dir, cwd):
+        # In the order pycti walks them: the directory of __main__, then the
+        # working directory.
         anchors = [d for d in (main_dir, cwd) if d is not None]
         if not anchors:
             raise Unsupported("python started in an unknown working directory")
-        return sorted(set(anchors))
+        return list(dict.fromkeys(anchors))
 
     @staticmethod
     def _module_dir(
@@ -4034,31 +4041,73 @@ def check_image(image, connector_dir, dockerfile, build_args=None):
     return missing[0]
 
 
+def pycti_version(text):
+    """The version pycti takes from an identity file, None when it skips the file
+    (not a JSON object, or no usable version)."""
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    value = data.get("version") or data.get("container_version")
+    version = "" if value is None else str(value).strip()
+    if version.lower() in VERSION_SENTINELS or version.startswith("$"):
+        return None
+    return "".join(c for c in version if c.isalnum() or c in "._+-")[:64] or None
+
+
 def coverage(image, model, anchors, files):
-    """Whether a python process reading ``anchors`` finds a stamp in ``files``."""
-    readable = {directory for anchor in anchors for directory in ancestors(anchor)}
+    """Whether a python process reading ``anchors`` takes its identity from a
+    stamp the build wrote: pycti keeps the first identity file it reads."""
     stamps = sorted(
         path
         for path, origin in files.items()
         if origin[0] == "stamp" and posixpath.basename(path) == STAMP
     )
-    found = [stamp for stamp in stamps if posixpath.dirname(stamp) in readable]
 
-    def volume_of(stamp):
+    def volume_of(path):
         return next(
-            (v for v in model.final.volumes if stamp.startswith(v.rstrip("/") + "/")),
+            (v for v in model.final.volumes if path.startswith(v.rstrip("/") + "/")),
             None,
         )
 
-    visible = [stamp for stamp in found if volume_of(stamp) is None]
-    if visible:
-        return Result(image, True, f"stamp at {visible[0]}")
-    if found:
-        return Result(
-            image,
-            False,
-            f"stamp at {found[0]} is below VOLUME {volume_of(found[0])}: a mount at run time hides it",
-        )
+    for directory in (d for anchor in anchors for d in ancestors(anchor)):
+        for name in IDENTITY_FILES:
+            path = posixpath.join(directory, name)
+            origin = files.get(path)
+            if origin is None and not model.final.written(path):
+                continue
+            volume = volume_of(path)
+            if volume is not None:
+                # A mount decides what pycti reads there.
+                what = "stamp at" if origin and origin[0] == "stamp" else "pycti reads"
+                return Result(
+                    image,
+                    False,
+                    f"{what} {path} is below VOLUME {volume}: a mount at run time hides it",
+                )
+            if origin is None:
+                return Result(
+                    image,
+                    False,
+                    f"pycti reads {path} before any build stamp, and a build step put content the model does not know there",
+                )
+            if origin[0] == "stamp":
+                return Result(image, True, f"stamp at {path}")
+            if origin[0] == "link":
+                return Result(
+                    image,
+                    False,
+                    f"pycti reads {path} before any build stamp, a link of the build context ({origin[1]})",
+                )
+            version = pycti_version(model.context.read(origin) or "")
+            if version is not None:
+                return Result(
+                    image,
+                    False,
+                    f"pycti reads {path} ({origin[1]} of the build context, version '{version}') before any build stamp",
+                )
     if any(
         anchor == SITE_PACKAGES or anchor.startswith(SITE_PACKAGES + "/")
         for anchor in anchors
