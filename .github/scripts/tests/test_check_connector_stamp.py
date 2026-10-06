@@ -103,8 +103,8 @@ def test_entrypoint_script_run_directly_with_a_conditional_without_cd(tmp_path):
             "Dockerfile": 'FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY entrypoint.sh /\nENTRYPOINT ["/entrypoint.sh"]\n',
             "entrypoint.sh": (
                 "#!/bin/sh\nset -eu\ncd /opt/sample || exit 1\n"
-                "if ! command -v helper >/dev/null 2>&1; then\n  echo 'missing helper' >&2\n  exit 1\nfi\n"
-                "helper_start\nexec python3 main.py\n"
+                "if ! command -v unogenerator_start >/dev/null 2>&1; then\n  echo 'missing listener' >&2\n  exit 1\nfi\n"
+                "unogenerator_start\nexec python3 main.py\n"
             ),
         },
     )
@@ -295,7 +295,8 @@ def test_stamp_restored_after_the_code_directory_is_removed(tmp_path):
         # Programs working on their working directory without naming it.
         ("cd /opt/src && git clean -fdx", False),
         ("cd /opt/src && make clean", False),
-        ("cd /tmp && npm prune", True),
+        # A program whose effect on the files is not known is reported.
+        ("cd /tmp && npm prune", False),
         # Copilot review of 00:11 UTC: each command sees the variables the
         # preceding ones left, with the shell quoting rules.
         ('export APP=/opt/src && rm -f "$APP/.connector_version.json"', False),
@@ -308,9 +309,9 @@ def test_stamp_restored_after_the_code_directory_is_removed(tmp_path):
             "cd /opt/src && python3 -c 'import os; os.unlink(\".connector_version.json\")'",
             False,
         ),
-        ("cd /tmp && python3 -c 'print(\".connector_version.json\")'", True),
-        # A "$" of code is not a shell variable; an unknown shell variable in code is reported.
-        ("python3 -c 'import re; re.compile(\"^/opt/[a-z]+$\")'", True),
+        # Python code run at build time is reported, whatever it does, unless audited.
+        ("cd /tmp && python3 -c 'print(\".connector_version.json\")'", False),
+        ("python3 -c 'import re; re.compile(\"^/opt/[a-z]+$\")'", False),
         ("python3 -c \"import shutil; shutil.rmtree('$TARGET/src')\"", False),
         # Copilot review of 00:11 UTC: mv replaces its destination.
         ("touch /tmp/empty && mv /tmp/empty /opt/src/.connector_version.json", False),
@@ -823,7 +824,7 @@ def test_python_script_rewritten_by_a_build_step_is_reported(tmp_path):
         },
     )
     assert image.reason == (
-        "not supported: python script /opt/src/main.py is not a file of the image model"
+        "not supported: 'sed' is not a command the model knows the effects of on the image files"
     )
 
 
@@ -850,6 +851,151 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
     assert image.covered is covered, image.reason
 
 
+@pytest.mark.parametrize(
+    "instructions, covered",
+    [
+        # Copilot review of 00:37 UTC: venv --clear empties its directory.
+        ("RUN python3 -m venv --clear --without-pip /opt/src", False),
+        ("RUN python3 -m venv /opt/venv", True),
+        # Copilot review of 00:37 UTC: a variable set in a branch is no longer known.
+        (
+            'ENV APP=/opt/src\nRUN if false; then APP=/tmp; fi; rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        ("ENV APP=/opt/src\nRUN true || export APP=/tmp; rm -f $APP/x", False),
+        ('ENV APP=/opt/src\nRUN APP=/tmp; rm -f "$APP/.connector_version.json"', True),
+        # Copilot review of 00:37 UTC: python modules and code run at build time.
+        ("RUN python3 -m clean_stamp", False),
+        ("RUN python3 -m compileall /opt/src", True),
+        # Copilot review of 00:37 UTC: pip options that write a file.
+        (
+            "RUN pip install --report /opt/src/.connector_version.json -r /opt/src/requirements.txt",
+            False,
+        ),
+        ("RUN pip install --log=/opt/src/.connector_version.json requests", False),
+        (
+            "RUN pip install --no-cache-dir --log /tmp/pip.log -r /opt/src/requirements.txt",
+            True,
+        ),
+        # Copilot review of 00:37 UTC: one ENV expands with the values before it.
+        (
+            'ENV APP=/opt/src\nENV APP=/tmp CLEAN=$APP\nRUN rm -f "$CLEAN/.connector_version.json"',
+            False,
+        ),
+        (
+            'ENV APP=/opt/src\nENV APP=/tmp\nENV CLEAN=$APP\nRUN rm -f "$CLEAN/.connector_version.json"',
+            True,
+        ),
+        # Closed world: package managers, but not when they install below another root.
+        ("RUN apk add --no-cache git && apt-get install -y curl", True),
+        ("RUN apk add --root /opt/src git", False),
+        ("RUN wget -O /opt/src/.connector_version.json https://example.com/x", False),
+        ("RUN wget -P /tmp https://example.com/.connector_version.json", True),
+        (
+            "RUN curl -fsSL -o /opt/src/.connector_version.json https://example.com/x",
+            False,
+        ),
+    ],
+)
+def test_build_steps(tmp_path, instructions, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                f"FROM python:3.12-alpine\nCOPY src /opt/src\n{instructions}\n"
+                'COPY src/main.py /opt/src/main.py\nCMD ["python3", "/opt/src/main.py"]\n'
+            )
+        },
+    )
+    assert image.covered is covered, image.reason
+
+
+def test_audited_build_scripts_only(tmp_path):
+    # A build-time script runs only when its exact text was reviewed.
+    audited = (
+        Path(__file__).resolve().parents[3]
+        / "internal-import-file/import-file-stix/src/stixmarx_warmup.py"
+    )
+    files = {
+        "Dockerfile": (
+            "FROM python:3.12-alpine\nCOPY src /opt/src\nRUN python3 /opt/src/warmup.py\n"
+            'CMD ["python3", "/opt/src/main.py"]\n'
+        ),
+        "src/warmup.py": audited.read_text(encoding="utf-8"),
+    }
+    assert single(tmp_path / "audited", files).covered
+    files[
+        "src/warmup.py"
+    ] += "\nimport os\nos.remove('/opt/src/.connector_version.json')\n"
+    image = single(tmp_path / "changed", files)
+    assert image.reason.startswith(
+        "not supported: build-time script /opt/src/warmup.py is not an audited script"
+    )
+
+
+def test_installed_package_deleted_by_its_native_path(tmp_path):
+    # Copilot review of 00:37 UTC: the installed packages also have their real path.
+    pyproject = {
+        "pyproject.toml": '[tool.setuptools.package-data]\nsample_connector = [".connector_version.json"]\n'
+    }
+    deleted = PACKAGED_DOCKERFILE.replace(
+        "&& rm -rf /opt/build",
+        "&& rm -rf /opt/build && rm -f /usr/local/lib/python3.12/site-packages/sample_connector/.connector_version.json",
+    )
+    assert not packaged(tmp_path / "file", pyproject, dockerfile=deleted).covered
+    wildcard = PACKAGED_DOCKERFILE.replace(
+        "&& rm -rf /opt/build",
+        "&& rm -rf /opt/build /usr/local/lib/python3*/site-packages/sample_*",
+    )
+    assert not packaged(tmp_path / "glob", pyproject, dockerfile=wildcard).covered
+    # Copilot review of 00:37 UTC: python -S does not import the installed packages.
+    no_site = PACKAGED_DOCKERFILE.replace('"python", "-m"', '"python", "-S", "-m"')
+    image = packaged(tmp_path / "nosite", pyproject, dockerfile=no_site)
+    assert (
+        image.reason
+        == "not supported: module sample_connector is not a file of the image model"
+    )
+
+
+@pytest.mark.parametrize(
+    "command, covered",
+    [
+        # Copilot review of 00:37 UTC: env -u removes the variable for the command.
+        ('["sh", "-c", "env -u PYTHONPATH python3 -m src"]', False),
+        ('["env", "-u", "PYTHONPATH", "python3", "-m", "src"]', False),
+        ('["sh", "-c", "python3 -m src"]', True),
+    ],
+)
+def test_env_unset_reaches_the_command(tmp_path, command, covered):
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine\nENV PYTHONPATH=/opt/connector\nCOPY src /opt/connector/src\n"
+                f"WORKDIR /tmp\nCMD {command}\n"
+            ),
+            "src/__main__.py": "",
+        },
+    )
+    assert image.covered is covered, image.reason
+
+
+def test_stage_copy_wildcard_matches_a_leading_dot(tmp_path):
+    # Copilot review of 00:37 UTC: Docker wildcards match a leading dot.
+    image = single(
+        tmp_path,
+        {
+            "Dockerfile": (
+                "FROM python:3.12-alpine AS builder\nCOPY src /build\n"
+                "FROM python:3.12-alpine\nCOPY --from=builder /build/* /opt/app/\n"
+                'WORKDIR /opt/app\nCMD ["python3", "main.py"]\n'
+            )
+        },
+    )
+    assert image.covered, image.reason
+    assert image.reason == "stamp at /opt/app/.connector_version.json"
+
+
 def test_entry_script_handing_over_to_another_script(tmp_path):
     files = {
         "Dockerfile": 'FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY entrypoint.sh /\nENTRYPOINT ["/entrypoint.sh"]\n',
@@ -859,25 +1005,27 @@ def test_entry_script_handing_over_to_another_script(tmp_path):
     assert single(tmp_path, files).covered
 
 
-def test_every_python_process_of_the_entry_script_needs_the_stamp(tmp_path):
-    # Which python process is the connector is not known: each must read a stamp.
+@pytest.mark.parametrize(
+    "script",
+    [
+        "#!/bin/sh\npython3 /usr/local/share/warmup.py\ncd /opt/sample\nexec python3 main.py\n",
+        "#!/bin/sh\ncd /opt/sample\npython3 warmup.py\npython3 main.py\n",
+    ],
+)
+def test_python_process_after_another_one_is_reported(tmp_path, script):
+    # What the first python process does to the files is not modelled.
     files = {
         "Dockerfile": (
             "FROM python:3.12-alpine\nCOPY src /opt/sample\nCOPY src/warmup.py /usr/local/share/\n"
             'COPY entrypoint.sh /\nENTRYPOINT ["/entrypoint.sh"]\n'
         ),
-        "entrypoint.sh": "#!/bin/sh\npython3 /usr/local/share/warmup.py\ncd /opt/sample\nexec python3 main.py\n",
+        "entrypoint.sh": script,
         "src/warmup.py": "",
     }
     image = single(tmp_path, files)
-    assert not image.covered
-    assert image.reason.startswith("python process 1 of 2: stamp at /opt/sample/")
-    (tmp_path / "external-import/sample/entrypoint.sh").write_text(
-        "#!/bin/sh\ncd /opt/sample\npython3 warmup.py\nexec python3 main.py\nrm -rf /opt/sample\n",
-        encoding="utf-8",
+    assert image.reason == (
+        "not supported: a python process starts after another one whose effects on the files are not modelled"
     )
-    [image] = result(tmp_path, tmp_path / "external-import/sample")
-    assert image.covered
 
 
 def test_script_started_without_exec_is_followed(tmp_path):
