@@ -588,6 +588,18 @@ def test_namespace_package_discovery(tmp_path, find, covered, reason):
         assert image.reason == reason
 
 
+def test_installed_package_reads_no_stamp_above_site_packages(tmp_path):
+    # Copilot review of 04:10 UTC: the installed package lies four levels below
+    # /usr/local, so pycti does not reach a stamp in "/" from it.
+    dockerfile = PACKAGED_DOCKERFILE.replace(
+        "CMD", "COPY .connector_version.json /\nWORKDIR /opt/a/b/c/d/e\nCMD"
+    )
+    image = packaged(
+        tmp_path, {"pyproject.toml": "[project]\nname = 'sample'\n"}, dockerfile
+    )
+    assert not image.covered, image.reason
+
+
 def test_packaged_connector_ships_the_stamp_in_its_package(tmp_path):
     image = packaged(
         tmp_path,
@@ -978,6 +990,24 @@ def test_copy_from_sources_are_read_from_the_stage_root(tmp_path, source, covere
         ("RUN bash -c 'rm -rf /opt/{src,other}'", False),
         ("RUN rm -rf /opt/{src,other}", False),
         ("RUN find /opt/src -name '*.pyc' -exec echo {} +", True),
+        # Copilot review of 04:10 UTC: env options, a command after && that may
+        # not run, pip global options.
+        ("RUN env -S 'rm -f /opt/src/.connector_version.json' true", False),
+        (
+            'ENV APP=/opt/src\nRUN false && APP=/tmp; rm -f "$APP/.connector_version.json"',
+            False,
+        ),
+        (
+            "WORKDIR /opt/src\nRUN false && cd /tmp; rm -f .connector_version.json",
+            False,
+        ),
+        ("WORKDIR /opt/src\nRUN cd /tmp && rm -f .connector_version.json", True),
+        ("RUN pip --log /opt/src/.connector_version.json install requests", False),
+        (
+            "RUN python3 -m pip --log /opt/src/.connector_version.json install requests",
+            False,
+        ),
+        ("RUN pip --no-cache-dir --log /tmp/pip.log install requests", True),
         # Copilot review of 03:54 UTC: <> may write its target; a wildcard
         # chmod that matches a directory needs its search permission.
         ("RUN printf '{}' 1<> /opt/src/.connector_version.json", False),
@@ -1299,6 +1329,18 @@ def test_shell_form_entrypoint_ignores_cmd(tmp_path):
             'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
             "not supported: the escape parser directive",
         ),
+        # Copilot review of 04:10 UTC: shell options that change what a command
+        # does (bash dotglob makes * match the stamp).
+        (
+            'FROM python:3.12-alpine\nSHELL ["/bin/bash", "-O", "dotglob", "-c"]\n'
+            'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
+            "not supported: shell option -O",
+        ),
+        (
+            'FROM python:3.12-alpine\nSHELL ["/bin/bash", "-eux", "-o", "pipefail", "-c"]\n'
+            'COPY src /opt/src\nCMD ["python3", "/opt/src/main.py"]\n',
+            "stamp at /opt/src/.connector_version.json",
+        ),
         # Copilot review of 03:54 UTC: another frontend may read the
         # instructions differently.
         (
@@ -1469,6 +1511,13 @@ def test_copies_from_images_whose_content_is_not_known(tmp_path, dockerfile, cov
             {
                 "wrapper.sh": '#!/bin/sh\nrm -f /opt/sample/.connector_version.json\nexec /usr/local/bin/python3.12 "$@"\n'
             },
+        ),
+        # Copilot review of 04:10 UTC: a COPY into a directory mkdir created.
+        (
+            "FROM python:3.12-alpine\nENV PATH=/opt/tools:$PATH\nCOPY src /opt/sample\n"
+            "RUN mkdir -p /opt/tools\nCOPY --chmod=755 python3 /opt/tools\n"
+            'CMD ["python3", "/opt/sample/main.py"]\n',
+            {"python3": ENV_WRAPPER},
         ),
         # Copilot review of 03:33 UTC: wildcard moves and links, a file of a
         # known image under another name, a RUN mount.
@@ -1768,6 +1817,8 @@ def test_build_semantics_of_docker_and_pip(tmp_path, files, reason):
             {"src/requirements.txt": "requests\n"},
             True,
         ),
+        # A local wheel or source archive: its content is not read.
+        ("RUN pip install /opt/src/dist/sample-1.0-py3-none-any.whl", {}, False),
         # A requirement file the model cannot read.
         ("RUN pip install -r /usr/share/requirements.txt", {}, False),
         # A bind mount of the context shows its files at the target.

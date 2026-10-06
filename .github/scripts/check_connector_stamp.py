@@ -144,7 +144,7 @@ DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 # Dockerfile frontends of the syntax directive the model follows: the official
 # ones, stable or labs.
 REVIEWED_FRONTEND = re.compile(
-    r"^(docker\.io/)?docker/dockerfile(-upstream)?:1(\.\d+)*(-labs)?(@sha256:[0-9a-f]{64})?$"
+    r"^(docker\.io/)?docker/dockerfile(-upstream)?(:1(\.\d+)*(-labs)?)?(@sha256:[0-9a-f]{64})?$"
 )
 # Dockerfile instructions the model reads (LABEL, EXPOSE, USER, MAINTAINER and
 # STOPSIGNAL change neither the files nor the start command; the HEALTHCHECK
@@ -527,6 +527,24 @@ AUDITED_BUILD_SCRIPTS = {
         "external-import/matrix/build_and_install_libolm.sh: builds libolm in /tmp, installs it in /usr/local"
     ),
 }
+# Global pip options (before the command) that take a value.
+PIP_GLOBAL_OPTIONS_WITH_VALUE = frozenset(
+    {
+        "--cache-dir",
+        "--proxy",
+        "--retries",
+        "--timeout",
+        "--exists-action",
+        "--trusted-host",
+        "--cert",
+        "--client-cert",
+        "--use-feature",
+        "--use-deprecated",
+        "--keyring-provider",
+        "--root-user-action",
+        "--progress-bar",
+    }
+)
 PIP_OPTIONS_WITH_VALUE = frozenset(
     {
         "-r",
@@ -589,6 +607,10 @@ def ancestors(directory, depth=STAMP_PARENT_DEPTH):
     found = [directory]
     current = directory
     for _ in range(depth):
+        if current == SITE_PACKAGES:
+            # The installed packages stand for site-packages, which sits deeper:
+            # what lies above it in the model is not where pycti looks.
+            break
         parent = posixpath.dirname(current)
         if parent == current:
             break
@@ -1427,6 +1449,23 @@ def download_outputs(program, args, cwd):
     return [output for output in outputs if output != "-"]
 
 
+def check_shell_options(options):
+    """Options of a shell the model reads its scripts with: -c, and the ones
+    that only stop it on errors or trace it (-e, -u, -x, -o pipefail...)."""
+    i = 0
+    while i < len(options):
+        option = options[i]
+        if option in ("-o", "+o") and i + 1 < len(options):
+            if options[i + 1] not in ("pipefail", "errexit", "nounset", "xtrace"):
+                raise Unsupported(f"shell option {option} {options[i + 1]}")
+            i += 2
+            continue
+        if not re.fullmatch(r"[-+][ceuxv]+", option):
+            # -O dotglob, -l (profile files), -B, ... change what commands do.
+            raise Unsupported(f"shell option {option}")
+        i += 1
+
+
 def env_prefix(words, assigned, unset):
     """``env [-u NAME] [NAME=value] command``: the environment of the command."""
     assigned = dict(assigned)
@@ -1452,8 +1491,12 @@ def env_prefix(words, assigned, unset):
             unset.add(name)
             assigned.pop(name, None)
             words = words[1:]
-        else:
+        elif option == "--":
             words = words[1:]
+            break
+        else:
+            # --split-string and others change which command runs.
+            raise Unsupported(f"env {option}")
     return words, assigned, unset
 
 
@@ -1494,8 +1537,10 @@ def shell_script(args, cwd, files, model, stage=None):
         if not option.startswith("--") and "c" in option[1:]:
             if i + 1 >= len(args):
                 raise Unsupported("'sh -c' without a command")
+            check_shell_options(args[: i + 1])
             return args[i + 1]
         i += 2 if option in ("-o", "+o") else 1
+    check_shell_options(args[:i])
     if i >= len(args):
         return None
     path = image_path(args[i], cwd, "shell script")
@@ -1536,6 +1581,9 @@ class Shell:
         self.references = []
         # Commands of the command substitutions, run once before their command.
         self.substitutions = []
+        # What the commands of the current && / | list changed (see _end_chain).
+        self.chain_variables = set()
+        self.chain_directory = False
 
     def run(self, script):
         if self.nesting > 8:
@@ -1741,6 +1789,8 @@ class Shell:
                     self._command(words, writes, before, token)
                 words, writes, skip = [], [], False
                 before = token if token != "\n" else None
+                if token not in ("&&", "||", "|"):
+                    self._end_chain()
                 if self.ended:
                     return
                 continue
@@ -1796,6 +1846,34 @@ class Shell:
             words.append(token.translate(RESTORE))
         if (words or writes) and not skip:
             self._command(words, writes, before, None)
+        self._end_chain()
+
+    def _end_chain(self):
+        """End of an && / || / | list: what a command that may not have run (after
+        &&) or ran in a subshell (a pipeline part, a background job) changed is no
+        longer known to the commands after the list."""
+        for key in self.chain_variables:
+            self.variables[key] = UNKNOWN
+        if self.chain_directory:
+            self._unknown_directory(
+                "a directory change in an && list, a pipeline or a background job"
+            )
+        self.chain_variables = set()
+        self.chain_directory = False
+
+    def _command(self, words, writes, before, after):
+        uncertain = before in ("&&", "|") or after in ("|", "&")
+        if not uncertain:
+            self._simple_command(words, writes, before, after)
+            return
+        variables, cwd = dict(self.variables), self.cwd
+        self._simple_command(words, writes, before, after)
+        self.chain_variables |= {
+            key
+            for key in {*variables, *self.variables}
+            if variables.get(key) != self.variables.get(key)
+        }
+        self.chain_directory = self.chain_directory or self.cwd != cwd
 
     def _set_options(self, args):
         """set -a / +a (and -o / +o allexport): assignments exported or not."""
@@ -1825,7 +1903,7 @@ class Shell:
                     nested.allexport = self.allexport
                     nested.run(script)
 
-    def _command(self, words, writes, before, after):
+    def _simple_command(self, words, writes, before, after):
         conditional = bool(self.stack) or before == "||"
         self._substitute((*words, *writes), conditional)
         for target in writes:
@@ -2100,6 +2178,9 @@ class Shell:
             variable = args[0][2:] or (args[1] if len(args) > 1 else "")
             self.variables[variable] = UNKNOWN
             return
+        if name == "mkdir":
+            self._mkdir(args)
+            return
         if name in HARMLESS_COMMANDS or name in AUDITED_PROGRAMS:
             return
         if name == "chmod":
@@ -2266,6 +2347,37 @@ class Shell:
         nested.run(text)
         self.cwd = nested.cwd
         self.allexport = nested.allexport
+
+    def _mkdir(self, args):
+        """The directories mkdir creates: a later COPY puts a file inside them; a
+        mode that removes read or search permission hides what they will hold."""
+        mode = None
+        operands = []
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            if arg in ("-m", "--mode"):
+                mode = args[i + 1] if i + 1 < len(args) else None
+                i += 2
+                continue
+            if arg.startswith(("--mode=", "-m")):
+                mode = arg.split("=", 1)[1] if arg.startswith("--") else arg[2:]
+            elif arg == "--":
+                operands += args[i + 1 :]
+                break
+            elif re.fullmatch(r"-[pv]+", arg) or arg in ("--parents", "--verbose"):
+                pass
+            elif arg.startswith("-"):
+                raise Unsupported(f"mkdir {arg}")
+            else:
+                operands.append(arg)
+            i += 1
+        for operand in operands:
+            path = image_path(self._tilde(operand), self.cwd, "mkdir operand")
+            for directory in self_and_parents(path):
+                self.stage.dirs.add(directory)
+            if mode is not None and not harmless_mode([mode], True):
+                self.stage.replaced.add(path)
 
     def _unknown_directory(self, why):
         if self.start:
@@ -2498,6 +2610,18 @@ class Shell:
         """pip: ``install <path>`` records the installed packages; an option that
         writes a file (--report, --log) or into a directory takes it out of the
         model; ``uninstall`` removes installed packages."""
+        # Global options come before the command.
+        while args and args[0].startswith("-"):
+            option, sep, attached = args[0].partition("=")
+            value = attached if sep else (args[1] if len(args) > 1 else None)
+            if option in PIP_WRITE_OPTIONS:
+                self._forget(value, created=True)
+            elif option == "--python":
+                raise Unsupported("pip --python: another interpreter")
+            if option in PIP_WRITE_OPTIONS or option in PIP_GLOBAL_OPTIONS_WITH_VALUE:
+                args = args[1:] if sep else args[2:]
+            else:
+                args = args[1:]
         if not args:
             return
         command, args = args[0], args[1:]
@@ -2548,6 +2672,10 @@ class Shell:
         for path in local:
             if self.stage.written(path):
                 raise Unsupported(f"pip install of {path}, which holds unknown content")
+            if path in self.files or re.search(r"\.(whl|zip|tar(\.\w+)?|tgz)$", path):
+                # A wheel or a source archive of the repository: its content is
+                # not read (a source archive runs its setup.py).
+                raise Unsupported(f"pip install of the local archive {path}")
             # Whether pip installs it or not, it runs the packaging code.
             self.model.check_packaging(self.files, path)
         if editable or conditional:
@@ -2684,6 +2812,7 @@ class ImageModel:
                 shell, shell_form = parse_command(arguments)
                 if shell_form or not shell:
                     raise Unsupported("SHELL not in the JSON form")
+                check_shell_options(shell[1:])
                 stage.shell = shell
             elif instruction == "VOLUME":
                 paths, shell_form = parse_command(expand(arguments, stage.variables))
