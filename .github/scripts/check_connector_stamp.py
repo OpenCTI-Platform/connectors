@@ -141,6 +141,11 @@ BASE_DIRECTORIES = frozenset(
     }
 )
 DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# Dockerfile frontends of the syntax directive the model follows: the official
+# ones, stable or labs.
+REVIEWED_FRONTEND = re.compile(
+    r"^(docker\.io/)?docker/dockerfile(-upstream)?:1(\.\d+)*(-labs)?(@sha256:[0-9a-f]{64})?$"
+)
 # Dockerfile instructions the model reads (LABEL, EXPOSE, USER, MAINTAINER and
 # STOPSIGNAL change neither the files nor the start command; the HEALTHCHECK
 # command must leave the files alone).
@@ -203,7 +208,8 @@ OPERATORS = (
     ">",
 )
 SEPARATORS = frozenset({";", "&&", "||", "|", "&", ";;", "\n"})
-OUTPUT_REDIRECTIONS = frozenset({">", ">>", ">|", "&>", "&>>"})
+# Redirections that may write their target (<> opens it for reading and writing).
+OUTPUT_REDIRECTIONS = frozenset({">", ">>", ">|", "&>", "&>>", "<>"})
 # Quoted or escaped shell punctuation is an argument, not an operator: it is
 # carried through shlex as a private-use character and restored afterwards.
 PUNCTUATION = "();<>|&"
@@ -766,9 +772,15 @@ def logical_lines(text):
         stripped = raw.strip()
         # Parser directives come first ("# syntax=...", "# escape=..."), until
         # the first line that is not one.
-        directive = re.match(r"#\s*([a-zA-Z]+)\s*=", stripped) if directives else None
+        directive = (
+            re.match(r"#\s*([a-zA-Z]+)\s*=\s*(\S*)", stripped) if directives else None
+        )
         if directive and directive.group(1).lower() == "escape":
             raise Unsupported("the escape parser directive")
+        if directive and directive.group(1).lower() == "syntax":
+            # Another frontend may read the instructions differently.
+            if not REVIEWED_FRONTEND.match(directive.group(2)):
+                raise Unsupported(f"the Dockerfile frontend {directive.group(2)}")
         directives = bool(directive)
         if not stripped or stripped.startswith("#"):
             continue
@@ -858,6 +870,17 @@ class BuildContext:
                     self.files[rel] = (kind, rel)
         self.stamps = written_stamps(connector_dir)
         for rel in self.stamps:
+            # The build step writes through a link: where the stamp lands, and
+            # what the copy ships, are not modelled.
+            linked = [
+                parent
+                for parent in [connector_dir / rel, *(connector_dir / rel).parents]
+                if parent != connector_dir
+                and connector_dir in parent.parents
+                and parent.is_symlink()
+            ]
+            if linked:
+                raise Unsupported(f"the stamp {rel} is written through a symbolic link")
             if not ignored_by(rel, rules):
                 self.files[rel] = ("stamp", rel)
         self.dirs = {"."}
@@ -1570,6 +1593,9 @@ class Shell:
         self.processes.extend(
             self.model.launch(words, self.cwd, env, self.files, self.nesting + 1)
         )
+        # What this process does to the files, for any process started after it
+        # (an exec in a nested shell does not end this one), is not known.
+        self.model.foreign_effects = True
 
     @staticmethod
     def _lines(script):
@@ -2081,8 +2107,17 @@ class Shell:
             operands = [a for a in args if a not in CHMOD_OPTIONS][1:]
             for operand in operands:
                 path = image_path(self._tilde(operand), self.cwd, "chmod operand")
-                # A directory also needs its search permission.
-                if not harmless_mode(args, recursive or self._is_dir(path)):
+                # A directory also needs its search permission (a pattern may
+                # match one).
+                directory = self._is_dir(path) or (
+                    bool(GLOB_CHARS.search(path))
+                    and any(
+                        shell_glob_match(path, d)
+                        for f in self.files
+                        for d in self_and_parents(posixpath.dirname(f))
+                    )
+                )
+                if not harmless_mode(args, recursive or directory):
                     # Files a non-root user may no longer read.
                     self._forget(operand)
             return
@@ -2418,27 +2453,36 @@ class Shell:
             base = image_path(self._tilde(root), self.cwd, "find root")
             if GLOB_CHARS.search(base):
                 raise Unsupported(f"find root '{root}' with a wildcard")
-            prefix = base.rstrip("/") + "/"
-            for path in list(self.files):
-                if not (path == base or path.startswith(prefix)):
-                    continue
-                if not understood or name is None:
-                    del self.files[path]
-                    continue
-                # find -name follows fnmatch: a wildcard matches a leading dot.
-                file_hit = kind in (None, "f") and fnmatch.fnmatchcase(
-                    posixpath.basename(path), name
-                )
-                dirs = [
-                    d
-                    for d in self_and_parents(posixpath.dirname(path))
-                    if d == base or d.startswith(prefix)
-                ]
-                dir_hit = kind in (None, "d") and any(
-                    fnmatch.fnmatchcase(posixpath.basename(d), name) for d in dirs
-                )
-                if file_hit or dir_hit:
-                    del self.files[path]
+            # The installed packages are also reached by their native path; the
+            # predicates hold as such only when the mapping is exact.
+            exact = bool(NATIVE_SITE_PACKAGES.match(base))
+            for modelled in modelled_targets(base):
+                keep_predicates = understood and (modelled == base or exact)
+                self._find_delete(modelled, kind, name, keep_predicates)
+
+    def _find_delete(self, base, kind, name, understood):
+        """The files find deletes below ``base`` (-type / -name when understood)."""
+        prefix = base.rstrip("/") + "/"
+        for path in list(self.files):
+            if not (path == base or path.startswith(prefix)):
+                continue
+            if not understood or name is None:
+                del self.files[path]
+                continue
+            # find -name follows fnmatch: a wildcard matches a leading dot.
+            file_hit = kind in (None, "f") and fnmatch.fnmatchcase(
+                posixpath.basename(path), name
+            )
+            dirs = [
+                d
+                for d in self_and_parents(posixpath.dirname(path))
+                if d == base or d.startswith(prefix)
+            ]
+            dir_hit = kind in (None, "d") and any(
+                fnmatch.fnmatchcase(posixpath.basename(d), name) for d in dirs
+            )
+            if file_hit or dir_hit:
+                del self.files[path]
 
     def _nested_shell(self, args, conditional, env):
         script = shell_script(args, self.cwd, self.files, self.model, self.stage)
@@ -2479,6 +2523,8 @@ class Shell:
                 continue
             if option in ("-e", "--editable"):
                 editable = True
+                if value:
+                    targets.append(value)
             if option in PIP_OPTIONS_WITH_VALUE:
                 i += 1 if sep else 2
                 continue
@@ -2491,21 +2537,95 @@ class Shell:
             # Which files a distribution owns is not modelled: none of the installed packages is kept.
             remove_files(self.files, SITE_PACKAGES)
             return
-        if command != "install" or self.start or editable or conditional:
+        if command != "install":
             return
-        for target in targets:
-            path = re.sub(r"\[[^\]]*\]$", "", target)
-            if path.startswith("file://"):
-                path = path[len("file://") :]
-            if "://" in path or not (path.startswith((".", "/")) or "/" in path):
-                continue
+        if self.start:
+            raise Unsupported("pip install in the entry script")
+        local = [
+            *(p for p in (self._local_requirement(t) for t in targets) if p),
+            *self._requirement_files(args),
+        ]
+        for path in local:
+            if self.stage.written(path):
+                raise Unsupported(f"pip install of {path}, which holds unknown content")
+            # Whether pip installs it or not, it runs the packaging code.
+            self.model.check_packaging(self.files, path)
+        if editable or conditional:
+            return
+        for path in local:
             if relocated:
                 raise Unsupported(
                     "pip install into another directory than site-packages"
                 )
-            self.model.install_package(
-                self.files, image_path(path, self.cwd, "pip install path")
+            self.model.install_package(self.files, path)
+
+    def _local_requirement(self, requirement):
+        """Image path of a requirement that names a local directory, or None."""
+        value = requirement.strip()
+        if " @ " in value:
+            value = value.split(" @ ", 1)[1].strip()
+        value = re.sub(r"\[[^\]]*\]$", "", value)
+        if value.startswith("file://"):
+            value = value[len("file://") :]
+        if "://" in value or not (value.startswith((".", "/")) or "/" in value):
+            return None
+        return image_path(self._tilde(value), self.cwd, "pip install path")
+
+    def _requirement_files(self, args, seen=None):
+        """Local directories the requirement files of ``args`` (-r, -c) name,
+        nested files included."""
+        seen = set() if seen is None else seen
+        found = []
+        for index, arg in enumerate(args):
+            option, sep, attached = arg.partition("=")
+            if option not in ("-r", "--requirement", "-c", "--constraint"):
+                if re.fullmatch(r"-r.+", arg):
+                    option, attached, sep = "-r", arg[2:], "attached"
+                else:
+                    continue
+            value = (
+                attached
+                if sep
+                else (args[index + 1] if index + 1 < len(args) else None)
             )
+            if not value or "://" in value:
+                continue
+            path = image_path(self._tilde(value), self.cwd, "requirement file")
+            if path in seen:
+                continue
+            seen.add(path)
+            text = self._read(path)
+            if text is None:
+                raise Unsupported(
+                    f"requirement file {path} is not a file of the image model"
+                )
+            base = posixpath.dirname(path)
+            for line in text.splitlines():
+                line = line.split(" #", 1)[0].strip()
+                if not line or line.startswith("#"):
+                    continue
+                words = line.split()
+                if (
+                    words[0] in ("-r", "--requirement", "-c", "--constraint")
+                    and len(words) > 1
+                ):
+                    nested = (
+                        posixpath.join(base, words[1])
+                        if not words[1].startswith("/")
+                        else words[1]
+                    )
+                    found += self._requirement_files([words[0], nested], seen)
+                    continue
+                if words[0] in ("-e", "--editable") and len(words) > 1:
+                    words = words[1:]
+                if words[0].startswith("-"):
+                    continue
+                # A relative path is read from the working directory of pip.
+                target = words[0] if " @ " not in line else line
+                local = self._local_requirement(target)
+                if local:
+                    found.append(local)
+        return found
 
 
 class ImageModel:
@@ -2919,32 +3039,71 @@ class ImageModel:
         return entries, opaque
 
     def _run(self, stage, arguments):
-        mounts = set()
+        # A mount puts other content at its target for this RUN only: a bind
+        # mount of the context puts its files there, any other mount content
+        # the model does not know.
+        unknown = set()
+        mounted = {}
+        hidden = {}
         while arguments.startswith("--"):
             flag, arguments = first_word(arguments)
-            if flag.startswith("--mount="):
-                # A mount puts other content at its target for this RUN only.
-                options = dict(
-                    item.partition("=")[::2]
-                    for item in flag[len("--mount=") :].split(",")
+            if not flag.startswith("--mount="):
+                continue
+            options = dict(
+                item.partition("=")[::2] for item in flag[len("--mount=") :].split(",")
+            )
+            target = next(
+                (
+                    options[k]
+                    for k in ("target", "dst", "destination")
+                    if options.get(k)
+                ),
+                None,
+            )
+            if target is None:
+                raise Unsupported(f"RUN {flag} without a target")
+            target = image_path(target, stage.workdir, "mount target")
+            for path in [
+                f for f in stage.files if f == target or f.startswith(target + "/")
+            ]:
+                hidden[path] = stage.files.pop(path)
+            members = None
+            if options.get("type", "bind") == "bind" and not options.get("from"):
+                members = self._context_members(
+                    options.get("source") or options.get("src") or "."
                 )
-                target = next(
-                    (
-                        options[k]
-                        for k in ("target", "dst", "destination")
-                        if options.get(k)
-                    ),
-                    None,
-                )
-                if target is None:
-                    raise Unsupported(f"RUN {flag} without a target")
-                mounts.add(image_path(target, stage.workdir, "mount target"))
-        added = mounts - stage.unknown_dirs
+            if members is None:
+                unknown.add(target)
+                continue
+            for relative, origin in members:
+                mounted[posixpath.normpath(posixpath.join(target, relative))] = origin
+        added = unknown - stage.unknown_dirs
         stage.unknown_dirs |= added
+        stage.files.update(mounted)
         try:
             self._run_command(stage, arguments)
         finally:
             stage.unknown_dirs -= added
+            for path in mounted:
+                stage.files.pop(path, None)
+            stage.files.update(hidden)
+
+    def _context_members(self, source):
+        """(relative path, origin) of the context files a bind mount of ``source``
+        shows, or None when it is not a file or directory of the context."""
+        source = (
+            posixpath.normpath(source.lstrip("/")) if source not in ("", ".") else "."
+        )
+        if source in self.context.files:
+            return [("", self.context.files[source])]
+        if source in self.context.dirs:
+            prefix = "" if source == "." else source + "/"
+            return [
+                (rel[len(prefix) :], origin)
+                for rel, origin in self.context.files.items()
+                if rel.startswith(prefix)
+            ]
+        return None
 
     def _run_command(self, stage, arguments):
         command, shell_form = parse_command(arguments)
@@ -2963,6 +3122,24 @@ class ImageModel:
         elif command:
             shell._statements([*command, "\n"])
 
+    def check_packaging(self, files, install_dir):
+        """Code of the repository that pip runs for ``install_dir``, whatever
+        package it finds: a setup.py, an in-tree build backend."""
+        if posixpath.join(install_dir, "setup.py") in files:
+            raise Unsupported("packaging declared in setup.py")
+        origin = files.get(posixpath.join(install_dir, "pyproject.toml"))
+        text = self.context.read(origin) if origin else None
+        if not text:
+            return
+        try:
+            build_system = tomllib.loads(text).get("build-system", {})
+        except tomllib.TOMLDecodeError as error:
+            raise Unsupported(f"pyproject.toml not readable: {error}") from error
+        if build_system.get("backend-path"):
+            raise Unsupported(
+                f"{install_dir}: an in-tree build backend runs during pip install"
+            )
+
     def install_package(self, files, install_dir):
         """``pip install <install_dir>``: the packages it puts in site-packages."""
         texts = {}
@@ -2972,19 +3149,7 @@ class ImageModel:
                 texts[name] = self.context.read(origin) or ""
         if not texts:
             return
-        # Code of the repository that pip runs, whatever package it finds.
-        if "setup.py" in texts:
-            raise Unsupported("packaging declared in setup.py")
-        try:
-            build_system = tomllib.loads(texts.get("pyproject.toml", "")).get(
-                "build-system", {}
-            )
-        except tomllib.TOMLDecodeError as error:
-            raise Unsupported(f"pyproject.toml not readable: {error}") from error
-        if build_system.get("backend-path"):
-            raise Unsupported(
-                f"{install_dir}: an in-tree build backend runs during pip install"
-            )
+        self.check_packaging(files, install_dir)
         config = None
         for root in ["."] + [r for r in self._roots(texts) if r != "."]:
             base = posixpath.normpath(posixpath.join(install_dir, root))
