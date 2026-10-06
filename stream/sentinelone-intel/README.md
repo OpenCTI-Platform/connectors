@@ -204,7 +204,8 @@ exist).
 | Indicator created in SentinelOne          | `deployed`, with the `uuid` of the first IOC returned by SentinelOne as external id (when returned)           |
 | Indicator rejected by SentinelOne         | `failed`, with a short reason such as "SentinelOne refused the IOC creation: permission denied" (the SentinelOne response is written to the connector log) |
 | Indicator with an unsupported pattern     | Nothing: the indicator is never pushed                                                                        |
-| Delete event, IOCs of the indicator found | `removed` once they are deleted (nothing is deleted nor reported when no IOC carries the STIX id of the indicator, or when one of them has no `uuid`) |
+| Delete event, IOCs of the indicator found | `removed` once they are deleted (nothing is deleted nor reported when one of them has no `uuid` or the lookup fails) |
+| Delete event, no IOC of the indicator     | `removed`: the lookup completed and no IOC carries the STIX id of the indicator, so it is already absent (nothing is reported for an unsupported pattern, never pushed) |
 | Reconciliation, indicator present         | `active`                                                                                                      |
 | Reconciliation, indicator absent          | `removed` (deleted or expired in SentinelOne)                                                                 |
 | Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`                                             |
@@ -224,8 +225,9 @@ exist).
   is set, the deployments come from the pushes and deletions of the stream (`deployed`, `failed`, `removed`), and the
   reconciliation only pushes the `pending` ones again (analyst retry): presence, absence, withdrawal and backfill need
   a scope without group. A delete event looks the IOCs of the indicator up by external id in the site or account of
-  the group (the whole API token scope for a group alone) and deletes them with the group in the deletion filter. The
-  connector logs this mode when it starts.
+  the group (the whole API token scope for a group alone) and deletes them with the group in the deletion filter; when
+  none is found, the indicator is reported `removed` all the same, which is how a deployment whose IOCs were deleted in
+  SentinelOne is repaired without read-back. The connector logs this mode when it starts.
 - **Withdrawal safety**: only the IOCs whose external id is the STIX id of the indicator are deleted; an IOC of the same
   value created by another source is left in place (the removal is not reported and OpenCTI flags the deployment
   `expired` once the indicator expires).

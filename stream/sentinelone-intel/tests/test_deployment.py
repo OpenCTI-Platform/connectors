@@ -342,20 +342,53 @@ def test_delete_with_an_ioc_of_the_indicator_without_uuid_is_aborted(connector):
     }
 
 
-def test_delete_without_ioc_of_the_indicator_is_not_reported(connector):
+def test_delete_of_an_indicator_already_absent_is_reported_removed(connector):
+    """A completed lookup without any IOC of the indicator is an idempotent removal."""
     connector.client.session.request.return_value = mock_response(
         {"data": [{"uuid": "uuid-2", "externalId": "other-source"}]}
     )
+    indicator = make_indicator()
 
-    connector.process_message(make_message("delete", make_indicator()))
+    connector.process_message(make_message("delete", indicator))
 
     assert calls_of(connector.client.session, "DELETE") == []
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
+def test_delete_already_absent_repairs_a_group_scope_deployment():
+    """With a group, no read-back can repair the deployment: the delete event does."""
+    connector = build_connector(
+        settings=make_settings(sentinelone_intel={"account_id": None, "group_id": "5"}),
+        assurance=MagicMock(spec=DeploymentAssurance),
+    )
+    connector.client.session.request.return_value = mock_response({"data": []})
+    indicator = make_indicator()
+
+    connector.process_message(make_message("delete", indicator))
+
+    assert calls_of(connector.client.session, "DELETE") == []
+    connector.assurance.report_removed.assert_called_once_with(indicator)
+
+
+def test_delete_of_an_unsupported_pattern_without_ioc_is_not_reported(connector):
+    """An indicator SentinelOne does not support was never pushed: no deployment."""
+    connector.client.session.request.return_value = mock_response({"data": []})
+    indicator = make_indicator()
+    indicator["pattern"] = "[process:name = 'evil.exe']"
+
+    connector.process_message(make_message("delete", indicator))
+
     connector.assurance.report_removed.assert_not_called()
 
 
 def test_delete_of_an_indicator_without_stix_id_reads_nothing(connector):
-    assert connector.delete_indicator(make_indicator(stix_id="not-a-stix-id")) is False
+    indicator = make_indicator(stix_id="not-a-stix-id")
+
+    assert connector.delete_indicator(indicator) is False
+    connector.process_message(make_message("delete", indicator))
+
     connector.client.session.request.assert_not_called()
+    connector.assurance.report_removed.assert_not_called()
 
 
 def test_failed_delete_is_not_reported(connector):

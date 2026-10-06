@@ -29,6 +29,11 @@ def failure_reason(error: SentinelOneApiError) -> str:
     return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, error.status_code)
 
 
+def _is_stix_indicator_id(value: Any) -> bool:
+    """Whether a value is the STIX id of an indicator (the external id of its IOCs)."""
+    return isinstance(value, str) and value.startswith(STIX_INDICATOR_PREFIX)
+
+
 class SentinelOneIntelConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
@@ -95,14 +100,13 @@ class SentinelOneIntelConnector:
         are never deleted.
 
         :param indicator: The indicator, in the stream event shape.
-        :return: True when IOCs were deleted, False when none carries the indicator id.
+        :return: True when IOCs were deleted, False when none carries the indicator id
+            (nothing is looked up for an id that is not a STIX indicator id).
         :raises SentinelOneApiError: When SentinelOne cannot list or delete the IOCs, or
             lists an IOC of the indicator without `uuid` (it could not be deleted).
         """
         stix_id = indicator.get("id")
-        if not isinstance(stix_id, str) or not stix_id.startswith(
-            STIX_INDICATOR_PREFIX
-        ):
+        if not _is_stix_indicator_id(stix_id):
             return False
         iocs = [
             ioc
@@ -148,8 +152,16 @@ class SentinelOneIntelConnector:
     def _delete_and_report(self, data: dict[str, Any]) -> None:
         """
         Delete the IOCs of the indicator of a delete event and report it `removed`
-        when IOCs were deleted.
+        once none is left in SentinelOne: deleted now, or already absent (the lookup
+        completed without any IOC of the indicator), which also repairs a deployment
+        no read-back can see (scope with a group).
+
+        Nothing is reported for an id that is not a STIX indicator id, when the lookup
+        or the deletion fails, or when nothing was found for a pattern SentinelOne does
+        not support (never pushed, so it has no deployment).
         """
+        if not _is_stix_indicator_id(data.get("id")):
+            return
         try:
             deleted = self.delete_indicator(data)
         except SentinelOneApiError as err:
@@ -158,11 +170,17 @@ class SentinelOneIntelConnector:
                 meta={"error": str(err)},
             )
             return
-        if not deleted:
+        if deleted:
+            self.helper.connector_logger.info(
+                "[DELETE] Successfully deleted Indicator from SentinelOne"
+            )
+        elif self.client.supports_pattern(data.get("pattern")):
+            self.helper.connector_logger.info(
+                "[DELETE] No IOC of the Indicator in SentinelOne, already removed",
+                meta={"indicator_id": data.get("id")},
+            )
+        else:
             return
-        self.helper.connector_logger.info(
-            "[DELETE] Successfully deleted Indicator from SentinelOne"
-        )
         if self.assurance is not None:
             self.assurance.report_removed(data)
 

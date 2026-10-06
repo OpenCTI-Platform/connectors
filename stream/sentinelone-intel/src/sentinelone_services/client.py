@@ -141,6 +141,15 @@ class SentinelOneClient:
             and item["uuid"]
         ]
 
+    def supports_pattern(self, pattern: Any) -> bool:
+        """
+        Whether SentinelOne accepts an indicator pattern, i.e. whether
+        `create_indicator` pushes the indicator.
+
+        :param pattern: The STIX pattern of the indicator.
+        """
+        return isinstance(pattern, str) and self._is_valid_pattern(pattern)
+
     def _is_valid_pattern(self, pattern: str) -> bool:
         """
         Check if a STIX pattern is in a format that is supported
