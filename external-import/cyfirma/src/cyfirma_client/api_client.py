@@ -4,9 +4,9 @@ import requests
 from connector.utils import (
     _IOC_GENERIC_PATH,
     _IOC_TAILORED_PATH,
+    _TA_SEARCH_PATH,
     _VUL_GENERIC_PATH,
     _VUL_TAILORED_PATH,
-    TA_SEARCH_PATH,
     CYFIRMA_EXTENSION_DEFINITION_ID,
     CYFIRMA_INDICATOR_EXTENSION_DEFINITION_ID,
     OPENCTI_EXTENSION_DEFINITION_ID,
@@ -87,6 +87,7 @@ class CyfirmaClient:
             ioc_request_params = get_request_params(self.look_back_days)
 
             ti_api_path = f"{self.base_url}{ioc_api_path}"
+            ta_api_path = f"{self.base_url}{_TA_SEARCH_PATH}"
 
             return_data = []
             while True:
@@ -124,7 +125,7 @@ class CyfirmaClient:
 
             if ta_names:
                 ta_res_data = self._request_data(
-                    TA_SEARCH_PATH,
+                    ta_api_path,
                     params={"values": list(ta_names)},
                     headers=self.headers,
                 )
@@ -209,7 +210,7 @@ class CyfirmaClient:
                 new_extension_props["cvss_integrity_impact"] = ext_props.get(
                     "integrity_impact", ""
                 )
-                new_extension_props["cvss_vector"] = str(
+                new_extension_props["cvss_vector_string"] = str(
                     ext_props.get("cvss_vector", "")
                 )
                 new_extension_props["cvss_attack_complexity"] = ext_props.get(
@@ -230,38 +231,36 @@ class CyfirmaClient:
                 )
                 # new_extension_props["cvss_exploit_code_maturity"] = ext_props.get("exploitability_score", "0.0")
             elif "2" in cvss_version:
-                new_extension_props["x_opencti_cvss_v2_base_score"] = float(
-                    ext_props.get("cvss_base_score", 0.0)
+                new_extension_props["cvss_v2_base_score"] = float(
+                    ext_props.get("cvss_base_score")
                 )
-                new_extension_props["x_opencti_cvss_v2_base_severity"] = ext_props.get(
+                new_extension_props["cvss_v2_base_severity"] = ext_props.get(
                     "severity", ""
                 )
-                new_extension_props["x_opencti_cvss_v2_attack_vector"] = ext_props.get(
+                new_extension_props["cvss_v2_attack_vector"] = ext_props.get(
                     "attack_vector", ""
                 )
-                new_extension_props["x_opencti_cvss_v2_integrity_impact"] = (
-                    ext_props.get("integrity_impact", "")
+                new_extension_props["cvss_v2_integrity_impact"] = ext_props.get(
+                    "integrity_impact", ""
                 )
-                new_extension_props["x_opencti_cvss_v2_vector_string"] = ext_props.get(
+                new_extension_props["cvss_v2_vector_string"] = ext_props.get(
                     "cvss_vector", ""
                 )
-                new_extension_props["x_opencti_cvss_v2_attack_complexity"] = (
-                    ext_props.get("attack_complexity", "")
+                new_extension_props["cvss_v2_attack_complexity"] = ext_props.get(
+                    "attack_complexity", ""
                 )
-                new_extension_props["x_opencti_cvss_v2_privileges_required"] = (
-                    ext_props.get("privileges_required", "")
+                new_extension_props["cvss_v2_privileges_required"] = ext_props.get(
+                    "privileges_required", ""
                 )
-                new_extension_props["x_opencti_cvss_v2_user_interaction"] = (
-                    ext_props.get("user_interaction", "")
+                new_extension_props["cvss_v2_user_interaction"] = ext_props.get(
+                    "user_interaction", ""
                 )
-                new_extension_props["x_opencti_cvss_v2_scope"] = ext_props.get(
-                    "scope", ""
+                new_extension_props["cvss_v2_scope"] = ext_props.get("scope", "")
+                new_extension_props["cvss_v2_confidentiality_impact"] = ext_props.get(
+                    "confidentiality_impact", ""
                 )
-                new_extension_props["x_opencti_cvss_v2_confidentiality_impact"] = (
-                    ext_props.get("confidentiality_impact", "")
-                )
-                new_extension_props["x_opencti_cvss_v2_availability_impact"] = (
-                    ext_props.get("availability_impact", "")
+                new_extension_props["cvss_v2_availability_impact"] = ext_props.get(
+                    "availability_impact", ""
                 )
                 # new_extension_props["x_opencti_cvss_v2_exploit_code_maturity"] = ext_props.get("exploitability_score", "0.0")
 

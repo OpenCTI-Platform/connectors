@@ -16,9 +16,9 @@ services:
       - CYFIRMA_API_BASE_URL=${CYFIRMA_API_BASE_URL:-https://api.cyfirma.com}
       - CYFIRMA_API_KEY=${CYFIRMA_API_KEY:-ChangeMe}
       - CYFIRMA_TLP_LEVEL=clear
-      - CYFIRMA_TAILORED_IOCS=false
-      - CYFIRMA_LOOK_BACK_DAYS=2
-      - CYFIRMA_TAILORED_VULNERABILITIES=false
+      - CYFIRMA_TAILORED_IOCS=true
+      - CYFIRMA_LOOK_BACK_DAYS=3
+      - CYFIRMA_TAILORED_VULNERABILITIES=true
 
     restart: always
     networks:

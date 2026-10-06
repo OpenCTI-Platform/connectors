@@ -125,7 +125,6 @@ However, if you would like to force an immediate download of a new batch of enti
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
 
-## Behavior
 
 ## Behavior
 
@@ -135,12 +134,12 @@ The connector periodically pulls data from the CYFIRMA API and imports it into O
 
 | CYFIRMA feed | OpenCTI entities |
 |--------------|------------------|
-| Indicators | Indicator, plus related observables and relationships (verify) |
-| Vulnerabilities | Vulnerability, plus related objects such as software or identities (verify) |
+| Indicators | Indicator, plus related observables and relationships |
+| Vulnerabilities | Vulnerability, plus related objects such as software or identities  |
 
 - Each feed is paginated. The connector requests pages until the API returns no further results.
 - Related STIX objects returned with a feed item are imported alongside it and linked with relationships.
-- All created objects carry the TLP marking set in `CYFIRMA_TLP_LEVEL` (verify the variable name).
+- All created objects carry the TLP marking set in `CYFIRMA_TLP_LEVEL`.
 
 ### CVSS handling
 
@@ -149,14 +148,14 @@ Missing scores are left unset rather than defaulted to 0.
 
 ### State and scheduling
 
-- The connector runs every `CONNECTOR_DURATION_PERIOD` (verify) and stores the time of the last successful run in the connector state.
+- The connector runs every `CONNECTOR_DURATION_PERIOD`  and stores the time of the last successful run in the connector state.
 - The next run fetches data from that point onward. If a run fails, the state is not advanced, so the same window is retried next time.
 
 ### Limitations and considerations
 
-- The first run may import a large volume of data depending on the configured start date (verify), so allow extra time.
+- The first run may import a large volume of data depending on the configured start date , so allow extra time.
 - Requests that fail after retries mark the run as failed instead of ending with partial data.
-- Objects are upserted by STIX ID, so re-importing the same data updates existing entities rather than duplicating them (verify).
+- Objects are upserted by STIX ID, so re-importing the same data updates existing entities rather than duplicating them.
 - Confidence and scoring values come from CYFIRMA. Check whether they're overridden by a connector setting.
 
 ## Debugging
