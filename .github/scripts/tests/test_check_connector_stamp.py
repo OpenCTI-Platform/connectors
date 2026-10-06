@@ -2898,6 +2898,159 @@ def test_env_interpreter_line(tmp_path, line, reason):
     assert single(tmp_path, files).reason == reason
 
 
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 18:58 UTC: curl --output-dir places -o and -O, in
+        # either order, and not the headers curl writes.
+        (
+            "curl --output-dir /opt/src -o .connector_version.json https://example.com/x",
+            False,
+        ),
+        (
+            "curl -o .connector_version.json --output-dir /opt/src https://example.com/x",
+            False,
+        ),
+        (
+            "curl --output-dir=/opt/src -O https://example.com/.connector_version.json",
+            False,
+        ),
+        (
+            "cd /opt/src && curl --output-dir /tmp -o .connector_version.json https://example.com/x",
+            True,
+        ),
+        (
+            "cd /opt/src && curl --output-dir /tmp -D .connector_version.json https://example.com/x",
+            False,
+        ),
+        (
+            "curl --output-dir /tmp -o /opt/src/.connector_version.json https://example.com/x",
+            False,
+        ),
+        (
+            "wget -P /tmp -O /opt/src/.connector_version.json https://example.com/x",
+            False,
+        ),
+    ],
+)
+def test_curl_output_directory(tmp_path, run, covered):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nCOPY src /opt/src\nRUN {run}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 18:58 UTC: a configuration file named for one
+        # command, by a prefix assignment or by env.
+        ("WGETRC=/tmp/download.conf wget -O /tmp/x https://example.com/x", False),
+        ("env WGETRC=/tmp/download.conf wget -O /tmp/x https://example.com/x", False),
+        (
+            "SYSTEM_WGETRC=/tmp/download.conf wget -O /tmp/x https://example.com/x",
+            False,
+        ),
+        ("CURL_HOME=/tmp curl -o /tmp/x https://example.com/x", False),
+        ("wget -O /tmp/x https://example.com/x", True),
+    ],
+)
+def test_downloader_configuration_set_for_one_command(tmp_path, run, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        f"COPY download.conf /tmp/download.conf\nRUN {run}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "download.conf": "output_document = /opt/src/.connector_version.json\n",
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "run, covered",
+    [
+        # Copilot review of 18:58 UTC: a PYTHONPATH the model does not resolve
+        # may put any module first.
+        (
+            "if true; then export PYTHONPATH=/opt/tools; fi; python3 -m pip install requests",
+            False,
+        ),
+        (
+            "if true; then export PYTHONPATH=/opt/other; fi; python3 -m compileall -q /opt/src",
+            False,
+        ),
+        ("export PYTHONPATH=/opt/tools; python3 -m pip install requests", False),
+        ("export PYTHONPATH=/opt/other; python3 -m pip install requests", True),
+        # Copilot review of 18:58 UTC: at startup, whatever it runs, python
+        # imports sitecustomize from PYTHONPATH, not from the working directory.
+        ("export PYTHONPATH=/opt/hooks; python3 -m compileall -q /opt/src", False),
+        ("export PYTHONPATH=/opt/hooks; pip install requests", False),
+        ("PYTHONPATH=/opt/hooks python3 -m compileall -q /opt/src", False),
+        ("cd /opt/hooks && python3 -m compileall -q /opt/src", True),
+        ("python3 -m compileall -q /opt/src", True),
+    ],
+)
+def test_python_search_path_at_build_time(tmp_path, run, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/src\n"
+        "COPY remove.py /opt/tools/pip.py\nCOPY remove.py /opt/hooks/sitecustomize.py\n"
+        f"RUN {run}\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "remove.py": "import os\nos.remove('/opt/src/.connector_version.json')\n",
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "target, covered",
+    [
+        # Copilot review of 18:58 UTC: the startup files of site-packages.
+        ("/usr/local/lib/python3.12/site-packages/sitecustomize.py", False),
+        ("/usr/local/lib/python3.12/site-packages/remove.pth", False),
+        ("/usr/local/lib/python3.12/site-packages/remove/__init__.py", True),
+    ],
+)
+def test_startup_files_of_site_packages_at_build_time(tmp_path, target, covered):
+    files = {
+        "Dockerfile": f"FROM python:3.12-alpine\nCOPY src /opt/src\nCOPY remove.py {target}\n"
+        "RUN python3 -m compileall -q /opt/src\n"
+        'CMD ["python3", "/opt/src/main.py"]\n',
+        "remove.py": "import os\nos.remove('/opt/src/.connector_version.json')\n",
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+
+
+@pytest.mark.parametrize(
+    "command, covered",
+    [
+        # Copilot review of 18:58 UTC: a .. after a link in the path of the
+        # program started climbs from the target of the link.
+        ('["python3", "/opt/app/alias/../main.py"]', False),
+        ('["sh", "/opt/app/alias/../start.sh"]', False),
+        ('["/opt/app/alias/../run.py"]', False),
+        ('["python3", "/opt/app/sub/../main.py"]', True),
+        ('["sh", "/opt/app/sub/../start.sh"]', True),
+    ],
+)
+def test_entry_point_after_a_link(tmp_path, command, covered):
+    files = {
+        "Dockerfile": "FROM python:3.12-alpine\nCOPY src /opt/app\n"
+        "RUN mkdir -p /opt/deep/a/b/c/d/e/sub /opt/app/sub"
+        " && ln -s /opt/deep/a/b/c/d/e/sub /opt/app/alias\n"
+        f"WORKDIR /srv\nCMD {command}\n",
+        "src/start.sh": "#!/bin/sh\nexec python3 /opt/app/main.py\n",
+        "src/run.py": "#!/usr/local/bin/python3\n",
+    }
+    image = single(tmp_path, files)
+    assert image.covered is covered, image.reason
+    if not covered:
+        assert "climbs out of the link /opt/app/alias the build created" in image.reason
+
+
 def test_workflow_watches_every_file_the_check_reads():
     # Copilot reviews of 21:40 and 23:37 UTC: any file of a connector (an entry
     # script has no fixed name) or of the shared build must run the check.
