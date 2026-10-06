@@ -11,6 +11,7 @@ access to Microsoft Sentinel:
   entities (IP addresses, URLs, domains, file hashes) match deployed indicators.
 """
 
+import math
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -51,7 +52,7 @@ INCIDENTS_PAGE_SIZE = 100
 """`$top` of the incidents listing."""
 
 INCIDENTS_MAX_PAGES = 20
-"""Hard cap of the incident pages read by one hit collection."""
+"""Incident pages read by one hit collection, beyond the pages of the incidents a continuation already handled."""
 
 MAX_HIT_INCIDENTS = 200
 """Maximum number of incidents whose entities are read by one hit collection."""
@@ -246,7 +247,11 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
 
         The read stops at the first incident beyond `MAX_HIT_INCIDENTS` inspected
         incidents, and when the listing stops at `INCIDENTS_MAX_PAGES` with pages
-        left. An incident whose entities cannot be read fails the read, so that the
+        left. A continuation lists again the incidents it handled that share its
+        start, and skips them: it reads one more page per `INCIDENTS_PAGE_SIZE`
+        handled incidents, so that it always gets past them, also when more of them
+        share that modification time than one capped listing returns. An incident
+        whose entities cannot be read fails the read, so that the
         reconciler keeps its checkpoint and reads the window again on the next run;
         one deleted since it was listed counts no hit. The listing is ordered by
         modification time while hits carry the activity time: an incident left
@@ -281,7 +286,8 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
             listing = self._client.iter_incidents(
                 modified_since=listed_since,
                 page_size=INCIDENTS_PAGE_SIZE,
-                max_pages=INCIDENTS_MAX_PAGES,
+                max_pages=INCIDENTS_MAX_PAGES
+                + math.ceil(len(handled) / INCIDENTS_PAGE_SIZE),
             )
             for incident in listing:
                 properties = incident.get("properties") or {}

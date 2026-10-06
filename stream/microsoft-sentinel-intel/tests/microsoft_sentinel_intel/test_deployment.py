@@ -1345,12 +1345,62 @@ def test_adapter_hits_continued_later_keep_the_activity_lower_bound(
     )
 
     assert [hit.timestamp for hit in hits] == [since + timedelta(minutes=5)]
+    # One page more for the handled incident, listed again when it shares the start.
     adapter_connector.client.iter_incidents.assert_called_once_with(
-        modified_since=cursor, page_size=100, max_pages=20
+        modified_since=cursor, page_size=100, max_pages=21
     )
     adapter_connector.client.list_incident_entities.assert_called_once_with(
         "incident-2"
     )
+
+
+def test_adapter_hits_continued_past_more_incidents_sharing_a_time_than_a_listing(
+    adapter, adapter_connector, monkeypatch
+) -> None:
+    """More incidents share one modification time than a capped listing returns:
+    each continuation reads past the incidents it handled, so every one is read."""
+    monkeypatch.setattr("microsoft_sentinel_intel.deployment.INCIDENTS_PAGE_SIZE", 2)
+    monkeypatch.setattr("microsoft_sentinel_intel.deployment.INCIDENTS_MAX_PAGES", 2)
+    since = datetime.now(UTC).replace(microsecond=0) - timedelta(hours=1)
+    incidents = [
+        {
+            "id": f"incident-{index}",
+            "properties": {
+                "lastActivityTimeUtc": since.isoformat(),
+                "lastModifiedTimeUtc": since.isoformat(),
+            },
+        }
+        for index in range(9)
+    ]
+
+    def iter_incidents(modified_since, page_size, max_pages):
+        assert modified_since == since
+        listing = IncidentListing(incidents[: page_size * max_pages])
+        if len(incidents) > page_size * max_pages:
+            listing.mark_truncated()
+        return listing
+
+    adapter_connector.client.iter_incidents.side_effect = iter_incidents
+    adapter_connector.client.list_incident_entities.return_value = [
+        {"kind": "Ip", "properties": {"address": "198.51.100.7"}}
+    ]
+
+    first = adapter.collect_hits([make_deployment()], since)
+    second = adapter.collect_hits([make_deployment()], since, resume=first.resume)
+    third = adapter.collect_hits([make_deployment()], since, resume=second.resume)
+
+    assert len(first.resume.handled) == 4
+    assert len(second.resume.handled) == 8
+    assert isinstance(third, list)
+    assert len(first.hits) + len(second.hits) + len(third) == 9
+    assert [
+        call.kwargs["max_pages"]
+        for call in adapter_connector.client.iter_incidents.call_args_list
+    ] == [2, 4, 6]
+    assert [
+        call.args[0]
+        for call in adapter_connector.client.list_incident_entities.call_args_list
+    ] == [incident["id"] for incident in incidents]
 
 
 def test_adapter_hits_continued_later_read_again_an_incident_active_again(

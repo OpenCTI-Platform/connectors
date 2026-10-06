@@ -236,7 +236,8 @@ it does not exist), and detection hits are counted with a sighting of the indica
   twice. When the 200 incidents are reached or the listing stops at its page limit, the next run continues the
   listing at the next incident instead of skipping the remaining ones; the hits read so far are reported once the
   listing is complete, so an incident modified later but active earlier is never missed; an incident already read
-  and active again since is read again.
+  and active again since is read again. A continued listing reads one more page per 100 incidents already read, so
+  that it gets past them even when more incidents share one modification time than a listing returns.
   An incident whose entities cannot be read, or without an id or any activity, creation or modification time, fails
   the read: no hit is reported and the next run reads the same incidents again. An incident deleted since it was
   listed counts no hit.
