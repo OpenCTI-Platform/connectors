@@ -192,6 +192,9 @@ class MicrosoftSentinelIntelDeploymentAdapter(DeploymentVendorAdapter):
             value=_first_pattern_value(data),
             raw={"id": resource_id, "name": resource_name},
             active=data.get("revoked") is not True and not expired,
+            # A failed upload keeps the previous object under the same STIX id: it
+            # never confirms the current pattern of the indicator.
+            pattern=data.get("pattern"),
         )
 
     def remove_vendor_indicator(

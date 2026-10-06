@@ -105,6 +105,9 @@ class ElasticDeploymentAdapter(DeploymentVendorAdapter):
                     value=None,
                     raw={"stix": stix},
                     active=not expired,
+                    # A failed update keeps the previous document: it never confirms
+                    # the current pattern of the indicator.
+                    pattern=stix.get("pattern"),
                 )
         except ElasticApiHandlerError as err:
             raise ElasticDeploymentError(describe_error(err)) from err

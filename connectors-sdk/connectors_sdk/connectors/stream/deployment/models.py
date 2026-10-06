@@ -389,6 +389,11 @@ class VendorIndicator:
         active: ``False`` for an object the vendor retains but no longer enforces
             (expired, revoked, deactivated): it is removed for a deployment that
             must be withdrawn, and never confirms or backfills a deployment.
+        pattern: The pattern the vendor object was written with, when the vendor
+            stores it as pushed. A deployment none of whose vendor objects holds its
+            current pattern is not complete: they are left from an earlier version
+            (a failed update), so it is pushed again (a ``failed`` one stays
+            ``failed``) instead of being confirmed ``active``.
     """
 
     indicator_id: str | None = None
@@ -396,6 +401,7 @@ class VendorIndicator:
     value: str | None = None
     raw: Mapping[str, Any] = field(default_factory=dict, compare=False)
     active: bool = True
+    pattern: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

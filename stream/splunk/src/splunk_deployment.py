@@ -151,6 +151,9 @@ class SplunkKVStoreDeploymentAdapter(DeploymentVendorAdapter):
                 external_id=key,
                 value=_text(item.get("values")),
                 raw=item,
+                # A failed update keeps the previous item: it never confirms the
+                # current pattern of the indicator.
+                pattern=_text(item.get("pattern")),
             )
 
     def remove_vendor_indicator(

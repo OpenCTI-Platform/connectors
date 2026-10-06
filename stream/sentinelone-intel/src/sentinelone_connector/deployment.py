@@ -18,7 +18,8 @@ SentinelOne exposes no match count of the Threat Intelligence IOCs, so no hit is
 reported.
 """
 
-from collections.abc import Iterator
+import re
+from collections.abc import Iterator, Sequence
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -35,6 +36,10 @@ from sentinelone_services import SentinelOneApiError
 
 if TYPE_CHECKING:
     from sentinelone_connector.connector import SentinelOneIntelConnector
+
+
+_PATTERN_VALUE = re.compile(r"=\s*'([^']+)'\s*\]\s*$")
+"""The value of a pattern SentinelOne supports (a single comparison)."""
 
 
 class SentinelOneDeploymentError(Exception):
@@ -109,6 +114,38 @@ class SentinelOneDeploymentAdapter(DeploymentVendorAdapter):
                 raw={"uuid": str(uuid), "externalId": external_id},
                 active=valid_until is None or valid_until > now,
             )
+
+    def is_complete(
+        self,
+        deployment: IndicatorDeployment,
+        vendor_matches: Sequence[VendorIndicator],
+    ) -> bool:
+        """Tell whether SentinelOne holds the current value of the indicator.
+
+        The stream ignores updates: after the pattern of an indicator changed, the
+        IOCs created from it still hold the previous value. They never confirm the
+        deployment, which is pushed again with the current value (a `failed` one
+        stays `failed`).
+
+        :param deployment: The deployment.
+        :param vendor_matches: Its IOCs (at least one).
+        :return: False when no IOC holds the value of the current pattern, or when
+            SentinelOne does not support the current pattern.
+        """
+        value = self._current_value(deployment)
+        return value is not None and any(
+            normalize_value(vendor_indicator.value) == value
+            for vendor_indicator in vendor_matches
+        )
+
+    def _current_value(self, deployment: IndicatorDeployment) -> str | None:
+        """Return the normalized value of the current pattern, if SentinelOne
+        supports it (a single comparison)."""
+        pattern = deployment.pattern
+        if not self._connector.client.supports_pattern(pattern):
+            return None
+        match = _PATTERN_VALUE.search(pattern)
+        return normalize_value(match.group(1)) if match else None
 
     def remove_vendor_indicator(
         self, vendor_indicator: VendorIndicator, deployment: IndicatorDeployment

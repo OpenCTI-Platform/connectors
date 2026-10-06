@@ -215,7 +215,7 @@ does not exist), and hits are counted with a sighting of the indicator on that e
 | KV Store write accepted (create, update)  | `deployed`, with the KV Store `_key` (the OpenCTI id of the indicator) as external id                    |
 | KV Store write rejected                   | `failed`, with the Splunk error and response body                                                        |
 | Delete event processed                    | `removed` (also when the item was already absent)                                                        |
-| Reconciliation, item present              | `active`                                                                                                 |
+| Reconciliation, item present              | `active`; an item still holding an earlier pattern (failed update) does not confirm it: the indicator is written again, a `failed` one stays `failed` |
 | Reconciliation, item absent               | `removed`                                                                                                |
 | Reconciliation, `pending` (analyst retry) | The indicator is written again with the stream path and reported `deployed` or `failed`; an indicator still present is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from the KV Store and reported `removed` |

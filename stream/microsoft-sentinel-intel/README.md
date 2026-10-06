@@ -218,7 +218,7 @@ it does not exist), and detection hits are counted with a sighting of the indica
 | Upload accepted (create, update)          | `deployed` (`removed` for a revoked indicator, which is no longer valid in Sentinel)                      |
 | Upload rejected                           | `failed`, with the API error message (also for an object listed in the `errors` of a successful upload)    |
 | Delete event processed                    | `removed` (also when the indicator was already absent from Sentinel)                                      |
-| Reconciliation, indicator present         | `active`, with the name of the Sentinel threat intelligence object as external id                         |
+| Reconciliation, indicator present         | `active`, with the name of the Sentinel threat intelligence object as external id; an object still holding an earlier pattern (failed upload) does not confirm it: the indicator is uploaded again, a `failed` one stays `failed` |
 | Reconciliation, indicator absent          | `removed` (deleted or purged in Sentinel)                                                                 |
 | Reconciliation, `pending` (analyst retry) | The indicator is uploaded again and reported `deployed` or `failed`; an indicator still present is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from Sentinel and reported `removed`   |

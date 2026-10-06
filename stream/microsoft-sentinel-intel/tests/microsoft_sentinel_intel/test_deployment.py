@@ -852,23 +852,27 @@ def test_adapter_lists_live_indicators_of_the_source_system(
     vendor_indicators = list(adapter.list_vendor_indicators())
 
     resource_name = RESOURCE_ID.rsplit("/", 1)[-1]
+    pattern = "[ipv4-addr:value = '198.51.100.7']"
     assert vendor_indicators == [
         VendorIndicator(
             indicator_id=INDICATOR_STIX_ID,
             external_id=resource_name,
             value="198.51.100.7",
+            pattern=pattern,
         ),
         VendorIndicator(
             indicator_id=OTHER_STIX_ID,
             external_id=resource_name,
             value="198.51.100.7",
             active=False,
+            pattern=pattern,
         ),
         VendorIndicator(
             indicator_id="indicator--expired",
             external_id=resource_name,
             value="198.51.100.7",
             active=False,
+            pattern=pattern,
         ),
     ]
     assert vendor_indicators[0].raw == {
@@ -877,6 +881,24 @@ def test_adapter_lists_live_indicators_of_the_source_system(
     }
     adapter_connector.client.iter_indicators.assert_called_once_with(
         source_system="Opencti Stream Connector", page_size=100, max_pages=5_000
+    )
+
+
+def test_adapter_an_object_left_from_an_earlier_pattern_is_not_complete(
+    adapter, adapter_connector
+) -> None:
+    """A failed upload keeps the previous object under the STIX id of the indicator."""
+    adapter_connector.client.iter_indicators.return_value = iter(
+        [ti_object(pattern="[ipv4-addr:value = '203.0.113.9']")]
+    )
+    (listed,) = adapter.list_vendor_indicators()
+
+    assert adapter.is_complete(make_deployment(status="failed"), [listed]) is False
+    assert (
+        adapter.is_complete(
+            make_deployment(pattern="[ipv4-addr:value = '203.0.113.9']"), [listed]
+        )
+        is True
     )
 
 

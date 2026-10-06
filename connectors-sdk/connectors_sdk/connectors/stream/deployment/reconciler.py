@@ -175,6 +175,20 @@ class _PendingHits:
 _LOG_PREFIX = "[DEPLOYMENT]"
 
 
+def _pattern_key(pattern: Any) -> str | None:
+    """Return a pattern with its whitespace runs collapsed, for comparison.
+
+    Args:
+        pattern: A pattern, as stored by the vendor or by OpenCTI.
+
+    Returns:
+        The comparable pattern, or ``None`` when there is none.
+    """
+    if not isinstance(pattern, str):
+        return None
+    return " ".join(pattern.split()) or None
+
+
 class DeploymentPushAdapter(ABC):
     """Vendor operations of a security platform whose API cannot list indicators.
 
@@ -278,16 +292,28 @@ class DeploymentVendorAdapter(DeploymentPushAdapter):
         Adapters pushing one vendor item per observable override it, so that an
         indicator only partly on the vendor is pushed again instead of being
         confirmed ``active``. By default, any vendor item confirms the deployment,
-        unless the adapter declares ``expected_values``: a vendor item must then
-        hold each of them, and a deployment without any is never complete.
+        unless the vendor items carry the pattern they were written with and none
+        holds the current pattern of the indicator (they are left from an earlier
+        version), or the adapter declares ``expected_values``: a vendor item must
+        then hold each of them, and a deployment without any is never complete.
 
         Args:
             deployment: The deployment.
             vendor_matches: Its vendor items (at least one).
 
         Returns:
-            ``False`` when an observable of the indicator has no vendor item.
+            ``False`` when an observable of the indicator has no vendor item, or
+            when the vendor only holds an earlier pattern of the indicator.
         """
+        stored = {
+            pattern
+            for vendor_indicator in vendor_matches
+            if (pattern := _pattern_key(vendor_indicator.pattern))
+        }
+        if stored:
+            current = _pattern_key(deployment.pattern)
+            if current and current not in stored:
+                return False
         expected = self.expected_values(deployment)
         if expected is None:
             return True

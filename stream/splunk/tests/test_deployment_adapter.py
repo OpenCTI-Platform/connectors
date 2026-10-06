@@ -40,6 +40,7 @@ def test_list_vendor_indicators_maps_the_kv_store_items(kvstore):
     item = {
         "_key": INDICATOR_ID,
         "type": "indicator",
+        "pattern": "[ipv4-addr:value = '198.51.100.7']",
         "values": ["198.51.100.7", "evil.example"],
     }
     kvstore.list_indicators.return_value = iter(
@@ -50,11 +51,32 @@ def test_list_vendor_indicators_maps_the_kv_store_items(kvstore):
 
     assert vendor_indicators == [
         VendorIndicator(
-            indicator_id=INDICATOR_ID, external_id=INDICATOR_ID, value="198.51.100.7"
+            indicator_id=INDICATOR_ID,
+            external_id=INDICATOR_ID,
+            value="198.51.100.7",
+            pattern="[ipv4-addr:value = '198.51.100.7']",
         ),
         VendorIndicator(indicator_id="other", external_id="other", value=None),
     ]
     assert vendor_indicators[0].raw == item
+
+
+def test_an_item_left_from_an_earlier_pattern_is_not_complete(kvstore):
+    """A failed update keeps the previous item under the key of the indicator."""
+    adapter = make_adapter(kvstore)
+    earlier = VendorIndicator(
+        indicator_id=INDICATOR_ID,
+        external_id=INDICATOR_ID,
+        pattern="[ipv4-addr:value = '203.0.113.9']",
+    )
+    current = VendorIndicator(
+        indicator_id=INDICATOR_ID,
+        external_id=INDICATOR_ID,
+        pattern="[ipv4-addr:value = '198.51.100.7']",
+    )
+
+    assert adapter.is_complete(DEPLOYMENT, [earlier]) is False
+    assert adapter.is_complete(DEPLOYMENT, [current]) is True
 
 
 @pytest.mark.parametrize("malformed", [{"type": "indicator"}, "x"])

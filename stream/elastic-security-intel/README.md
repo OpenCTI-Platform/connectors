@@ -239,7 +239,7 @@ does not exist). Observables streamed directly (not as indicators) are pushed as
 | Indicator created or updated in Elastic   | `deployed`, with the `opencti_doc_id` of its threat intel document as external id       |
 | Indicator not accepted by Elastic         | `failed` (the Elasticsearch error is in the connector logs)                             |
 | Delete event processed                    | `removed`                                                                               |
-| Reconciliation, indicator present         | `active`                                                                                |
+| Reconciliation, indicator present         | `active`; a document still holding an earlier pattern (failed update) does not confirm it: the indicator is pushed again, a `failed` one stays `failed` |
 | Reconciliation, indicator absent          | `removed` (deleted from the index, or past its `valid_until`)                           |
 | Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an indicator still present is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from Elastic and reported `removed` |

@@ -206,7 +206,7 @@ exist).
 | Indicator with an unsupported pattern     | Nothing: the indicator is never pushed                                                                        |
 | Delete event, IOCs of the indicator found | `removed` once they are deleted (nothing is deleted nor reported when one of them has no `uuid` or the lookup fails) |
 | Delete event, no IOC of the indicator     | `removed`: the lookup completed and no IOC carries the STIX id of the indicator, so it is already absent (nothing is reported for an unsupported pattern, never pushed) |
-| Reconciliation, indicator present         | `active`                                                                                                      |
+| Reconciliation, indicator present         | `active` when an IOC holds the value of the current pattern; IOCs of an earlier pattern (the stream ignores updates) do not confirm it: the indicator is pushed again, a `failed` one stays `failed` |
 | Reconciliation, indicator absent          | `removed` (deleted or expired in SentinelOne)                                                                 |
 | Reconciliation, `pending` (analyst retry) | The indicator is pushed again and reported `deployed` or `failed`; an indicator the read-back still finds in SentinelOne is confirmed `active` instead |
 | Reconciliation, withdrawal or expiry      | Revoked, expired or withdrawn indicators still present are deleted from SentinelOne and reported `removed`    |

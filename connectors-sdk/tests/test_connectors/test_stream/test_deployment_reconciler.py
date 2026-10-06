@@ -705,6 +705,56 @@ def test_pending_deployments_are_pushed_again_unless_the_vendor_holds_them_in_fu
     assert reports["pending-partial"]["status"] == "deployed"
 
 
+def test_vendor_items_left_from_an_earlier_pattern_do_not_confirm_a_deployment(
+    graphql_helper, make_reporter, list_nodes, node_factory, reported
+):
+    """A vendor keeping the previous version after a failed update does not certify
+    it live: a failed deployment stays failed, a live one is pushed again."""
+    current = "[domain-name:value = 'new.example']"
+    earlier = "[domain-name:value = 'old.example']"
+    list_nodes(
+        node_factory(indicator_id="stale-failed", status="failed", pattern=current),
+        node_factory(indicator_id="stale-active", status="active", pattern=current),
+        node_factory(indicator_id="updated", status="failed", pattern=current),
+        node_factory(indicator_id="unknown", status="active", pattern=current),
+    )
+    graphql_helper.api.stix2.get_stix_bundle_or_object_from_entity_id.return_value = {
+        "type": "indicator",
+        "id": "indicator--s",
+        "pattern": current,
+    }
+    adapter = FakeAdapter(
+        vendor=[
+            VendorIndicator(
+                indicator_id="stale-failed", external_id="v-1", pattern=earlier
+            ),
+            VendorIndicator(
+                indicator_id="stale-active", external_id="v-2", pattern=earlier
+            ),
+            VendorIndicator(indicator_id="updated", external_id="v-3", pattern=earlier),
+            VendorIndicator(
+                indicator_id="updated",
+                external_id="v-4",
+                pattern="[domain-name:value  =  'new.example']",
+            ),
+            VendorIndicator(indicator_id="unknown", external_id="v-5"),
+        ],
+    )
+
+    summary = make_reconciler(make_reporter(graphql_helper), adapter).run_once()
+
+    assert (summary.incomplete, summary.repushed, summary.confirmed_active) == (
+        2,
+        1,
+        2,
+    )
+    reports = reported()
+    assert "stale-failed" not in reports
+    assert reports["stale-active"]["status"] == "deployed"
+    assert reports["updated"]["status"] == "active"
+    assert reports["unknown"]["status"] == "active"
+
+
 def test_retained_inactive_vendor_objects_are_only_removed(
     graphql_helper, make_reporter, list_nodes, node_factory, reported
 ):

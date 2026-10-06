@@ -714,6 +714,30 @@ def test_adapter_reads_a_blank_expiry_as_none(connector):
     ]
 
 
+def test_adapter_completeness_requires_the_current_value(connector):
+    """The stream ignores updates: an IOC of an earlier pattern never confirms."""
+    adapter = SentinelOneDeploymentAdapter(connector)
+    current = VendorIndicator(
+        indicator_id=STIX_ID, external_id="uuid-2", value="198.51.100.7"
+    )
+    earlier = VendorIndicator(
+        indicator_id=STIX_ID, external_id="uuid-1", value="203.0.113.9"
+    )
+    sha256 = "A" * 64
+    hashed = make_deployment(pattern=f"[file:hashes.'SHA-256' = '{sha256}']")
+
+    assert adapter.is_complete(make_deployment(), [earlier, current]) is True
+    assert adapter.is_complete(make_deployment(), [earlier]) is False
+    assert (
+        adapter.is_complete(
+            hashed, [VendorIndicator(indicator_id=STIX_ID, value=sha256.lower())]
+        )
+        is True
+    )
+    unsupported = make_deployment(pattern="[process:name = 'evil.exe']")
+    assert adapter.is_complete(unsupported, [current]) is False
+
+
 def test_adapter_removes_only_the_iocs_of_the_indicator(connector):
     connector.client.session.request.return_value = mock_response({})
     adapter = SentinelOneDeploymentAdapter(connector)
@@ -947,6 +971,47 @@ def test_reconciliation_confirms_removes_and_withdraws(e2e_connector, router):
     assert reports[INDICATOR_ID]["externalId"] == "u-1"
     assert reports[OTHER_ID]["status"] == "removed"
     assert reports["withdrawn-id"]["status"] == "removed"
+
+
+def test_reconciliation_pushes_again_an_indicator_left_with_an_earlier_value(
+    e2e_connector, router
+):
+    """An IOC still holding the previous value of the indicator does not confirm it:
+    the current value is pushed and reported deployed."""
+    router.deployments = [
+        deployment_node(INDICATOR_ID, "active", "198.51.100.7", STIX_ID)
+    ]
+    stix2 = e2e_connector.helper.api.stix2
+    stix2.get_stix_bundle_or_object_from_entity_id.return_value = make_indicator()
+
+    def request(method, url, params=None, json=None, timeout=None):
+        if method == "GET":
+            return mock_response(
+                {
+                    "data": [
+                        {"uuid": "u-1", "value": "203.0.113.9", "externalId": STIX_ID}
+                    ],
+                    "pagination": {"nextCursor": None},
+                }
+            )
+        return mock_response({"data": [{"uuid": "u-2"}]})
+
+    e2e_connector.client.session.request.side_effect = request
+
+    summary = e2e_connector.assurance.reconciler.run_once()
+
+    assert (summary.incomplete, summary.repushed, summary.confirmed_active) == (
+        1,
+        1,
+        0,
+    )
+    (push,) = calls_of(e2e_connector.client.session, "POST")
+    (pushed,) = push.kwargs["json"]["bundle"]["objects"]
+    assert pushed["pattern"] == "[ipv4-addr:value = '198.51.100.7']"
+    (batch,) = router.calls_of("IndicatorReportDeployments(")
+    assert [(r["indicatorId"], r["status"]) for r in batch["reports"]] == [
+        (INDICATOR_ID, "deployed")
+    ]
 
 
 def test_withdrawal_deletes_every_ioc_of_the_indicator(e2e_connector, router):

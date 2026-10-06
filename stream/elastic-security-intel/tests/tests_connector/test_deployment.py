@@ -1,11 +1,12 @@
 """Deployment write-back of the Elastic Security Intel connector (OpenCTI-Platform/opencti#18680)."""
 
+from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
 import requests
 import requests_mock as rm_module
-from connectors_sdk import DeploymentAssurance
+from connectors_sdk import DeploymentAssurance, IndicatorDeployment
 from connectors_sdk.connectors.stream.deployment import OPENCTI_EXTENSION_ID
 from elastic_security_intel_connector import api_handler as api_module
 from elastic_security_intel_connector.api_handler import (
@@ -213,6 +214,32 @@ class TestAdapter:
         assert [v.active for v in listed] == [True, False, True]
         assert listed[0].external_id == f"doc-{INDICATOR_ID}"
         assert listed[0].raw == {"stix": live}
+        assert listed[0].pattern == live["pattern"]
+
+    def test_a_document_left_from_an_earlier_pattern_is_not_complete(self, connector):
+        """A failed update keeps the previous document of the indicator."""
+        connector.api = MagicMock()
+        earlier = dict(stix_indicator(), pattern="[ipv4-addr:value = '203.0.113.9']")
+        connector.api.iter_connector_documents.return_value = [
+            document(earlier)["_source"]
+        ]
+        adapter = ElasticDeploymentAdapter(connector)
+        (listed,) = adapter.list_vendor_indicators()
+        deployment = IndicatorDeployment(
+            relationship_id="r",
+            status="failed",
+            indicator_id=INDICATOR_ID,
+            pattern=stix_indicator()["pattern"],
+            pattern_type="stix",
+        )
+
+        assert adapter.is_complete(deployment, [listed]) is False
+        assert (
+            adapter.is_complete(
+                replace(deployment, pattern=earlier["pattern"]), [listed]
+            )
+            is True
+        )
 
     def test_a_document_without_stix_object_raises(self, connector):
         """A skipped document would make its deployment look absent."""
