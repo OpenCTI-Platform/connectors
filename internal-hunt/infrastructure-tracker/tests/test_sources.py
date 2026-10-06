@@ -75,6 +75,17 @@ def test_host_collects_unique_values():
     assert host.last_seen == datetime(2026, 10, 3, 8, tzinfo=timezone.utc)
 
 
+def test_host_joins_a_fingerprint_named_like_a_certificate_field():
+    # Given a host whose certificate names an issuer, and a source fingerprinting another one
+    host = Host(key="8.8.8.8", ip="8.8.8.8", sources=["censys", "urlscan"])
+    host.add_certificate(CERT_SHA256, CERT_SUBJECT, "CN=Evil CA")
+    host.add_fingerprint("certificate.issuer", "R3")
+    host.add_fingerprint("certificate.issuer", "CN=Evil CA")
+
+    # When/Then the field holds both issuers once
+    assert host.fields()["certificate.issuer"] == ["CN=Evil CA", "R3"]
+
+
 def test_host_merge():
     first = Host(key="8.8.8.8", ip="8.8.8.8", sources=["censys"], asn=15169)
     second = Host(
@@ -341,8 +352,10 @@ def test_urlscan_search_dates_the_query_and_follows_search_after(
     assert host.fingerprints == {
         "http.title": ["Login"],
         "http.server": ["nginx"],
-        "tls.issuer": ["R3"],
+        "certificate.issuer": ["R3"],
     }
+    # The issuer is read where certificate_issuer rules match it
+    assert host.fields()["certificate.issuer"] == ["R3"]
 
 
 def test_urlscan_search_stops_without_sort_values(requests_mock, deadline):

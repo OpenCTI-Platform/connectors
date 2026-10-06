@@ -213,6 +213,12 @@ def test_process_message_maps_the_infrastructure(
     assert "certificates" not in evidence_fields
     assert "jarm" in evidence_fields
     assert "2 hit(s)" in message
+    # Each hit is a host named by its address, which keeps two hosts apart in the hit keys
+    assert sorted(hit["host"] for hit in kwargs["hits_sample"]) == [
+        "10.0.0.1",
+        "8.8.8.8",
+    ]
+    assert len(set(kwargs["hit_keys"])) == 2
 
     # And the infrastructure, its public observables and detection indicators are sent
     sent = helper.stix2_create_bundle.call_args.args[0]

@@ -141,10 +141,15 @@ class Host:
             "certificate.subject": [c.subject for c in self.certificates if c.subject],
             "certificate.issuer": [c.issuer for c in self.certificates if c.issuer],
             CERTIFICATES_FIELD: [asdict(cert) for cert in self.certificates],
-            **dict(self.fingerprints),
             "url": list(self.urls),
             "tag": list(self.tags),
         }
+        # A fingerprint named like a certificate field (urlscan's issuer) joins its values
+        for name, fingerprint in self.fingerprints.items():
+            known = list(values.get(name) or [])
+            values[name] = known + [
+                value for value in fingerprint if value not in known
+            ]
         return {name: value for name, value in values.items() if value}
 
 
@@ -519,7 +524,8 @@ def _urlscan_host(item: dict[str, Any]) -> Host | None:
     host.as_name = _text(page.get("asnname")) or None
     host.add_fingerprint("http.title", page.get("title"))
     host.add_fingerprint("http.server", page.get("server"))
-    host.add_fingerprint("tls.issuer", page.get("tlsIssuer"))
+    # Named like the field certificate_issuer rules match, so the match shows in the evidence
+    host.add_fingerprint("certificate.issuer", page.get("tlsIssuer"))
     _append(host.urls, _text(page.get("url")) or None)
     host.seen(_dict(item.get("task")).get("time"))
     return host

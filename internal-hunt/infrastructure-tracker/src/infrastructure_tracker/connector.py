@@ -7,6 +7,7 @@ from typing import Any, NoReturn
 
 from connectors_sdk import InternalHuntConnector
 from connectors_sdk.connectors.internal_hunt import (
+    HitFields,
     HuntConnectionCheck,
     HuntEvent,
     HuntExecutionError,
@@ -205,6 +206,8 @@ class InfrastructureTrackerConnector(InternalHuntConnector):
     required_permissions = REQUIRED_PERMISSIONS
     documentation_url = DOCUMENTATION_URL
     entity_fields = ("ip", "domain")
+    # A hit is a host: its address, else its domain, names it in the evidence and keys it across runs
+    hit_fields = HitFields(host=("ip", "domain"))
     evidence_excluded_fields = frozenset({CERTIFICATES_FIELD})
 
     def __init__(self, settings: ConnectorSettings) -> None:
