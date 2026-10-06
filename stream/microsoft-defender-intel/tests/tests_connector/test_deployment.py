@@ -27,6 +27,7 @@ from microsoft_defender_intel_connector.deployment import (
     MicrosoftDefenderDeploymentAdapter,
     build_deployment_assurance,
     describe_error,
+    failure_reason,
 )
 from pycti import OpenCTIConnectorHelper
 
@@ -172,12 +173,20 @@ def test_rejected_indicator_is_reported_failed(connector):
 
     connector.process_message(make_message("create", indicator))
 
-    connector.assurance.report_push_failed.assert_called_once()
-    reported, message = connector.assurance.report_push_failed.call_args.args
-    assert reported == indicator
-    assert message.startswith("[API] An error occurred during request: 400 Client")
-    assert message.endswith('Invalid indicator value"}}')
+    connector.assurance.report_push_failed.assert_called_once_with(
+        indicator,
+        "Microsoft Defender refused the indicator submission: invalid request",
+    )
     connector.assurance.report_pushed.assert_not_called()
+    # The Defender response is left to the log.
+    connector.helper.connector_logger.warning.assert_called_once()
+    message, kwargs = connector.helper.connector_logger.warning.call_args
+    assert message == ("Indicator not deployed on Microsoft Defender",)
+    assert kwargs["meta"]["opencti_id"] == INDICATOR_ID
+    assert kwargs["meta"]["error"].startswith(
+        "[API] An error occurred during request: 400 Client"
+    )
+    assert kwargs["meta"]["error"].endswith('Invalid indicator value"}}')
 
 
 def test_external_reference_errors_do_not_abort_the_dissemination(connector):
@@ -270,7 +279,40 @@ def test_failed_update_is_reported_failed(connector):
     connector.process_message(make_message("update", make_indicator()))
 
     message = connector.assurance.report_push_failed.call_args.args[1]
-    assert message.endswith("403 Client Error - Forbidden")
+    assert message == (
+        "Microsoft Defender refused the indicator submission: permission denied"
+    )
+
+
+@pytest.mark.parametrize(
+    ("cause", "reason"),
+    [
+        (
+            requests.exceptions.RetryError("too many 429 error responses"),
+            "Microsoft Defender refused the indicator submission: rate limit reached",
+        ),
+        (
+            requests.exceptions.ConnectionError("connection reset"),
+            "Microsoft Defender could not be reached for the indicator submission",
+        ),
+        (
+            requests.exceptions.ReadTimeout("read timeout"),
+            "Microsoft Defender could not be reached for the indicator submission",
+        ),
+        (
+            None,
+            "Microsoft Defender returned an unexpected response to the indicator "
+            "submission",
+        ),
+    ],
+)
+def test_failure_reasons_name_the_cause_without_the_defender_response(cause, reason):
+    error = DefenderApiHandlerError("[API] Failed", {})
+    error.__cause__ = cause
+
+    assert failure_reason(error) == reason
+    assert failure_reason(ValueError("No observable")) == "No observable"
+    assert failure_reason(ValueError()) == "ValueError"
 
 
 def own(defender_id, opencti_id=INDICATOR_ID):
@@ -1256,8 +1298,18 @@ def test_adapter_push():
         adapter.push_indicator(indicator)
 
     connector.api._send_request.side_effect = http_error(400, "Invalid value")
-    with pytest.raises(DefenderDeploymentError, match="Invalid value"):
+    with pytest.raises(DefenderDeploymentError) as error:
         adapter.push_indicator(make_indicator())
+    assert str(error.value) == (
+        "Microsoft Defender refused the indicator submission: invalid request"
+    )
+    connector.helper.connector_logger.warning.assert_called_with(
+        "Indicator not pushed again to Microsoft Defender",
+        meta={
+            "error": "[API] An error occurred during request: 400 Client Error"
+            " - Invalid value"
+        },
+    )
 
 
 def test_adapter_collects_hits_from_alert_evidence():
@@ -1795,7 +1847,9 @@ def test_stream_outcomes_are_reported_in_one_batch(e2e_connector, router):
     }
     assert failed["indicatorId"] == OTHER_ID
     assert failed["status"] == "failed"
-    assert failed["metadata"]["error_message"].endswith("Invalid value")
+    assert failed["metadata"]["error_message"] == (
+        "Microsoft Defender refused the indicator submission: invalid request"
+    )
 
 
 def test_reconciliation_and_hits_are_reported(e2e_connector, router):

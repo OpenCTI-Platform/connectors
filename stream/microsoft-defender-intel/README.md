@@ -70,7 +70,7 @@ entity. Observables streamed directly (not as indicators) are pushed as before a
 | When                                      | Reported to OpenCTI                                                                                  |
 |-------------------------------------------|------------------------------------------------------------------------------------------------------|
 | Indicator created or updated in Defender  | `deployed`, with the Defender indicator id as external id                                            |
-| Indicator rejected by Defender            | `failed`, with the API error and the Defender response                                               |
+| Indicator rejected by Defender            | `failed`, with a short reason such as "Microsoft Defender refused the indicator submission: invalid request" (the Defender response is written to the connector log) |
 | Update of an indicator absent from Defender | Nothing: the indicator was never pushed (neither its current nor its former pattern)             |
 | Pattern edited to values Defender does not take | `removed`, once the Defender indicators of the former values are deleted                       |
 | Delete event processed                    | `removed` (also when the indicator was already absent from Defender)                                 |

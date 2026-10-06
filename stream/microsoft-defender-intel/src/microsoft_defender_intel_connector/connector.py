@@ -10,7 +10,10 @@ from microsoft_defender_intel_connector.api_handler import (
     DefenderApiHandler,
     DefenderApiHandlerError,
 )
-from microsoft_defender_intel_connector.deployment import describe_error
+from microsoft_defender_intel_connector.deployment import (
+    describe_error,
+    failure_reason,
+)
 from microsoft_defender_intel_connector.settings import ConnectorSettings
 from microsoft_defender_intel_connector.utils import (
     FILE_HASH_TYPES_MAPPER,
@@ -328,9 +331,19 @@ class MicrosoftDefenderIntelConnector:
         return defender_ids
 
     def _report_failed(self, data: dict, error: BaseException) -> None:
-        """Report an indicator rejected by Defender (no-op without write-back)."""
+        """Report an indicator rejected by Defender (no-op without write-back): OpenCTI
+        gets a short reason, the Defender response goes to the log."""
         if self.assurance is not None:
-            self.assurance.report_push_failed(data, describe_error(error))
+            self.helper.connector_logger.warning(
+                "Indicator not deployed on Microsoft Defender",
+                meta={
+                    "opencti_id": OpenCTIConnectorHelper.get_attribute_in_extension(
+                        "id", data
+                    ),
+                    "error": describe_error(error),
+                },
+            )
+            self.assurance.report_push_failed(data, failure_reason(error))
 
     def _report_pushed(self, data: dict, defender_ids: list[str]) -> None:
         """Report an indicator live in Defender, with its first Defender id."""

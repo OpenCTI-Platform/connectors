@@ -15,9 +15,11 @@ access to Microsoft Defender for Endpoint:
 from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
+from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
 
+import requests
 from connectors_sdk import (
     DeploymentAssurance,
     DeploymentVendorAdapter,
@@ -27,6 +29,7 @@ from connectors_sdk import (
     VendorIndicator,
 )
 from connectors_sdk.connectors.stream.deployment import (
+    deployment_failure_reason,
     extract_pattern_values,
     normalize_value,
     parse_datetime,
@@ -54,7 +57,13 @@ MIN_HIT_WINDOW = timedelta(seconds=1)
 """Shortest time window of alerts, never halved again (the filter precision)."""
 
 MAX_ERROR_DETAIL_LENGTH = 500
-"""Maximum length of the Defender response appended to a deployment error."""
+"""Maximum length of the Defender response appended to a logged error."""
+
+PLATFORM_NAME = "Microsoft Defender"
+"""Name of the security platform in the deployment failure reasons."""
+
+PUSH_ACTION = "indicator submission"
+"""What Defender is asked to do when an indicator is pushed."""
 
 EVIDENCE_VALUE_FIELDS = ("sha1", "sha256", "md5", "ipAddress", "url")
 """Evidence fields compared with the indicator values (`domainName` is an account domain)."""
@@ -64,7 +73,7 @@ PATTERN_VALUE_TYPES = frozenset(IOC_TYPES) - set(FILE_HASH_TYPES_MAPPER.values()
 
 
 def describe_error(error: BaseException) -> str:
-    """Describe a Defender API error for logs and the deployment error message.
+    """Describe a Defender API error for the logs.
 
     :param error: The error raised by the API handler.
     :return: The message, followed by the HTTP error and the Defender response body.
@@ -80,6 +89,33 @@ def describe_error(error: BaseException) -> str:
                 message = f"{message} - {detail.strip()[:MAX_ERROR_DETAIL_LENGTH]}"
         return message
     return str(error) or type(error).__name__
+
+
+def failure_reason(error: BaseException) -> str:
+    """Return the reason OpenCTI shows for an indicator Defender did not take.
+
+    :param error: The error raised while pushing the indicator.
+    :return: One short sentence naming Microsoft Defender and the cause; the Defender
+        response is left to the logs (`describe_error`).
+    """
+    if not isinstance(error, DefenderApiHandlerError):
+        return str(error) or type(error).__name__
+    cause = error.__cause__
+    status_code: int | None
+    if isinstance(cause, requests.exceptions.RetryError):
+        # The retries of the throttled requests ran out.
+        status_code = HTTPStatus.TOO_MANY_REQUESTS
+    elif isinstance(
+        cause, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)
+    ):
+        status_code = None
+    else:
+        response = getattr(cause, "response", None)
+        status_code = getattr(response, "status_code", None)
+        if not isinstance(status_code, int):
+            # Defender answered with a payload the connector cannot use.
+            status_code = HTTPStatus.OK
+    return deployment_failure_reason(PLATFORM_NAME, PUSH_ACTION, status_code)
 
 
 class DefenderDeploymentError(Exception):
@@ -319,11 +355,18 @@ class MicrosoftDefenderDeploymentAdapter(DeploymentVendorAdapter):
         """Push an indicator again, with the stream create path.
 
         :return: The id of the first Defender indicator created.
-        :raises DefenderDeploymentError: When Defender rejects the indicator.
+        :raises DefenderDeploymentError: When Defender rejects the indicator, with the
+            reason OpenCTI shows (the Defender response is logged).
         :raises ValueError: When no observable of the indicator can be pushed.
         """
-        with _readable_errors():
+        try:
             defender_ids = self._connector.push_indicator(stix_indicator)
+        except DefenderApiHandlerError as err:
+            self._connector.helper.connector_logger.warning(
+                "Indicator not pushed again to Microsoft Defender",
+                meta={"error": describe_error(err)},
+            )
+            raise DefenderDeploymentError(failure_reason(err)) from err
         if not defender_ids:
             raise ValueError(
                 "No observable of the indicator can be pushed to Microsoft Defender"
