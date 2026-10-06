@@ -176,8 +176,9 @@ For a telemetry run with hits, the connector sends:
 - in the run report, next to the hits count, the **key of every hit** it read (`hit_keys`, bounded by `max_results`;
   indicator runs report the keys of each value in its result). The key is the SHA-256 digest of the identity of the hit
   as reported in `hits_sample`: its detection, else its event id, else its time to the second, host, user, process and
-  matched field hashes (`analysis.hit_key`, with test vectors shared with OpenCTI). The values that identify a hit are
-  sent whole, so a key never depends on the preview length.
+  matched field hashes (`analysis.hit_key`, with test vectors shared with OpenCTI). The values that identify a hit
+  (event id, detection, host, user, process) are sent as they are up to 256 characters (`HIT_IDENTITY_MAX_LENGTH`),
+  a longer one as its SHA-256 digest: the evidence stays bounded and a key never depends on the preview length.
 
 Connectors send no sighting. OpenCTI counts the hits a hunt never saw before on the Security Platform, and keeps one
 **sighting** per technique and per indicator of the hunt on the Security Platform: the first run with hits creates it,

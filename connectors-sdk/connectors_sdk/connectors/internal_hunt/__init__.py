@@ -16,6 +16,7 @@ This package provides the building blocks of the connectors of type ``INTERNAL_H
 from connectors_sdk.connectors.internal_hunt.analysis import (
     DEFAULT_ENTITY_FIELDS,
     DEFAULT_HIT_FIELDS,
+    HIT_IDENTITY_MAX_LENGTH,
     HIT_KEY_VERSION,
     HOST_FIELDS,
     BenignMatcher,
@@ -149,6 +150,7 @@ __all__ = [
     # Result helpers
     "DEFAULT_ENTITY_FIELDS",
     "DEFAULT_HIT_FIELDS",
+    "HIT_IDENTITY_MAX_LENGTH",
     "HIT_KEY_VERSION",
     "BenignMatcher",
     "HitFields",

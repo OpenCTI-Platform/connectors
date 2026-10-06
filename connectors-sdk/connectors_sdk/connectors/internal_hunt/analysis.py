@@ -424,10 +424,11 @@ def build_hit_evidence(
     """Build the redacted evidence of single hits: what matched, where, by whom and when.
 
     One item per event, the earliest first (events without time last). A
-    matched value is hashed whole and its preview truncated. The event id, host,
-    user and process are sent whole: they identify the hit (``hit_key``), so its
-    key does not depend on the preview length, and OpenCTI truncates them when it
-    stores them.
+    matched value is hashed whole and its preview truncated. The event id,
+    detection, host, user and process identify the hit (``hit_key``): each is sent
+    as it is up to ``HIT_IDENTITY_MAX_LENGTH`` characters, else as its SHA-256
+    digest, so the evidence stays bounded and the key of a hit never depends on
+    the preview length.
 
     Args:
         hits: Each result event with the fields the hunt matched in it.
@@ -454,6 +455,21 @@ def build_hit_evidence(
 
 HIT_KEY_VERSION = "v1"
 """Version of the hit key rule, the first item of the hashed array."""
+
+HIT_IDENTITY_MAX_LENGTH = 256
+"""Longest identity value of a hit (event id, detection, host, user, process) sent as it is.
+
+A longer value is sent as ``sha256:<hex digest>``: bounded, never readable in
+clear, and still distinct from any other value. OpenCTI stores these values up
+to this length at least.
+"""
+
+
+def _identity(value: str | None) -> str | None:
+    """Return an identity value of a hit as it is sent (see ``HIT_IDENTITY_MAX_LENGTH``)."""
+    if value is None or len(value) <= HIT_IDENTITY_MAX_LENGTH:
+        return value
+    return f"sha256:{sha256_hex(value)}"
 
 
 def hit_key(hit: HuntHitEvidence) -> str:
@@ -558,13 +574,13 @@ def _hit_evidence(
         return None
 
     return HuntHitEvidence(
-        event_id=_first(hit_fields.event_id),
+        event_id=_identity(_first(hit_fields.event_id)),
         timestamp=event.timestamp,
-        detection=event.detection,
+        detection=_identity(event.detection),
         matched=fields,
-        host=_first(hit_fields.host),
-        user=_first(hit_fields.user),
-        process=_first(hit_fields.process),
+        host=_identity(_first(hit_fields.host)),
+        user=_identity(_first(hit_fields.user)),
+        process=_identity(_first(hit_fields.process)),
     )
 
 

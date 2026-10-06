@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from connectors_sdk.connectors.internal_hunt import (
+    HIT_IDENTITY_MAX_LENGTH,
     BenignMatcher,
     HitFields,
     HuntEvent,
@@ -321,6 +322,31 @@ def test_hit_keys_do_not_depend_on_the_preview_length():
         hits, HuntLimits(evidence_max_items=4, evidence_max_value_length=4)
     )
     assert [hit_key(hit) for hit in sampled] == short
+
+
+def test_long_identity_values_are_sent_as_their_digest():
+    # Given two hits whose hosts are longer than the identity limit and share
+    # their first characters, and a host within the limit
+    prefix = "h" * HIT_IDENTITY_MAX_LENGTH
+    hosts = [f"{prefix}-a", f"{prefix}-b", "ws-01"]
+    hits = [(HuntEvent(fields={"host.name": host}), []) for host in hosts]
+
+    # When the evidence and the keys are built with two preview lengths
+    evidence = build_hit_evidence(
+        hits, HuntLimits(evidence_max_items=3, evidence_max_value_length=16)
+    )
+    short = build_hit_keys(hits, HuntLimits(evidence_max_value_length=4))
+    long = build_hit_keys(hits, HuntLimits(evidence_max_value_length=512))
+
+    # Then a long value is sent as its digest, never in clear, a short one as it is,
+    # and the keys stay distinct and independent of the preview length
+    assert [hit.host for hit in evidence] == [
+        f"sha256:{sha256_hex(hosts[0])}",
+        f"sha256:{sha256_hex(hosts[1])}",
+        "ws-01",
+    ]
+    assert short == long == [hit_key(hit) for hit in evidence]
+    assert len(set(short)) == 3
 
 
 def test_build_hit_evidence_is_capped_by_the_evidence_limit():

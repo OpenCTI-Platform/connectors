@@ -1,6 +1,7 @@
 """Splunk REST API client running hunt searches as search jobs."""
 
 import base64
+import re
 import threading
 from collections.abc import Hashable
 from datetime import datetime, timezone
@@ -10,11 +11,18 @@ from urllib.parse import quote
 from connectors_sdk.connectors.internal_hunt import (
     HuntApiClient,
     HuntExecutionError,
+    HuntQueryRejectedError,
     RunDeadline,
 )
 
 JOB_TTL_SECONDS = 600
 RESULTS_PAGE_SIZE = 10000
+QUERY_REJECTED_MESSAGE = re.compile(
+    r"unknown (search )?command|error in '|unable to parse|syntax|mismatched|"
+    r"unbalanced|invalid argument",
+    re.IGNORECASE,
+)
+"""Fatal messages of a job Splunk ran that say the search itself is invalid: it fails at every run."""
 
 
 def splunk_time(value: datetime) -> str:
@@ -198,12 +206,20 @@ class SplunkClient(HuntApiClient):
             entries = response.get("entry") if isinstance(response, dict) else None
             content: dict[str, Any] = (entries or [{}])[0].get("content") or {}
             if content.get("isFailed") or content.get("dispatchState") == "FAILED":
-                messages = [
-                    str(message.get("text"))
+                details = [
+                    message
                     for message in content.get("messages") or []
                     if isinstance(message, dict) and message.get("text")
                 ]
-                raise HuntExecutionError(
+                messages = [str(message["text"]) for message in details]
+                rejected = any(
+                    str(message.get("type", "")).upper() == "FATAL"
+                    and QUERY_REJECTED_MESSAGE.search(str(message["text"]))
+                    for message in details
+                )
+                # A rejected search fails at every run: OpenCTI must not retry it
+                error = HuntQueryRejectedError if rejected else HuntExecutionError
+                raise error(
                     "The Splunk search failed: " + ("; ".join(messages) or "no details")
                 )
             if content.get("isDone") or content.get("dispatchState") == "DONE":

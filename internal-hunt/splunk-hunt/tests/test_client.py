@@ -6,6 +6,7 @@ import requests
 from conftest import NAMESPACE, SPLUNK_URL
 from connectors_sdk.connectors.internal_hunt import (
     HuntExecutionError,
+    HuntQueryRejectedError,
     HuntTimeoutError,
     RunDeadline,
 )
@@ -148,9 +149,31 @@ def test_search_reports_failed_jobs(requests_mock):
     )
     requests_mock.delete(JOB, json={})
 
-    # When/Then the Splunk messages are reported
-    with pytest.raises(HuntExecutionError, match="Unknown command"):
+    # When/Then the Splunk messages are reported, and the search stays rejected:
+    # a retry cannot succeed
+    with pytest.raises(HuntQueryRejectedError, match="Unknown command") as err:
         _client().search("search x", START, END, 5, RunDeadline(30), "k")
+    assert err.value.retryable is False
+
+
+def test_search_keeps_transient_job_failures_retryable(requests_mock):
+    # Given a job Splunk cancelled on its own
+    requests_mock.post(f"{NAMESPACE}/search/v2/jobs", json={"sid": "sid-1"})
+    requests_mock.get(
+        JOB,
+        json=_status(
+            dispatchState="FAILED",
+            isFailed=True,
+            messages=[{"type": "FATAL", "text": "Search auto-canceled"}],
+        ),
+    )
+    requests_mock.delete(JOB, json={})
+
+    # When/Then the failure is reported and a later run may succeed
+    with pytest.raises(HuntExecutionError, match="auto-canceled") as err:
+        _client().search("search x", START, END, 5, RunDeadline(30), "k")
+    assert not isinstance(err.value, HuntQueryRejectedError)
+    assert err.value.retryable is True
 
 
 def test_search_reports_failed_jobs_without_message(requests_mock):
