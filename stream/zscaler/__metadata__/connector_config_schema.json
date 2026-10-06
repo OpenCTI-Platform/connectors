@@ -78,40 +78,65 @@
       "format": "date-time",
       "type": "string"
     },
+    "ZSCALER_CLIENT_ID": {
+      "description": "Client ID of the ZIdentity API client used to authenticate to Zscaler OneAPI.",
+      "type": "string"
+    },
+    "ZSCALER_CLIENT_SECRET": {
+      "description": "Client secret of the ZIdentity API client.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ZSCALER_VANITY_DOMAIN": {
+      "description": "ZIdentity vanity domain of the organization, i.e. the `<vanity_domain>` part of `https://<vanity_domain>.zslogin.net`.",
+      "type": "string"
+    },
+    "ZSCALER_CLOUD": {
+      "default": null,
+      "description": "Zscaler cloud to target (for example `beta`). Leave empty to use the production cloud (`api.zsapi.net`).",
+      "type": "string"
+    },
+    "ZSCALER_BLACKLIST_NAME": {
+      "default": "BLACK_LIST_DYNDNS",
+      "description": "ID of the Zscaler URL category used as blacklist (for example `CUSTOM_01`), not its display name.",
+      "type": "string"
+    },
+    "ZSCALER_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify SSL certificates when connecting to the Zscaler API.",
+      "type": "boolean"
+    },
     "ZSCALER_USERNAME": {
-      "description": "Zscaler account username used for authentication.",
+      "default": null,
+      "deprecated": true,
+      "description": "Zscaler account username (legacy API, no longer used).",
       "type": "string"
     },
     "ZSCALER_PASSWORD": {
-      "description": "Zscaler account password used for authentication.",
+      "default": null,
+      "deprecated": true,
+      "description": "Zscaler account password (legacy API, no longer used).",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "ZSCALER_API_KEY": {
-      "description": "Zscaler API key used to obfuscate the authenticated session.",
+      "default": null,
+      "deprecated": true,
+      "description": "Zscaler API key (legacy API, no longer used).",
       "format": "password",
       "type": "string",
       "writeOnly": true
-    },
-    "ZSCALER_BLACKLIST_NAME": {
-      "default": "BLACK_LIST_DYNDNS",
-      "description": "Name of the Zscaler URL category used as blacklist.",
-      "type": "string"
-    },
-    "ZSCALER_SSL_VERIFY": {
-      "default": false,
-      "description": "Whether to verify SSL certificates when connecting to OpenCTI.",
-      "type": "boolean"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
     "CONNECTOR_LIVE_STREAM_ID",
-    "ZSCALER_USERNAME",
-    "ZSCALER_PASSWORD",
-    "ZSCALER_API_KEY"
+    "ZSCALER_CLIENT_ID",
+    "ZSCALER_CLIENT_SECRET",
+    "ZSCALER_VANITY_DOMAIN"
   ],
   "additionalProperties": true
 }
